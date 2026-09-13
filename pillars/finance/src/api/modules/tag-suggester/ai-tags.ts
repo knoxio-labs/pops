@@ -4,7 +4,7 @@
  * priority order, because the tag-only pass (POPS-2596) calls it on its own.
  */
 import { tagVocabularyService, type FinanceDb } from '../../../db/index.js';
-import { remember } from './seen-tags.js';
+import { pushSuggestion, remember } from './seen-tags.js';
 
 import type { AiSuggestionProvenance, SuggestedTag } from './types.js';
 
@@ -103,7 +103,6 @@ export function addAiTags(args: AddAiTagsArgs): void {
     tagVocabularyService.loadKnownTagSet(db),
     aiProvenance
   )) {
-    if (!remember(seen, suggestion.tag)) continue;
-    result.push(suggestion);
+    pushSuggestion(seen, result, suggestion);
   }
 }

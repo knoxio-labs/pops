@@ -107,6 +107,21 @@ describe('buildConfirmedTransactions', () => {
     expect(result[0]).toMatchObject({ transactionType: 'reversal' });
   });
 
+  it('commits one value on a single-valued facet when the suggestions carry two (POPS-3734)', () => {
+    const [confirmed] = buildConfirmedTransactions([
+      matched({
+        suggestedTags: [
+          { tag: 'venue:takeaway', source: 'rule' },
+          { tag: 'contains:food', source: 'rule' },
+          { tag: 'venue:restaurant', source: 'ai' },
+          { tag: 'contains:alcohol', source: 'ai' },
+        ],
+      }),
+    ]);
+
+    expect(confirmed?.tags).toEqual(['venue:takeaway', 'contains:food', 'contains:alcohol']);
+  });
+
   it('still drops a refund with no entity (merchant transactions require a payee)', () => {
     const result = buildConfirmedTransactions([
       matched({ transactionType: 'refund', entity: { matchType: 'none' } }),
@@ -158,6 +173,38 @@ describe('buildConfirmedTransactions — pre-accepting suggestions (POPS-3671)',
     ]);
 
     expect(confirmed?.tags).toEqual([]);
+  });
+});
+
+describe('buildConfirmedTransactions — pre-accept meets the single-valued facet limit (POPS-3671, POPS-3668)', () => {
+  it('ticks the allowed value when a held-back suggestion comes first on the same single-valued facet', () => {
+    const [confirmed] = buildConfirmedTransactions([
+      matched({
+        suggestedTags: [
+          { tag: 'venue:club', source: 'ai', confidence: 0.3, preAccept: false },
+          { tag: 'venue:pub', source: 'rule', pattern: 'PALMS' },
+        ],
+      }),
+    ]);
+
+    // Filtering after the facet merge would let venue:club claim the facet, skip
+    // venue:pub, and then drop club: a held-back suggestion displacing a ticked one.
+    expect(confirmed?.tags).toEqual(['venue:pub']);
+    expect(confirmed?.suggestedTags?.map((s) => s.tag)).toEqual(['venue:club', 'venue:pub']);
+  });
+
+  it('ticks the first allowed AI value behind a held-back one on the same facet', () => {
+    const [confirmed] = buildConfirmedTransactions([
+      matched({
+        suggestedTags: [
+          { tag: 'venue:takeaway', source: 'ai', confidence: 0.2, preAccept: false },
+          { tag: 'venue:restaurant', source: 'ai', confidence: 0.9, preAccept: true },
+          { tag: 'venue:cafe', source: 'ai', confidence: 0.85, preAccept: true },
+        ],
+      }),
+    ]);
+
+    expect(confirmed?.tags).toEqual(['venue:restaurant']);
   });
 });
 

@@ -81,6 +81,7 @@ function laterTypeBackfills(): string[] {
     '0077_correct_mistyped_rows.sql',
     '0080_retype_rule_shadowed_rows.sql',
     '0102_atm_foreign_fee_reclassified.sql',
+    '0115_fee_account_keeping_backfill.sql',
   ].map((name) => readFileSync(join(here, '..', '..', '..', 'migrations', name), 'utf8'));
 }
 

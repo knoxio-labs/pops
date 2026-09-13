@@ -6,6 +6,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
+import { mergeTagsReplacingSingleValued } from '../../../lib/tag-merge';
 import { groupTagSources } from './groupTagSources';
 import { unionTags } from './tagReviewUtils';
 
@@ -42,8 +43,11 @@ function applySuggestionsToGroup(
     const currentTags = localTags[tx.checksum] ?? [];
     const suggestions = (suggestedTagMeta[tx.checksum] ?? []).map((s) => s.tag);
     if (suggestions.length === 0) continue;
-    const mergedTags = Array.from(new Set([...currentTags, ...suggestions]));
-    if (mergedTags.length === currentTags.length) continue; // all suggestions already present
+    const mergedTags = mergeTagsReplacingSingleValued(currentTags, suggestions);
+    const unchanged =
+      mergedTags.length === currentTags.length &&
+      mergedTags.every((tag) => currentTags.includes(tag));
+    if (unchanged) continue;
     onUpdateTag(tx.checksum, mergedTags);
     applied++;
   }

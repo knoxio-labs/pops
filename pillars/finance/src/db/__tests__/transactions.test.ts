@@ -891,19 +891,20 @@ describe('usage_count maintenance (POPS-2627)', () => {
   });
 
   it('deleting a transaction decrements every tag it carried', () => {
+    upsertVocabularyTag(db, 'contains:coffee', 'seed');
     const created = createTransaction(db, {
       description: 'Coffee',
       accountId: resolveIdByName(db, 'Up'),
       amountCents: -500,
       type: 'purchase',
       date: '2025-06-15',
-      tags: ['venue:cafe', 'venue:pub'],
+      tags: ['venue:cafe', 'contains:coffee'],
     });
 
     deleteTransaction(db, created.id);
 
     expect(usageCountOf(db, 'venue:cafe')).toBe(0);
-    expect(usageCountOf(db, 'venue:pub')).toBe(0);
+    expect(usageCountOf(db, 'contains:coffee')).toBe(0);
   });
 
   it('restoring a deleted transaction re-increments its tags', () => {

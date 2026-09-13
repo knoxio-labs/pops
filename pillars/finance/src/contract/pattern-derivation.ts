@@ -57,6 +57,22 @@ export function longestCommonSubstring(values: string[]): string {
 }
 
 /**
+ * Whether `pattern` is too thin on its own to identify a merchant: nothing
+ * but a run of digits once every digit is stripped out.
+ *
+ * A statement line's reference number, a card's last four digits or a store
+ * number (`2200`, `215`) recurs across unrelated merchants, so a pattern that
+ * is *only* digits — or reduces to fewer than {@link MIN_DERIVED_PATTERN_LENGTH}
+ * characters once its digits are removed — tags everything that happens to
+ * share that number rather than the merchant the rule was meant for
+ * (POPS-3665). `7 ELEVEN 2041`, by contrast, keeps `ELEVEN` after the digits
+ * are stripped and is left alone.
+ */
+function lacksNonDigitContent(pattern: string): boolean {
+  return pattern.replaceAll(/[0-9]/g, '').trim().length < MIN_DERIVED_PATTERN_LENGTH;
+}
+
+/**
  * The `contains` pattern for a set of descriptions, or `null` when none long
  * enough to be specific survives.
  *
@@ -68,13 +84,33 @@ export function longestCommonSubstring(values: string[]): string {
  * normalisation changes underneath. A pattern that matches none of the
  * descriptions it was derived from is exactly the bug, so it is refused
  * rather than returned.
+ *
+ * `siblingDescriptions` are other descriptions already known to belong to the
+ * same merchant but left out of `descriptions` — typically because they carry
+ * a different tag set, or none at all. A group of `AMZNPRIMEA*` renewals and a
+ * group of `AMAZON RETA*` purchases share the same entity but are different
+ * shapes of it; deriving from one group alone can still land on a fragment
+ * short enough to also match the other (`A* AM` matched both in prod), which
+ * would silently apply the first group's tags to the second's rows the next
+ * time the rule runs. A pattern that reaches into a sibling is refused rather
+ * than narrowed, for the same reason a too-short one is: a missing rule is
+ * visible on the next import, an over-broad one is not (POPS-3665, POPS-3679).
  */
-export function derivePatternFromDescriptions(descriptions: string[]): string | null {
+export function derivePatternFromDescriptions(
+  descriptions: string[],
+  siblingDescriptions: readonly string[] = []
+): string | null {
   const pattern = longestCommonSubstring(descriptions.map(normalizeDescription)).trim();
   if (pattern.length < MIN_DERIVED_PATTERN_LENGTH) return null;
+  if (lacksNonDigitContent(pattern)) return null;
 
   const matchesOwnRows = descriptions.some((description) =>
     patternMatchesDescription(pattern, 'contains', describeForMatching(description))
   );
-  return matchesOwnRows ? pattern : null;
+  if (!matchesOwnRows) return null;
+
+  const overreachesIntoSibling = siblingDescriptions.some((description) =>
+    patternMatchesDescription(pattern, 'contains', describeForMatching(description))
+  );
+  return overreachesIntoSibling ? null : pattern;
 }

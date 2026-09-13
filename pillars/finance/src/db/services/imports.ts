@@ -27,6 +27,7 @@ import { eq } from 'drizzle-orm';
 
 import { isPositiveAmountPurchase } from '../../contract/corrections-constants.js';
 import { ImportTransactionPersistError, PositiveAmountPurchaseError } from '../errors.js';
+import { assertTagsWithinFacetCardinality } from '../facet-cardinality-guard.js';
 import { transactions } from '../schema.js';
 import { resolveImportAccountId } from './account-lookup.js';
 
@@ -142,6 +143,7 @@ export function insertImportTransaction(
   if (isPositiveAmountPurchase(input.amountCents, input.type)) {
     throw new PositiveAmountPurchaseError(input.amountCents);
   }
+  assertTagsWithinFacetCardinality(input.tags);
 
   const id = crypto.randomUUID();
   const now = new Date().toISOString();

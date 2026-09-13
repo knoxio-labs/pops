@@ -28,6 +28,7 @@ export const FEE_TAGS = [
   'fee:membership',
   'fee:conversion',
   'fee:atm',
+  'fee:account-keeping',
   'fee:surcharge',
 ] as const;
 
@@ -108,16 +109,30 @@ export const FEE_PATTERNS: ReadonlyArray<{ tag: FeeTag; patterns: readonly strin
     tag: 'fee:atm',
     patterns: ['ATM WITHDRAWAL FEE', 'ATM OPERATOR FEE', 'ATM FEE', 'CASH ADVANCE FEE'],
   },
+  /**
+   * A bank charging for the account itself — e.g. not meeting a minimum-deposit
+   * condition — not `fee:membership`, which names a card or subscription
+   * membership fee (see `0113_fee_account_keeping.sql`). `MONTHLY ACCOUNT FEE`
+   * and `ACCOUNT SERVICE FEE` moved here from `fee:membership` for the same
+   * reason: a bank account fee, not a gym or subscription (POPS-3703, backfilled
+   * by `0115_fee_account_keeping_backfill.sql`). No amount-sign special-case:
+   * `REVERSAL OF ACCOUNT SERVICING FEE` (a credit undoing the charge) still
+   * contains the phrase and is deliberately typed `fee` / `fee:account-keeping`
+   * the same as the debit, so the two net out in a fee report — the same "no
+   * reversal special-case" convention every other fee pattern here follows.
+   */
   {
-    tag: 'fee:membership',
+    tag: 'fee:account-keeping',
     patterns: [
-      'MEMBERSHIP FEE',
-      'ANNUAL MEMBERSHIP',
-      'ANNUAL FEE',
-      'CARD FEE',
+      'ACCOUNT SERVICING FEE',
+      'ACCOUNT KEEPING FEE',
       'MONTHLY ACCOUNT FEE',
       'ACCOUNT SERVICE FEE',
     ],
+  },
+  {
+    tag: 'fee:membership',
+    patterns: ['MEMBERSHIP FEE', 'ANNUAL MEMBERSHIP', 'ANNUAL FEE', 'CARD FEE'],
   },
   {
     tag: 'fee:surcharge',

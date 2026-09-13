@@ -53,6 +53,8 @@ import { lazy, Suspense, type ComponentType } from 'react';
 import { iconMap } from '@pops/navigation';
 import { ErrorBoundary } from '@pops/ui';
 
+import { entryUrlForThisLoad, uncachedProbeUrl } from './remote-entry-url';
+
 import type { RouteObject } from 'react-router';
 
 import type {
@@ -111,11 +113,15 @@ export interface RemoteUiDescriptor {
  * indirection so tests can inject a fake remote module without a real
  * network fetch. `/* @vite-ignore *\/` keeps Vite from trying to resolve the
  * runtime URL at build time; the import is genuinely dynamic.
+ *
+ * The entry is imported from a URL unique to this page load
+ * (`remote-entry-url.ts`): its name survives deploys, and any cache that
+ * served an earlier copy would hand back chunks that no longer exist.
  */
 export type RemoteModuleImporter = (assetsBaseUrl: string) => Promise<unknown>;
 
 export const defaultRemoteModuleImporter: RemoteModuleImporter = (assetsBaseUrl) =>
-  import(/* @vite-ignore */ assetsBaseUrl);
+  import(/* @vite-ignore */ entryUrlForThisLoad(assetsBaseUrl));
 
 /**
  * Narrow an unknown dynamic-import result to `RemotePillarUiModule`. Throws a
@@ -202,7 +208,10 @@ function remotePageElement(
 ): RouteObject {
   const LazyComponent = lazy(() => loadRemoteComponent(descriptor, page.bundleSlot, importer));
   const element = (
-    <ErrorBoundary fallback={() => RemoteLoadFallback}>
+    <ErrorBoundary
+      fallback={() => RemoteLoadFallback}
+      staleChunkProbeUrl={() => uncachedProbeUrl(descriptor.assetsBaseUrl)}
+    >
       <Suspense fallback={RemoteSuspenseFallback}>
         <LazyComponent />
       </Suspense>
@@ -245,7 +254,10 @@ function remoteSlotComponent<P extends object>(
   ) as ComponentType<P>;
   return function RemoteSlot(props: P) {
     return (
-      <ErrorBoundary fallback={() => RemoteLoadFallback}>
+      <ErrorBoundary
+        fallback={() => RemoteLoadFallback}
+        staleChunkProbeUrl={() => uncachedProbeUrl(descriptor.assetsBaseUrl)}
+      >
         <Suspense fallback={RemoteSuspenseFallback}>
           <LazySlot {...props} />
         </Suspense>

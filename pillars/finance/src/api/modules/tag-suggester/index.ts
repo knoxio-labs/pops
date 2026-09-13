@@ -1,7 +1,8 @@
 /**
  * Suggest tags for a transaction with source attribution.
  *
- * Strategy (order = priority for dedup):
+ * Strategy (order = priority for dedup and for single-valued facets, where the
+ * first pass to fill the facet keeps it):
  *   1. Correction rules — tags from matching `transaction_corrections` (source: "rule")
  *   2. Tag rules — tags from `transaction_tag_rules` (source: "rule")
  *   3. AI tags — returned directly by AI or a validated category string (source: "ai")
@@ -24,7 +25,7 @@ import {
 } from '../../../db/index.js';
 import { parseStoredTags } from '../../../db/tag-facets.js';
 import { addAiTags } from './ai-tags.js';
-import { remember } from './seen-tags.js';
+import { pushSuggestion } from './seen-tags.js';
 import { findMatchingTagRules, matchTagRules } from './tag-rule-matching.js';
 
 import type { AiSuggestionProvenance, SuggestedTag } from './types.js';
@@ -122,8 +123,7 @@ function addCorrectionTags(
   const { db, description, accountId, corrections, seen, result } = pass;
   if (correctionTags && correctionTags.length > 0) {
     for (const tag of correctionTags) {
-      if (!remember(seen, tag)) continue;
-      result.push({ tag, source: 'rule', pattern: correctionPattern });
+      pushSuggestion(seen, result, { tag, source: 'rule', pattern: correctionPattern });
     }
     return;
   }
@@ -140,16 +140,18 @@ function addCorrectionTags(
       );
   for (const correction of matches) {
     for (const tag of parseStoredTags(correction.tags)) {
-      if (!remember(seen, tag)) continue;
-      result.push({ tag, source: 'rule', pattern: correction.descriptionPattern ?? undefined });
+      pushSuggestion(seen, result, {
+        tag,
+        source: 'rule',
+        pattern: correction.descriptionPattern ?? undefined,
+      });
     }
   }
 }
 
 function pushRuleTags(pass: TagPass, tags: string[], pattern: string, entityScoped: boolean): void {
   for (const tag of tags) {
-    if (!remember(pass.seen, tag)) continue;
-    pass.result.push({
+    pushSuggestion(pass.seen, pass.result, {
       tag,
       source: 'rule',
       pattern,
@@ -196,8 +198,7 @@ function addEntityTags(pass: TagPass): void {
   const tags = entityDefaultTags.get(entityId);
   if (!tags) return;
   for (const tag of tags) {
-    if (!remember(seen, tag)) continue;
-    result.push({ tag, source: 'entity' });
+    pushSuggestion(seen, result, { tag, source: 'entity' });
   }
 }
 

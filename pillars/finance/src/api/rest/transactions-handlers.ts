@@ -8,6 +8,7 @@
  */
 import {
   AccountNotFoundError,
+  FacetCardinalityError,
   type FinanceDb,
   PositiveAmountPurchaseError,
   TransactionAlreadyExistsError,
@@ -40,6 +41,9 @@ const PREVIEW_DESCRIPTIONS_LIMIT = 2000;
 
 function translateTransactionError(err: unknown, id?: string): never {
   if (err instanceof PositiveAmountPurchaseError) throw new ValidationError(err.message);
+  if (err instanceof FacetCardinalityError) {
+    throw new ValidationError(err.message, { facet: err.facet, tags: err.tags });
+  }
   if (err instanceof TransactionNotFoundError) throw new NotFoundError('Transaction', id ?? err.id);
   if (err instanceof TransactionAlreadyExistsError) throw new ConflictError(err.message);
   if (err instanceof AccountNotFoundError) throw new NotFoundError('Account', err.id);
