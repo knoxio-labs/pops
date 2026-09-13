@@ -148,6 +148,7 @@ describe('the seeded classified vocabulary', () => {
     'venue:convenience-store',
     'venue:electronics',
     'venue:gift-shop',
+    'venue:gym',
     'venue:hardware',
     'venue:homewares',
     'venue:parking',
@@ -167,7 +168,7 @@ describe('the seeded classified vocabulary', () => {
     const { db } = freshMigratedFinanceDb();
 
     expect(listClassifiedVocabulary(db).toSorted()).toEqual(EXPECTED);
-    expect(EXPECTED).toHaveLength(84);
+    expect(EXPECTED).toHaveLength(85);
   });
 
   it('gives every closed-facet value the closed kind', () => {
