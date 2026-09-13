@@ -22,7 +22,7 @@ import {
   transactionCorrectionsService,
   transactionTagRulesService,
 } from '../../../db/index.js';
-import { parseStoredTags } from '../../../db/tag-facets.js';
+import { exceedsFacetCardinality, parseStoredTags } from '../../../db/tag-facets.js';
 import { addAiTags } from './ai-tags.js';
 import { remember } from './seen-tags.js';
 import { findMatchingTagRules, matchTagRules } from './tag-rule-matching.js';
@@ -146,8 +146,15 @@ function addCorrectionTags(
   }
 }
 
+/**
+ * A rule tag on a single-valued facet that an earlier suggestion already
+ * filled is dropped: rules arrive in match order, so the first value is the
+ * best-ranked rule's, and two values would reach the row as two venues.
+ */
 function pushRuleTags(pass: TagPass, tags: string[], pattern: string, entityScoped: boolean): void {
   for (const tag of tags) {
+    const suggested = pass.result.map((suggestion) => suggestion.tag);
+    if (exceedsFacetCardinality(suggested, tag)) continue;
     if (!remember(pass.seen, tag)) continue;
     pass.result.push({
       tag,

@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
 
+import { mergeTagsReplacingSingleValued } from '../../../lib/tag-merge';
 import { hasManualEdit } from './tagReviewUtils';
 
 import type { ConfirmedTransaction, SuggestedTag, TagRuleImpactItem } from '@pops/finance';
@@ -25,7 +26,7 @@ export function applyAffectedToLocalTags(
     const existingTags = prev[checksum] ?? [];
     if (!hasManualEdit(existingTags, suggestedTagMeta[checksum] ?? [])) {
       const newRuleTags = item.after.suggestedTags.map((s) => s.tag);
-      next[checksum] = [...new Set([...existingTags, ...newRuleTags])];
+      next[checksum] = mergeTagsReplacingSingleValued(existingTags, newRuleTags);
     }
   }
   return next;
@@ -79,7 +80,7 @@ function mergeGroupTags(
   const next = { ...prev };
   for (const t of group.transactions) {
     const existing = prev[t.checksum] ?? [];
-    next[t.checksum] = Array.from(new Set([...existing, ...newTags]));
+    next[t.checksum] = mergeTagsReplacingSingleValued(existing, newTags);
   }
   return next;
 }
@@ -127,7 +128,7 @@ export function useTagActions(deps: TagActionsDeps) {
       const next = { ...prev };
       for (const checksum of pending) {
         const suggested = (suggestedTagMeta[checksum] ?? []).map((s) => s.tag);
-        next[checksum] = [...new Set([...(prev[checksum] ?? []), ...suggested])];
+        next[checksum] = mergeTagsReplacingSingleValued(prev[checksum] ?? [], suggested);
       }
       return next;
     });
