@@ -35,16 +35,32 @@ internal struct ReceiptCameraAuthorization: CameraAuthorizing {
 /// different literal, which is what lets every result state be a one-line
 /// difference in the catalogue rather than a new type.
 internal struct PlaygroundReceiptCaptureRepository: ReceiptCaptureRepository {
-    private let answer: Result<ReceiptOutcome, RepositoryError>
+    private let answer: Result<ReceiptExtraction, RepositoryError>
+    private let writeAnswer: Result<ReceiptPurchase, RepositoryError>
     private let neverAnswers: Bool
 
-    internal init(_ answer: Result<ReceiptOutcome, RepositoryError>, neverAnswers: Bool = false) {
+    internal init(
+        _ answer: Result<ReceiptExtraction, RepositoryError>,
+        writing writeAnswer: Result<ReceiptPurchase, RepositoryError> = .failure(.unavailable),
+        neverAnswers: Bool = false
+    ) {
         self.answer = answer
+        self.writeAnswer = writeAnswer
         self.neverAnswers = neverAnswers
     }
 
-    internal func capture(_ parts: [ReceiptPart]) async throws -> ReceiptOutcome {
+    internal func extract(_ parts: [ReceiptPart]) async throws -> ReceiptExtraction {
         if neverAnswers { try await Task.sleep(for: .seconds(3600)) }
         return try answer.get()
+    }
+
+    internal func saveDraft(_ payload: ReceiptDraftSavePayload) async throws -> ReceiptPurchase {
+        try writeAnswer.get()
+    }
+
+    internal func createManualPurchase(_ payload: ReceiptManualPurchasePayload) async throws
+        -> ReceiptPurchase
+    {
+        try writeAnswer.get()
     }
 }

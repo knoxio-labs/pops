@@ -13,16 +13,37 @@
     /// from one. `#if DEBUG` keeps it out of anything shipped, and
     /// `ModuleBoundaryTests.fakesAreTestOnly` keeps `AppCoreFakes` out of here.
     private struct PreviewReceiptCaptureRepository: ReceiptCaptureRepository {
-        let answer: Result<ReceiptOutcome, RepositoryError>
-        /// Never answers, so the canvas holds on the submitting state. A
+        let extraction: Result<ReceiptExtraction, RepositoryError>
+        let write: Result<ReceiptPurchase, RepositoryError>
+        /// Never answers, so the canvas holds on the extracting state. A
         /// `Task.sleep` rather than a continuation nobody resumes, because the
         /// canvas going away cancels the task and the model treats that as the
         /// non-event it is.
         var neverAnswers = false
 
-        func capture(_ parts: [ReceiptPart]) async throws -> ReceiptOutcome {
+        init(
+            extraction: Result<ReceiptExtraction, RepositoryError> = .failure(.unavailable),
+            write: Result<ReceiptPurchase, RepositoryError> = .success(PreviewReceipt.purchase),
+            neverAnswers: Bool = false
+        ) {
+            self.extraction = extraction
+            self.write = write
+            self.neverAnswers = neverAnswers
+        }
+
+        func extract(_ parts: [ReceiptPart]) async throws -> ReceiptExtraction {
             if neverAnswers { try await Task.sleep(for: .seconds(3600)) }
-            return try answer.get()
+            return try extraction.get()
+        }
+
+        func saveDraft(_ payload: ReceiptDraftSavePayload) async throws -> ReceiptPurchase {
+            try write.get()
+        }
+
+        func createManualPurchase(_ payload: ReceiptManualPurchasePayload) async throws
+            -> ReceiptPurchase
+        {
+            try write.get()
         }
     }
 
@@ -71,6 +92,22 @@
                 kind: .unreadableLine, detail: "One line below the eggs could not be read",
                 deltaCents: nil),
         ]
+
+        static let reconciledDraft = ReceiptDraftReading(
+            receiptUris: ["pops://purchases/receipt/" + String(repeating: "a", count: 64)],
+            reconciled: true,
+            failures: [],
+            extracted: extracted,
+            capture: nil
+        )
+
+        static let unreconciledDraft = ReceiptDraftReading(
+            receiptUris: ["pops://purchases/receipt/" + String(repeating: "a", count: 64)],
+            reconciled: false,
+            failures: failures,
+            extracted: extracted,
+            capture: nil
+        )
 
         /// Pages that actually draw, so the canvas shows the design's
         /// centrepiece rather than a row of placeholders. Synthesised rather
@@ -147,17 +184,18 @@
     @MainActor
     private func previewResultModel(
         pages: Int = 2,
-        answering answer: Result<ReceiptOutcome, RepositoryError>,
+        extracting extraction: Result<ReceiptExtraction, RepositoryError>,
+        writing write: Result<ReceiptPurchase, RepositoryError> = .success(PreviewReceipt.purchase),
         neverAnswers: Bool = false
     ) -> ReceiptResultViewModel {
-        return ReceiptResultViewModel(
+        ReceiptResultViewModel(
             parts: PreviewReceipt.pages(pages),
             dependencies: AppDependencies(
                 transactions: AppDependencies.unbound.transactions,
                 pairing: AppDependencies.unbound.pairing,
                 reachability: AppDependencies.unbound.reachability,
                 receiptCapture: PreviewReceiptCaptureRepository(
-                    answer: answer, neverAnswers: neverAnswers),
+                    extraction: extraction, write: write, neverAnswers: neverAnswers),
                 purchases: AppDependencies.unbound.purchases,
                 accounts: AppDependencies.unbound.accounts
             )
@@ -188,45 +226,32 @@
             .dynamicTypeSize(.accessibility5)
     }
 
-    #Preview("Result — created") {
+    #Preview("Result — saved") {
         ReceiptResultView(
             model: previewResultModel(
-                pages: 1,
-                answering: .success(
-                    .created(purchase: PreviewReceipt.purchase, alreadyStored: false))))
+                pages: 1, extracting: .success(.draft(PreviewReceipt.reconciledDraft))))
     }
 
-    /// A re-upload of bytes already on file. Not a duplicate purchase, and the
-    /// screen must not say it saved twice.
-    #Preview("Result — created, already on file") {
+    /// The screen every usable reading reaches now: an editable form, whether
+    /// or not the receipt's own arithmetic agreed with it.
+    #Preview("Result — draft, reconciled") {
         ReceiptResultView(
             model: previewResultModel(
-                pages: 1,
-                answering: .success(
-                    .created(purchase: PreviewReceipt.purchase, alreadyStored: true))))
+                extracting: .success(.draft(PreviewReceipt.reconciledDraft))))
     }
 
-    /// The screen the whole tri-state exists for: a real purchase whose
-    /// numbers a person has to settle, laid out so the reading can be run
-    /// against the photograph beside it.
-    #Preview("Result — needs review") {
+    #Preview("Result — draft, unreconciled") {
         ReceiptResultView(
             model: previewResultModel(
-                answering: .success(
-                    .needsReview(
-                        receiptCount: 2, failures: PreviewReceipt.failures,
-                        extracted: PreviewReceipt.extracted))))
+                extracting: .success(.draft(PreviewReceipt.unreconciledDraft))))
     }
 
     /// The same screen at the text size the layout has to survive — where a
     /// line item's description and its amount stop fitting on one row.
-    #Preview("Result — needs review, accessibility text size") {
+    #Preview("Result — draft, accessibility text size") {
         ReceiptResultView(
             model: previewResultModel(
-                answering: .success(
-                    .needsReview(
-                        receiptCount: 2, failures: PreviewReceipt.failures,
-                        extracted: PreviewReceipt.extracted)))
+                extracting: .success(.draft(PreviewReceipt.unreconciledDraft)))
         )
         .dynamicTypeSize(.accessibility5)
     }
@@ -235,7 +260,7 @@
         ReceiptResultView(
             model: previewResultModel(
                 pages: 1,
-                answering: .success(
+                extracting: .success(
                     .unreadable(
                         receiptCount: 1,
                         reason: "The image is too blurred for any line to be read."))))
@@ -244,8 +269,7 @@
     #Preview("Result — reading") {
         ReceiptResultView(
             model: previewResultModel(
-                answering: .success(
-                    .created(purchase: PreviewReceipt.purchase, alreadyStored: false)),
+                extracting: .success(.draft(PreviewReceipt.reconciledDraft)),
                 neverAnswers: true))
     }
 
@@ -253,7 +277,7 @@
     /// nothing about them is known to be wrong and the retry sends the same
     /// bytes.
     #Preview("Result — gateway failure") {
-        ReceiptResultView(model: previewResultModel(answering: .failure(.unavailable)))
+        ReceiptResultView(model: previewResultModel(extracting: .failure(.unavailable)))
     }
 
 #endif

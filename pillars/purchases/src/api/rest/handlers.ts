@@ -41,7 +41,7 @@ export function makePurchasesRestHandlers(deps: {
     analytics: makeAnalyticsHandlers(deps.purchasesDb.db),
     product: makeProductHandlers(deps.purchasesDb.db),
     purchase: {
-      ...makePurchaseHandlers(deps.purchasesDb.db, deps.onIngest),
+      ...makePurchaseHandlers(deps.purchasesDb.db, deps.onIngest, deps.merchant),
       ...makeInventoryItemHandlers(deps.purchasesDb.db, deps.inventoryAssets),
     },
     receipt: makeReceiptHandlers(deps.purchasesDb.db, deps.vision, deps.onIngest, deps.merchant),

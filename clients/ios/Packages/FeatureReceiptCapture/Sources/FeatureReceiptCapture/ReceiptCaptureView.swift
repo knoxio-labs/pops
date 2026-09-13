@@ -89,6 +89,8 @@ public struct ReceiptCaptureView: View {
             prompt
         case .reading(let submission):
             reading(submission)
+        case .enteringManually:
+            enteringManually
         }
     }
 }
@@ -107,30 +109,37 @@ extension ReceiptCaptureView {
         .safeAreaInset(edge: .bottom) { promptActions }
     }
 
-    /// The camera, or the one refusal that can be undone, or nothing.
-    ///
-    /// Nothing is a real answer and not an omission: a device with no camera
-    /// and a device under a Screen Time policy have no action to offer, and a
-    /// disabled button in a bar is an invitation to keep pressing something
-    /// that will never work.
+    /// The camera (or the one refusal that can be undone, or nothing), and —
+    /// always, regardless of the camera decision — the manual-entry action
+    /// (POPS-2454). Manual entry needs no camera and is not gated behind one
+    /// being unavailable: a reader with a receipt in hand and one with
+    /// nothing to photograph are both offered a way in from this screen.
     @ViewBuilder private var promptActions: some View {
+        PopsActionBar {
+            cameraAction
+            PopsButton(ReceiptCaptureCopy.addPurchase) { model.startManualEntry() }
+                .accessibilityIdentifier(ReceiptCaptureAccessibility.manualEntryButton)
+        }
+    }
+
+    /// Nothing is a real answer and not an omission for the camera half of
+    /// the bar: a device with no camera and a device under a Screen Time
+    /// policy have no camera action to offer, and a disabled button there is
+    /// an invitation to keep pressing something that will never work.
+    @ViewBuilder private var cameraAction: some View {
         if let refusal = CameraRefusal.refusing(model.cameraAccess) {
             if refusal.offersSettings, let settings = SystemSettings.url {
-                PopsActionBar {
-                    Link(ReceiptCaptureCopy.openSettings, destination: settings)
-                        .font(.popsHeadline)
-                        .foregroundStyle(Color.popsAccent)
-                        .frame(maxWidth: .infinity)
-                        .accessibilityIdentifier(ReceiptCaptureAccessibility.openSettings)
-                }
+                Link(ReceiptCaptureCopy.openSettings, destination: settings)
+                    .font(.popsHeadline)
+                    .foregroundStyle(Color.popsAccent)
+                    .frame(maxWidth: .infinity)
+                    .accessibilityIdentifier(ReceiptCaptureAccessibility.openSettings)
             }
         } else {
-            PopsActionBar {
-                PopsButton(ReceiptCaptureCopy.captureButton, prominence: .prominent) {
-                    Task { await model.startCapture() }
-                }
-                .accessibilityIdentifier(ReceiptCaptureAccessibility.captureButton)
+            PopsButton(ReceiptCaptureCopy.captureButton, prominence: .prominent) {
+                Task { await model.startCapture() }
             }
+            .accessibilityIdentifier(ReceiptCaptureAccessibility.captureButton)
         }
     }
 
@@ -151,6 +160,24 @@ extension ReceiptCaptureView {
                         model.captureAnother()
                     }
                     .accessibilityIdentifier(ReceiptCaptureAccessibility.captureAnotherButton)
+                }
+            }
+    }
+
+    /// The same result screen ``reading(_:)`` embeds, opened straight on a
+    /// blank draft (POPS-2454). Not keyed on anything: unlike a receipt,
+    /// there is no submission identity to key a fresh model on — pressing
+    /// Done and starting again always means a fresh, blank form, which
+    /// `model.startManualEntry()` already guarantees by replacing the state
+    /// each time it is called.
+    private var enteringManually: some View {
+        ReceiptResultView(model: model.manualEntryModel())
+            .safeAreaInset(edge: .bottom) {
+                PopsActionBar {
+                    PopsButton(ReceiptCaptureCopy.doneAddingPurchase, prominence: .prominent) {
+                        model.captureAnother()
+                    }
+                    .accessibilityIdentifier(ReceiptCaptureAccessibility.manualEntryDoneButton)
                 }
             }
     }

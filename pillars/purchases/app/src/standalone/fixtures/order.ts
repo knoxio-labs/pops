@@ -12,7 +12,7 @@ import type { PurchaseGetResponses } from '../../purchases-api/types.gen';
  * charges renders a page that looks fine and proves nothing.
  */
 
-const ORDERED_AT = '2026-08-14T03:12:00.000Z';
+export const ORDERED_AT = '2026-08-14T03:12:00.000Z';
 const CREATED_AT = '2026-08-14T03:12:41.000Z';
 
 export const ORDER_ID = 'pur_9f2c41ab';

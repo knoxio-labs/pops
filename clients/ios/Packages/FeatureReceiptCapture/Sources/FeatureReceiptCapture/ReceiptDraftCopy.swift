@@ -21,6 +21,14 @@ public enum ReceiptDraftCopy {
         "For something with no receipt to photograph. Fill in what you know."
 
     internal static let save = "Save purchase"
+    internal static let dismissSaveError = "OK"
+
+    /// Shown above the form when the receipt's own arithmetic did not
+    /// reconcile — the status ``ReceiptDraftView`` draws for that arm.
+    internal static let unreconciledHeading = "The figures don't add up"
+    internal static let unreconciledMessage =
+        "The items below don't sum to the printed total. Check them against the receipt "
+        + "before saving."
 
     // MARK: sections
 
@@ -82,4 +90,18 @@ public enum ReceiptDraftCopy {
     /// The gate's complaints that name no field, kept as one line under the
     /// heading rather than pinned to a field they are not about.
     internal static let generalHintsLabel = "About the paper itself"
+
+    // MARK: save
+
+    /// A field that could not be turned into what the BFM saves — not a
+    /// missing field (``ReceiptDraftProblem`` already stops the Save button
+    /// for that) but one that is present and not a shape this can parse.
+    internal static func message(for error: ReceiptDraftSaveError) -> String {
+        switch error {
+        case .unparseableAmount:
+            "An amount isn't a plain number — check the total, the items and the adjustments."
+        case .unparseableDate:
+            "The date isn't in a shape this can save. Use YYYY-MM-DD, optionally followed by a time."
+        }
+    }
 }

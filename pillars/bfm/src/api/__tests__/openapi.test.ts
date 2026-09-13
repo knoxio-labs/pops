@@ -134,7 +134,9 @@ describe('GET /openapi', () => {
       '/mobile/finance/transactions',
       '/mobile/finance/transactions/{id}',
       '/mobile/purchases',
+      '/mobile/purchases/manual',
       '/mobile/purchases/receipts',
+      '/mobile/purchases/receipts/extract',
       '/mobile/purchases/receipts/{sha256}',
       '/mobile/purchases/receipts/{sha256}/thumbnail',
       '/mobile/purchases/{id}',
@@ -149,7 +151,7 @@ describe('GET /openapi', () => {
       'mobileFinance.listTransactions'
     );
     expect(body.paths?.['/mobile/purchases/receipts']?.['post']?.operationId).toBe(
-      'mobilePurchases.uploadReceipt'
+      'mobilePurchases.saveReceiptDraft'
     );
   });
 });

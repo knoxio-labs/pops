@@ -19,7 +19,17 @@ internal struct UnboundReachabilityWitness: ReachabilityWitness {
 }
 
 internal struct UnboundReceiptCaptureRepository: ReceiptCaptureRepository {
-    func capture(_ parts: [ReceiptPart]) async throws -> ReceiptOutcome {
+    func extract(_ parts: [ReceiptPart]) async throws -> ReceiptExtraction {
+        throw RepositoryError.dependencyNotBound
+    }
+
+    func saveDraft(_ payload: ReceiptDraftSavePayload) async throws -> ReceiptPurchase {
+        throw RepositoryError.dependencyNotBound
+    }
+
+    func createManualPurchase(_ payload: ReceiptManualPurchasePayload) async throws
+        -> ReceiptPurchase
+    {
         throw RepositoryError.dependencyNotBound
     }
 }

@@ -26,7 +26,19 @@ export const MOBILE_PATH_PREFIX = '/mobile';
  * matching would leave the upload on Express's 100kb default and turn every
  * real receipt into a refusal.
  */
-export const MOBILE_RECEIPT_UPLOAD_PATH = bfmContract.mobilePurchases.uploadReceipt.path;
+export const MOBILE_RECEIPT_UPLOAD_PATH = bfmContract.mobilePurchases.saveReceiptDraft.path;
+
+/** Where the photographs actually arrive. Sits under the path above. */
+export const MOBILE_RECEIPT_EXTRACT_PATH = bfmContract.mobilePurchases.extractReceipt.path;
+
+/*
+ * `app.use` matches a PREFIX, and `extractReceipt` sits under this path at
+ * `/extract` — so the budget and the rate limit mounted here cover the call
+ * that actually carries the photographs, not just the one that saves the
+ * draft. That is the intent: extraction is the expensive leg and the large
+ * body. If either route ever moves out from under this prefix, both have to
+ * be mounted explicitly, or a real receipt meets Express's 100kb default.
+ */
 
 /**
  * The pairing exchange's path, needed as a string because its budget is

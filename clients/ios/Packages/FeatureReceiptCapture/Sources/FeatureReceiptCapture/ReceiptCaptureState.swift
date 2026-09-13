@@ -20,17 +20,24 @@ public struct ReceiptSubmission: Identifiable, Hashable, Sendable {
 
 /// What the capture screen is showing.
 ///
-/// Two states, not three: there is no "photographing" state here because the
-/// document camera is a modal presentation the system owns, and while it is up
-/// this screen is not the one being looked at. Whether that presentation is on
-/// screen is a separate flag for exactly that reason — it says what is covering
-/// this screen, not what this screen is.
+/// Three states: there is no "photographing" state here because the document
+/// camera is a modal presentation the system owns, and while it is up this
+/// screen is not the one being looked at. Whether that presentation is on
+/// screen is a separate flag for exactly that reason — it says what is
+/// covering this screen, not what this screen is.
 public enum ReceiptCaptureState: Hashable, Sendable {
-    /// Nothing captured yet, or the last capture was handed off and the person
-    /// came back for another receipt.
+    /// Nothing captured yet, or the last capture — or manual entry — was
+    /// handed off and the person came back for another.
     case ready
     /// A receipt was captured and the result screen owns it from here.
     case reading(ReceiptSubmission)
+    /// A purchase typed by hand, no photograph involved (POPS-2454). The
+    /// same result screen as ``reading(_:)``, over the same
+    /// ``ReceiptDraftView`` a corrected reading uses — it opens blank rather
+    /// than pre-filled, and saves through
+    /// ``ReceiptCaptureRepository/createManualPurchase(_:)`` rather than
+    /// ``ReceiptCaptureRepository/saveDraft(_:)``.
+    case enteringManually
 }
 
 /// Why a capture produced no receipt to send.

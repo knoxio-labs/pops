@@ -11,43 +11,38 @@
  * its refusals. A photograph, a PDF invoice and a pasted order confirmation
  * are stored, keyed, gated and written by the same code.
  *
- * The sub-router's two read routes are spread in from
- * `receipt-bytes-handlers.ts`. They belong to the same router and share
- * nothing else with the upload — no database, no model, no merchant resolver.
+ * `extract` and `saveDraft` — separating a reading from what becomes a
+ * purchase (POPS-2454) — are spread in from `receipt-draft-handlers.ts`,
+ * and the sub-router's two read routes from `receipt-bytes-handlers.ts`.
+ * All three share the decode/store pipeline in `receipt-prepare.ts` and
+ * nothing else with this file.
  */
-import { findPurchaseBySourceOrderId } from '../../db/index.js';
 import { firstPhotoCapture, resolveCapture } from '../../ingest/receipt/capture.js';
-import { RECEIPT_SOURCE_ID, receiptToPurchase } from '../../ingest/receipt/purchase.js';
+import { receiptToPurchase } from '../../ingest/receipt/purchase.js';
 import { readReceipt } from '../../ingest/receipt/read-receipt.js';
 import {
-  canonicalBase64,
-  decodeReceiptBase64,
-  looksLikeMediaType,
-  receiptKey,
-  storeReceiptPart,
-  type StoredReceipt,
-} from '../../ingest/receipt/store.js';
-import { kindOf } from '../../ingest/receipt/vision.js';
-import { createMerchantResolver, type MerchantResolver } from '../contacts/merchant.js';
+  createMerchantResolver,
+  nameMerchant,
+  type MerchantResolver,
+} from '../contacts/merchant.js';
 import { makeReceiptBytesHandlers } from './receipt-bytes-handlers.js';
+import { makeReceiptDraftHandlers } from './receipt-draft-handlers.js';
 import { persistReceiptPurchase, sameShopAlreadyRecorded } from './receipt-persist.js';
+import {
+  fireIngest,
+  prepareReceiptParts,
+  receiptUris,
+  visionUnavailable,
+  type UploadBody,
+} from './receipt-prepare.js';
 import { toPurchaseDetailBody } from './serializers.js';
 
 import type { z } from 'zod';
 
-import type {
-  ReceiptOutcomeSchema,
-  UploadReceiptBodySchema,
-} from '../../contract/rest-receipts.js';
+import type { ReceiptOutcomeSchema } from '../../contract/rest-receipts.js';
 import type { PurchasesDb } from '../../db/index.js';
-import type {
-  DecodedReceiptPart,
-  ReceiptKind,
-  ReceiptMediaType,
-  ReceiptVision,
-} from '../../ingest/receipt/vision.js';
+import type { ReceiptVision } from '../../ingest/receipt/vision.js';
 
-type UploadBody = z.infer<typeof UploadReceiptBodySchema>;
 /**
  * The contract's own union. Annotating each branch against it is what makes
  * a body that drifts from the declared shape a compile error rather than a
@@ -56,90 +51,6 @@ type UploadBody = z.infer<typeof UploadReceiptBodySchema>;
 type ReceiptOutcome = z.infer<typeof ReceiptOutcomeSchema>;
 
 const ok = (body: ReceiptOutcome) => ({ status: 200 as const, body });
-
-/**
- * Two refusals worth making before spending a model call.
- *
- * Both are answers the user can act on immediately — "configure a key",
- * "that is not a JPEG" — where the same facts discovered inside the model
- * come back as confusion that costs money to obtain.
- */
-const visionUnavailable = () => ({
-  status: 503 as const,
-  body: {
-    message:
-      'No vision model is configured; set ANTHROPIC_API_KEY, or ' +
-      'ANTHROPIC_API_KEY_FILE pointing at a mounted secret, to accept receipts',
-    code: 'VISION_UNAVAILABLE',
-  },
-});
-
-/** What to call the thing that was wrong, in the sender's own terms. */
-const NOUNS: Readonly<Record<ReceiptKind, string>> = {
-  image: 'Photograph',
-  pdf: 'Document',
-  text: 'Text',
-};
-
-/**
- * Which part was not what it claimed, when there is more than one.
- *
- * Naming the position matters for a long receipt: "the upload is not a
- * valid image/jpeg file" leaves the sender re-taking all six pictures
- * rather than the third.
- */
-const notWhatItClaims = (mediaType: ReceiptMediaType, index: number, count: number) => ({
-  status: 400 as const,
-  body: {
-    message:
-      count === 1
-        ? `The upload is not a valid ${mediaType} file`
-        : `${NOUNS[kindOf(mediaType)]} ${String(index + 1)} of ${String(count)} is not a valid ${mediaType} file`,
-    code: 'NOT_THE_STATED_TYPE',
-  },
-});
-
-/** Every stored part's address, in the order it was sent. */
-const uris = (stored: readonly StoredReceipt[]): string[] => stored.map((one) => one.uri);
-
-/**
- * Trigger 1 of the reconciliation sweep, fired only after the write
- * committed and swallowed if it fails. Letting a scheduling failure turn a
- * successful ingest into a 500 would make the caller re-upload a receipt
- * that is already stored.
- */
-function fireIngest(onIngest: () => void): void {
-  try {
-    onIngest();
-  } catch (error) {
-    console.error('[purchases-api] ingest sweep trigger failed', {
-      error: error instanceof Error ? error.message : String(error),
-    });
-  }
-}
-
-/**
- * Best-effort merchant link.
- *
- * The guarantee that a contacts outage costs a link rather than the
- * purchase belongs HERE, not inside whichever resolver happens to be
- * wired in. The live one catches its own failures; a future one, or a
- * stub, might not, and a receipt must not be lost to a peer being down.
- */
-async function nameMerchant(
-  merchant: MerchantResolver,
-  merchantName: string | null | undefined
-): Promise<string | null> {
-  if (merchantName === null || merchantName === undefined) return null;
-  try {
-    return await merchant.resolve(merchantName);
-  } catch (error) {
-    console.warn('[purchases-api] merchant lookup failed; leaving the purchase unlinked', {
-      error: error instanceof Error ? error.message : String(error),
-    });
-    return null;
-  }
-}
 
 export function makeReceiptHandlers(
   db: PurchasesDb,
@@ -155,53 +66,30 @@ export function makeReceiptHandlers(
       // a shop uploaded at 23:59 into the following day.
       const uploadedAt = new Date().toISOString();
       if (vision === null) return visionUnavailable();
-      const parts = body.parts.map((one) => ({
-        mediaType: one.mediaType,
-        dataBase64: canonicalBase64(one.dataBase64),
-      }));
-      const decodedParts = parts.map((one) => ({
-        mediaType: one.mediaType,
-        bytes: decodeReceiptBase64(one.dataBase64),
-      }));
 
-      const badPartAt = decodedParts.findIndex(
-        (one) => one.bytes === null || !looksLikeMediaType(one.bytes, one.mediaType)
-      );
-      if (badPartAt !== -1) {
-        const bad = parts[badPartAt];
-        if (bad !== undefined) return notWhatItClaims(bad.mediaType, badPartAt, parts.length);
-      }
-
-      const goodParts = decodedParts.filter((one): one is DecodedReceiptPart => one.bytes !== null);
-
-      const stored = goodParts.map((one) => storeReceiptPart(one));
-
-      // Before the model, not after. The parts' digest IS the key, so a
-      // re-upload is already knowable here — and letting it reach the
-      // vision call means paying for an answer whose only possible outcome
-      // is 409. Re-sending a receipt you already sent is an ordinary
-      // mistake, and it should be free.
-      const existing = findPurchaseBySourceOrderId(db, RECEIPT_SOURCE_ID, receiptKey(stored));
-      if (existing !== undefined) {
+      const prepared = prepareReceiptParts(db, body);
+      if (prepared.kind === 'refused') return prepared.response;
+      if (prepared.kind === 'duplicate') {
         return {
           status: 409 as const,
           body: {
-            message: `This upload has already been read as purchase ${existing.id}`,
+            message: `This upload has already been read as purchase ${prepared.purchaseId}`,
             code: 'ALREADY_IMPORTED',
           },
         };
       }
+      const { parts, goodParts, stored } = prepared;
 
       const outcome = await readReceipt(vision, parts);
 
       if (outcome.kind === 'unreadable') {
-        return ok({ kind: 'unreadable', receiptUris: uris(stored), reason: outcome.reason });
+        return ok({ kind: 'unreadable', receiptUris: receiptUris(stored), reason: outcome.reason });
       }
 
       if (outcome.kind === 'needs-review') {
         return ok({
           kind: 'needs-review',
-          receiptUris: uris(stored),
+          receiptUris: receiptUris(stored),
           failures: [...outcome.gate.failures],
           extracted: outcome.extracted,
         });
@@ -257,6 +145,7 @@ export function makeReceiptHandlers(
       });
     },
 
+    ...makeReceiptDraftHandlers(db, vision, onIngest, merchant),
     ...makeReceiptBytesHandlers(),
   };
 }

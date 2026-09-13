@@ -96,10 +96,10 @@ import {
 import { deviceRow } from '../../../db/__tests__/helpers.js';
 import { devices, openBfmDb } from '../../../db/index.js';
 import { mintAccessToken } from '../../auth/access-token.js';
-import { MOBILE_RECEIPT_UPLOAD_PATH } from '../../paths.js';
+import { MOBILE_RECEIPT_EXTRACT_PATH, MOBILE_RECEIPT_UPLOAD_PATH } from '../../paths.js';
 import { PURCHASES_PILLAR_ID } from '../client.js';
 
-import type { MobileReceiptOutcome } from '../../../contract/rest-schemas.js';
+import type { MobileExtractOutcome } from '../../../contract/receipt-draft.js';
 
 /**
  * Purchases' own test-only escape hatch (`middleware/service-account-scope.ts`).
@@ -278,8 +278,15 @@ async function mintServiceAccount(
   return body.plaintextKey;
 }
 
-function post(bfmBaseUrl: string, token: string, partsText: string): Promise<Response> {
-  return fetch(`${bfmBaseUrl}${MOBILE_RECEIPT_UPLOAD_PATH}`, {
+/**
+ * The reading leg: photographs in, an editable draft out, nothing persisted.
+ *
+ * This is where a real receipt's bytes arrive, and where the 12mb ceiling
+ * and the rate limit apply — both are mounted on the save path, which is
+ * this one's prefix (see `paths.ts`).
+ */
+function extract(bfmBaseUrl: string, token: string, partsText: string): Promise<Response> {
+  return fetch(`${bfmBaseUrl}${MOBILE_RECEIPT_EXTRACT_PATH}`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
     body: JSON.stringify({
@@ -288,6 +295,38 @@ function post(bfmBaseUrl: string, token: string, partsText: string): Promise<Res
       ],
     }),
   });
+}
+
+/** The writing leg: a reviewed draft becomes a purchase. */
+function save(bfmBaseUrl: string, token: string, body: Record<string, unknown>): Promise<Response> {
+  return fetch(`${bfmBaseUrl}${MOBILE_RECEIPT_UPLOAD_PATH}`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+    body: JSON.stringify(body),
+  });
+}
+
+/** A save body built from what `extractReceipt` just answered. */
+function saveBodyFrom(
+  outcome: Extract<MobileExtractOutcome, { kind: 'draft' }>,
+  idempotencyKey: string
+): Record<string, unknown> {
+  const { draft } = outcome;
+  return {
+    merchantName: draft.merchantName,
+    orderedAt: draft.orderedAt,
+    // The offset is a fact of its own: without it a morning shop is stored
+    // under the previous day (POPS-2530).
+    orderedAtOffsetMinutes: draft.orderedAtOffsetMinutes,
+    currency: draft.currency,
+    totalCents: draft.totalCents,
+    items: draft.items,
+    documents: outcome.receiptUris.map((documentUri) => ({
+      documentUri,
+      kind: 'receipt' as const,
+    })),
+    idempotencyKey,
+  };
 }
 
 /** A GET on bfm's mobile surface, authenticated as the paired device. */
@@ -401,33 +440,64 @@ describe('bfm -> purchases receipt upload live seam', () => {
     if (tempDir) rmSync(tempDir, { recursive: true, force: true });
   });
 
-  it('a receipt upload proxied through bfm reaches purchases and comes back created', async () => {
+  it('a receipt read through bfm becomes a draft, and the saved draft becomes a purchase', async () => {
     vision.enqueue(GOOD_READING);
 
-    const response = await post(
+    const read = await extract(
       bfmProcess.baseUrl,
       deviceToken,
       'Live Seam Cafe\nFlat White  $4.50\nTotal       $4.50'
     );
 
-    expect(response.status).toBe(200);
-    const body = (await response.json()) as MobileReceiptOutcome;
-    if (body.kind !== 'created') {
-      throw new Error(`expected a 'created' outcome, got ${JSON.stringify(body)}`);
+    expect(read.status).toBe(200);
+    const outcome = (await read.json()) as MobileExtractOutcome;
+    if (outcome.kind !== 'draft') {
+      throw new Error(`expected a 'draft' outcome, got ${JSON.stringify(outcome)}`);
     }
-    expect(body.alreadyStored).toBe(false);
-    expect(body.purchase.merchantName).toBe('Live Seam Cafe');
-    expect(body.purchase.totalCents).toBe(450);
-    expect(body.purchase.currency).toBe('AUD');
-    expect(body.purchase.itemCount).toBe(1);
+    expect(outcome.reconciled).toBe(true);
+    expect(outcome.draft.merchantName).toBe('Live Seam Cafe');
+    expect(outcome.draft.totalCents).toBe(450);
+    expect(outcome.draft.currency).toBe('AUD');
+    expect(outcome.draft.items).toHaveLength(1);
+
+    // Reading persisted nothing: the ledger gains a purchase only when the
+    // reviewer saves. That separation is the whole point of the two routes.
+    const beforeSave = purchasesProxy.requests.filter((entry) =>
+      entry.url.endsWith('/receipts/draft')
+    );
+    expect(beforeSave).toHaveLength(0);
+
+    const written = await save(
+      bfmProcess.baseUrl,
+      deviceToken,
+      saveBodyFrom(outcome, 'live-seam-1')
+    );
+
+    expect(written.status).toBe(200);
+    const purchase = (await written.json()) as {
+      merchantName: string | null;
+      totalCents: number;
+      currency: string;
+      itemCount: number;
+    };
+    expect(purchase.merchantName).toBe('Live Seam Cafe');
+    expect(purchase.totalCents).toBe(450);
+    expect(purchase.currency).toBe('AUD');
 
     // Independent verification: what purchases itself answered on the wire,
-    // not the SDK's or bfm's view of it.
-    const uploadCalls = purchasesProxy.requests.filter((entry) => entry.url.endsWith('/receipts'));
-    expect(uploadCalls).toHaveLength(1);
-    expect(uploadCalls[0]?.method).toBe('POST');
-    expect(uploadCalls[0]?.status).toBe(200);
-    expect(uploadCalls[0]?.bodySnippet).toContain('"kind":"created"');
+    // not the SDK's or bfm's view of it. Both legs, in order.
+    const extractCalls = purchasesProxy.requests.filter((entry) =>
+      entry.url.endsWith('/receipts/extract')
+    );
+    expect(extractCalls).toHaveLength(1);
+    expect(extractCalls[0]?.method).toBe('POST');
+    expect(extractCalls[0]?.status).toBe(200);
+
+    const saveCalls = purchasesProxy.requests.filter((entry) =>
+      entry.url.endsWith('/receipts/draft')
+    );
+    expect(saveCalls).toHaveLength(1);
+    expect(saveCalls[0]?.status).toBe(200);
 
     // Independent verification of the other end: the bytes bfm uploaded
     // reached purchases' vision port intact, not just that purchases
@@ -531,30 +601,36 @@ describe('bfm -> purchases receipt upload live seam', () => {
     expect(((await response.json()) as { code: string }).code).toBe('not_found');
   });
 
-  it('a needs-review refusal crosses the seam intact, reshaped to the mobile contract', async () => {
+  it('a reading the arithmetic refused still crosses the seam as an editable draft', async () => {
+    // The old upload route answered `needs-review` and wrote nothing, which
+    // left the reader holding objections and no way to act on them. Now an
+    // unreconciled reading is a draft like any other — `reconciled: false`
+    // is what tells them apart, not whether the fields can be edited.
     vision.enqueue(MISMATCH_READING);
 
-    const response = await post(
+    const response = await extract(
       bfmProcess.baseUrl,
       deviceToken,
       'Live Seam Deli\nSandwich    $9.00\nTotal       $12.00'
     );
 
     expect(response.status).toBe(200);
-    const body = (await response.json()) as MobileReceiptOutcome;
-    if (body.kind !== 'needs-review') {
-      throw new Error(`expected a 'needs-review' outcome, got ${JSON.stringify(body)}`);
+    const outcome = (await response.json()) as MobileExtractOutcome;
+    if (outcome.kind !== 'draft') {
+      throw new Error(`expected a 'draft' outcome, got ${JSON.stringify(outcome)}`);
     }
-    expect(body.problems).toEqual(
+    expect(outcome.reconciled).toBe(false);
+    expect(outcome.failures).toEqual(
       expect.arrayContaining([expect.objectContaining({ code: 'sum-mismatch' })])
     );
+    // Editable regardless: the fields are there to be corrected.
+    expect(outcome.draft.items.length).toBeGreaterThan(0);
 
-    const uploadCalls = purchasesProxy.requests.filter((entry) => entry.url.endsWith('/receipts'));
-    // The first entry is the prior test's `created` upload; this test's own
-    // call is whichever landed after it.
-    const thisCall = uploadCalls.at(-1);
+    const extractCalls = purchasesProxy.requests.filter((entry) =>
+      entry.url.endsWith('/receipts/extract')
+    );
+    const thisCall = extractCalls.at(-1);
     expect(thisCall?.status).toBe(200);
-    expect(thisCall?.bodySnippet).toContain('"kind":"needs-review"');
   });
 
   describe('a body purchases refuses at its own ceiling', () => {
@@ -566,7 +642,7 @@ describe('bfm -> purchases receipt upload live seam', () => {
       // purchases' ceiling through this route.
       const oversizedText = 'A'.repeat(6_000);
 
-      const response = await post(bfmProcess.baseUrl, deviceToken, oversizedText);
+      const response = await extract(bfmProcess.baseUrl, deviceToken, oversizedText);
 
       // Not one of the three receipt outcomes — those are all 200s (see this
       // file's header, "The mobile write" in `pillars/bfm/README.md`) — and
@@ -589,10 +665,10 @@ describe('bfm -> purchases receipt upload live seam', () => {
       // Independent verification: purchases itself answered 413, not
       // whatever bfm made of it — the recording proxy sees the real wire
       // response purchases sent, before bfm's own mapping touches it.
-      const uploadCalls = purchasesProxy.requests.filter((entry) =>
-        entry.url.endsWith('/receipts')
+      const extractCalls = purchasesProxy.requests.filter((entry) =>
+        entry.url.endsWith('/receipts/extract')
       );
-      const thisCall = uploadCalls.at(-1);
+      const thisCall = extractCalls.at(-1);
       expect(thisCall?.status).toBe(413);
     });
   });
@@ -718,7 +794,7 @@ describe('bfm -> purchases receipt upload live seam — a real 413', () => {
   it('purchases itself answers 413 for a body over ITS OWN (lowered) limit', async () => {
     // Independent proof the seam is genuinely primed: purchases refuses this
     // on its own terms before bfm is involved at all.
-    const response = await fetch(`${purchasesProcess.baseUrl}/receipts`, {
+    const response = await fetch(`${purchasesProcess.baseUrl}/receipts/extract`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ parts: [{ mediaType: 'text/plain', dataBase64: 'x'.repeat(500) }] }),
@@ -728,7 +804,7 @@ describe('bfm -> purchases receipt upload live seam — a real 413', () => {
   });
 
   it('bfm reports the refusal as non-retryable and distinct from an outage, not as "purchases is unavailable"', async () => {
-    const response = await post(
+    const response = await extract(
       bfmProcess.baseUrl,
       deviceToken,
       'a perfectly ordinary receipt, refused only because the wire limit was lowered for this test'

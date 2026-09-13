@@ -2,6 +2,7 @@ import { MERCHANT_SPEND } from '../fixtures/merchant-spend';
 import { ORDER, ORDER_ID } from '../fixtures/order';
 import { ORDER_INDEX_ROW } from '../fixtures/order-index';
 import { PRODUCT_DICTIONARY } from '../fixtures/product-dictionary';
+import { RECEIPT_DRAFT } from '../fixtures/receipt-draft';
 import { RECONCILE_QUEUE } from '../fixtures/reconcile-queue';
 
 import type { MockHandler } from './install';
@@ -105,6 +106,20 @@ export const handlers: Readonly<Record<OperationKey, MockHandler>> = {
   // standalone reader is most likely to try first, and the other two outcomes
   // are reachable by editing this one line.
   'POST /receipts': ok({ kind: 'created', alreadyStored: false, purchase: ORDER }),
+  // Reading and saving are separate calls now. The reading answers a draft
+  // and persists nothing, so a standalone reader can open the review screen
+  // without a write ever happening; `reconciled: false` plus a failure is
+  // the other state that screen has to draw, reachable by editing these two
+  // lines rather than by wiring a second fixture.
+  'POST /receipts/extract': ok({
+    kind: 'draft',
+    receiptUris: [`pops://purchases/receipt/${'a'.repeat(64)}`],
+    reconciled: true,
+    failures: [],
+    draft: RECEIPT_DRAFT,
+  }),
+  'POST /receipts/draft': ok(ORDER),
+  'POST /purchases/manual': ok(ORDER),
   'GET /receipts/{sha256}': ok({ contentType: 'image/jpeg', data: '', sha256: '' }),
   'GET /receipts/{sha256}/thumbnail': ok({ contentType: 'image/jpeg', data: '', sha256: '' }),
 

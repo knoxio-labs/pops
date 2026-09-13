@@ -117,13 +117,21 @@ extension ReceiptCaptureViewModel {
         state = .ready
     }
 
-    /// Back to the camera prompt, keeping the screen for a second receipt.
+    /// Back to the camera prompt, keeping the screen for a second receipt or
+    /// a second manual entry.
     ///
     /// The result screen is otherwise terminal, which would leave this tab
-    /// showing one receipt's outcome until the app was relaunched.
+    /// showing one outcome until the app was relaunched.
     public func captureAnother() {
         problem = nil
         state = .ready
+    }
+
+    /// Opens the same form a corrected reading uses, blank — a purchase with
+    /// no receipt to photograph (POPS-2454).
+    public func startManualEntry() {
+        problem = nil
+        state = .enteringManually
     }
 
     /// The result screen's model for a submission this screen produced.
@@ -133,6 +141,13 @@ extension ReceiptCaptureViewModel {
     /// place deciding what a capture is submitted through.
     public func result(for submission: ReceiptSubmission) -> ReceiptResultViewModel {
         ReceiptResultViewModel(parts: submission.parts, dependencies: dependencies)
+    }
+
+    /// The result screen's model for a manual entry — same type, same view,
+    /// opened straight on ``ReceiptResultState/manualEntry`` rather than on
+    /// ``ReceiptResultState/extracting``.
+    public func manualEntryModel() -> ReceiptResultViewModel {
+        ReceiptResultViewModel(enteringManuallyWith: dependencies)
     }
 
     /// Which problem, if any, stops these pages being a receipt.
