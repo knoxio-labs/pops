@@ -38,6 +38,8 @@ public struct ReceiptDraftView: View {
     private let complaints: ComplaintStyle
     private let merchants: [ReceiptMerchantChoice]
     private let secondaryAction: SecondaryAction?
+    private let addAnother: AddAnother?
+    private let isSaving: Bool
     private let save: ((ReceiptDraft) -> Void)?
 
     /// - Parameters:
@@ -61,6 +63,10 @@ public struct ReceiptDraftView: View {
     ///   - save: `nil` omits the action bar entirely, for the same reason: a
     ///     form inside a batch is not the thing that saves, and two Save
     ///     buttons on one screen is one of them lying about what it does.
+    ///   - addAnother: a second save beside Save that keeps the form open for
+    ///     the next purchase, under the same rule Save is.
+    ///   - isSaving: a save is in flight. Both saves hold, so a second tap
+    ///     cannot create a second purchase.
     public init(
         draft: ReceiptDraft,
         title: String? = nil,
@@ -70,6 +76,8 @@ public struct ReceiptDraftView: View {
         merchants: [ReceiptMerchantChoice] = [],
         parts: [ReceiptPart] = [],
         secondaryAction: SecondaryAction? = nil,
+        addAnother: AddAnother? = nil,
+        isSaving: Bool = false,
         save: ((ReceiptDraft) -> Void)? = nil
     ) {
         _draft = State(wrappedValue: draft)
@@ -80,6 +88,8 @@ public struct ReceiptDraftView: View {
         self.merchants = merchants
         self.parts = parts
         self.secondaryAction = secondaryAction
+        self.addAnother = addAnother
+        self.isSaving = isSaving
         self.save = save
     }
 
@@ -124,6 +134,18 @@ public struct ReceiptDraftView: View {
             self.heading = heading
             self.message = message
             self.caption = caption
+        }
+    }
+
+    /// Saves, and keeps the form open for another purchase.
+    ///
+    /// Not a ``SecondaryAction``: that one takes no draft and is not held by
+    /// the save rule, and this one is a save.
+    public struct AddAnother {
+        internal let action: (ReceiptDraft) -> Void
+
+        public init(action: @escaping (ReceiptDraft) -> Void) {
+            self.action = action
         }
     }
 
@@ -221,15 +243,28 @@ public struct ReceiptDraftView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    /// Whether either save can be pressed. Held while one is in flight, which
+    /// is half of what stops a double tap creating two purchases.
+    internal static func canSave(_ draft: ReceiptDraft, isSaving: Bool) -> Bool {
+        draft.isSaveable && !isSaving
+    }
+
     /// Save is the prominent one; whatever else can be done here sits beside
     /// it at the standard weight. Exactly the demotion this package's README
     /// describes for the moment the form replaces the read-only reading —
     /// "Photograph another" stops being what the screen is for.
     private var actions: some View {
         PopsActionBar {
-            PopsButton(ReceiptDraftCopy.save, prominence: .prominent) { save?(draft) }
-                .disabled(!draft.isSaveable)
-                .accessibilityIdentifier(ReceiptDraftAccessibility.saveButton)
+            PopsButton(
+                isSaving ? ReceiptDraftCopy.saving : ReceiptDraftCopy.save, prominence: .prominent
+            ) { save?(draft) }
+            .disabled(!Self.canSave(draft, isSaving: isSaving))
+            .accessibilityIdentifier(ReceiptDraftAccessibility.saveButton)
+            if let addAnother {
+                PopsButton(ReceiptDraftCopy.saveAndAddAnother) { addAnother.action(draft) }
+                    .disabled(!Self.canSave(draft, isSaving: isSaving))
+                    .accessibilityIdentifier(ReceiptDraftAccessibility.saveAndAddAnotherButton)
+            }
             if let secondaryAction {
                 PopsButton(secondaryAction.title, action: secondaryAction.action)
             }

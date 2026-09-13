@@ -29,6 +29,8 @@ public enum ReceiptDraftCopy {
     internal static let unreconciledMessage =
         "The items below don't sum to the printed total. Check them against the receipt "
         + "before saving."
+    internal static let saveAndAddAnother = "Save and add another"
+    internal static let saving = "Saving"
 
     // MARK: sections
 

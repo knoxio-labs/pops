@@ -6,17 +6,14 @@ import SwiftUI
 /// Where one purchase in the batch came from.
 ///
 /// Carried rather than inferred from the draft. A receipt for a single unnamed
-/// item reads back almost blank and a purchase typed by hand starts blank, and
-/// neither is a receipt nothing could be read off.
+/// item reads back almost blank, and it is not a receipt nothing could be read
+/// off. A purchase typed by hand never reaches this screen: see
+/// ``PurchaseHandEntryView``.
 internal enum ReviewOrigin: Hashable, Sendable {
     /// Read off paper, however well.
     case read
     /// Paper nothing could be read off. Its form arrives empty and says why.
     case unreadable
-    /// Typed by hand from the capture menu. No paper, so no pages above the
-    /// form and no sentence explaining the emptiness: empty is what was asked
-    /// for.
-    case typed
 }
 
 /// One purchase waiting to be checked.
@@ -129,11 +126,8 @@ internal struct PurchaseReviewSurface: View {
         .safeAreaInset(edge: .bottom) { controls }
     }
 
-    /// `1 of 1` over a purchase somebody chose to type is a count of nothing.
     private var title: String {
-        if remaining.isEmpty { return "Nothing left" }
-        if remaining.count == 1, current?.origin == .typed { return "New purchase" }
-        return "\(position) of \(remaining.count)"
+        remaining.isEmpty ? "Nothing left" : "\(position) of \(remaining.count)"
     }
 
     /// `ReceiptDraftView` itself, not a second form. POPS-2455 was cancelled

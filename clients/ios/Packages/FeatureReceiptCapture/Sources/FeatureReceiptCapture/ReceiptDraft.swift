@@ -300,12 +300,24 @@ internal struct ReceiptDraftValue: Hashable, Sendable {
     /// Collapsing them loses the ability to say which of the two happened,
     /// which is the whole of what provenance is for.
     internal let extracted: String?
+    /// What the previous purchase typed by hand left here, when this form was
+    /// opened by Save and add another. Not read off paper, so not provenance;
+    /// not typed into this form either, so not an edit until it changes.
+    internal let carried: String?
     internal var value: String
 
     internal init(extracted: String?) {
         let trimmed = extracted?.trimmed
         self.extracted = trimmed?.isEmpty == true ? nil : trimmed
+        carried = nil
         value = self.extracted ?? ""
+    }
+
+    internal init(carried: String) {
+        let trimmed = carried.trimmed
+        extracted = nil
+        self.carried = trimmed.isEmpty ? nil : trimmed
+        value = self.carried ?? ""
     }
 
     /// The extractor produced something here.
@@ -314,7 +326,7 @@ internal struct ReceiptDraftValue: Hashable, Sendable {
     /// The reader has changed it. Compared trimmed, so a trailing space is
     /// not an edit — a keyboard artefact is not a correction, and treating it
     /// as one would mark half a form as human-authored.
-    internal var isEdited: Bool { value.trimmed != (extracted ?? "") }
+    internal var isEdited: Bool { value.trimmed != (extracted ?? carried ?? "") }
 
     internal var isEmpty: Bool { value.trimmed.isEmpty }
 }

@@ -27,4 +27,5 @@ internal enum ReceiptDraftAccessibility {
     /// What the screen says about whether the figures agree.
     internal static let reconciliation = "receipt-draft-reconciliation"
     internal static let saveButton = "receipt-draft-save"
+    internal static let saveAndAddAnotherButton = "receipt-draft-save-add-another"
 }

@@ -68,6 +68,22 @@ public struct ReceiptDraftPresentation: Sendable {
             currency: currency
         )
     }
+
+    /// The next blank form after a purchase typed by hand was saved with
+    /// Save and add another.
+    ///
+    /// Keeps the date and the currency: purchases typed in a row are usually
+    /// from the same day. Everything that identifies the purchase starts
+    /// empty, because a carried merchant would file the next purchase under
+    /// the last shop the moment somebody forgot to change it.
+    ///
+    /// The date is carried, not typed, so the new form does not open by naming
+    /// what is missing from it.
+    public func blankDraft(after previous: ReceiptDraft) -> ReceiptDraft {
+        var next = blankDraft(currency: previous.currency)
+        next.date = ReceiptDraftValue(carried: previous.date.value)
+        return next
+    }
 }
 
 extension ReceiptDraftPresentation {

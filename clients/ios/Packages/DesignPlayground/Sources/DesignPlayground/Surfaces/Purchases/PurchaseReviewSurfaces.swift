@@ -44,16 +44,6 @@ internal enum PurchaseReviewSurfaces {
         message: "Some of what came back does not check out."
     )
 
-    /// A purchase typed by hand: what the capture menu's `Enter it by hand`
-    /// opens. The same form as every other entry, with nothing in it.
-    internal static let typed = ReviewEntry(
-        id: "typed",
-        draft: drafts.blankDraft(currency: Fixtures.aud),
-        origin: .typed,
-        status: nil,
-        parts: []
-    )
-
     /// The standard three, for the states about what pressing Save does to a
     /// batch rather than about the batch.
     private static let batch: [ReviewEntry] = [
@@ -146,12 +136,6 @@ internal enum PurchaseReviewSurfaces {
                         failures: ReceiptPlaygroundFixtures.noLinesFailures,
                         status: needsReview)
                 ])
-            },
-            // No pages above it, no sentence, and not one red rule: nothing is
-            // missing from a form nobody has started. The merchant and total
-            // are named once something has been typed.
-            DesignState("typed", "Entered by hand") {
-                PurchaseReviewSurface(entries: [typed])
             },
             // Everything held still, and the button that was pressed saying
             // how far it has got instead of being pressable again.

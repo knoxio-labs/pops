@@ -93,7 +93,7 @@ internal struct PurchasesShellView: View {
         // whatever was typed without the question Cancel asks first.
         .sheet(isPresented: $typing) {
             NavigationStack {
-                PurchaseReviewSurface(entries: [PurchaseReviewSurfaces.typed])
+                PurchaseHandEntryView()
             }
             .interactiveDismissDisabled()
         }
