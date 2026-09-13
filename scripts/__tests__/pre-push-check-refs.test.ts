@@ -1,18 +1,7 @@
 /**
- * `.husky/pre-push` used to run its conflict check (`git merge-tree`) and
- * line-budget check against `HEAD`, having read the checked-out branch's
- * NAME to decide whether to skip. That is a different question from "what is
- * git about to push" whenever the pushed ref's local sha is not HEAD — a
- * branch already squash-merged into `main` while a DIFFERENT branch is being
- * pushed, `git push origin <sha>:refs/heads/x`, or several refs pushed at
- * once. `scripts/pre-push-check-refs.mjs` replaces that: it reads the actual
- * `<local ref> <local sha> <remote ref> <remote sha>` lines git hands the
- * hook on stdin, and refuses (rather than silently checking the wrong tree)
- * any pushed ref whose local sha is not HEAD.
- *
- * This suite drives the pure decision functions directly, `orchestrate()`
- * with a mocked `run` (to pin the exact command sequence and argv without
- * needing real git plumbing), and — the adversarial half — the real BINARY
+ * Covers `scripts/pre-push-check-refs.mjs`: the pure decision functions
+ * directly, `orchestrate()` with a mocked `run` (to pin the exact command
+ * sequence and argv without needing real git plumbing), and the real binary
  * against throwaway git repos, so a bug in main()'s wiring (e.g. reading
  * `process.cwd()` incorrectly, or building the wrong argv for the line-budget
  * check) cannot hide behind unit tests of the pure functions alone.
@@ -149,9 +138,6 @@ describe('planPushChecks', () => {
   });
 
   it('does not exempt a push where the LOCAL branch is named main but the destination is not', () => {
-    // The old hook read `git branch --show-current` — being on a locally
-    // named `main` used to exempt every push made from it. The fix keys on
-    // the remote side only.
     const plans = planPushChecks(
       [
         {

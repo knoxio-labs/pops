@@ -1,9 +1,7 @@
 # Husky runs this under `sh -e`, so an unguarded failing command aborts the push.
 #
-# Git hands this hook one `<local ref> <local sha> <remote ref> <remote sha>`
-# line per ref being pushed, on stdin — captured once, here, because two
-# separate node invocations below each need to read it and a pipe can only be
-# read once.
+# stdin (the pre-push ref list) is captured once here because two separate
+# node invocations below each need to read it and a pipe can only be read once.
 refs_input=$(cat)
 
 # The typecheck is scoped to what the push contains rather than run
@@ -17,11 +15,10 @@ refs_input=$(cat)
 # `run` on any doubt; the `|| output=...` below keeps that true even if node
 # itself cannot start.
 #
-# This typecheck necessarily runs `tsc -b` against the files on disk — the
-# checked-out worktree, i.e. HEAD — because there is no way to typecheck a
-# different commit without checking it out. scripts/pre-push-check-refs.mjs
-# (below) is what refuses a push whose pushed ref does not match HEAD, rather
-# than letting this typecheck silently vouch for a tree it never looked at.
+# This typecheck runs `tsc -b` against the working tree, i.e. HEAD — there is
+# no way to typecheck a different commit without checking it out. That is why
+# scripts/pre-push-check-refs.mjs (below) refuses any pushed ref whose sha is
+# not HEAD, rather than letting this typecheck vouch for a tree it never saw.
 output=$(printf '%s' "$refs_input" | node scripts/pre-push-scope.mjs) || output="run
 run"
 decision=$(printf '%s\n' "$output" | sed -n '1p')
@@ -91,13 +88,8 @@ else
   fi
 fi
 
-# The conflict check (`git merge-tree`) and the line-budget projection both
-# read git objects directly rather than the working tree, so — unlike the
-# typecheck above — they CAN be run against whatever commit is actually being
-# pushed, ref by ref, rather than against the worktree's checked-out HEAD.
-# scripts/pre-push-check-refs.mjs does that: it skips a ref only when the
-# REMOTE side is refs/heads/main (not when the local branch happens to be
-# named main), and refuses — rather than silently checking the wrong tree —
-# any pushed ref whose local sha is not HEAD, since the typecheck above never
-# looked at anything else.
+# Unlike the typecheck above, the conflict check (`git merge-tree`) and the
+# line-budget projection read git objects directly, so they can run against
+# whatever commit is actually being pushed rather than the worktree's HEAD.
+# scripts/pre-push-check-refs.mjs decides that, ref by ref.
 printf '%s' "$refs_input" | node scripts/pre-push-check-refs.mjs

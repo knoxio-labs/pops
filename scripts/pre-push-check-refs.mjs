@@ -5,50 +5,16 @@
  * (`scripts/ci/check-line-budget-headroom.mjs`) must run against, and run
  * them.
  *
- * THE DEFECT THIS REPLACES. The hook used to read `git branch --show-current`
- * and run both checks against `HEAD`, on the assumption that the branch
- * checked out in the worktree is the branch being pushed. That is false in
- * three ordinary shapes:
- *
- *   - The worktree is on a branch that was already squash-merged into `main`,
- *     and a DIFFERENT branch is being pushed (`git push origin
- *     other-branch`). The checks ran against the checked-out branch's stale
- *     HEAD, double-counting a change that already landed — reported here as
- *     `pillars/finance/app/src/lib/tags.ts` failing the line-budget check for
- *     a push that never touches the file.
- *   - `git push origin <sha>:refs/heads/x` — the pushed commit need not be
- *     HEAD, or even reachable from any local branch tip.
- *   - Several refs pushed in one command, each with its own local sha.
- *
- * The reverse of the observed bug is the dangerous direction: a push whose
- * ref is NOT the checked-out branch used to be silently exempted from both
- * checks (they always looked at HEAD, so a ref pushed at some other commit
- * was simply never asked about). This script closes that instead of widening
- * it — see `planPushChecks` below.
- *
- * WHY THE TYPECHECK ITSELF IS NOT RE-SCOPED HERE. `pnpm typecheck`
- * (`.husky/pre-push`, before this script runs) is `tsc -b` against files on
- * disk — it necessarily checks whatever the WORKTREE currently holds, which
- * is HEAD, not a `--head <sha>` argument the way the line-budget check
- * accepts one. There is no way to "typecheck a different commit" without
- * checking it out, and checking out a different commit inside someone's
- * worktree mid-push is a worse hazard than the one this script fixes. So
- * instead: whenever a pushed ref's local sha is not HEAD, this refuses the
- * push outright with a message telling the developer to check out or detach
- * onto that commit and push again — never a silent check against the wrong
- * tree, and never a silent skip either.
- *
- * WHAT COUNTS AS "PUSHING TO MAIN", the one case every check here is skipped
- * for: the REMOTE ref is `refs/heads/main`, not the locally checked-out
- * branch name. Reading the local branch name conflates "I am on main" with "I
- * am pushing to main" — two different questions, and the second is the one
- * that matters (pushing a topic branch onto `main` — e.g. a fast-forward
- * merge commit — must still exempt itself).
- *
- * Git's pre-push protocol (see githooks(5)): one line per ref being pushed,
+ * Git's pre-push protocol (githooks(5)): one line per ref being pushed,
  * `<local ref> <local sha> <remote ref> <remote sha>`, on stdin. A local sha
- * of all zeros is a delete — nothing is being added, so there is nothing to
- * check.
+ * of all zeros is a delete.
+ *
+ * Two rules that are not obvious from the code alone:
+ *   - A ref is skipped only when the REMOTE ref is `refs/heads/main` — not
+ *     when the locally checked-out branch happens to be named main.
+ *   - A pushed sha that is not HEAD is refused, never silently checked: the
+ *     typecheck that already ran (in `.husky/pre-push`, before this script)
+ *     only vouches for the working tree, i.e. HEAD.
  *
  * Usage: node scripts/pre-push-check-refs.mjs   (reads the pre-push stdin protocol)
  *        node scripts/pre-push-check-refs.mjs --self-test
@@ -125,21 +91,16 @@ export function parseRefUpdates(stdin) {
  */
 
 /**
- * The plan for each ref this push actually needs an opinion on.
+ * Decide, per pushed ref, whether the conflict/line-budget checks can run
+ * (`'check'`), must be refused (`'mismatch'`), or need nothing at all (a
+ * delete, or a push whose remote ref is `refs/heads/main`).
  *
- * A deletion (`localSha` all zeros) needs no opinion — nothing is being
- * added. A push whose remote ref IS `refs/heads/main` is exempt, matching
- * `.husky/pre-push`'s original `[ "$branch" = "main" ] && exit 0`, except
- * keyed on the destination git actually reports rather than on the branch the
- * worktree happens to be on.
- *
- * Everything else becomes `'check'` when its local sha equals the worktree's
- * current HEAD — the one case where `git merge-tree`/the line-budget
- * projection (both of which read git objects directly, not the working tree)
- * are guaranteed to agree with the `pnpm typecheck` that already ran against
- * HEAD's checked-out files — and `'mismatch'` otherwise: a push this hook
- * cannot safely validate without checking out a different commit, which it
- * refuses to do silently.
+ * A ref is `'check'` only when its local sha equals `headSha` — the one case
+ * where `git merge-tree`/the line-budget projection (which read git objects
+ * directly, not the working tree) are guaranteed to agree with the
+ * `pnpm typecheck` that already ran against the checked-out files. Anything
+ * else is `'mismatch'`: this hook refuses rather than silently validating a
+ * commit it never checked out.
  *
  * @param {RefUpdate[]} updates
  * @param {string | undefined} headSha
@@ -164,17 +125,11 @@ export function planPushChecks(updates, headSha) {
   return plans;
 }
 
-// ---------------------------------------------------------------------------
-// Git plumbing / orchestration.
-// ---------------------------------------------------------------------------
-
 /**
  * @param {string[]} args
- * @param {string} cwd The repo being pushed — `process.cwd()` for a real
- *   invocation (husky always runs from the repo root), or a fixture
- *   directory under test. Never this script's OWN location: those two are
- *   the same in production, but conflating them is exactly the "operates on
- *   the wrong tree" bug this file exists to avoid repeating.
+ * @param {string} cwd The repo being pushed — `process.cwd()` in production
+ *   (husky always runs from the repo root), or a fixture directory under
+ *   test. Never this script's own location.
  * @returns {string}
  */
 function git(args, cwd) {
@@ -329,10 +284,6 @@ function main() {
   process.exit(code);
 }
 
-// ---------------------------------------------------------------------------
-// Self-test
-// ---------------------------------------------------------------------------
-
 /**
  * @returns {string}
  */
@@ -445,7 +396,6 @@ function selfTest() {
       headSha
     ).length === 1;
 
-  // --- orchestrate(): the mismatch refuses loudly, never runs a check -------
   {
     /** @type {string[]} */
     const errLines = [];
@@ -476,7 +426,6 @@ function selfTest() {
     );
   }
 
-  // --- orchestrate(): a clean check runs fetch, merge-tree, then the budget check ---
   {
     /** @type {{ cmd: string, args: string[] }[]} */
     const ran = [];
@@ -509,7 +458,6 @@ function selfTest() {
       ran[2]?.args[ran[2].args.indexOf('--head') + 1] === headSha;
   }
 
-  // --- orchestrate(): a merge-tree conflict stops before the budget check ---
   {
     /** @type {{ cmd: string, args: string[] }[]} */
     const ran = [];
@@ -542,7 +490,6 @@ function selfTest() {
     );
   }
 
-  // --- end-to-end: a real repo, a real invocation of the actual binary -----
   const dir = tmpRepo();
   try {
     writeFileSync(join(dir, 'a.ts'), 'const a = 1;\n');
@@ -559,9 +506,6 @@ function selfTest() {
       encoding: 'utf8',
     }).trim();
 
-    // The worktree is back on `topic` at `topicSha` (HEAD), but the stdin
-    // protocol claims a push of a DIFFERENT ref at the ROOT commit — the
-    // "several refs, only one checked out" and "sha != HEAD" shapes at once.
     const stdin = `refs/heads/other ${root} refs/heads/other 0000000000000000000000000000000000000000\n`;
     const result = spawnSync('node', [join(repoRoot, 'scripts', 'pre-push-check-refs.mjs')], {
       cwd: dir,
@@ -572,8 +516,6 @@ function selfTest() {
     checks['end-to-end: a ref pushed at a sha other than HEAD is refused, not silently checked'] =
       result.status === 1 && result.stderr.includes(`git checkout ${root}`);
 
-    // The same stdin, but claiming the ref actually checked out (topic at its
-    // own HEAD) — this must proceed to the real checks rather than refusing.
     const stdinMatching = `refs/heads/topic ${topicSha} refs/heads/topic 0000000000000000000000000000000000000000\n`;
     const resultMatching = spawnSync(
       'node',
