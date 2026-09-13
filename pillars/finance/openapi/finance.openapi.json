@@ -25154,6 +25154,26 @@
                             "enum": ["exact", "contains", "regex"],
                             "type": "string"
                           },
+                          "overlaps": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "descriptionPattern": {
+                                  "type": "string"
+                                },
+                                "kind": {
+                                  "enum": ["contradicts", "redundant"],
+                                  "type": "string"
+                                },
+                                "ruleId": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["ruleId", "descriptionPattern", "kind"],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
                           "priority": {
                             "type": "number"
                           },
@@ -25179,7 +25199,8 @@
                           "timesApplied",
                           "createdAt",
                           "lastUsedAt",
-                          "ledgerMatchStatus"
+                          "ledgerMatchStatus",
+                          "overlaps"
                         ],
                         "type": "object"
                       },
@@ -27447,6 +27468,26 @@
                           "enum": ["exact", "contains", "regex"],
                           "type": "string"
                         },
+                        "overlaps": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "descriptionPattern": {
+                                "type": "string"
+                              },
+                              "kind": {
+                                "enum": ["contradicts", "redundant"],
+                                "type": "string"
+                              },
+                              "ruleId": {
+                                "type": "string"
+                              }
+                            },
+                            "required": ["ruleId", "descriptionPattern", "kind"],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
                         "priority": {
                           "type": "number"
                         },
@@ -27472,7 +27513,8 @@
                         "timesApplied",
                         "createdAt",
                         "lastUsedAt",
-                        "ledgerMatchStatus"
+                        "ledgerMatchStatus",
+                        "overlaps"
                       ],
                       "type": "object"
                     }

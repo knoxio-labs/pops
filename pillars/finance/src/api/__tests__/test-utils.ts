@@ -291,6 +291,7 @@ interface TagRule {
 /** {@link TagRule} plus the ledger-match verdict `list`/`get` add (POPS-2941). */
 interface TagRuleWithLedgerStatus extends TagRule {
   ledgerMatchStatus: 'matched' | 'unused' | 'broken';
+  overlaps: { ruleId: string; descriptionPattern: string; kind: 'contradicts' | 'redundant' }[];
 }
 
 interface Correction {
