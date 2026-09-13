@@ -1,6 +1,8 @@
 import { useCallback, useMemo, useState } from 'react';
 
 import { useImportStore } from '../../../store/importStore';
+import { batchRuleTempIds, rulesStepHasProposals } from '../rule-creation/utils';
+import { COMMIT_STEP } from '../step-labels';
 import { assembleTagReviewOutput } from './assembleTagReviewOutput';
 import { groupByEntity } from './tagReviewUtils';
 import { usePreviewTransactions } from './usePreviewTransactions';
@@ -78,27 +80,59 @@ function useTagRuleWorkflow(deps: TagRuleWorkflowDeps) {
   return { dialog, handleTagRuleApplied };
 }
 
-/** Flushes the step's working copy of the tags into the store before advancing. */
-function useHandleContinue(
-  localTags: Record<string, string[]>,
-  updateTransactionTags: ImportStoreType['updateTransactionTags'],
-  nextStep: () => void
-) {
+type ContinueDeps = Pick<
+  ImportStoreType,
+  | 'confirmedTransactions'
+  | 'pendingTagRuleChangeSets'
+  | 'updateTransactionTags'
+  | 'nextStep'
+  | 'goToStep'
+  | 'removePendingTagRuleChangeSet'
+>;
+
+/**
+ * Flushes the step's working copy of the tags into the store, then advances —
+ * past the Rules step when, on the tags as reviewed here, it has nothing to
+ * offer. Rules an earlier visit to that step staged go with it: nothing
+ * proposes them any more, and no later step would drop them.
+ */
+function useHandleContinue(localTags: Record<string, string[]>, deps: ContinueDeps) {
+  const {
+    confirmedTransactions,
+    pendingTagRuleChangeSets,
+    updateTransactionTags,
+    nextStep,
+    goToStep,
+    removePendingTagRuleChangeSet,
+  } = deps;
   return useCallback(() => {
     for (const [checksum, tags] of Object.entries(localTags)) updateTransactionTags(checksum, tags);
-    nextStep();
-  }, [localTags, updateTransactionTags, nextStep]);
+    const reviewed = confirmedTransactions.map((t) => ({
+      ...t,
+      tags: localTags[t.checksum] ?? t.tags,
+    }));
+    if (rulesStepHasProposals(reviewed, pendingTagRuleChangeSets)) {
+      nextStep();
+      return;
+    }
+    for (const tempId of batchRuleTempIds(pendingTagRuleChangeSets)) {
+      removePendingTagRuleChangeSet(tempId);
+    }
+    goToStep(COMMIT_STEP);
+  }, [
+    localTags,
+    confirmedTransactions,
+    pendingTagRuleChangeSets,
+    updateTransactionTags,
+    nextStep,
+    goToStep,
+    removePendingTagRuleChangeSet,
+  ]);
 }
 
 export function useTagReviewState(): UseTagReviewStateOutput {
   const store = useImportStore();
-  const {
-    confirmedTransactions,
-    updateTransactionTags,
-    nextStep,
-    prevStep,
-    addPendingTagRuleChangeSet,
-  } = store;
+  const { confirmedTransactions, prevStep, addPendingTagRuleChangeSet } = store;
 
   const { localTags, setLocalTags, suggestedTagMeta, setSuggestedTagMeta } =
     useLocalTagsSync(confirmedTransactions);
@@ -114,7 +148,7 @@ export function useTagReviewState(): UseTagReviewStateOutput {
     suggestedTagMeta,
     confirmedTransactions,
   });
-  const handleContinue = useHandleContinue(localTags, updateTransactionTags, nextStep);
+  const handleContinue = useHandleContinue(localTags, store);
   const { dialog, handleTagRuleApplied } = useTagRuleWorkflow({
     localTags,
     suggestedTagMeta,

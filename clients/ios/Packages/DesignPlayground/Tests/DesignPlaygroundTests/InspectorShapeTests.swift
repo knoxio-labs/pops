@@ -62,20 +62,19 @@ internal struct InspectorShapeTests {
         )
     }
 
-    /// The bar keeps its capsule, and that is the same invariant rather than an
-    /// exception to it: one row tall, a capsule's round end still clears the
-    /// controls inside it.
-    @Test("the bar's capsule clears the controls inside it")
-    func barCoversItsContent() {
-        let bounds = CGRect(x: 0, y: 0, width: 361, height: InspectorShape.barHeight)
-        let path = InspectorShape.bar.path(in: bounds)
-        let inset = InspectorShape.barPadding
+    /// The strip is the exception, and deliberately: it clips its content to
+    /// its own shape, because with twenty variants the chips scroll under its
+    /// ends and a shape that only sits behind them would let one draw outside.
+    @Test("the strip's capsule clears a chip resting at its content inset")
+    func stripClearsItsRestingContent() {
+        let bounds = CGRect(x: 0, y: 0, width: 361, height: InspectorShape.elementHeight)
+        let path = InspectorShape.strip.path(in: bounds)
 
         for corner in [
-            CGPoint(x: bounds.minX + InspectorShape.contentInset, y: bounds.minY + inset),
-            CGPoint(x: bounds.maxX - InspectorShape.contentInset, y: bounds.maxY - inset),
+            CGPoint(x: bounds.minX + InspectorShape.contentInset, y: bounds.midY),
+            CGPoint(x: bounds.maxX - InspectorShape.contentInset, y: bounds.midY),
         ] {
-            #expect(path.contains(corner), "the bar's glass misses \(corner)")
+            #expect(path.contains(corner), "the strip's glass misses \(corner)")
         }
     }
 }

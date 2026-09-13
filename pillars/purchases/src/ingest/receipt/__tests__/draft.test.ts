@@ -172,10 +172,28 @@ describe('shapeReceiptDraft — what the reading could not settle', () => {
     expect(draft.items.map((item) => item.name)).toEqual(['Timber Pine DAR 42x19']);
   });
 
-  it('falls back to the default currency when the receipt stated none', () => {
+  it('infers an unstated currency from the zone, and marks it uncertain', () => {
+    // A Sydney address is a real signal, so the draft carries AUD — but as a
+    // guess, tagged, rather than as something the receipt said.
     const { draft } = shape({ currency: null });
 
     expect(draft.currency).toBe('AUD');
+    expect(draft.tags).toContain('currency-uncertain');
+  });
+
+  it('leaves a currency nothing could resolve as unresolved, not AUD', () => {
+    // No stated currency and no zone: the old default would have filed a BRL
+    // slip as AUD, off by roughly three times (POPS-3570).
+    const { draft } = shape({ currency: null, address: null, timeZone: null });
+
+    expect(draft.currency).toBe('XXX');
+    expect(draft.tags).toContain('currency-uncertain');
+  });
+
+  it('does not mark a currency the receipt stated', () => {
+    const { draft } = shape();
+
+    expect(draft.tags).not.toContain('currency-uncertain');
   });
 });
 

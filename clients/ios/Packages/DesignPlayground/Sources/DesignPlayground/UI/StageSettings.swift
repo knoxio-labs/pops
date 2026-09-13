@@ -15,13 +15,25 @@ internal struct StageSettings {
     var typeSize: DynamicTypeSize = .playgroundDefault
     var rightToLeft = false
 
-    /// True when anything has been moved off the surface's own defaults —
-    /// what the collapsed inspector badges, so a reviewer never forgets they
-    /// are looking at AX5 in dark and reports it as a bug.
+    /// What has been moved off the surface's own defaults, shortest first.
+    ///
+    /// What the inspector reports, so a reviewer never forgets they are
+    /// looking at AX5 in dark and files it as a bug. One list rather than a
+    /// predicate here and a summary in the view: they are the same question,
+    /// and asking it twice is how they drifted — the summary treated any
+    /// appearance other than ``Appearance/light`` as "Dark", so a surface left
+    /// on System reported itself as dark, and one actually set to Light
+    /// reported no appearance at all.
+    func modifications(from surface: DesignSurface) -> [String] {
+        var parts: [String] = []
+        if appearance != .system { parts.append(appearance.title) }
+        if typeSize != .playgroundDefault { parts.append(typeSize.playgroundLabel) }
+        if rightToLeft { parts.append("RTL") }
+        if chrome != surface.chrome { parts.append(chrome.title) }
+        return parts
+    }
+
     func isModified(from surface: DesignSurface) -> Bool {
-        chrome != surface.chrome
-            || appearance != .system
-            || typeSize != .playgroundDefault
-            || rightToLeft
+        !modifications(from: surface).isEmpty
     }
 }

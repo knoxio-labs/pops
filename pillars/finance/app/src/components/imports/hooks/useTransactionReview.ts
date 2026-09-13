@@ -147,8 +147,20 @@ export function useTransactionReview() {
   const { localTransactions, setLocalTransactions, applyReevaluatedResult } =
     useSyncedLocalTransactions(processedTransactions);
   const [viewMode, setViewMode] = useState<ViewMode>('grouped');
+  const [blockedOnly, setBlockedOnly] = useState(false);
   const initialTab = localTransactions.uncertain.length > 0 ? 'uncertain' : 'matched';
   const { activeTab, handleTabChange } = useTabWithScrollMemory(initialTab);
+
+  /**
+   * Put the rows that will not commit in front of the user: the Matched tab,
+   * ungrouped (a blocked row is invisible inside a collapsed group) and
+   * filtered to them alone. What the drop notice points at (POPS-3659).
+   */
+  const showBlockedRows = useCallback(() => {
+    setViewMode('list');
+    setBlockedOnly(true);
+    handleTabChange('matched');
+  }, [handleTabChange]);
 
   const { isReevaluating } = useReevalOnChangeSets(applyReevaluatedResult, pendingChangeSets, via);
 
@@ -175,6 +187,9 @@ export function useTransactionReview() {
     applyReevaluatedResult,
     viewMode,
     setViewMode,
+    blockedOnly,
+    setBlockedOnly,
+    showBlockedRows,
     activeTab,
     handleTabChange,
     unresolvedCount,

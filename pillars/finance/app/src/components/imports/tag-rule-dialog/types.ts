@@ -18,6 +18,11 @@ export interface TagRuleLearnSignal {
   matchType: 'exact' | 'contains' | 'regex';
   entityId: string | null;
   tags: string[];
+  /**
+   * The rows the dialog opened on share no descriptor text specific enough to
+   * match on, so `descriptionPattern` is empty rather than guessed.
+   */
+  noCommonDescriptor?: boolean;
 }
 
 export interface TagRuleProposalDialogProps {

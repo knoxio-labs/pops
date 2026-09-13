@@ -14,10 +14,10 @@
  */
 import { parseAmountCents } from '../money.js';
 import { resolveCapture } from './capture.js';
+import { CURRENCY_UNCERTAIN, resolveCurrency } from './currency.js';
 import {
   captureInput,
   DATE_UNCERTAIN,
-  DEFAULT_CURRENCY,
   occurredAt,
   offsetAt,
   TIMEZONE_UNCERTAIN,
@@ -131,9 +131,15 @@ export function shapeReceiptDraft(
   const stated = occurredAt(extracted, capture.timeReference);
   const orderedAt = stated ?? capture.capturedAt ?? uploadedAt;
 
+  // The same resolution the upload path uses (POPS-3570): a currency the
+  // receipt did not state is inferred or left unresolved, and marked, never
+  // defaulted to AUD on the draft route either.
+  const resolvedCurrency = resolveCurrency(extracted);
+
   const tags = [
     ...(stated === null ? [DATE_UNCERTAIN] : []),
     ...(capture.zoneCertain ? [] : [TIMEZONE_UNCERTAIN]),
+    ...(resolvedCurrency.uncertain ? [CURRENCY_UNCERTAIN] : []),
   ];
 
   const locale = { currency: extracted.currency };
@@ -146,7 +152,7 @@ export function shapeReceiptDraft(
     merchantEntityName: extracted.merchantName,
     orderedAt,
     orderedAtOffsetMinutes: offsetAt(orderedAt, capture.timeReference),
-    currency: extracted.currency ?? DEFAULT_CURRENCY,
+    currency: resolvedCurrency.currency,
     subtotalCents: gate.lineTotalCents,
     taxCents: gate.taxIncluded ? 0 : gate.taxCents,
     surchargeCents: gate.surchargeCents,

@@ -10,9 +10,9 @@
  * before" rather than "show me this order", and only the write path calls
  * them.
  */
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 
-import { purchases } from '../schema.js';
+import { purchaseTags, purchases } from '../schema.js';
 import { canonicalInstant } from './ordered-at.js';
 
 import type { PurchaseRow } from '../schema.js';
@@ -75,13 +75,27 @@ export interface ShopMoment {
   readonly orderedAt: string;
   readonly totalCents: number;
   readonly currency: string;
+  /**
+   * The tag marking a currency nobody transcribed, or `null` when this
+   * upload's currency came off the paper.
+   *
+   * An inferred or unresolved receipt currency can read differently
+   * between two photographs of the very same paper, so comparing values
+   * would miss the re-upload this lookup exists to catch. Comparing
+   * nothing is worse: an unrelated receipt that DID state its currency,
+   * at the same stated minute for the same cents, would be refused as a
+   * duplicate. So an uncertain upload is matched only against rows that
+   * are equally uncertain — rows carrying this tag — and no currency
+   * values are compared on either side.
+   */
+  readonly uncertainCurrencyTag: string | null;
 }
 
 export function findPurchaseAtInstantForAmount(
   db: PurchasesDb,
   moment: ShopMoment
 ): PurchaseRow | undefined {
-  const { source, orderedAt, totalCents, currency } = moment;
+  const { source, orderedAt, totalCents, currency, uncertainCurrencyTag } = moment;
   return db
     .select()
     .from(purchases)
@@ -92,8 +106,20 @@ export function findPurchaseAtInstantForAmount(
         eq(purchases.totalCents, totalCents),
         // Cents are a number without one. 3000 is $30.00 and ¥3000, and a
         // traveller can hold both — refusing the second as a duplicate of
-        // the first would lose a real shop.
-        eq(purchases.currency, currency)
+        // the first would lose a real shop. When neither side transcribed
+        // a currency there is nothing to compare, so the match narrows to
+        // the other equally-untranscribed rows instead (see above).
+        ...(uncertainCurrencyTag === null
+          ? [eq(purchases.currency, currency)]
+          : [
+              inArray(
+                purchases.id,
+                db
+                  .select({ id: purchaseTags.purchaseId })
+                  .from(purchaseTags)
+                  .where(eq(purchaseTags.tag, uncertainCurrencyTag))
+              ),
+            ])
       )
     )
     .all()[0];

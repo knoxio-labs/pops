@@ -149,14 +149,23 @@ const REQUIRED_FACETS = new Set<string>(['occasion', 'contains']);
  */
 const SPEND_ONLY_FACETS = new Set<string>(['venue', 'occasion', 'contains']);
 
-export const FACET_EXPECTATIONS: readonly FacetExpectation[] = CLASSIFIED_TAG_FACETS.map(
-  (closed) => ({
-    facet: closed.facet,
-    required: REQUIRED_FACETS.has(closed.facet),
-    spendOnly: SPEND_ONLY_FACETS.has(closed.facet),
-    exclusions: EXCLUSIONS_BY_FACET[closed.facet] ?? [],
-  })
-);
+/**
+ * The facets coverage measures. Named rather than derived from
+ * {@link CLASSIFIED_TAG_FACETS}: that list is what the categorizer may write,
+ * and `hobby` is on it (POPS-3675) without being something a row is expected to
+ * carry. Deriving the measured set from it would report nearly every spend row as
+ * missing a hobby.
+ */
+const MEASURED_FACETS = new Set<string>(['venue', 'occasion', 'contains', 'channel', 'fee']);
+
+export const FACET_EXPECTATIONS: readonly FacetExpectation[] = CLASSIFIED_TAG_FACETS.filter(
+  (closed) => MEASURED_FACETS.has(closed.facet)
+).map((closed) => ({
+  facet: closed.facet,
+  required: REQUIRED_FACETS.has(closed.facet),
+  spendOnly: SPEND_ONLY_FACETS.has(closed.facet),
+  exclusions: EXCLUSIONS_BY_FACET[closed.facet] ?? [],
+}));
 
 /** True when `enrich:` marks the row as waiting on an enrichment provider. */
 export function isEnrichBlocked(tags: string[]): boolean {

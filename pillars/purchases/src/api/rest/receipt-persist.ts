@@ -11,6 +11,7 @@ import {
   getPurchase,
   upsertSource,
 } from '../../db/index.js';
+import { CURRENCY_UNCERTAIN } from '../../ingest/receipt/currency.js';
 import { DATE_UNCERTAIN, RECEIPT_SOURCE_ID } from '../../ingest/receipt/purchase.js';
 import { tryMapServiceError } from './error-mapping.js';
 
@@ -71,17 +72,29 @@ type Persisted =
  * moment of upload, which differs between two uploads of the same receipt —
  * so it would never match, and matching on it would be wrong anyway, since
  * two undated receipts uploaded in the same second are not one receipt.
+ *
+ * Currency is treated the same way when `CURRENCY_UNCERTAIN` is set. An
+ * inferred or unresolved currency depends on how legibly THIS photograph's
+ * address read — one shot of a receipt can resolve `BRL` and a blurrier
+ * second shot of the same paper can fall through to `XXX` — so matching on
+ * the value would miss the very re-upload this check exists to catch and
+ * silently double-count the spend. The match is narrowed to the rows that
+ * are equally untranscribed rather than dropping currency altogether,
+ * which would let a receipt that DID state its currency be refused as a
+ * duplicate of one that did not.
  */
 export function sameShopAlreadyRecorded(
   db: PurchasesDb,
   purchase: CreatePurchaseInput
 ): { id: string } | undefined {
   if (purchase.tags?.includes(DATE_UNCERTAIN) === true) return undefined;
+  const currencyUncertain = purchase.tags?.includes(CURRENCY_UNCERTAIN) === true;
   return findPurchaseAtInstantForAmount(db, {
     source: RECEIPT_SOURCE_ID,
     orderedAt: purchase.orderedAt,
     totalCents: purchase.totalCents,
     currency: purchase.currency,
+    uncertainCurrencyTag: currencyUncertain ? CURRENCY_UNCERTAIN : null,
   });
 }
 

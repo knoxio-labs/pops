@@ -1,11 +1,13 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { type ReactElement } from 'react';
 import { toast } from 'sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { elementAt } from '../../test-utils';
 import { TagRuleProposalDialog } from './TagRuleProposalDialog';
+
+import type { TagRuleLearnSignal } from './TagRuleProposalDialog';
 
 // ---------------------------------------------------------------------------
 // Hoisted finance SDK mocks (referenced inside vi.mock factories)
@@ -295,5 +297,61 @@ describe('TagRuleProposalDialog', () => {
     // The regression was an `sm:gap-0` override cancelling the base gap at sm and up.
     expect(classes).not.toContain('sm:gap-0');
     expect(classes.filter((c) => /(^|:)gap-0$/.test(c))).toEqual([]);
+  });
+});
+
+describe('TagRuleProposalDialog — no common descriptor (POPS-255)', () => {
+  beforeEach(() => {
+    mockPropose.mockReset();
+    mockPropose.mockResolvedValue({ data: baseProposal, error: undefined });
+  });
+
+  function renderWithSignal(overrides: Partial<TagRuleLearnSignal>) {
+    return render(
+      withClient(
+        <TagRuleProposalDialog
+          open={true}
+          onOpenChange={vi.fn()}
+          signal={{ ...signal, ...overrides }}
+          previewTransactions={[{ checksum: 't1', description: 'WOOLWORTHS 1234', entityId: null }]}
+        />
+      )
+    );
+  }
+
+  it('says why the pattern is empty and links to the merchant’s default tags', async () => {
+    renderWithSignal({ descriptionPattern: '', noCommonDescriptor: true, entityId: 'sauna-id' });
+
+    const hint = await screen.findByTestId('no-common-descriptor');
+    expect(hint.textContent).toMatch(/share no descriptor text/i);
+    const link = within(hint).getByRole('link', { name: /default tags/i });
+    expect(link.getAttribute('href')).toBe('/finance/entities/sauna-id');
+    expect(link.getAttribute('target')).toBe('_blank');
+    expect(mockPropose).not.toHaveBeenCalled();
+  });
+
+  it('offers no merchant link when the rows have no merchant', async () => {
+    renderWithSignal({ descriptionPattern: '', noCommonDescriptor: true, entityId: null });
+
+    const hint = await screen.findByTestId('no-common-descriptor');
+    expect(within(hint).queryByRole('link')).toBeNull();
+  });
+
+  it('drops the hint once a pattern is typed', async () => {
+    renderWithSignal({ descriptionPattern: '', noCommonDescriptor: true, entityId: 'sauna-id' });
+    await screen.findByTestId('no-common-descriptor');
+
+    fireEvent.change(screen.getByLabelText('Description pattern'), { target: { value: 'MCLUU' } });
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('no-common-descriptor')).toBeNull();
+    });
+  });
+
+  it('shows no hint when a pattern was derived', async () => {
+    renderWithSignal({ noCommonDescriptor: false });
+
+    expect(await screen.findByText(/contains:WOOLWORTHS/i)).toBeDefined();
+    expect(screen.queryByTestId('no-common-descriptor')).toBeNull();
   });
 });
