@@ -11,6 +11,7 @@ import { and, eq, isNull } from 'drizzle-orm';
 import { InvalidPatternError, UnmatchablePatternError } from '../errors.js';
 import { transactionTagRules } from '../schema.js';
 import { mergeTagsWithinFacetLimits, parseStoredTags } from '../tag-facets.js';
+import { assertTagRuleWritable } from './tag-rule-write-guards.js';
 import {
   isValidRegexPattern,
   normalizePatternForStorage,
@@ -165,6 +166,7 @@ export function createOrReinforceTransactionTagRule(
   db: FinanceDb,
   input: CreateTransactionTagRuleInput
 ): TagRuleWriteResult {
+  assertTagRuleWritable(input);
   if (input.matchType === 'regex' && !isValidRegexPattern(input.descriptionPattern)) {
     throw new InvalidPatternError(input.descriptionPattern);
   }
