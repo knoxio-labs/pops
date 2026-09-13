@@ -3,14 +3,15 @@ import { BookmarkPlus, ChevronDown, ChevronRight } from 'lucide-react';
 import { Button, ButtonPrimitive } from '@pops/ui';
 
 import { describeTag } from '../../../lib/tags';
-import { TagBadgeRow } from '../../tags/TagChip';
 import { GroupTagBar } from './GroupTagBar';
+import { GroupTagsPreview } from './GroupTagsPreview';
 import { TransactionTagRow } from './TransactionTagRow';
 import { useEntityGroupState } from './useEntityGroupState';
 
 import type { ConfirmedTransaction } from '@pops/finance';
 
 import type { TagFacetOption } from '../../../lib/tags';
+import type { TagMetaEntry } from '../../tag-editor/utils';
 import type { ConfirmedGroup } from './tagReviewUtils';
 import type { EntityGroupStateInput } from './useEntityGroupState';
 
@@ -26,13 +27,14 @@ interface HeaderProps {
   expanded: boolean;
   currentUnion: string[];
   suggestedUnion: string[];
+  tagSources: ReadonlyMap<string, readonly TagMetaEntry[]>;
   onToggle: () => void;
   onApplySuggestions: () => void;
   onSaveTagRule: () => void;
 }
 
 function GroupHeader(props: HeaderProps) {
-  const { group, expanded, currentUnion, suggestedUnion } = props;
+  const { group, expanded, currentUnion, suggestedUnion, tagSources } = props;
   return (
     <div className="flex items-center justify-between gap-3 px-4 py-3 bg-muted/40">
       <Button
@@ -51,7 +53,7 @@ function GroupHeader(props: HeaderProps) {
         <span className="text-xs text-muted-foreground">({group.transactions.length})</span>
       </Button>
       <div className="flex items-center gap-2 flex-shrink-0">
-        <CurrentTagsPreview currentUnion={currentUnion} />
+        <GroupTagsPreview tags={currentUnion} sources={tagSources} />
         {suggestedUnion.length > 0 && (
           <ButtonPrimitive
             variant="outline"
@@ -84,18 +86,6 @@ function GroupHeader(props: HeaderProps) {
   );
 }
 
-function CurrentTagsPreview({ currentUnion }: { currentUnion: string[] }) {
-  if (currentUnion.length === 0) return null;
-  return (
-    <TagBadgeRow
-      tags={currentUnion}
-      limit={3}
-      className="hidden sm:flex gap-1 flex-wrap max-w-48"
-      badgeClassName="text-xs"
-    />
-  );
-}
-
 export function EntityGroup(props: EntityGroupProps) {
   const {
     group,
@@ -116,6 +106,7 @@ export function EntityGroup(props: EntityGroupProps) {
         expanded={s.expanded}
         currentUnion={s.currentUnion}
         suggestedUnion={s.suggestedUnion}
+        tagSources={s.tagSources}
         onToggle={() => s.setExpanded((prev) => !prev)}
         onApplySuggestions={s.handleApplySuggestions}
         onSaveTagRule={() => onSaveTagRule(group)}

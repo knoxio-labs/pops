@@ -4,7 +4,7 @@ import { Badge, Button, type ButtonProps, Popover, PopoverContent, PopoverTrigge
 
 import { orderTagsByFacet } from '../lib/tags';
 import { cn } from '../lib/utils';
-import { SOURCE_ICONS } from './tag-editor/sourceMeta';
+import { SOURCE_ICONS, sourceTooltip } from './tag-editor/sourceMeta';
 import { TagEditorPanel } from './tag-editor/TagEditorPanel';
 import { type PanelHandlers, useTagEditorState } from './tag-editor/useTagEditorState';
 import { type TagEditorProps, type TagMetaEntry, type TagSource } from './tag-editor/utils';
@@ -15,12 +15,6 @@ export type { PanelHandlers, TagEditorProps, TagMetaEntry, TagSource };
 interface TriggerProps extends Omit<ButtonProps, 'children'> {
   tags: string[];
   tagMeta?: Map<string, TagMetaEntry>;
-}
-
-function tooltipFor(meta: TagMetaEntry | undefined): string | undefined {
-  if (meta?.source === 'rule' && meta?.pattern) return `Rule: "${meta.pattern}"`;
-  if (meta?.source) return `${meta.source} suggestion`;
-  return undefined;
 }
 
 /**
@@ -57,7 +51,7 @@ const TriggerContent = forwardRef<HTMLButtonElement, TriggerProps>(
                 variant="outline"
                 colored
                 className="text-2xs uppercase tracking-wider font-bold py-0 px-1.5"
-                context={tooltipFor(meta)}
+                context={sourceTooltip(meta)}
                 prefix={meta ? `${SOURCE_ICONS[meta.source]} ` : undefined}
               />
             );
