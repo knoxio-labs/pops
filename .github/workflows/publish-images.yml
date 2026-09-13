@@ -56,6 +56,12 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # The build step runs scripts/ci/docker-build-retry.mjs, so Node is pinned
+      # rather than taken from the runner image.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
       - name: Log in to GHCR
         uses: docker/login-action@v4
         with:
@@ -78,17 +84,26 @@ jobs:
             type=semver,pattern={{major}}
             type=semver,pattern=v{{major}}
 
+      # A registry 5xx or a lost BuildKit blob fails one leg while the rest of
+      # the fleet publishes, leaving it on mixed revisions (POPS-3425). The
+      # wrapper retries only those signatures; a real build failure still fails
+      # on the first attempt. Tags and labels arrive through env, never
+      # interpolated into the script.
       - name: Build and push ${{ matrix.app.image }}
         if: ${{ inputs.only == '' || inputs.only == matrix.app.image }}
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          file: ${{ matrix.app.file }}
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          build-args: |
-            BUILD_VERSION=${{ github.sha }}
+        env:
+          IMAGE: ${{ matrix.app.image }}
+          DOCKERFILE: ${{ matrix.app.file }}
+          TAGS: ${{ steps.meta.outputs.tags }}
+          LABELS: ${{ steps.meta.outputs.labels }}
+          BUILD_VERSION: ${{ github.sha }}
+        run: |
+          args=()
+          while IFS= read -r tag; do [ -n "$tag" ] && args+=(--tag "$tag"); done <<< "$TAGS"
+          while IFS= read -r label; do [ -n "$label" ] && args+=(--label "$label"); done <<< "$LABELS"
+          node scripts/ci/docker-build-retry.mjs --label "$IMAGE" -- \
+            docker buildx build --push --file "$DOCKERFILE" \
+            --build-arg "BUILD_VERSION=$BUILD_VERSION" "${args[@]}" .
 
   discover:
     name: Discover publishable pillars
@@ -148,6 +163,12 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # The build step runs scripts/ci/docker-build-retry.mjs, so Node is pinned
+      # rather than taken from the runner image.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
       - name: Log in to GHCR
         uses: docker/login-action@v4
         with:
@@ -171,12 +192,16 @@ jobs:
             type=semver,pattern=v{{major}}
 
       - name: Build and push pops-${{ matrix.pillar }}
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          file: pillars/${{ matrix.pillar }}/Dockerfile
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          build-args: |
-            BUILD_VERSION=${{ github.sha }}
+        env:
+          IMAGE: pops-${{ matrix.pillar }}
+          DOCKERFILE: pillars/${{ matrix.pillar }}/Dockerfile
+          TAGS: ${{ steps.meta.outputs.tags }}
+          LABELS: ${{ steps.meta.outputs.labels }}
+          BUILD_VERSION: ${{ github.sha }}
+        run: |
+          args=()
+          while IFS= read -r tag; do [ -n "$tag" ] && args+=(--tag "$tag"); done <<< "$TAGS"
+          while IFS= read -r label; do [ -n "$label" ] && args+=(--label "$label"); done <<< "$LABELS"
+          node scripts/ci/docker-build-retry.mjs --label "$IMAGE" -- \
+            docker buildx build --push --file "$DOCKERFILE" \
+            --build-arg "BUILD_VERSION=$BUILD_VERSION" "${args[@]}" .
