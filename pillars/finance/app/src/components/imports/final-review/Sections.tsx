@@ -86,7 +86,7 @@ export interface TxnBreakdown {
   manual: number;
   skipped: number;
   total: number;
-  /** Rows committing with no merchant — left unassigned, or entity-optional (POPS-3748). */
+  /** Rows committing with no merchant. */
   noMerchant: number;
 }
 

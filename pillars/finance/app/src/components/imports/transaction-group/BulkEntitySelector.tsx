@@ -37,9 +37,9 @@ export interface BulkEntitySelectorProps {
 /** The bulk forced-type prompt's message, naming the pending pick or the leave-unassigned choice. */
 function bulkPromptMessage(pending: PendingAssignment, count: number): string {
   if (pending.kind === 'none') {
-    return `At least one of these is a credit with no type yet — choose one to leave all ${count} transactions unassigned.`;
+    return `At least one of these is a credit with no type yet. Choose one to leave all ${count} transactions unassigned.`;
   }
-  return `At least one of these is a credit with no type yet — choose one to finish assigning “${pending.entityName}” to all ${count} transactions.`;
+  return `At least one of these is a credit with no type yet. Choose one to finish assigning “${pending.entityName}” to all ${count} transactions.`;
 }
 
 type BulkAssignmentControlsProps = Pick<

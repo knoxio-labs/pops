@@ -1176,7 +1176,6 @@ describe('ReviewStep — committed count + dropped-rows notice (#3765, POPS-3748
     };
     render(reviewStepTree());
 
-    // Both rows commit now — an entity-less purchase is not dropped (POPS-3748).
     expect(screen.getByText('Continue to Tag Review (2)')).toBeInTheDocument();
     expect(screen.queryByText(/won't be imported/)).toBeNull();
   });

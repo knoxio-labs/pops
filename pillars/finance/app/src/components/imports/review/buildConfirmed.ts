@@ -11,11 +11,7 @@ import type {
 
 import type { ProcessedTransaction } from '../../../store/importStore';
 
-/**
- * Why a matched row cannot be committed as it stands, or `null` when it can.
- * `'entity'` now means a placeholder (`pending:contact:*`) merchant, not a
- * missing one — see {@link dropReason}.
- */
+/** Why a matched row cannot be committed as it stands, or `null` when it can. */
 export type DropReason = 'entity' | 'type';
 
 /**
@@ -35,16 +31,12 @@ export function needsTransactionType(t: {
 /**
  * Why a matched row would be dropped at commit, or `null` when it commits.
  *
- * A **purchase** or **refund** (or an unset/unknown type) with no merchant is no
- * longer dropped for that alone (POPS-3748) — the wizard has a "leave
- * unassigned" action for exactly this, and the server already stores a `null`
- * entity. What is still dropped is a `pending:contact:` id: it is not a
- * resolved merchant however complete the `{ entityId, entityName }` pair
- * looks, since it is the placeholder a commit wrote when contacts could not
- * be reached, and a correction rule carrying one hands it to every future
- * import of the same merchant. Committing on it writes a transaction whose
- * entity resolves to nothing (POPS-2692) — the one case where "has an
- * entityId" is worse than having none.
+ * A row with no merchant commits with a `null` entity. A `pending:contact:` id
+ * does not: it is not a resolved merchant however complete the
+ * `{ entityId, entityName }` pair looks, since it is the placeholder a commit
+ * wrote when contacts could not be reached, and a correction rule carrying one
+ * hands it to every future import of the same merchant. Committing on it
+ * writes a transaction whose entity resolves to nothing (POPS-2692).
  *
  * A **credit** (amount >= 0) additionally needs a type of its own. The pillar
  * refuses to store one without it rather than defaulting to `purchase`

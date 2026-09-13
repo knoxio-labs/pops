@@ -415,7 +415,7 @@ describe('dropReason — an untyped credit is never committed as spend (POPS-275
     expect(dropReason(matched())).toBeNull();
   });
 
-  it('commits an untyped debit left unassigned — no merchant is no longer a drop reason (POPS-3748)', () => {
+  it('commits an untyped debit with no merchant', () => {
     expect(dropReason(matched({ entity: { matchType: 'none' } }))).toBeNull();
   });
 

@@ -23,7 +23,7 @@ type GenerateProposal = (args: {
 
 export interface MoveArgs {
   transaction: ProcessedTransaction;
-  /** Omitted together with `entityName` for `matchType: 'none'` — the row is left with no merchant (POPS-3748). */
+  /** Omitted, with `entityName`, for `matchType: 'none'`: the row has no merchant. */
   entityId?: string;
   entityName?: string;
   matchType: 'manual' | 'ai' | 'none';
@@ -37,9 +37,9 @@ export interface MoveArgs {
 }
 
 /**
- * Move a transaction into the `matched` bucket with the chosen entity — or
- * with none at all, for `matchType: 'none'` (POPS-3748's "leave unassigned") —
- * removing any prior copy of it from every bucket first.
+ * Move a transaction into the `matched` bucket with the chosen entity, or with
+ * none for `matchType: 'none'`, removing any prior copy of it from every
+ * bucket first.
  *
  * Thin wrapper around the canonical `replaceByChecksum` identity (#3590/#3620):
  * any prior copy of the checksum is dropped from every bucket — including
@@ -192,16 +192,9 @@ function useHandleEntitySelect({
 }
 
 /**
- * Resolve a row with deliberately no merchant (POPS-3748): the row moves to
- * `matched` exactly like an entity pick does, just with `entityId`/`entityName`
- * left off and `matchType: 'none'` recorded instead of `'manual'`/`'ai'` — the
- * same provenance value an entity-optional type (a transfer, say) already
- * carries, and the value `buildConfirmed`'s commit filter and the draft
- * write-through already round-trip without a new field.
- *
- * A credit still forces the type choice first — `EntitySection` routes here
- * through the same pending-assignment machinery as an entity pick, so leaving
- * a credit unassigned can never skip `needsTransactionType`.
+ * Resolve a row with no merchant. A credit reaches here only through the same
+ * forced-type prompt as an entity pick, so it cannot skip
+ * `needsTransactionType`.
  */
 function useHandleLeaveUnassigned({
   setLocalTransactions,

@@ -104,11 +104,7 @@ interface EntitySectionProps {
     transactionType?: TransactionType
   ) => void;
   onAcceptAiSuggestion?: (transaction: ProcessedTransaction) => void;
-  /**
-   * Resolve the row with deliberately no merchant (POPS-3748) — moves it to
-   * `matched` with `entityId`/`entityName` left off, same as an entity pick
-   * would. Omitted, the action does not render at all.
-   */
+  /** Resolve the row with no merchant. Omitted, the action does not render. */
   onLeaveUnassigned?: (
     transaction: ProcessedTransaction,
     transactionType?: TransactionType
@@ -120,18 +116,14 @@ function isLeftUnassigned(transaction: ProcessedTransaction): boolean {
   return transaction.status === 'matched' && transaction.entity?.matchType === 'none';
 }
 
-/**
- * Says a matched row carries no merchant on purpose, so it does not read as
- * still unresolved (POPS-3748) — the picker below stays available to change
- * that before commit.
- */
+/** Marks a matched row with no merchant as resolved rather than pending. */
 function UnassignedNotice() {
   return (
     <div
       role="status"
       className="mb-2 p-2 rounded-md border text-xs text-muted-foreground bg-muted/40"
     >
-      Unassigned — no merchant on this transaction. Pick one below if it needs one.
+      Unassigned: no merchant on this transaction. Pick one below if it needs one.
     </div>
   );
 }

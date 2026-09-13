@@ -57,12 +57,7 @@ export function useBulkTypedAssignment(args: UseBulkTypedAssignmentArgs) {
     }
   };
 
-  /**
-   * Leaves every transaction in the group unassigned (POPS-3748). There is no
-   * bulk-optimized store write for this the way `onBulkEntitySelect` is for a
-   * pick — each row's own `onLeaveUnassigned` call, looped, is the whole
-   * operation.
-   */
+  /** Loops the per-row action: unlike a pick, there is no bulk store write for this. */
   const applyLeaveUnassigned = (transactionType?: TransactionType) => {
     for (const t of group.transactions) {
       onLeaveUnassigned(t, needsTransactionType(t) ? transactionType : undefined);

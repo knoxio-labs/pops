@@ -23,7 +23,7 @@ export interface TypedEntityPickerProps {
     entityName: string,
     transactionType?: TransactionType
   ) => void;
-  /** Resolve the row with deliberately no merchant (POPS-3748). Omitted, the action does not render. */
+  /** Resolve the row with no merchant. Omitted, the action does not render. */
   onLeaveUnassigned?: (
     transaction: ProcessedTransaction,
     transactionType?: TransactionType
@@ -33,9 +33,9 @@ export interface TypedEntityPickerProps {
 /** The forced-type prompt's message, naming the pending pick or the leave-unassigned choice. */
 function promptMessage(pending: PendingAssignment): string {
   if (pending.kind === 'none') {
-    return 'This is a credit with no type yet — choose one to leave it unassigned.';
+    return 'This is a credit with no type yet. Choose one to leave it unassigned.';
   }
-  return `This is a credit with no type yet — choose one to finish assigning “${pending.entityName}”.`;
+  return `This is a credit with no type yet. Choose one to finish assigning “${pending.entityName}”.`;
 }
 
 function LeaveUnassignedButton({ onClick }: { onClick: () => void }) {
