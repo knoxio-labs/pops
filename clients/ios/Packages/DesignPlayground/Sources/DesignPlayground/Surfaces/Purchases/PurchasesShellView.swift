@@ -27,6 +27,7 @@ internal struct PurchasesShellView: View {
     @State private var query: String
     @State private var searching: Bool
     @State private var selected: Int
+    @State private var typing = false
 
     internal init(
         purchases: [Purchase],
@@ -88,6 +89,14 @@ internal struct PurchasesShellView: View {
                 // of it instead of under it.
                 .safeAreaInset(edge: .bottom, alignment: .trailing) { captureControl }
         }
+        // A sheet with its swipe turned off. Swiping it away would throw out
+        // whatever was typed without the question Cancel asks first.
+        .sheet(isPresented: $typing) {
+            NavigationStack {
+                PurchaseReviewSurface(entries: [PurchaseReviewSurfaces.typed])
+            }
+            .interactiveDismissDisabled()
+        }
     }
 
     /// A circle rather than a labelled button, matched in size to the search
@@ -123,6 +132,7 @@ internal struct PurchasesShellView: View {
                 Label("Choose a file", systemImage: "folder")
             }
             Button {
+                typing = true
             } label: {
                 Label("Enter it by hand", systemImage: "square.and.pencil")
             }

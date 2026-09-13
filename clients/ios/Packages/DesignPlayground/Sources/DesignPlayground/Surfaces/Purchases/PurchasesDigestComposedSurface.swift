@@ -47,7 +47,9 @@ internal struct PurchasesDigestComposedSurface: View {
         ScrollView {
             VStack(alignment: .leading, spacing: PopsSpacing.xl) {
                 hero
-                if !unsettled.isEmpty { unmatched }
+                if !unsettled.isEmpty {
+                    DigestUnmatchedStrip(purchases: purchases, markSize: markSize)
+                }
                 leaderboard
                 recent
             }
@@ -132,37 +134,6 @@ internal struct PurchasesDigestComposedSurface: View {
         return totals.count > 1 ? "\(purchases) in \(totals.count) currencies" : purchases
     }
 
-    private var unmatched: some View {
-        HStack(spacing: PopsSpacing.md) {
-            HStack(spacing: -PopsSpacing.sm) {
-                ForEach(unsettled.prefix(3)) { purchase in
-                    PurchaseMark(purchase: purchase, size: markSize)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: PopsRadius.control)
-                                .strokeBorder(
-                                    Color.popsBackground, lineWidth: PopsBorder.emphasis)
-                        )
-                }
-            }
-            VStack(alignment: .leading, spacing: PopsSpacing.xs) {
-                Text("\(unsettled.count) unmatched")
-                    .font(.popsHeadline)
-                    .foregroundStyle(Color.popsForeground)
-                Text("Nothing in finance explains these yet.")
-                    .font(.popsCaption)
-                    .foregroundStyle(Color.popsMutedForeground)
-                    .lineLimit(2)
-            }
-            Spacer(minLength: PopsSpacing.sm)
-            Image(systemName: "chevron.right")
-                .font(.popsCaption)
-                .foregroundStyle(Color.popsMutedForeground)
-        }
-        .padding(PopsSpacing.md)
-        .playgroundGlass(in: RoundedRectangle(cornerRadius: PopsRadius.card))
-        .contentShape(.rect)
-    }
-
     /// `Grouped`'s ranked rows with the bar taken out, so the numeral carries
     /// the ranking and a till name gets the full width of the row minus its
     /// amount.
@@ -239,7 +210,14 @@ internal struct PurchasesDigestComposedSurface: View {
             }
             .padding(.horizontal, PopsSpacing.md)
             .playgroundGlass(in: RoundedRectangle(cornerRadius: PopsRadius.card))
-            seeAll
+            if !purchases.isEmpty {
+                NavigationLink {
+                    PurchasesArchiveView(loaded: purchases, paging: .end)
+                } label: {
+                    seeAll
+                }
+                .buttonStyle(.plain)
+            }
         }
     }
 

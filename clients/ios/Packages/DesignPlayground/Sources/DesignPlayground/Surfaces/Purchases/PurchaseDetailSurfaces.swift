@@ -53,6 +53,26 @@ internal enum PurchaseDetailSurfaces {
         PurchasesFixtures.history.first { $0.id == id } ?? PurchasesFixtures.history[0]
     }
 
+    /// Any row of the history as a detail, so a row opened from the archive
+    /// lands somewhere. No lines: the fixtures itemise only the purchases
+    /// staged here, and an invented line would be a claim about a purchase
+    /// nobody made. A detail with no lines is already a layout this screen
+    /// carries.
+    internal static func sample(for purchase: Purchase) -> PurchaseDetail {
+        let none = MoneyAmount(minorUnits: 0, currencyCode: purchase.total.currencyCode)
+        return PurchaseDetail(
+            purchase: purchase,
+            subtotal: purchase.total,
+            tax: none,
+            shipping: none,
+            discount: none,
+            surcharge: none,
+            source: purchase.receiptURI ?? "pops://purchases/manual",
+            lines: [],
+            pages: purchase.receiptURI == nil ? [] : [page(0, "Page 1")]
+        )
+    }
+
     internal static let surface = DesignSurface(
         id: SurfaceID(area: "purchases", slug: "detail"),
         title: "Purchase",

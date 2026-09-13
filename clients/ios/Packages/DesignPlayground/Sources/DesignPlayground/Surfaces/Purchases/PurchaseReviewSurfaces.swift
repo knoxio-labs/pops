@@ -29,7 +29,7 @@ internal enum PurchaseReviewSurfaces {
         return ReviewEntry(
             id: id,
             draft: draft,
-            wasUnreadable: extracted == nil,
+            origin: extracted == nil ? .unreadable : .read,
             status: status,
             parts: ReceiptPlaygroundPaper.pages(pages)
         )
@@ -43,6 +43,24 @@ internal enum PurchaseReviewSurfaces {
         heading: "Needs review",
         message: "Some of what came back does not check out."
     )
+
+    /// A purchase typed by hand: what the capture menu's `Enter it by hand`
+    /// opens. The same form as every other entry, with nothing in it.
+    internal static let typed = ReviewEntry(
+        id: "typed",
+        draft: drafts.blankDraft(currency: Fixtures.aud),
+        origin: .typed,
+        status: nil,
+        parts: []
+    )
+
+    /// The standard three, for the states about what pressing Save does to a
+    /// batch rather than about the batch.
+    private static let batch: [ReviewEntry] = [
+        entry("e1", extracted: ReceiptPlaygroundFixtures.tillNamesExtracted),
+        entry("e2", extracted: ReceiptPlaygroundFixtures.typicalExtracted, pages: 3),
+        entry("e3", extracted: ReceiptPlaygroundFixtures.hardwareExtracted),
+    ]
 
     internal static let review = DesignSurface(
         id: SurfaceID(area: "purchases", slug: "review"),
@@ -128,6 +146,44 @@ internal enum PurchaseReviewSurfaces {
                         failures: ReceiptPlaygroundFixtures.noLinesFailures,
                         status: needsReview)
                 ])
+            },
+            // No pages above it, no sentence, and not one red rule: nothing is
+            // missing from a form nobody has started. The merchant and total
+            // are named once something has been typed.
+            DesignState("typed", "Entered by hand") {
+                PurchaseReviewSurface(entries: [typed])
+            },
+            // Everything held still, and the button that was pressed saying
+            // how far it has got instead of being pressable again.
+            DesignState("saving", "Saving, one of three done") {
+                PurchaseReviewSurface(entries: batch, saving: .saving(done: 1))
+            },
+            // Two written and gone from the batch; the third refused by
+            // something a retry can get past.
+            DesignState("save-failed-partway", "Two saved, the third refused") {
+                PurchaseReviewSurface(
+                    entries: batch,
+                    saving: .failed(
+                        id: "e3", reason: "The purchases service didn't answer.", retryable: true),
+                    written: 2)
+            },
+            DesignState("save-failed-offline", "Nothing saved, no connection") {
+                PurchaseReviewSurface(
+                    entries: batch,
+                    saving: .failed(
+                        id: "e1", reason: "No connection, so nothing was saved.", retryable: true))
+            },
+            // The refusal a retry cannot get past: the checksum says this
+            // paper is already a purchase. Save holds until it is discarded,
+            // and the banner is what explains the held button.
+            DesignState("save-duplicate", "One is already a purchase") {
+                PurchaseReviewSurface(
+                    entries: batch,
+                    saving: .failed(
+                        id: "e2",
+                        reason: "This receipt is already a purchase. Discard it to save the rest.",
+                        retryable: false),
+                    written: 1)
             },
         ]
     )

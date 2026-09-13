@@ -3,14 +3,27 @@ import DesignSystem
 import FeatureReceiptCapture
 import SwiftUI
 
+/// Where one purchase in the batch came from.
+///
+/// Carried rather than inferred from the draft. A receipt for a single unnamed
+/// item reads back almost blank and a purchase typed by hand starts blank, and
+/// neither is a receipt nothing could be read off.
+internal enum ReviewOrigin: Hashable, Sendable {
+    /// Read off paper, however well.
+    case read
+    /// Paper nothing could be read off. Its form arrives empty and says why.
+    case unreadable
+    /// Typed by hand from the capture menu. No paper, so no pages above the
+    /// form and no sentence explaining the emptiness: empty is what was asked
+    /// for.
+    case typed
+}
+
 /// One purchase waiting to be checked.
 internal struct ReviewEntry: Identifiable {
     internal let id: String
     internal let draft: ReceiptDraft
-    /// Nothing could be read off this one, so its form arrived empty. Carried
-    /// rather than inferred from the draft being blank, because a receipt for
-    /// a single unnamed item is blank too and is not the same thing.
-    internal let wasUnreadable: Bool
+    internal let origin: ReviewOrigin
     internal let status: ReceiptDraftView.Status?
     internal let parts: [ReceiptPart]
 }
@@ -33,8 +46,7 @@ internal struct ReviewEntry: Identifiable {
 /// ## Saving is the batch; discarding is not
 ///
 /// There is one Save, and it creates every purchase still in the batch. That
-/// is what makes the step a step: a half-saved batch has no state anybody
-/// could describe, and `POST /receipts` writing nothing until then
+/// is what makes the step a step: `POST /receipts` writing nothing until then
 /// (POPS-3646) is what allows one moment to mean "all of this is right".
 ///
 /// Discard is per purchase, because a blurred photograph is one receipt's
@@ -44,12 +56,16 @@ internal struct ReviewEntry: Identifiable {
 /// There is no third way out. Nothing here is kept as a draft anywhere —
 /// there is nowhere to keep it and no surface to find it again — so leaving
 /// with work unsaved would be a promise the app cannot keep.
+///
+/// ## Saving can stop partway
+///
+/// See ``ReviewSaving``. What was written leaves the batch, and the refused
+/// purchase is put on screen with its reason. Offering to discard a purchase
+/// that now exists would be a lie about what Cancel does.
 internal struct PurchaseReviewSurface: View {
     internal let entries: [ReviewEntry]
-    /// Defaults to what `review-complaint-density` decided. The experiment's
-    /// own variants pass the others.
-    internal var complaints: ReceiptDraftView.ComplaintStyle = .hintsOnly
-    internal var merchants: [ReceiptMerchantChoice] = PurchaseMerchantFixtures.all
+    internal let complaints: ReceiptDraftView.ComplaintStyle
+    internal let merchants: [ReceiptMerchantChoice]
 
     @Environment(\.dismiss) private var dismiss
     @State private var index = 0
@@ -60,9 +76,28 @@ internal struct PurchaseReviewSurface: View {
     /// this is not a record of what was read — nothing can be — it is a record
     /// of what was put in front of somebody.
     @State private var visited: Set<String> = []
+    @State private var saving: ReviewSaving
+    /// Purchases an earlier attempt created, and which have left the batch.
+    @State private var written: Int
+
+    /// `complaints` defaults to what `review-complaint-density` decided; the
+    /// experiment's own variants pass the others.
+    internal init(
+        entries: [ReviewEntry],
+        complaints: ReceiptDraftView.ComplaintStyle = .hintsOnly,
+        merchants: [ReceiptMerchantChoice] = PurchaseMerchantFixtures.all,
+        saving: ReviewSaving = .idle,
+        written: Int = 0
+    ) {
+        self.entries = entries
+        self.complaints = complaints
+        self.merchants = merchants
+        _saving = State(initialValue: saving)
+        _written = State(initialValue: written)
+    }
 
     private var remaining: [ReviewEntry] {
-        entries.filter { !discarded.contains($0.id) }
+        ReviewBatch.remaining(entries, discarded: discarded, written: written)
     }
 
     private var current: ReviewEntry? {
@@ -84,7 +119,7 @@ internal struct PurchaseReviewSurface: View {
         .background(Color.popsBackground)
         .onAppear { markSeen() }
         .onChange(of: index) { markSeen() }
-        .navigationTitle(remaining.isEmpty ? "Nothing left" : "\(position) of \(remaining.count)")
+        .navigationTitle(title)
         .playgroundTitleDisplay(large: false)
         .playgroundLeadingBarItem { cancel }
         // An inset, not an overlay. An overlay reserves nothing, so the last
@@ -92,6 +127,13 @@ internal struct PurchaseReviewSurface: View {
         // scroll past them; an inset takes the height out of the scroll's safe
         // area and the content clears it.
         .safeAreaInset(edge: .bottom) { controls }
+    }
+
+    /// `1 of 1` over a purchase somebody chose to type is a count of nothing.
+    private var title: String {
+        if remaining.isEmpty { return "Nothing left" }
+        if remaining.count == 1, current?.origin == .typed { return "New purchase" }
+        return "\(position) of \(remaining.count)"
     }
 
     /// `ReceiptDraftView` itself, not a second form. POPS-2455 was cancelled
@@ -107,10 +149,12 @@ internal struct PurchaseReviewSurface: View {
             // checking the purchase is words where the receipt should be. An
             // unreadable one still needs its sentence, because an empty form
             // with no explanation reads as a form that failed to load.
-            subtitle: entry.wasUnreadable
+            subtitle: entry.origin == .unreadable
                 ? "Nothing could be read off this one. The paper is stored, so fill in what it says."
                 : nil,
-            status: entry.status,
+            // A refused save outranks the gate's complaint: that one is a
+            // reason to look, and this one is the thing that went wrong.
+            status: saving.notice(for: entry.id) ?? entry.status,
             complaints: complaints,
             merchants: merchants,
             parts: entry.parts
@@ -119,7 +163,10 @@ internal struct PurchaseReviewSurface: View {
     }
 
     private var nothingLeft: some View {
-        EmptyStateView(message: "Every purchase in this batch was discarded.")
+        EmptyStateView(
+            message: written == 0
+                ? "Every purchase in this batch was discarded."
+                : "\(written) saved. The rest were discarded.")
     }
 
     // MARK: Getting about
@@ -152,7 +199,7 @@ internal struct PurchaseReviewSurface: View {
                 .padding(PopsSpacing.sm)
         }
         .playgroundGlassButton()
-        .disabled(back ? position == 1 : position == remaining.count)
+        .disabled(saving.isInFlight || (back ? position == 1 : position == remaining.count))
         .accessibilityLabel(back ? "Previous purchase" : "Next purchase")
     }
 
@@ -166,7 +213,7 @@ internal struct PurchaseReviewSurface: View {
                 .padding(PopsSpacing.sm)
         }
         .playgroundGlassButton()
-        .disabled(remaining.isEmpty)
+        .disabled(remaining.isEmpty || saving.isInFlight)
         .accessibilityLabel("Discard this purchase")
         .confirmationDialog(
             "Discard this purchase?", isPresented: $discarding, titleVisibility: .visible
@@ -183,15 +230,13 @@ internal struct PurchaseReviewSurface: View {
     /// finish — the count on the button is what says how many they are
     /// committing to.
     private var save: some View {
-        Button {
-        } label: {
-            Label(saveTitle, systemImage: "checkmark")
-                .font(.popsHeadline)
-                .padding(.horizontal, PopsSpacing.sm)
-                .padding(.vertical, PopsSpacing.xs)
+        ReviewSaveButton(
+            saving: saving,
+            count: remaining.count,
+            blocked: remaining.isEmpty || !unseenFlagged.isEmpty || saving.blocksSave
+        ) {
+            saving = .saving(done: 0)
         }
-        .playgroundProminentGlassButton()
-        .disabled(remaining.isEmpty || !unseenFlagged.isEmpty)
     }
 
     /// Flagged readings that have not been on screen yet.
@@ -210,9 +255,12 @@ internal struct PurchaseReviewSurface: View {
     }
 
     /// Says what is holding Save, and goes to it. A disabled button with no
-    /// explanation is the thing this exists to avoid.
+    /// explanation is the thing this exists to avoid. Once a save has written
+    /// some, the same place says how many.
     @ViewBuilder private var gate: some View {
-        if let next = unseenFlagged.first, !remaining.isEmpty {
+        if saving.isInFlight {
+            EmptyView()
+        } else if let next = unseenFlagged.first, !remaining.isEmpty {
             Button {
                 if let target = remaining.firstIndex(where: { $0.id == next.id }) {
                     index = target
@@ -229,6 +277,8 @@ internal struct PurchaseReviewSurface: View {
             }
             .playgroundGlassButton()
             .tint(Color.popsWarning)
+        } else if written > 0 {
+            ReviewSavedTally(saved: written)
         }
     }
 
@@ -237,16 +287,13 @@ internal struct PurchaseReviewSurface: View {
         visited.insert(current.id)
     }
 
-    private var saveTitle: String {
-        remaining.count == 1 ? "Save" : "Save all \(remaining.count)"
-    }
-
     private var cancel: some View {
         Button {
             cancelling = true
         } label: {
             Image(systemName: "xmark")
         }
+        .disabled(saving.isInFlight)
         .accessibilityLabel("Cancel")
         .confirmationDialog(
             cancelTitle, isPresented: $cancelling, titleVisibility: .visible
@@ -254,7 +301,10 @@ internal struct PurchaseReviewSurface: View {
             Button("Discard them all", role: .destructive) { dismiss() }
             Button("Keep checking", role: .cancel) {}
         } message: {
-            Text("Nothing has been saved yet, so all of it goes.")
+            Text(
+                written == 0
+                    ? "Nothing has been saved yet, so all of it goes."
+                    : ReviewSaving.alreadySaved(written))
         }
     }
 
@@ -263,8 +313,12 @@ internal struct PurchaseReviewSurface: View {
             ? "Discard this purchase?" : "Discard all \(remaining.count) purchases?"
     }
 
+    /// Discarding the purchase a save was refused on clears the refusal. It
+    /// was about that purchase, and leaving its banner or its hold on Save
+    /// behind would be a complaint about something no longer in the batch.
     private func dropCurrent() {
         guard let current else { return }
+        if saving.failedID == current.id { saving = .idle }
         discarded.insert(current.id)
         index = min(index, max(remaining.count - 1, 0))
     }
