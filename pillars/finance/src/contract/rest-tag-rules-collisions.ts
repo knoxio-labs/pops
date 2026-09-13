@@ -10,6 +10,11 @@ import { TagRuleChangeSetSchema } from './rest-tag-rules-schemas.js';
 export const TagRuleAddCollisionSchema = z.object({
   ruleId: z.string(),
   existingTags: z.array(z.string()),
+  /**
+   * `false` when that rule is disabled. Committing the `add` re-enables it, so
+   * a caller must say so rather than present the merge as a plain one.
+   */
+  isActive: z.boolean(),
 });
 
 export const ResolveTagRuleAddCollisionsBody = z.object({

@@ -52,6 +52,8 @@ export interface BuildSuggestedTagsOptions {
   correctionTags: string[];
   aiTags?: string[];
   aiCategory: string | null;
+  /** The prompt revision that produced `aiTags` (POPS-3677). */
+  aiPromptVersion?: string;
   knownTags: string[];
   correctionPattern?: string;
   /** `contactId → defaultTags` from the per-run contacts fetch (entity source). */
@@ -76,6 +78,7 @@ export function buildSuggestedTags(db: FinanceDb, opts: BuildSuggestedTagsOption
     entityId: opts.entityId,
     aiTags: opts.aiTags,
     aiCategory: opts.aiCategory,
+    aiPromptVersion: opts.aiPromptVersion,
     knownTags: opts.knownTags,
     correctionTags: opts.correctionTags,
     correctionPattern: opts.correctionPattern,

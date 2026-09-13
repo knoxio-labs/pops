@@ -10,6 +10,13 @@ export * as tagVocabularyService from '../services/tag-vocabulary.js';
 
 export { type TagVocabularyRow, type TagVocabularySource } from '../services/tag-vocabulary.js';
 
+export * as aiTagSuggestionOutcomesService from '../services/ai-tag-suggestion-outcomes.js';
+
+export type {
+  AiTagSuggestionOutcome,
+  RecordAiTagSuggestionOutcomeInput,
+} from '../services/ai-tag-suggestion-outcomes.js';
+
 export * as tagRuleRejectionsService from '../services/tag-rule-rejections.js';
 
 export {

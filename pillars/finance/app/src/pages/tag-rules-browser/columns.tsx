@@ -4,6 +4,7 @@ import { Badge, Button, formatDate, SortableHeader } from '@pops/ui';
 
 import { TagChip } from '../../components/tags/TagChip';
 import { orderTagsByFacet } from '../../lib/tags';
+import { PatternCell } from './PatternCell';
 
 import type { ColumnDef } from '@tanstack/react-table';
 
@@ -22,20 +23,7 @@ type BuildOptions = {
 const patternColumn: ColumnDef<TagRule> = {
   accessorKey: 'descriptionPattern',
   header: ({ column }) => <SortableHeader column={column}>Pattern</SortableHeader>,
-  cell: ({ row }) => (
-    <div className="flex items-center gap-2">
-      <span className="font-mono text-sm">{row.original.descriptionPattern}</span>
-      {row.original.ledgerMatchStatus === 'broken' && (
-        <Badge
-          variant="outline"
-          className="border-destructive text-destructive"
-          title="This pattern matches no transaction in the ledger — it can never fire"
-        >
-          Never matches
-        </Badge>
-      )}
-    </div>
-  ),
+  cell: ({ row }) => <PatternCell rule={row.original} />,
 };
 
 const matchTypeColumn: ColumnDef<TagRule> = {

@@ -77,6 +77,8 @@ export interface MatchedFromEntityArgs {
   entry: EntityLookupEntry;
   matchType: 'alias' | 'exact' | 'prefix' | 'contains' | 'ai';
   aiTags?: string[];
+  /** The prompt revision that produced `aiTags` (POPS-3677). */
+  aiPromptVersion?: string;
   category?: string | null;
   /** Model-reported confidence, carried onto the entity for `matchType: 'ai'` only. */
   confidence?: number;
@@ -119,6 +121,7 @@ export function buildFromEntityMatch(
       entityId: args.entry.id,
       correctionTags: [],
       aiTags: args.aiTags,
+      aiPromptVersion: args.aiPromptVersion,
       aiCategory: args.category ?? null,
       knownTags: args.knownTags,
       entityDefaultTags: args.entityDefaultTags,
@@ -131,6 +134,8 @@ export interface UncertainFromAiArgs {
   entityName: string;
   aiTags: string[];
   aiCategory: string | null;
+  /** The prompt revision that produced `aiTags` (POPS-3677). */
+  aiPromptVersion?: string;
   /** The model's reported confidence (0.0-1.0) that `entityName` is correct (CF037/#3655). */
   confidence: number;
   knownTags: string[];
@@ -149,6 +154,7 @@ export function buildUncertainFromAi(
       entityId: null,
       correctionTags: [],
       aiTags: args.aiTags,
+      aiPromptVersion: args.aiPromptVersion,
       aiCategory: args.aiCategory,
       knownTags: args.knownTags,
     }),

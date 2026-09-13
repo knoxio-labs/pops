@@ -155,7 +155,7 @@ export function FinalReviewStep() {
       {state.commitError && <CommitErrorPanel error={state.commitError} />}
       <ActionFooter
         isCommitting={state.isCommitting}
-        onBack={state.prevStep}
+        onBack={state.goBack}
         onCommit={state.openConfirm}
       />
       <CommitConfirmDialog

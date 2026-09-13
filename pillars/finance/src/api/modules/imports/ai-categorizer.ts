@@ -36,6 +36,11 @@ import {
   isAiCategorizerEnabled,
 } from './ai-categorizer-config.js';
 import { AiCategorizationError } from './ai-categorizer-error.js';
+import {
+  PROMPT_VERSION_CATEGORIZE,
+  PROMPT_VERSION_CATEGORIZE_BATCH,
+  PROMPT_VERSION_TAGS_ONLY,
+} from './ai-categorizer-prompt.js';
 import { callTagsOnlyApiOrThrow, parseTagsOnlyEntries } from './ai-tags-only-api.js';
 
 export {
@@ -134,7 +139,10 @@ export async function categorizeWithAi(
   if (!response.text) return { result: null };
 
   return {
-    result: buildEntryFromText(response.text, knownTags),
+    result: {
+      ...buildEntryFromText(response.text, knownTags),
+      promptVersion: PROMPT_VERSION_CATEGORIZE,
+    },
     usage: usageFrom(response.inputTokens, response.outputTokens),
   };
 }
@@ -171,7 +179,9 @@ export async function categorizeBatchWithAi(
   if (!response.text) return { results: inputs.map(() => null) };
 
   return {
-    results: parseBatchEntries(response.text, inputs.length, knownTags),
+    results: parseBatchEntries(response.text, inputs.length, knownTags).map((entry) =>
+      entry === null ? null : { ...entry, promptVersion: PROMPT_VERSION_CATEGORIZE_BATCH }
+    ),
     usage: usageFrom(response.inputTokens, response.outputTokens),
   };
 }
@@ -208,7 +218,9 @@ export async function tagsOnlyBatchWithAi(
   if (!response.text) return { results: inputs.map(() => null) };
 
   return {
-    results: parseTagsOnlyEntries(response.text, inputs.length, knownTags),
+    results: parseTagsOnlyEntries(response.text, inputs.length, knownTags).map((entry) =>
+      entry === null ? null : { ...entry, promptVersion: PROMPT_VERSION_TAGS_ONLY }
+    ),
     usage: usageFrom(response.inputTokens, response.outputTokens),
   };
 }

@@ -25,7 +25,7 @@ Everything downstream treats a tag rule's output as a proposal. Nothing in this 
 
 `POST /tag-rules/reject` writes the refused ChangeSet and the reason the user gave to `tag_rule_rejections`, and answers with a message. It does not return a replacement.
 
-It used to. The endpoint re-ran `proposeTagRuleChangeSet` against the same signal and returned the result as a "revised" proposal — deterministic in that signal, so byte-identical to the one just refused apart from a sentence of prose, while the UI announced a revision. Tag rules were given the correction side's API shape (propose / reject / follow-up) without the correction side's AI engine behind it. Whether tag rules get an engine, a deterministic narrowing pass, or nothing at all is POPS-253's call; until then the rejection is stored so that decision has evidence to work from, and nothing claims a capability that does not exist.
+It used to. The endpoint re-ran `proposeTagRuleChangeSet` against the same signal and returned the result as a "revised" proposal — deterministic in that signal, so byte-identical to the one just refused apart from a sentence of prose, while the UI announced a revision. Tag rules were given the correction side's API shape (propose / reject / follow-up) without the correction side's AI engine behind it. Nothing revises a proposal from a rejection, by decision (finance ADR-006): the rejection is stored as evidence, and nothing claims a capability that does not exist.
 
 ## The preview is a diff, not a match test
 
@@ -48,6 +48,12 @@ Two failure modes exist for a stored rule, and they get different treatment:
 
 The second case still needs to be visible, just not blocked: `../../../db/services/tag-rule-ledger-match.ts`'s `tagRuleLedgerMatchStatus` classifies every rule the Tag Rules browser lists as `matched`, `unused` (no ledger data yet — the ahead-of-time case, told apart by whether the rule's own `entityId` has any transactions) or `broken` (data exists and none of it matches — the POPS-2758 shape). It runs `patternMatchesDescription` — the one matcher above, never a reimplementation — over one `transactions` fetch shared across every rule on the page, so a page of N rules costs one table scan, not N (POPS-2941).
 
+## Rules that overlap
+
+Two active rules overlap when both fire on the same transaction, which is harmless on its own. `overlap.ts`'s `findTagRuleOverlaps` reports the two shapes that are not, and the Tag Rules browser badges them beside a rule's pattern: a rule **contradicts** another when they share a transaction and write different values on a single-valued facet, so the suggester keeps one value and the other rule silently loses; a rule is **redundant** with another that fires on every transaction it does and already writes all of its tags.
+
+Firing is decided by the suggester's own `matchTagRules`, so entity scope and the active flag mean exactly what they mean on import. Overlaps are computed against every active rule, never only the page being listed: the rule a listed one contradicts is usually on another page.
+
 ## Where things live
 
 | Concern                                  | File                                 |
@@ -56,6 +62,7 @@ The second case still needs to be visible, just not blocked: `../../../db/servic
 | Deterministic suggestion-impact preview  | `preview.ts`                         |
 | ChangeSet overlaid on the persisted set  | `merged-rules.ts`                    |
 | Catch-up pass over already-imported rows | `retroactive-apply.ts`               |
+| Overlaps between active rules            | `overlap.ts`                         |
 | Shared match predicate                   | `../../../contract/pattern-match.ts` |
 
 Each carries a header explaining its own mechanics — including why retroactive apply is idempotent and why a dry run deliberately does not count as rule usage.

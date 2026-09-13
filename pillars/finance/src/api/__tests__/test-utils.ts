@@ -291,6 +291,7 @@ interface TagRule {
 /** {@link TagRule} plus the ledger-match verdict `list`/`get` add (POPS-2941). */
 interface TagRuleWithLedgerStatus extends TagRule {
   ledgerMatchStatus: 'matched' | 'unused' | 'broken';
+  overlaps: { ruleId: string; descriptionPattern: string; kind: 'contradicts' | 'redundant' }[];
 }
 
 interface Correction {
@@ -631,9 +632,9 @@ export function makeClient(app: Express) {
       reject: (body: Record<string, unknown>) =>
         call<{ message: string }>((r) => r.post('/tag-rules/reject').send(body)),
       resolveAddCollisions: (body: Record<string, unknown>) =>
-        call<{ collisions: ({ ruleId: string; existingTags: string[] } | null)[][] }>((r) =>
-          r.post('/tag-rules/resolve-add-collisions').send(body)
-        ),
+        call<{
+          collisions: ({ ruleId: string; existingTags: string[]; isActive: boolean } | null)[][];
+        }>((r) => r.post('/tag-rules/resolve-add-collisions').send(body)),
     },
     corrections: {
       list: (query: CorrectionListQuery = {}) =>
