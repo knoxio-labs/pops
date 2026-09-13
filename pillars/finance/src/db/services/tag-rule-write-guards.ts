@@ -49,6 +49,18 @@ export function markerFacetTags(tags: readonly string[]): string[] {
 }
 
 /**
+ * Refuse storing an unresolved `temp:` placeholder in an `entity_id` column.
+ *
+ * Shared by the tag-rule and correction write paths (POPS-3717): both scope a
+ * rule to an entity, and a rule scoped to a placeholder can never fire.
+ *
+ * @throws {PlaceholderEntityScopeError}
+ */
+export function assertEntityIdNotPlaceholder(entityId: string | null | undefined): void {
+  if (isPlaceholderEntityId(entityId)) throw new PlaceholderEntityScopeError(entityId);
+}
+
+/**
  * Refuse a tag-rule write that would store a marker tag or a placeholder scope.
  *
  * Fields left `undefined` are not being written and are not checked, so an
@@ -65,7 +77,5 @@ export function assertTagRuleWritable(input: {
     const markers = markerFacetTags(input.tags);
     if (markers.length > 0) throw new MarkerFacetTagRuleError(markers);
   }
-  if (isPlaceholderEntityId(input.entityId)) {
-    throw new PlaceholderEntityScopeError(input.entityId);
-  }
+  assertEntityIdNotPlaceholder(input.entityId);
 }

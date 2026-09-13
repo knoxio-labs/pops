@@ -22,6 +22,7 @@ import {
 import { mergeTagsWithinFacetLimits, parseStoredTags } from '../../../db/tag-facets.js';
 import { NotFoundError } from '../../shared/errors.js';
 import {
+  assertEntityIdResolved,
   assertNotTagsOnly,
   assertPatternCanMatch,
   assertPatternCompiles,
@@ -179,6 +180,7 @@ function insertNewCorrectionRule(tx: FinanceDb, normalized: string, op: AddOp): 
  */
 function applyAddOp(tx: FinanceDb, op: AddOp): CorrectionAddOutcome {
   assertNotTagsOnly(op);
+  assertEntityIdResolved(op.data.entityId);
   assertPatternCompiles(op);
   assertPatternCanMatch(op);
 
@@ -218,6 +220,7 @@ function applyMutatingOp(tx: FinanceDb, op: Exclude<ChangeSetOp, { op: 'add' }>)
   if (!existing) throw new NotFoundError('Correction', op.id);
 
   if (op.op === 'edit') {
+    assertEntityIdResolved(op.data.entityId);
     tx.update(transactionCorrections)
       .set(buildEditUpdates(op))
       .where(eq(transactionCorrections.id, op.id))

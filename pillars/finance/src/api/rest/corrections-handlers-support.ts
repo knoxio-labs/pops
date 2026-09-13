@@ -26,6 +26,7 @@ import {
   transactionCorrectionsService,
   transactions,
 } from '../../db/index.js';
+import { PlaceholderEntityScopeError } from '../../db/tag-rule-errors.js';
 import { centsToDollars } from '../../money.js';
 import {
   applyChangeSetToRules,
@@ -210,6 +211,9 @@ export function translateCorrectionError(err: unknown, id?: string): never {
       err.message,
       err instanceof TagsOnlyCorrectionError ? undefined : { pattern: err.pattern }
     );
+  }
+  if (err instanceof PlaceholderEntityScopeError) {
+    throw new ValidationError(err.message, { entityId: err.entityId });
   }
   throw err;
 }
