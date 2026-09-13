@@ -20,44 +20,49 @@
  * was — the module is still only evaluated when the route renders, so nothing
  * about the lazy-mount behaviour changes.
  *
+ * The preload targets the same per-load URL the importer uses
+ * (`remote-entry-url.ts`), so it never reads a cached entry and the import
+ * reuses the preloaded module instead of fetching again.
+ *
  * What this does NOT collapse is the second hop. A page's chunk is reached by
  * a dynamic `import()` inside the remote bundle, so it is not part of the
  * entry's static graph and no preload the shell can emit from the manifest
  * covers it. Closing that would need the remote build to publish a
  * slot → chunk map, which is a wire-contract change and not this one.
- *
- * The cost is bounded and paid whether or not the pillar is visited: one small
- * entry per mounted loader pillar. That is the right trade while entries are
- * kilobyte-scale; if one ever is not, the fix is to make it a facade over its
- * own chunks rather than to stop preloading.
  */
+
+import { entryUrlForThisLoad } from './remote-entry-url';
 
 const REL = 'modulepreload';
 
 /**
- * Emit a `modulepreload` for each URL, skipping any the document already has.
+ * Emit a `modulepreload` for each URL's per-load entry URL, skipping any the
+ * document already has.
  *
  * Idempotent by inspection rather than by a module-level flag: boot can run
  * more than once in a test, and a `<link>` the document already carries is the
  * only reliable record of what was requested.
  *
- * @param urls Bundle URLs to preload; duplicates and empties are ignored.
+ * @param urls Advertised bundle URLs; duplicates and empties are ignored.
  * @param doc Document to append to, injectable for tests.
- * @returns The URLs a link was added for, in the order they were added.
+ * @param toEntryUrl Maps an advertised URL to the one fetched; per-load by default.
+ * @returns The advertised URLs a link was added for, in the order they were added.
  */
 export function preloadRemoteBundles(
   urls: readonly string[],
-  doc: Document = document
+  doc: Document = document,
+  toEntryUrl: (url: string) => string = entryUrlForThisLoad
 ): readonly string[] {
   const added: string[] = [];
   for (const url of urls) {
     if (url === '') continue;
     if (added.includes(url)) continue;
-    if (doc.head.querySelector(`link[rel="${REL}"][href="${cssEscape(url)}"]`) !== null) continue;
+    const href = toEntryUrl(url);
+    if (doc.head.querySelector(`link[rel="${REL}"][href="${cssEscape(href)}"]`) !== null) continue;
 
     const link = doc.createElement('link');
     link.rel = REL;
-    link.href = url;
+    link.href = href;
     doc.head.append(link);
     added.push(url);
   }
