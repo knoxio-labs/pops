@@ -15,11 +15,28 @@ public struct ReceiptDraftPresentation: Sendable {
 
     /// A form pre-filled from what the model read, with the gate's complaints
     /// attached to the fields they name.
-    public func draft(extracted: ExtractedReceipt, failures: [ReceiptGateFailure]) -> ReceiptDraft {
+    ///
+    /// - Parameter matchedMerchantID: the contacts entity the *server*
+    ///   resolved from the printed name, when it resolved one.
+    ///
+    ///   A parameter here rather than a property somebody sets afterwards,
+    ///   because the match arrives with the reading: `purchases` resolves it
+    ///   at ingest against contacts, deliberately conservatively — an exact
+    ///   name or alias hit, with ambiguity resolving to nothing. So it is one
+    ///   of the things a reading is, and it lands as
+    ///   ``RecordResolution/matched`` rather than `chosen`: nobody has
+    ///   looked at it yet, and presenting a suggestion as a decision collects
+    ///   agreement nobody gave.
+    public func draft(
+        extracted: ExtractedReceipt,
+        failures: [ReceiptGateFailure],
+        matchedMerchantID: String? = nil
+    ) -> ReceiptDraft {
         let attached = hints(failures)
         return ReceiptDraft(
-            merchant: ReceiptDraftValue(extracted: extracted.merchantName),
-            address: ReceiptDraftValue(extracted: extracted.address),
+            printedMerchant: ReceiptDraftValue(extracted: extracted.merchantName),
+            merchantResolution: matchedMerchantID.map(RecordResolution.matched) ?? .unresolved,
+            printedAddress: ReceiptDraftValue(extracted: extracted.address),
             date: ReceiptDraftValue(extracted: ReceiptPrintedDate.oneLine(extracted)),
             lines: lines(extracted.lines),
             adjustments: adjustments(extracted),
@@ -42,14 +59,30 @@ public struct ReceiptDraftPresentation: Sendable {
     /// section the reader has to discover an "Add" control for.
     public func blankDraft(currency: String?) -> ReceiptDraft {
         ReceiptDraft(
-            merchant: ReceiptDraftValue(extracted: nil),
-            address: ReceiptDraftValue(extracted: nil),
+            printedMerchant: ReceiptDraftValue(extracted: nil),
+            printedAddress: ReceiptDraftValue(extracted: nil),
             date: ReceiptDraftValue(extracted: nil),
             lines: [.blank(id: "line-0")],
             adjustments: [],
             total: ReceiptDraftValue(extracted: nil),
             currency: currency
         )
+    }
+
+    /// The next blank form after a purchase typed by hand was saved with
+    /// Save and add another.
+    ///
+    /// Keeps the date and the currency: purchases typed in a row are usually
+    /// from the same day. Everything that identifies the purchase starts
+    /// empty, because a carried merchant would file the next purchase under
+    /// the last shop the moment somebody forgot to change it.
+    ///
+    /// The date is carried, not typed, so the new form does not open by naming
+    /// what is missing from it.
+    public func blankDraft(after previous: ReceiptDraft) -> ReceiptDraft {
+        var next = blankDraft(currency: previous.currency)
+        next.date = ReceiptDraftValue(carried: previous.date.value)
+        return next
     }
 }
 
@@ -64,13 +97,20 @@ extension ReceiptDraftPresentation {
                 description: ReceiptDraftValue(extracted: line.description),
                 amount: ReceiptDraftValue(extracted: line.amount),
                 quantity: ReceiptDraftValue(extracted: line.quantity.map(String.init)),
-                unitNote: ReceiptDraftValue(extracted: line.unitNote)
+                unitNote: ReceiptDraftValue(extracted: line.unitNote),
+                // `ExtractedReceiptLine` carries no list price, so this is
+                // always empty for the reader to fill. Asking the model for
+                // the `WAS` figure is the server half of POPS-3652; the field
+                // exists first so there is somewhere to put it.
+                listPrice: ReceiptDraftValue(extracted: nil)
             )
         }
     }
 
     /// One row per stated adjustment, and none for the ones the receipt did
-    /// not state.
+    /// not state. A kind the receipt never mentioned can still be added by
+    /// hand — `ReceiptDraft.addAdjustment` — which is how a surcharge the
+    /// reading missed entirely gets onto the form.
     ///
     /// This is the one place the form does drop what was not read, and the
     /// reason is that an adjustment is not a fact about the purchase the way
@@ -83,7 +123,14 @@ extension ReceiptDraftPresentation {
         if let tax = extracted.tax {
             adjustments.append(
                 ReceiptDraftAdjustment(
-                    id: "tax", kind: .tax, amount: ReceiptDraftValue(extracted: tax)))
+                    id: "tax", kind: .tax, amount: ReceiptDraftValue(extracted: tax),
+                    // GST is inside the marked price on an Australian
+                    // receipt, so included is the assumption that is right
+                    // more often. It is an assumption either way — the
+                    // extractor is not told which convention it read — and
+                    // the toggle is there because a default cannot be right
+                    // for every receipt.
+                    isIncluded: true))
         }
         adjustments += extracted.discounts.enumerated().map { index, discount in
             ReceiptDraftAdjustment(

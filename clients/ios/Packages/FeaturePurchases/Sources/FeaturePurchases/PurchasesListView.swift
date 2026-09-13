@@ -59,7 +59,7 @@ private struct PurchasesRow: View {
 
     var body: some View {
         PopsRow(
-            title: purchase.merchantName ?? "Unknown merchant",
+            title: purchase.merchant.displayName ?? "Unknown merchant",
             subtitle: purchase.orderedOn.formatted(date: .abbreviated, time: .omitted)
         ) {
             Text(purchase.total.formatted())
@@ -68,7 +68,7 @@ private struct PurchasesRow: View {
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(
-            "\(purchase.merchantName ?? "Unknown merchant"), \(purchase.total.formatted())"
+            "\(purchase.merchant.displayName ?? "Unknown merchant"), \(purchase.total.formatted())"
         )
     }
 }

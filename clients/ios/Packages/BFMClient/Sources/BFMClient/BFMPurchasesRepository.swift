@@ -57,12 +57,28 @@ public struct BFMPurchasesRepository: PurchasesRepository {
         }
         return Purchase(
             id: wire.id,
-            merchantName: wire.merchantName,
+            merchant: Self.merchant(from: wire.merchantName),
             orderedOn: orderedOn,
             total: MoneyAmount(minorUnits: wire.totalCents, currencyCode: wire.currency),
             itemCount: wire.itemCount,
-            receiptURI: wire.receiptUri
+            receiptURI: wire.receiptUri,
+            status: PurchaseSettlement(wire: wire.status)
         )
+    }
+
+    /// The mobile surface sends `merchantName` and nothing else — not
+    /// `merchantEntityId`, and not the entity's own name — so this can never
+    /// answer ``MerchantIdentity/entity``, and says so rather than guessing.
+    ///
+    /// The consequence is visible on screen: a purchase the pillar *did*
+    /// resolve to a contacts entity still shows the till's wording here,
+    /// because the name worth reading never crossed the wire. Widening it is
+    /// POPS-3634.
+    private static func merchant(from name: String?) -> MerchantIdentity {
+        guard let name, !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return .unattributed
+        }
+        return .printed(name)
     }
 
     private static func day(from raw: String, in timeZone: TimeZone) -> Date? {

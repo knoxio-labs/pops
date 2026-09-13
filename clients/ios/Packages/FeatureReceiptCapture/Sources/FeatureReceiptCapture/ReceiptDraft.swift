@@ -35,8 +35,45 @@ import Foundation
 /// human correction is a third origin, and this is the shape it is carried in
 /// on the handset.
 public struct ReceiptDraft: Hashable, Sendable {
-    internal var merchant: ReceiptDraftValue
-    internal var address: ReceiptDraftValue
+    /// What the till printed, kept verbatim and never edited here.
+    ///
+    /// It used to be the merchant field. It is not the answer to "who was this
+    /// from" — `merchantEntityId` is — and offering it as an editable text
+    /// field invited a purchase whose merchant is a string, which is the
+    /// outcome `RecordResolution` exists to make impossible. Kept because it
+    /// is what `merchantEntityName` stores and what a later match is attempted
+    /// against.
+    internal let printedMerchant: ReceiptDraftValue
+    /// How the merchant came to be attached to an entity, if it did.
+    ///
+    /// Three states rather than an optional id, because "the server matched
+    /// this" and "a person chose this" are different evidence and the pillar
+    /// draws that distinction everywhere else it has one — an item's `kind`
+    /// and its tags both carry a `confirmedAt`, null meaning a pass proposed
+    /// it and non-null meaning somebody asserted it. A merchant should not be
+    /// the one place the difference is thrown away.
+    ///
+    /// It matters on this screen in particular: a match the reader has not
+    /// looked at is a suggestion, and presenting it identically to one they
+    /// picked would collect agreement nobody gave.
+    internal var merchantResolution: RecordResolution
+    /// What the till printed for the branch, kept verbatim. Provenance, the
+    /// same way ``printedMerchant`` is — contacts owns the addresses, so the
+    /// answer is which of them this was, not what the paper spelled.
+    internal let printedAddress: ReceiptDraftValue
+    /// Which of the merchant's addresses this purchase was made at.
+    ///
+    /// Not gated on save. An address is descriptive where a merchant is
+    /// operative: reconciliation, the merchant lens and every total key on
+    /// `merchantEntityId` and none of them on a branch, so an unresolved
+    /// address costs detail and an unresolved merchant costs attribution.
+    internal var addressResolution: RecordResolution
+    /// Bought online, so there is no branch to record.
+    ///
+    /// Not the same as an address the extractor failed to read. An empty
+    /// address field on a screen for an online order is an invitation to
+    /// invent one, and an address invented is worse than an address absent.
+    internal var online: Bool
     /// As printed, verbatim. Not parsed into a `Date`: the extractor
     /// transcribes what the paper says, and running that through a formatter
     /// is how a form comes to state a day the receipt never did.
@@ -63,8 +100,11 @@ public struct ReceiptDraft: Hashable, Sendable {
     internal let reconciliationDetail: String?
 
     internal init(
-        merchant: ReceiptDraftValue,
-        address: ReceiptDraftValue,
+        printedMerchant: ReceiptDraftValue,
+        merchantResolution: RecordResolution = .unresolved,
+        printedAddress: ReceiptDraftValue,
+        addressResolution: RecordResolution = .unresolved,
+        online: Bool = false,
         date: ReceiptDraftValue,
         lines: [ReceiptDraftLine],
         adjustments: [ReceiptDraftAdjustment],
@@ -75,8 +115,11 @@ public struct ReceiptDraft: Hashable, Sendable {
         readingReconciled: Bool = true,
         reconciliationDetail: String? = nil
     ) {
-        self.merchant = merchant
-        self.address = address
+        self.printedMerchant = printedMerchant
+        self.merchantResolution = merchantResolution
+        self.printedAddress = printedAddress
+        self.addressResolution = addressResolution
+        self.online = online
         self.date = date
         self.lines = lines
         self.adjustments = adjustments
@@ -106,15 +149,74 @@ extension ReceiptDraft {
         lines.removeAll { $0.id == id }
     }
 
+    /// Points the purchase at a merchant, dropping the branch when that
+    /// changes.
+    ///
+    /// On the model rather than at the call site because it is an invariant
+    /// between two fields, and a view that set one and forgot the other is
+    /// exactly what went wrong: a Woolworths branch id survived onto a Kmart
+    /// purchase, invisible because the select scopes its list to the new
+    /// merchant and an address is not gated on save.
+    ///
+    /// Setting the same merchant again — confirming the server's match, say —
+    /// is not a change and keeps the branch.
+    internal mutating func setMerchant(_ next: RecordResolution) {
+        let changed =
+            next.entityID != merchantResolution.entityID
+            || next.createdValue != merchantResolution.createdValue
+        merchantResolution = next
+        if changed { addressResolution = .unresolved }
+    }
+
+    /// An adjustment the model never found.
+    ///
+    /// Without this a surcharge the reading missed cannot be corrected by
+    /// editing what is on screen, because it is not on screen — and the only
+    /// way forward is retyping the total, which hides the discrepancy instead
+    /// of explaining it.
+    ///
+    /// Included defaults to false. A figure the reader is adding by hand is
+    /// one the line prices demonstrably did not account for, or they would
+    /// not have noticed it missing.
+    internal mutating func addAdjustment(kind: ReceiptDraftAdjustment.Kind) {
+        adjustments.append(
+            ReceiptDraftAdjustment(
+                id: "added-\(UUID().uuidString)",
+                kind: kind,
+                amount: ReceiptDraftValue(extracted: nil),
+                isIncluded: false
+            ))
+    }
+
+    internal mutating func removeAdjustment(id: String) {
+        adjustments.removeAll { $0.id == id }
+    }
+
+    /// Which kinds are not on the form yet. One of each is enough: two tax
+    /// rows on one receipt is a reading nobody should be helped to produce.
+    internal var addableAdjustments: [ReceiptDraftAdjustment.Kind] {
+        let present = Set(adjustments.map(\.kind))
+        return ReceiptDraftAdjustment.Kind.allCases.filter { !present.contains($0) }
+    }
+
     /// Whether the reader has moved any figure since the reading came back.
     ///
     /// The reconciliation the gate reported is a statement about the numbers
     /// the model read. The moment one of them changes it is a statement about
     /// numbers that are no longer on screen, and continuing to show it would
     /// be this screen vouching for arithmetic nobody has done.
+    /// Whether the reader has moved any figure — or changed what the figures
+    /// mean — since the reading came back.
+    ///
+    /// Toggling an adjustment's ``ReceiptDraftAdjustment/isIncluded`` counts,
+    /// and that is the subtle one: it changes no number at all, and changes
+    /// the arithmetic the gate's verdict was about. A reconciliation that
+    /// survived it would be this screen vouching for a sum computed on the
+    /// other assumption.
     internal var amountsEdited: Bool {
         total.isEdited || lines.contains { $0.amount.isEdited }
-            || adjustments.contains { $0.amount.isEdited }
+            || adjustments.contains { $0.amount.isEdited || $0.basisChanged }
+            || adjustments.contains { !$0.wasExtracted }
     }
 
     /// What the screen may honestly say about whether this adds up.
@@ -133,6 +235,11 @@ extension ReceiptDraft {
     internal var problems: [ReceiptDraftProblem] {
         var problems: [ReceiptDraftProblem] = []
         if total.isEmpty { problems.append(.totalMissing) }
+        // The rule that follows from a merchant being an entity: if there is
+        // no free-text escape, an unresolved merchant is not a thing that can
+        // be saved and quietly fixed later — it is the purchase having nobody
+        // to attribute it to.
+        if !merchantResolution.isResolved { problems.append(.merchantUnresolved) }
         // A row with nothing in it is one the form offered, not one the
         // reader filled in badly. Reporting it would mean the blank form's
         // first frame accuses somebody of leaving out an amount they were
@@ -156,6 +263,17 @@ extension ReceiptDraft {
         total.isEmpty && (total.wasExtracted || isEdited)
     }
 
+    /// The same rule for the merchant, which is the other thing that stops a
+    /// save.
+    ///
+    /// Reported the moment the form opens on a reading, because a receipt
+    /// whose merchant the server did not match is already wrong and the
+    /// reader is the only one who can say which entity it is. On a form
+    /// nobody has typed into yet it stays quiet, for the reason above.
+    internal var reportsUnresolvedMerchant: Bool {
+        !merchantResolution.isResolved && (printedMerchant.wasExtracted || isEdited)
+    }
+
     /// The problem to draw against one line, if any.
     internal func problem(forLine id: String) -> ReceiptDraftProblem? {
         problems.first { $0 == .lineAmountMissing(lineID: id) }
@@ -164,7 +282,8 @@ extension ReceiptDraft {
     /// Whether anything at all differs from what the extractor read. What a
     /// caller needs to know before deciding a save is worth making.
     internal var isEdited: Bool {
-        merchant.isEdited || address.isEdited || date.isEdited || total.isEdited
+        merchantResolution.isConfirmed || addressResolution.isConfirmed || date.isEdited
+            || total.isEdited
             || adjustments.contains { $0.amount.isEdited } || lines.contains { $0.isEdited }
             || lines.contains { !$0.wasExtracted && !$0.isBlank }
     }
@@ -181,12 +300,24 @@ internal struct ReceiptDraftValue: Hashable, Sendable {
     /// Collapsing them loses the ability to say which of the two happened,
     /// which is the whole of what provenance is for.
     internal let extracted: String?
+    /// What the previous purchase typed by hand left here, when this form was
+    /// opened by Save and add another. Not read off paper, so not provenance;
+    /// not typed into this form either, so not an edit until it changes.
+    internal let carried: String?
     internal var value: String
 
     internal init(extracted: String?) {
         let trimmed = extracted?.trimmed
         self.extracted = trimmed?.isEmpty == true ? nil : trimmed
+        carried = nil
         value = self.extracted ?? ""
+    }
+
+    internal init(carried: String) {
+        let trimmed = carried.trimmed
+        extracted = nil
+        self.carried = trimmed.isEmpty ? nil : trimmed
+        value = self.carried ?? ""
     }
 
     /// The extractor produced something here.
@@ -195,7 +326,7 @@ internal struct ReceiptDraftValue: Hashable, Sendable {
     /// The reader has changed it. Compared trimmed, so a trailing space is
     /// not an edit — a keyboard artefact is not a correction, and treating it
     /// as one would mark half a form as human-authored.
-    internal var isEdited: Bool { value.trimmed != (extracted ?? "") }
+    internal var isEdited: Bool { value.trimmed != (extracted ?? carried ?? "") }
 
     internal var isEmpty: Bool { value.trimmed.isEmpty }
 }
@@ -216,19 +347,29 @@ internal struct ReceiptDraftLine: Hashable, Sendable, Identifiable {
     internal var quantity: ReceiptDraftValue
     /// `$4.90/kg`, `2 @ $3.00` — whatever qualified the price.
     internal var unitNote: ReceiptDraftValue
+    /// What the line would have cost at list — the `WAS 5.50` beside a
+    /// `3.50`.
+    ///
+    /// Kept beside what was paid rather than instead of it: the charged
+    /// figure is the operative one and the only one the gate checked, and a
+    /// list price read off paper is checked against nothing. It is a separate
+    /// field for that reason, not a second opinion about `amount`.
+    internal var listPrice: ReceiptDraftValue
 
     internal init(
         id: String,
         description: ReceiptDraftValue,
         amount: ReceiptDraftValue,
         quantity: ReceiptDraftValue,
-        unitNote: ReceiptDraftValue
+        unitNote: ReceiptDraftValue,
+        listPrice: ReceiptDraftValue = ReceiptDraftValue(extracted: nil)
     ) {
         self.id = id
         self.description = description
         self.amount = amount
         self.quantity = quantity
         self.unitNote = unitNote
+        self.listPrice = listPrice
     }
 
     /// A row the reader added. Nothing was extracted into any of it, which is
@@ -239,7 +380,8 @@ internal struct ReceiptDraftLine: Hashable, Sendable, Identifiable {
             description: ReceiptDraftValue(extracted: nil),
             amount: ReceiptDraftValue(extracted: nil),
             quantity: ReceiptDraftValue(extracted: nil),
-            unitNote: ReceiptDraftValue(extracted: nil)
+            unitNote: ReceiptDraftValue(extracted: nil),
+            listPrice: ReceiptDraftValue(extracted: nil)
         )
     }
 
@@ -249,11 +391,12 @@ internal struct ReceiptDraftLine: Hashable, Sendable, Identifiable {
     /// something.
     internal var wasExtracted: Bool {
         description.wasExtracted || amount.wasExtracted || quantity.wasExtracted
-            || unitNote.wasExtracted
+            || unitNote.wasExtracted || listPrice.wasExtracted
     }
 
     internal var isEdited: Bool {
         description.isEdited || amount.isEdited || quantity.isEdited || unitNote.isEdited
+            || listPrice.isEdited
     }
 
     /// Nothing in it. A row the reader has been offered and not yet used —
@@ -261,6 +404,13 @@ internal struct ReceiptDraftLine: Hashable, Sendable, Identifiable {
     /// untouched form look authored.
     internal var isBlank: Bool {
         description.isEmpty && amount.isEmpty && quantity.isEmpty && unitNote.isEmpty
+            && listPrice.isEmpty
+    }
+
+    /// Whether anything qualifies the price — a quantity, a unit note, a list
+    /// price. What decides whether the row opens with its second tier showing.
+    internal var hasQualifiers: Bool {
+        !quantity.isEmpty || !unitNote.isEmpty || !listPrice.isEmpty
     }
 }
 
@@ -273,6 +423,36 @@ internal struct ReceiptDraftAdjustment: Hashable, Sendable, Identifiable {
     internal let id: String
     internal let kind: Kind
     internal var amount: ReceiptDraftValue
+    /// Whether this figure is already inside the line prices, or sits on top
+    /// of them.
+    ///
+    /// Australian receipts print both conventions and a reading often cannot
+    /// tell which it found. Without this, a reading whose every figure is
+    /// right still fails its own total check, and the person correcting it has
+    /// no field to fix — the numbers are all correct and the arithmetic
+    /// assumption is not.
+    internal var isIncluded: Bool
+    /// What the extractor assumed, so a change to ``isIncluded`` can be told
+    /// from the reading's own basis.
+    internal let extractedIsIncluded: Bool
+
+    internal init(
+        id: String,
+        kind: Kind,
+        amount: ReceiptDraftValue,
+        isIncluded: Bool = false
+    ) {
+        self.id = id
+        self.kind = kind
+        self.amount = amount
+        self.isIncluded = isIncluded
+        extractedIsIncluded = isIncluded
+    }
+
+    /// The reader has changed what the figure means, without changing it.
+    internal var basisChanged: Bool { isIncluded != extractedIsIncluded }
+
+    internal var wasExtracted: Bool { amount.wasExtracted }
 
     /// Which way it moves the total, and what it is called.
     internal enum Kind: Hashable, Sendable, CaseIterable {
@@ -317,6 +497,11 @@ internal enum ReceiptDraftProblem: Hashable, Sendable {
     /// sum. A line with an amount and no name is fine — that is a Salvos
     /// receipt, and the paper genuinely does not say.
     case lineAmountMissing(lineID: String)
+    /// Nobody to attribute the purchase to. Unlike a missing total this can
+    /// often be fixed in one tap, because the server usually matched
+    /// something — but it cannot be skipped, or the purchase joins the ones
+    /// attributed to a string.
+    case merchantUnresolved
 }
 
 /// What the screen may say about whether the figures add up.

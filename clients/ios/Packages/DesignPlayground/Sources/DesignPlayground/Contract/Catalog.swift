@@ -43,6 +43,11 @@ internal enum Catalog {
         ShellSurfaces.surfaces
         + TransactionsSurfaces.surfaces
         + PurchasesSurfaces.surfaces
+        + [PurchasesHomeSurface.surface]
+        + [PurchasesArchiveSurface.surface]
+        + PurchaseCaptureSurfaces.surfaces
+        + [PurchaseHandEntrySurface.surface]
+        + [PurchaseDetailSurfaces.surface]
         + ReceiptSurfaces.surfaces
         + AccountsSurfaces.surfaces
         + PairingSurfaces.surfaces
