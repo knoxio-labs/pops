@@ -13,10 +13,10 @@ import type { CategorizerInput } from './ai-categorizer-types.js';
  * — bump on every prompt-shape change so accept/reject quality is joinable
  * per prompt revision.
  */
-export const PROMPT_VERSION_CATEGORIZE = 'categorize-v3.4';
+export const PROMPT_VERSION_CATEGORIZE = 'categorize-v4.0';
 
 /** Versioned telemetry tag for the batched categorizer prompt (CF096/#3671). */
-export const PROMPT_VERSION_CATEGORIZE_BATCH = 'categorize-batch-v3.4';
+export const PROMPT_VERSION_CATEGORIZE_BATCH = 'categorize-batch-v4.0';
 
 /**
  * Versioned telemetry tag for the tag-only prompt (POPS-2596) — the shape that
@@ -24,7 +24,7 @@ export const PROMPT_VERSION_CATEGORIZE_BATCH = 'categorize-batch-v3.4';
  * categorize versions so this path's cost and its accept/reject quality are
  * readable on their own rather than folded into entity categorization.
  */
-export const PROMPT_VERSION_TAGS_ONLY = 'tags-v2.4';
+export const PROMPT_VERSION_TAGS_ONLY = 'tags-v3.0';
 
 /**
  * Render the allowlisted transaction fields as the prompt's "Transaction data"
@@ -75,6 +75,17 @@ export const ENTITY_NAME_RULES = `entityName rules:
 - Return the brand's natural / title casing, NOT the verbatim ALL-CAPS from the bank description — UNLESS the brand is conventionally written in all caps (e.g. IKEA, KFC, BP, IGA, HSBC, H&M). Preserve genuinely mixed-case brands exactly (e.g. eBay, iiNet).
 - If you cannot identify a real merchant from the description, return entityName as null.
   Do NOT invent placeholder names like "Unknown Membership Organization", "Generic Merchant", "Unidentified Vendor", or similar — null is the correct answer when the merchant is unrecoverable.`;
+
+/**
+ * Stated in each prompt's opening, before the transaction and the axis list
+ * (POPS-3667). It used to live only at the tail of {@link TAGS_RULES}, after an
+ * opening that told the model to classify on every axis, and the opening won:
+ * a crypto wallet top-up came back `occasion:out + contains:food +
+ * venue:takeaway + channel:in-person`, the head of each usage-ranked list, where
+ * the true answer on every offered axis was null.
+ */
+export const AXIS_OPTIONALITY =
+  'Classify on an axis only where a listed value is actually true of the transaction. Leave every other axis null (or [] for a list axis): an empty axis is a correct answer, not a gap to fill.';
 
 export const TAGS_RULES = `tag rules:
 - Each tag field above is a closed set. Choose only from the values listed for that field.

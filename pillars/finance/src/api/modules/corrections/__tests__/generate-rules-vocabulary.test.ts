@@ -88,9 +88,9 @@ describe('buildGeneratePrompt', () => {
   it('states the cardinality so a rule cannot be proposed with two occasions', () => {
     const prompt = buildGeneratePrompt(TXNS, ['occasion:home', 'occasion:out', 'contains:food']);
 
-    expect(prompt).toContain('- occasion: exactly one of [home, out]');
+    expect(prompt).toContain('- occasion: at most one of [home, out]');
     expect(prompt).toContain('- contains: any of [food]');
-    expect(prompt).toContain('may carry at most one value from that axis');
+    expect(prompt).toContain('may carry at most one value from an "at most one of" axis');
   });
 
   it('tells the model the listed values are the only ones available', () => {

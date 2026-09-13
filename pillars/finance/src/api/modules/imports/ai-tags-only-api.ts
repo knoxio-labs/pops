@@ -23,6 +23,7 @@ import { callRawApi, type ApiCallResponse } from './ai-categorizer-api.js';
 import { parseJsonArrayReply } from './ai-categorizer-batch-api.js';
 import { throwApiError } from './ai-categorizer-error.js';
 import {
+  AXIS_OPTIONALITY,
   buildMatchedTransactionData,
   PROMPT_VERSION_TAGS_ONLY,
   TAGS_RULES,
@@ -88,7 +89,9 @@ export function buildTagsOnlyPrompt(
     .join('\n');
   const facets = closedFacetOptions(knownTags, tagDescriptions);
 
-  return `Given these ${inputs.length} bank transactions, each already identified as the merchant named on its line, classify EACH one on every tag axis below. The merchant is given — do not revise it.
+  return `Given these ${inputs.length} bank transactions, each already identified as the merchant named on its line, classify each one on the tag axes below. The merchant is given — do not revise it.
+
+${AXIS_OPTIONALITY}
 
 ${lines}
 
