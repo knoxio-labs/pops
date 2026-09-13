@@ -470,6 +470,13 @@
       "when": 1788800000014,
       "tag": "0115_fee_account_keeping_backfill",
       "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1788800000015,
+      "tag": "0116_narrow_fee_membership",
+      "breakpoints": true
     }
   ]
 }

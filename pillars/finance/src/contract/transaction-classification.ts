@@ -111,8 +111,10 @@ export const FEE_PATTERNS: ReadonlyArray<{ tag: FeeTag; patterns: readonly strin
   },
   /**
    * A bank charging for the account itself — e.g. not meeting a minimum-deposit
-   * condition — not `fee:membership`, which names a card or subscription
-   * membership fee (see `0113_fee_account_keeping.sql`). `MONTHLY ACCOUNT FEE`
+   * condition — not `fee:membership`, which names a card or account membership
+   * fee charged for holding the card itself, never a subscription or gym
+   * membership (see `0113_fee_account_keeping.sql`, narrowed by
+   * `0116_narrow_fee_membership.sql`). `MONTHLY ACCOUNT FEE`
    * and `ACCOUNT SERVICE FEE` moved here from `fee:membership` for the same
    * reason: a bank account fee, not a gym or subscription (POPS-3703, backfilled
    * by `0115_fee_account_keeping_backfill.sql`). No amount-sign special-case:
