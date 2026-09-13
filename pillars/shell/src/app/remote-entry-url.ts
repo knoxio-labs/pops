@@ -16,8 +16,32 @@
  * The cost is one uncached entry, a few kilobytes, per pillar per page load.
  */
 
+function uniqueToken(): string {
+  return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+}
+
 /** Unique per document load; shared by the boot preload and every import. */
-export const DOCUMENT_LOAD_ID = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+export const DOCUMENT_LOAD_ID = uniqueToken();
+
+/**
+ * `url` under a token no earlier request used, for the error boundary's
+ * staleness probe (`@pops/ui` `reloadForStaleChunk`). Unlike the import URL it
+ * changes per call: the probe asks whether the origin is up NOW, and an edge
+ * copy of an earlier answer would say it is when it is not.
+ *
+ * @param url The URL to probe; an empty `url` is returned unchanged.
+ */
+export function uncachedProbeUrl(url: string): string {
+  return entryUrlForThisLoad(url, uniqueToken());
+}
+
+/**
+ * Probe URL for a boundary around the shell's own modules: the document,
+ * which pops-shell's nginx answers whenever it is up.
+ */
+export function shellDocumentProbeUrl(): string {
+  return uncachedProbeUrl('/index.html');
+}
 
 /**
  * Append `v=<loadId>` to an entry URL, keeping any existing query and fragment.

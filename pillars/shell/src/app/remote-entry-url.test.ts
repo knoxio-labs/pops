@@ -1,6 +1,25 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { DOCUMENT_LOAD_ID, entryUrlForThisLoad } from './remote-entry-url';
+import {
+  DOCUMENT_LOAD_ID,
+  entryUrlForThisLoad,
+  shellDocumentProbeUrl,
+  uncachedProbeUrl,
+} from './remote-entry-url';
+
+describe('uncachedProbeUrl', () => {
+  it('gives every probe a URL no earlier request used, unlike the import URL', () => {
+    const first = uncachedProbeUrl('/media-ui/media.js');
+    const second = uncachedProbeUrl('/media-ui/media.js');
+    expect(first).toMatch(/^\/media-ui\/media\.js\?v=.+$/);
+    expect(second).not.toBe(first);
+    expect(first).not.toBe(entryUrlForThisLoad('/media-ui/media.js'));
+  });
+
+  it('probes the shell document for the shell’s own boundaries', () => {
+    expect(shellDocumentProbeUrl()).toMatch(/^\/index\.html\?v=.+$/);
+  });
+});
 
 describe('entryUrlForThisLoad', () => {
   it('adds the load id as a query so no cache can have seen the URL', () => {
