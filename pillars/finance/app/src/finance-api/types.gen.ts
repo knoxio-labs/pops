@@ -8658,6 +8658,11 @@ export type TagRulesListResponses = {
       lastUsedAt: string | null;
       ledgerMatchStatus: 'matched' | 'unused' | 'broken';
       matchType: 'exact' | 'contains' | 'regex';
+      overlaps: Array<{
+        descriptionPattern: string;
+        kind: 'contradicts' | 'redundant';
+        ruleId: string;
+      }>;
       priority: number;
       tags: Array<string>;
       timesApplied: number;
@@ -9440,6 +9445,11 @@ export type TagRulesGetResponses = {
       lastUsedAt: string | null;
       ledgerMatchStatus: 'matched' | 'unused' | 'broken';
       matchType: 'exact' | 'contains' | 'regex';
+      overlaps: Array<{
+        descriptionPattern: string;
+        kind: 'contradicts' | 'redundant';
+        ruleId: string;
+      }>;
       priority: number;
       tags: Array<string>;
       timesApplied: number;

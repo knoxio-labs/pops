@@ -11788,6 +11788,12 @@ export interface operations {
               ledgerMatchStatus: 'matched' | 'unused' | 'broken';
               /** @enum {string} */
               matchType: 'exact' | 'contains' | 'regex';
+              overlaps: {
+                descriptionPattern: string;
+                /** @enum {string} */
+                kind: 'contradicts' | 'redundant';
+                ruleId: string;
+              }[];
               priority: number;
               tags: string[];
               timesApplied: number;
@@ -12683,6 +12689,12 @@ export interface operations {
               ledgerMatchStatus: 'matched' | 'unused' | 'broken';
               /** @enum {string} */
               matchType: 'exact' | 'contains' | 'regex';
+              overlaps: {
+                descriptionPattern: string;
+                /** @enum {string} */
+                kind: 'contradicts' | 'redundant';
+                ruleId: string;
+              }[];
               priority: number;
               tags: string[];
               timesApplied: number;
