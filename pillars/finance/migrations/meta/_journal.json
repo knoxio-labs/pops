@@ -484,6 +484,20 @@
       "when": 1788800000016,
       "tag": "0117_strip_fee_tags_from_non_fee_rows",
       "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "7",
+      "when": 1788800000017,
+      "tag": "0118_venue_mechanic_service_station",
+      "breakpoints": true
+    },
+    {
+      "idx": 70,
+      "version": "7",
+      "when": 1788800000018,
+      "tag": "0119_vocabulary_kind_matches_facet",
+      "breakpoints": true
     }
   ]
 }
