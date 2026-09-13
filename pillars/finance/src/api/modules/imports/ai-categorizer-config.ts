@@ -17,8 +17,9 @@ import Anthropic from '@anthropic-ai/sdk';
 import {
   AI_CATEGORIZER_MAX_TOKENS_KEY,
   AI_CATEGORIZER_MODEL_KEY,
+  AI_CATEGORIZER_PRE_ACCEPT_PERCENT_KEY,
 } from '../../../contract/settings/ai-settings-keys.js';
-import { resolveAiMaxTokens, resolveAiString } from '../ai-settings-resolver.js';
+import { resolveAiMaxTokens, resolveAiPercent, resolveAiString } from '../ai-settings-resolver.js';
 
 import type { FinanceDb } from '../../../db/index.js';
 
@@ -78,6 +79,23 @@ export function getMaxTokens(db: FinanceDb): number {
     AI_CATEGORIZER_MAX_TOKENS_KEY,
     'FINANCE_AI_CATEGORIZER_MAX_TOKENS',
     DEFAULT_MAX_TOKENS
+  );
+}
+
+/** Default for `finance.aiCategorizer.preAcceptConfidencePercent` (POPS-3671). */
+export const DEFAULT_PRE_ACCEPT_CONFIDENCE_PERCENT = 80;
+
+/**
+ * The tag confidence at or above which an AI suggestion is pre-accepted in Tag
+ * Review, as a fraction. Resolved once per import run and carried on the
+ * `ProcessContext`, like the vocabulary.
+ */
+export function getPreAcceptThreshold(db: FinanceDb): number {
+  return resolveAiPercent(
+    db,
+    AI_CATEGORIZER_PRE_ACCEPT_PERCENT_KEY,
+    'FINANCE_AI_CATEGORIZER_PRE_ACCEPT_PERCENT',
+    DEFAULT_PRE_ACCEPT_CONFIDENCE_PERCENT
   );
 }
 

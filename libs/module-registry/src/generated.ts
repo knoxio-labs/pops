@@ -800,6 +800,19 @@ export const MODULES = [
                 },
               },
               {
+                key: 'finance.aiCategorizer.preAcceptConfidencePercent',
+                label: 'Pre-accept confidence (%)',
+                type: 'number',
+                default: '80',
+                description:
+                  'An AI tag suggestion the model rates at least this confident is ticked for you in Tag Review; one below it is shown but left for you to accept. A suggestion with no confidence at all is never pre-accepted. 0 pre-accepts every AI suggestion that carries a confidence, which is how it behaved before the model was asked for one; 100 pre-accepts none.',
+                validation: {
+                  min: 0,
+                  max: 100,
+                  message: 'Use a whole number from 0 to 100.',
+                },
+              },
+              {
                 key: 'finance.ruleGen.model',
                 label: 'Rule Generation Model',
                 type: 'text',

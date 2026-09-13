@@ -8415,9 +8415,11 @@ export interface operations {
                 /** @enum {string} */
                 status: 'matched' | 'uncertain' | 'failed' | 'skipped';
                 suggestedTags?: {
+                  confidence?: number;
                   entityScoped?: boolean;
                   isNew?: boolean;
                   pattern?: string;
+                  preAccept?: boolean;
                   promptVersion?: string;
                   /** @enum {string} */
                   source: 'ai' | 'rule' | 'entity';
@@ -8493,9 +8495,11 @@ export interface operations {
                 /** @enum {string} */
                 status: 'matched' | 'uncertain' | 'failed' | 'skipped';
                 suggestedTags?: {
+                  confidence?: number;
                   entityScoped?: boolean;
                   isNew?: boolean;
                   pattern?: string;
+                  preAccept?: boolean;
                   promptVersion?: string;
                   /** @enum {string} */
                   source: 'ai' | 'rule' | 'entity';
@@ -8571,9 +8575,11 @@ export interface operations {
                 /** @enum {string} */
                 status: 'matched' | 'uncertain' | 'failed' | 'skipped';
                 suggestedTags?: {
+                  confidence?: number;
                   entityScoped?: boolean;
                   isNew?: boolean;
                   pattern?: string;
+                  preAccept?: boolean;
                   promptVersion?: string;
                   /** @enum {string} */
                   source: 'ai' | 'rule' | 'entity';
@@ -8649,9 +8655,11 @@ export interface operations {
                 /** @enum {string} */
                 status: 'matched' | 'uncertain' | 'failed' | 'skipped';
                 suggestedTags?: {
+                  confidence?: number;
                   entityScoped?: boolean;
                   isNew?: boolean;
                   pattern?: string;
+                  preAccept?: boolean;
                   promptVersion?: string;
                   /** @enum {string} */
                   source: 'ai' | 'rule' | 'entity';
@@ -8930,9 +8938,11 @@ export interface operations {
             pending?: boolean;
             rawRow: string;
             suggestedTags?: {
+              confidence?: number;
               entityScoped?: boolean;
               isNew?: boolean;
               pattern?: string;
+              preAccept?: boolean;
               promptVersion?: string;
               /** @enum {string} */
               source: 'ai' | 'rule' | 'entity';
@@ -9311,9 +9321,11 @@ export interface operations {
                 /** @enum {string} */
                 status: 'matched' | 'uncertain' | 'failed' | 'skipped';
                 suggestedTags?: {
+                  confidence?: number;
                   entityScoped?: boolean;
                   isNew?: boolean;
                   pattern?: string;
+                  preAccept?: boolean;
                   promptVersion?: string;
                   /** @enum {string} */
                   source: 'ai' | 'rule' | 'entity';
@@ -9389,9 +9401,11 @@ export interface operations {
                 /** @enum {string} */
                 status: 'matched' | 'uncertain' | 'failed' | 'skipped';
                 suggestedTags?: {
+                  confidence?: number;
                   entityScoped?: boolean;
                   isNew?: boolean;
                   pattern?: string;
+                  preAccept?: boolean;
                   promptVersion?: string;
                   /** @enum {string} */
                   source: 'ai' | 'rule' | 'entity';
@@ -9467,9 +9481,11 @@ export interface operations {
                 /** @enum {string} */
                 status: 'matched' | 'uncertain' | 'failed' | 'skipped';
                 suggestedTags?: {
+                  confidence?: number;
                   entityScoped?: boolean;
                   isNew?: boolean;
                   pattern?: string;
+                  preAccept?: boolean;
                   promptVersion?: string;
                   /** @enum {string} */
                   source: 'ai' | 'rule' | 'entity';
@@ -9545,9 +9561,11 @@ export interface operations {
                 /** @enum {string} */
                 status: 'matched' | 'uncertain' | 'failed' | 'skipped';
                 suggestedTags?: {
+                  confidence?: number;
                   entityScoped?: boolean;
                   isNew?: boolean;
                   pattern?: string;
+                  preAccept?: boolean;
                   promptVersion?: string;
                   /** @enum {string} */
                   source: 'ai' | 'rule' | 'entity';
@@ -9795,9 +9813,11 @@ export interface operations {
                 /** @enum {string} */
                 status: 'matched' | 'uncertain' | 'failed' | 'skipped';
                 suggestedTags?: {
+                  confidence?: number;
                   entityScoped?: boolean;
                   isNew?: boolean;
                   pattern?: string;
+                  preAccept?: boolean;
                   promptVersion?: string;
                   /** @enum {string} */
                   source: 'ai' | 'rule' | 'entity';
@@ -9873,9 +9893,11 @@ export interface operations {
                 /** @enum {string} */
                 status: 'matched' | 'uncertain' | 'failed' | 'skipped';
                 suggestedTags?: {
+                  confidence?: number;
                   entityScoped?: boolean;
                   isNew?: boolean;
                   pattern?: string;
+                  preAccept?: boolean;
                   promptVersion?: string;
                   /** @enum {string} */
                   source: 'ai' | 'rule' | 'entity';
@@ -9951,9 +9973,11 @@ export interface operations {
                 /** @enum {string} */
                 status: 'matched' | 'uncertain' | 'failed' | 'skipped';
                 suggestedTags?: {
+                  confidence?: number;
                   entityScoped?: boolean;
                   isNew?: boolean;
                   pattern?: string;
+                  preAccept?: boolean;
                   promptVersion?: string;
                   /** @enum {string} */
                   source: 'ai' | 'rule' | 'entity';
@@ -10029,9 +10053,11 @@ export interface operations {
                 /** @enum {string} */
                 status: 'matched' | 'uncertain' | 'failed' | 'skipped';
                 suggestedTags?: {
+                  confidence?: number;
                   entityScoped?: boolean;
                   isNew?: boolean;
                   pattern?: string;
+                  preAccept?: boolean;
                   promptVersion?: string;
                   /** @enum {string} */
                   source: 'ai' | 'rule' | 'entity';
@@ -10273,9 +10299,11 @@ export interface operations {
               /** @enum {string} */
               status: 'matched' | 'uncertain' | 'failed' | 'skipped';
               suggestedTags?: {
+                confidence?: number;
                 entityScoped?: boolean;
                 isNew?: boolean;
                 pattern?: string;
+                preAccept?: boolean;
                 promptVersion?: string;
                 /** @enum {string} */
                 source: 'ai' | 'rule' | 'entity';
@@ -10351,9 +10379,11 @@ export interface operations {
               /** @enum {string} */
               status: 'matched' | 'uncertain' | 'failed' | 'skipped';
               suggestedTags?: {
+                confidence?: number;
                 entityScoped?: boolean;
                 isNew?: boolean;
                 pattern?: string;
+                preAccept?: boolean;
                 promptVersion?: string;
                 /** @enum {string} */
                 source: 'ai' | 'rule' | 'entity';
@@ -10429,9 +10459,11 @@ export interface operations {
               /** @enum {string} */
               status: 'matched' | 'uncertain' | 'failed' | 'skipped';
               suggestedTags?: {
+                confidence?: number;
                 entityScoped?: boolean;
                 isNew?: boolean;
                 pattern?: string;
+                preAccept?: boolean;
                 promptVersion?: string;
                 /** @enum {string} */
                 source: 'ai' | 'rule' | 'entity';
@@ -10507,9 +10539,11 @@ export interface operations {
               /** @enum {string} */
               status: 'matched' | 'uncertain' | 'failed' | 'skipped';
               suggestedTags?: {
+                confidence?: number;
                 entityScoped?: boolean;
                 isNew?: boolean;
                 pattern?: string;
+                preAccept?: boolean;
                 promptVersion?: string;
                 /** @enum {string} */
                 source: 'ai' | 'rule' | 'entity';
@@ -10614,9 +10648,11 @@ export interface operations {
                 /** @enum {string} */
                 status: 'matched' | 'uncertain' | 'failed' | 'skipped';
                 suggestedTags?: {
+                  confidence?: number;
                   entityScoped?: boolean;
                   isNew?: boolean;
                   pattern?: string;
+                  preAccept?: boolean;
                   promptVersion?: string;
                   /** @enum {string} */
                   source: 'ai' | 'rule' | 'entity';
@@ -10692,9 +10728,11 @@ export interface operations {
                 /** @enum {string} */
                 status: 'matched' | 'uncertain' | 'failed' | 'skipped';
                 suggestedTags?: {
+                  confidence?: number;
                   entityScoped?: boolean;
                   isNew?: boolean;
                   pattern?: string;
+                  preAccept?: boolean;
                   promptVersion?: string;
                   /** @enum {string} */
                   source: 'ai' | 'rule' | 'entity';
@@ -10770,9 +10808,11 @@ export interface operations {
                 /** @enum {string} */
                 status: 'matched' | 'uncertain' | 'failed' | 'skipped';
                 suggestedTags?: {
+                  confidence?: number;
                   entityScoped?: boolean;
                   isNew?: boolean;
                   pattern?: string;
+                  preAccept?: boolean;
                   promptVersion?: string;
                   /** @enum {string} */
                   source: 'ai' | 'rule' | 'entity';
@@ -10848,9 +10888,11 @@ export interface operations {
                 /** @enum {string} */
                 status: 'matched' | 'uncertain' | 'failed' | 'skipped';
                 suggestedTags?: {
+                  confidence?: number;
                   entityScoped?: boolean;
                   isNew?: boolean;
                   pattern?: string;
+                  preAccept?: boolean;
                   promptVersion?: string;
                   /** @enum {string} */
                   source: 'ai' | 'rule' | 'entity';
@@ -11278,6 +11320,7 @@ export interface operations {
         key:
           | 'finance.aiCategorizer.model'
           | 'finance.aiCategorizer.maxTokens'
+          | 'finance.aiCategorizer.preAcceptConfidencePercent'
           | 'finance.ruleGen.model'
           | 'finance.ruleGen.maxTokens'
           | 'finance.upSync.enabled'
@@ -11351,6 +11394,7 @@ export interface operations {
         key:
           | 'finance.aiCategorizer.model'
           | 'finance.aiCategorizer.maxTokens'
+          | 'finance.aiCategorizer.preAcceptConfidencePercent'
           | 'finance.ruleGen.model'
           | 'finance.ruleGen.maxTokens'
           | 'finance.upSync.enabled'
@@ -11432,6 +11476,7 @@ export interface operations {
         key:
           | 'finance.aiCategorizer.model'
           | 'finance.aiCategorizer.maxTokens'
+          | 'finance.aiCategorizer.preAcceptConfidencePercent'
           | 'finance.ruleGen.model'
           | 'finance.ruleGen.maxTokens'
           | 'finance.upSync.enabled'
@@ -11512,6 +11557,7 @@ export interface operations {
         key:
           | 'finance.aiCategorizer.model'
           | 'finance.aiCategorizer.maxTokens'
+          | 'finance.aiCategorizer.preAcceptConfidencePercent'
           | 'finance.ruleGen.model'
           | 'finance.ruleGen.maxTokens'
           | 'finance.upSync.enabled'
@@ -13479,9 +13525,11 @@ export interface operations {
         content: {
           'application/json': {
             tags: {
+              confidence?: number;
               entityScoped?: boolean;
               isNew?: boolean;
               pattern?: string;
+              preAccept?: boolean;
               promptVersion?: string;
               /** @enum {string} */
               source: 'ai' | 'rule' | 'entity';

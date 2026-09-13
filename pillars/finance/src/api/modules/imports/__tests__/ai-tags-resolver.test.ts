@@ -95,6 +95,7 @@ function makeContext(): ProcessContext {
     importBatchId: 'batch-1',
     entityDefaultTags: new Map(),
     correctionRules: [],
+    preAcceptThreshold: 0,
   };
 }
 
@@ -158,9 +159,21 @@ describe('trigger predicate', () => {
         transactionType: 'purchase',
       },
     ]);
+    // No confidence in the reply, so nothing is pre-accepted (POPS-3671).
     expect(rowOf(results[0]!).suggestedTags).toEqual([
-      { tag: 'venue:supermarket', source: 'ai' },
-      { tag: 'contains:groceries', source: 'ai' },
+      { tag: 'venue:supermarket', source: 'ai', preAccept: false },
+      { tag: 'contains:groceries', source: 'ai', preAccept: false },
+    ]);
+  });
+
+  it('pre-accepts the tags when the reply carries a confidence that meets the threshold', async () => {
+    tagsOnlyBatchWithAi.mockResolvedValue(reply({ tags: ['venue:supermarket'], confidence: 0.9 }));
+    const results = [tagPoorRow()];
+
+    await resolve(results);
+
+    expect(rowOf(results[0]!).suggestedTags).toEqual([
+      { tag: 'venue:supermarket', source: 'ai', confidence: 0.9, preAccept: true },
     ]);
   });
 
@@ -171,7 +184,7 @@ describe('trigger predicate', () => {
     await resolve(results);
 
     expect(rowOf(results[0]!).suggestedTags).toEqual([
-      { tag: 'venue:speakeasy', source: 'ai', isNew: true },
+      { tag: 'venue:speakeasy', source: 'ai', isNew: true, preAccept: false },
     ]);
   });
 
@@ -306,9 +319,13 @@ describe('deduplication and chunking', () => {
     expect(tagsOnlyBatchWithAi).toHaveBeenCalledTimes(1);
     expect(callInputs(0)).toHaveLength(8);
     for (const result of results.slice(0, 6)) {
-      expect(rowOf(result).suggestedTags).toEqual([{ tag: 'venue:supermarket', source: 'ai' }]);
+      expect(rowOf(result).suggestedTags).toEqual([
+        { tag: 'venue:supermarket', source: 'ai', preAccept: false },
+      ]);
     }
-    expect(rowOf(results[6]!).suggestedTags).toEqual([{ tag: 'venue:cafe', source: 'ai' }]);
+    expect(rowOf(results[6]!).suggestedTags).toEqual([
+      { tag: 'venue:cafe', source: 'ai', preAccept: false },
+    ]);
   });
 
   it('gives each row its own suggestion objects so the wizard can edit them apart', async () => {
@@ -374,7 +391,9 @@ describe('counters', () => {
     await resolve(results);
 
     expect(counters.aiTagValuesRejected).toBe(2);
-    expect(rowOf(results[0]!).suggestedTags).toEqual([{ tag: 'venue:supermarket', source: 'ai' }]);
+    expect(rowOf(results[0]!).suggestedTags).toEqual([
+      { tag: 'venue:supermarket', source: 'ai', preAccept: false },
+    ]);
   });
 
   it('leaves a row alone when the reply carries no usable tags', async () => {

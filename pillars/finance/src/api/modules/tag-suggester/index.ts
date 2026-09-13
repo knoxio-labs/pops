@@ -28,10 +28,10 @@ import { addAiTags } from './ai-tags.js';
 import { pushSuggestion } from './seen-tags.js';
 import { findMatchingTagRules, matchTagRules } from './tag-rule-matching.js';
 
-import type { SuggestedTag } from './types.js';
+import type { AiSuggestionProvenance, SuggestedTag } from './types.js';
 
 export { buildAiSuggestedTags } from './ai-tags.js';
-export type { SuggestedTag, TagSuggestionSource } from './types.js';
+export type { AiSuggestionProvenance, SuggestedTag, TagSuggestionSource } from './types.js';
 
 import type { InMemoryTagRule } from './tag-rule-matching.js';
 
@@ -50,8 +50,8 @@ export interface SuggestTagsOptions {
   accountId?: string | null;
   aiTags?: string[];
   aiCategory?: string | null;
-  /** The prompt revision that produced `aiTags`, stamped onto each AI suggestion (POPS-3677). */
-  aiPromptVersion?: string;
+  /** The prompt, confidence and pre-accept threshold behind `aiTags`, stamped onto each AI suggestion (POPS-3677, POPS-3671). */
+  aiProvenance?: AiSuggestionProvenance;
   knownTags?: string[];
   correctionTags?: string[];
   correctionPattern?: string;
@@ -221,7 +221,7 @@ export function suggestTags(db: FinanceDb, opts: SuggestTagsOptions): SuggestedT
   addAiTags({
     aiTags: opts.aiTags,
     aiCategory: opts.aiCategory,
-    aiPromptVersion: opts.aiPromptVersion,
+    aiProvenance: opts.aiProvenance,
     knownTags: opts.knownTags,
     db,
     seen: pass.seen,

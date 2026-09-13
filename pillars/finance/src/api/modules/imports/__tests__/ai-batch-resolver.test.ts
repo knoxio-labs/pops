@@ -64,6 +64,7 @@ function makeContext(overrides: Partial<ProcessContext> = {}): ProcessContext {
     importBatchId: 'batch-1',
     entityDefaultTags: new Map(),
     correctionRules: [],
+    preAcceptThreshold: 0,
     ...overrides,
   };
 }

@@ -6,7 +6,11 @@
  * own `suggestTags` (which also takes the handle).
  */
 import { tagVocabularyService, type FinanceDb } from '../../../db/index.js';
-import { suggestTags, type SuggestedTag } from '../tag-suggester/index.js';
+import {
+  suggestTags,
+  type AiSuggestionProvenance,
+  type SuggestedTag,
+} from '../tag-suggester/index.js';
 
 /**
  * Load the vocabulary of every classified facet, most-used value first. Called
@@ -52,8 +56,8 @@ export interface BuildSuggestedTagsOptions {
   correctionTags: string[];
   aiTags?: string[];
   aiCategory: string | null;
-  /** The prompt revision that produced `aiTags` (POPS-3677). */
-  aiPromptVersion?: string;
+  /** The prompt, confidence and pre-accept threshold behind `aiTags` (POPS-3677, POPS-3671). */
+  aiProvenance?: AiSuggestionProvenance;
   knownTags: string[];
   correctionPattern?: string;
   /** `contactId → defaultTags` from the per-run contacts fetch (entity source). */
@@ -78,7 +82,7 @@ export function buildSuggestedTags(db: FinanceDb, opts: BuildSuggestedTagsOption
     entityId: opts.entityId,
     aiTags: opts.aiTags,
     aiCategory: opts.aiCategory,
-    aiPromptVersion: opts.aiPromptVersion,
+    aiProvenance: opts.aiProvenance,
     knownTags: opts.knownTags,
     correctionTags: opts.correctionTags,
     correctionPattern: opts.correctionPattern,

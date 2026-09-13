@@ -13,10 +13,10 @@ import type { CategorizerInput } from './ai-categorizer-types.js';
  * — bump on every prompt-shape change so accept/reject quality is joinable
  * per prompt revision.
  */
-export const PROMPT_VERSION_CATEGORIZE = 'categorize-v4.0';
+export const PROMPT_VERSION_CATEGORIZE = 'categorize-v4.1';
 
 /** Versioned telemetry tag for the batched categorizer prompt (CF096/#3671). */
-export const PROMPT_VERSION_CATEGORIZE_BATCH = 'categorize-batch-v4.0';
+export const PROMPT_VERSION_CATEGORIZE_BATCH = 'categorize-batch-v4.1';
 
 /**
  * Versioned telemetry tag for the tag-only prompt (POPS-2596) — the shape that
@@ -24,7 +24,7 @@ export const PROMPT_VERSION_CATEGORIZE_BATCH = 'categorize-batch-v4.0';
  * categorize versions so this path's cost and its accept/reject quality are
  * readable on their own rather than folded into entity categorization.
  */
-export const PROMPT_VERSION_TAGS_ONLY = 'tags-v3.0';
+export const PROMPT_VERSION_TAGS_ONLY = 'tags-v3.1';
 
 /**
  * Render the allowlisted transaction fields as the prompt's "Transaction data"
@@ -94,8 +94,19 @@ export const TAGS_RULES = `tag rules:
 - A value that is not listed is not available. If nothing listed fits a field, return null (or [] for a list field) — do NOT invent a value, coin a near-synonym, or return a value from a different field's list.
 - Choose the most specific listed value that is true of the transaction, and omit a field you would only be guessing at. Omitting is a correct answer rather than a failure: routine provisioning — a grocery run, a fuel stop, a subscription — genuinely has no occasion, and leaving the field null is right where picking the nearest value is wrong.`;
 
+/**
+ * What a tag confidence means (POPS-3671). Shared by every shape that asks for
+ * one: the categorize shapes call the field `tagConfidence`, beside the
+ * merchant's `confidence`; the tag-only shape, which has no merchant to rate,
+ * calls it `confidence`.
+ */
+export function tagConfidenceRule(field: string): string {
+  return `- ${field} (0.0-1.0) is your confidence that every tag you returned is true of the transaction. 1.0 only when the transaction leaves no doubt; lower it for each tag you inferred rather than read; an answer with no tags at all can still be confident.`;
+}
+
 export const CONFIDENCE_RULES = `confidence rules:
-- Your confidence (0.0-1.0) that entityName is the correct merchant. 1.0 only when the description unambiguously names a known brand; lower it for an inferred/guessed name, and lower it further when entityName is null.`;
+- confidence (0.0-1.0) is your confidence that entityName is the correct merchant. 1.0 only when the description unambiguously names a known brand; lower it for an inferred/guessed name, and lower it further when entityName is null.
+${tagConfidenceRule('tagConfidence')}`;
 
 export function knownEntitiesSection(knownEntityNames: string[], reuseInstruction: string): string {
   return knownEntityNames.length > 0

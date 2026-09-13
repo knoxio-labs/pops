@@ -23,6 +23,12 @@ export interface AiCacheEntry {
    */
   confidence: number;
   /**
+   * The model's confidence that `tags` are true of the transaction (POPS-3671).
+   * Absent when the reply omitted or malformed it — with no default, because an
+   * absent tag confidence must not pre-accept a suggestion.
+   */
+  tagConfidence?: number;
+  /**
    * How many values the model returned that were refused by the closed-set
    * validation (POPS-2606). Absent when nothing was refused. Counted into the
    * batch's {@link AiCounters}; the values themselves are logged at the point
