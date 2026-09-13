@@ -70,7 +70,15 @@ interface ItemPayload {
   condition: string | null;
   room: null;
   locationId: string | null;
-  inUse: boolean;
+  /**
+   * Absent unless the checkbox was actually touched this session. The form
+   * has no tri-state control, so a fetched `NULL` (unreviewed) displays as
+   * unchecked (POPS-2432); sending that coerced `false` back unconditionally
+   * on every save — even one that only changed the brand — would flip a
+   * never-reviewed row to "reviewed, not in use" on the next edit, the
+   * exact regret-value collision this ticket exists to eliminate.
+   */
+  inUse: boolean | undefined;
   deductible: boolean;
   purchaseDate: string | null;
   warrantyExpires: string | null;
@@ -81,7 +89,7 @@ interface ItemPayload {
   notes: string | null;
 }
 
-function buildItemPayload(values: ItemFormValues): ItemPayload {
+export function buildItemPayload(values: ItemFormValues, isInUseTouched: boolean): ItemPayload {
   return {
     itemName: values.itemName.trim(),
     brand: values.brand || null,
@@ -91,7 +99,7 @@ function buildItemPayload(values: ItemFormValues): ItemPayload {
     condition: values.condition || null,
     room: null,
     locationId: values.locationId || null,
-    inUse: values.inUse,
+    inUse: isInUseTouched ? values.inUse : undefined,
     deductible: values.deductible,
     purchaseDate: values.purchaseDate || null,
     warrantyExpires: values.warrantyExpires || null,
@@ -107,6 +115,8 @@ interface UseItemMutationsArgs {
   id: string | undefined;
   isEditMode: boolean;
   pendingConnections: PendingConnection[];
+  /** Whether the inUse checkbox has been touched this session. See {@link ItemPayload.inUse}. */
+  isInUseTouched: () => boolean;
 }
 
 interface UpdateInput {
@@ -114,7 +124,12 @@ interface UpdateInput {
   data: ItemPayload;
 }
 
-export function useItemMutations({ id, isEditMode, pendingConnections }: UseItemMutationsArgs) {
+export function useItemMutations({
+  id,
+  isEditMode,
+  pendingConnections,
+  isInUseTouched,
+}: UseItemMutationsArgs) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -160,14 +175,14 @@ export function useItemMutations({ id, isEditMode, pendingConnections }: UseItem
         toast.error('Item name is required');
         return;
       }
-      const payload = buildItemPayload(values);
+      const payload = buildItemPayload(values, isInUseTouched());
       if (isEditMode && id) {
         updateMutation.mutate({ id, data: payload });
       } else {
         createMutation.mutate(payload);
       }
     },
-    [isEditMode, id, createMutation, updateMutation]
+    [isEditMode, id, createMutation, updateMutation, isInUseTouched]
   );
 
   return {

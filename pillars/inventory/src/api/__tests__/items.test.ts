@@ -60,7 +60,9 @@ describe('items REST — CRUD happy paths', () => {
     expect(created.data.brand).toBe('Apple');
     expect(created.data.replacementValue).toBe(2500);
     expect(created.data.purchasePrice).toBe(1999);
-    expect(created.data.inUse).toBe(false);
+    // Unreviewed (POPS-2432): create omitted inUse, so the row — and this
+    // response — carries null, not the "reviewed, not in use" false.
+    expect(created.data.inUse).toBeNull();
     expect(created.data.deductible).toBe(false);
 
     const list = await api.items.list();
@@ -92,6 +94,52 @@ describe('items REST — CRUD happy paths', () => {
     expect(created.data.model).toBeNull();
     expect(created.data.locationId).toBeNull();
     expect(created.data.replacementValue).toBeNull();
+  });
+
+  it('writes in_use as NULL — unreviewed — rather than 0, when create omits it (POPS-2432)', async () => {
+    const created = await client().items.create({ itemName: 'Fanned-out asset' });
+
+    const row = inventoryDb.db
+      .select({ inUse: homeInventory.inUse })
+      .from(homeInventory)
+      .where(eq(homeInventory.id, created.data.id))
+      .get();
+
+    expect(row?.inUse).toBeNull();
+  });
+
+  it('writes in_use as 0 — reviewed, not in use — when create sends an explicit false (POPS-2432)', async () => {
+    const created = await client().items.create({ itemName: 'Reviewed asset', inUse: false });
+
+    const row = inventoryDb.db
+      .select({ inUse: homeInventory.inUse })
+      .from(homeInventory)
+      .where(eq(homeInventory.id, created.data.id))
+      .get();
+
+    expect(row?.inUse).toBe(0);
+  });
+
+  it('reports inUse as null over REST, not false, for an unreviewed row (POPS-2432)', async () => {
+    // The create response is read by the very caller who just omitted
+    // inUse; if it answered false, that caller would see "reviewed, not in
+    // use" for a row nobody reviewed — the same collision the fix exists to
+    // close, just moved from the write side to the read side.
+    const api = client();
+    const created = await api.items.create({ itemName: 'Fanned-out asset' });
+    expect(created.data.inUse).toBeNull();
+
+    const fetched = await api.items.get(created.data.id);
+    expect(fetched.data.inUse).toBeNull();
+
+    const list = await api.items.list();
+    expect(list.data.find((item) => item.id === created.data.id)?.inUse).toBeNull();
+  });
+
+  it('still reports inUse as a real false when a row was actually reviewed (POPS-2432)', async () => {
+    const api = client();
+    const created = await api.items.create({ itemName: 'Reviewed asset', inUse: false });
+    expect(created.data.inUse).toBe(false);
   });
 
   it('applies the column default for condition when create omits it', async () => {
