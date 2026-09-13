@@ -485,6 +485,122 @@ describe('what a PASSING run says (POPS-3026)', { timeout: REAL_SUBPROCESS_TIMEO
   });
 });
 
+describe(
+  '--head lets the caller project a commit other than HEAD (pre-push: the pushed sha may not be HEAD)',
+  { timeout: REAL_SUBPROCESS_TIMEOUT_MS },
+  () => {
+    const repos: string[] = [];
+    const script = join(repoRoot, 'scripts', 'ci', 'check-line-budget-headroom.mjs');
+
+    afterEach(() => {
+      for (const dir of repos.splice(0)) rmSync(dir, { recursive: true, force: true });
+    });
+
+    function makeRepo(): string {
+      const dir = mkdtempSync(join(tmpdir(), 'line-budget-head-'));
+      repos.push(dir);
+      execFileSync('git', ['init', '--initial-branch=main', '-q'], { cwd: dir, env: gitEnv() });
+      execFileSync('git', ['config', 'user.email', 'test@example.com'], {
+        cwd: dir,
+        env: gitEnv(),
+      });
+      execFileSync('git', ['config', 'user.name', 'Test'], { cwd: dir, env: gitEnv() });
+      return dir;
+    }
+
+    function commit(dir: string, file: string, content: string, message: string): void {
+      writeFileSync(join(dir, file), content);
+      execFileSync('git', ['add', file], { cwd: dir, env: gitEnv() });
+      execFileSync('git', ['commit', '-q', '-m', message], { cwd: dir, env: gitEnv() });
+    }
+
+    function body(n: number): string {
+      return `${Array.from({ length: n }, (_, i) => `console.error(${i});`).join('\n')}\n`;
+    }
+
+    /**
+     * Three branches sharing one root: `main` never moves again, `clean`
+     * checks out at the root with no further changes, `over` adds two lines
+     * to `shared.ts` (199 -> 201, one over the cap). `headSha`/`cleanSha` are
+     * exposed so a test can pass either as `--head` regardless of which one
+     * is actually checked out.
+     */
+    function threeBranchRepo(): { dir: string; overSha: string; cleanSha: string } {
+      const dir = makeRepo();
+      commit(dir, 'shared.ts', body(199), 'root: shared.ts at 199 lines');
+      execFileSync('git', ['checkout', '-q', '-b', 'clean'], { cwd: dir, env: gitEnv() });
+      const cleanSha = execFileSync('git', ['rev-parse', 'HEAD'], {
+        cwd: dir,
+        encoding: 'utf8',
+      }).trim();
+      execFileSync('git', ['checkout', '-q', '-b', 'over'], { cwd: dir, env: gitEnv() });
+      commit(
+        dir,
+        'shared.ts',
+        `${body(199)}console.error('a');\nconsole.error('b');\n`,
+        'over: +2 lines, 201 total'
+      );
+      const overSha = execFileSync('git', ['rev-parse', 'HEAD'], {
+        cwd: dir,
+        encoding: 'utf8',
+      }).trim();
+      return { dir, overSha, cleanSha };
+    }
+
+    it('reports OVER for --head <over-budget sha> while the checked-out HEAD (clean) stays under the cap', () => {
+      const { dir, overSha, cleanSha } = threeBranchRepo();
+      execFileSync('git', ['checkout', '-q', 'clean'], { cwd: dir, env: gitEnv() });
+      expect(
+        execFileSync('git', ['rev-parse', 'HEAD'], { cwd: dir, encoding: 'utf8' }).trim()
+      ).toBe(cleanSha);
+
+      const pointedAtOver = spawnSync(
+        'node',
+        [script, '--base', 'main', '--head', overSha, '--repo', dir],
+        { cwd: repoRoot, encoding: 'utf8', env: gitEnv() }
+      );
+      expect(pointedAtOver.status).toBe(1);
+      expect(pointedAtOver.stdout).toContain('OVER the 200-line cap');
+
+      // The default (`--head` omitted, i.e. HEAD) must NOT reproduce that
+      // failure — HEAD really is the clean branch here.
+      const defaultingToHead = spawnSync('node', [script, '--base', 'main', '--repo', dir], {
+        cwd: repoRoot,
+        encoding: 'utf8',
+        env: gitEnv(),
+      });
+      expect(defaultingToHead.status).toBe(0);
+      expect(defaultingToHead.stdout).not.toContain('OVER');
+    });
+
+    it('passes for --head <clean sha> even while the checked-out HEAD is the over-budget branch', () => {
+      const { dir, overSha, cleanSha } = threeBranchRepo();
+      execFileSync('git', ['checkout', '-q', 'over'], { cwd: dir, env: gitEnv() });
+      expect(
+        execFileSync('git', ['rev-parse', 'HEAD'], { cwd: dir, encoding: 'utf8' }).trim()
+      ).toBe(overSha);
+
+      const pointedAtClean = spawnSync(
+        'node',
+        [script, '--base', 'main', '--head', cleanSha, '--repo', dir],
+        { cwd: repoRoot, encoding: 'utf8', env: gitEnv() }
+      );
+      expect(pointedAtClean.status).toBe(0);
+      expect(pointedAtClean.stdout).not.toContain('OVER');
+
+      // Proves the sha argument is actually doing the work: the same repo,
+      // same cwd, defaulting to HEAD (the over-budget branch) DOES fail.
+      const defaultingToHead = spawnSync('node', [script, '--base', 'main', '--repo', dir], {
+        cwd: repoRoot,
+        encoding: 'utf8',
+        env: gitEnv(),
+      });
+      expect(defaultingToHead.status).toBe(1);
+      expect(defaultingToHead.stdout).toContain('OVER the 200-line cap');
+    });
+  }
+);
+
 describe('headroom description helpers', () => {
   const base = { file: 'a.ts', max: 200, baseHeadCount: 190, branchDelta: 5 } as const;
 
