@@ -52,13 +52,18 @@ export function buildCreateValues(
   const values: InventoryInsert = {
     id,
     itemName: input.itemName,
-    inUse: input.inUse ? 1 : 0,
     deductible: input.deductible ? 1 : 0,
     lastEditedTime: now,
     purchaseTransactionUri: crossPillarUrisService.purchaseTransactionUriFor(
       input.purchaseTransactionId
     ),
   };
+  // input.inUse is left unset (→ NULL, "nobody has reviewed this row") unless
+  // the caller sent an explicit true/false. The column has no default, so an
+  // omitted key lands as NULL the same as writing it explicitly (POPS-2432).
+  if (input.inUse !== undefined && input.inUse !== null) {
+    values.inUse = input.inUse ? 1 : 0;
+  }
 
   assignNullableKeys(values, input, CREATE_NULLABLE_STRING_KEYS);
   assignNullableKeys(values, input, CREATE_NULLABLE_NUMBER_KEYS);

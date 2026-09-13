@@ -13,6 +13,7 @@ recoveries and one second feature, each starting from an unpaired launch:
 | `root-says-so-when-nothing-is-usable.yaml`      | A feature the BFM reports `unavailable` never opens its screen; the root says so and Try again leaves it once the pillar answers. |
 | `root-contract-mismatch-reads-differently.yaml` | A pillar answering something unreadable reads as a different sentence from `unavailable`, not the same one.                       |
 | `receipt-capture-says-there-is-no-camera.yaml`  | A second usable feature earns a tab, and the screen behind it explains the camera it cannot open instead of offering one.         |
+| `receipt-manual-entry.yaml`                     | A hand-entered purchase reaches the editable form with no camera, saves for real, and comes back as the saved result screen.      |
 
 ## Running them
 
@@ -179,6 +180,13 @@ call the seams are in `scripts/` beside the flows, one per switch.
   asks it not to, which is the same shape finance's two `/openapi` switches
   have and for the same cache reason. `scripts/ios-e2e/purchases-stub.mjs`
   carries it, on its own port — two pillars cannot share one `/openapi`.
+- **A saved manual purchase** is the one write on this stub that answers for
+  real rather than refusing: `POST /purchases/manual`, the operation
+  `pillars/bfm/src/api/purchases/draft-client.ts`'s `createManualPurchase`
+  calls by name. `scripts/ios-e2e/purchases-stub.mjs` echoes back a
+  `PurchaseDetailResponseSchema`-shaped record built from the request body,
+  which is what lets `receipt-manual-entry.yaml` assert on values it typed
+  rather than a producer's invention.
 
 A silent recovery leaves no mark on a screenshot, so the expiry flow finishes
 by reading `GET /__e2e/state` back: one token aged, one refresh spent. Without
@@ -195,12 +203,20 @@ no selector works around it.
 So `receipt-capture-says-there-is-no-camera.yaml` drives everything on the near
 side of the camera: the tab that only exists once a second feature is usable,
 the screen behind it, which of the three refusals it is showing, and the rule
-that only a reversible refusal is offered a way to reverse it. What sits on the
-far side — a capture, an upload, and the three outcomes the result screen draws
-from it — needs the capture step stubbed inside the app before a flow can reach
-it, and that is tracked rather than done here. Until it is, those outcomes are
-covered where they can be: `FeatureReceiptCapture`'s own suites render each one
-and read it back.
+that only a reversible refusal is offered a way to reverse it. A capture, an
+upload, and the reconciled/unreconciled/unreadable outcomes a scan produces
+still need the capture step stubbed inside the app before a flow can reach
+them, and that remains tracked rather than done here — those three outcomes
+are covered where they can be, by `FeatureReceiptCapture`'s own suites
+rendering each one and reading it back.
+
+Manual entry (POPS-2454) is not on the far side of that gap: it produces no
+scan, so there is nothing about it a camera-free Simulator cannot drive.
+`receipt-manual-entry.yaml` reaches it from the same tab, fills in the same
+`ReceiptDraftView` a corrected reading uses, and saves it through a real
+`POST /purchases/manual` against `scripts/ios-e2e/purchases-stub.mjs` — the
+one write this harness answers for real rather than refusing, since it is the
+one write the Simulator can produce a request for at all.
 
 ## What these flows do not prove
 

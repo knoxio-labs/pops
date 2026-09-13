@@ -12,6 +12,7 @@ import {
 import { correctionsTools } from './finance-corrections.js';
 import { importsTools } from './finance-imports.js';
 import { searchTools } from './finance-search.js';
+import { summaryTools } from './finance-summary.js';
 import { wishlistTools } from './finance-wishlist.js';
 import { mapCallResult, reqStr, toolError } from './utils.js';
 
@@ -156,4 +157,5 @@ export const financeTools: readonly ToolDef[] = [
   ...accountsTools,
   ...importsTools,
   ...searchTools,
+  ...summaryTools,
 ];

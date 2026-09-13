@@ -181,39 +181,38 @@ internal struct FakesTests {
         }
     }
 
-    @Test("the receipt capture fake answers the default outcome when nothing is configured")
+    @Test("the receipt capture fake answers the default extraction when nothing is configured")
     func receiptCaptureFakeDefaultOutcome() async throws {
         let repository = InMemoryReceiptCaptureRepository(
-            defaultOutcome: .unreadable(receiptCount: 1, reason: "no fixture"))
+            defaultExtraction: .unreadable(receiptCount: 1, reason: "no fixture"))
 
-        let outcome = try await repository.capture([ReceiptPart.fake()])
+        let outcome = try await repository.extract([ReceiptPart.fake()])
 
         #expect(outcome == .unreadable(receiptCount: 1, reason: "no fixture"))
-        #expect(await repository.callCount == 1)
+        #expect(await repository.extractCallCount == 1)
     }
 
-    @Test("a configured outcome answers the call it names")
+    @Test("a configured extraction answers the call it names")
     func receiptCaptureFakeConfiguredOutcome() async throws {
         let repository = InMemoryReceiptCaptureRepository()
-        await repository.respond(
-            onCall: 1, with: .created(purchase: .fake(id: "purchase-1"), alreadyStored: false))
+        await repository.respond(onCall: 1, with: .unreadable(receiptCount: 1, reason: "blurred"))
 
-        let outcome = try await repository.capture([ReceiptPart.fake()])
+        let outcome = try await repository.extract([ReceiptPart.fake()])
 
-        #expect(outcome == .created(purchase: .fake(id: "purchase-1"), alreadyStored: false))
+        #expect(outcome == .unreadable(receiptCount: 1, reason: "blurred"))
     }
 
-    @Test("a receipt capture failure can be injected, and only on the call it names")
+    @Test("a receipt extraction failure can be injected, and only on the call it names")
     func receiptCaptureFakeInjectsFailure() async throws {
         let repository = InMemoryReceiptCaptureRepository(
-            defaultOutcome: .created(purchase: .fake(id: "purchase-1"), alreadyStored: false))
-        await repository.fail(onCall: 1, with: .unavailable)
+            defaultExtraction: .unreadable(receiptCount: 1, reason: "blurred"))
+        await repository.failExtract(onCall: 1, with: .unavailable)
 
         await #expect(throws: RepositoryError.unavailable) {
-            try await repository.capture([ReceiptPart.fake()])
+            try await repository.extract([ReceiptPart.fake()])
         }
-        let outcome = try await repository.capture([ReceiptPart.fake()])
-        #expect(outcome == .created(purchase: .fake(id: "purchase-1"), alreadyStored: false))
+        let outcome = try await repository.extract([ReceiptPart.fake()])
+        #expect(outcome == .unreadable(receiptCount: 1, reason: "blurred"))
     }
 
     @Test("the receipt capture fake records what it was sent, per call")
@@ -222,10 +221,34 @@ internal struct FakesTests {
         let firstParts = [ReceiptPart.fake(mediaType: .png)]
         let secondParts = [ReceiptPart.fake(mediaType: .jpeg), ReceiptPart.fake(mediaType: .pdf)]
 
-        _ = try await repository.capture(firstParts)
-        _ = try await repository.capture(secondParts)
+        _ = try await repository.extract(firstParts)
+        _ = try await repository.extract(secondParts)
 
-        #expect(await repository.received == [firstParts, secondParts])
-        #expect(await repository.callCount == 2)
+        #expect(await repository.extracted == [firstParts, secondParts])
+        #expect(await repository.extractCallCount == 2)
+    }
+
+    @Test("saveDraft answers the configured result and records the payload")
+    func receiptCaptureFakeSaveDraft() async throws {
+        let repository = InMemoryReceiptCaptureRepository()
+        await repository.respondToSave(with: .success(.fake(id: "purchase-1")))
+        let payload = ReceiptDraftSavePayload.fake()
+
+        let purchase = try await repository.saveDraft(payload)
+
+        #expect(purchase == .fake(id: "purchase-1"))
+        #expect(await repository.savedDrafts == [payload])
+    }
+
+    @Test("createManualPurchase answers the configured result and records the payload")
+    func receiptCaptureFakeManualPurchase() async throws {
+        let repository = InMemoryReceiptCaptureRepository()
+        await repository.respondToManualPurchase(with: .success(.fake(id: "purchase-2")))
+        let payload = ReceiptManualPurchasePayload.fake()
+
+        let purchase = try await repository.createManualPurchase(payload)
+
+        #expect(purchase == .fake(id: "purchase-2"))
+        #expect(await repository.manualPurchases == [payload])
     }
 }

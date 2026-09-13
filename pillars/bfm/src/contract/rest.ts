@@ -46,6 +46,11 @@ import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
 
 import { requires } from './capabilities.js';
+import {
+  MobileCreateManualPurchaseBodySchema,
+  MobileExtractOutcomeSchema,
+  MobileSaveReceiptDraftBodySchema,
+} from './receipt-draft.js';
 import { bfmDeviceContract } from './rest-device.js';
 import { mobileFinanceContract } from './rest-mobile-finance.js';
 import {
@@ -55,6 +60,7 @@ import {
   MobilePageLimit,
 } from './rest-mobile-responses.js';
 import { bfmOperatorContract } from './rest-operator.js';
+import { MobileReceiptUploadBodySchema as MobileReceiptExtractBodySchema } from './rest-schemas.js';
 import {
   HealthResponseSchema,
   MobileBootstrapResponseSchema,
@@ -62,8 +68,6 @@ import {
   MobilePurchaseDetailSchema,
   MobilePurchasesPageSchema,
   MobileReceiptBytesSchema,
-  MobileReceiptOutcomeSchema,
-  MobileReceiptUploadBodySchema,
   MobileUpstreamErrorSchema,
 } from './rest-schemas.js';
 
@@ -73,14 +77,16 @@ const c = initContract();
  * The phone's view of `purchases`: the orders it can read, and the receipt it
  * can hand over.
  *
- * Three routes and two capabilities, which is the whole point of ADR-048 in
- * one sub-router. `purchases.receipts.write` buys the upload and nothing else;
- * `purchases.read` buys the list and the detail and nothing else. A device may
- * hold either without the other — photographing a till slip and scrolling a
+ * Several routes and three capabilities, which is the whole point of ADR-048
+ * in one sub-router. `purchases.receipts.write` buys reading a receipt into a
+ * draft and saving one; `purchases.write` buys writing a purchase directly,
+ * with no receipt involved (POPS-2454); `purchases.read` buys the list and
+ * the detail. A device may hold any of them without the others —
+ * photographing a till slip, typing a purchase by hand and scrolling a
  * history of everything the household has bought are different authorities —
- * and destroying an order is on neither, because it is not on this surface at
- * all. `__tests__/mobile-capabilities.test.ts` walks this contract and fails on
- * a mobile route that declares nothing.
+ * and destroying an order is on none of them, because it is not on this
+ * surface at all. `__tests__/mobile-capabilities.test.ts` walks this contract
+ * and fails on a mobile route that declares nothing.
  */
 const mobilePurchasesContract = c.router({
   listPurchases: {
@@ -118,24 +124,61 @@ const mobilePurchasesContract = c.router({
     summary: 'The fuller record behind one list row, with its lines',
     metadata: requires('purchases.read'),
   },
-  uploadReceipt: {
+  /**
+   * Read a receipt into an editable draft. Persists nothing (POPS-2454):
+   * the phone edits `draft` and hands it to `saveReceiptDraft` when the
+   * reviewer is done, or discards it and nothing was ever written.
+   */
+  extractReceipt: {
     method: 'POST',
-    path: '/mobile/purchases/receipts',
-    body: MobileReceiptUploadBodySchema,
+    path: '/mobile/purchases/receipts/extract',
+    body: MobileReceiptExtractBodySchema,
     responses: {
-      // One status for all three outcomes. Each is a receipt bfm successfully
-      // handed over and got an answer about, so none of them is an HTTP
-      // failure — the distinction lives in the body's `kind`, which the app
-      // switches on, rather than in a status code that would also have to mean
-      // "the upload itself went wrong".
-      200: MobileReceiptOutcomeSchema,
+      200: MobileExtractOutcomeSchema,
       ...MOBILE_REQUEST_RESPONSES,
       ...MOBILE_PERIMETER_RESPONSES,
       413: MobilePayloadTooLargeErrorSchema,
       ...MOBILE_UPSTREAM_RESPONSES,
     },
-    summary: 'Hand a photographed, scanned or pasted receipt to the purchases pillar',
+    summary: 'Read a photographed, scanned or pasted receipt into an editable draft',
     metadata: requires('purchases.receipts.write'),
+  },
+  /**
+   * Persist a reviewer-approved (and possibly corrected) receipt-derived
+   * draft. Replaces the old upload-and-persist route this same path used
+   * to name — see this contract's git history for `uploadReceipt`.
+   */
+  saveReceiptDraft: {
+    method: 'POST',
+    path: '/mobile/purchases/receipts',
+    body: MobileSaveReceiptDraftBodySchema,
+    responses: {
+      200: MobilePurchaseDetailSchema,
+      ...MOBILE_REQUEST_RESPONSES,
+      ...MOBILE_PERIMETER_RESPONSES,
+      ...MOBILE_UPSTREAM_RESPONSES,
+    },
+    summary: 'Save a reviewed, possibly corrected receipt-derived draft as a purchase',
+    metadata: requires('purchases.receipts.write'),
+  },
+  /**
+   * A purchase typed by hand — no receipt, no photograph. Its own capability
+   * (`purchases.write`): handing a phone the ability to photograph a till
+   * slip is not the same as handing it the ability to write an arbitrary
+   * purchase record.
+   */
+  createManualPurchase: {
+    method: 'POST',
+    path: '/mobile/purchases/manual',
+    body: MobileCreateManualPurchaseBodySchema,
+    responses: {
+      200: MobilePurchaseDetailSchema,
+      ...MOBILE_REQUEST_RESPONSES,
+      ...MOBILE_PERIMETER_RESPONSES,
+      ...MOBILE_UPSTREAM_RESPONSES,
+    },
+    summary: 'Create a purchase typed by hand, with no receipt',
+    metadata: requires('purchases.write'),
   },
   getReceiptThumbnail: {
     method: 'GET',

@@ -71,7 +71,7 @@ internal struct CompositionRootTests {
             try await unpaired.transactions.transactions(after: nil)
         }
         await #expect(throws: RepositoryError.dependencyNotBound) {
-            _ = try await unpaired.receiptCapture.capture([])
+            _ = try await unpaired.receiptCapture.extract([])
         }
     }
 

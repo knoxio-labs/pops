@@ -85,6 +85,7 @@ const SAMPLE_TRANSACTION = {
   description: 'WOOLWORTHS 2246 SYDNEY NSW AU',
   amount: -45.2,
   date: '2026-01-15',
+  location: 'Sydney',
 };
 
 const SAMPLE_ACCEPTED_EXAMPLES: AcceptedCorrectionExample[] = [
@@ -173,7 +174,7 @@ export function buildPromptCatalog(): PromptCatalogEntry[] {
       title: 'Transaction Categorisation',
       model: CATEGORIZER_DEFAULT_MODEL,
       description:
-        'Used when a bank transaction cannot be matched to a known entity. Extracts a merchant name and spending tags from the allowlisted transaction fields (description, amount, date — never the raw CSV row or account/card columns), grounded by a bounded closed-set hint of known entity names.',
+        'Used when a bank transaction cannot be matched to a known entity. Extracts a merchant name and spending tags from the allowlisted transaction fields (description, amount, date, and the location parsed from the descriptor — never the raw CSV row or account/card columns), grounded by a bounded closed-set hint of known entity names.',
       template: buildPrompt(
         SAMPLE_TRANSACTION,
         SAMPLE_KNOWN_TAGS,

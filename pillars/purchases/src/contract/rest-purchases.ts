@@ -16,6 +16,7 @@ import {
 } from './inventory-proposals.js';
 import {
   AttachDocumentBodySchema,
+  CreateManualPurchaseBodySchema,
   CreatePurchaseBodySchema,
   ErrorBodySchema,
   ListItemsByTagQuerySchema,
@@ -84,6 +85,30 @@ export const purchasesPurchaseContract = c.router({
       409: ErrorBodySchema,
     },
     summary: 'Create an order with its deliveries, lines, charges and documents',
+  },
+  /**
+   * A purchase typed by hand — no receipt, no adapter, no file to hash
+   * (POPS-2454).
+   *
+   * Deliberately its own route rather than a variant of {@link create}:
+   * `create` is the adapter primitive and trusts its caller's `source`,
+   * which is exactly what a phone must never be trusted with (ADR-046) —
+   * handing it straight to a device would let a manual entry claim to be an
+   * upload. The handler fixes `source`/`ingestMethod` itself; the body
+   * carries only the fields a reviewer typed and an idempotency key it
+   * chose, so the same key resubmitted is a 409, not a twin.
+   */
+  createManual: {
+    method: 'POST',
+    path: '/purchases/manual',
+    body: CreateManualPurchaseBodySchema,
+    responses: {
+      200: PurchaseDetailSchema,
+      400: ErrorBodySchema,
+      // The idempotency key has already been used to write a purchase.
+      409: ErrorBodySchema,
+    },
+    summary: 'Create a purchase typed by hand, with no receipt',
   },
   /**
    * Attach one document to an order that already exists.

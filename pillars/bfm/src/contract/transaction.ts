@@ -1,16 +1,23 @@
 import { z } from 'zod';
 
 /**
- * The one currency value bfm emits today. Finance carries no currency field
- * at all — the fleet is single-currency and has always assumed it — so this
- * is what {@link import('../api/finance/wire.js').toMobileTransaction} stamps
- * onto every row rather than something finance sent.
+ * Stamped only when a transaction's own account currency could not be
+ * resolved — a finance account lookup that failed or timed out, never the
+ * ordinary case. Finance accounts carry a real `currency` (migration
+ * `0083_accounts.sql`), and a transaction's currency is its account's, so
+ * {@link import('../api/finance/wire.js').toMobileTransaction} is handed that
+ * currency by its caller and reaches for this only as the last resort — see
+ * `api/finance/accounts-client.ts` for the resolution.
+ *
+ * This used to be the currency bfm stamped on EVERY row unconditionally,
+ * before bfm read the account's own currency: a BRL cash account's rows all
+ * read as this value, off by roughly a factor of three (POPS-3571).
  *
  * Not the source of a `z.literal` on the wire schema — see
  * {@link MobileTransactionSchema.shape.currency} for why the wire type must
  * not narrow to this one value.
  */
-export const MOBILE_CURRENCY = 'AUD';
+export const FALLBACK_MOBILE_CURRENCY = 'AUD';
 
 /**
  * One row of the mobile transaction list. Deliberately only what a list row
@@ -36,9 +43,9 @@ export const MobileTransactionSchema = z.object({
    * enum on the generated client — the day bfm emits a second currency, every
    * installed build fails to decode it, and because this field sits inside an
    * array element, one unrecognised value fails the whole page, not just the
-   * row it is on. bfm only ever emits {@link MOBILE_CURRENCY} today; that is a
-   * fact about the current mapping, not a constraint the wire type should
-   * assert.
+   * row it is on. bfm now emits each transaction's real account currency
+   * (POPS-3571), falling back to {@link FALLBACK_MOBILE_CURRENCY} only when
+   * that lookup fails — either way this stays an open string.
    */
   currency: z.string(),
   /** Date-only `YYYY-MM-DD`. Finance's transactions carry no time component. */

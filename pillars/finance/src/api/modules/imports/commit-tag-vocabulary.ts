@@ -37,7 +37,9 @@ import { tagVocabularyService, type FinanceDb } from '../../../db/index.js';
  * them here would mean second-guessing `dropUnusableAddOps`, which decides
  * which of those ops apply at all and runs inside the transaction.
  */
+import { markerFacetTags } from '../../../db/services/tag-rule-write-guards.js';
 import { parseTagFacet, tagFacetKind } from '../../../db/tag-facets.js';
+import { MarkerFacetTagRuleError } from '../../../db/tag-rule-errors.js';
 import { ValidationError } from '../../shared/errors.js';
 import { collectTagsFromTagRuleChangeSet, isTagBearingTagRuleOp } from './commit-temp-resolver.js';
 
@@ -172,11 +174,17 @@ export function planCommitTagVocabulary(db: FinanceDb, payload: CommitPayload): 
   const tagRuleChangeSets = filterAcceptedTagRuleChangeSets(known, payload.tagRuleChangeSets);
   const toUpsert = new Map<string, string>();
 
+  const ruleTags = tagRuleChangeSets.flatMap((entry) =>
+    trimmedTags(collectTagsFromTagRuleChangeSet(entry.changeSet))
+  );
+  const markers = markerFacetTags(ruleTags);
+  if (markers.length > 0) {
+    throw new ValidationError(new MarkerFacetTagRuleError(markers).message, { tags: markers });
+  }
+
   const committedTags = [
     ...payload.transactions.flatMap((txn) => trimmedTags(txn.tags)),
-    ...tagRuleChangeSets.flatMap((entry) =>
-      trimmedTags(collectTagsFromTagRuleChangeSet(entry.changeSet))
-    ),
+    ...ruleTags,
   ];
 
   for (const tag of committedTags) {

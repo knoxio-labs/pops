@@ -139,6 +139,22 @@ export type FinanceSearchInput = {
   query: { text: string; filters?: StructuredFilter[] };
 };
 
+/**
+ * The window vocabulary `GET /summary` enforces, mirrored from
+ * `SUMMARY_WINDOWS` in `pillars/finance/src/contract/summary-windows.ts` —
+ * the mcp pillar cannot import that contract module directly (see
+ * `TRANSACTION_TYPES` above for why). Kept in step by
+ * `finance-summary.test.ts`, which reads the enum back off the finance
+ * pillar's committed OpenAPI spec.
+ */
+export const SUMMARY_WINDOWS = ['30d', '90d', 'month', 'year', 'all'] as const;
+export type SummaryWindow = (typeof SUMMARY_WINDOWS)[number];
+
+export type SummaryInput = {
+  window?: SummaryWindow;
+  topLimit?: number;
+};
+
 export type FinancePillarShape = {
   transactions: {
     list: (input: TransactionListInput) => unknown;
@@ -169,6 +185,9 @@ export type FinancePillarShape = {
   };
   search: {
     search: (input: FinanceSearchInput) => unknown;
+  };
+  summary: {
+    get: (input: SummaryInput) => unknown;
   };
 };
 

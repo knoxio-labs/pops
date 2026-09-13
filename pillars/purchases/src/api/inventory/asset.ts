@@ -36,7 +36,6 @@ export interface InventoryItemCreateBody {
   readonly purchasePrice: number;
   readonly purchasedFromName: string | null;
   readonly purchaseTransactionId: string | null;
-  readonly inUse: boolean;
   readonly deductible: boolean;
   readonly notes: string;
   readonly sourceRef: string;
@@ -131,15 +130,15 @@ export function sourceRefFor(proposal: InventoryProposal): string {
  *     instant does not merely render oddly, it deletes itself. Which day it
  *     is, is {@link purchaseCalendarDate}'s question.
  *
- * `inUse` and `deductible` are stated rather than left to inventory's own
- * defaults, because a default in another pillar's contract is a fact about
- * this asset that nothing here would notice changing. Both are false:
- * purchases holds no evidence either way, and `true` would assert a claim
- * nobody made. What false is NOT is a review — `home_inventory.in_use` is a
- * nullable tri-state whose NULL means "nobody has looked", and inventory's
- * create body has no way to say it, so a fanned-out asset arrives
- * indistinguishable from one a person marked "Stored". The pillar README's
- * fan-out section carries that caveat and what it costs.
+ * `deductible` is stated rather than left to inventory's own default, because
+ * a default in another pillar's contract is a fact about this asset that
+ * nothing here would notice changing. It goes as `false`: purchases holds no
+ * evidence either way, and `true` would assert a claim nobody made.
+ *
+ * `inUse` is not sent at all. Inventory's create body can now express the
+ * unreviewed state (POPS-2432) by omitting the field, and that is exactly
+ * what a fanned-out asset is — nobody has looked at it — so leaving it out
+ * says the true thing instead of stating a claim purchases cannot back.
  */
 /**
  * The calendar day this purchase fell on, where it was made.
@@ -171,7 +170,6 @@ export function toInventoryItemCreateBody(proposal: InventoryProposal): Inventor
     purchasePrice: proposal.purchasePriceCents / CENTS_PER_DOLLAR,
     purchasedFromName: proposal.purchasedFromName,
     purchaseTransactionId: financeTransactionId(proposal.purchaseTransactionUri),
-    inUse: false,
     deductible: false,
     notes: provenanceNote(proposal),
     sourceRef: sourceRefFor(proposal),

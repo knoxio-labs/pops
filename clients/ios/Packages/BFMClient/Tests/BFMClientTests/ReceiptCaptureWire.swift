@@ -1,4 +1,5 @@
 import AppCore
+import AppCoreFakes
 import Foundation
 import HTTPTypes
 import Testing
@@ -6,83 +7,69 @@ import Testing
 @testable import BFMClient
 
 /// One receipt through a stubbed transport, shared by every suite that reads
-/// what came back rather than asserting on what went out.
-internal func captureReceipt(
+/// what came back from `extractReceipt` rather than asserting on what went
+/// out.
+internal func extractReceipt(
     _ status: HTTPResponse.Status = .ok,
     json: String,
     parts: [ReceiptPart] = [ReceiptPart(mediaType: .jpeg, data: Data([0xFF, 0xD8]))]
-) async throws -> ReceiptOutcome {
+) async throws -> ReceiptExtraction {
     try await BFMReceiptCaptureRepository
         .stubbed(StubTransport(status: status, json: json))
-        .capture(parts)
+        .extract(parts)
 }
 
-/// The bodies `POST /mobile/purchases/receipts` can answer with, written as
-/// the JSON the BFM actually sends rather than built through the generated
-/// types — see ``TransactionsWire``'s own note for why.
+/// Saves a draft through a stubbed transport, for suites that read what
+/// `saveDraft` mapped a response into.
+internal func saveDraft(
+    _ status: HTTPResponse.Status = .ok,
+    json: String,
+    payload: ReceiptDraftSavePayload = .fake()
+) async throws -> ReceiptPurchase {
+    try await BFMReceiptCaptureRepository
+        .stubbed(StubTransport(status: status, json: json))
+        .saveDraft(payload)
+}
+
+/// The bodies `POST /mobile/purchases/receipts/extract`,
+/// `POST /mobile/purchases/receipts` and `POST /mobile/purchases/manual` can
+/// answer with, written as the JSON the BFM actually sends rather than built
+/// through the generated types — see ``TransactionsWire``'s own note for why.
 internal enum ReceiptCaptureWire {
-    internal static func created(
-        id: String = "purchase-1",
-        merchantName: String? = "Woolworths",
-        totalCents: Int = 4599,
+    internal static func draft(
+        reconciled: Bool = true,
+        receiptUris: String = "[\"pops://purchases/receipt/\(String(repeating: "a", count: 64))\"]",
+        failures: String = "[]",
+        merchantName: String? = "Bunnings Warehouse",
+        orderedAt: String = "2026-08-01T14:32:00+10:00",
         currency: String = "AUD",
-        orderedAt: String = "2026-03-05T10:00:00.000Z",
-        itemCount: Int = 3,
-        alreadyStored: Bool = false
+        totalCents: Int = 2750,
+        subtotalCents: Int = 2750,
+        taxCents: Int = 0,
+        surchargeCents: Int = 0,
+        shippingCents: Int = 0,
+        discountCents: Int = 0,
+        items: String = oneItem,
+        documents: String =
+            "[{\"documentUri\":\"pops://purchases/receipt/\(String(repeating: "a", count: 64))\",\"kind\":\"receipt\"}]"
     ) -> String {
         let merchantField = merchantName.map { "\"\($0)\"" } ?? "null"
         return """
-            {"kind":"created","alreadyStored":\(alreadyStored),\
-            "purchase":{"id":"\(id)","merchantName":\(merchantField),\
-            "totalCents":\(totalCents),"currency":"\(currency)",\
-            "orderedAt":"\(orderedAt)","itemCount":\(itemCount)}}
+            {"kind":"draft","receiptUris":\(receiptUris),"reconciled":\(reconciled),\
+            "failures":\(failures),"draft":{"merchantName":\(merchantField),\
+            "orderedAt":"\(orderedAt)","currency":"\(currency)","totalCents":\(totalCents),\
+            "subtotalCents":\(subtotalCents),"taxCents":\(taxCents),\
+            "surchargeCents":\(surchargeCents),"shippingCents":\(shippingCents),\
+            "discountCents":\(discountCents),"items":\(items),"documents":\(documents)}}
             """
     }
 
-    internal static func needsReview(
-        receiptCount: Int = 1,
-        extracted: String = ReceiptCaptureWire.extracted(),
-        problems: String...
-    ) -> String {
-        """
-        {"kind":"needs-review","receiptCount":\(receiptCount),\
-        "problems":[\(problems.joined(separator: ","))],"extracted":\(extracted)}
-        """
-    }
-
-    /// A reading with every field populated. A test asserting an absence
-    /// overrides the field it is about rather than starting from a blank, so
-    /// "the mapper drops this" cannot pass because nothing was there.
-    internal static func extracted(
-        merchantName: String = "\"Woolworths\"",
-        address: String = "\"12 Example St\"",
-        purchasedOn: String = "\"2026-03-05\"",
-        purchasedAt: String = "\"14:05\"",
-        currency: String = "\"AUD\"",
-        total: String = "$84.20",
-        tax: String = "\"$7.65\"",
-        discounts: String = "[\"$2.00\"]",
-        surcharges: String = "[\"$0.50\"]",
-        shipping: String = "null",
-        lines: String = oneLine,
-        unreadableNotes: String = "[\"line 7 is smudged\"]"
-    ) -> String {
-        """
-        {"merchantName":\(merchantName),"address":\(address),\
-        "purchasedOn":\(purchasedOn),"purchasedAt":\(purchasedAt),\
-        "currency":\(currency),"total":"\(total)","tax":\(tax),\
-        "discounts":\(discounts),"surcharges":\(surcharges),"shipping":\(shipping),\
-        "lines":\(lines),"unreadableNotes":\(unreadableNotes)}
-        """
-    }
-
-    /// One line, as the model transcribed it. A constant rather than a
-    /// default expression so the signature stays inside a line.
-    internal static let oneLine = """
-        [{"description":"MILK 2L","amount":"$3.10","quantity":2,"unitNote":"2 @ $1.55"}]
+    internal static let oneItem = """
+        [{"name":"Timber Pine DAR 42x19","quantity":null,"unitPriceCents":1250,\
+        "lineTotalCents":1250,"notes":[]}]
         """
 
-    internal static func problem(
+    internal static func gateFailure(
         code: String, detail: String = "off by a bit", deltaCents: String = "null"
     ) -> String {
         """
@@ -91,11 +78,36 @@ internal enum ReceiptCaptureWire {
     }
 
     internal static func unreadable(
-        reason: String = "the image is blank", receiptCount: Int = 1
+        reason: String = "the image is blank",
+        receiptUris: String = "[\"pops://purchases/receipt/\(String(repeating: "a", count: 64))\"]"
     ) -> String {
         """
-        {"kind":"unreadable","receiptCount":\(receiptCount),"reason":"\(reason)"}
+        {"kind":"unreadable","receiptUris":\(receiptUris),"reason":"\(reason)"}
         """
+    }
+
+    /// `saveReceiptDraft` and `createManualPurchase` both answer this shape.
+    internal static func purchaseDetail(
+        id: String = "purchase-1",
+        merchantName: String? = "Bunnings Warehouse",
+        totalCents: Int = 2750,
+        currency: String = "AUD",
+        orderedAt: String = "2026-08-01T14:32:00+10:00",
+        itemCount: Int = 1
+    ) -> String {
+        let merchantField = merchantName.map { "\"\($0)\"" } ?? "null"
+        let items = String(
+            repeating: """
+                {"id":"item","name":"item","quantity":1,"lineTotalCents":100},
+                """, count: itemCount
+        ).dropLast()
+        return """
+            {"id":"\(id)","merchantName":\(merchantField),"totalCents":\(totalCents),\
+            "orderedOn":"2026-08-01","currency":"\(currency)","orderedAt":"\(orderedAt)",\
+            "itemCount":\(itemCount),"status":"awaiting_settlement","receiptUri":null,\
+            "subtotalCents":\(totalCents),"taxCents":0,"shippingCents":0,"discountCents":0,\
+            "surchargeCents":0,"source":"receipt","items":[\(items)]}
+            """
     }
 
     internal static func failure(code: String, message: String = "no") -> String {

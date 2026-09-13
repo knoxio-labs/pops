@@ -2,7 +2,7 @@
  * A stand-in for the purchases pillar's READ surface, behind a real
  * {@link PillarGateway}.
  *
- * A fake HANDLE, like its receipt-upload sibling in `purchases-fake.ts`: the
+ * A fake HANDLE, like its sibling in `purchases-draft-fake.ts`: the
  * gateway, the wire validation, the day derivation and the paging arithmetic
  * are all production code under test, and only the network is replaced.
  *

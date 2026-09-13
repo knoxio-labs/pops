@@ -25,7 +25,11 @@ import { z } from 'zod';
 
 import { ExtractedReceiptSchema } from '../ingest/receipt/extraction.js';
 import { MEDIA_TYPES } from '../ingest/receipt/vision.js';
-import { ErrorBodySchema } from './rest-schemas.js';
+import {
+  CreatePurchaseBodySchema,
+  ErrorBodySchema,
+  SaveReceiptDraftBodySchema,
+} from './rest-schemas.js';
 import { PurchaseDetailSchema } from './schemas/purchase-detail.js';
 import { PopsUriSchema } from './schemas/purchase.js';
 
@@ -191,6 +195,53 @@ export const ReceiptOutcomeSchema = z.discriminatedUnion('kind', [
 ]);
 
 /**
+ * A receipt read into fields a reviewer can edit, before anything is
+ * persisted (POPS-2454).
+ *
+ * Deliberately the same shape {@link CreatePurchaseBodySchema} accepts, minus
+ * the provenance fields only the save route may decide — see
+ * `PurchaseDraftFieldsSchema` in `rest-schemas.ts`. `items` is left
+ * unbounded here even though the save route requires at least one: an
+ * all-unreadable receipt can extract to zero usable lines, and the
+ * reviewer's next move is to add one by hand, not to be refused a screen to
+ * do it on.
+ */
+export const ReceiptDraftSchema = CreatePurchaseBodySchema.omit({
+  source: true,
+  sourceOrderId: true,
+  ingestMethod: true,
+  checksum: true,
+});
+
+/**
+ * What extracting a receipt answers, before any of it is saved.
+ *
+ * Two arms, not three: the gate's `admissible` verdict is no longer a
+ * different RESPONSE shape, only the `reconciled` flag on the one arm that
+ * produced a draft. That is the whole point of separating extraction from
+ * persistence — every usable reading reaches the same editable form, and no
+ * outcome gates field editability. `unreadable` survives on its own because
+ * there is nothing to edit: the model returned nothing a draft could start
+ * from.
+ */
+export const ExtractReceiptOutcomeSchema = z.discriminatedUnion('kind', [
+  z.object({
+    kind: z.literal('draft'),
+    receiptUris: z.array(PopsUriSchema).min(1),
+    /** True when the receipt's own arithmetic agreed with its stated total. */
+    reconciled: z.boolean(),
+    /** The gate's objections when `reconciled` is false; empty otherwise. */
+    failures: z.array(GateFailureSchema),
+    draft: ReceiptDraftSchema,
+  }),
+  z.object({
+    kind: z.literal('unreadable'),
+    receiptUris: z.array(PopsUriSchema).min(1),
+    reason: z.string(),
+  }),
+]);
+
+/**
  * A stored receipt, on the wire.
  *
  * Base64 in JSON rather than a raw body with a `Content-Type`, for the reason
@@ -250,6 +301,34 @@ export const purchasesReceiptContract = c.router({
       503: ErrorBodySchema,
     },
     summary: 'Read an uploaded receipt — photograph, PDF or pasted body — and create its purchase',
+  },
+  extract: {
+    method: 'POST',
+    path: '/receipts/extract',
+    body: UploadReceiptBodySchema,
+    responses: {
+      200: ExtractReceiptOutcomeSchema,
+      400: ErrorBodySchema,
+      // The same file already became a purchase — re-extracting it a second
+      // time would let a reviewer save a twin under a fresh idempotency key.
+      409: ErrorBodySchema,
+      503: ErrorBodySchema,
+    },
+    summary:
+      'Read an uploaded receipt into an editable draft — photograph, PDF or pasted body. ' +
+      'Persists nothing.',
+  },
+  saveDraft: {
+    method: 'POST',
+    path: '/receipts/draft',
+    body: SaveReceiptDraftBodySchema,
+    responses: {
+      200: PurchaseDetailSchema,
+      400: ErrorBodySchema,
+      // The idempotency key has already been used to write a purchase.
+      409: ErrorBodySchema,
+    },
+    summary: 'Persist a reviewed, possibly corrected receipt-derived draft as a purchase',
   },
   read: {
     method: 'GET',

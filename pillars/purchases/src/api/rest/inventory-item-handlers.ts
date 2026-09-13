@@ -38,7 +38,7 @@ import {
   listInventoryProposals,
 } from '../../db/index.js';
 import { createInventoryAssetCreator, type InventoryAssetCreator } from '../inventory/client.js';
-import { proposalNotFound } from './purchase-handlers.js';
+import { proposalNotFound } from './purchase-inventory-handlers.js';
 
 import type { z } from 'zod';
 

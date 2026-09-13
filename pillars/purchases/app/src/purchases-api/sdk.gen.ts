@@ -34,6 +34,9 @@ import type {
   PurchaseCreateInventoryItemData,
   PurchaseCreateInventoryItemErrors,
   PurchaseCreateInventoryItemResponses,
+  PurchaseCreateManualData,
+  PurchaseCreateManualErrors,
+  PurchaseCreateManualResponses,
   PurchaseCreateResponses,
   PurchaseDecideInventoryProposalData,
   PurchaseDecideInventoryProposalErrors,
@@ -57,9 +60,15 @@ import type {
   PurchasePatchItemData,
   PurchasePatchItemErrors,
   PurchasePatchItemResponses,
+  ReceiptExtractData,
+  ReceiptExtractErrors,
+  ReceiptExtractResponses,
   ReceiptReadData,
   ReceiptReadErrors,
   ReceiptReadResponses,
+  ReceiptSaveDraftData,
+  ReceiptSaveDraftErrors,
+  ReceiptSaveDraftResponses,
   ReceiptThumbnailData,
   ReceiptThumbnailErrors,
   ReceiptThumbnailResponses,
@@ -278,6 +287,25 @@ export const purchaseCreate = <ThrowOnError extends boolean = false>(
   });
 
 /**
+ * Create a purchase typed by hand, with no receipt
+ */
+export const purchaseCreateManual = <ThrowOnError extends boolean = false>(
+  options?: Options<PurchaseCreateManualData, ThrowOnError>
+): RequestResult<PurchaseCreateManualResponses, PurchaseCreateManualErrors, ThrowOnError> =>
+  (options?.client ?? client).post<
+    PurchaseCreateManualResponses,
+    PurchaseCreateManualErrors,
+    ThrowOnError
+  >({
+    url: '/purchases/manual',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
+
+/**
  * Hard-delete an order (everything hanging off it cascades)
  */
 export const purchaseDelete = <ThrowOnError extends boolean = false>(
@@ -429,6 +457,38 @@ export const receiptUpload = <ThrowOnError extends boolean = false>(
 ): RequestResult<ReceiptUploadResponses, ReceiptUploadErrors, ThrowOnError> =>
   (options?.client ?? client).post<ReceiptUploadResponses, ReceiptUploadErrors, ThrowOnError>({
     url: '/receipts',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
+
+/**
+ * Persist a reviewed, possibly corrected receipt-derived draft as a purchase
+ */
+export const receiptSaveDraft = <ThrowOnError extends boolean = false>(
+  options?: Options<ReceiptSaveDraftData, ThrowOnError>
+): RequestResult<ReceiptSaveDraftResponses, ReceiptSaveDraftErrors, ThrowOnError> =>
+  (options?.client ?? client).post<ReceiptSaveDraftResponses, ReceiptSaveDraftErrors, ThrowOnError>(
+    {
+      url: '/receipts/draft',
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options?.headers,
+      },
+    }
+  );
+
+/**
+ * Read an uploaded receipt into an editable draft — photograph, PDF or pasted body. Persists nothing.
+ */
+export const receiptExtract = <ThrowOnError extends boolean = false>(
+  options?: Options<ReceiptExtractData, ThrowOnError>
+): RequestResult<ReceiptExtractResponses, ReceiptExtractErrors, ThrowOnError> =>
+  (options?.client ?? client).post<ReceiptExtractResponses, ReceiptExtractErrors, ThrowOnError>({
+    url: '/receipts/extract',
     ...options,
     headers: {
       'Content-Type': 'application/json',

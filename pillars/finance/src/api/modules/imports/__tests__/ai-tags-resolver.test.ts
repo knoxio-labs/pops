@@ -154,6 +154,8 @@ describe('trigger predicate', () => {
       {
         entityName: 'Woolworths',
         input: { description: 'WOOLWORTHS 2246', amount: -20, date: '2026-01-01' },
+        // The resolved spend type rides with the row into the tag-only prompt (POPS-3678).
+        transactionType: 'purchase',
       },
     ]);
     expect(rowOf(results[0]!).suggestedTags).toEqual([

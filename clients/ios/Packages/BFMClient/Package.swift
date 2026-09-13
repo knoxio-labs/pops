@@ -55,6 +55,7 @@ let package = Package(
             dependencies: [
                 "BFMClient",
                 "AppCore",
+                .product(name: "AppCoreFakes", package: "AppCore"),
                 .product(name: "OpenAPIRuntime", package: "swift-openapi-runtime"),
             ],
             swiftSettings: strictSwiftSettings

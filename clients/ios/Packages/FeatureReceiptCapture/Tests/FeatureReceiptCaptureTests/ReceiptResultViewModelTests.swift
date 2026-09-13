@@ -8,14 +8,22 @@ import Testing
 /// What the result screen decides, against a fake and against a scripted
 /// double.
 ///
-/// The distinction every test here circles is the one the screen exists to
-/// keep: three materially different outcomes, plus a call that never
-/// answered with one at all. Only the last of those offers a retry that
-/// resends the same bytes.
+/// Extraction and persistence are two different calls now (POPS-2454): a
+/// usable reading — reconciled or not — is a `.draft` a reader edits, never
+/// a terminal state on its own, and only `save(_:)` reaching `.saved` means
+/// anything was written.
 @MainActor
 @Suite("Receipt result")
 internal struct ReceiptResultViewModelTests {
     private static let parts = [ReceiptPart(mediaType: .jpeg, data: Data([0x01, 0x02]))]
+
+    private static let reading = ReceiptDraftReading(
+        receiptUris: ["pops://purchases/receipt/" + String(repeating: "a", count: 64)],
+        reconciled: true,
+        failures: [],
+        extracted: .fake(),
+        capture: nil
+    )
 
     private func model(
         _ repository: any ReceiptCaptureRepository,
@@ -24,46 +32,46 @@ internal struct ReceiptResultViewModelTests {
         ReceiptResultViewModel(parts: parts, dependencies: .fake(receiptCapture: repository))
     }
 
-    @Test("the screen opens submitting")
-    func opensSubmitting() {
+    @Test("the screen opens extracting")
+    func opensExtracting() {
         let model = model(InMemoryReceiptCaptureRepository())
 
-        #expect(model.state == .submitting)
+        #expect(model.state == .extracting)
     }
 
-    @Test("a created outcome reaches the screen")
-    func createdReachesTheScreen() async {
-        let outcome = ReceiptOutcome.created(
-            purchase: .fake(id: "purchase-1"), alreadyStored: false)
-        let repository = InMemoryReceiptCaptureRepository(defaultOutcome: outcome)
+    @Test("a reconciled draft reaches the screen")
+    func draftReachesTheScreen() async {
+        let repository = InMemoryReceiptCaptureRepository(
+            defaultExtraction: .draft(Self.reading))
         let model = model(repository)
 
-        await model.submit()
+        await model.extract()
 
-        #expect(model.state == .outcome(outcome))
+        #expect(model.state == .draft(Self.reading))
     }
 
-    @Test("a needs-review outcome reaches the screen with everything it carries")
-    func needsReviewReachesTheScreen() async {
-        let outcome = ReceiptOutcome.needsReview(
-            receiptCount: 1, failures: [.fake()], extracted: .fake())
-        let repository = InMemoryReceiptCaptureRepository(defaultOutcome: outcome)
+    @Test("an unreconciled draft reaches the screen carrying its failures")
+    func unreconciledDraftReachesTheScreen() async {
+        let reading = ReceiptDraftReading(
+            receiptUris: Self.reading.receiptUris, reconciled: false, failures: [.fake()],
+            extracted: .fake(), capture: nil)
+        let repository = InMemoryReceiptCaptureRepository(defaultExtraction: .draft(reading))
         let model = model(repository)
 
-        await model.submit()
+        await model.extract()
 
-        #expect(model.state == .outcome(outcome))
+        #expect(model.state == .draft(reading))
     }
 
     @Test("an unreadable outcome reaches the screen")
     func unreadableReachesTheScreen() async {
-        let outcome = ReceiptOutcome.unreadable(receiptCount: 1, reason: "blank image")
-        let repository = InMemoryReceiptCaptureRepository(defaultOutcome: outcome)
+        let extraction = ReceiptExtraction.unreadable(receiptCount: 1, reason: "blank image")
+        let repository = InMemoryReceiptCaptureRepository(defaultExtraction: extraction)
         let model = model(repository)
 
-        await model.submit()
+        await model.extract()
 
-        #expect(model.state == .outcome(outcome))
+        #expect(model.state == .unreadable(receiptCount: 1, reason: "blank image"))
     }
 
     @Test("the parts sent are exactly the parts given at construction")
@@ -75,58 +83,55 @@ internal struct ReceiptResultViewModelTests {
         ]
         let model = model(repository, parts: parts)
 
-        await model.submit()
+        await model.extract()
 
-        #expect(await repository.received == [parts])
+        #expect(await repository.extracted == [parts])
     }
 
     @Test("a gateway failure with nothing to show becomes the screen, and retries")
     func gatewayFailureThenRetry() async {
         let repository = InMemoryReceiptCaptureRepository()
-        await repository.fail(onCall: 1, with: .unavailable)
+        await repository.failExtract(onCall: 1, with: .unavailable)
         let model = model(repository)
 
-        await model.submit()
-        #expect(model.state == .failed(.unavailable))
+        await model.extract()
+        #expect(model.state == .extractionFailed(.unavailable))
 
-        let outcome = ReceiptOutcome.created(
-            purchase: .fake(id: "purchase-1"), alreadyStored: false)
-        await repository.respond(onCall: 2, with: outcome)
-        await model.submit()
+        await repository.respond(onCall: 2, with: .draft(Self.reading))
+        await model.extract()
 
-        #expect(model.state == .outcome(outcome))
-        #expect(await repository.callCount == 2)
+        #expect(model.state == .draft(Self.reading))
+        #expect(await repository.extractCallCount == 2)
     }
 
-    /// An outcome is an answer, including a `needsReview` or `unreadable` one
-    /// — neither is a failure, and neither should resend the same bytes on a
-    /// re-appearance.
-    @Test("an outcome that has landed is not resubmitted")
-    func doesNotResubmitAnOutcome() async {
+    /// A draft is an answer, and so is `unreadable` — neither should resend
+    /// the same bytes on a re-appearance.
+    @Test("a reading that has landed is not re-extracted")
+    func doesNotReExtract() async {
         let repository = InMemoryReceiptCaptureRepository(
-            defaultOutcome: .unreadable(receiptCount: 0, reason: "blank"))
+            defaultExtraction: .unreadable(receiptCount: 0, reason: "blank"))
         let model = model(repository)
 
-        await model.submit()
-        await model.submit()
+        await model.extract()
+        await model.extract()
 
-        #expect(await repository.callCount == 1)
+        #expect(await repository.extractCallCount == 1)
     }
 
     /// Two `.task` invocations before the first answers — the same race
     /// `TransactionDetailViewModelTests` guards against, here guarding
-    /// against submitting a receipt's bytes twice.
-    @Test("two submissions racing produce one request")
-    func submitIsNotReentrant() async {
+    /// against extracting a receipt's bytes twice.
+    @Test("two extractions racing produce one request")
+    func extractIsNotReentrant() async {
         let repository = ScriptedReceiptCaptureRepository(
             script: [.outcome(.unreadable(receiptCount: 0, reason: "blank"))],
             gating: [1]
         )
         let model = model(repository)
 
-        let first = Task { await model.submit() }
+        let first = Task { await model.extract() }
         await repository.waitUntilCalled(1)
-        let second = Task { await model.submit() }
+        let second = Task { await model.extract() }
 
         await repository.release()
         await first.value
@@ -144,9 +149,9 @@ internal struct ReceiptResultViewModelTests {
             script: [.failing(UnrecognisedRepositoryFailure())])
         let model = model(repository)
 
-        await model.submit()
+        await model.extract()
 
-        guard case .failed(.transport) = model.state else {
+        guard case .extractionFailed(.transport) = model.state else {
             Issue.record("expected a transport failure, got \(model.state)")
             return
         }
@@ -159,8 +164,77 @@ internal struct ReceiptResultViewModelTests {
     func unboundDependencyIsAState() async {
         let model = ReceiptResultViewModel(parts: Self.parts, dependencies: .unbound)
 
-        await model.submit()
+        await model.extract()
 
-        #expect(model.state == .failed(.dependencyNotBound))
+        #expect(model.state == .extractionFailed(.dependencyNotBound))
+    }
+
+    // MARK: save
+
+    @Test("saving a draft persists it and moves the screen to saved")
+    func saveMovesToSaved() async throws {
+        let repository = InMemoryReceiptCaptureRepository(defaultExtraction: .draft(Self.reading))
+        await repository.respondToSave(with: .success(.fake(id: "purchase-1")))
+        let model = model(repository)
+        await model.extract()
+
+        let draft = ReceiptDraftPresentation().draft(extracted: .fake(), failures: [])
+        await model.save(draft)
+
+        #expect(model.state == .saved(.fake(id: "purchase-1")))
+        #expect(await repository.savedDrafts.count == 1)
+    }
+
+    @Test("a save that is not confirmed by a landed draft does nothing")
+    func saveWithoutADraftDoesNothing() async {
+        let repository = InMemoryReceiptCaptureRepository()
+        let model = model(repository)
+
+        let draft = ReceiptDraftPresentation().draft(extracted: .fake(), failures: [])
+        await model.save(draft)
+
+        #expect(await repository.savedDrafts.isEmpty)
+    }
+
+    @Test("a save failure is reported without discarding the draft")
+    func saveFailureIsReported() async {
+        let repository = InMemoryReceiptCaptureRepository(defaultExtraction: .draft(Self.reading))
+        await repository.respondToSave(with: .failure(.unavailable))
+        let model = model(repository)
+        await model.extract()
+
+        let draft = ReceiptDraftPresentation().draft(extracted: .fake(), failures: [])
+        await model.save(draft)
+
+        #expect(model.saveError == .unavailable)
+        // The screen stays on the draft — a failed save must not discard it.
+        #expect(model.state == .draft(Self.reading))
+    }
+
+    @Test("dismissing a save error clears it without touching the draft")
+    func dismissSaveError() async {
+        let repository = InMemoryReceiptCaptureRepository(defaultExtraction: .draft(Self.reading))
+        await repository.respondToSave(with: .failure(.unavailable))
+        let model = model(repository)
+        await model.extract()
+        await model.save(ReceiptDraftPresentation().draft(extracted: .fake(), failures: []))
+
+        model.dismissSaveError()
+
+        #expect(model.saveError == nil)
+        #expect(model.state == .draft(Self.reading))
+    }
+
+    @Test("an amount that will not parse is reported as a validation failure, not sent")
+    func unparseableAmountIsNotSent() async {
+        let repository = InMemoryReceiptCaptureRepository(defaultExtraction: .draft(Self.reading))
+        let model = model(repository)
+        await model.extract()
+
+        await model.save(
+            ReceiptDraftPresentation().draft(extracted: .fake(total: "abc"), failures: []))
+
+        #expect(model.saveValidationError == .unparseableAmount)
+        #expect(await repository.savedDrafts.isEmpty)
     }
 }
