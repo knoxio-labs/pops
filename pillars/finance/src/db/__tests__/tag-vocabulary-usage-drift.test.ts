@@ -1,7 +1,3 @@
-import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-
 /**
  * `findVocabularyUsageDrift` (POPS-3740): the standing check behind
  * `/health`'s `vocabulary.usageDrift`, over a real migrated schema so it sees
@@ -12,6 +8,10 @@ import { join } from 'node:path';
  * its own (0069, 0106, ...) — a test that asserted on the full result set
  * would only be checking today's migration seed data, not the drift logic.
  */
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
