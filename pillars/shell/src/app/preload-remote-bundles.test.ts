@@ -1,66 +1,65 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { preloadRemoteBundles } from './preload-remote-bundles';
-
-function links(): string[] {
-  return [...document.head.querySelectorAll('link[rel="modulepreload"]')].map((link) =>
-    link.getAttribute('href')
-  ) as string[];
-}
+import { createRemoteEntryRevalidator } from './revalidate-remote-entry';
 
 describe('preloadRemoteBundles', () => {
   beforeEach(() => {
     document.head.innerHTML = '';
   });
 
-  it('emits one modulepreload per bundle URL', () => {
-    preloadRemoteBundles(['/purchases-ui/purchases.js', '/lists-ui/lists.js']);
-    expect(links()).toEqual(['/purchases-ui/purchases.js', '/lists-ui/lists.js']);
+  it('revalidates one request per bundle URL', () => {
+    const revalidate = vi.fn().mockResolvedValue(undefined);
+    preloadRemoteBundles(['/purchases-ui/purchases.js', '/lists-ui/lists.js'], revalidate);
+    expect(revalidate.mock.calls.map(([url]) => url)).toEqual([
+      '/purchases-ui/purchases.js',
+      '/lists-ui/lists.js',
+    ]);
   });
 
-  it('emits nothing when no pillar is loader-mounted', () => {
-    expect(preloadRemoteBundles([])).toEqual([]);
-    expect(links()).toEqual([]);
+  // A modulepreload reads the entry from the HTTP cache without revalidating
+  // it and pins that copy in the module map for every later import().
+  it('emits no modulepreload link', () => {
+    preloadRemoteBundles(['/finance-ui/finance.js'], vi.fn().mockResolvedValue(undefined));
+    expect(document.head.querySelectorAll('link[rel="modulepreload"]')).toHaveLength(0);
   });
 
-  // Boot can run more than once — a registry retry, a test — and a second
-  // <link> for the same URL is a second request in some browsers.
-  it('does not re-add a URL the document already carries', () => {
-    preloadRemoteBundles(['/purchases-ui/purchases.js']);
-    const second = preloadRemoteBundles(['/purchases-ui/purchases.js', '/lists-ui/lists.js']);
-
-    expect(second).toEqual(['/lists-ui/lists.js']);
-    expect(links()).toEqual(['/purchases-ui/purchases.js', '/lists-ui/lists.js']);
+  it('requests nothing when no pillar is loader-mounted', () => {
+    const revalidate = vi.fn().mockResolvedValue(undefined);
+    expect(preloadRemoteBundles([], revalidate)).toEqual([]);
+    expect(revalidate).not.toHaveBeenCalled();
   });
 
-  it('adds a repeated URL within one call only once', () => {
-    expect(preloadRemoteBundles(['/x.js', '/x.js'])).toEqual(['/x.js']);
-    expect(links()).toEqual(['/x.js']);
+  it('requests a repeated URL within one call only once', () => {
+    const revalidate = vi.fn().mockResolvedValue(undefined);
+    expect(preloadRemoteBundles(['/x.js', '/x.js'], revalidate)).toEqual(['/x.js']);
+    expect(revalidate).toHaveBeenCalledOnce();
   });
 
-  it('ignores an empty URL rather than preloading the document itself', () => {
-    expect(preloadRemoteBundles([''])).toEqual([]);
-    expect(links()).toEqual([]);
+  it('ignores an empty URL rather than fetching the document itself', () => {
+    const revalidate = vi.fn().mockResolvedValue(undefined);
+    expect(preloadRemoteBundles([''], revalidate)).toEqual([]);
+    expect(revalidate).not.toHaveBeenCalled();
   });
 
-  it('leaves unrelated head links alone', () => {
-    const icon = document.createElement('link');
-    icon.rel = 'icon';
-    icon.href = '/icons/icon-192.png';
-    document.head.append(icon);
+  // Boot can run more than once (a registry retry); the network must not see
+  // a second request for an entry this document already revalidated.
+  it('does not issue a second network request when boot runs again', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(new Response('export {}'));
+    const revalidate = createRemoteEntryRevalidator(fetchImpl);
 
-    preloadRemoteBundles(['/purchases-ui/purchases.js']);
+    preloadRemoteBundles(['/purchases-ui/purchases.js'], revalidate);
+    preloadRemoteBundles(['/purchases-ui/purchases.js', '/lists-ui/lists.js'], revalidate);
+    await Promise.resolve();
 
-    expect(links()).toEqual(['/purchases-ui/purchases.js']);
-    expect(document.head.querySelectorAll('link[rel="icon"]')).toHaveLength(1);
+    expect(fetchImpl.mock.calls.map(([url]) => url)).toEqual([
+      '/purchases-ui/purchases.js',
+      '/lists-ui/lists.js',
+    ]);
   });
 
-  // A quote or a backslash in the URL would end the attribute selector early
-  // and throw out of the dedupe check — turning a preload into a boot failure.
-  it('survives a URL carrying selector metacharacters', () => {
-    const url = '/odd-ui/a"b\\c.js';
-    expect(() => preloadRemoteBundles([url])).not.toThrow();
-    expect(preloadRemoteBundles([url])).toEqual([]);
-    expect(links()).toEqual([url]);
+  it('does not throw when a revalidation rejects', () => {
+    const revalidate = vi.fn().mockRejectedValue(new TypeError('Load failed'));
+    expect(() => preloadRemoteBundles(['/media-ui/media.js'], revalidate)).not.toThrow();
   });
 });

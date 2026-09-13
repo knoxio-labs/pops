@@ -53,6 +53,8 @@ import { lazy, Suspense, type ComponentType } from 'react';
 import { iconMap } from '@pops/navigation';
 import { ErrorBoundary } from '@pops/ui';
 
+import { revalidateRemoteEntry } from './revalidate-remote-entry';
+
 import type { RouteObject } from 'react-router';
 
 import type {
@@ -111,11 +113,17 @@ export interface RemoteUiDescriptor {
  * indirection so tests can inject a fake remote module without a real
  * network fetch. `/* @vite-ignore *\/` keeps Vite from trying to resolve the
  * runtime URL at build time; the import is genuinely dynamic.
+ *
+ * The entry is revalidated before the import (`revalidate-remote-entry`): its
+ * name survives deploys, and without that a browser can import a copy cached
+ * before the last one, whose chunks no longer exist.
  */
 export type RemoteModuleImporter = (assetsBaseUrl: string) => Promise<unknown>;
 
-export const defaultRemoteModuleImporter: RemoteModuleImporter = (assetsBaseUrl) =>
-  import(/* @vite-ignore */ assetsBaseUrl);
+export const defaultRemoteModuleImporter: RemoteModuleImporter = async (assetsBaseUrl) => {
+  await revalidateRemoteEntry(assetsBaseUrl);
+  return import(/* @vite-ignore */ assetsBaseUrl);
+};
 
 /**
  * Narrow an unknown dynamic-import result to `RemotePillarUiModule`. Throws a

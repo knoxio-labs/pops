@@ -64,7 +64,7 @@ export interface BootRegistry {
   readonly registeredApps: readonly AppNavConfig[];
   /**
    * `assetsBaseUrl` of every mounted pillar the runtime loader will import,
-   * so boot can `modulepreload` them rather than leaving the first request
+   * so boot can revalidate them rather than leaving the first request
    * until the reader navigates (`preload-remote-bundles.ts`). Only pillars
    * that actually resolved to a mounted surface appear — an operator's
    * install-set selection is honoured here as everywhere else.
