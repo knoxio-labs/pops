@@ -87,12 +87,9 @@ export interface HealthResponse {
      * Active vocabulary rows whose `usage_count` disagrees with the
      * transactions carrying the tag. Empty when consistent.
      *
-     * Same shape of ops signal as `contacts`: `usage_count` has drifted from
-     * the ledger before, each time caught by a one-off recount migration
-     * (0102, 0114) rather than something that runs on its own. `ok` stays
-     * `true` on a nonempty list — the categorizer still serves
-     * requests with a mis-ranked vocabulary, and the healthcheck must not
-     * restart-loop over a data problem a restart cannot fix.
+     * An ops signal like `contacts`: `ok` stays `true` on a nonempty list,
+     * because a restart cannot fix drifted data and the healthcheck must not
+     * restart-loop over it.
      */
     usageDrift: { tag: string; usageCount: number; actual: number }[];
   };

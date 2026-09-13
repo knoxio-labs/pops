@@ -294,42 +294,25 @@ export interface VocabularyUsageDrift {
 
 /**
  * Active vocabulary rows whose `usage_count` disagrees with the number of
- * transactions that actually carry the tag, empty when every count is
- * consistent.
+ * transactions carrying the tag, ordered by tag; empty when consistent.
  *
- * `usage_count` is {@link applyVocabularyUsageDelta}'s running total, and a
- * hand-kept counter drifts the moment one writer of `transactions.tags`
- * forgets to touch it — twice already, corrected by migrations 0102 and 0114
- * rather than caught in the moment. This is the standing check migration
- * 0114's one-off recount should have had from the start: it reports every
- * drift it finds (never repairs one), so `/health` can surface it as an
- * unattended ops signal instead of the next drift going unnoticed until
- * someone happens to re-run the recount SQL by hand.
- *
- * `COUNT(DISTINCT r.id)` matches {@link applyVocabularyUsageDelta}'s
- * `Set`-based accounting: a row carrying the same tag twice — malformed input
- * or an un-deduped merge — counts once, the same as the maintained column
- * would after a normal write. Retired (`is_active = 0`) rows are excluded:
- * nothing keeps a retired tag's count in step once it stops being written, so
- * comparing it would just report the moment it was retired as permanent
- * drift.
- *
- * One correlated subquery per active vocabulary row — active rows are a small
- * fraction of the table and `/health` is polled often, so this stays cheap
- * without an index; `transactions.tags` is filtered by `json_each` rather than
- * indexed, so an index on `tag_vocabulary` alone would not help. Revisit only
- * if a profiled `/health` call shows this query as the cost, not before.
+ * Reports, never repairs: a recount stays an explicit migration, as 0114 was
+ * (POPS-3740). Counts `DISTINCT` rows, matching the `Set`-based accounting in
+ * {@link applyVocabularyUsageDelta}, so a tag duplicated on one row counts
+ * once. Retired rows are skipped because nothing maintains their count.
  */
 export function findVocabularyUsageDrift(db: FinanceDb): VocabularyUsageDrift[] {
+  // One aggregate pass over the ledger rather than one scan per vocabulary
+  // row: `/health` runs this on every container healthcheck poll.
   return db.all<VocabularyUsageDrift>(sql`
-    SELECT tag, usageCount, actual FROM (
-      SELECT ${tagVocabulary.tag} AS tag, ${tagVocabulary.usageCount} AS usageCount,
-        (SELECT COUNT(DISTINCT r.id) FROM ${transactions} r, json_each(r.tags) je
-          WHERE je.value = ${tagVocabulary.tag}) AS actual
-      FROM ${tagVocabulary}
-      WHERE ${tagVocabulary.isActive} = 1
-    )
-    WHERE usageCount <> actual
-    ORDER BY tag
+    SELECT v.tag AS tag, v.usage_count AS usageCount, COALESCE(c.actual, 0) AS actual
+    FROM ${tagVocabulary} v
+    LEFT JOIN (
+      SELECT je.value AS tag, COUNT(DISTINCT r.id) AS actual
+      FROM ${transactions} r, json_each(r.tags) je
+      GROUP BY je.value
+    ) c ON c.tag = v.tag
+    WHERE v.is_active = 1 AND v.usage_count <> COALESCE(c.actual, 0)
+    ORDER BY v.tag
   `);
 }

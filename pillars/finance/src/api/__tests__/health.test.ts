@@ -190,13 +190,7 @@ describe('GET /health — the contacts seam', () => {
   });
 });
 
-/**
- * POPS-3740: `usage_count` has drifted from the ledger's actual tag counts
- * before (migrations 0102, 0114 both had to correct it). This makes the drift
- * a signal `/health` reports on its own, without waiting for someone to
- * re-run the recount SQL by hand.
- */
-describe('GET /health — vocabulary usage drift', () => {
+describe('GET /health — vocabulary usage drift (POPS-3740)', () => {
   it('surfaces a drifted vocabulary count without failing the probe', async () => {
     tagVocabularyService.upsertVocabularyTag(financeDb.db, 'drift:example', 'user');
     transactionsService.createTransaction(financeDb.db, {
