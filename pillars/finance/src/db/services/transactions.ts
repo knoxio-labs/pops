@@ -24,6 +24,7 @@ import {
   TransactionAlreadyExistsError,
   TransactionNotFoundError,
 } from '../errors.js';
+import { assertTagsWithinFacetCardinality } from '../facet-cardinality-guard.js';
 import { transactions } from '../schema.js';
 import { parseStoredTags } from '../tag-facets.js';
 import { getAccount } from './accounts.js';
@@ -101,10 +102,12 @@ export function createTransaction(db: FinanceDb, input: CreateTransactionInput):
     throw new PositiveAmountPurchaseError(input.amountCents);
   }
 
+  const tags = input.tags ?? [];
+  assertTagsWithinFacetCardinality(tags);
+
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
   const accountId = getAccount(db, input.accountId).id;
-  const tags = input.tags ?? [];
 
   db.transaction((tx) => {
     tx.insert(transactions)
@@ -217,6 +220,10 @@ function assertPatchStaysCoherent(stored: TransactionRow, input: UpdateTransacti
   if (isPositiveAmountPurchase(amountCents, type)) {
     throw new PositiveAmountPurchaseError(amountCents);
   }
+  // Only the tags this PATCH sends are judged. A stored row already over the
+  // cardinality must stay editable on its other fields, and a tags-bearing
+  // PATCH is exactly the edit that can repair it.
+  if (input.tags !== undefined) assertTagsWithinFacetCardinality(input.tags);
 }
 
 /**

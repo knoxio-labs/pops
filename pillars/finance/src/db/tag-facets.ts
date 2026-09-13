@@ -247,6 +247,32 @@ export function exceedsFacetCardinality(existing: readonly string[], tag: string
   return existing.some((present) => parseTagFacet(present).facet === facet);
 }
 
+/** A single-valued facet a tag set holds more than one value on. */
+export interface FacetCardinalityConflict {
+  facet: string;
+  /** Every value the set carries on `facet`, in the order given. */
+  tags: string[];
+}
+
+/**
+ * The first single-valued facet `tags` carries two or more values on, or
+ * `undefined` when the set is within every facet's cardinality.
+ *
+ * The check a *replacing* write needs, where {@link mergeTagsWithinFacetLimits}
+ * serves an additive one: a replacement has no incumbent to keep, so a set that
+ * violates the cardinality can only be refused whole.
+ */
+export function findFacetCardinalityConflict(
+  tags: readonly string[]
+): FacetCardinalityConflict | undefined {
+  const [firstDropped] = mergeTagsWithinFacetLimits([], tags).dropped;
+  if (firstDropped === undefined) return undefined;
+  const { facet } = parseTagFacet(firstDropped);
+  if (facet === null) return undefined;
+  const onFacet = tags.filter((tag) => parseTagFacet(tag).facet === facet);
+  return { facet, tags: [...new Set(onFacet)] };
+}
+
 /** The outcome of {@link mergeTagsWithinFacetLimits}. */
 export interface TagMergeResult {
   /** `existing` in its original order, followed by the incoming tags that joined. */

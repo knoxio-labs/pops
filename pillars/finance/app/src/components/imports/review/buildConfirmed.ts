@@ -1,5 +1,6 @@
 import { isPendingContactId } from '@pops/finance';
 
+import { mergeTagsReplacingSingleValued } from '../../../lib/tag-merge';
 import { requiresEntity } from '../../../lib/transaction-type';
 
 import type {
@@ -122,7 +123,10 @@ export function buildConfirmedTransactions(
     transactionType: t.transactionType,
     entityId: t.entity?.entityId,
     entityName: t.entity?.entityName,
-    tags: (t.suggestedTags ?? []).map((s) => s.tag),
+    tags: mergeTagsReplacingSingleValued(
+      [],
+      (t.suggestedTags ?? []).map((s) => s.tag)
+    ),
     suggestedTags: t.suggestedTags,
     matchType: t.entity?.matchType,
     matchRuleId: t.ruleProvenance?.ruleId,

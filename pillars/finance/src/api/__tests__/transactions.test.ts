@@ -8,6 +8,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
@@ -16,6 +17,7 @@ import {
   transferPairsService,
   type OpenedFinanceDb,
 } from '../../db/index.js';
+import { transactions } from '../../db/schema.js';
 import { createFinanceApiApp } from '../app.js';
 import { makeContactsFake } from './contacts-fake.js';
 import { makeClient } from './test-utils.js';
@@ -297,6 +299,64 @@ describe('transactions — filters & pagination', () => {
     expect(body?.message).toBe(
       'beforeDate and beforeId must be supplied together; beforeId is missing'
     );
+  });
+});
+
+describe('transactions — one value per single-valued facet (POPS-3668)', () => {
+  const twoVenues = [
+    'venue:takeaway',
+    'occasion:out',
+    'contains:food',
+    'channel:in-person',
+    'venue:restaurant',
+  ];
+
+  it('400s a create carrying two venues, and the message names the facet', async () => {
+    await expect(
+      client().transactions.create({ ...base(), tags: twoVenues })
+    ).rejects.toMatchObject({
+      status: 400,
+      body: { message: expect.stringContaining("'venue'") },
+    });
+  });
+
+  it('400s a PATCH carrying two venues and leaves the stored tags alone', async () => {
+    const created = await client().transactions.create({ ...base(), tags: ['venue:takeaway'] });
+
+    await expect(
+      client().transactions.update(created.data.id, { tags: twoVenues })
+    ).rejects.toMatchObject({
+      status: 400,
+      body: { message: expect.stringContaining("'venue'") },
+    });
+    const reread = await client().transactions.get(created.data.id);
+    expect(reread.data.tags).toEqual(['venue:takeaway']);
+  });
+
+  it('accepts one venue and several values on a multi-valued facet', async () => {
+    const created = await client().transactions.create({ ...base(), tags: ['venue:takeaway'] });
+
+    const updated = await client().transactions.update(created.data.id, {
+      tags: ['venue:restaurant', 'contains:food', 'contains:alcohol'],
+    });
+    expect(updated.data.tags).toEqual(['venue:restaurant', 'contains:food', 'contains:alcohol']);
+  });
+
+  it('does not refuse a PATCH without tags on a row already storing two venues', async () => {
+    const created = await client().transactions.create({ ...base(), tags: ['venue:bar'] });
+    financeDb.db
+      .update(transactions)
+      .set({ tags: JSON.stringify(['venue:bar', 'venue:pub']) })
+      .where(eq(transactions.id, created.data.id))
+      .run();
+
+    const updated = await client().transactions.update(created.data.id, {
+      notes: 'still editable',
+    });
+    expect(updated.data).toMatchObject({
+      notes: 'still editable',
+      tags: ['venue:bar', 'venue:pub'],
+    });
   });
 });
 
