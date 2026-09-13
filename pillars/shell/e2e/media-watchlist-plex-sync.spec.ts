@@ -32,10 +32,12 @@
  * Crash detection is wired into beforeEach/afterEach (pageerror + console
  * errors) so every test in this suite verifies no uncaught JS error occurs.
  */
-import { expect, test, type Page } from '@playwright/test';
 import { z } from 'zod';
 
+import { expect, test } from './fixtures/pillar-rest-guard';
 import { assertMatchesContract, json, fulfilWith, stubShellBoot } from './helpers/pillar-rest';
+
+import type { Page } from '@playwright/test';
 
 // ---------------------------------------------------------------------------
 // Contract schemas — hand-mirrored from the media pillar's own zod schemas

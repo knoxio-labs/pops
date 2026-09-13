@@ -13,8 +13,7 @@
  * that does nothing observable unless it is mounted inside the router the
  * shell built — exactly the coupling the loader sits in the middle of.
  */
-import { expect, test } from '@playwright/test';
-
+import { expect, test } from './fixtures/pillar-rest-guard';
 import { stubShellBoot } from './helpers/pillar-rest';
 
 test.describe('ai — mounted by the runtime loader', () => {
@@ -31,19 +30,30 @@ test.describe('ai — mounted by the runtime loader', () => {
     expect(errors).toHaveLength(0);
   });
 
-  test('the rail carries ai and its dashboard renders from the remote bundle', async ({ page }) => {
-    await page.goto('/ai');
+  test.describe('mount without the ai API stubbed', () => {
+    test.use({
+      allowUnroutedPillarRest:
+        'the heading is the same string on the loaded and the failed-to-load ' +
+        'branch of the page, so this asserts the component mounted WITHOUT ' +
+        'depending on the ai API being stubbed — see the comment below',
+    });
 
-    // `exact`, because a substring match on "AI" also finds "Collapse app
-    // rail" and the assertion fails as ambiguous rather than as absent.
-    await expect(page.getByRole('button', { name: 'AI', exact: true })).toHaveAttribute(
-      'aria-current',
-      'page'
-    );
-    // The heading is the same string on the loaded and the failed-to-load
-    // branch of the page, so this asserts the component mounted without
-    // depending on the ai API being stubbed.
-    await expect(page.getByRole('heading', { name: 'AI Observability' })).toBeVisible();
+    test('the rail carries ai and its dashboard renders from the remote bundle', async ({
+      page,
+    }) => {
+      await page.goto('/ai');
+
+      // `exact`, because a substring match on "AI" also finds "Collapse app
+      // rail" and the assertion fails as ambiguous rather than as absent.
+      await expect(page.getByRole('button', { name: 'AI', exact: true })).toHaveAttribute(
+        'aria-current',
+        'page'
+      );
+      // The heading is the same string on the loaded and the failed-to-load
+      // branch of the page, so this asserts the component mounted without
+      // depending on the ai API being stubbed.
+      await expect(page.getByRole('heading', { name: 'AI Observability' })).toBeVisible();
+    });
   });
 
   /**

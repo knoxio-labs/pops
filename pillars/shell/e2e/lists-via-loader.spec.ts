@@ -6,8 +6,7 @@
  * link with no sidebar entry, so if it were left off the page list nothing on
  * the rail would look wrong and every link into a list would 404.
  */
-import { expect, test } from '@playwright/test';
-
+import { expect, test } from './fixtures/pillar-rest-guard';
 import { stubShellBoot } from './helpers/pillar-rest';
 
 test.describe('lists — mounted by the runtime loader', () => {

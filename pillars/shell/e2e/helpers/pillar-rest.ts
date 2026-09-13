@@ -12,11 +12,15 @@
  *   GET  /pillars, /pillars/health       the boot projection + health
  *                                        aggregator `PillarGuard` reads
  *   POST /orchestrator-api/search        federated search behind the top bar
+ *   POST /cerebrum-api/nudges/search     the top-bar nudge bell's poll
  *
- * Leaving those unstubbed does not fail loudly: each one soft-fails to a
+ * Leaving those unstubbed used to fail silently: each one soft-fails to a
  * fallback, so the shell still renders and the spec still passes — against
  * the fallback path rather than the one it meant to test. Stubbing them is
- * what makes a run say the same thing twice.
+ * what makes a run say the same thing twice, and `e2e/fixtures/pillar-rest-
+ * guard.ts` now backs that up: any pillar REST request that reaches neither
+ * this file's stubs nor a spec's own fails the test that made it, rather than
+ * degrading it.
  *
  * The route patterns are anchored regexes, not `**` globs, for one specific
  * reason: `**` spans `/`, so a glob for the pillar-boot endpoint `/pillars`
@@ -72,6 +76,27 @@ const PILLAR_HEALTH_URL = /^https?:\/\/[^/]+\/pillars\/health$/;
 const REGISTRY_SNAPSHOT_URL = /\/registry-api\/registry\/pillars$/;
 const SHELL_MANIFEST_URL = /\/registry-api\/shell\/manifest$/;
 const ORCHESTRATOR_SEARCH_URL = /\/orchestrator-api\/search$/;
+const NUDGES_SEARCH_URL = /\/cerebrum-api\/nudges\/search$/;
+
+/**
+ * Every URL shape the constants above (and every per-spec helper's
+ * `**\/<pillar>-api/...` glob) stub: the first path segment is `/pillars`
+ * (with or without `/health`), or ends in `-api` — `vite.config.ts`'s proxy
+ * table names one such prefix per pillar plus `/registry-api` and
+ * `/orchestrator-api`. `e2e/fixtures/pillar-rest-guard.ts` installs this as a
+ * catch-all so a spec that forgets one of the stubs below fails loudly
+ * instead of soft-failing to the fallback path.
+ *
+ * Deliberately narrower than every proxy path the shell's dev server carries:
+ * `/api`, `/api/ego`, `/media/images`, and `/inventory/documents`
+ * (`vite.config.ts`) are real proxies too, but no spec in this suite routes
+ * or exercises them today, so widening the pattern to cover them would be
+ * asserting about traffic nothing here produces. Anchoring to the first path
+ * segment also keeps this from swallowing the shell's own source modules —
+ * `/src/registry-api/*.ts` in dev — the same hazard `failRegistry`'s doc
+ * comment below describes for a `/registry-api` prefix match.
+ */
+export const PILLAR_REST_URL = /^https?:\/\/[^/]+\/(?:[a-z][a-z0-9]*-api\/|pillars(?:\/|$))/;
 
 /** Fulfil `route` with `body` as JSON. */
 export function json(route: Route, status: number, body: unknown): Promise<void> {
@@ -155,6 +180,18 @@ const ShellManifestResponseSchema: z.ZodType<ShellManifestResponses[200]> = z
     apps: z.array(z.string()),
     overlays: z.array(z.string()),
   })
+  .strict();
+
+/**
+ * The `/cerebrum-api/nudges/search` 200 shape, mirrored from
+ * `nudgeSearchContract` (`pillars/cerebrum/src/contract/rest-nudges.ts`):
+ * `{ nudges: Nudge[], total: number }`. `NudgeIndicator`
+ * (`src/app/layout/top-bar/NudgeIndicator.tsx`) only reads `total`, so
+ * `nudges` is left an untyped array rather than mirroring the full nudge
+ * shape for a field nothing here asserts on.
+ */
+const NudgesSearchResponseSchema = z
+  .object({ nudges: z.array(z.unknown()), total: z.number().int() })
   .strict();
 
 /**
@@ -583,7 +620,17 @@ export async function failRegistry(page: Page): Promise<void> {
   await page.route(SHELL_MANIFEST_URL, (route) => route.abort('failed'));
 }
 
-/** Report every pillar in `pillarIds` healthy to `PillarGuard`. */
+/**
+ * Report every pillar in `pillarIds` healthy to `PillarGuard`, and answer the
+ * top-bar nudge poll with zero pending.
+ *
+ * The nudge poll rides along here rather than getting its own call at every
+ * site: `NudgeIndicator` fires at shell-chrome mount exactly like the health
+ * aggregator — unconditionally, independent of the registry and of which
+ * pillar a spec is about — so anywhere `stubPillarHealth` is called on its
+ * own (`shell-boot.spec.ts`, `pops-apps-finance-only-install-set.spec.ts`)
+ * is a site that needs the nudge poll answered too.
+ */
 export async function stubPillarHealth(page: Page, pillarIds: readonly string[]): Promise<void> {
   const bootBody = { pillars: pillarIds.map((id) => ({ id, baseUrl: `http://${id}-api:3000` })) };
   await page.route(
@@ -595,6 +642,12 @@ export async function stubPillarHealth(page: Page, pillarIds: readonly string[])
   await page.route(
     PILLAR_HEALTH_URL,
     fulfilWith(200, PillarHealthResponseSchema, healthBody, 'pillar health')
+  );
+
+  const nudgesBody = { nudges: [], total: 0 };
+  await page.route(
+    NUDGES_SEARCH_URL,
+    fulfilWith(200, NudgesSearchResponseSchema, nudgesBody, 'nudges search')
   );
 }
 
