@@ -15,45 +15,67 @@
  *
  * The shell does not have to wait for that decision: the rail comes off the
  * wire, so every mounted pillar's `assetsBaseUrl` is known before first paint.
- * Revalidating each one moves the fetch into the boot window, in parallel with
- * the shell's own chunks, and leaves evaluation exactly where it was — the
- * module is still only evaluated when the route renders.
+ * A `modulepreload` for each one moves the fetch into the boot window, in
+ * parallel with the shell's own chunks, and leaves evaluation exactly where it
+ * was — the module is still only evaluated when the route renders, so nothing
+ * about the lazy-mount behaviour changes.
  *
- * This used to be a `<link rel="modulepreload">`. That reads the entry from the
- * HTTP cache without revalidating it and pins the result in the document's
- * module map, so a copy cached before a deploy was the one every later
- * `import()` got, naming chunks the deploy had deleted. The request is now the
- * same `no-cache` revalidation the importer awaits (`revalidate-remote-entry`),
- * shared rather than repeated.
+ * The preload targets the same per-load URL the importer uses
+ * (`remote-entry-url.ts`), so it never reads a cached entry and the import
+ * reuses the preloaded module instead of fetching again.
  *
  * What this does NOT collapse is the second hop. A page's chunk is reached by
  * a dynamic `import()` inside the remote bundle, so it is not part of the
- * entry's static graph and nothing the shell can issue from the manifest
+ * entry's static graph and no preload the shell can emit from the manifest
  * covers it. Closing that would need the remote build to publish a
  * slot → chunk map, which is a wire-contract change and not this one.
  */
 
-import { revalidateRemoteEntry, type RemoteEntryRevalidator } from './revalidate-remote-entry';
+import { entryUrlForThisLoad } from './remote-entry-url';
+
+const REL = 'modulepreload';
 
 /**
- * Start revalidating each bundle URL. Does not wait for the requests.
+ * Emit a `modulepreload` for each URL's per-load entry URL, skipping any the
+ * document already has.
  *
- * A URL already revalidated in this document is not requested again: the
- * revalidator hands back its existing promise.
+ * Idempotent by inspection rather than by a module-level flag: boot can run
+ * more than once in a test, and a `<link>` the document already carries is the
+ * only reliable record of what was requested.
  *
- * @param urls Bundle URLs to fetch; duplicates and empties are ignored.
- * @param revalidate The revalidator; the document-wide one by default.
- * @returns The distinct, non-empty URLs handed to the revalidator, in order.
+ * @param urls Advertised bundle URLs; duplicates and empties are ignored.
+ * @param doc Document to append to, injectable for tests.
+ * @param toEntryUrl Maps an advertised URL to the one fetched; per-load by default.
+ * @returns The advertised URLs a link was added for, in the order they were added.
  */
 export function preloadRemoteBundles(
   urls: readonly string[],
-  revalidate: RemoteEntryRevalidator = revalidateRemoteEntry
+  doc: Document = document,
+  toEntryUrl: (url: string) => string = entryUrlForThisLoad
 ): readonly string[] {
-  const requested: string[] = [];
+  const added: string[] = [];
   for (const url of urls) {
-    if (url === '' || requested.includes(url)) continue;
-    void revalidate(url);
-    requested.push(url);
+    if (url === '') continue;
+    if (added.includes(url)) continue;
+    const href = toEntryUrl(url);
+    if (doc.head.querySelector(`link[rel="${REL}"][href="${cssEscape(href)}"]`) !== null) continue;
+
+    const link = doc.createElement('link');
+    link.rel = REL;
+    link.href = href;
+    doc.head.append(link);
+    added.push(url);
   }
-  return requested;
+  return added;
+}
+
+/**
+ * Quote a URL for use inside an attribute selector. `CSS.escape` is the right
+ * tool and is absent in some test environments, so the fallback escapes the
+ * characters an `assetsBaseUrl` can actually contain — a quote or a backslash
+ * would otherwise end the selector early and throw, turning a preload into a
+ * boot failure.
+ */
+function cssEscape(value: string): string {
+  return value.replace(/["\\]/g, String.raw`\$&`);
 }
