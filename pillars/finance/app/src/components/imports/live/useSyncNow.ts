@@ -20,13 +20,22 @@ export interface SyncRange {
 const POLL_MS = 1000;
 const MAX_POLLS = 120;
 
+/** Said for a failed job that recorded no reason, so a failure is never silent. */
+export const UNEXPLAINED_SYNC_FAILURE = 'The sync failed without saying why.';
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/**
+ * Follow a job to its end. A failed job rejects with its own reason: every
+ * surface renders `error`, and a failed job has no `result`, so resolving it
+ * would read as a sync that found nothing (POPS-3657).
+ */
 async function pollJob(accountId: string, jobId: string): Promise<UpSyncJob> {
   for (let i = 0; i < MAX_POLLS; i += 1) {
     const job = unwrap(await accountImportsGetSyncJob({ path: { id: accountId, jobId } })).data;
+    if (job.status === 'failed') throw new Error(job.error ?? UNEXPLAINED_SYNC_FAILURE);
     if (job.status !== 'running') return job;
     await sleep(POLL_MS);
   }
@@ -53,10 +62,9 @@ export function useSyncNow(accountId: string) {
       ).data;
       return pollJob(accountId, started.id);
     },
-    onSuccess: (finished) => {
-      setJob(finished);
-      void queryClient.invalidateQueries({ queryKey: IMPORT_DRAFTS_LIST_KEY });
-    },
+    onSuccess: (finished) => setJob(finished),
+    onError: () => setJob(null),
+    onSettled: () => void queryClient.invalidateQueries({ queryKey: IMPORT_DRAFTS_LIST_KEY }),
   });
   return {
     syncNow: () => mutation.mutate(undefined),
