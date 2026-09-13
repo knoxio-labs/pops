@@ -91,6 +91,26 @@ export function parseRefUpdates(stdin) {
  */
 
 /**
+ * Replace each pushed ref's local sha with the commit it points at.
+ *
+ * Git reports an annotated tag's own object sha, not its commit, so without
+ * this a tag pushed at HEAD never compares equal to HEAD and is refused.
+ * Deletions keep their all-zero sha; a sha `resolveCommit` cannot peel is kept
+ * as given, which leaves it a mismatch rather than a silent pass.
+ *
+ * @param {RefUpdate[]} updates
+ * @param {(revision: string) => string | undefined} resolveCommit
+ * @returns {RefUpdate[]}
+ */
+export function peelToCommits(updates, resolveCommit) {
+  return updates.map((update) => {
+    if (NULL_SHA.test(update.localSha)) return update;
+    const commit = resolveCommit(`${update.localSha}^{commit}`);
+    return commit === undefined ? update : { ...update, localSha: commit };
+  });
+}
+
+/**
  * Decide, per pushed ref, whether the conflict/line-budget checks can run
  * (`'check'`), must be refused (`'mismatch'`), or need nothing at all (a
  * delete, or a push whose remote ref is `refs/heads/main`).
@@ -274,7 +294,7 @@ function main() {
 
   const headSha = tryGit(['rev-parse', 'HEAD'], repoDir);
   const code = orchestrate({
-    updates,
+    updates: peelToCommits(updates, (revision) => tryGit(['rev-parse', revision], repoDir)),
     headSha,
     repoDir,
     run: makeRealRun(repoDir),

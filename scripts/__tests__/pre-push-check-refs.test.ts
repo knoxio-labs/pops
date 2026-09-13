@@ -16,7 +16,12 @@ import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { gitEnv } from '../ci/resolve-report-base.mjs';
-import { orchestrate, parseRefUpdates, planPushChecks } from '../pre-push-check-refs.mjs';
+import {
+  orchestrate,
+  parseRefUpdates,
+  peelToCommits,
+  planPushChecks,
+} from '../pre-push-check-refs.mjs';
 
 const REAL_SUBPROCESS_TIMEOUT_MS = 60_000;
 
@@ -488,5 +493,82 @@ describe(
 
       expect(result.status).toBe(0);
     });
+
+    it('an annotated tag pushed at HEAD is checked against its commit, not refused as a HEAD mismatch', () => {
+      const dir = makeRepo();
+      const originDir = mkdtempSync(join(tmpdir(), 'pre-push-check-refs-origin-'));
+      repos.push(originDir);
+      execFileSync('git', ['init', '--bare', '-q', '--initial-branch=main'], {
+        cwd: originDir,
+        env: gitEnv(),
+      });
+
+      commit(dir, 'shared.ts', 'const a = 1;\n', 'root: small file');
+      execFileSync('git', ['remote', 'add', 'origin', originDir], { cwd: dir, env: gitEnv() });
+      execFileSync('git', ['push', '-q', 'origin', 'main'], { cwd: dir, env: gitEnv() });
+      execFileSync('git', ['tag', '-a', 'v0.1.0', '-m', 'Release v0.1.0'], {
+        cwd: dir,
+        env: gitEnv(),
+      });
+      const tagObject = rev(dir, 'v0.1.0');
+      expect(tagObject).not.toBe(rev(dir));
+
+      const stdin = `refs/tags/v0.1.0 ${tagObject} refs/tags/v0.1.0 ${NULL_SHA}\n`;
+      const result = run(dir, stdin);
+
+      expect(result.stderr).not.toContain('which is not the checked-out HEAD');
+      expect(result.status).toBe(0);
+    });
   }
 );
+
+describe('peelToCommits', () => {
+  const tagObject = 't'.repeat(40);
+  const commitSha = 'c'.repeat(40);
+
+  it('replaces an annotated tag object sha with the commit it points at', () => {
+    const asked: string[] = [];
+    const [peeled] = peelToCommits(
+      [
+        {
+          localRef: 'refs/tags/v1',
+          localSha: tagObject,
+          remoteRef: 'refs/tags/v1',
+          remoteSha: NULL_SHA,
+        },
+      ],
+      (revision) => {
+        asked.push(revision);
+        return commitSha;
+      }
+    );
+
+    expect(asked).toEqual([`${tagObject}^{commit}`]);
+    expect(peeled?.localSha).toBe(commitSha);
+  });
+
+  it('leaves a delete untouched and never asks git about it', () => {
+    const update = {
+      localRef: '(delete)',
+      localSha: NULL_SHA,
+      remoteRef: 'refs/heads/x',
+      remoteSha: 'b'.repeat(40),
+    };
+    const peeled = peelToCommits([update], () => {
+      throw new Error('a delete must not be resolved');
+    });
+
+    expect(peeled).toEqual([update]);
+  });
+
+  it('keeps the sha as given when it cannot be peeled, so it stays a mismatch rather than passing', () => {
+    const update = {
+      localRef: 'refs/heads/x',
+      localSha: tagObject,
+      remoteRef: 'refs/heads/x',
+      remoteSha: NULL_SHA,
+    };
+
+    expect(peelToCommits([update], () => undefined)).toEqual([update]);
+  });
+});
