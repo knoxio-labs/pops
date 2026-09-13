@@ -61,5 +61,8 @@ export function useTagFacets(): TagFacetOption[] {
     queryKey: ['finance', 'tagRules', 'facets'],
     queryFn: async () => unwrap(await tagRulesFacets()),
   });
-  return data?.facets ?? [];
+  // Memoised so the empty fallback keeps one identity while the query is
+  // pending: proposals are memoised on it, and a new array every render
+  // recomputes them every render.
+  return useMemo(() => data?.facets ?? [], [data]);
 }

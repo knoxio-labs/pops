@@ -13,6 +13,7 @@ import { useAvailableTags, useTagFacets, useVocabularyTags } from './useTagTaxon
 
 import type { ConfirmedTransaction, SuggestedTag } from '@pops/finance';
 
+import type { TagFacetOption } from '../../../lib/tags';
 import type { ImportStore as ImportStoreType } from '../../../store/import-store-types';
 import type { UseTagReviewStateOutput } from './tagReviewStateTypes';
 
@@ -57,6 +58,7 @@ interface TagRuleWorkflowDeps {
   setLocalTags: React.Dispatch<React.SetStateAction<Record<string, string[]>>>;
   setSuggestedTagMeta: React.Dispatch<React.SetStateAction<Record<string, SuggestedTag[]>>>;
   addPendingTagRuleChangeSet: ImportStoreType['addPendingTagRuleChangeSet'];
+  facets: readonly TagFacetOption[];
 }
 
 /** The tag-rule dialog and the handler that folds an applied rule back into local state. */
@@ -67,8 +69,9 @@ function useTagRuleWorkflow(deps: TagRuleWorkflowDeps) {
     setLocalTags,
     setSuggestedTagMeta,
     addPendingTagRuleChangeSet,
+    facets,
   } = deps;
-  const dialog = useTagRuleDialog(localTags);
+  const dialog = useTagRuleDialog(localTags, facets);
   const handleTagRuleApplied = useTagRuleHandler({
     addPendingTagRuleChangeSet,
     dialogGroupNameRef: dialog.dialogGroupNameRef,
@@ -96,7 +99,11 @@ type ContinueDeps = Pick<
  * offer. Rules an earlier visit to that step staged go with it: nothing
  * proposes them any more, and no later step would drop them.
  */
-function useHandleContinue(localTags: Record<string, string[]>, deps: ContinueDeps) {
+function useHandleContinue(
+  localTags: Record<string, string[]>,
+  facets: readonly TagFacetOption[],
+  deps: ContinueDeps
+) {
   const {
     confirmedTransactions,
     pendingTagRuleChangeSets,
@@ -111,7 +118,7 @@ function useHandleContinue(localTags: Record<string, string[]>, deps: ContinueDe
       ...t,
       tags: localTags[t.checksum] ?? t.tags,
     }));
-    if (rulesStepHasProposals(reviewed, pendingTagRuleChangeSets)) {
+    if (rulesStepHasProposals(reviewed, pendingTagRuleChangeSets, facets)) {
       nextStep();
       return;
     }
@@ -121,6 +128,7 @@ function useHandleContinue(localTags: Record<string, string[]>, deps: ContinueDe
     goToStep(COMMIT_STEP);
   }, [
     localTags,
+    facets,
     confirmedTransactions,
     pendingTagRuleChangeSets,
     updateTransactionTags,
@@ -148,13 +156,14 @@ export function useTagReviewState(): UseTagReviewStateOutput {
     suggestedTagMeta,
     confirmedTransactions,
   });
-  const handleContinue = useHandleContinue(localTags, store);
+  const handleContinue = useHandleContinue(localTags, facets, store);
   const { dialog, handleTagRuleApplied } = useTagRuleWorkflow({
     localTags,
     suggestedTagMeta,
     setLocalTags,
     setSuggestedTagMeta,
     addPendingTagRuleChangeSet,
+    facets,
   });
   const previewTransactions = usePreviewTransactions({
     confirmedTransactions,

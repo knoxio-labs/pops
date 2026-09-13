@@ -8,6 +8,7 @@ import {
   computeProposals,
   IMPORT_BATCH_SOURCE,
   previouslyStagedProposalIds,
+  rulesStepHasProposals,
 } from './utils';
 
 import type { ConfirmedTransaction } from '@pops/finance';
@@ -411,5 +412,44 @@ describe('what a previous visit to the Rules step staged (POPS-3676)', () => {
         [entry('review-1', 'tag-review:Woolworths', 'WOOLWORTHS', ['Other'])]
       )
     ).toEqual([]);
+  });
+});
+
+describe('computeProposals marker-facet tags (POPS-3704)', () => {
+  const facets = [
+    { facet: 'contains', kind: 'open' as const },
+    { facet: 'person', kind: 'marker' as const },
+    { facet: 'flag', kind: 'marker' as const },
+  ];
+
+  it('proposes a rule without the marker tags the group’s rows carry', () => {
+    const proposals = computeProposals(
+      [
+        txn({
+          description: 'GITHUB SPONSORS',
+          checksum: 'g0',
+          entityId: 'e1',
+          entityName: 'GitHub',
+          tags: ['person:x', 'contains:software'],
+        }),
+      ],
+      [],
+      facets
+    );
+    expect(proposals.map((p) => p.tags)).toEqual([['contains:software']]);
+  });
+
+  it('offers no proposal for a group whose only common tags are markers', () => {
+    const rows = [
+      txn({
+        description: 'GITHUB SPONSORS',
+        checksum: 'g0',
+        entityId: 'e1',
+        entityName: 'GitHub',
+        tags: ['person:x', 'flag:needs-review'],
+      }),
+    ];
+    expect(computeProposals(rows, [], facets)).toEqual([]);
+    expect(rulesStepHasProposals(rows, [], facets)).toBe(false);
   });
 });
