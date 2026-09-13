@@ -140,6 +140,67 @@ describe('computeProposals pattern derivation', () => {
   });
 });
 
+describe('computeProposals refuses a pattern that reaches into a sibling (POPS-3665, POPS-3679)', () => {
+  it('drops the proposal when the tagged group’s pattern also matches an untagged sibling row', () => {
+    // Same shape as the prod Amazon Prime/retail bug: the tagged rows alone
+    // derive a pattern that also matches an untagged row for the same
+    // entity, which this batch left out of the group entirely.
+    const proposals = computeProposals([
+      txn({
+        description: 'AMZNPRIMEA* AMZNPRIMEA',
+        entityId: 'e-amazon',
+        entityName: 'Amazon',
+        checksum: 'p1',
+        tags: ['fee:membership'],
+      }),
+      txn({
+        description: 'QQQQQQQQQA* AMWWWWWWWWW',
+        entityId: 'e-amazon',
+        entityName: 'Amazon',
+        checksum: 'p2',
+        tags: ['fee:membership'],
+      }),
+      txn({
+        description: 'AMAZON RETA* AMAZON AU SYDNEY',
+        entityId: 'e-amazon',
+        entityName: 'Amazon',
+        checksum: 'r1',
+        tags: [],
+      }),
+      txn({
+        description: 'AMAZON RETA* AMAZON AU',
+        entityId: 'e-amazon',
+        entityName: 'Amazon',
+        checksum: 'r2',
+        tags: [],
+      }),
+    ]);
+
+    expect(proposals).toEqual([]);
+  });
+
+  it('still proposes a rule when the group has no untagged sibling to reach into', () => {
+    const [proposal] = computeProposals([
+      txn({
+        description: 'AMZNPRIMEA* AMZNPRIMEA',
+        entityId: 'e-amazon',
+        entityName: 'Amazon',
+        checksum: 'p1',
+        tags: ['fee:membership'],
+      }),
+      txn({
+        description: 'QQQQQQQQQA* AMWWWWWWWWW',
+        entityId: 'e-amazon',
+        entityName: 'Amazon',
+        checksum: 'p2',
+        tags: ['fee:membership'],
+      }),
+    ]);
+
+    expect(proposal?.pattern).toBe('A* AM');
+  });
+});
+
 describe('computeProposals subtracts what already applies (POPS-3676)', () => {
   const woolworths = { entityId: 'e1', entityName: 'Woolworths' };
   const descriptors = ['WOOLWORTHS 1034 CANTERBURY', 'WOOLWORTHS 2201 NEWTOWN'];

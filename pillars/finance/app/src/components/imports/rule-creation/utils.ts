@@ -25,17 +25,40 @@ export interface RuleProposal {
 
 type EntityGroup = { entityId: string | null; entityName: string; txns: ConfirmedTransaction[] };
 
+function groupKey(txn: ConfirmedTransaction): string {
+  return txn.entityId ?? `desc:${txn.description.slice(0, 30)}`;
+}
+
 function groupByEntity(txns: ConfirmedTransaction[]): Map<string, EntityGroup> {
   const groups = new Map<string, EntityGroup>();
   for (const txn of txns) {
     if (!txn.tags?.length) continue;
-    const key = txn.entityId ?? `desc:${txn.description.slice(0, 30)}`;
+    const key = groupKey(txn);
     const name = txn.entityName ?? txn.description.slice(0, 30);
     if (!groups.has(key))
       groups.set(key, { entityId: txn.entityId ?? null, entityName: name, txns: [] });
     groups.get(key)?.txns.push(txn);
   }
   return groups;
+}
+
+/**
+ * Every row of the batch, keyed the same way {@link groupByEntity} keys a
+ * group — including rows a group leaves out because they carry no tags. Those
+ * rows are exactly the sibling descriptors `derivePattern` checks a group's
+ * pattern against: real, known shapes of the same merchant that this batch
+ * did not put in the group, which a pattern derived from the group must not
+ * also match (POPS-3665).
+ */
+function descriptorsByGroupKey(txns: ConfirmedTransaction[]): Map<string, ConfirmedTransaction[]> {
+  const byKey = new Map<string, ConfirmedTransaction[]>();
+  for (const txn of txns) {
+    const key = groupKey(txn);
+    const existing = byKey.get(key);
+    if (existing) existing.push(txn);
+    else byKey.set(key, [txn]);
+  }
+  return byKey;
 }
 
 /**
@@ -82,9 +105,25 @@ function commonTagsForGroup(group: EntityGroup): string[] {
  * was built from — never from the entity name. See
  * `derivePatternFromDescriptions` for why, and why it lives beside the
  * matcher rather than here.
+ *
+ * `allSameKeyTxns` is every row of the batch that shares the group's key,
+ * tagged or not; the ones not already in the group — untagged rows never
+ * reach `groupByEntity` at all — are passed as sibling descriptors, so a
+ * pattern that reaches past this group into another, untagged shape of the
+ * same merchant is refused rather than staged (POPS-3665, POPS-3679).
  */
-function derivePattern(group: EntityGroup): string | null {
-  return derivePatternFromDescriptions(group.txns.map((txn) => txn.description));
+function derivePattern(
+  group: EntityGroup,
+  allSameKeyTxns: readonly ConfirmedTransaction[]
+): string | null {
+  const groupChecksums = new Set(group.txns.map((txn) => txn.checksum));
+  const siblingDescriptions = allSameKeyTxns
+    .filter((txn) => !groupChecksums.has(txn.checksum))
+    .map((txn) => txn.description);
+  return derivePatternFromDescriptions(
+    group.txns.map((txn) => txn.description),
+    siblingDescriptions
+  );
 }
 
 /**
@@ -126,14 +165,15 @@ export function computeProposals(
   staged: readonly PendingTagRuleChangeSet[] = []
 ): RuleProposal[] {
   const stagedByRow = tagsStagedByRow(staged);
+  const byGroupKey = descriptorsByGroupKey(confirmedTransactions);
   const proposals: RuleProposal[] = [];
   let seq = 0;
-  for (const [, group] of groupByEntity(confirmedTransactions)) {
+  for (const [key, group] of groupByEntity(confirmedTransactions)) {
     const tags = commonTagsForGroup(group).filter(
       (tag) => !group.txns.every((txn) => stagedByRow.get(txn.checksum)?.has(tag) ?? false)
     );
     if (!tags.length) continue;
-    const pattern = derivePattern(group);
+    const pattern = derivePattern(group, byGroupKey.get(key) ?? []);
     if (pattern === null) continue;
     proposals.push({
       id: `proposal-${seq++}`,
