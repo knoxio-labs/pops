@@ -1005,7 +1005,9 @@ describe('tagRules — resolveAddCollisions (POPS-2955)', () => {
         },
       ],
     });
-    expect(collisions).toEqual([[{ ruleId, existingTags: ['venue:cafe', 'occasion:birthday'] }]]);
+    expect(collisions).toEqual([
+      [{ ruleId, existingTags: ['venue:cafe', 'occasion:birthday'], isActive: true }],
+    ]);
   });
 
   it('lines up one entry per op, null for edit/disable/remove ops', async () => {
@@ -1068,7 +1070,61 @@ describe('tagRules — resolveAddCollisions (POPS-2955)', () => {
       ],
     });
     expect(collisions[0]).toEqual([null]);
-    expect(collisions[1]).toEqual([{ ruleId, existingTags: ['x'] }]);
+    expect(collisions[1]).toEqual([{ ruleId, existingTags: ['x'], isActive: true }]);
+  });
+});
+
+describe('tagRules — resolveAddCollisions on a disabled rule', () => {
+  async function disabledRule(pattern: string): Promise<string> {
+    const created = await client().tagRules.apply({
+      changeSet: {
+        ops: [
+          { op: 'add', data: { descriptionPattern: pattern, matchType: 'contains', tags: ['x'] } },
+        ],
+      },
+      acceptedNewTags: ['x'],
+    });
+    const ruleId = created.rules[0]!.id;
+    await client().tagRules.disable(ruleId);
+    return ruleId;
+  }
+
+  it('says the rule an add would land on is disabled', async () => {
+    const ruleId = await disabledRule('SWITCHED OFF');
+
+    const { collisions } = await client().tagRules.resolveAddCollisions({
+      changeSets: [
+        {
+          ops: [
+            {
+              op: 'add',
+              data: { descriptionPattern: 'SWITCHED OFF', matchType: 'contains', tags: ['y'] },
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(collisions).toEqual([[{ ruleId, existingTags: ['x'], isActive: false }]]);
+  });
+
+  it('re-enables the disabled rule when that add is committed, which is what the collision warns of', async () => {
+    const ruleId = await disabledRule('SWITCHED BACK ON');
+
+    await client().tagRules.apply({
+      changeSet: {
+        ops: [
+          {
+            op: 'add',
+            data: { descriptionPattern: 'SWITCHED BACK ON', matchType: 'contains', tags: ['y'] },
+          },
+        ],
+      },
+      acceptedNewTags: ['y'],
+    });
+
+    const refetched = await client().tagRules.get(ruleId);
+    expect(refetched.data.isActive).toBe(true);
   });
 });
 
@@ -1184,5 +1240,134 @@ describe('tagRules — ledgerMatchStatus on list/get (POPS-2941)', () => {
 
     const listed = await client().tagRules.list({});
     expect(listed.data.find((r) => r.id === id)?.ledgerMatchStatus).toBe('broken');
+  });
+});
+
+describe('tagRules — overlaps on list/get (POPS-3691)', () => {
+  function seed(description: string): void {
+    transactionsService.createTransaction(financeDb.db, {
+      description,
+      accountId: amexAccountId,
+      amountCents: -1000,
+      date: '2026-01-01',
+    });
+  }
+
+  async function rule(descriptionPattern: string, tags: string[]): Promise<string> {
+    const applied = await client().tagRules.apply({
+      changeSet: {
+        ops: [{ op: 'add', data: { descriptionPattern, matchType: 'contains', tags } }],
+      },
+      acceptedNewTags: tags,
+    });
+    return applied.rules[0]!.id;
+  }
+
+  async function overlapsOf(id: string) {
+    const listed = await client().tagRules.list({});
+    return listed.data.find((r) => r.id === id)?.overlaps;
+  }
+
+  async function twoValuesOf(facet: string): Promise<[string, string]> {
+    const { tags } = await client().tagRules.vocabulary();
+    const values = tags.filter((tag) => tag.startsWith(`${facet}:`));
+    if (values.length < 2) throw new Error(`the vocabulary holds fewer than two ${facet} values`);
+    return [values[0]!, values[1]!];
+  }
+
+  it('reports nothing for rules that never match the same transaction', async () => {
+    seed('WOOLWORTHS METRO');
+    seed('NETFLIX COM');
+    const woolworths = await rule('WOOLWORTHS', ['overlap-x']);
+    const netflix = await rule('NETFLIX', ['overlap-y']);
+
+    expect(await overlapsOf(woolworths)).toEqual([]);
+    expect(await overlapsOf(netflix)).toEqual([]);
+  });
+
+  it('reports nothing for two rules that share rows but neither covers nor contradicts the other', async () => {
+    seed('WOOLWORTHS METRO');
+    seed('WOOLWORTHS TOWN HALL');
+    const wide = await rule('WOOLWORTHS', ['overlap-x']);
+    const narrow = await rule('METRO', ['overlap-y']);
+
+    expect(await overlapsOf(wide)).toEqual([]);
+    expect(await overlapsOf(narrow)).toEqual([]);
+  });
+
+  it('marks a rule redundant when another matches every row it does and already writes its tags', async () => {
+    seed('WOOLWORTHS METRO');
+    seed('WOOLWORTHS TOWN HALL');
+    const wide = await rule('WOOLWORTHS', ['overlap-x', 'overlap-y']);
+    const narrow = await rule('WOOLWORTHS METRO', ['overlap-x']);
+
+    expect(await overlapsOf(narrow)).toEqual([
+      { ruleId: wide, descriptionPattern: 'WOOLWORTHS', kind: 'redundant' },
+    ]);
+    expect(await overlapsOf(wide)).toEqual([]);
+  });
+
+  it('does not call a rule redundant when the covering rule lacks one of its tags', async () => {
+    seed('WOOLWORTHS METRO');
+    await rule('WOOLWORTHS', ['overlap-x']);
+    const narrow = await rule('WOOLWORTHS METRO', ['overlap-x', 'overlap-z']);
+
+    expect(await overlapsOf(narrow)).toEqual([]);
+  });
+
+  it('does not call a rule redundant when it matches transactions the other does not', async () => {
+    seed('WOOLWORTHS METRO');
+    seed('WOOLWORTHS TOWN HALL');
+    const wide = await rule('WOOLWORTHS', ['overlap-x']);
+    const narrow = await rule('WOOLWORTHS METRO', ['overlap-x', 'overlap-y']);
+
+    expect(await overlapsOf(wide)).toEqual([]);
+    expect(await overlapsOf(narrow)).toEqual([]);
+  });
+
+  it('marks both rules when they match the same row with different values on a single-valued axis', async () => {
+    const [first, second] = await twoValuesOf('venue');
+    seed('ROYAL HOTEL SYDNEY');
+    const royal = await rule('ROYAL HOTEL', [first]);
+    const hotel = await rule('HOTEL', [second]);
+
+    expect(await overlapsOf(royal)).toEqual([
+      { ruleId: hotel, descriptionPattern: 'HOTEL', kind: 'contradicts' },
+    ]);
+    expect(await overlapsOf(hotel)).toEqual([
+      { ruleId: royal, descriptionPattern: 'ROYAL HOTEL', kind: 'contradicts' },
+    ]);
+  });
+
+  it('does not call two values on a multi-valued axis a contradiction', async () => {
+    const [first, second] = await twoValuesOf('contains');
+    seed('BAKERY AND BUTCHER');
+    const bakery = await rule('BAKERY', [first]);
+    const butcher = await rule('BUTCHER', [second]);
+
+    expect(await overlapsOf(bakery)).toEqual([]);
+    expect(await overlapsOf(butcher)).toEqual([]);
+  });
+
+  it('ignores a disabled rule, which fires on nothing', async () => {
+    const [first, second] = await twoValuesOf('venue');
+    seed('ROYAL HOTEL SYDNEY');
+    const royal = await rule('ROYAL HOTEL', [first]);
+    const hotel = await rule('HOTEL', [second]);
+    await client().tagRules.disable(hotel);
+
+    expect(await overlapsOf(royal)).toEqual([]);
+  });
+
+  it('reports a rule’s overlaps on get, the same as on list', async () => {
+    const [first, second] = await twoValuesOf('venue');
+    seed('ROYAL HOTEL SYDNEY');
+    const royal = await rule('ROYAL HOTEL', [first]);
+    const hotel = await rule('HOTEL', [second]);
+
+    const fetched = await client().tagRules.get(royal);
+    expect(fetched.data.overlaps).toEqual([
+      { ruleId: hotel, descriptionPattern: 'HOTEL', kind: 'contradicts' },
+    ]);
   });
 });

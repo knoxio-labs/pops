@@ -69,7 +69,7 @@ describe('tag-only prompt', () => {
   });
 
   it('has a prompt version distinct from the categorize prompts', () => {
-    expect(PROMPT_VERSION_TAGS_ONLY).toBe('tags-v2.3');
+    expect(PROMPT_VERSION_TAGS_ONLY).toBe('tags-v3.1');
   });
 });
 

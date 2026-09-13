@@ -9,7 +9,7 @@
  *   2. Review  → accept an AI suggestion, which opens the correction proposal
  *   3. Dialog  → `Apply ChangeSet` is ENABLED and applying stages the rule
  *   4. Tags    → no edits, continue
- *   5. Rules   → skip
+ *   5. Rules   → passed over, nothing to offer
  *   6. Commit  → Approve & Commit All, then confirm
  *   7. Summary → "Import Complete", and the commit carried the staged rule
  *
@@ -605,9 +605,6 @@ test.describe('Finance — import wizard from a staged live draft (mocked)', () 
     // Step 4: Tag Review — nothing to change.
     await expect(page.getByRole('heading', { name: 'Tag Review' })).toBeVisible();
     await page.getByRole('button', { name: /continue to final review/i }).click();
-
-    // Step 5: Create Rules — the tag-rule step has no patterns to offer.
-    await page.getByRole('button', { name: /^skip$/i }).click();
 
     // Step 6: Final Review — approve, then confirm in the dialog, whose button
     // carries the same label as the one that opened it.

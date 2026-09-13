@@ -1,3 +1,5 @@
+import { ExternalLink } from 'lucide-react';
+
 import { Checkbox, Input, Label, Select, Textarea } from '@pops/ui';
 
 import { describeTag } from '../../../lib/tags';
@@ -48,6 +50,37 @@ export function FormFields(props: FormFieldsProps) {
         />
       </div>
     </>
+  );
+}
+
+/**
+ * Why a group dialog opened with no pattern: its rows share no descriptor text
+ * specific enough to match on (POPS-255). Tagging every transaction from a
+ * merchant is what the merchant's default tags are for, so the hint points
+ * there rather than suggesting a pattern that would over- or under-match.
+ *
+ * The link sits on its own line so its 44px touch target does not stretch the
+ * sentence around it.
+ */
+export function NoCommonDescriptorHint({ entityId }: { entityId: string | null }) {
+  return (
+    <div className="space-y-1" data-testid="no-common-descriptor">
+      <p className="text-xs text-muted-foreground">
+        These transactions share no descriptor text to match on, so there is no pattern to suggest.
+        Type one to save a rule.
+      </p>
+      {entityId !== null && (
+        <a
+          href={`/finance/entities/${entityId}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex min-h-11 min-w-11 items-center gap-1 text-xs text-primary hover:underline"
+        >
+          Or tag every transaction from this merchant with its default tags
+          <ExternalLink className="h-3 w-3" />
+        </a>
+      )}
+    </div>
   );
 }
 

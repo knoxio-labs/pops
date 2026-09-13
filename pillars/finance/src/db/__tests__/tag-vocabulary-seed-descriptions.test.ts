@@ -129,6 +129,7 @@ describe('the seeded classified vocabulary', () => {
     'fee:late',
     'fee:membership',
     'fee:surcharge',
+    'hobby:brewing',
     'occasion:health',
     'occasion:home',
     'occasion:out',
@@ -166,7 +167,7 @@ describe('the seeded classified vocabulary', () => {
     const { db } = freshMigratedFinanceDb();
 
     expect(listClassifiedVocabulary(db).toSorted()).toEqual(EXPECTED);
-    expect(EXPECTED).toHaveLength(83);
+    expect(EXPECTED).toHaveLength(84);
   });
 
   it('gives every closed-facet value the closed kind', () => {
@@ -185,7 +186,7 @@ describe('the seeded classified vocabulary', () => {
     const unclassified = (
       raw
         .prepare(
-          "SELECT tag FROM tag_vocabulary WHERE facet NOT IN ('venue','occasion','contains','channel','fee') ORDER BY tag"
+          "SELECT tag FROM tag_vocabulary WHERE facet NOT IN ('venue','occasion','contains','channel','fee','hobby') ORDER BY tag"
         )
         .all() as { tag: string }[]
     ).map((row) => row.tag);
@@ -207,7 +208,6 @@ describe('the seeded classified vocabulary', () => {
       'enrich:paylab',
       'enrich:paypal',
       'flag:needs-review',
-      'hobby:brewing',
       'person:rosane',
       'tax:deductible',
       'tax:novated-lease',

@@ -142,13 +142,26 @@ export const TagRuleSchema = z.object({
 });
 
 /**
- * `TagRuleSchema` plus {@link TagRuleLedgerMatchStatusSchema} — only the
- * Tag Rules browser's `list`/`get` responses carry this; ChangeSet
- * propose/preview/apply return the plain `TagRuleSchema` and do not pay for
- * a ledger scan on every apply.
+ * Another active rule a rule overlaps with in the ledger (POPS-3691):
+ * `contradicts` when both match a transaction and write different values on a
+ * single-valued facet, so one silently loses; `redundant` when the other
+ * matches every transaction this one does and already writes all its tags.
+ */
+export const TagRuleOverlapSchema = z.object({
+  ruleId: z.string(),
+  descriptionPattern: z.string(),
+  kind: z.enum(['contradicts', 'redundant']),
+});
+
+/**
+ * `TagRuleSchema` plus {@link TagRuleLedgerMatchStatusSchema} and the rule's
+ * overlaps — only the Tag Rules browser's `list`/`get` responses carry these;
+ * ChangeSet propose/preview/apply return the plain `TagRuleSchema` and do not
+ * pay for a ledger scan on every apply.
  */
 export const TagRuleWithLedgerStatusSchema = TagRuleSchema.extend({
   ledgerMatchStatus: TagRuleLedgerMatchStatusSchema,
+  overlaps: z.array(TagRuleOverlapSchema),
 });
 
 export const MaxPreviewItems = z.coerce.number().int().positive().max(500).default(200);

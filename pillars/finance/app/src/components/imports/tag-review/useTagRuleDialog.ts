@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
+import { derivePatternFromDescriptions } from '@pops/finance';
+
 import { unionTags } from './tagReviewUtils';
 
 import type { ConfirmedTransaction } from '@pops/finance';
@@ -22,11 +24,18 @@ function groupDialogState(
 ): TagRuleDialogState | null {
   const tags = unionTags(group.transactions.map((t) => localTags[t.checksum] ?? []));
   if (tags.length === 0) return null;
+  // From the descriptors, never the entity name: a rule is tested against what
+  // the bank sent, and a merchant's display name is routinely not a substring
+  // of it, so a name-seeded rule can never fire (POPS-255).
+  const descriptionPattern = derivePatternFromDescriptions(
+    group.transactions.map((t) => t.description)
+  );
   const signal: TagRuleLearnSignal = {
-    descriptionPattern: group.entityName,
+    descriptionPattern: descriptionPattern ?? '',
     matchType: 'contains',
     entityId: group.transactions[0]?.entityId ?? null,
     tags,
+    noCommonDescriptor: descriptionPattern === null,
   };
   return {
     signal,

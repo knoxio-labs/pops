@@ -13,6 +13,7 @@ const addOp = (tags: string[] = []): TagRuleChangeSetOp => ({
 const collision: TagRuleAddCollision = {
   ruleId: 'rule-1',
   existingTags: ['venue:cafe', 'occasion:birthday'],
+  isActive: true,
 };
 
 describe('tagRuleOpBadge (POPS-2955)', () => {
@@ -56,7 +57,30 @@ describe('tagRuleOpDisplayLabel (POPS-2955)', () => {
     const label = tagRuleOpDisplayLabel(addOp(['venue:cafe']), {
       ruleId: 'rule-2',
       existingTags: [],
+      isActive: true,
     });
     expect(label).toMatch(/no tags/i);
+  });
+});
+
+describe('an add that lands on a disabled rule (POPS-3676)', () => {
+  const disabled: TagRuleAddCollision = { ...collision, isActive: false };
+
+  it('badges it RE-ENABLE, never MERGE', () => {
+    const badge = tagRuleOpBadge(addOp(), disabled);
+    expect(badge?.label).toBe('Re-enable');
+    expect(badge).not.toBe(MERGE_BADGE);
+  });
+
+  it('says committing it re-enables a rule the user disabled, and still lists what that rule has', () => {
+    const label = tagRuleOpDisplayLabel(addOp(['contains:coffee']), disabled);
+    expect(label).toMatch(/re-enables a rule you disabled/i);
+    expect(label).toContain('Cafe');
+    expect(label).toContain('Coffee');
+  });
+
+  it('does not call a merge into a live rule a re-enable', () => {
+    expect(tagRuleOpBadge(addOp(), collision)).toBe(MERGE_BADGE);
+    expect(tagRuleOpDisplayLabel(addOp(['contains:coffee']), collision)).not.toMatch(/re-enable/i);
   });
 });

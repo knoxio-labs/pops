@@ -8704,6 +8704,11 @@ export type TagRulesListResponses = {
       lastUsedAt: string | null;
       ledgerMatchStatus: 'matched' | 'unused' | 'broken';
       matchType: 'exact' | 'contains' | 'regex';
+      overlaps: Array<{
+        descriptionPattern: string;
+        kind: 'contradicts' | 'redundant';
+        ruleId: string;
+      }>;
       priority: number;
       tags: Array<string>;
       timesApplied: number;
@@ -9350,6 +9355,7 @@ export type TagRulesResolveAddCollisionsResponses = {
     collisions: Array<
       Array<{
         existingTags: Array<string>;
+        isActive: boolean;
         ruleId: string;
       } | null>
     >;
@@ -9485,6 +9491,11 @@ export type TagRulesGetResponses = {
       lastUsedAt: string | null;
       ledgerMatchStatus: 'matched' | 'unused' | 'broken';
       matchType: 'exact' | 'contains' | 'regex';
+      overlaps: Array<{
+        descriptionPattern: string;
+        kind: 'contradicts' | 'redundant';
+        ruleId: string;
+      }>;
       priority: number;
       tags: Array<string>;
       timesApplied: number;
