@@ -21,6 +21,10 @@ import SwiftUI
 /// survives, and every value is live from the first frame.
 internal struct ReceiptDraftForm: View {
     @Binding internal var draft: ReceiptDraft
+    /// Merchants that can be picked. Empty falls back to free text, which is
+    /// what this form did before pickers and what it must still do on a
+    /// device that cannot reach contacts.
+    internal var merchants: [ReceiptMerchantChoice] = []
 
     internal var body: some View {
         VStack(alignment: .leading, spacing: PopsSpacing.lg) {
@@ -62,42 +66,6 @@ extension ReceiptDraftForm {
     }
 }
 
-// MARK: who and when
-
-extension ReceiptDraftForm {
-    /// Merchant, address and date at three weights, as the read-only reading
-    /// draws them. A merchant is what a reader recognises the receipt by; the
-    /// address and the date place it. Three fields at one size is the
-    /// flatness this surface was built to leave behind.
-    private var identity: some View {
-        section(ReceiptDraftCopy.identitySection) {
-            PopsTextField(
-                ReceiptDraftCopy.merchantLabel,
-                placeholder: ReceiptDraftCopy.merchantPlaceholder,
-                text: $draft.merchant.value,
-                font: .popsTitle,
-                note: hint(.merchant)
-            )
-            .accessibilityIdentifier(ReceiptDraftAccessibility.merchant)
-            PopsTextField(
-                ReceiptDraftCopy.addressLabel,
-                placeholder: ReceiptDraftCopy.addressPlaceholder,
-                text: $draft.address.value,
-                font: .popsSubheadline,
-                note: hint(.address)
-            )
-            .accessibilityIdentifier(ReceiptDraftAccessibility.address)
-            PopsTextField(
-                ReceiptDraftCopy.dateLabel,
-                placeholder: ReceiptDraftCopy.datePlaceholder,
-                text: $draft.date.value,
-                note: hint(.date)
-            )
-            .accessibilityIdentifier(ReceiptDraftAccessibility.date)
-        }
-    }
-}
-
 // MARK: the items
 
 extension ReceiptDraftForm {
@@ -120,7 +88,6 @@ extension ReceiptDraftForm {
                         ? nil : ReceiptDraftCopy.lineAmountMissing,
                     remove: { draft.removeLine(id: line.id) }
                 )
-                if line.id != draft.lines.last?.id { PopsDivider() }
             }
             if let hint = hint(.lines) {
                 Text(hint.text)
@@ -145,15 +112,9 @@ extension ReceiptDraftForm {
     private var totals: some View {
         section(ReceiptDraftCopy.totalsSection) {
             ForEach($draft.adjustments) { $adjustment in
-                PopsTextField(
-                    adjustment.kind.label,
-                    placeholder: ReceiptDraftCopy.amountPlaceholder,
-                    text: $adjustment.amount.value,
-                    font: .popsMonospaced,
-                    alignment: .trailing,
-                    keyboard: .decimal
-                )
+                adjustmentRow($adjustment)
             }
+            if !draft.addableAdjustments.isEmpty { addAdjustment }
             if let hint = hint(.adjustments) {
                 Text(hint.text)
                     .font(.popsCaption)
@@ -173,6 +134,63 @@ extension ReceiptDraftForm {
             .accessibilityIdentifier(ReceiptDraftAccessibility.total)
             reconciliation
         }
+    }
+
+    /// The figure, and whether it is already inside the line prices.
+    ///
+    /// The toggle is the point of the row rather than a detail on it. A
+    /// reading whose every figure is right still fails its own total check
+    /// when the basis is wrong, and before this there was no field to fix:
+    /// the numbers were all correct and the arithmetic assumption was not.
+    private func adjustmentRow(_ adjustment: Binding<ReceiptDraftAdjustment>) -> some View {
+        VStack(alignment: .leading, spacing: PopsSpacing.xs) {
+            PopsTextField(
+                adjustment.wrappedValue.kind.label,
+                placeholder: ReceiptDraftCopy.amountPlaceholder,
+                text: adjustment.amount.value,
+                font: .popsMonospaced,
+                alignment: .trailing,
+                keyboard: .decimal
+            )
+            HStack(spacing: PopsSpacing.sm) {
+                Toggle(ReceiptDraftCopy.includedLabel, isOn: adjustment.isIncluded)
+                    .font(.popsCaption)
+                    .foregroundStyle(Color.popsMutedForeground)
+                    .tint(Color.popsAccent)
+                // Only a row the reader added can be taken away. One the model
+                // read is a fact about the paper, and removing it would be
+                // editing the reading rather than correcting it — emptying the
+                // amount is how you say it was misread.
+                if !adjustment.wrappedValue.wasExtracted {
+                    Button {
+                        draft.removeAdjustment(id: adjustment.wrappedValue.id)
+                    } label: {
+                        Image(systemName: "minus.circle")
+                            .foregroundStyle(Color.popsMutedForeground)
+                    }
+                    .accessibilityLabel(
+                        ReceiptDraftCopy.removeAdjustment(adjustment.wrappedValue.kind.label))
+                }
+            }
+        }
+    }
+
+    /// An adjustment the reading never found.
+    ///
+    /// A menu rather than four buttons, and only the kinds not already on the
+    /// form: two tax rows on one receipt is a reading nobody should be helped
+    /// to produce.
+    private var addAdjustment: some View {
+        Menu {
+            ForEach(draft.addableAdjustments, id: \.self) { kind in
+                Button(kind.label) { draft.addAdjustment(kind: kind) }
+            }
+        } label: {
+            Label(ReceiptDraftCopy.addAdjustment, systemImage: "plus")
+                .font(.popsSubheadline)
+                .foregroundStyle(Color.popsAccent)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     /// A missing total is what stops a save, so it outranks the gate's
@@ -213,7 +231,7 @@ extension ReceiptDraftForm {
     /// The gate's complaint about one field, as a note beside it. Never a
     /// problem: the extractor being unsure is a reason to look, and nothing
     /// the reader has to resolve before saving.
-    private func hint(_ field: ReceiptDraftField) -> PopsFieldNote? {
+    internal func hint(_ field: ReceiptDraftField) -> PopsFieldNote? {
         guard let hints = draft.hints[field], !hints.isEmpty else { return nil }
         return .hint(hints.joined(separator: " "))
     }
@@ -221,7 +239,7 @@ extension ReceiptDraftForm {
     /// A named group of fields in one card, with the label outside it — the
     /// same shape ``ReceiptResultCard`` uses, so the form and the reading it
     /// replaces are recognisably one screen in two states.
-    private func section(
+    internal func section(
         _ title: String, caption: String? = nil, @ViewBuilder rows: () -> some View
     ) -> some View {
         VStack(alignment: .leading, spacing: PopsSpacing.sm) {

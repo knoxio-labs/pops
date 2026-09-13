@@ -31,12 +31,16 @@ import SwiftUI
 public struct ReceiptDraftView: View {
     @State private var draft: ReceiptDraft
 
-    private let title: String
-    private let subtitle: String
+    private let title: String?
+    private let subtitle: String?
     private let status: Status?
     private let parts: [ReceiptPart]
+    private let complaints: ComplaintStyle
+    private let merchants: [ReceiptMerchantChoice]
     private let secondaryAction: SecondaryAction?
-    private let save: (ReceiptDraft) -> Void
+    private let addAnother: AddAnother?
+    private let isSaving: Bool
+    private let save: ((ReceiptDraft) -> Void)?
 
     /// - Parameters:
     ///   - draft: pre-filled, and live from the first frame. There is no
@@ -51,22 +55,68 @@ public struct ReceiptDraftView: View {
     ///   - secondaryAction: the other thing that can be done here, at the
     ///     standard weight beside the prominent Save.
     ///   - save: called with the draft as it stands.
+    /// - Parameters:
+    ///   - title: the screen's own name, and `nil` when it has none. A form
+    ///     embedded in a flow that already says where you are — the review
+    ///     step's `2 of 3` — would otherwise carry a second heading under the
+    ///     first, saying less.
+    ///   - save: `nil` omits the action bar entirely, for the same reason: a
+    ///     form inside a batch is not the thing that saves, and two Save
+    ///     buttons on one screen is one of them lying about what it does.
+    ///   - addAnother: a second save beside Save that keeps the form open for
+    ///     the next purchase, under the same rule Save is.
+    ///   - isSaving: a save is in flight. Both saves hold, so a second tap
+    ///     cannot create a second purchase.
     public init(
         draft: ReceiptDraft,
-        title: String,
-        subtitle: String,
+        title: String? = nil,
+        subtitle: String? = nil,
         status: Status? = nil,
+        complaints: ComplaintStyle = .banner,
+        merchants: [ReceiptMerchantChoice] = [],
         parts: [ReceiptPart] = [],
         secondaryAction: SecondaryAction? = nil,
-        save: @escaping (ReceiptDraft) -> Void
+        addAnother: AddAnother? = nil,
+        isSaving: Bool = false,
+        save: ((ReceiptDraft) -> Void)? = nil
     ) {
         _draft = State(wrappedValue: draft)
         self.title = title
         self.subtitle = subtitle
         self.status = status
+        self.complaints = complaints
+        self.merchants = merchants
         self.parts = parts
         self.secondaryAction = secondaryAction
+        self.addAnother = addAnother
+        self.isSaving = isSaving
         self.save = save
+    }
+
+    /// How much room the gate's complaint is given.
+    ///
+    /// It is a full status header today, which is right when the reading is
+    /// the whole screen — the result screen opens on it and the tone is the
+    /// first thing read. Inside the review step the same block costs the top
+    /// of a screen whose entire job is the form below it, and none of it can
+    /// be acted on.
+    ///
+    /// Every style keeps the per-field hints, which are where a complaint
+    /// that names a field actually belongs. What the styles differ on is what
+    /// happens to the complaints that name no field, and how loudly.
+    public enum ComplaintStyle: Hashable, Sendable, CaseIterable {
+        /// The full header, above the fields. What the result screen uses.
+        case banner
+        /// The same words at caption weight in one row.
+        case compact
+        /// A single line saying how many, opening on a tap.
+        case collapsed
+        /// Nothing at the top at all. The fields carry their own hints and
+        /// anything naming no field is not shown here.
+        case hintsOnly
+        /// The full header, after the fields, so the screen opens on
+        /// something that can be acted on.
+        case belowForm
     }
 
     /// What happened to the receipt this form was read off, as the glyph and
@@ -87,6 +137,18 @@ public struct ReceiptDraftView: View {
         }
     }
 
+    /// Saves, and keeps the form open for another purchase.
+    ///
+    /// Not a ``SecondaryAction``: that one takes no draft and is not held by
+    /// the save rule, and this one is a save.
+    public struct AddAnother {
+        internal let action: (ReceiptDraft) -> Void
+
+        public init(action: @escaping (ReceiptDraft) -> Void) {
+            self.action = action
+        }
+    }
+
     public struct SecondaryAction {
         internal let title: String
         internal let action: () -> Void
@@ -104,7 +166,11 @@ public struct ReceiptDraftView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.popsBackground)
-        .safeAreaInset(edge: .bottom) { actions }
+        .safeAreaInset(edge: .bottom) { if save != nil { actions } }
+        // A tap outside a field puts the keyboard away, which it did not do
+        // before: a form this long is mostly scrolling, and a keyboard that
+        // only closes on Return is a keyboard covering half the receipt.
+        .scrollDismissesKeyboard(.interactively)
         .accessibilityIdentifier(ReceiptDraftAccessibility.form)
     }
 
@@ -114,14 +180,45 @@ public struct ReceiptDraftView: View {
     @ViewBuilder internal var content: some View {
         VStack(alignment: .leading, spacing: PopsSpacing.lg) {
             if !parts.isEmpty { ReceiptPagesView(parts: parts) }
-            if let status {
+            if complaints != .belowForm { complaint }
+            if title != nil || subtitle != nil { heading }
+            ReceiptDraftForm(draft: $draft, merchants: merchants)
+            if complaints == .belowForm { complaint }
+        }
+    }
+
+    @ViewBuilder private var complaint: some View {
+        if let status {
+            switch complaints {
+            case .banner, .belowForm:
                 PopsStatusHeader(
                     tone: status.tone, title: status.heading, message: status.message,
                     caption: status.caption)
+            case .compact:
+                compactComplaint(status)
+            case .collapsed:
+                CollapsedComplaint(status: status)
+            case .hintsOnly:
+                EmptyView()
             }
-            heading
-            ReceiptDraftForm(draft: $draft)
         }
+    }
+
+    private func compactComplaint(_ status: Status) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: PopsSpacing.sm) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.popsCaption)
+                .foregroundStyle(status.tone.color)
+            Text(status.message)
+                .font(.popsCaption)
+                .foregroundStyle(Color.popsMutedForeground)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: PopsSpacing.zero)
+        }
+        .padding(PopsSpacing.md)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            status.tone.color.opacity(0.12), in: .rect(cornerRadius: PopsRadius.control))
     }
 
     /// The screen's own name and what it is asking for.
@@ -132,14 +229,24 @@ public struct ReceiptDraftView: View {
     /// for an Edit button that does not exist.
     private var heading: some View {
         VStack(alignment: .leading, spacing: PopsSpacing.sm) {
-            Text(title)
-                .font(.popsLargeTitle)
-                .foregroundStyle(Color.popsForeground)
-            Text(subtitle)
-                .font(.popsBody)
-                .foregroundStyle(Color.popsMutedForeground)
+            if let title {
+                Text(title)
+                    .font(.popsLargeTitle)
+                    .foregroundStyle(Color.popsForeground)
+            }
+            if let subtitle {
+                Text(subtitle)
+                    .font(.popsBody)
+                    .foregroundStyle(Color.popsMutedForeground)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// Whether either save can be pressed. Held while one is in flight, which
+    /// is half of what stops a double tap creating two purchases.
+    internal static func canSave(_ draft: ReceiptDraft, isSaving: Bool) -> Bool {
+        draft.isSaveable && !isSaving
     }
 
     /// Save is the prominent one; whatever else can be done here sits beside
@@ -148,12 +255,71 @@ public struct ReceiptDraftView: View {
     /// "Photograph another" stops being what the screen is for.
     private var actions: some View {
         PopsActionBar {
-            PopsButton(ReceiptDraftCopy.save, prominence: .prominent) { save(draft) }
-                .disabled(!draft.isSaveable)
-                .accessibilityIdentifier(ReceiptDraftAccessibility.saveButton)
+            PopsButton(
+                isSaving ? ReceiptDraftCopy.saving : ReceiptDraftCopy.save, prominence: .prominent
+            ) { save?(draft) }
+            .disabled(!Self.canSave(draft, isSaving: isSaving))
+            .accessibilityIdentifier(ReceiptDraftAccessibility.saveButton)
+            if let addAnother {
+                PopsButton(ReceiptDraftCopy.saveAndAddAnother) { addAnother.action(draft) }
+                    .disabled(!Self.canSave(draft, isSaving: isSaving))
+                    .accessibilityIdentifier(ReceiptDraftAccessibility.saveAndAddAnotherButton)
+            }
             if let secondaryAction {
                 PopsButton(secondaryAction.title, action: secondaryAction.action)
             }
         }
+    }
+}
+
+/// The gate's complaint as one line, opening on a tap.
+///
+/// Closed, it gives the screen back to the form and still says there is
+/// something to know. Open, it says the same thing the banner does. The bet is
+/// that a person who has read the complaint once does not need it occupying
+/// the top of every subsequent receipt in the batch.
+internal struct CollapsedComplaint: View {
+    internal let status: ReceiptDraftView.Status
+
+    @State private var open = false
+
+    internal var body: some View {
+        Button {
+            open.toggle()
+        } label: {
+            VStack(alignment: .leading, spacing: PopsSpacing.sm) {
+                HStack(spacing: PopsSpacing.sm) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.popsCaption)
+                        .foregroundStyle(status.tone.color)
+                    Text(status.heading)
+                        .font(.popsSubheadline)
+                        .fontWeight(.medium)
+                        .foregroundStyle(Color.popsForeground)
+                    Spacer(minLength: PopsSpacing.sm)
+                    Image(systemName: open ? "chevron.up" : "chevron.down")
+                        .font(.popsCaption)
+                        .foregroundStyle(Color.popsMutedForeground)
+                }
+                if open {
+                    Text(status.message)
+                        .font(.popsSubheadline)
+                        .foregroundStyle(Color.popsMutedForeground)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if let caption = status.caption {
+                        Text(caption)
+                            .font(.popsCaption)
+                            .foregroundStyle(Color.popsMutedForeground)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(PopsSpacing.md)
+            .background(
+                status.tone.color.opacity(0.12), in: .rect(cornerRadius: PopsRadius.control))
+        }
+        .buttonStyle(.plain)
+        .animation(.snappy(duration: 0.2), value: open)
     }
 }

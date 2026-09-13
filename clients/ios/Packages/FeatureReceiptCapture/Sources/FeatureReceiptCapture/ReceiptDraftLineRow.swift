@@ -22,12 +22,65 @@ internal struct ReceiptDraftLineRow: View {
     internal let problem: String?
     internal let remove: () -> Void
 
+    /// Whether the second tier is showing. Opens itself for a line that has
+    /// something in it, so nothing the paper said is hidden behind a tap — it
+    /// is the empty ones that stay shut, and those are the majority.
+    @State private var showsDetails: Bool
+
+    internal init(
+        line: Binding<ReceiptDraftLine>, problem: String?, remove: @escaping () -> Void
+    ) {
+        _line = line
+        self.problem = problem
+        self.remove = remove
+        _showsDetails = State(initialValue: line.wrappedValue.hasQualifiers)
+    }
+
+    /// ## Why the qualifiers are behind a disclosure
+    ///
+    /// Every field draws its own underline, which is how this form keeps the
+    /// shape of the paper. Four fields a line is four rules a line, and a
+    /// five-item receipt came out as a page of horizontal lines with the
+    /// receipt somewhere behind them — and three of the four are usually
+    /// empty, because most lines are a name and a price.
+    ///
+    /// So the second tier opens on demand, and opens itself when there is
+    /// anything in it. The rules that remain are the two fields every line
+    /// has.
     internal var body: some View {
         VStack(alignment: .leading, spacing: PopsSpacing.sm) {
             primary
-            qualifiers
+            if showsDetails {
+                qualifiers
+            } else if line.hasQualifiers {
+                summary
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// What the hidden tier says, when it is hidden and has something to say.
+    /// `2 · $4.90/kg · was 5.50` in one muted line — readable without being
+    /// four more fields.
+    @ViewBuilder private var summary: some View {
+        let parts = [
+            line.quantity.value.isEmpty ? nil : line.quantity.value,
+            line.unitNote.value.isEmpty ? nil : line.unitNote.value,
+            line.listPrice.value.isEmpty
+                ? nil
+                : "\(ReceiptDraftCopy.itemListPriceLabel.lowercased()) \(line.listPrice.value)",
+        ].compactMap { $0 }
+        if !parts.isEmpty {
+            Button {
+                showsDetails = true
+            } label: {
+                Text(parts.joined(separator: " · "))
+                    .font(.popsCaption)
+                    .foregroundStyle(Color.popsMutedForeground)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .buttonStyle(.plain)
+        }
     }
 
     @ViewBuilder private var primary: some View {
@@ -36,6 +89,7 @@ internal struct ReceiptDraftLineRow: View {
                 description
                 HStack(alignment: .firstTextBaseline, spacing: PopsSpacing.md) {
                     amount
+                    detailsToggle
                     removeButton
                 }
             }
@@ -44,9 +98,28 @@ internal struct ReceiptDraftLineRow: View {
                 description
                 amount
                     .frame(maxWidth: Self.amountWidth(at: dynamicTypeSize, column: amountColumn))
+                detailsToggle
                 removeButton
             }
         }
+    }
+
+    /// The control that opens the second tier, in the row that is always
+    /// there. A chevron rather than a label, because it is the least
+    /// important thing on the line and a word would give it the weight of the
+    /// amount beside it.
+    private var detailsToggle: some View {
+        Button {
+            showsDetails.toggle()
+        } label: {
+            Image(systemName: showsDetails ? "chevron.up" : "chevron.down")
+                .font(.popsCaption)
+                .foregroundStyle(Color.popsMutedForeground)
+        }
+        .buttonStyle(.plain)
+        .frame(minWidth: PopsSize.touchTarget, minHeight: PopsSize.touchTarget)
+        .contentShape(Rectangle())
+        .accessibilityLabel(ReceiptDraftCopy.itemDetails)
     }
 
     private var description: some View {
@@ -73,20 +146,35 @@ internal struct ReceiptDraftLineRow: View {
     /// smaller than it — they are what the receipt said *about* the price,
     /// not the price.
     private var qualifiers: some View {
-        HStack(alignment: .firstTextBaseline, spacing: PopsSpacing.md) {
+        VStack(alignment: .leading, spacing: PopsSpacing.sm) {
+            HStack(alignment: .firstTextBaseline, spacing: PopsSpacing.md) {
+                PopsTextField(
+                    ReceiptDraftCopy.itemQuantityLabel,
+                    placeholder: ReceiptDraftCopy.itemQuantityPlaceholder,
+                    text: $line.quantity.value,
+                    font: .popsCaption,
+                    keyboard: .number
+                )
+                .frame(maxWidth: Self.quantityWidth(at: dynamicTypeSize, column: countColumn))
+                PopsTextField(
+                    placeholder: ReceiptDraftCopy.itemUnitNotePlaceholder,
+                    text: $line.unitNote.value,
+                    font: .popsCaption
+                )
+            }
+            // What it would have cost, beside what it did. A separate field
+            // rather than a second reading of `amount`: the charged figure is
+            // the one the gate checked and this one is checked against
+            // nothing, so they must not look like the same kind of number.
             PopsTextField(
-                ReceiptDraftCopy.itemQuantityLabel,
-                placeholder: ReceiptDraftCopy.itemQuantityPlaceholder,
-                text: $line.quantity.value,
+                ReceiptDraftCopy.itemListPriceLabel,
+                placeholder: ReceiptDraftCopy.itemListPricePlaceholder,
+                text: $line.listPrice.value,
                 font: .popsCaption,
-                keyboard: .number
+                alignment: .trailing,
+                keyboard: .decimal
             )
-            .frame(maxWidth: Self.quantityWidth(at: dynamicTypeSize, column: countColumn))
-            PopsTextField(
-                placeholder: ReceiptDraftCopy.itemUnitNotePlaceholder,
-                text: $line.unitNote.value,
-                font: .popsCaption
-            )
+            .frame(maxWidth: Self.amountWidth(at: dynamicTypeSize, column: amountColumn))
         }
     }
 

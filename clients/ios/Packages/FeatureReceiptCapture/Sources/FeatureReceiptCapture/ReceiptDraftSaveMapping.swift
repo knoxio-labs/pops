@@ -53,7 +53,7 @@ extension ReceiptDraft {
         let adjustmentCents = try adjustmentTotals()
 
         return ReceiptPurchaseDraftFields(
-            merchantName: merchant.isEmpty ? nil : merchant.value,
+            merchantName: merchantNameForSave,
             orderedAt: orderedAt,
             currency: currency ?? "AUD",
             totalCents: totalCents,
@@ -65,6 +65,20 @@ extension ReceiptDraft {
             capture: capture,
             idempotencyKey: idempotencyKey
         )
+    }
+
+    /// The merchant as the save payload can carry it: a name, with no record
+    /// behind it.
+    ///
+    /// The form points at contacts records, and the payload has room only for
+    /// `merchantName`, so a merchant chosen or matched from contacts cannot be
+    /// sent as the record it is. That needs an entity id on the wire
+    /// (POPS-3650, POPS-3655). Until then a created merchant is sent by the
+    /// name the reader gave it, and anything else by what the till printed,
+    /// which is what the pillar already resolves against at ingest.
+    internal var merchantNameForSave: String? {
+        if let created = merchantResolution.createdValue { return created }
+        return printedMerchant.isEmpty ? nil : printedMerchant.value
     }
 
     private func saveLine(from line: ReceiptDraftLine) throws -> ReceiptSaveLine {
