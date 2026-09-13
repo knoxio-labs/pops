@@ -1,8 +1,14 @@
 /**
  * React Error Boundary
- * Catches errors in component tree and displays fallback UI
+ * Catches errors in component tree and displays fallback UI.
+ *
+ * A failed dynamic import of a chunk a deploy removed reloads the page once
+ * (see `reloadForStaleChunk`) and renders nothing meanwhile; the fallback is
+ * shown only if the chunk is still missing after that reload.
  */
 import { Component, type ReactNode } from 'react';
+
+import { reloadForStaleChunk } from './stale-chunk-reload';
 
 interface Props {
   children: ReactNode;
@@ -11,16 +17,21 @@ interface Props {
 
 interface State {
   error: Error | null;
+  reloading: boolean;
 }
 
 export class ErrorBoundary extends Component<Props, State> {
-  state: State = { error: null };
+  state: State = { error: null, reloading: false };
 
-  static getDerivedStateFromError(error: Error): State {
+  static getDerivedStateFromError(error: Error): Partial<State> {
     return { error };
   }
 
   componentDidCatch(error: Error, errorInfo: unknown) {
+    if (reloadForStaleChunk(error)) {
+      this.setState({ reloading: true });
+      return;
+    }
     console.error('ErrorBoundary caught:', error, errorInfo);
   }
 
@@ -29,6 +40,7 @@ export class ErrorBoundary extends Component<Props, State> {
   };
 
   render() {
+    if (this.state.reloading) return null;
     if (this.state.error) {
       return this.props.fallback ? (
         this.props.fallback(this.state.error, this.reset)
