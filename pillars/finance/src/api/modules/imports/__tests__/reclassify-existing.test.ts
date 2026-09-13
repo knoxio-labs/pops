@@ -12,7 +12,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { eq } from 'drizzle-orm';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { seededAccountId } from '../../../../db/__tests__/seeded-account.js';
 import {
@@ -51,7 +51,7 @@ interface SeedRule {
   entityName?: string | null;
   location?: string | null;
   tags?: string[];
-  transactionType?: 'purchase' | 'transfer' | 'income' | null;
+  transactionType?: 'purchase' | 'transfer' | 'income' | 'fee' | null;
 }
 
 let tmpDir: string;
@@ -715,5 +715,64 @@ describe('retroactive apply — a rule cannot retype a credit to purchase (POPS-
 
     expect(reclassifyExistingTransactions(db, [])).toBe(0);
     expect(readTxn(txnId).matchType).toBeNull();
+  });
+});
+
+describe('retroactive apply — a fee tag only on a fee row (POPS-2610)', () => {
+  it("drops the rule's fee tag on a purchase and still applies its other tags", () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const txnId = seedTxn({
+      description: 'AMAZON PRIME',
+      type: 'purchase',
+      tags: ['venue:online'],
+    });
+    seedRule({
+      descriptionPattern: 'AMAZON PRIME',
+      entityId: 'ent-amazon',
+      entityName: 'Amazon',
+      tags: ['fee:membership', 'contains:subscription'],
+      confidence: 1,
+    });
+
+    reclassifyExistingTransactions(db, []);
+
+    expect(JSON.parse(readTxn(txnId).tags)).toEqual(['venue:online', 'contains:subscription']);
+  });
+
+  it('keeps the fee tag when the rule itself types the row a fee', () => {
+    const txnId = seedTxn({ description: 'ANNUAL FEE', type: 'purchase' });
+    const ruleId = seedRule({
+      descriptionPattern: 'ANNUAL FEE',
+      transactionType: 'fee',
+      tags: ['fee:membership'],
+      confidence: 1,
+    });
+
+    applyCorrectionRuleToExistingTransactions(db, ruleId);
+
+    const row = readTxn(txnId);
+    expect(row.type).toBe('fee');
+    expect(JSON.parse(row.tags)).toEqual(['fee:membership']);
+  });
+
+  it('strips the stored fee tags when the rule retypes a fee row away', () => {
+    const txnId = seedTxn({
+      description: 'GYM DD',
+      type: 'fee',
+      tags: ['fee:membership', 'venue:gym'],
+    });
+    seedRule({
+      descriptionPattern: 'GYM DD',
+      transactionType: 'purchase',
+      entityId: 'ent-gym',
+      entityName: 'Plus Fitness',
+      confidence: 1,
+    });
+
+    reclassifyExistingTransactions(db, []);
+
+    const row = readTxn(txnId);
+    expect(row.type).toBe('purchase');
+    expect(JSON.parse(row.tags)).toEqual(['venue:gym']);
   });
 });

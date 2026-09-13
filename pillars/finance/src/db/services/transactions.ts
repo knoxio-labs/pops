@@ -25,6 +25,7 @@ import {
   TransactionNotFoundError,
 } from '../errors.js';
 import { assertTagsWithinFacetCardinality } from '../facet-cardinality-guard.js';
+import { assertNoFeeTagsOnNonFeeType } from '../fee-tag-guard.js';
 import { transactions } from '../schema.js';
 import { parseStoredTags } from '../tag-facets.js';
 import { getAccount } from './accounts.js';
@@ -104,6 +105,7 @@ export function createTransaction(db: FinanceDb, input: CreateTransactionInput):
 
   const tags = input.tags ?? [];
   assertTagsWithinFacetCardinality(tags);
+  assertNoFeeTagsOnNonFeeType(type, tags);
 
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
@@ -224,6 +226,12 @@ function assertPatchStaysCoherent(stored: TransactionRow, input: UpdateTransacti
   // cardinality must stay editable on its other fields, and a tags-bearing
   // PATCH is exactly the edit that can repair it.
   if (input.tags !== undefined) assertTagsWithinFacetCardinality(input.tags);
+  // Judged on the row the PATCH leaves behind, so retyping a fee to `purchase`
+  // while its `fee:` tags stay stored is refused too. A PATCH touching neither
+  // field is not judged, for the same stays-editable reason as above.
+  if (input.type !== undefined || input.tags !== undefined) {
+    assertNoFeeTagsOnNonFeeType(type, input.tags ?? parseStoredTags(stored.tags));
+  }
 }
 
 /**

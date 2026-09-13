@@ -360,6 +360,72 @@ describe('transactions — one value per single-valued facet (POPS-3668)', () =>
   });
 });
 
+describe('transactions — a fee tag only on a fee row (POPS-2610)', () => {
+  const storedRows = () => financeDb.db.select().from(transactions).all();
+
+  it('400s a purchase create carrying a fee tag, naming it, and stores nothing', async () => {
+    await expect(
+      client().transactions.create({ ...base(), tags: ['venue:gym', ' FEE:membership'] })
+    ).rejects.toMatchObject({
+      status: 400,
+      body: { message: expect.stringContaining('FEE:membership') },
+    });
+    expect(storedRows()).toHaveLength(0);
+  });
+
+  it('accepts a fee create carrying a fee tag', async () => {
+    const created = await client().transactions.create({
+      ...base(),
+      type: 'fee',
+      tags: ['fee:late'],
+    });
+    expect(created.data).toMatchObject({ type: 'fee', tags: ['fee:late'] });
+  });
+
+  it('400s a PATCH adding a fee tag to a purchase and leaves the row alone', async () => {
+    const created = await client().transactions.create({ ...base(), tags: ['venue:gym'] });
+
+    await expect(
+      client().transactions.update(created.data.id, { tags: ['venue:gym', 'fee:membership'] })
+    ).rejects.toMatchObject({ status: 400 });
+    expect((await client().transactions.get(created.data.id)).data.tags).toEqual(['venue:gym']);
+  });
+
+  it('400s retyping a fee to purchase while its stored fee tags stay', async () => {
+    const created = await client().transactions.create({
+      ...base(),
+      type: 'fee',
+      tags: ['fee:late'],
+    });
+
+    await expect(
+      client().transactions.update(created.data.id, { type: 'purchase' })
+    ).rejects.toMatchObject({
+      status: 400,
+      body: { message: expect.stringContaining('fee:late') },
+    });
+    expect((await client().transactions.get(created.data.id)).data.type).toBe('fee');
+
+    const retyped = await client().transactions.update(created.data.id, {
+      type: 'purchase',
+      tags: [],
+    });
+    expect(retyped.data).toMatchObject({ type: 'purchase', tags: [] });
+  });
+
+  it('does not refuse a PATCH touching neither type nor tags on a row already contradicting', async () => {
+    const created = await client().transactions.create({ ...base(), tags: [] });
+    financeDb.db
+      .update(transactions)
+      .set({ tags: JSON.stringify(['fee:membership']) })
+      .where(eq(transactions.id, created.data.id))
+      .run();
+
+    const updated = await client().transactions.update(created.data.id, { notes: 'editable' });
+    expect(updated.data).toMatchObject({ notes: 'editable', tags: ['fee:membership'] });
+  });
+});
+
 describe('transactions — error mapping', () => {
   it('404s unknown get / update / delete', async () => {
     await expect(client().transactions.get('nope')).rejects.toMatchObject({ status: 404 });

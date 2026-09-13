@@ -11,9 +11,60 @@ import { describe, expect, it } from 'vitest';
 import {
   classifyFromDescription,
   FEE_TAGS,
+  feeTagsOnNonFeeType,
   GIFT_CARD_TAG,
   resolveCommittedType,
+  withoutFeeTagsOnNonFeeType,
 } from '../transaction-classification.js';
+
+describe('feeTagsOnNonFeeType', () => {
+  it('flags nothing on a fee row, whatever fee values it carries', () => {
+    expect(feeTagsOnNonFeeType('fee', ['fee:late', 'FEE:interest', 'venue:bank'])).toEqual([]);
+  });
+
+  it('flags every fee value on a purchase, verbatim, and leaves other facets alone', () => {
+    expect(
+      feeTagsOnNonFeeType('purchase', ['venue:gym', 'fee:membership', 'contains:fees'])
+    ).toEqual(['fee:membership']);
+  });
+
+  it('matches the prefix case-insensitively and trimmed', () => {
+    expect(feeTagsOnNonFeeType('transfer', ['FEE:late', '  fee:atm ', 'Fee:x'])).toEqual([
+      'FEE:late',
+      '  fee:atm ',
+      'Fee:x',
+    ]);
+  });
+
+  it('flags nothing when the row carries no fee value', () => {
+    expect(feeTagsOnNonFeeType('purchase', ['venue:cafe', 'feel:good'])).toEqual([]);
+    expect(feeTagsOnNonFeeType('purchase', [])).toEqual([]);
+  });
+
+  it('treats a missing type as not a fee', () => {
+    expect(feeTagsOnNonFeeType(null, ['fee:late'])).toEqual(['fee:late']);
+    expect(feeTagsOnNonFeeType(undefined, ['fee:late'])).toEqual(['fee:late']);
+  });
+
+  it('does not treat a type that merely resembles fee as one', () => {
+    expect(feeTagsOnNonFeeType('Fee', ['fee:late'])).toEqual(['fee:late']);
+  });
+});
+
+describe('withoutFeeTagsOnNonFeeType', () => {
+  it('drops only the flagged values, preserving order', () => {
+    expect(
+      withoutFeeTagsOnNonFeeType('purchase', ['venue:gym', 'FEE:membership', 'contains:x'])
+    ).toEqual(['venue:gym', 'contains:x']);
+  });
+
+  it('keeps a fee row intact', () => {
+    expect(withoutFeeTagsOnNonFeeType('fee', ['fee:late', 'venue:bank'])).toEqual([
+      'fee:late',
+      'venue:bank',
+    ]);
+  });
+});
 
 describe('classifyFromDescription — fees', () => {
   it.each([

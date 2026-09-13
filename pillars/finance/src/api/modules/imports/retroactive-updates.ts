@@ -16,6 +16,10 @@
  */
 import { isPositiveAmountPurchase } from '../../../contract/corrections-constants.js';
 import {
+  feeTagsOnNonFeeType,
+  withoutFeeTagsOnNonFeeType,
+} from '../../../contract/transaction-classification.js';
+import {
   type CorrectionRow,
   normalizeEntityId,
   parseCorrectionTags,
@@ -87,16 +91,25 @@ function changedLocation(txn: BatchTxn, rule: CorrectionRow): string | null {
 }
 
 /**
- * Tags the rule would add to the transaction (additive-only, never removes an
- * existing tag), or `null` when the rule carries no tags or the transaction
- * already has every one of them.
+ * The row's tags after the rule, or `null` when they would not change. Additive,
+ * except that no `fee:` value survives on a row whose resulting `type` is not
+ * `fee`: the rule's own are dropped, and a retype away from `fee` strips the
+ * row's (POPS-2610).
  */
-function mergedTags(txn: BatchTxn, rule: CorrectionRow): string[] | null {
-  const ruleTags = parseCorrectionTags(rule.tags);
-  if (ruleTags.length === 0) return null;
+function mergedTags(txn: BatchTxn, rule: CorrectionRow, type: string): string[] | null {
+  for (const tag of feeTagsOnNonFeeType(type, parseCorrectionTags(rule.tags))) {
+    console.warn(
+      `[corrections] rule ${rule.id} not adding ${JSON.stringify(tag)} to transaction ` +
+        `${txn.id}: a '${type}' row cannot carry a fee tag`
+    );
+  }
+  const ruleTags = withoutFeeTagsOnNonFeeType(type, parseCorrectionTags(rule.tags));
   const existing = parseCorrectionTags(txn.tags);
-  const missing = ruleTags.filter((t) => !existing.includes(t));
-  return missing.length > 0 ? [...existing, ...missing] : null;
+  // The one exception to additive-only: a rule that retypes a fee away also
+  // takes its `fee:` values, or the retype itself stores the contradiction.
+  const kept = type === txn.type ? existing : withoutFeeTagsOnNonFeeType(type, existing);
+  const missing = ruleTags.filter((t) => !kept.includes(t));
+  return missing.length > 0 || kept.length !== existing.length ? [...kept, ...missing] : null;
 }
 
 /** Entity/type/location changes a rule makes, shared by every retroactive builder. */
@@ -132,7 +145,7 @@ export function buildRetroactiveApplyUpdates(
 ): Record<string, unknown> | null {
   const updates = buildCoreFieldUpdates(txn, rule);
 
-  const newTags = mergedTags(txn, rule);
+  const newTags = mergedTags(txn, rule, typeof updates.type === 'string' ? updates.type : txn.type);
   if (newTags !== null) updates.tags = JSON.stringify(newTags);
 
   if (Object.keys(updates).length === 0) return null;

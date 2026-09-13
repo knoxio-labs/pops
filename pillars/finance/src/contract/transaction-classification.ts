@@ -37,6 +37,36 @@ export type FeeTag = (typeof FEE_TAGS)[number];
 /** The `fee:` prefix, so callers can strip foreign fee values without re-deriving it. */
 export const FEE_TAG_PREFIX = 'fee:';
 
+function isFeeTag(tag: string): boolean {
+  return tag.trim().toLowerCase().startsWith(FEE_TAG_PREFIX);
+}
+
+/**
+ * The `fee:` values in `tags` that contradict `type`: every one of them unless
+ * the row is `type = 'fee'`, since the namespace names a fee's sub-kind and
+ * nothing else. The prefix is compared trimmed and case-insensitively, so
+ * `' FEE:late'` is caught too; returned values are verbatim.
+ *
+ * A `null`/`undefined` type is not `fee`, so it flags every fee value: a row is
+ * a fee only when something explicitly typed it one.
+ */
+export function feeTagsOnNonFeeType(
+  type: string | null | undefined,
+  tags: readonly string[]
+): string[] {
+  if (type === 'fee') return [];
+  return tags.filter(isFeeTag);
+}
+
+/** `tags` without the values {@link feeTagsOnNonFeeType} flags for `type`, order preserved. */
+export function withoutFeeTagsOnNonFeeType(
+  type: string | null | undefined,
+  tags: readonly string[]
+): string[] {
+  const contradicting = new Set(feeTagsOnNonFeeType(type, tags));
+  return tags.filter((tag) => !contradicting.has(tag));
+}
+
 /**
  * A foreign-currency ATM cash withdrawal from a bank account. ANZ appends
  * `INCL ... TRANSACTION FEE $X.XX` to the withdrawal line itself as a

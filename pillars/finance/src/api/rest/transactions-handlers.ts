@@ -9,6 +9,7 @@
 import {
   AccountNotFoundError,
   FacetCardinalityError,
+  FeeTagOnNonFeeTypeError,
   type FinanceDb,
   PositiveAmountPurchaseError,
   TransactionAlreadyExistsError,
@@ -43,6 +44,9 @@ function translateTransactionError(err: unknown, id?: string): never {
   if (err instanceof PositiveAmountPurchaseError) throw new ValidationError(err.message);
   if (err instanceof FacetCardinalityError) {
     throw new ValidationError(err.message, { facet: err.facet, tags: err.tags });
+  }
+  if (err instanceof FeeTagOnNonFeeTypeError) {
+    throw new ValidationError(err.message, { type: err.type, tags: err.tags });
   }
   if (err instanceof TransactionNotFoundError) throw new NotFoundError('Transaction', id ?? err.id);
   if (err instanceof TransactionAlreadyExistsError) throw new ConflictError(err.message);
