@@ -138,7 +138,6 @@ describe('the seeded classified vocabulary', () => {
     'occasion:work',
     'venue:arcade',
     'venue:attraction',
-    'venue:auto',
     'venue:bakery',
     'venue:bottle-shop',
     'venue:butcher',
@@ -152,11 +151,13 @@ describe('the seeded classified vocabulary', () => {
     'venue:gym',
     'venue:hardware',
     'venue:homewares',
+    'venue:mechanic',
     'venue:parking',
     'venue:pharmacy',
     'venue:pub',
     'venue:restaurant',
     'venue:sauna',
+    'venue:service-station',
     'venue:sex-shop',
     'venue:shopping-centre',
     'venue:supermarket',
@@ -169,7 +170,7 @@ describe('the seeded classified vocabulary', () => {
     const { db } = freshMigratedFinanceDb();
 
     expect(listClassifiedVocabulary(db).toSorted()).toEqual(EXPECTED);
-    expect(EXPECTED).toHaveLength(86);
+    expect(EXPECTED).toHaveLength(87);
   });
 
   it('gives every closed-facet value the closed kind', () => {
