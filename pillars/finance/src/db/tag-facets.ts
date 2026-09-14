@@ -121,16 +121,18 @@ export const DEFAULT_TAG_FACET_KIND: TagFacetKind = 'open';
  * which fee it is. The rows the classifier could not type keep the tag and
  * carry `flag:needs-review`, because there the tag is the only evidence left.
  *
- * `hobby` is the one open facet classified here besides `contains` (POPS-3675).
- * The model may not coin a hobby — `validateAiTags` refuses any value the
- * vocabulary does not already hold — but it may recognise one that exists. A
- * crypto wallet top-up whose honest tag is `hobby:crypto` otherwise has no axis
- * to answer on, and a model offered only venue/occasion/contains fills those
- * with the nearest wrong value instead. The other open facets stay out, each for
+ * `hobby` and `tax` are the open facets classified here besides `contains`
+ * (POPS-3675, POPS-3685). The model may not coin a value on either —
+ * `validateAiTags` refuses any value the vocabulary does not already hold — but
+ * it may recognise one that exists. A crypto wallet top-up whose honest tag is
+ * `hobby:crypto` otherwise has no axis to answer on, and a model offered only
+ * venue/occasion/contains fills those with the nearest wrong value instead.
+ * `tax` is offered on a stricter term: it is a claim with consequences at tax
+ * time, so a suggestion on it is never pre-accepted
+ * ({@link NEVER_PRE_ACCEPTED_FACETS}). The other open facets stay out, each for
  * its own reason: `trip` is a date range someone declares, not a property of a
  * descriptor; `asset` links spend to one owned thing the descriptor cannot name;
- * `tax` is a claim with consequences, deferred until AI tags stop being
- * pre-accepted (POPS-3685); `enrich` is written from provenance.
+ * `enrich` is written from provenance.
  */
 /**
  * Marks a row a human still owes a decision on.
@@ -160,12 +162,27 @@ export const CLASSIFIED_TAG_FACETS = [
   { facet: 'channel', single: true },
   { facet: 'fee', single: false },
   { facet: 'hobby', single: false },
+  { facet: 'tax', single: false },
 ] as const satisfies readonly { facet: keyof typeof TAG_FACET_KINDS; single: boolean }[];
 
 /** A classified facet — the only facets the categorizer may write into. */
 export type ClassifiedTagFacet = (typeof CLASSIFIED_TAG_FACETS)[number]['facet'];
 
 const CLASSIFIED_FACET_SET = new Set<string>(CLASSIFIED_TAG_FACETS.map((f) => f.facet));
+
+/**
+ * Classified facets whose AI suggestions are never pre-accepted, whatever
+ * confidence the model reports. Whether a transaction is tax deductible is a
+ * human decision: a confident wrong `tax:deductible` a reviewer misses becomes
+ * a committed tax claim (POPS-3685).
+ */
+export const NEVER_PRE_ACCEPTED_FACETS: ReadonlySet<ClassifiedTagFacet> = new Set(['tax']);
+
+/** Whether an AI suggestion of `tag` must be left for a person to tick. */
+export function isNeverPreAccepted(tag: string): boolean {
+  const { facet } = parseTagFacet(tag);
+  return isClassifiedTagFacet(facet) && NEVER_PRE_ACCEPTED_FACETS.has(facet);
+}
 
 /**
  * Split a stored tag into its facet and value. Only the first separator

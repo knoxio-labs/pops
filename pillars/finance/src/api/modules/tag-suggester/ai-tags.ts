@@ -4,6 +4,7 @@
  * priority order, because the tag-only pass (POPS-2596) calls it on its own.
  */
 import { tagVocabularyService, type FinanceDb } from '../../../db/index.js';
+import { isNeverPreAccepted } from '../../../db/tag-facets.js';
 import { pushSuggestion, remember } from './seen-tags.js';
 
 import type { AiSuggestionProvenance, SuggestedTag } from './types.js';
@@ -29,6 +30,10 @@ export interface AddAiTagsArgs {
  * a second time for rules whose tags the row does not even carry. It takes the
  * vocabulary set rather than reading it so that pass can load it once per run
  * instead of once per row.
+ *
+ * A tag on a never-pre-accepted facet (`tax:`, POPS-3685) carries
+ * `preAccept: false` even with no provenance, because a consumer treats an
+ * absent decision as ticked.
  */
 export function buildAiSuggestedTags(
   aiTags: readonly string[],
@@ -45,6 +50,7 @@ export function buildAiSuggestedTags(
       source: 'ai',
       ...(isNew ? { isNew: true } : {}),
       ...provenanceFields(provenance),
+      ...(isNeverPreAccepted(tag) ? { preAccept: false } : {}),
     });
   }
   return result;
