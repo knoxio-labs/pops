@@ -8582,6 +8582,52 @@ export type SummaryGetResponses = {
       deltaCents: number | null;
       deltaRatio: number | null;
       empty: boolean;
+      income: {
+        byAccount: Array<{
+          accountId: string;
+          accountName: string | null;
+          archived: boolean;
+          currency: string | null;
+          income: {
+            cents: number;
+            transactionCount: number;
+          };
+          shareOfTotal: number | null;
+        }>;
+        byEntity: Array<{
+          entityId: string | null;
+          entityName: string | null;
+          income: {
+            cents: number;
+            transactionCount: number;
+          };
+          shareOfTotal: number | null;
+        }>;
+        byMonth: Array<{
+          byAccount: Array<{
+            accountId: string;
+            income: {
+              cents: number;
+              transactionCount: number;
+            };
+          }>;
+          income: {
+            cents: number;
+            transactionCount: number;
+          };
+          month: string;
+        }>;
+        deltaCents: number | null;
+        deltaRatio: number | null;
+        previousTotal: {
+          cents: number;
+          transactionCount: number;
+        } | null;
+        total: {
+          cents: number;
+          transactionCount: number;
+        };
+      };
       inference: {
         concentration: {
           cents: number;
@@ -8623,6 +8669,15 @@ export type SummaryGetResponses = {
           };
           tag: string;
         };
+      };
+      net: {
+        byMonth: Array<{
+          cents: number;
+          month: string;
+        }>;
+        cents: number;
+        deltaCents: number | null;
+        previousCents: number | null;
       };
       previousTotal: {
         cents: number;

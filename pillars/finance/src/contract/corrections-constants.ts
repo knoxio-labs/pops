@@ -85,6 +85,14 @@ export const SPEND_TRANSACTION_TYPES = [
 ] as const satisfies readonly TransactionType[];
 
 /**
+ * The types that count as income — every type the income stat tile counts, so
+ * the summary and the tile cannot disagree about what was earned.
+ */
+export const INCOME_TRANSACTION_TYPES: readonly TransactionType[] = TRANSACTION_TYPES.filter(
+  (type) => TRANSACTION_TYPE_STAT_TILE[type] === 'income'
+);
+
+/**
  * Whether an amount and a type contradict each other outright.
  *
  * The invariant is narrower than it first looks, and writing it wide is the

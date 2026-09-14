@@ -11695,6 +11695,52 @@ export interface operations {
               deltaCents: number | null;
               deltaRatio: number | null;
               empty: boolean;
+              income: {
+                byAccount: {
+                  accountId: string;
+                  accountName: string | null;
+                  archived: boolean;
+                  currency: string | null;
+                  income: {
+                    cents: number;
+                    transactionCount: number;
+                  };
+                  shareOfTotal: number | null;
+                }[];
+                byEntity: {
+                  entityId: string | null;
+                  entityName: string | null;
+                  income: {
+                    cents: number;
+                    transactionCount: number;
+                  };
+                  shareOfTotal: number | null;
+                }[];
+                byMonth: {
+                  byAccount: {
+                    accountId: string;
+                    income: {
+                      cents: number;
+                      transactionCount: number;
+                    };
+                  }[];
+                  income: {
+                    cents: number;
+                    transactionCount: number;
+                  };
+                  month: string;
+                }[];
+                deltaCents: number | null;
+                deltaRatio: number | null;
+                previousTotal: {
+                  cents: number;
+                  transactionCount: number;
+                } | null;
+                total: {
+                  cents: number;
+                  transactionCount: number;
+                };
+              };
               inference: {
                 concentration: {
                   cents: number;
@@ -11736,6 +11782,15 @@ export interface operations {
                   };
                   tag: string;
                 };
+              };
+              net: {
+                byMonth: {
+                  cents: number;
+                  month: string;
+                }[];
+                cents: number;
+                deltaCents: number | null;
+                previousCents: number | null;
               };
               previousTotal: {
                 cents: number;

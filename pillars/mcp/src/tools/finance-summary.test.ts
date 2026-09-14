@@ -156,7 +156,12 @@ describe('finance.summary.get description', () => {
     expect(tool.description).toMatch(/transactionCount 0/u);
   });
 
-  it('says there is no income figure, so nobody looks for one', () => {
-    expect(tool.description).toMatch(/no income/u);
+  it('points the model at the income and net blocks', () => {
+    expect(tool.description).toMatch(/an income block/u);
+    expect(tool.description).toMatch(/a net block \(income minus spend\)/u);
+  });
+
+  it('never claims the ledger holds no income', () => {
+    expect(tool.description).not.toMatch(/no income/iu);
   });
 });

@@ -1,14 +1,10 @@
 /**
- * The dashboard/assistant spend summary (POPS-3589, POPS-250 decision 2).
+ * The dashboard/assistant summary (POPS-3589, POPS-250 decision 2).
  *
- * One read composing the grouped queries in `summary-breakdowns.ts` and the
- * panel reads in `summary-inference.ts`, so the browser never pages the ledger
- * to reduce it locally and the assistant never does the arithmetic in context.
- *
- * There is deliberately no income figure. The ledger holds zero `income` rows
- * and always has (POPS-250), so an income field would be a permanent `$0.00`
- * that reads as measured — the honest rendering of a category nothing has ever
- * been filed under is its absence, not a zero.
+ * One read composing the grouped queries in `summary-breakdowns.ts`, the
+ * income and net in `summary-income.ts`, and the panel reads in
+ * `summary-inference.ts`, so the browser never pages the ledger to reduce it
+ * locally and the assistant never does the arithmetic in context.
  */
 import {
   DEFAULT_SUMMARY_TOP_LIMIT,
@@ -26,6 +22,12 @@ import {
 } from './summary-breakdowns.js';
 import { spendByEntity, spendByTag, type EntitySpend, type TagSpend } from './summary-facets.js';
 import {
+  incomeSummary,
+  netSummary,
+  type IncomeSummary,
+  type NetSummary,
+} from './summary-income.js';
+import {
   concentration,
   foreignSpend,
   largestCharge,
@@ -35,7 +37,12 @@ import {
   type LargestCharge,
   type RecurringSubscriptions,
 } from './summary-inference.js';
-import { type SpendMeasure, type SummaryRange } from './summary-sql.js';
+import {
+  compareMeasures,
+  type MeasureComparison,
+  type SpendMeasure,
+  type SummaryRange,
+} from './summary-sql.js';
 import {
   monthsInRange,
   resolveSummaryWindow,
@@ -59,7 +66,8 @@ export interface SummaryInference {
   foreign: ForeignSpend;
 }
 
-export interface FinanceSummary {
+/** The top-level `total`/`previousTotal`/`delta*` fields are spend. */
+export interface FinanceSummary extends MeasureComparison {
   window: ResolvedSummaryWindow;
   /**
    * The window holds no transactions of any type. Distinct from spend of
@@ -67,22 +75,18 @@ export interface FinanceSummary {
    */
   empty: boolean;
   /**
-   * Every currency the contributing accounts are denominated in. More than
-   * one means `total` adds unlike units — the ledger has no conversion, so the
-   * figure is reported with the fact rather than without it.
+   * Every currency the accounts behind spend or income are denominated in.
+   * More than one means the totals add unlike units — the ledger has no
+   * conversion, so the figure is reported with the fact rather than without it.
    */
   currencies: string[];
   total: SpendMeasure;
-  /** `null` for the `all` window, which has no period before it. */
-  previousTotal: SpendMeasure | null;
-  /** `total - previousTotal`, or `null` when there is no previous period. */
-  deltaCents: number | null;
-  /** Fractional change against the previous period; `null` when it was zero. */
-  deltaRatio: number | null;
   byAccount: AccountSpend[];
   byMonth: MonthSpend[];
   byTag: TagSpend[];
   byEntity: EntitySpend[];
+  income: IncomeSummary;
+  net: NetSummary;
   inference: SummaryInference;
 }
 
@@ -96,33 +100,33 @@ function trendMonths(db: FinanceDb, window: ResolvedSummaryWindow): string[] {
   return monthsInRange({ start, end: window.end });
 }
 
-function ratio(total: SpendMeasure, previous: SpendMeasure | null): number | null {
-  if (previous === null || previous.cents === 0) return null;
-  return (total.cents - previous.cents) / Math.abs(previous.cents);
-}
-
 /** Build the whole summary for one window. */
 export function financeSummary(db: FinanceDb, options: SummaryOptions = {}): FinanceSummary {
   const window = resolveSummaryWindow(options.window ?? DEFAULT_SUMMARY_WINDOW, options.now);
   const topLimit = options.topLimit ?? DEFAULT_SUMMARY_TOP_LIMIT;
   const range: SummaryRange = { start: window.start, end: window.end };
+  const months = trendMonths(db, window);
 
   const total = totalSpend(db, range);
   const previousTotal = window.previous === null ? null : totalSpend(db, window.previous);
   const byAccount = spendByAccount(db, range, total.cents);
+  const byMonth = spendByMonth(db, range, months);
+  const income = incomeSummary(db, { range, previous: window.previous, months, topLimit });
 
   return {
     window,
     empty: transactionsInRange(db, range) === 0,
-    currencies: [...new Set(byAccount.flatMap((account) => account.currency ?? []))].toSorted(),
+    currencies: [
+      ...new Set([...byAccount, ...income.byAccount].flatMap((account) => account.currency ?? [])),
+    ].toSorted(),
     total,
-    previousTotal,
-    deltaCents: previousTotal === null ? null : total.cents - previousTotal.cents,
-    deltaRatio: ratio(total, previousTotal),
+    ...compareMeasures(total, previousTotal),
     byAccount,
-    byMonth: spendByMonth(db, range, trendMonths(db, window)),
+    byMonth,
     byTag: spendByTag(db, range, total.cents, topLimit),
     byEntity: spendByEntity(db, range, total.cents, topLimit),
+    income,
+    net: netSummary({ total, previousTotal, byMonth }, income),
     inference: {
       largestCharge: largestCharge(db, range),
       concentration: concentration(db, range, total.cents),

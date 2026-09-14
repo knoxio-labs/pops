@@ -22,6 +22,8 @@ import { createFinanceApiApp } from '../app.js';
 import { makeContactsFake } from './contacts-fake.js';
 import { makeClient } from './test-utils.js';
 
+import type { TransactionType } from '../../contract/corrections-constants.js';
+
 const TODAY = '2026-09-12';
 
 let tmpDir: string;
@@ -60,7 +62,7 @@ interface Row {
   accountId: string;
   date: string;
   amountCents: number;
-  type?: 'purchase' | 'transfer' | 'fee' | 'refund';
+  type?: TransactionType;
   description?: string;
   tags?: string[];
   entityId?: string | null;
@@ -322,6 +324,139 @@ describe('GET /summary — breakdowns', () => {
       'b',
     ]);
     await expect(client().summary.get({ topLimit: 500 })).rejects.toMatchObject({ status: 400 });
+  });
+});
+
+describe('GET /summary — income and net', () => {
+  it('measures income against the previous period, by payer, and nets spend off it', async () => {
+    const accountId = await anAccount('Everyday');
+    ledger(
+      {
+        accountId,
+        date: '2026-09-01',
+        amountCents: 300_000,
+        type: 'income',
+        entityId: 'helix',
+        entityName: 'Helix Venture',
+      },
+      { accountId, date: '2026-09-04', amountCents: 100_000, type: 'tax' },
+      { accountId, date: '2026-09-05', amountCents: -100_000 },
+      // A transfer in is neither income nor spend.
+      { accountId, date: '2026-09-06', amountCents: 90_000, type: 'transfer' },
+      { accountId, date: '2026-08-03', amountCents: 200_000, type: 'income' },
+      // Past the elapsed days of August, so outside the comparison period.
+      { accountId, date: '2026-08-20', amountCents: 999_000, type: 'income' }
+    );
+
+    const { data } = await client().summary.get({ window: 'month' });
+
+    expect(data.income.total).toEqual({ cents: 400_000, transactionCount: 2 });
+    expect(data.income.previousTotal).toEqual({ cents: 200_000, transactionCount: 1 });
+    expect(data.income.deltaCents).toBe(200_000);
+    expect(data.income.deltaRatio).toBe(1);
+    expect(data.income.byEntity).toEqual([
+      {
+        entityId: 'helix',
+        entityName: 'Helix Venture',
+        income: { cents: 300_000, transactionCount: 1 },
+        shareOfTotal: 0.75,
+      },
+      {
+        entityId: null,
+        entityName: null,
+        income: { cents: 100_000, transactionCount: 1 },
+        shareOfTotal: 0.25,
+      },
+    ]);
+    expect(data.net).toEqual({
+      cents: 300_000,
+      previousCents: 200_000,
+      deltaCents: 100_000,
+      byMonth: [{ month: '2026-09', cents: 300_000 }],
+    });
+    expect(data.total).toEqual({ cents: 100_000, transactionCount: 1 });
+  });
+
+  it('answers unmeasured income, not a measured zero, for a window without any', async () => {
+    const accountId = await anAccount('Everyday');
+    ledger({ accountId, date: '2026-09-01', amountCents: -5_000 });
+
+    const { data } = await client().summary.get();
+
+    expect(data.income.total).toEqual({ cents: 0, transactionCount: 0 });
+    expect(data.income.previousTotal).toEqual({ cents: 0, transactionCount: 0 });
+    expect(data.income.deltaRatio).toBeNull();
+    expect(data.income.byAccount).toEqual([]);
+    expect(data.income.byEntity).toEqual([]);
+    expect(data.income.byMonth.every((month) => month.income.transactionCount === 0)).toBe(true);
+    expect(data.net.cents).toBe(-5_000);
+  });
+
+  it('lets a clawback reduce income rather than dropping it', async () => {
+    const accountId = await anAccount('Everyday');
+    ledger(
+      { accountId, date: '2026-09-01', amountCents: 100_000, type: 'income' },
+      { accountId, date: '2026-09-02', amountCents: -30_000, type: 'income' }
+    );
+
+    const { data } = await client().summary.get();
+
+    expect(data.income.total).toEqual({ cents: 70_000, transactionCount: 2 });
+  });
+
+  it('stacks income by account and nets every month on the dense axis', async () => {
+    const accountId = await anAccount('Everyday');
+    ledger(
+      { accountId, date: '2026-08-10', amountCents: 100_000, type: 'income' },
+      { accountId, date: '2026-08-11', amountCents: -40_000 },
+      { accountId, date: '2026-09-02', amountCents: -10_000 }
+    );
+
+    const { data } = await client().summary.get({ window: '90d' });
+
+    expect(data.income.byAccount).toEqual([
+      {
+        accountId,
+        accountName: 'Everyday',
+        currency: 'AUD',
+        archived: false,
+        income: { cents: 100_000, transactionCount: 1 },
+        shareOfTotal: 1,
+      },
+    ]);
+    expect(data.income.byMonth[2]).toEqual({
+      month: '2026-08',
+      income: { cents: 100_000, transactionCount: 1 },
+      byAccount: [{ accountId, income: { cents: 100_000, transactionCount: 1 } }],
+    });
+    expect(data.net.byMonth).toEqual([
+      { month: '2026-06', cents: 0 },
+      { month: '2026-07', cents: 0 },
+      { month: '2026-08', cents: 60_000 },
+      { month: '2026-09', cents: -10_000 },
+    ]);
+  });
+
+  it('has no previous income or net for the all-time window', async () => {
+    const { data } = await client().summary.get({ window: 'all' });
+
+    expect(data.income.previousTotal).toBeNull();
+    expect(data.income.deltaCents).toBeNull();
+    expect(data.net.previousCents).toBeNull();
+    expect(data.net.deltaCents).toBeNull();
+  });
+
+  it('names the currency of an account that only received income', async () => {
+    const everyday = await anAccount('Everyday');
+    const salary = await anAccount('Salary', 'USD');
+    ledger(
+      { accountId: everyday, date: '2026-09-01', amountCents: -1_000 },
+      { accountId: salary, date: '2026-09-01', amountCents: 50_000, type: 'income' }
+    );
+
+    const { data } = await client().summary.get();
+
+    expect(data.currencies).toEqual(['AUD', 'USD']);
   });
 });
 
