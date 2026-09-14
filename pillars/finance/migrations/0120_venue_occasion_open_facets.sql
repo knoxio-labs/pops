@@ -1,0 +1,19 @@
+-- Make `venue` and `occasion` open facets: a human may mint a value on either
+-- (POPS-3951).
+--
+-- Both were closed because their value sets are report buckets, but the same
+-- argument that opened `contains` (0079) applies here: a human meets a new
+-- venue ("Fishmonger") or occasion ("Moving") on import, and until now the
+-- only way to record one was a migration. `validateAiTags` still refuses any
+-- value the categorizer itself invents, so opening the kind lets a human add
+-- a value without letting the model add one.
+--
+-- The axes stay classified and single-valued: `CLASSIFIED_TAG_FACETS` in
+-- `src/db/tag-facets.ts` is unchanged, so the categorizer keeps filling both
+-- from whatever the vocabulary holds, and a picker that mints a value on
+-- either replaces the row's existing one rather than doubling it.
+--
+-- Values are untouched. Only the `kind` column moves, and only on rows whose
+-- facet is `venue` or `occasion`; a row that predates 0069's facet backfill
+-- has a null facet and is not one of them.
+UPDATE tag_vocabulary SET kind = 'open' WHERE facet IN ('venue', 'occasion') AND kind <> 'open';

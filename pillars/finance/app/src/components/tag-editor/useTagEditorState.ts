@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 
+import { mergeTagsReplacingSingleValued } from '../../lib/tag-merge';
 import {
   orderTagsByFacet,
   planTagCreation,
@@ -98,9 +99,13 @@ interface ActionsArgs {
 }
 
 function useTagActions({ s, currentTags, onSave, onSuggest }: ActionsArgs) {
+  // A single-valued facet's incoming value replaces whatever the row already
+  // carries on that axis, rather than joining it — picking a second venue or
+  // occasion is a correction, not an addition, and the commit's cardinality
+  // check would otherwise refuse the pair.
   const addTag = (tag: string) => {
     const trimmed = tag.trim();
-    if (trimmed) s.setTags((prev) => (prev.includes(trimmed) ? prev : [...prev, trimmed]));
+    if (trimmed) s.setTags((prev) => mergeTagsReplacingSingleValued(prev, [trimmed]));
     s.setInputValue('');
     s.inputRef.current?.focus();
   };

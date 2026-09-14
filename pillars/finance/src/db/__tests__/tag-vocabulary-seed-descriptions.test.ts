@@ -29,7 +29,7 @@ describe('seeded tag descriptions', () => {
     }
   });
 
-  it('holds every value 0105 writes onto a row, so none lands outside the closed set', () => {
+  it('holds every value 0105 writes onto a row, correctly described', () => {
     const { raw } = freshMigratedFinanceDb();
     const written = raw
       .prepare(
@@ -40,13 +40,13 @@ describe('seeded tag descriptions', () => {
     expect(written.toSorted((a, b) => a.tag.localeCompare(b.tag))).toEqual([
       {
         tag: 'occasion:health',
-        kind: 'closed',
+        kind: 'open',
         description:
           'Spent on health: a pharmacy, a doctor or dentist, medicines, supplements, treatment.',
       },
       {
         tag: 'venue:hardware',
-        kind: 'closed',
+        kind: 'open',
         description: 'A hardware, tool or building-supplies store.',
       },
     ]);
@@ -65,15 +65,16 @@ describe('seeded tag descriptions', () => {
 });
 
 /**
- * The closed set the migration chain produces, pinned.
+ * The classified vocabulary the migration chain produces, pinned.
  *
- * Not a restatement of the migrations for its own sake. `venue`, `occasion`,
- * `channel` and `fee` are `closed` — nobody may mint a value and a value
- * outside the set is a validation error — and before POPS-3301 the live
- * database held eighteen classified values this chain did not, so the axis was
- * closed in the schema and open in practice depending on which copy you
- * opened. Pinning the list makes adding one an edit somebody has to make on
- * purpose, in the same change as the migration that seeds it.
+ * Not a restatement of the migrations for its own sake. Before POPS-3301 the
+ * live database held eighteen classified values this chain did not, so a
+ * value was seeded in the schema and missing in practice depending on which
+ * copy you opened. Pinning the list makes adding one an edit somebody has to
+ * make on purpose, in the same change as the migration that seeds it. `venue`
+ * and `occasion` became `open` facets in POPS-3951, so this list — every
+ * seeded value, whatever its kind — is unaffected by that change; only the
+ * kind assertion below is.
  */
 describe('the seeded classified vocabulary', () => {
   const EXPECTED = [
@@ -179,7 +180,18 @@ describe('the seeded classified vocabulary', () => {
     const { raw } = freshMigratedFinanceDb();
     const wrong = raw
       .prepare(
-        "SELECT tag, kind FROM tag_vocabulary WHERE facet IN ('venue','occasion','channel','fee') AND kind <> 'closed'"
+        "SELECT tag, kind FROM tag_vocabulary WHERE facet IN ('channel','fee') AND kind <> 'closed'"
+      )
+      .all();
+
+    expect(wrong).toEqual([]);
+  });
+
+  it('gives every open-facet value the open kind (POPS-3951)', () => {
+    const { raw } = freshMigratedFinanceDb();
+    const wrong = raw
+      .prepare(
+        "SELECT tag, kind FROM tag_vocabulary WHERE facet IN ('venue','occasion') AND kind <> 'open'"
       )
       .all();
 

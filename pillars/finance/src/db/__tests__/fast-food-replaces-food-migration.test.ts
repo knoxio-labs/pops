@@ -1,5 +1,5 @@
 /**
- * Migration test for 0120_fast_food_replaces_food (POPS-3952).
+ * Migration test for 0121_fast_food_replaces_food (POPS-3952).
  *
  * contains:food leaves every row, rule and correction that also carries
  * contains:fast-food, and nothing else changes. The definitions are read back
@@ -34,7 +34,7 @@ const MIGRATION = readFileSync(
     '..',
     '..',
     'migrations',
-    '0120_fast_food_replaces_food.sql'
+    '0121_fast_food_replaces_food.sql'
   ),
   'utf8'
 );
@@ -70,7 +70,7 @@ function snapshot(): unknown {
   };
 }
 
-describe('0120_fast_food_replaces_food rows', () => {
+describe('0121_fast_food_replaces_food rows', () => {
   it.each<TaggedTable>(['transactions', 'transaction_tag_rules', 'transaction_corrections'])(
     'drops contains:food beside contains:fast-food in %s, keeping the rest in order',
     (table) => {
@@ -145,7 +145,7 @@ describe('0120_fast_food_replaces_food rows', () => {
   });
 });
 
-describe('0120_fast_food_replaces_food definitions', () => {
+describe('0121_fast_food_replaces_food definitions', () => {
   it('makes fast-food and food exclusive from both sides', () => {
     const descriptions = listVocabularyDescriptions(freshMigratedFinanceDb().db);
 

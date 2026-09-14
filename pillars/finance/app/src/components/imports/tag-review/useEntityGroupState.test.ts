@@ -65,3 +65,23 @@ describe('useEntityGroupState — handleApplySuggestions (POPS-3668)', () => {
     expect(onUpdateTag).not.toHaveBeenCalled();
   });
 });
+
+describe('useEntityGroupState — addGroupStagedTag (POPS-3951)', () => {
+  it('replaces a staged value on a single-valued facet rather than staging both', () => {
+    const { result } = render({}, {});
+
+    act(() => result.current.addGroupStagedTag('venue:bar'));
+    act(() => result.current.addGroupStagedTag('venue:pub'));
+
+    expect(result.current.groupStagedTags).toEqual(['venue:pub']);
+  });
+
+  it('stages values on different facets alongside each other', () => {
+    const { result } = render({}, {});
+
+    act(() => result.current.addGroupStagedTag('venue:bar'));
+    act(() => result.current.addGroupStagedTag('contains:alcohol'));
+
+    expect(result.current.groupStagedTags).toEqual(['venue:bar', 'contains:alcohol']);
+  });
+});

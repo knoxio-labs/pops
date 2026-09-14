@@ -17,7 +17,7 @@ import {
 } from './tags';
 
 const FACETS = [
-  { facet: 'venue', kind: 'closed' },
+  { facet: 'channel', kind: 'closed' },
   { facet: 'contains', kind: 'open' },
   { facet: 'trip', kind: 'open' },
   { facet: 'flag', kind: 'marker' },
@@ -340,9 +340,9 @@ describe('planTagCreation', () => {
   });
 
   it('refuses a closed axis instead of offering to create the value', () => {
-    expect(planTagCreation('venue:speakeasy', FACETS)).toEqual({
+    expect(planTagCreation('channel:speakeasy', FACETS)).toEqual({
       kind: 'refused',
-      facet: 'venue',
+      facet: 'channel',
       facetKind: 'closed',
     });
   });
@@ -376,8 +376,36 @@ describe('planTagCreation', () => {
   });
 
   it('offers nothing to choose from when the taxonomy has no open axis', () => {
-    expect(planTagCreation('Cairns 2026', [{ facet: 'venue', kind: 'closed' }])).toEqual({
+    expect(planTagCreation('Cairns 2026', [{ facet: 'channel', kind: 'closed' }])).toEqual({
       kind: 'none',
+    });
+  });
+
+  it('offers venue and occasion for a bare value now that both axes are open', () => {
+    expect(
+      planTagCreation('Fishmonger', [
+        { facet: 'venue', kind: 'open' },
+        { facet: 'occasion', kind: 'open' },
+        { facet: 'channel', kind: 'closed' },
+      ])
+    ).toEqual({
+      kind: 'choose',
+      value: 'fishmonger',
+      facets: ['venue', 'occasion'],
+    });
+  });
+
+  it('is ready when the typed text already names the open venue axis', () => {
+    expect(planTagCreation('venue:Fishmonger', [{ facet: 'venue', kind: 'open' }])).toEqual({
+      kind: 'ready',
+      tag: 'venue:fishmonger',
+    });
+  });
+
+  it('is ready when the typed text already names the open occasion axis', () => {
+    expect(planTagCreation('occasion:Moving', [{ facet: 'occasion', kind: 'open' }])).toEqual({
+      kind: 'ready',
+      tag: 'occasion:moving',
     });
   });
 });

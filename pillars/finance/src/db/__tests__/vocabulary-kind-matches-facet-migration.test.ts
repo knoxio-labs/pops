@@ -94,16 +94,21 @@ describe('0119_vocabulary_kind_matches_facet', () => {
     expect(kindOf('flag:needs-review')).toBe('marker');
   });
 
-  it('gives every facet in TAG_FACET_KINDS its mapped kind, so the CASE cannot miss one', () => {
-    for (const { facet, kind } of TAG_FACETS) {
+  it('gives every facet in TAG_FACET_KINDS its kind as of 0119, so the CASE cannot miss one', () => {
+    // 0119 is shipped history; 0120 opened venue and occasion, so this pins what they were when it ran.
+    const kindAt0119 = TAG_FACETS.map(({ facet, kind }) => ({
+      facet,
+      kind: facet === 'venue' || facet === 'occasion' ? 'closed' : kind,
+    }));
+    for (const { facet, kind } of kindAt0119) {
       seed(`${facet}:drifted`, facet, kind === 'closed' ? 'marker' : 'closed');
     }
 
     runMigration();
 
-    const mismatched = TAG_FACETS.filter(
-      ({ facet, kind }) => kindOf(`${facet}:drifted`) !== kind
-    ).map(({ facet }) => facet);
+    const mismatched = kindAt0119
+      .filter(({ facet, kind }) => kindOf(`${facet}:drifted`) !== kind)
+      .map(({ facet }) => facet);
     expect(mismatched).toEqual([]);
   });
 

@@ -485,8 +485,8 @@ describe('buildCommitPayload staged tag rule reconciliation (POPS-3106)', () => 
 
   it('does not send a tag the user edited away after staging the rule', () => {
     // The reported failure: a rule staged with `venue:bar`, the chip then
-    // changed to `venue:pub`. The UI showed Pub; the commit still carried Bar
-    // and was refused whole against the closed `venue` namespace.
+    // changed to `venue:pub`. The UI showed Pub, but the commit still carried
+    // Bar — the edit never reached the staged rule payload at all.
     const txn = makeConfirmedTransaction({
       checksum: 'chk-palms',
       tags: ['occasion:out', 'venue:pub'],
