@@ -13,20 +13,10 @@ import { and, eq, gte, isNull, lte, ne } from 'drizzle-orm';
 import { TransactionNotFoundError } from '../errors.js';
 import { transactions } from '../schema.js';
 
-import type { TransactionType } from '../../contract/corrections-constants.js';
 import type { FinanceDb } from './internal.js';
 import type { TransactionRow } from './transactions.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-
-/**
- * The type a leg reverts to when its transfer pair is unlinked. The pre-pairing
- * type is unrecoverable (linking overwrote it with `transfer`), so we fall back
- * to the direction-derived default: a debit is a purchase, a credit is income.
- */
-function defaultTypeForAmount(amountCents: number): TransactionType {
-  return amountCents < 0 ? 'purchase' : 'income';
-}
 
 /** The target fields the candidate query keys on. */
 export interface PairTarget {
@@ -45,16 +35,15 @@ function shiftDate(date: string, deltaDays: number): string {
 /**
  * Rows that could be `target`'s transfer counterpart: exact-opposite signed
  * amount (equal-abs + opposite-sign collapse to `amount_cents = -target`), a
- * different account, no existing link, not classified by a correction rule
- * (rules take precedence over the pairing engine — #3607 AC), and a date within
- * `windowDays` either side (inclusive). The target row itself is excluded. This
- * is only a prefilter — `findPairForTransaction` applies the closest-date /
- * uniqueness decision over the returned pool.
+ * different account, no existing link, and a date within `windowDays` either
+ * side (inclusive). The target row itself is excluded. This is only a
+ * prefilter — `findPairForTransaction` applies the type, closest-date and
+ * uniqueness decisions over the returned pool.
  *
- * A row carrying an entity-matcher / AI classification (`match_type` set but no
- * `match_rule_id`) IS still eligible — the ladder puts the pairing detector
- * ahead of the entity matcher, so a genuine transfer overrides a shakier
- * entity guess; only an explicit correction rule outranks it.
+ * How a row was classified does not matter here. A correction rule is how most
+ * real transfer legs get their entity and `transfer` type, so excluding
+ * rule-classified rows would exclude almost every genuine pair (POPS-3939); a
+ * rule that typed a row anything but `transfer` is refused by the matcher.
  */
 export function findPairCandidates(
   db: FinanceDb,
@@ -69,7 +58,6 @@ export function findPairCandidates(
         eq(transactions.amountCents, -target.amountCents),
         ne(transactions.accountId, target.accountId),
         isNull(transactions.relatedTransactionId),
-        isNull(transactions.matchRuleId),
         gte(transactions.date, shiftDate(target.date, -windowDays)),
         lte(transactions.date, shiftDate(target.date, windowDays)),
         ne(transactions.id, target.id)
@@ -79,18 +67,16 @@ export function findPairCandidates(
 }
 
 /**
- * Ids of every transaction eligible for pairing — unlinked
- * (`related_transaction_id IS NULL`) and not classified by a correction rule
- * (`match_rule_id IS NULL`, since rules outrank the pairing engine). The
- * reconcile worker re-reads each row fresh before attempting a pair, so
- * returning ids that a later row in the same pass links is harmless — the stale
- * ones simply resolve to `skipped`.
+ * Ids of every transaction eligible for pairing — every unlinked row
+ * (`related_transaction_id IS NULL`). The reconcile worker re-reads each row
+ * fresh before attempting a pair, so returning ids that a later row in the same
+ * pass links is harmless — the stale ones simply resolve to `skipped`.
  */
 export function listUnpairedTransactionIds(db: FinanceDb): string[] {
   return db
     .select({ id: transactions.id })
     .from(transactions)
-    .where(and(isNull(transactions.relatedTransactionId), isNull(transactions.matchRuleId)))
+    .where(isNull(transactions.relatedTransactionId))
     .all()
     .map((row) => row.id);
 }
@@ -101,30 +87,21 @@ export function listUnpairedTransactionIds(db: FinanceDb): string[] {
  * `transfer`. Runs in one DB transaction so two concurrent passes cannot each
  * link one side to a different candidate.
  *
- * A pairing decision is automatic, not a hand-edit, so this deliberately does
- * NOT route through `updateTransaction` (which stamps `matchType: 'manual'`
- * whenever `type` changes). Provenance for a paired classification is the
- * related id itself (AC #3607); `matchType` is set to `none` (transfers are
- * entity-less by convention) and rule provenance is cleared. Any
- * previously-assigned entity is cleared too — safe because a link only ever
- * happens on an unambiguous unique match, honouring the #3612 "no silent
- * null-clear on a shaky match" safeguard.
+ * Nothing else about either row changes. Its entity, `match_rule_id`,
+ * `match_type` and `match_confidence` are kept: a transfer between two of the
+ * owner's own accounts still belongs to an entity, and a rule that classified
+ * the leg is still the reason it carries that entity. A pairing decision is
+ * automatic, not a hand-edit, so this deliberately does NOT route through
+ * `updateTransaction` (which stamps `matchType: 'manual'` whenever `type`
+ * changes). Provenance for the pairing itself is the related id (AC #3607).
  *
- * Refuses (returns `false`, writes nothing) if either row is classified by a
- * correction rule (`match_rule_id` set): rules outrank the pairing engine, so
- * the writer never clobbers a rule classification even if a caller hands it a
- * rule-classified row — `findPairCandidates` already filters these out, this is
- * the writer's own second line of defence.
- *
- * Also refuses if either row is `type: 'fee'` (POPS-2830). A loan repayment's
- * interest leg (`fee`/`fee:interest`, synthesised at import — see
- * `commit-loan-split.ts`) is not classified by a rule, so the check above does
- * not protect it, yet it must never be reclassified `transfer` just because it
- * happens to share an exact-opposite amount with some unrelated row within the
- * pairing window. `findPairCandidates` has no equivalent prefilter for this —
- * unlike `match_rule_id`, `type` is exactly what a legitimate pair rewrites, so
- * the fee case can only be caught here, on the specific value `fee`, not by
- * excluding candidates on `type` in general.
+ * Refuses (returns `false`, writes nothing) if either row is `type: 'fee'`
+ * (POPS-2830). A loan repayment's interest leg (`fee`/`fee:interest`,
+ * synthesised at import — see `commit-loan-split.ts`) must never be
+ * reclassified `transfer` just because a caller handed it here with some
+ * unrelated exact-opposite row. The matcher already refuses any leg not typed
+ * `transfer`; this writer has other callers and keeps its own guard for the one
+ * type whose rewrite would silently break a split.
  *
  * Idempotent: if either row already carries a `related_transaction_id`, nothing
  * is written and it returns `false`, so neither trigger re-links an existing
@@ -142,7 +119,7 @@ export function listUnpairedTransactionIds(db: FinanceDb): string[] {
  * multi-writer caller.
  *
  * @throws TransactionNotFoundError if either id is missing.
- * @returns `true` when both sides were linked, `false` otherwise (already linked, rule-classified, a `fee` leg, equal ids, or a lost race).
+ * @returns `true` when both sides were linked, `false` otherwise (already linked, a `fee` leg, equal ids, or a lost race).
  */
 export function linkTransferPair(db: FinanceDb, idA: string, idB: string): boolean {
   if (idA === idB) return false;
@@ -151,7 +128,6 @@ export function linkTransferPair(db: FinanceDb, idA: string, idB: string): boole
     const rowB = tx.select().from(transactions).where(eq(transactions.id, idB)).get();
     if (!rowA) throw new TransactionNotFoundError(idA);
     if (!rowB) throw new TransactionNotFoundError(idB);
-    if (rowA.matchRuleId !== null || rowB.matchRuleId !== null) return false;
     if (rowA.type === 'fee' || rowB.type === 'fee') return false;
     if (rowA.relatedTransactionId !== null || rowB.relatedTransactionId !== null) return false;
 
@@ -159,16 +135,7 @@ export function linkTransferPair(db: FinanceDb, idA: string, idB: string): boole
     const writeLink = (id: string, counterpartId: string): number =>
       tx
         .update(transactions)
-        .set({
-          relatedTransactionId: counterpartId,
-          type: 'transfer',
-          entityId: null,
-          entityName: null,
-          matchType: 'none',
-          matchRuleId: null,
-          matchConfidence: null,
-          lastEditedTime: now,
-        })
+        .set({ relatedTransactionId: counterpartId, type: 'transfer', lastEditedTime: now })
         .where(and(eq(transactions.id, id), isNull(transactions.relatedTransactionId)))
         .run().changes;
 
@@ -178,11 +145,6 @@ export function linkTransferPair(db: FinanceDb, idA: string, idB: string): boole
         .set({
           relatedTransactionId: rowA.relatedTransactionId,
           type: rowA.type,
-          entityId: rowA.entityId,
-          entityName: rowA.entityName,
-          matchType: rowA.matchType,
-          matchRuleId: rowA.matchRuleId,
-          matchConfidence: rowA.matchConfidence,
           lastEditedTime: rowA.lastEditedTime,
         })
         .where(eq(transactions.id, idA))
@@ -194,20 +156,23 @@ export function linkTransferPair(db: FinanceDb, idA: string, idB: string): boole
 }
 
 /**
- * Break a transfer pair: clear the target leg's `related_transaction_id`,
- * revert its `type` to its direction-derived default (the pre-pairing type is
- * unrecoverable), and do the same for its counterpart. The user-facing escape
- * hatch for a false-positive pairing (PRD risk). Runs in one DB transaction.
+ * Break a transfer pair: clear the target leg's `related_transaction_id`, and
+ * its counterpart's. The user-facing escape hatch for a false-positive pairing
+ * (PRD risk). Runs in one DB transaction.
  *
- * The counterpart is only reverted when the link is SYMMETRIC — its own
+ * `type` is left alone. Only rows already typed `transfer` are ever paired, so
+ * each leg was a transfer before it was linked and is still one after; an
+ * unlink that retyped it would corrupt a correctly-classified row.
+ *
+ * The counterpart is only cleared when the link is SYMMETRIC — its own
  * `related_transaction_id` points back at the target. A corrupt or asymmetric
  * pointer (the target references a row that references someone else, or a plain
- * transaction) clears only the target's dangling pointer and never rewrites the
- * type of a row that is not actually paired back.
+ * transaction) clears only the target's dangling pointer and never touches a
+ * row that is not actually paired back.
  *
  * Idempotent: called on a row that is not part of a pair
  * (`related_transaction_id IS NULL`) it returns the row untouched, so a
- * double-unlink is harmless and never rewrites a plain transaction's type.
+ * double-unlink is harmless.
  *
  * @throws TransactionNotFoundError if `id` is missing.
  * @returns the updated target row.
@@ -221,24 +186,20 @@ export function unlinkTransferPair(db: FinanceDb, id: string): TransactionRow {
     if (counterpartId === null) return row;
 
     const now = new Date().toISOString();
-    const revert = (leg: TransactionRow): void => {
+    const clearLink = (legId: string): void => {
       tx.update(transactions)
-        .set({
-          relatedTransactionId: null,
-          type: defaultTypeForAmount(leg.amountCents),
-          lastEditedTime: now,
-        })
-        .where(eq(transactions.id, leg.id))
+        .set({ relatedTransactionId: null, lastEditedTime: now })
+        .where(eq(transactions.id, legId))
         .run();
     };
 
-    revert(row);
+    clearLink(id);
     const counterpart = tx
       .select()
       .from(transactions)
       .where(eq(transactions.id, counterpartId))
       .get();
-    if (counterpart && counterpart.relatedTransactionId === id) revert(counterpart);
+    if (counterpart && counterpart.relatedTransactionId === id) clearLink(counterpart.id);
 
     const updated = tx.select().from(transactions).where(eq(transactions.id, id)).get();
     if (!updated) throw new TransactionNotFoundError(id);
