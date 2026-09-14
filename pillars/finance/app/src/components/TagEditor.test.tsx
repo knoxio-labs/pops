@@ -282,6 +282,34 @@ describe('TagEditor', () => {
     expect(screen.getByRole('button', { name: /Edit tags/i }).textContent).toBe('Groceries');
   });
 
+  it('appends an added tag as the last chip and removes that chip on Backspace', async () => {
+    const onSave = vi.fn();
+    render(
+      <TagEditor
+        currentTags={['venue:bar']}
+        availableTags={['venue:bar', 'contains:alcohol']}
+        onSave={onSave}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Edit tags/i }));
+    const input = screen.getByPlaceholderText(/Type to add a tag/i);
+    fireEvent.change(input, { target: { value: 'Alcohol' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    const chipLabels = () =>
+      screen
+        .getAllByRole('button', { name: /^Remove / })
+        .map((button) => button.getAttribute('aria-label'));
+    expect(chipLabels()).toEqual([expect.stringMatching(/Bar/), expect.stringMatching(/Alcohol/)]);
+
+    fireEvent.keyDown(input, { key: 'Backspace' });
+    expect(chipLabels()).toEqual([expect.stringMatching(/Bar/)]);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith(['venue:bar']));
+  });
+
   it('offers no creation when the taxonomy has not loaded', () => {
     render(<TagEditor currentTags={[]} availableTags={[]} onSave={vi.fn()} />);
 

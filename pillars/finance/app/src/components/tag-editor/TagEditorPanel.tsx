@@ -2,12 +2,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Button, TextInput } from '@pops/ui';
 
-import {
-  describeTag,
-  groupTagsByFacet,
-  orderTagsByFacet,
-  type TagCreationIntent,
-} from '../../lib/tags';
+import { describeTag, groupTagsByFacet, type TagCreationIntent } from '../../lib/tags';
 import { FacetHeading, TagChip } from '../tags/TagChip';
 import { TagCreationRow } from '../tags/TagCreationRow';
 import { describeSourceMeta, type SourceMarkerText } from './sourceMeta';
@@ -59,17 +54,19 @@ function CurrentTags({
 }) {
   const { t } = useTranslation('finance');
   if (tags.length === 0) return null;
+  // Insertion order, not facet order: Backspace removes the last tag added, so
+  // that tag has to be the last chip on screen.
   return (
     <div className="flex flex-wrap gap-2">
-      {orderTagsByFacet(tags).map((parsed) => {
-        const meta = tagMeta.get(parsed.raw);
+      {tags.map((tag) => {
+        const meta = tagMeta.get(tag);
         const marker = meta ? describeSourceMeta(t, meta) : undefined;
         return (
-          <div key={parsed.raw} className="inline-flex items-center gap-1">
+          <div key={tag} className="inline-flex items-center gap-1">
             <TagChip
-              tag={parsed.raw}
+              tag={tag}
               removable
-              onRemove={() => onRemove(parsed.raw)}
+              onRemove={() => onRemove(tag)}
               className="border"
               context={marker?.accessibleText}
             />
