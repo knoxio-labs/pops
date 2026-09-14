@@ -2216,7 +2216,7 @@ describe('imports.commitImport — who may add to tag_vocabulary (POPS-2602)', (
   it('refuses a closed value an edit op would write onto an existing rule', async () => {
     const c = client();
     await c.imports.commitImport({
-      tagRuleChangeSets: [{ changeSet: tagRuleChangeSet('EDIT TARGET', ['venue:cafe']) }],
+      tagRuleChangeSets: [{ changeSet: tagRuleChangeSet('EDIT TARGET', ['channel:online']) }],
       transactions: [confirmed({ description: 'EDIT TARGET 1', checksum: 'vocab-edit-seed' })],
     });
     const ruleId = (
@@ -2231,7 +2231,7 @@ describe('imports.commitImport — who may add to tag_vocabulary (POPS-2602)', (
           {
             changeSet: {
               source: 'unit-test',
-              ops: [{ op: 'edit', id: ruleId, data: { tags: ['venue:speakeasy'] } }],
+              ops: [{ op: 'edit', id: ruleId, data: { tags: ['channel:mystery'] } }],
             },
           },
         ],
@@ -2239,8 +2239,8 @@ describe('imports.commitImport — who may add to tag_vocabulary (POPS-2602)', (
       })
     ).rejects.toMatchObject({ status: 400 });
 
-    expect(tagRuleTags()).toEqual(['venue:cafe']);
-    expect(vocabularyTags()).not.toContain('venue:speakeasy');
+    expect(tagRuleTags()).toEqual(['channel:online']);
+    expect(vocabularyTags()).not.toContain('channel:mystery');
   });
 
   it('admits an open value an edit op writes onto an existing rule', async () => {
@@ -2286,7 +2286,43 @@ describe('imports.commitImport — who may add to tag_vocabulary (POPS-2602)', (
     expect(vocabularyTags()).toContain('contains:sunscreen');
   });
 
-  it('still refuses a venue value the user names during review', async () => {
+  it('admits a venue value the user names during review, upserted as user-sourced (POPS-3951)', async () => {
+    const c = client();
+
+    await c.imports.commitImport({
+      transactions: [
+        confirmed({
+          description: 'FISHMONGER ON KING ST',
+          checksum: 'vocab-venue-open',
+          tags: ['venue:fishmonger'],
+        }),
+      ],
+    });
+
+    expect(vocabularyTags()).toContain('venue:fishmonger');
+    const row = financeDb.raw
+      .prepare('SELECT source FROM tag_vocabulary WHERE tag = ?')
+      .get('venue:fishmonger') as { source: string } | undefined;
+    expect(row?.source).toBe('user');
+  });
+
+  it('admits an occasion value the user names during review (POPS-3951)', async () => {
+    const c = client();
+
+    await c.imports.commitImport({
+      transactions: [
+        confirmed({
+          description: 'PACKING BOXES',
+          checksum: 'vocab-occasion-open',
+          tags: ['occasion:moving'],
+        }),
+      ],
+    });
+
+    expect(vocabularyTags()).toContain('occasion:moving');
+  });
+
+  it('still refuses a channel value the user names during review', async () => {
     const c = client();
 
     await expect(
@@ -2294,14 +2330,14 @@ describe('imports.commitImport — who may add to tag_vocabulary (POPS-2602)', (
         transactions: [
           confirmed({
             description: 'THE HIDDEN DOOR',
-            checksum: 'vocab-venue-closed',
-            tags: ['venue:speakeasy'],
+            checksum: 'vocab-channel-closed',
+            tags: ['channel:mystery'],
           }),
         ],
       })
     ).rejects.toMatchObject({ status: 400 });
 
-    expect(vocabularyTags()).not.toContain('venue:speakeasy');
+    expect(vocabularyTags()).not.toContain('channel:mystery');
   });
 
   it('replays a recorded commit without re-judging it against a vocabulary that moved on', async () => {
@@ -2355,33 +2391,37 @@ describe('imports.commitImport — who may add to tag_vocabulary (POPS-2602)', (
     const c = client();
     await expect(
       c.imports.commitImport({
-        tagRuleChangeSets: [stagedTagRule('SPEAKEASY', ['venue:speakeasy'], ['venue:speakeasy'])],
+        tagRuleChangeSets: [stagedTagRule('SPEAKEASY', ['channel:mystery'], ['channel:mystery'])],
         transactions: [
           confirmed({
             description: 'SPEAKEASY',
             checksum: 'vocab-closed',
-            tags: ['venue:speakeasy'],
+            tags: ['channel:mystery'],
           }),
         ],
       })
     ).rejects.toMatchObject({ status: 400 });
 
-    expect(vocabularyTags()).not.toContain('venue:speakeasy');
+    expect(vocabularyTags()).not.toContain('channel:mystery');
     expect(storedTags()).toEqual([]);
-    expect(tagRuleTags()).not.toContain('venue:speakeasy');
+    expect(tagRuleTags()).not.toContain('channel:mystery');
   });
 
   it('accepts a closed value the namespace does hold without re-adding it', async () => {
-    const before = vocabularyTags().filter((t) => t === 'venue:pub').length;
+    const before = vocabularyTags().filter((t) => t === 'channel:online').length;
     const c = client();
     await c.imports.commitImport({
       transactions: [
-        confirmed({ description: 'THE LOCAL', checksum: 'vocab-closed-ok', tags: ['venue:pub'] }),
+        confirmed({
+          description: 'THE LOCAL',
+          checksum: 'vocab-closed-ok',
+          tags: ['channel:online'],
+        }),
       ],
     });
 
     expect(before).toBe(1);
-    expect(vocabularyTags().filter((t) => t === 'venue:pub')).toHaveLength(1);
+    expect(vocabularyTags().filter((t) => t === 'channel:online')).toHaveLength(1);
   });
 
   it('carries a marker tag onto the transaction but never into the vocabulary', async () => {

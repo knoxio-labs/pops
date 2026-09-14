@@ -74,7 +74,9 @@ describe('tagRules — facets', () => {
     const { facets } = await client().tagRules.facets();
     const kindOf = (facet: string) => facets.find((entry) => entry.facet === facet)?.kind;
 
-    expect(kindOf('venue')).toBe('closed');
+    expect(kindOf('channel')).toBe('closed');
+    expect(kindOf('venue')).toBe('open');
+    expect(kindOf('occasion')).toBe('open');
     expect(kindOf('trip')).toBe('open');
     expect(kindOf('enrich')).toBe('open');
     expect(kindOf('flag')).toBe('marker');

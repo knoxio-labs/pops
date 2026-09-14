@@ -9,22 +9,22 @@ import { describe, expect, it } from 'vitest';
 import { closedValuesOutsideVocabulary, withoutMarkerTags, type TagFacetOption } from './tags';
 
 const facets: TagFacetOption[] = [
-  { facet: 'venue', kind: 'closed' },
-  { facet: 'occasion', kind: 'closed' },
+  { facet: 'channel', kind: 'closed' },
+  { facet: 'fee', kind: 'closed' },
   { facet: 'trip', kind: 'open' },
   { facet: 'flag', kind: 'marker' },
 ];
-const vocabulary = ['venue:bar', 'venue:pub', 'occasion:birthday'];
+const vocabulary = ['channel:bar', 'channel:pub', 'fee:birthday'];
 
 describe('closedValuesOutsideVocabulary', () => {
   it('refuses a closed-axis value the vocabulary does not hold', () => {
-    expect(closedValuesOutsideVocabulary(['venue:speakeasy'], facets, vocabulary)).toEqual([
-      'venue:speakeasy',
+    expect(closedValuesOutsideVocabulary(['channel:speakeasy'], facets, vocabulary)).toEqual([
+      'channel:speakeasy',
     ]);
   });
 
   it('accepts a closed-axis value the vocabulary holds, whatever its casing and padding', () => {
-    expect(closedValuesOutsideVocabulary([' Venue:PUB '], facets, vocabulary)).toEqual([]);
+    expect(closedValuesOutsideVocabulary([' Channel:PUB '], facets, vocabulary)).toEqual([]);
   });
 
   it('never refuses an open axis, a marker axis, or a facet the taxonomy does not list', () => {
@@ -44,15 +44,15 @@ describe('closedValuesOutsideVocabulary', () => {
   it('lists each refused tag once, in the order the rule carries them', () => {
     expect(
       closedValuesOutsideVocabulary(
-        ['occasion:wake', 'venue:bar', 'venue:speakeasy', 'occasion:wake'],
+        ['fee:wake', 'channel:bar', 'channel:speakeasy', 'fee:wake'],
         facets,
         vocabulary
       )
-    ).toEqual(['occasion:wake', 'venue:speakeasy']);
+    ).toEqual(['fee:wake', 'channel:speakeasy']);
   });
 
   it('refuses nothing it cannot judge: with no taxonomy loaded, no axis is closed', () => {
-    expect(closedValuesOutsideVocabulary(['venue:speakeasy'], [], vocabulary)).toEqual([]);
+    expect(closedValuesOutsideVocabulary(['channel:speakeasy'], [], vocabulary)).toEqual([]);
   });
 });
 
@@ -60,15 +60,15 @@ describe('withoutMarkerTags', () => {
   it('drops marker-axis values and keeps every other tag in order (POPS-3704)', () => {
     expect(
       withoutMarkerTags(
-        ['venue:pub', 'flag:needs-review', 'trip:cairns-2026', 'Groceries', 'mood:cheerful'],
+        ['channel:pub', 'flag:needs-review', 'trip:cairns-2026', 'Groceries', 'mood:cheerful'],
         facets
       )
-    ).toEqual(['venue:pub', 'trip:cairns-2026', 'Groceries', 'mood:cheerful']);
+    ).toEqual(['channel:pub', 'trip:cairns-2026', 'Groceries', 'mood:cheerful']);
   });
 
   it('drops a marker value whatever its casing and padding, as the server compares it', () => {
-    expect(withoutMarkerTags([' FLAG:needs-review ', 'Flag:x', 'venue:pub'], facets)).toEqual([
-      'venue:pub',
+    expect(withoutMarkerTags([' FLAG:needs-review ', 'Flag:x', 'channel:pub'], facets)).toEqual([
+      'channel:pub',
     ]);
   });
 });

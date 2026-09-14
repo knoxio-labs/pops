@@ -47,7 +47,7 @@ function renderDialog(tags: string[], vocabularyTags?: string[]): ReactElement {
         onOpenChange={() => {}}
         signal={{ descriptionPattern: 'GRIFFIN', matchType: 'contains', entityId: null, tags }}
         previewTransactions={[{ checksum: 'a', description: 'GRIFFIN HOTEL' }]}
-        facets={[{ facet: 'venue', kind: 'closed' }]}
+        facets={[{ facet: 'channel', kind: 'closed' }]}
         {...(vocabularyTags === undefined ? {} : { vocabularyTags })}
       />
     </QueryClientProvider>
@@ -60,23 +60,23 @@ beforeEach(() => {
 
 describe('TagRuleProposalDialog — closed tag axes', () => {
   it('names the refused value and will not save the rule', async () => {
-    mockPropose.mockResolvedValue(proposalWriting(['venue:speakeasy']));
-    render(renderDialog(['venue:speakeasy'], ['venue:bar']));
-    expect((await screen.findByRole('alert')).textContent).toContain('venue:speakeasy');
+    mockPropose.mockResolvedValue(proposalWriting(['channel:mystery']));
+    render(renderDialog(['channel:mystery'], ['channel:offline']));
+    expect((await screen.findByRole('alert')).textContent).toContain('channel:mystery');
     expect(screen.getByRole('button', { name: 'Save rule' })).toHaveProperty('disabled', true);
   });
 
   it('saves a rule whose closed-axis values the vocabulary holds', async () => {
-    mockPropose.mockResolvedValue(proposalWriting(['venue:bar']));
-    render(renderDialog(['venue:bar'], ['venue:bar']));
+    mockPropose.mockResolvedValue(proposalWriting(['channel:offline']));
+    render(renderDialog(['channel:offline'], ['channel:offline']));
     await screen.findByText('Seen on every Griffin row');
     expect(screen.queryByRole('alert')).toBeNull();
     expect(screen.getByRole('button', { name: 'Save rule' })).toHaveProperty('disabled', false);
   });
 
   it('refuses nothing when the caller supplies no vocabulary to judge against', async () => {
-    mockPropose.mockResolvedValue(proposalWriting(['venue:speakeasy']));
-    render(renderDialog(['venue:speakeasy']));
+    mockPropose.mockResolvedValue(proposalWriting(['channel:mystery']));
+    render(renderDialog(['channel:mystery']));
     await screen.findByText('Seen on every Griffin row');
     expect(screen.queryByRole('alert')).toBeNull();
   });

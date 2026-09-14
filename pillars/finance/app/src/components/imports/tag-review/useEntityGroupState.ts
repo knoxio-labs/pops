@@ -108,8 +108,11 @@ export function useEntityGroupState(props: EntityGroupStateInput) {
     (tag: string) => setGroupStagedTags((prev) => prev.filter((t) => t !== tag)),
     []
   );
+  // A single-valued facet's incoming value replaces whatever is already
+  // staged on that axis, so the staged pills never show two venues at once
+  // and the eventual group merge never has a stale one to drop silently.
   const addGroupStagedTag = useCallback(
-    (tag: string) => setGroupStagedTags((prev) => (prev.includes(tag) ? prev : [...prev, tag])),
+    (tag: string) => setGroupStagedTags((prev) => mergeTagsReplacingSingleValued(prev, [tag])),
     []
   );
 

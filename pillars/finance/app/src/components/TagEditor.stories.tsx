@@ -156,8 +156,9 @@ export const CreatingATag: Story = {
     },
     availableTags: ['venue:cafe', 'venue:bar', 'contains:coffee', 'trip:hunter-valley'],
     facets: [
-      { facet: 'venue', kind: 'closed' },
-      { facet: 'occasion', kind: 'closed' },
+      { facet: 'venue', kind: 'open' },
+      { facet: 'occasion', kind: 'open' },
+      { facet: 'channel', kind: 'closed' },
       { facet: 'contains', kind: 'open' },
       { facet: 'trip', kind: 'open' },
       { facet: 'project', kind: 'open' },

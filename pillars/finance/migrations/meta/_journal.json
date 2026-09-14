@@ -498,6 +498,13 @@
       "when": 1788800000018,
       "tag": "0119_vocabulary_kind_matches_facet",
       "breakpoints": true
+    },
+    {
+      "idx": 71,
+      "version": "7",
+      "when": 1788800000019,
+      "tag": "0120_venue_occasion_open_facets",
+      "breakpoints": true
     }
   ]
 }

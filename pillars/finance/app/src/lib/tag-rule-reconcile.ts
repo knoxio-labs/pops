@@ -52,9 +52,10 @@ function reconcileOp(op: TagRuleChangeSetOp, live: ReadonlySet<string>): TagRule
  *
  * A staged rule materialises its tags when it is staged, but the user goes on
  * editing tags afterwards, and nothing re-visits the staged copy. Without this
- * the two drift: the wizard shows `venue:pub` while the rule still asserts the
- * `venue:bar` it was staged with, and the commit is refused atomically over a
- * value the user removed and has no way to see (POPS-3106).
+ * the two drift: the wizard shows `channel:online` while the rule still
+ * asserts the `channel:in-person` it was staged with, and the commit is
+ * refused atomically over a value the user removed and has no way to see
+ * (POPS-3106).
  *
  * Narrowing only ever removes. A tag the rows do not carry was never confirmed
  * anywhere in this import, so dropping it is the conservative reading; adding
