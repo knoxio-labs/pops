@@ -327,7 +327,9 @@ vi.mock('../../lib/transaction-utils', () => ({
 
 vi.mock('@pops/ui', async () => {
   const React = await import('react');
+  const actual = await vi.importActual<typeof import('@pops/ui')>('@pops/ui');
   return {
+    cn: actual.cn,
     Button: ({ children, onClick, disabled, ...rest }: Record<string, unknown>) =>
       React.createElement(
         'button',

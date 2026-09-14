@@ -116,7 +116,7 @@ export function TransactionGroup(props: TransactionGroupProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [showEntitySelector, setShowEntitySelector] = useState(false);
 
-  const totalAmount = group.transactions.reduce((sum, t) => sum + Math.abs(t.amount), 0);
+  const totalAmount = group.transactions.reduce((sum, t) => sum + t.amount, 0);
   const existence = resolveEntityExistence(group.entityName, entities, entityVerification);
 
   return (

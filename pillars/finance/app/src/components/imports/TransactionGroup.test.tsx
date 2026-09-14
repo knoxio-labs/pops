@@ -168,6 +168,29 @@ describe('TransactionGroup — forcing a type for an untyped credit in the bulk 
   });
 });
 
+describe('TransactionGroup — the header total keeps the direction of money', () => {
+  it('nets credits against debits instead of adding their magnitudes', () => {
+    renderGroup({
+      group: makeGroup({
+        transactions: [
+          { ...makeTxn('a'), amount: -3000 },
+          { ...makeTxn('b'), amount: 1000 },
+        ],
+      }),
+    });
+
+    expect(screen.getByText(/^Total:/)).toHaveTextContent('Total: -$2000.00');
+  });
+
+  it('marks an all-credit group as money in', () => {
+    renderGroup({
+      group: makeGroup({ transactions: [{ ...makeTxn('a'), amount: 2052.43 }] }),
+    });
+
+    expect(screen.getByText(/^Total:/)).toHaveTextContent('Total: +$2052.43');
+  });
+});
+
 describe('TransactionGroup — the accept button names its outcome', () => {
   it('offers to assign when the suggested entity already exists', () => {
     renderGroup({ group: makeGroup({ aiSuggestion: true }) });
