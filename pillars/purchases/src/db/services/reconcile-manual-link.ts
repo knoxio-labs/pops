@@ -27,6 +27,7 @@ export type ManualLinkOutcome =
   | { readonly kind: 'already-linked' }
   | { readonly kind: 'incomparable-currency' }
   | { readonly kind: 'wrong-direction' }
+  | { readonly kind: 'mixed-currency-claims' }
   | { readonly kind: 'transaction-claimed' }
   | { readonly kind: 'exceeds-charge'; readonly remainingCents: number }
   | { readonly kind: 'exceeds-transaction'; readonly unclaimedCents: number };
@@ -50,6 +51,32 @@ function confirmedLinks(db: PurchasesDb, scope: SQL | undefined): { count: numbe
   return { count: row?.count ?? 0, cents: row?.cents ?? 0 };
 }
 
+/**
+ * Confirmed claims on a transaction, per currency of the charge that made
+ * them. A link's amount is stated in its own charge's currency, so claims in
+ * different currencies cannot be summed without a rate nobody recorded.
+ */
+function claimsOn(
+  db: PurchasesDb,
+  transactionUri: string
+): readonly { currency: string; cents: number }[] {
+  return db
+    .select({
+      currency: sql<string>`UPPER(${purchaseCharges.currency})`,
+      cents: sql<number>`SUM(ABS(${purchaseChargeLinks.amountCents}))`,
+    })
+    .from(purchaseChargeLinks)
+    .innerJoin(purchaseCharges, eq(purchaseCharges.id, purchaseChargeLinks.chargeId))
+    .where(
+      and(
+        eq(purchaseChargeLinks.transactionUri, transactionUri),
+        isNotNull(purchaseChargeLinks.confirmedAt)
+      )
+    )
+    .groupBy(sql`UPPER(${purchaseCharges.currency})`)
+    .all();
+}
+
 /** The unsigned amount to link, or why the pairing is refused. */
 function judge(
   db: PurchasesDb,
@@ -69,9 +96,12 @@ function judge(
     return { kind: 'wrong-direction' };
   }
 
+  const claims = claimsOn(db, transaction.uri);
+  if (claims.some((claim) => claim.currency !== charge.currency.toUpperCase())) {
+    return { kind: 'mixed-currency-claims' };
+  }
   const unclaimedCents =
-    Math.abs(transactionCents) -
-    confirmedLinks(db, eq(purchaseChargeLinks.transactionUri, transaction.uri)).cents;
+    Math.abs(transactionCents) - claims.reduce((sum, claim) => sum + claim.cents, 0);
   if (unclaimedCents <= 0) return { kind: 'transaction-claimed' };
 
   const remainingCents = Math.max(

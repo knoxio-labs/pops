@@ -46,6 +46,12 @@ function toResponse(outcome: ManualLinkOutcome, body: ManualLinkBody): ManualLin
         'incomparable_currency',
         `${body.transactionUri} states no amount in the charge's currency.`
       );
+    case 'mixed-currency-claims':
+      return refused(
+        409,
+        'mixed_currency_claims',
+        `${body.transactionUri} is already claimed by a charge in another currency, and the two cannot be summed.`
+      );
     case 'wrong-direction':
       return refused(
         409,

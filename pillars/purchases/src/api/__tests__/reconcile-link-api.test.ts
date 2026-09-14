@@ -287,6 +287,28 @@ describe('a manual link to the wrong kind of transaction', () => {
 
     expect(res.body.code).toBe('incomparable_currency');
   });
+
+  it('refuses a transaction already claimed by a charge in another currency', async () => {
+    // AUD 50.00 settled abroad as BRL 200.00. Once the AUD charge claims it,
+    // a BRL charge would subtract AUD cents from a BRL amount and pass.
+    const app = appWith(
+      financeReturning({
+        id: 'abroad',
+        amountCents: -5000,
+        foreignCurrency: 'BRL',
+        foreignAmountMinor: 20000,
+      })
+    );
+    const [aud] = orderWithCharges('aud', [5000]).chargeIds;
+    const [brl] = orderWithCharges('brl', [20000], { currency: 'BRL' }).chargeIds;
+    if (aud === undefined || brl === undefined) throw new Error('order has no charge');
+    await link(app, aud, 'abroad').expect(200);
+
+    const res = await link(app, brl, 'abroad').expect(409);
+
+    expect(res.body.code).toBe('mixed_currency_claims');
+    expect(linksOf(brl)).toEqual([]);
+  });
 });
 
 describe('a manual link that cannot be checked', () => {
