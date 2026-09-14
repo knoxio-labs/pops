@@ -70,15 +70,14 @@ describe('loadKnownTags — the vocabulary is the only source', () => {
       const known = loadKnownTags(harness.db);
 
       expect(known).toContain('occasion:out');
-      // hobby is open but classified: the model may recognise an existing value (POPS-3675).
+      // hobby and tax are open but classified: the model may recognise an existing value.
       expect(known).toContain('hobby:brewing');
+      expect(known).toContain('tax:deductible');
       expect(known).not.toContain('trip:hunter-valley-2026');
       expect(known).not.toContain('asset:homelab');
       expect(known).not.toContain('enrich:amazon');
       expect(known).not.toContain('person:rosane');
       expect(known).not.toContain('flag:needs-review');
-      // tax stays unclassified until AI tags stop being pre-accepted (POPS-3685).
-      expect(known).not.toContain('tax:deductible');
     } finally {
       harness.raw.close();
     }
