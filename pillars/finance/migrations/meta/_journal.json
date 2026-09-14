@@ -505,6 +505,13 @@
       "when": 1788800000019,
       "tag": "0120_venue_occasion_open_facets",
       "breakpoints": true
+    },
+    {
+      "idx": 72,
+      "version": "7",
+      "when": 1788800000020,
+      "tag": "0121_fast_food_replaces_food",
+      "breakpoints": true
     }
   ]
 }
