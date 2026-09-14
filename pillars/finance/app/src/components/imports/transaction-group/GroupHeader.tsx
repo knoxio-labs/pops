@@ -2,6 +2,7 @@ import { AlertTriangle, ChevronRight, Sparkles } from 'lucide-react';
 
 import { Badge, Button, CollapsibleTrigger } from '@pops/ui';
 
+import { SignedAmount } from '../../SignedAmount';
 import { AcceptEntityButton } from '../AcceptEntityButton';
 import { type EntityExistence } from '../entity-existence';
 import { dropReason } from '../review/buildConfirmed';
@@ -94,7 +95,9 @@ export function GroupHeader(props: GroupHeaderProps) {
               {group.transactions.length} transaction
               {group.transactions.length !== 1 ? 's' : ''}
             </Badge>
-            <span className="text-sm text-muted-foreground">Total: ${totalAmount.toFixed(2)}</span>
+            <span className="text-sm text-muted-foreground">
+              Total: <SignedAmount amount={totalAmount} />
+            </span>
             {group.category && (
               <Badge variant="outline" className="text-xs">
                 {group.category}

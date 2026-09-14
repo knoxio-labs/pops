@@ -1,10 +1,9 @@
+import { SignedAmount } from '../../components/SignedAmount';
+
 export function AmountCell({ amount }: { amount: number }) {
-  const isNegative = amount < 0;
   return (
     <div className="text-right font-mono font-medium tabular-nums">
-      <span className={isNegative ? 'text-destructive' : 'text-success'}>
-        {isNegative ? '-' : '+'}${Math.abs(amount).toFixed(2)}
-      </span>
+      <SignedAmount amount={amount} />
     </div>
   );
 }

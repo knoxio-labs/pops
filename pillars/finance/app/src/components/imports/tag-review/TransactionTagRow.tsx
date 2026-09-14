@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 
 import { ButtonPrimitive } from '@pops/ui';
 
-import { cn } from '../../../lib/utils';
+import { SignedAmount } from '../../SignedAmount';
 import { buildTagMetaMap } from '../../tag-editor/utils';
 import { TagEditor } from '../../TagEditor';
 
@@ -35,9 +35,6 @@ export function TransactionTagRow({
   onSave,
   onSaveTagRule,
 }: TransactionTagRowProps) {
-  const amount = transaction.amount;
-  const isNegative = amount < 0;
-
   const tagMeta = useMemo(() => buildTagMetaMap(suggestedTagMeta), [suggestedTagMeta]);
 
   return (
@@ -47,14 +44,10 @@ export function TransactionTagRow({
         <p className="text-xs text-muted-foreground">{transaction.date}</p>
       </div>
 
-      <span
-        className={cn(
-          'text-sm font-mono tabular-nums flex-shrink-0',
-          isNegative ? 'text-destructive' : 'text-success'
-        )}
-      >
-        {isNegative ? '-' : '+'}${Math.abs(amount).toFixed(2)}
-      </span>
+      <SignedAmount
+        amount={transaction.amount}
+        className="text-sm font-mono tabular-nums flex-shrink-0"
+      />
 
       {onSaveTagRule && (
         <ButtonPrimitive

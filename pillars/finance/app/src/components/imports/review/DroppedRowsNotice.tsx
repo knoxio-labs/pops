@@ -2,6 +2,7 @@ import { AlertTriangle } from 'lucide-react';
 
 import { Button } from '@pops/ui';
 
+import { SignedAmount } from '../../SignedAmount';
 import { dropReason } from './buildConfirmed';
 import { dropReasonCopy } from './drop-reason-copy';
 
@@ -25,7 +26,7 @@ function DroppedRow({ transaction }: { transaction: ProcessedTransaction }) {
     <li className="flex flex-wrap items-baseline gap-x-2">
       <span className="font-medium">{transaction.description}</span>
       <span className="opacity-80">
-        {transaction.date} • ${Math.abs(transaction.amount).toFixed(2)}
+        {transaction.date} • <SignedAmount amount={transaction.amount} />
       </span>
       {reason && <span className="opacity-80">— {dropReasonCopy[reason].label}</span>}
     </li>
