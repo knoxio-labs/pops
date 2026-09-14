@@ -30,16 +30,40 @@ function isSubsequence(needle: string, haystack: string): boolean {
   return i === needle.length;
 }
 
+function isWordChar(char: string | undefined): boolean {
+  return char !== undefined && /[\p{L}\p{N}]/u.test(char);
+}
+
+function startsWordAt(haystack: string, index: number): boolean {
+  return !isWordChar(haystack[index - 1]);
+}
+
+function endsWordAt(haystack: string, index: number): boolean {
+  return !isWordChar(haystack[index]);
+}
+
 /**
- * A contiguous, normalized match ranks above a scattered one so typo/fuzzy
- * tolerance (cmdk's default behavior) survives diacritic normalization
- * instead of being replaced by strict substring matching.
+ * cmdk sorts by this score, so it has to separate match quality: when every
+ * contiguous match scored the same, rows kept list order and an entity named
+ * exactly "Ing" sank below "Alternative Brewing". Tiers, best first: the term
+ * is the leading word, a prefix of the value, the start of a later word, a
+ * substring anywhere, then a scattered subsequence — the last keeps cmdk's
+ * typo tolerance alive under diacritic normalization.
  */
 function defaultFilter(value: string, search: string): number {
   const normalizedValue = normalizeForSearch(value);
   const normalizedSearch = normalizeForSearch(search);
   if (!normalizedSearch) return 1;
-  if (normalizedValue.includes(normalizedSearch)) return 1;
+  if (normalizedValue.startsWith(normalizedSearch)) {
+    return endsWordAt(normalizedValue, normalizedSearch.length) ? 1 : 0.9;
+  }
+  const first = normalizedValue.indexOf(normalizedSearch);
+  if (first !== -1) {
+    for (let i = first; i !== -1; i = normalizedValue.indexOf(normalizedSearch, i + 1)) {
+      if (startsWordAt(normalizedValue, i)) return 0.8;
+    }
+    return 0.6;
+  }
   return isSubsequence(normalizedSearch, normalizedValue) ? 0.3 : 0;
 }
 
