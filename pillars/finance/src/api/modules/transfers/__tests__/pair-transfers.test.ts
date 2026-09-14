@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { TRANSACTION_TYPES } from '../../../../contract/corrections-constants.js';
 import {
   findPairForTransaction,
   getTransferPairWindowDays,
@@ -16,6 +17,7 @@ function tx(overrides: Partial<PairCandidate> = {}): PairCandidate {
     id: 'tx',
     amount: -5000,
     accountId: 'Amex',
+    type: 'transfer',
     date: '2026-07-01',
     description: 'TRANSFER',
     relatedTransactionId: null,
@@ -197,6 +199,84 @@ describe('findPairForTransaction', () => {
       expect(findPairForTransaction(everyday, [payId, laterCard], 3)).toEqual({
         kind: 'match',
         id: 'PAYID',
+      });
+    });
+  });
+
+  describe('both legs must already be typed transfer (POPS-3940)', () => {
+    const amazon = tx({
+      id: 'AMAZON',
+      amount: -12239,
+      accountId: 'Amex',
+      type: 'purchase',
+      date: '2026-04-27',
+      description: 'AMAZON RETA* AMAZON AU',
+    });
+    const andrew = tx({
+      id: 'ANDREW',
+      amount: 12239,
+      accountId: 'Up',
+      type: 'income',
+      date: '2026-04-27',
+      description: 'Andrew Borg',
+    });
+    const upToAmex = tx({
+      id: 'UP_LEG',
+      amount: -300000,
+      accountId: 'Up',
+      type: 'transfer',
+      date: '2026-08-18',
+      description: 'Amex Credit Card',
+    });
+    const amexReceipt = tx({
+      id: 'AMEX_LEG',
+      amount: 300000,
+      accountId: 'Amex',
+      type: 'transfer',
+      date: '2026-08-18',
+      description: 'PayID Payment Received, Thank you',
+    });
+
+    it('never pairs a card purchase with a friend reimbursing it the same day', () => {
+      expect(findPairForTransaction(amazon, [andrew], 3)).toEqual({ kind: 'none' });
+      expect(findPairForTransaction(andrew, [amazon], 3)).toEqual({ kind: 'none' });
+    });
+
+    it('still refuses the purchase when the reimbursement is itself typed transfer', () => {
+      const andrewTransfer = tx({ ...andrew, type: 'transfer' });
+      expect(findPairForTransaction(amazon, [andrewTransfer], 3)).toEqual({ kind: 'none' });
+      expect(findPairForTransaction(andrewTransfer, [amazon], 3)).toEqual({ kind: 'none' });
+    });
+
+    it('pairs an Up card payment with its Amex receipt when both are transfers', () => {
+      expect(findPairForTransaction(upToAmex, [amexReceipt], 3)).toEqual({
+        kind: 'match',
+        id: 'AMEX_LEG',
+      });
+      expect(findPairForTransaction(amexReceipt, [upToAmex], 3)).toEqual({
+        kind: 'match',
+        id: 'UP_LEG',
+      });
+    });
+
+    it.each(TRANSACTION_TYPES.filter((type) => type !== 'transfer'))(
+      'refuses a %s leg on either side',
+      (type) => {
+        expect(findPairForTransaction(tx({ ...upToAmex, type }), [amexReceipt], 3)).toEqual({
+          kind: 'none',
+        });
+        expect(findPairForTransaction(upToAmex, [tx({ ...amexReceipt, type })], 3)).toEqual({
+          kind: 'none',
+        });
+      }
+    );
+
+    it('does not let a nearer non-transfer row make a transfer match ambiguous or steal it', () => {
+      const nearerPurchase = tx({ ...amexReceipt, id: 'NEAR', accountId: 'ING', type: 'income' });
+      const laterReceipt = tx({ ...amexReceipt, date: '2026-08-19' });
+      expect(findPairForTransaction(upToAmex, [nearerPurchase, laterReceipt], 3)).toEqual({
+        kind: 'match',
+        id: 'AMEX_LEG',
       });
     });
   });
