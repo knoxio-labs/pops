@@ -78,12 +78,20 @@ describe('0119_vocabulary_kind_matches_facet', () => {
     ]);
   });
 
-  it('closes a venue row seeded open', () => {
-    seed('venue:pub', 'venue', 'open');
+  it('closes a channel row seeded open', () => {
+    seed('channel:online', 'channel', 'open');
 
     runMigration();
 
-    expect(kindOf('venue:pub')).toBe('closed');
+    expect(kindOf('channel:online')).toBe('closed');
+  });
+
+  it('opens a venue row seeded closed', () => {
+    seed('venue:pub', 'venue', 'closed');
+
+    runMigration();
+
+    expect(kindOf('venue:pub')).toBe('open');
   });
 
   it('makes a flag row a marker', () => {
@@ -109,7 +117,7 @@ describe('0119_vocabulary_kind_matches_facet', () => {
 
   it('leaves a row that already has its facet kind untouched', () => {
     seed('contains:food', 'contains', 'open', 5);
-    seed('venue:bar', 'venue', 'closed', 3);
+    seed('venue:bar', 'venue', 'open', 3);
 
     const before = snapshot();
     const changes = runMigration();
@@ -139,7 +147,7 @@ describe('0119_vocabulary_kind_matches_facet', () => {
   it('is idempotent: a second run writes no row', () => {
     seed('contains:streaming', 'contains', 'closed');
     seed('contains:haircut', 'contains', 'closed');
-    seed('venue:pub', 'venue', 'open');
+    seed('venue:pub', 'venue', 'closed');
     seed('contains:food', 'contains', 'open');
     seed('Groceries', null, 'closed');
 

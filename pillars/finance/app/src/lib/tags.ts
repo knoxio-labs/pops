@@ -210,7 +210,7 @@ export function withoutMarkerTags(
 /**
  * The tags a staged rule would write that a closed axis does not hold.
  *
- * A closed facet (`venue`, `occasion`, …) is a fixed set: the commit refuses a
+ * A closed facet (`channel`, `fee`, …) is a fixed set: the commit refuses a
  * value outside it, atomically, after every other step of the import is done
  * (POPS-3106). This asks the same question at the point the rule is staged, so
  * the answer arrives where the tag can still be changed.

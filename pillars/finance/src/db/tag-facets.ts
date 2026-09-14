@@ -27,9 +27,14 @@
  * import ("contains:sunscreen"), while the categorizer still classifies every
  * row against whatever the vocabulary currently holds. Making it `closed`
  * meant a human could not name a new one without a migration; making it
- * unclassified would have cost the axis its coverage. The other four stay
- * closed because their value sets are the buckets the reports group by, and a
- * sixth venue invented mid-import is a bucket nothing else counts.
+ * unclassified would have cost the axis its coverage. `venue` and `occasion`
+ * are open for the same reason (POPS-3951): a human meets a new venue or
+ * occasion on import too, `validateAiTags` still refuses any value the model
+ * invents, and `CLASSIFIED_TAG_FACETS` keeps both single-valued so a picker
+ * that mints one replaces the row's existing value rather than doubling it.
+ * `channel` and `fee` stay closed because their value sets are the buckets
+ * the reports group by, and a sixth channel invented mid-import is a bucket
+ * nothing else counts.
  *
  * This module owns the *rules*; `tag_vocabulary` owns the *values*. It
  * deliberately carries no list of classified values: that list lives in the
@@ -49,8 +54,8 @@ export const TAG_FACET_SEPARATOR = ':';
  * — see {@link tagFacetKind}.
  */
 export const TAG_FACET_KINDS = {
-  venue: 'closed',
-  occasion: 'closed',
+  venue: 'open',
+  occasion: 'open',
   contains: 'open',
   channel: 'closed',
   fee: 'closed',
@@ -100,14 +105,14 @@ export const DEFAULT_TAG_FACET_KIND: TagFacetKind = 'open';
  * neither is (POPS-2607):
  *
  * - `occasion:travel` stays, even though `trip:*` also implies travel. The
- *   implication runs one way only. `trip` is an *open* facet, so a value exists
- *   only when someone deliberately creates one — derive travel from it and you
- *   lose the airport coffee, the work flight, and the weekend nobody bothered
- *   naming, which are exactly the ones that never get a trip. Making a value on
- *   the closed always-present axis conditional on a sparse open one would cost
- *   that axis the property it exists for: being exhaustively groupable. A row
- *   with both keeps `occasion:travel`; "spend eating out" is answered by
- *   `venue:` and `contains:` regardless of occasion.
+ *   implication runs one way only. `trip` is a *sparse* open facet, so a value
+ *   exists only when someone deliberately creates one — derive travel from it
+ *   and you lose the airport coffee, the work flight, and the weekend nobody
+ *   bothered naming, which are exactly the ones that never get a trip. Making a
+ *   value on the always-classified `occasion` axis conditional on a sparse one
+ *   would cost `occasion` the property it exists for: being exhaustively
+ *   groupable. A row with both keeps `occasion:travel`; "spend eating out" is
+ *   answered by `venue:` and `contains:` regardless of occasion.
  * - `occasion:admin` was retired (migration 0071). It restated what `type`
  *   already says, and `type` is set by the importer from the descriptor on every
  *   import with nobody in the loop, where the tag needed a human to remember
@@ -121,10 +126,11 @@ export const DEFAULT_TAG_FACET_KIND: TagFacetKind = 'open';
  * which fee it is. The rows the classifier could not type keep the tag and
  * carry `flag:needs-review`, because there the tag is the only evidence left.
  *
- * `hobby` and `tax` are the open facets classified here besides `contains`
- * (POPS-3675, POPS-3685). The model may not coin a value on either —
- * `validateAiTags` refuses any value the vocabulary does not already hold — but
- * it may recognise one that exists. A crypto wallet top-up whose honest tag is
+ * `hobby` and `tax` are the open facets classified here besides `contains`,
+ * `venue`, and `occasion` (POPS-3675, POPS-3685). The model may not coin a
+ * value on either — `validateAiTags` refuses any value the vocabulary does not
+ * already hold — but it may recognise one that exists. A crypto wallet top-up
+ * whose honest tag is
  * `hobby:crypto` otherwise has no axis to answer on, and a model offered only
  * venue/occasion/contains fills those with the nearest wrong value instead.
  * `tax` is offered on a stricter term: it is a claim with consequences at tax
