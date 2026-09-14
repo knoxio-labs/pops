@@ -160,6 +160,49 @@ describe('EntitySelect — searching by alias', () => {
   });
 });
 
+describe('EntitySelect — result ranking', () => {
+  it('orders matches by quality rather than list order', async () => {
+    const entities: EntityOption[] = [
+      { id: 'e1', name: 'Alternative Brewing', type: 'company' },
+      { id: 'e2', name: 'Bunnings Warehouse', type: 'company' },
+      { id: 'e3', name: 'Direct Ingredients', type: 'company' },
+      { id: 'e4', name: 'ING Direct', type: 'company' },
+      { id: 'e5', name: 'Ingo', type: 'company' },
+      { id: 'e6', name: 'Ing', type: 'company' },
+      { id: 'e7', name: 'Kmart', type: 'company' },
+    ];
+    render(<EntitySelect entities={entities} />);
+
+    const search = await openPicker();
+    await userEvent.type(search, 'ing');
+
+    expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual([
+      expect.stringContaining('ING Direct'),
+      expect.stringContaining('Ing'),
+      expect.stringContaining('Ingo'),
+      expect.stringContaining('Direct Ingredients'),
+      expect.stringContaining('Alternative Brewing'),
+      expect.stringContaining('Bunnings Warehouse'),
+    ]);
+  });
+
+  it('keeps a scattered match below every contiguous one', async () => {
+    const entities: EntityOption[] = [
+      { id: 'e1', name: 'Woolworths', type: 'company' },
+      { id: 'e2', name: 'West Wools', type: 'company' },
+    ];
+    render(<EntitySelect entities={entities} />);
+
+    const search = await openPicker();
+    await userEvent.type(search, 'wools');
+
+    expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual([
+      expect.stringContaining('West Wools'),
+      expect.stringContaining('Woolworths'),
+    ]);
+  });
+});
+
 describe('EntitySelect — diacritic-insensitive search', () => {
   it('matches an accented entity name when the search term has none', async () => {
     const withAccent: EntityOption[] = [{ id: 'e1', name: 'João Miranda', type: 'individual' }];
