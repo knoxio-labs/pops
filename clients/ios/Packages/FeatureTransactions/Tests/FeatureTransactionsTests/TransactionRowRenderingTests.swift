@@ -12,8 +12,9 @@ import Testing
 /// Same technique and the same reasoning as `DesignSystem`'s
 /// `PrimitiveRenderingTests`: the `#Preview`s claim these render, Xcode's canvas
 /// is the only place a person sees that, and nothing in CI opens it. Two renders
-/// of the same row in the same scheme must be byte-identical, which is what
-/// makes every comparison below a signal rather than noise.
+/// of the same row in the same scheme must draw the same picture — the same to
+/// within `RenderedPixels`' anti-aliasing tolerance — which is what makes every
+/// comparison below a signal rather than noise.
 @Suite("Transaction row rendering")
 @MainActor
 internal struct TransactionRowRenderingTests {
@@ -76,7 +77,7 @@ internal struct TransactionRowRenderingTests {
         let once = try #require(Self.render(Self.row(Self.transaction())))
         let again = try #require(Self.render(Self.row(Self.transaction())))
 
-        #expect(once == again)
+        #expect(RenderedPixels.drawTheSame(once, again))
     }
 
     /// Every colour on this row is a token, and every token diverges between the
