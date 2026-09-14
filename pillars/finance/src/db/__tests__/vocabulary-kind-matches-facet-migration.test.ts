@@ -78,20 +78,12 @@ describe('0119_vocabulary_kind_matches_facet', () => {
     ]);
   });
 
-  it('closes a channel row seeded open', () => {
-    seed('channel:online', 'channel', 'open');
+  it('closes a venue row seeded open', () => {
+    seed('venue:pub', 'venue', 'open');
 
     runMigration();
 
-    expect(kindOf('channel:online')).toBe('closed');
-  });
-
-  it('opens a venue row seeded closed', () => {
-    seed('venue:pub', 'venue', 'closed');
-
-    runMigration();
-
-    expect(kindOf('venue:pub')).toBe('open');
+    expect(kindOf('venue:pub')).toBe('closed');
   });
 
   it('makes a flag row a marker', () => {
@@ -102,22 +94,27 @@ describe('0119_vocabulary_kind_matches_facet', () => {
     expect(kindOf('flag:needs-review')).toBe('marker');
   });
 
-  it('gives every facet in TAG_FACET_KINDS its mapped kind, so the CASE cannot miss one', () => {
-    for (const { facet, kind } of TAG_FACETS) {
+  it('gives every facet in TAG_FACET_KINDS its kind as of 0119, so the CASE cannot miss one', () => {
+    // 0119 is shipped history; 0120 opened venue and occasion, so this pins what they were when it ran.
+    const kindAt0119 = TAG_FACETS.map(({ facet, kind }) => ({
+      facet,
+      kind: facet === 'venue' || facet === 'occasion' ? 'closed' : kind,
+    }));
+    for (const { facet, kind } of kindAt0119) {
       seed(`${facet}:drifted`, facet, kind === 'closed' ? 'marker' : 'closed');
     }
 
     runMigration();
 
-    const mismatched = TAG_FACETS.filter(
-      ({ facet, kind }) => kindOf(`${facet}:drifted`) !== kind
-    ).map(({ facet }) => facet);
+    const mismatched = kindAt0119
+      .filter(({ facet, kind }) => kindOf(`${facet}:drifted`) !== kind)
+      .map(({ facet }) => facet);
     expect(mismatched).toEqual([]);
   });
 
   it('leaves a row that already has its facet kind untouched', () => {
     seed('contains:food', 'contains', 'open', 5);
-    seed('venue:bar', 'venue', 'open', 3);
+    seed('venue:bar', 'venue', 'closed', 3);
 
     const before = snapshot();
     const changes = runMigration();
@@ -147,7 +144,7 @@ describe('0119_vocabulary_kind_matches_facet', () => {
   it('is idempotent: a second run writes no row', () => {
     seed('contains:streaming', 'contains', 'closed');
     seed('contains:haircut', 'contains', 'closed');
-    seed('venue:pub', 'venue', 'closed');
+    seed('venue:pub', 'venue', 'open');
     seed('contains:food', 'contains', 'open');
     seed('Groceries', null, 'closed');
 

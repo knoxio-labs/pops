@@ -31,8 +31,8 @@ FROM (
   SELECT
     `tag`,
     CASE `facet`
-      WHEN 'venue' THEN 'open'
-      WHEN 'occasion' THEN 'open'
+      WHEN 'venue' THEN 'closed'
+      WHEN 'occasion' THEN 'closed'
       WHEN 'contains' THEN 'open'
       WHEN 'channel' THEN 'closed'
       WHEN 'fee' THEN 'closed'
