@@ -104,6 +104,7 @@ export function buildTypeOnlyMatch(args: TypeOnlyMatchArgs): ProcessedTransactio
     },
     matchedRules,
     status,
+    error: undefined,
     suggestedTags: withDerivedFeeTag(
       buildSuggestedTags(db, {
         description: transaction.description,
@@ -154,6 +155,7 @@ export function buildEntityMatch(args: EntityMatchArgs): ProcessedTransaction {
     },
     matchedRules,
     status,
+    error: undefined,
     suggestedTags: withDerivedFeeTag(
       buildSuggestedTags(db, {
         description: transaction.description,
