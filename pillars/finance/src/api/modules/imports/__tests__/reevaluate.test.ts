@@ -240,6 +240,41 @@ describe('reevaluateImportSessionResult — fetch-once + real usage (CF040/#3664
   });
 });
 
+describe('reevaluate — a rule-matched row drops the no-match reason it was processed with', () => {
+  const noMatch = (description: string): ProcessedTransaction => ({
+    ...uncertainTxn(description),
+    error: 'No entity match found',
+  });
+
+  it('clears the reason when a rule names the merchant', async () => {
+    seedTypedRule('r-typed');
+
+    const { nextResult } = await reevaluateImportSessionResult({
+      db,
+      contacts: makeContactsFake(),
+      result: emptyResult([noMatch('TRANSFER TO 4564XXXXXXXX7373')]),
+    });
+
+    const row = [...nextResult.matched, ...nextResult.uncertain][0];
+    expect(row?.entity).toMatchObject({ entityId: 'ent-anz', matchType: 'learned' });
+    expect(row?.error).toBeUndefined();
+  });
+
+  it('clears the reason when a type-only rule decides the row', async () => {
+    seedTypeOnlyRule('r-type-only');
+
+    const { nextResult } = await reevaluateImportSessionResult({
+      db,
+      contacts: makeContactsFake(),
+      result: emptyResult([noMatch('COLES SYDNEY')]),
+    });
+
+    const row = [...nextResult.matched, ...nextResult.uncertain][0];
+    expect(row?.transactionType).toBe('transfer');
+    expect(row?.error).toBeUndefined();
+  });
+});
+
 describe('reevaluate — a new rule reaches rows that were already matched (#3814)', () => {
   it('re-decides a wrongly auto-matched sibling instead of passing it through', async () => {
     // The reported bug: the user corrects one AI-matched row, the proposal
