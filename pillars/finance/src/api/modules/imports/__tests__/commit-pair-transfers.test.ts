@@ -7,7 +7,6 @@
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { coherentType } from '../../../../db/__tests__/coherent-type.js';
 import { freshMigratedFinanceDb } from '../../../../db/__tests__/migrated-db.js';
 import { transactions } from '../../../../db/schema.js';
 import { resolveAccountIdByName } from '../../../../db/services/account-lookup.js';
@@ -43,11 +42,7 @@ function seed(
     description: 'seed',
     accountId: resolveAccountIdByName(db, accountName),
     date: '2026-07-01',
-    // A credit leg is the whole point of these fixtures, and `purchase` — the
-    // service default — is refused on one (POPS-2685). Every case that cares
-    // which type a row carries still overrides it; these assert on the type
-    // pairing WRITES, not the one it started from.
-    type: coherentType(amountCents),
+    type: 'transfer',
     ...overrides,
     amountCents,
   });
