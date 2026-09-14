@@ -17,7 +17,12 @@ import {
   type CreateTransactionInput,
   type TransactionRow,
 } from '../transactions.js';
-import { findPairCandidates, linkTransferPair, unlinkTransferPair } from '../transfer-pairs.js';
+import {
+  findPairCandidates,
+  linkTransferPair,
+  listUnpairedTransactionIds,
+  unlinkTransferPair,
+} from '../transfer-pairs.js';
 
 import type { FinanceDb } from '../internal.js';
 
@@ -48,6 +53,28 @@ function seed(
     amountCents,
   });
 }
+
+function classifyByRule(db: FinanceDb, id: string, ruleId: string): void {
+  db.update(transactions)
+    .set({ matchType: 'learned', matchRuleId: ruleId, matchConfidence: 0.9 })
+    .where(eq(transactions.id, id))
+    .run();
+}
+
+describe('listUnpairedTransactionIds', () => {
+  it('lists every unlinked row, rule-classified or not, and no linked one (POPS-3939)', () => {
+    const db = freshDb();
+    const plain = seed(db, 'Amex', { amountCents: -5000 });
+    const ruled = seed(db, 'Bendigo', { amountCents: 5000 });
+    classifyByRule(db, ruled.id, 'r1');
+    const linked = seed(db, 'ING', { amountCents: -7000 });
+    db.update(transactions)
+      .set({ relatedTransactionId: 'elsewhere' })
+      .where(eq(transactions.id, linked.id))
+      .run();
+    expect(listUnpairedTransactionIds(db).toSorted()).toEqual([plain.id, ruled.id].toSorted());
+  });
+});
 
 describe('findPairCandidates', () => {
   let db: FinanceDb;
@@ -99,17 +126,14 @@ describe('findPairCandidates', () => {
     expect(findPairCandidates(db, target, 3)).toEqual([]);
   });
 
-  it('excludes a correction-rule-classified row (rules take precedence over pairing)', () => {
+  it('includes a correction-rule-classified row (POPS-3939)', () => {
     const target = seed(db, 'Amex', { amountCents: -5000, date: '2026-07-01' });
     const ruled = seed(db, 'Bendigo', { amountCents: 5000, date: '2026-07-01' });
-    db.update(transactions)
-      .set({ matchType: 'learned', matchRuleId: 'r1', matchConfidence: 0.9 })
-      .where(eq(transactions.id, ruled.id))
-      .run();
-    expect(findPairCandidates(db, target, 3)).toEqual([]);
+    classifyByRule(db, ruled.id, 'r1');
+    expect(findPairCandidates(db, target, 3).map((row) => row.id)).toEqual([ruled.id]);
   });
 
-  it('keeps an entity-matcher / AI classified row eligible (only rules outrank pairing)', () => {
+  it('keeps an entity-matcher / AI classified row eligible', () => {
     const target = seed(db, 'Amex', { amountCents: -5000, date: '2026-07-01' });
     const aiMatched = seed(db, 'Bendigo', { amountCents: 5000, date: '2026-07-01' });
     db.update(transactions)
@@ -155,42 +179,57 @@ describe('linkTransferPair', () => {
     expect(rb.type).toBe('transfer');
   });
 
-  it('records the pairing as automatic (matchType none), never a manual override', () => {
-    const a = seed(db, 'Amex', { amountCents: -5000 });
-    const b = seed(db, 'Bendigo', { amountCents: 5000 });
-    linkTransferPair(db, a.id, b.id);
-    expect(getTransaction(db, a.id).matchType).toBe('none');
-    expect(getTransaction(db, b.id).matchType).toBe('none');
-  });
-
-  it('clears a previously-assigned entity + AI/entity-matcher provenance on an unambiguous link', () => {
-    const a = seed(db, 'Amex', { amountCents: -5000, entityId: 'e1', entityName: 'Landlord' });
-    const b = seed(db, 'Bendigo', { amountCents: 5000 });
+  it('keeps both legs entities and match provenance, writing only the link (POPS-3939)', () => {
+    const a = seed(db, 'Amex', {
+      amountCents: -5000,
+      type: 'transfer',
+      entityId: 'e-self',
+      entityName: 'Joao Miranda',
+    });
+    const b = seed(db, 'Bendigo', {
+      amountCents: 5000,
+      type: 'transfer',
+      entityId: 'e-self-2',
+      entityName: 'Joao Miranda (Bendigo)',
+    });
     db.update(transactions)
       .set({ matchType: 'ai', matchConfidence: 0.8 })
       .where(eq(transactions.id, a.id))
       .run();
+    classifyByRule(db, b.id, 'r1');
+
     expect(linkTransferPair(db, a.id, b.id)).toBe(true);
+
     const ra = getTransaction(db, a.id);
-    expect(ra.entityId).toBeNull();
-    expect(ra.entityName).toBeNull();
-    expect(ra.matchConfidence).toBeNull();
-    expect(ra.matchType).toBe('none');
+    expect(ra).toMatchObject({
+      relatedTransactionId: b.id,
+      type: 'transfer',
+      entityId: 'e-self',
+      entityName: 'Joao Miranda',
+      matchType: 'ai',
+      matchRuleId: null,
+      matchConfidence: 0.8,
+    });
+    const rb = getTransaction(db, b.id);
+    expect(rb).toMatchObject({
+      relatedTransactionId: a.id,
+      type: 'transfer',
+      entityId: 'e-self-2',
+      entityName: 'Joao Miranda (Bendigo)',
+      matchType: 'learned',
+      matchRuleId: 'r1',
+      matchConfidence: 0.9,
+    });
   });
 
-  it('refuses to link when either side is correction-rule-classified, preserving provenance', () => {
-    const a = seed(db, 'Amex', { amountCents: -5000 });
-    const b = seed(db, 'Bendigo', { amountCents: 5000 });
-    db.update(transactions)
-      .set({ matchType: 'learned', matchRuleId: 'r1', matchConfidence: 0.9 })
-      .where(eq(transactions.id, b.id))
-      .run();
-    expect(linkTransferPair(db, a.id, b.id)).toBe(false);
-    expect(getTransaction(db, a.id).relatedTransactionId).toBeNull();
-    expect(getTransaction(db, a.id).type).not.toBe('transfer');
-    const rb = getTransaction(db, b.id);
-    expect(rb.matchRuleId).toBe('r1');
-    expect(rb.relatedTransactionId).toBeNull();
+  it('links when both sides are correction-rule-classified (POPS-3939)', () => {
+    const a = seed(db, 'Amex', { amountCents: -5000, type: 'transfer' });
+    const b = seed(db, 'Bendigo', { amountCents: 5000, type: 'transfer' });
+    classifyByRule(db, a.id, 'r1');
+    classifyByRule(db, b.id, 'r2');
+    expect(linkTransferPair(db, a.id, b.id)).toBe(true);
+    expect(getTransaction(db, a.id).matchRuleId).toBe('r1');
+    expect(getTransaction(db, b.id).matchRuleId).toBe('r2');
   });
 
   it('refuses to link a fee/fee:interest leg, so a loan repayment split survives pairing untouched (POPS-2830)', () => {
@@ -253,29 +292,49 @@ describe('unlinkTransferPair', () => {
     db = freshDb();
   });
 
-  it('symmetrically clears both legs and reverts type by direction (debit->purchase, credit->income)', () => {
-    const debit = seed(db, 'Amex', { amountCents: -5000 });
-    const credit = seed(db, 'Bendigo', { amountCents: 5000 });
+  it('symmetrically clears both legs and leaves both typed transfer (POPS-3939)', () => {
+    const debit = seed(db, 'Amex', { amountCents: -5000, type: 'transfer' });
+    const credit = seed(db, 'Bendigo', { amountCents: 5000, type: 'transfer' });
     expect(linkTransferPair(db, debit.id, credit.id)).toBe(true);
 
     const updated = unlinkTransferPair(db, debit.id);
     expect(updated.relatedTransactionId).toBeNull();
-    expect(updated.type).toBe('purchase');
+    expect(updated.type).toBe('transfer');
     const rc = getTransaction(db, credit.id);
     expect(rc.relatedTransactionId).toBeNull();
-    expect(rc.type).toBe('income');
+    expect(rc.type).toBe('transfer');
   });
 
   it('unlinks the whole pair when called on the credit leg', () => {
-    const debit = seed(db, 'Amex', { amountCents: -5000 });
-    const credit = seed(db, 'Bendigo', { amountCents: 5000 });
+    const debit = seed(db, 'Amex', { amountCents: -5000, type: 'transfer' });
+    const credit = seed(db, 'Bendigo', { amountCents: 5000, type: 'transfer' });
     linkTransferPair(db, debit.id, credit.id);
 
     unlinkTransferPair(db, credit.id);
     expect(getTransaction(db, debit.id).relatedTransactionId).toBeNull();
-    expect(getTransaction(db, debit.id).type).toBe('purchase');
+    expect(getTransaction(db, debit.id).type).toBe('transfer');
     expect(getTransaction(db, credit.id).relatedTransactionId).toBeNull();
-    expect(getTransaction(db, credit.id).type).toBe('income');
+    expect(getTransaction(db, credit.id).type).toBe('transfer');
+  });
+
+  it('keeps entities and rule provenance through an unlink', () => {
+    const debit = seed(db, 'Amex', {
+      amountCents: -5000,
+      type: 'transfer',
+      entityId: 'e-self',
+      entityName: 'Joao Miranda',
+    });
+    const credit = seed(db, 'Bendigo', { amountCents: 5000, type: 'transfer' });
+    classifyByRule(db, debit.id, 'r1');
+    linkTransferPair(db, debit.id, credit.id);
+
+    expect(unlinkTransferPair(db, debit.id)).toMatchObject({
+      relatedTransactionId: null,
+      type: 'transfer',
+      entityId: 'e-self',
+      entityName: 'Joao Miranda',
+      matchRuleId: 'r1',
+    });
   });
 
   it('is a no-op that preserves the type of a row that is not part of a pair', () => {
@@ -306,7 +365,7 @@ describe('unlinkTransferPair', () => {
     unlinkTransferPair(db, a.id);
 
     expect(getTransaction(db, a.id).relatedTransactionId).toBeNull();
-    expect(getTransaction(db, a.id).type).toBe('purchase');
+    expect(getTransaction(db, a.id).type).toBe('transfer');
     // B is not paired back to A, so its (mis)pairing with C is left untouched.
     const rb = getTransaction(db, b.id);
     expect(rb.relatedTransactionId).toBe(c.id);

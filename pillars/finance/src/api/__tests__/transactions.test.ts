@@ -132,19 +132,17 @@ describe('transactions — accountId', () => {
 });
 
 describe('transactions — unlink transfer', () => {
-  it('symmetrically unlinks a paired transfer and reverts both legs by direction', async () => {
+  it('symmetrically unlinks a paired transfer and leaves both legs typed transfer (POPS-3939)', async () => {
     const debit = await client().transactions.create({
       ...base(),
       amount: -50,
+      type: 'transfer',
       accountId: idFor('Everyday'),
     });
-    // `refund`, not `base()`'s `purchase`: a positive purchase is refused at
-    // the write path (POPS-2685), and seeding a type unlink must rewrite keeps
-    // the `income` assertion below meaningful.
     const credit = await client().transactions.create({
       ...base(),
       amount: 50,
-      type: 'refund',
+      type: 'transfer',
       accountId: idFor('Bendigo'),
     });
     // Pairing is gated in prod, so arrange the linked state directly via the service.
@@ -152,11 +150,11 @@ describe('transactions — unlink transfer', () => {
 
     const result = await client().transactions.unlinkTransfer(debit.data.id);
     expect(result.data.relatedTransactionId).toBeNull();
-    expect(result.data.type).toBe('purchase');
+    expect(result.data.type).toBe('transfer');
 
     const creditAfter = await client().transactions.get(credit.data.id);
     expect(creditAfter.data.relatedTransactionId).toBeNull();
-    expect(creditAfter.data.type).toBe('income');
+    expect(creditAfter.data.type).toBe('transfer');
   });
 
   it('404s for a missing transaction', async () => {
