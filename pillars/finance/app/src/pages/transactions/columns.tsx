@@ -1,5 +1,3 @@
-import { Link2 } from 'lucide-react';
-
 import { Badge, type ColumnFilter, dateRangeFilter, SortableHeader } from '@pops/ui';
 
 import { AccountLabel } from '../../components/accounts/AccountLabel';
@@ -8,6 +6,7 @@ import { labelForType, TRANSACTION_TYPES, type TransactionType } from '../../lib
 import { AmountCell, DescriptionCell } from './cells';
 import { buildPurchaseLinkColumn } from './purchase-link/column';
 import { RowActions, type RowActionHandlers } from './RowActions';
+import { TransferLinkIndicator } from './transfer-link/TransferLinkIndicator';
 
 import type { ColumnDef } from '@tanstack/react-table';
 import type { TFunction } from 'i18next';
@@ -132,7 +131,10 @@ function buildCoreColumns(
             {typeLabels[row.original.type] ?? labelForType(row.original.type)}
           </Badge>
           {row.original.relatedTransactionId ? (
-            <Link2 className="h-3 w-3 text-muted-foreground" aria-label="Linked transfer" />
+            <TransferLinkIndicator
+              relatedTransactionId={row.original.relatedTransactionId}
+              accounts={accounts}
+            />
           ) : null}
         </div>
       ),
