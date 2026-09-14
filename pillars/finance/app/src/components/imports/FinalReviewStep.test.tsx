@@ -233,6 +233,35 @@ describe('FinalReviewStep', () => {
     expect(screen.queryByText('Failed:')).toBeNull();
   });
 
+  it('shows how many rows will commit with no merchant (POPS-3748)', () => {
+    storeState = makeStoreState({
+      confirmedTransactions: [{ id: 't1', entityId: 'ent-1' }, { id: 't2' }, { id: 't3' }],
+      processedTransactions: {
+        matched: [{ id: 'm1' }, { id: 'm2' }, { id: 'm3' }],
+        uncertain: [],
+        failed: [],
+        skipped: [],
+      },
+    });
+    render(renderStep());
+    const label = screen.getByText('No merchant:');
+    expect(label.nextElementSibling).toHaveTextContent('2');
+  });
+
+  it('omits the no-merchant line when every row has one', () => {
+    storeState = makeStoreState({
+      confirmedTransactions: [{ id: 't1', entityId: 'ent-1' }],
+      processedTransactions: {
+        matched: [{ id: 'm1' }],
+        uncertain: [],
+        failed: [],
+        skipped: [],
+      },
+    });
+    render(renderStep());
+    expect(screen.queryByText('No merchant:')).toBeNull();
+  });
+
   it('names the account duplicates were matched against, only when some were skipped (POPS-2820)', () => {
     storeState = makeStoreState({
       confirmedTransactions: Array.from({ length: 3 }, (_, i) => ({ id: `t${i}` })),

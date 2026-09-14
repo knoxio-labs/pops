@@ -37,6 +37,7 @@ export interface ReviewTabBaseProps {
     transactionType?: TransactionType
   ) => void;
   onAcceptAiSuggestion: (t: ProcessedTransaction) => void;
+  onLeaveUnassigned: (t: ProcessedTransaction, transactionType?: TransactionType) => void;
   onAcceptAll: (transactions: ProcessedTransaction[]) => void;
   onCreateAndAssignAll: (
     transactions: ProcessedTransaction[],
@@ -101,6 +102,7 @@ export function GroupedView({
           onBulkEntitySelect={props.onBulkEntitySelect}
           onCreateEntityWithName={props.onCreateEntityWithName}
           onAcceptAiSuggestion={props.onAcceptAiSuggestion}
+          onLeaveUnassigned={props.onLeaveUnassigned}
           onEdit={props.onEdit}
           editingTransaction={props.editingTransaction}
           onSaveEdit={props.onSaveEdit}
@@ -139,6 +141,7 @@ export function ListView({
             onEntitySelect={props.onEntitySelect}
             onCreateEntityWithName={props.onCreateEntityWithName}
             onAcceptAiSuggestion={props.onAcceptAiSuggestion}
+            onLeaveUnassigned={props.onLeaveUnassigned}
             onEdit={props.onEdit}
             entities={props.entities}
             entityVerification={props.entityVerification}

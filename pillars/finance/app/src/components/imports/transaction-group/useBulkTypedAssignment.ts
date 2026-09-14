@@ -25,6 +25,7 @@ interface UseBulkTypedAssignmentArgs {
     entityName: string,
     transactionType?: TransactionType
   ) => void;
+  onLeaveUnassigned: (transaction: ProcessedTransaction, transactionType?: TransactionType) => void;
   onClose: () => void;
 }
 
@@ -34,7 +35,14 @@ interface UseBulkTypedAssignmentArgs {
  * transaction in the group once one is chosen (POPS-2754).
  */
 export function useBulkTypedAssignment(args: UseBulkTypedAssignmentArgs) {
-  const { group, onBulkEntitySelect, onEntitySelect, onCreateAndAssignAll, onClose } = args;
+  const {
+    group,
+    onBulkEntitySelect,
+    onEntitySelect,
+    onCreateAndAssignAll,
+    onLeaveUnassigned,
+    onClose,
+  } = args;
   const forceType = group.transactions.some((t) => needsTransactionType(t));
 
   const applyAssignment = (
@@ -49,14 +57,23 @@ export function useBulkTypedAssignment(args: UseBulkTypedAssignmentArgs) {
     }
   };
 
+  /** Loops the per-row action: unlike a pick, there is no bulk store write for this. */
+  const applyLeaveUnassigned = (transactionType?: TransactionType) => {
+    for (const t of group.transactions) {
+      onLeaveUnassigned(t, needsTransactionType(t) ? transactionType : undefined);
+    }
+  };
+
   const pendingAssignment = usePendingTypedAssignment((assignment, chosenType) => {
     if (assignment.kind === 'select') {
       applyAssignment(assignment.entityId, assignment.entityName, chosenType);
-    } else {
+    } else if (assignment.kind === 'create') {
       onCreateAndAssignAll(group.transactions, assignment.entityName, chosenType);
+    } else {
+      applyLeaveUnassigned(chosenType);
     }
     onClose();
   });
 
-  return { forceType, applyAssignment, ...pendingAssignment };
+  return { forceType, applyAssignment, applyLeaveUnassigned, ...pendingAssignment };
 }

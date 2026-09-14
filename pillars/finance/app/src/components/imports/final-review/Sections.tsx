@@ -86,6 +86,8 @@ export interface TxnBreakdown {
   manual: number;
   skipped: number;
   total: number;
+  /** Rows committing with no merchant. */
+  noMerchant: number;
 }
 
 /**
@@ -128,6 +130,12 @@ export function TransactionsSection({
           <div className="flex justify-between">
             <span className="text-muted-foreground">Skipped:</span>
             <span className="font-medium">{txnBreakdown.skipped}</span>
+          </div>
+        )}
+        {txnBreakdown.noMerchant > 0 && (
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">No merchant:</span>
+            <span className="font-medium">{txnBreakdown.noMerchant}</span>
           </div>
         )}
       </div>

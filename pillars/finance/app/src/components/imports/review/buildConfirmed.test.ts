@@ -83,10 +83,12 @@ describe('buildConfirmedTransactions', () => {
     expect(confirmed?.entityId).toBeUndefined();
   });
 
-  it('drops a matched row missing both entityId and entityName (no provenance to persist)', () => {
-    const result = buildConfirmedTransactions([matched({ entity: { matchType: 'exact' } })]);
+  it('keeps a matched row with no entity — a purchase left unassigned commits (POPS-3748)', () => {
+    const result = buildConfirmedTransactions([matched({ entity: { matchType: 'none' } })]);
 
-    expect(result).toHaveLength(0);
+    expect(result).toHaveLength(1);
+    expect(result[0]?.entityId).toBeUndefined();
+    expect(result[0]?.entityName).toBeUndefined();
   });
 
   it('keeps an entity-optional credit type (loan) with no entity — not silently dropped (#3607)', () => {
@@ -122,9 +124,24 @@ describe('buildConfirmedTransactions', () => {
     expect(confirmed?.tags).toEqual(['venue:takeaway', 'contains:food', 'contains:alcohol']);
   });
 
-  it('still drops a refund with no entity (merchant transactions require a payee)', () => {
+  it('keeps a refund with no entity — left unassigned commits like any other type (POPS-3748)', () => {
     const result = buildConfirmedTransactions([
       matched({ transactionType: 'refund', entity: { matchType: 'none' } }),
+    ]);
+
+    expect(result).toHaveLength(1);
+  });
+
+  it('still drops a refund whose entity id is a pending:contact placeholder (POPS-2692)', () => {
+    const result = buildConfirmedTransactions([
+      matched({
+        transactionType: 'refund',
+        entity: {
+          entityId: 'pending:contact:4c42ebf6-f6b7-4ce5-91ab-70ac3645ecbd',
+          entityName: 'Apple',
+          matchType: 'learned',
+        },
+      }),
     ]);
 
     expect(result).toHaveLength(0);
@@ -209,20 +226,20 @@ describe('buildConfirmedTransactions — pre-accept meets the single-valued face
 });
 
 describe('partitionConfirmable (#3765 — dropped rows are surfaced, not lost)', () => {
-  it('returns a dropped entity-required row instead of silently discarding it', () => {
-    const droppable = matched({ transactionType: 'purchase', entity: { matchType: 'exact' } });
-    const { confirmed, dropped } = partitionConfirmable([droppable]);
+  it('keeps a purchase with no entity confirmed — left unassigned, it is not dropped (POPS-3748)', () => {
+    const unassigned = matched({ transactionType: 'purchase', entity: { matchType: 'none' } });
+    const { confirmed, dropped } = partitionConfirmable([unassigned]);
 
-    expect(confirmed).toHaveLength(0);
-    expect(dropped).toEqual([droppable]);
+    expect(confirmed).toEqual([unassigned]);
+    expect(dropped).toHaveLength(0);
   });
 
-  it('treats an unset transaction type with no entity as droppable (requiresEntity default)', () => {
+  it('keeps an unset transaction type with no entity confirmed (requiresEntity default, POPS-3748)', () => {
     const untyped = matched({ transactionType: undefined, entity: { matchType: 'none' } });
     const { confirmed, dropped } = partitionConfirmable([untyped]);
 
-    expect(confirmed).toHaveLength(0);
-    expect(dropped).toEqual([untyped]);
+    expect(confirmed).toEqual([untyped]);
+    expect(dropped).toHaveLength(0);
   });
 
   /**
@@ -269,7 +286,15 @@ describe('partitionConfirmable (#3765 — dropped rows are surfaced, not lost)',
   it('partition is disjoint and exhaustive over the input, and confirmed matches the commit filter', () => {
     const rows = [
       matched({ checksum: 'a' }),
-      matched({ checksum: 'b', transactionType: 'purchase', entity: { matchType: 'exact' } }),
+      matched({
+        checksum: 'b',
+        transactionType: 'purchase',
+        entity: {
+          entityId: 'pending:contact:4c42ebf6-f6b7-4ce5-91ab-70ac3645ecbd',
+          entityName: 'Placeholder',
+          matchType: 'learned',
+        },
+      }),
       matched({ checksum: 'c', transactionType: 'loan', entity: { matchType: 'none' } }),
       matched({ checksum: 'd', transactionType: 'refund', entity: { matchType: 'none' } }),
     ];
@@ -390,8 +415,22 @@ describe('dropReason — an untyped credit is never committed as spend (POPS-275
     expect(dropReason(matched())).toBeNull();
   });
 
-  it('reports the missing merchant, not the missing type, on an untyped debit', () => {
-    expect(dropReason(matched({ entity: { matchType: 'none' } }))).toBe('entity');
+  it('commits an untyped debit with no merchant', () => {
+    expect(dropReason(matched({ entity: { matchType: 'none' } }))).toBeNull();
+  });
+
+  it('still reports a placeholder merchant, not a missing type, on an untyped debit (POPS-2692)', () => {
+    expect(
+      dropReason(
+        matched({
+          entity: {
+            entityId: 'pending:contact:4c42ebf6-f6b7-4ce5-91ab-70ac3645ecbd',
+            entityName: 'Placeholder',
+            matchType: 'learned',
+          },
+        })
+      )
+    ).toBe('entity');
   });
 
   it('keeps the untyped credit out of the commit payload and in the dropped list', () => {

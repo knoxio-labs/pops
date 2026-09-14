@@ -75,6 +75,7 @@ function useDerivedCounts(
       manual: processedTransactions.failed.length,
       skipped: processedTransactions.skipped.length,
       total: confirmedTransactions.length,
+      noMerchant: confirmedTransactions.filter((t) => !t.entityId).length,
     }),
     [processedTransactions, confirmedTransactions]
   );

@@ -40,6 +40,7 @@ function renderGroup(overrides: Partial<Parameters<typeof TransactionGroup>[0]> 
       onBulkEntitySelect={vi.fn()}
       onCreateEntityWithName={vi.fn()}
       onAcceptAiSuggestion={vi.fn()}
+      onLeaveUnassigned={vi.fn()}
       onEdit={vi.fn()}
       entities={[
         { id: 'ent-1', name: 'Bunnings Warehouse' },

@@ -42,6 +42,7 @@ function renderTab(transactions: ProcessedTransaction[], overrides: Partial<Matc
     onBulkEntitySelect: vi.fn(),
     onCreateEntityWithName: vi.fn(),
     onAcceptAiSuggestion: vi.fn(),
+    onLeaveUnassigned: vi.fn(),
     onAcceptAll: vi.fn(),
     onCreateAndAssignAll: vi.fn(),
     onEdit: vi.fn(),
@@ -162,7 +163,7 @@ describe('MatchedTab (POPS-2448)', () => {
       'WOOLWORTHS 1',
     ]);
     expect(cards[0]).toHaveAttribute('data-blocked', 'entity');
-    expect(cards[0]).toHaveTextContent("Won't be imported: needs a merchant");
+    expect(cards[0]).toHaveTextContent("Won't be imported: still points at a placeholder contact");
     expect(cards[1]).not.toHaveAttribute('data-blocked');
   });
 

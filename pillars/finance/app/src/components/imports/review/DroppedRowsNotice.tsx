@@ -33,11 +33,13 @@ function DroppedRow({ transaction }: { transaction: ProcessedTransaction }) {
 }
 
 /**
- * Non-blocking notice that some matched rows will not be imported: they need a
- * merchant entity (a `purchase`/`refund` or unset-type row with no resolved
- * entity), or they are credits nobody has typed, which the pillar refuses to
- * store rather than booking as spend (POPS-2754). The rows stay visible and
- * fixable in the Matched tab, so the drop is informed, not silent (#3765).
+ * Non-blocking notice that some matched rows will not be imported: they still
+ * carry a placeholder (`pending:contact:*`) merchant a correction rule wrote
+ * when contacts could not be reached (POPS-2692), or they are credits nobody
+ * has typed, which the pillar
+ * refuses to store rather than booking as spend (POPS-2754). The rows stay
+ * visible and fixable in the Matched tab, so the drop is informed, not silent
+ * (#3765).
  *
  * It names the offending rows and offers to jump to them because the count
  * alone was unactionable: the Matched tab is grouped and collapsed by default,
