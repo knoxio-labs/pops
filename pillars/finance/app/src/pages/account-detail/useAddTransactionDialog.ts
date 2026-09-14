@@ -37,6 +37,7 @@ export function useAddTransactionDialog(accountId: string) {
     setIsDialogOpen,
     setEditingTransaction: noop,
     setDeletingTx: noop,
+    setUnlinkingTx: noop,
   });
 
   const openDialog = () => {
