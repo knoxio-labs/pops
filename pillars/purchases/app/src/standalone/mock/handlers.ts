@@ -40,6 +40,7 @@ export const handlers: Readonly<Record<OperationKey, MockHandler>> = {
   'GET /reconcile/links': ok({ purchases: [] }),
   'POST /reconcile/links/batch': ok({ purchases: [] }),
   'POST /reconcile/confirm': acknowledged,
+  'POST /reconcile/link': ok({ ok: true, amountCents: 0 }),
   'POST /reconcile/unlink': acknowledged,
   'POST /reconcile/reject': acknowledged,
   'POST /reconcile/sweep': ok({
