@@ -12,9 +12,11 @@ import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { seededAccountId } from '../../../../db/__tests__/seeded-account.js';
 import { openFinanceDb, type FinanceDb, type OpenedFinanceDb } from '../../../../db/index.js';
 import { AiCategorizationError } from '../ai-categorizer-error.js';
 import { AiCircuitBreaker } from '../ai-circuit-breaker.js';
+import { isHeldOut } from '../eval-split.js';
 import { createAiCounters } from '../types.js';
 
 import type { TagsOnlyEntry, TagsOnlyInput } from '../ai-categorizer.js';
@@ -164,6 +166,35 @@ describe('trigger predicate', () => {
       { tag: 'venue:supermarket', source: 'ai', preAccept: false },
       { tag: 'contains:groceries', source: 'ai', preAccept: false },
     ]);
+  });
+
+  it("sends the merchant's prior tag sets with its request, and nothing else from those rows (POPS-3673)", async () => {
+    tagsOnlyBatchWithAi.mockResolvedValue(reply(null, null));
+    let priorId = 'woolies-prior-0';
+    for (let i = 1; isHeldOut(priorId); i++) priorId = `woolies-prior-${i}`;
+    opened.raw
+      .prepare(
+        `INSERT INTO transactions
+           (id, description, account_id, amount_cents, date, type, tags, checksum, last_edited_time, entity_id)
+         VALUES (?, 'WOOLIES PRIOR SECRET', ?, -1000, '2025-12-01', 'purchase', ?, ?, '2026-01-01T00:00:00Z', 'woolies')`
+      )
+      .run(
+        priorId,
+        seededAccountId(db, 'Amex'),
+        JSON.stringify(['venue:supermarket', 'contains:groceries', 'person:rosane']),
+        `checksum-${priorId}`
+      );
+
+    await resolve([
+      tagPoorRow(),
+      makeRow({ description: 'COLES 0912', entityId: 'coles', entityName: 'Coles' }),
+    ]);
+
+    const inputs = callInputs(0);
+    expect(inputs[0]?.priorTagSets).toEqual([['contains:groceries', 'venue:supermarket']]);
+    expect(inputs[1]).not.toHaveProperty('priorTagSets');
+    expect(JSON.stringify(inputs)).not.toContain('SECRET');
+    expect(JSON.stringify(inputs)).not.toContain('rosane');
   });
 
   it('pre-accepts the tags when the reply carries a confidence that meets the threshold', async () => {

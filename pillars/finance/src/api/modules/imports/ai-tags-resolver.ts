@@ -45,6 +45,7 @@ import {
   toCategorizerInput,
 } from './ai-categorizer.js';
 import { AiCircuitBreaker } from './ai-circuit-breaker.js';
+import { createPriorTagSetLoader } from './prior-tagging.js';
 import { yieldToEventLoop } from './processing-helpers.js';
 
 import type { TagsOnlyInput } from './ai-categorizer.js';
@@ -96,22 +97,28 @@ function isTagPoorSpendMatch(row: ProcessedTransaction): boolean {
  * on one, a correction rule on the other) and a prompt naming only the first
  * one's merchant would be asking about a transaction it is not showing.
  */
-function groupTagPoorRows(results: (TransactionProcessResult | undefined)[]): TagGroup[] {
+function groupTagPoorRows(
+  results: (TransactionProcessResult | undefined)[],
+  priorTagSetsOf: (entityId: string) => string[][]
+): TagGroup[] {
   const groups = new Map<string, TagGroup>();
   for (const result of results) {
     const row = classifiedRow(result);
     if (!row || !isTagPoorSpendMatch(row)) continue;
-    const key = `${row.entity.entityId ?? ''}\t${normalizeDescription(row.description)}`;
+    const entityId = row.entity.entityId ?? '';
+    const key = `${entityId}\t${normalizeDescription(row.description)}`;
     const existing = groups.get(key);
     if (existing) {
       existing.rows.push(row);
       continue;
     }
+    const priorTagSets = priorTagSetsOf(entityId);
     groups.set(key, {
       request: {
         entityName: row.entity.entityName ?? '',
         input: toCategorizerInput(row),
         ...(row.transactionType === undefined ? {} : { transactionType: row.transactionType }),
+        ...(priorTagSets.length > 0 ? { priorTagSets } : {}),
       },
       rows: [row],
     });
@@ -186,7 +193,7 @@ async function resolveChunk(args: ChunkArgs): Promise<void> {
 export async function resolveTagsForMatched(args: ResolveTagsForMatchedArgs): Promise<void> {
   if (!isTagsForMatchedEnabled() || !isAiCategorizerEnabled()) return;
 
-  const groups = groupTagPoorRows(args.results);
+  const groups = groupTagPoorRows(args.results, createPriorTagSetLoader(args.db));
   if (groups.length === 0) return;
 
   const breaker = args.breaker ?? new AiCircuitBreaker();

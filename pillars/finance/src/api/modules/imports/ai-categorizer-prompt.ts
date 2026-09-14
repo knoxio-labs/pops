@@ -24,7 +24,7 @@ export const PROMPT_VERSION_CATEGORIZE_BATCH = 'categorize-batch-v4.2';
  * categorize versions so this path's cost and its accept/reject quality are
  * readable on their own rather than folded into entity categorization.
  */
-export const PROMPT_VERSION_TAGS_ONLY = 'tags-v3.2';
+export const PROMPT_VERSION_TAGS_ONLY = 'tags-v3.3';
 
 /**
  * Render the allowlisted transaction fields as the prompt's "Transaction data"
