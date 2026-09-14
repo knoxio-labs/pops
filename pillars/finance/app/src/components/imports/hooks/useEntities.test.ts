@@ -4,8 +4,8 @@
  * a page at 200, and the tail of a larger set was invisible — an existing
  * merchant looked absent and accepting it minted a duplicate.
  */
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { renderHook, waitFor } from '@testing-library/react';
+import { focusManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { createElement, type ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -122,6 +122,34 @@ describe('useEntities', () => {
       'Woolworths',
     ]);
     expect(result.current.entities?.[0]?.id).toMatch(/^temp:entity:/);
+  });
+
+  it('picks up an entity created elsewhere once the window regains focus, despite a long default staleTime', async () => {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: 5 * 60 * 1000 } },
+    });
+    const shellWrapper = ({ children }: { children: ReactNode }) =>
+      createElement(QueryClientProvider, { client }, children);
+    const { result } = renderHook(() => useEntities(), { wrapper: shellWrapper });
+    await waitFor(() => expect(result.current.entities).toHaveLength(2));
+
+    lookupResolves(
+      ['ent-coles', 'Coles'],
+      ['ent-daiane', 'Daiane Psicologa'],
+      ['ent-woolies', 'Woolworths']
+    );
+    act(() => {
+      focusManager.setFocused(false);
+      focusManager.setFocused(true);
+    });
+
+    try {
+      await waitFor(() =>
+        expect(result.current.entities?.map((e) => e.name)).toContain('Daiane Psicologa')
+      );
+    } finally {
+      focusManager.setFocused(undefined);
+    }
   });
 
   it('exposes the DB set alone, so a duplicate-name check is not fooled by pending ones', async () => {
