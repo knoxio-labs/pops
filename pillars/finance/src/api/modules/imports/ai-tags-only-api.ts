@@ -17,6 +17,7 @@ import {
   closedFacetFields,
   closedFacetOptions,
   closedFacetReplyShape,
+  sanitizePromptField,
   type TagDescriptions,
 } from '../vocabulary-prompt.js';
 import { callRawApi, parseConfidence, type ApiCallResponse } from './ai-categorizer-api.js';
@@ -43,6 +44,21 @@ export interface TagsOnlyInput {
   input: CategorizerInput;
   /** The type the ladder resolved the row to — always a spend type on this pass (POPS-3678). */
   transactionType?: string;
+  /**
+   * The distinct classified tag sets on this merchant's earlier committed
+   * transactions (POPS-3673), bounded by `loadPriorTagSets`. Absent when the
+   * merchant has none, which leaves the line exactly as it was without them.
+   */
+  priorTagSets?: string[][];
+}
+
+const PRIOR_TAGS_RULE =
+  '- "Previously tagged" lists how earlier transactions from the same merchant were tagged. It is precedent, not a constraint: classify each transaction on its own evidence, because a merchant can change what it sells.';
+
+function renderPriorTagSets(sets: readonly (readonly string[])[] | undefined): string {
+  if (sets === undefined || sets.length === 0) return '';
+  const rendered = sets.map((tags) => `[${tags.map(sanitizePromptField).join(', ')}]`);
+  return ` | Previously tagged: ${rendered.join('; ')}`;
 }
 
 /** One row's classification. No `entityName` — the merchant was given, not guessed. */
@@ -86,11 +102,12 @@ export function buildTagsOnlyPrompt(
 ): string {
   const lines = inputs
     .map(
-      ({ entityName, input, transactionType }, i) =>
-        `${i + 1}. ${buildMatchedTransactionData(entityName, input, transactionType).replaceAll('\n', ' | ')}`
+      ({ entityName, input, transactionType, priorTagSets }, i) =>
+        `${i + 1}. ${buildMatchedTransactionData(entityName, input, transactionType).replaceAll('\n', ' | ')}${renderPriorTagSets(priorTagSets)}`
     )
     .join('\n');
   const facets = closedFacetOptions(knownTags, tagDescriptions);
+  const hasPriors = inputs.some(({ priorTagSets }) => (priorTagSets?.length ?? 0) > 0);
 
   return `Given these ${inputs.length} bank transactions, each already identified as the merchant named on its line, classify each one on the tag axes below. The merchant is given — do not revise it.
 
@@ -103,7 +120,7 @@ ${closedFacetFields(facets)}
 
 Reply with a JSON array of exactly ${inputs.length} objects, one per transaction. Each object carries the number of the line it answers as "n": [{"n": 1, ${closedFacetReplyShape(facets)}, "confidence": 0.0-1.0}, ...]
 
-${TAGS_RULES}
+${TAGS_RULES}${hasPriors ? `\n${PRIOR_TAGS_RULE}` : ''}
 
 confidence rules:
 ${tagConfidenceRule('confidence')}
