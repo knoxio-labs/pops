@@ -161,6 +161,42 @@ describe('stageMappedRows', () => {
     expect(typeOf('unruled')).toBe('income');
   });
 
+  it("keeps the mapper's income on a credit whose rule sets no type, though its descriptor reads as a transfer", async () => {
+    createOrUpdateTransactionCorrection(db, {
+      descriptionPattern: 'PAYMENT THANK YOU',
+      matchType: 'contains',
+      entityId: 'entity-employer',
+      entityName: 'Employer',
+    });
+
+    const { draftId } = await stageMappedRows({
+      db,
+      contacts,
+      target: target(),
+      rows: [
+        toParsedTransaction(
+          upTransaction({
+            id: 'payroll',
+            cents: 250_000,
+            description: 'Payment Thank You Employer',
+            createdAt: '2026-09-05T09:00:00+10:00',
+          }),
+          { accountId, accountLabel: 'Up Everyday' }
+        ),
+      ],
+      balanceCents: 100,
+    });
+
+    const { matched, uncertain, failed } = readLiveDraftPayload(
+      getImportDraft(db, draftId)!
+    ).processedTransactions;
+    const row = [...matched, ...uncertain, ...failed].find(
+      (t) => t.checksum === upChecksum(accountId, 'payroll')
+    );
+    expect(row?.ruleProvenance?.pattern).toBe('PAYMENT THANK YOU');
+    expect(row?.transactionType).toBe('income');
+  });
+
   it('starts a new draft once the collecting one has been claimed', async () => {
     const first = await stageMappedRows({
       db,
