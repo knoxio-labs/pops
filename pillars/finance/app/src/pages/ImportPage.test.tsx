@@ -14,6 +14,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   accountsList: vi.fn(),
   draftsGet: vi.fn(),
+  draftsList: vi.fn(),
   draftsClaim: vi.fn(),
   draftsCreate: vi.fn(),
   draftsWrite: vi.fn(),
@@ -27,6 +28,7 @@ vi.mock('../finance-api/index.js', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../finance-api/index.js')>()),
   accountsList: (...args: unknown[]) => mocks.accountsList(...args),
   importDraftsGet: (...args: unknown[]) => mocks.draftsGet(...args),
+  importDraftsList: (...args: unknown[]) => mocks.draftsList(...args),
   importDraftsClaim: (...args: unknown[]) => mocks.draftsClaim(...args),
   importDraftsCreate: (...args: unknown[]) => mocks.draftsCreate(...args),
   importDraftsWrite: (...args: unknown[]) => mocks.draftsWrite(...args),
@@ -158,6 +160,7 @@ beforeEach(() => {
   mocks.accountsList.mockResolvedValue(
     ok({ data: [AMEX], pagination: { total: 1, limit: 500, offset: 0, hasMore: false } })
   );
+  mocks.draftsList.mockResolvedValue(ok({ data: [] }));
   mocks.draftsClaim.mockResolvedValue(ok({ data: { id: 'draft-1', state: 'open' } }));
   mocks.draftsWrite.mockResolvedValue(ok({ data: { id: 'draft-1', state: 'open' } }));
   mocks.draftsRelease.mockResolvedValue({ data: undefined, error: undefined });
@@ -263,6 +266,31 @@ describe('opening a draft', () => {
     await waitFor(() => expect(mocks.draftsClaim).toHaveBeenCalledTimes(2));
     expect(mocks.draftsClaim.mock.calls[1]?.[0]).toMatchObject({ body: { force: true } });
     await screen.findByText('Upload');
+  });
+
+  it('does not offer the draft the wizard is already on as one to take over', async () => {
+    useImportStore.setState({
+      ...initialState,
+      draftId: 'draft-1',
+      currentStep: 1,
+      rows: [{ a: '1' }],
+      headers: ['a'],
+      accountId: 'acc-amex',
+    });
+    const seen = new Date().toISOString();
+    mocks.draftsList.mockResolvedValue(
+      ok({
+        data: [
+          { ...draftOn({}), id: 'draft-1', state: 'open', ownerSeenAt: seen },
+          { ...draftOn({}), id: 'draft-2', state: 'open', ownerSeenAt: seen },
+        ],
+      })
+    );
+    renderImportPage('/finance/import?draft=draft-1');
+
+    await waitFor(() => expect(screen.getAllByTestId('pending-import-card')).toHaveLength(1));
+    fireEvent.click(screen.getByRole('button', { name: 'Take over here' }));
+    await waitFor(() => expect(locationSpy.pathname).toBe('/finance/import?draft=draft-2'));
   });
 
   it('drops a draft that is gone from the URL and starts fresh', async () => {
