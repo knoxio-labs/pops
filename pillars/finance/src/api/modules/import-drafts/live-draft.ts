@@ -109,9 +109,15 @@ async function classifyInto(
     transactions: fresh.map((row) => row.parsed),
     importBatchId: batchId,
   });
+  // A person's correction rule outranks the mapper, whose credit type is only
+  // a default ("every other credit is income"); without a rule-set type the
+  // mapper still wins over the ladder's own guesses.
   const assertType = (row: ProcessedTransaction): ProcessedTransaction => ({
     ...row,
-    transactionType: mappedType.get(row.checksum) ?? row.transactionType,
+    transactionType:
+      row.ruleProvenance !== undefined && row.transactionType !== undefined
+        ? row.transactionType
+        : (mappedType.get(row.checksum) ?? row.transactionType),
   });
   const arrived = new Set(
     [...output.matched, ...output.uncertain, ...output.failed].map((row) => row.checksum)
