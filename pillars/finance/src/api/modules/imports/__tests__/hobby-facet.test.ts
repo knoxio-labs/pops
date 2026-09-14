@@ -6,8 +6,7 @@
  * value. These cases pin the three halves of the change: the axis is offered
  * with the values the vocabulary already holds, a value it does not hold is
  * refused rather than coined, and tag coverage does not start counting a
- * missing hobby on every spend row. They also pin what stays out, so a later
- * edit cannot offer `tax:` before POPS-3685 decides it may.
+ * missing hobby on every spend row. They also pin what stays out.
  */
 import { describe, expect, it } from 'vitest';
 
@@ -60,15 +59,18 @@ describe('hobby as a classified axis', () => {
 });
 
 describe('what stays unclassified', () => {
-  it.each(['tax', 'trip', 'asset', 'enrich', 'person', 'flag'])(
+  it.each(['trip', 'asset', 'enrich', 'person', 'flag'])(
     'does not offer %s to the categorizer',
     (facet) => {
       expect(CLASSIFIED_TAG_FACETS.map((entry) => entry.facet)).not.toContain(facet);
     }
   );
 
-  it('refuses a tax value in a reply even when the vocabulary holds it', () => {
-    const { tags } = validateAiTags({ tax: ['deductible'] }, [...VOCAB, 'tax:deductible']);
+  it('refuses a trip value in a reply even when the vocabulary holds it', () => {
+    const { tags } = validateAiTags({ trip: ['hunter-valley-2026'] }, [
+      ...VOCAB,
+      'trip:hunter-valley-2026',
+    ]);
 
     expect(tags).toEqual([]);
   });
