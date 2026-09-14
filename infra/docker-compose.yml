@@ -222,6 +222,9 @@ services:
       AI_API_URL: http://ai-api:3008
       POPS_REGISTRY_ENABLED: 'true'
       # Paired-transfer matching (POPS-2753): pillars/finance/src/api/modules/transfers/pair-transfers.ts
+      # Capivara does not deploy this file: its stack is homelab-infra's
+      # hosts/capivara/stacks/pops/docker-compose.yml, so a flag set only here
+      # never reaches prod (POPS-3942).
       FINANCE_TRANSFER_PAIR_ENABLED: 'true'
       # A PATH, not the value, as for bfm and purchases. Without the key every
       # outbound leg (the contacts entity matcher, the usage rollup, the import
