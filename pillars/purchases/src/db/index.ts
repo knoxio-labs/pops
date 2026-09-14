@@ -196,6 +196,12 @@ export {
 } from './services/reconcile-writes.js';
 
 export {
+  linkChargeManually,
+  type ManualLinkOutcome,
+  type ManualLinkRequest,
+} from './services/reconcile-manual-link.js';
+
+export {
   listActiveMatchRules,
   recordMatchRule,
   type MatchRuleEvidence,

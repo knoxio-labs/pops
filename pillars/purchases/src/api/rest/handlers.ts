@@ -14,12 +14,14 @@ import { makeProductHandlers } from './product-handlers.js';
 import { makePurchaseHandlers } from './purchase-handlers.js';
 import { makeReceiptHandlers } from './receipt-handlers.js';
 import { makeReconcileHandlers, type SweepTrigger } from './reconcile-handlers.js';
+import { makeManualLinkHandler } from './reconcile-link-handler.js';
 import { makeSearchHandlers } from './search-handlers.js';
 import { makeSourceHandlers } from './source-handlers.js';
 
 import type { OpenedPurchasesDb } from '../../db/index.js';
 import type { ReceiptVision } from '../../ingest/receipt/vision.js';
 import type { MerchantResolver } from '../contacts/merchant.js';
+import type { FinanceTransactionLookup } from '../finance/client.js';
 import type { InventoryAssetCreator } from '../inventory/client.js';
 
 const server: ReturnType<typeof initServer> = initServer();
@@ -30,6 +32,8 @@ export function makePurchasesRestHandlers(deps: {
   onIngest?: () => void;
   /** Runs a sweep on demand, for `POST /reconcile/sweep`. */
   sweep?: SweepTrigger;
+  /** Reads the transaction a manual link names. Absent answers `POST /reconcile/link` with a 503. */
+  finance?: FinanceTransactionLookup;
   /** Reads photographed receipts. Null declines every upload with a 503. */
   vision: ReceiptVision | null;
   /** Names the merchant against contacts. Injectable so tests stay offline. */
@@ -45,7 +49,10 @@ export function makePurchasesRestHandlers(deps: {
       ...makeInventoryItemHandlers(deps.purchasesDb.db, deps.inventoryAssets),
     },
     receipt: makeReceiptHandlers(deps.purchasesDb.db, deps.vision, deps.onIngest, deps.merchant),
-    reconcile: makeReconcileHandlers(deps.purchasesDb.db, deps.sweep),
+    reconcile: {
+      ...makeReconcileHandlers(deps.purchasesDb.db, deps.sweep),
+      link: makeManualLinkHandler(deps.purchasesDb.db, deps.finance),
+    },
     search: makeSearchHandlers(deps.purchasesDb.db),
     source: makeSourceHandlers(deps.purchasesDb.db),
   });

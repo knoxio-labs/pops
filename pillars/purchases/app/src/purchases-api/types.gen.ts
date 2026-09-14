@@ -2487,6 +2487,58 @@ export type ReconcileConfirmResponses = {
 
 export type ReconcileConfirmResponse = ReconcileConfirmResponses[keyof ReconcileConfirmResponses];
 
+export type ReconcileLinkData = {
+  /**
+   * Body
+   */
+  body?: {
+    amountCents?: number;
+    chargeId: string;
+    transactionUri: string;
+  };
+  path?: never;
+  query?: never;
+  url: '/reconcile/link';
+};
+
+export type ReconcileLinkErrors = {
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code?: string;
+    message: string;
+  };
+};
+
+export type ReconcileLinkError = ReconcileLinkErrors[keyof ReconcileLinkErrors];
+
+export type ReconcileLinkResponses = {
+  /**
+   * 200
+   */
+  200: {
+    amountCents: number;
+    ok: true;
+  };
+};
+
+export type ReconcileLinkResponse = ReconcileLinkResponses[keyof ReconcileLinkResponses];
+
 export type ReconcileLinksData = {
   body?: never;
   path?: never;

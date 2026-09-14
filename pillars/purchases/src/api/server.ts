@@ -67,6 +67,8 @@ const purchasesDb = openPurchasesDb(resolvePurchasesSqlitePath());
 // that do each say `no-credential` instead of degrading into `unavailable`.
 configurePurchasesServerSdk();
 
+const finance = createFinanceClient();
+
 /**
  * The reconciliation triggers.
  *
@@ -78,7 +80,7 @@ configurePurchasesServerSdk();
  */
 const sweepRunner = createSweepRunner({
   db: purchasesDb.db,
-  finance: createFinanceClient(),
+  finance,
   defaultWindowDays: DEFAULT_SETTLEMENT_WINDOW_DAYS,
   // Overridable so a smoke test does not wait a quarter of an hour for the
   // first tick. Absent in production, where the module defaults apply.
@@ -133,6 +135,7 @@ const app = createPurchasesApiApp({
   // The explicit trigger. Shares the runner's gate, so a manual sweep
   // cannot run alongside a scheduled one and tear down its work.
   sweep: () => sweepRunner.runOnce(),
+  finance,
 });
 
 const server = app.listen(port, () => {

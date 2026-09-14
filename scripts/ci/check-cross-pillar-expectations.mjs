@@ -166,6 +166,16 @@ export const EXPECTATIONS = [
   },
   {
     consumer: 'purchases',
+    producer: 'finance',
+    operationId: 'transactions.get',
+    path: '/transactions/{id}',
+    method: 'get',
+    query: [],
+    pathParams: ['id'],
+    usedBy: 'pillars/purchases/src/api/finance/client.ts',
+  },
+  {
+    consumer: 'purchases',
     producer: 'inventory',
     operationId: 'items.get',
     path: '/items/{id}',

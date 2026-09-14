@@ -106,7 +106,7 @@ function sameCurrency(left: string, right: string): boolean {
  *    was paid abroad.
  */
 export function comparableAmountCents(
-  charge: SolvableCharge,
+  charge: Pick<SolvableCharge, 'currency'>,
   transaction: SolvableTransaction
 ): number | null {
   if (sameCurrency(charge.currency, transaction.settlementCurrency)) {

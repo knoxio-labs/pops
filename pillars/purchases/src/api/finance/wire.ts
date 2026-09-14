@@ -121,6 +121,11 @@ export const FinanceListResponseSchema = z.object({
   }),
 });
 
+/** Finance's `GET /transactions/:id` envelope. */
+export const FinanceTransactionGetResponseSchema = z.object({
+  data: FinanceTransactionWireSchema,
+});
+
 /**
  * A transaction as the reconciliation ladder consumes it: integer cents,
  * and a `pops://` URI ready to store on a charge link. Deliberately has no

@@ -128,6 +128,25 @@ const LinkDecisionBodySchema = z.object({
 });
 
 /**
+ * A link a human states, for a charge the sweep could not or did not match.
+ *
+ * `amountCents` is a positive magnitude in the charge's currency; the stored
+ * link takes its sign from the charge. Omitted, it is as much as both the
+ * charge and the transaction still leave unclaimed by confirmed links.
+ */
+export const ManualLinkBodySchema = z.object({
+  chargeId: z.string().trim().min(1),
+  transactionUri: FinanceTransactionUriSchema,
+  amountCents: z.int().positive().optional(),
+});
+
+/** The signed amount the link was written with. */
+export const ManualLinkResultSchema = z.object({
+  ok: z.literal(true),
+  amountCents: CentsSchema,
+});
+
+/**
  * What a confirm did beyond pinning.
  *
  * Null `matchRuleId` is a normal outcome, not a failure: the transaction's
@@ -199,6 +218,29 @@ export const purchasesReconcileContract = c.router({
     body: LinkDecisionBodySchema,
     responses: { 200: ConfirmResultSchema, 404: ErrorBodySchema },
     summary: 'Pin a link and learn the merchant descriptor behind it',
+  },
+  /**
+   * The only route that creates a link. `confirm` pins one a sweep derived;
+   * this writes a confirmed `manual` link to a transaction the caller names,
+   * after reading that transaction from finance.
+   *
+   * 409 covers every refusal about the pairing itself: the pair is already
+   * confirmed, the transaction runs in the charge's direction or has no
+   * amount in its currency, or the amount exceeds what confirmed links leave
+   * unclaimed on either side. 503 means finance could not be read, so
+   * nothing was written.
+   */
+  link: {
+    method: 'POST',
+    path: '/reconcile/link',
+    body: ManualLinkBodySchema,
+    responses: {
+      200: ManualLinkResultSchema,
+      404: ErrorBodySchema,
+      409: ErrorBodySchema,
+      503: ErrorBodySchema,
+    },
+    summary: 'Link a charge to a finance transaction the caller names, confirmed',
   },
   unlink: {
     method: 'POST',

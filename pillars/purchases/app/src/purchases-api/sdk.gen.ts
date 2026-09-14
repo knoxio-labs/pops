@@ -78,6 +78,9 @@ import type {
   ReconcileConfirmData,
   ReconcileConfirmErrors,
   ReconcileConfirmResponses,
+  ReconcileLinkData,
+  ReconcileLinkErrors,
+  ReconcileLinkResponses,
   ReconcileLinksBatchData,
   ReconcileLinksBatchResponses,
   ReconcileLinksData,
@@ -534,6 +537,21 @@ export const reconcileConfirm = <ThrowOnError extends boolean = false>(
       },
     }
   );
+
+/**
+ * Link a charge to a finance transaction the caller names, confirmed
+ */
+export const reconcileLink = <ThrowOnError extends boolean = false>(
+  options?: Options<ReconcileLinkData, ThrowOnError>
+): RequestResult<ReconcileLinkResponses, ReconcileLinkErrors, ThrowOnError> =>
+  (options?.client ?? client).post<ReconcileLinkResponses, ReconcileLinkErrors, ThrowOnError>({
+    url: '/reconcile/link',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
 
 /**
  * Orders linked to one finance transaction, confirmed or derived

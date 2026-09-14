@@ -20,6 +20,7 @@ import {
 } from '../pillars/outbound.js';
 import {
   FinanceListResponseSchema,
+  FinanceTransactionGetResponseSchema,
   toCandidateTransaction,
   type CandidateTransaction,
 } from './wire.js';
@@ -56,8 +57,33 @@ export type FinanceRouter = {
       limit?: number;
       offset?: number;
     }) => Promise<unknown>;
+    get: (input: { id: string }) => Promise<unknown>;
   };
 };
+
+/**
+ * The result of asking finance for one transaction by id.
+ *
+ * `not-found` is its own value rather than folded into `unavailable`: the
+ * first is an answer about the id the caller named, the second says nothing
+ * about it, and a caller that reported both as a missing transaction would
+ * tell an operator their id is wrong during an outage.
+ */
+export type TransactionFetch =
+  | { readonly kind: 'ok'; readonly transaction: CandidateTransaction }
+  | { readonly kind: 'not-found' }
+  | { readonly kind: 'unavailable'; readonly reason: string };
+
+/**
+ * Reads a single finance transaction.
+ *
+ * Separate from {@link FinanceClient} because only a manual link needs it:
+ * that decision names a transaction no sweep proposed, so there is no stored
+ * descriptor or amount to check the claim against.
+ */
+export interface FinanceTransactionLookup {
+  getTransaction(id: string): Promise<TransactionFetch>;
+}
 
 /**
  * The result of asking finance for candidates.
@@ -123,7 +149,7 @@ export function createFinanceClient(
   handleFactory: FinanceHandleFactory = () =>
     credentialled(FINANCE_PILLAR_ID, () => pillar<FinanceRouter>(FINANCE_PILLAR_ID)),
   options: FinanceClientOptions = {}
-): FinanceClient {
+): FinanceClient & FinanceTransactionLookup {
   const maxPages = options.maxPages ?? MAX_PAGES;
   return {
     fetchCandidates(query: CandidateQuery): Promise<CandidateFetch> {
@@ -133,7 +159,31 @@ export function createFinanceClient(
       }
       return pageThroughTransactions(handle, query, maxPages);
     },
+    async getTransaction(id: string): Promise<TransactionFetch> {
+      const handle = handleFactory();
+      if (handle === null) return { kind: 'unavailable', reason: NO_CREDENTIAL_REASON };
+      return readTransaction(await handle.transactions.get({ id }));
+    },
   };
+}
+
+function readTransaction(result: CallResult<unknown>): TransactionFetch {
+  if (result.kind === 'not-found') return { kind: 'not-found' };
+  if (!isOk(result)) {
+    if (result.kind === UNAUTHORIZED_REASON) {
+      console.error(credentialRejectedMessage(FINANCE_PILLAR_ID, 'transactions.get'));
+    }
+    return { kind: 'unavailable', reason: result.kind };
+  }
+
+  const parsed = FinanceTransactionGetResponseSchema.safeParse(result.value);
+  if (!parsed.success) {
+    console.warn(
+      `[finance] transactions.get returned a shape this pillar cannot read: ${parsed.error.message}`
+    );
+    return { kind: 'unavailable', reason: 'contract-mismatch' };
+  }
+  return { kind: 'ok', transaction: toCandidateTransaction(parsed.data.data) };
 }
 
 async function pageThroughTransactions(

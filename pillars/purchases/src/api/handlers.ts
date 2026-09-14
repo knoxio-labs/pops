@@ -12,6 +12,7 @@ import type { PillarRegistryEntry } from '@pops/types';
 import type { OpenedPurchasesDb } from '../db/index.js';
 import type { ReceiptVision } from '../ingest/receipt/vision.js';
 import type { MerchantResolver } from './contacts/merchant.js';
+import type { FinanceTransactionLookup } from './finance/client.js';
 import type { InventoryAssetCreator } from './inventory/client.js';
 import type { SweepTrigger } from './rest/reconcile-handlers.js';
 
@@ -29,6 +30,8 @@ export interface PurchasesApiDeps {
   onIngest?: () => void;
   /** Runs a sweep on demand, for `POST /reconcile/sweep`. */
   sweep?: SweepTrigger;
+  /** Reads the transaction a manual link names, for `POST /reconcile/link`. Absent answers 503. */
+  finance?: FinanceTransactionLookup;
   /**
    * Reads photographed receipts. Null declines every upload with a 503 —
    * the drop-zone is optional, and a pillar without an API key should say
