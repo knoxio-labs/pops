@@ -7,6 +7,14 @@ internal enum InventoryExperiments {
             question:
                 "Should Inventory read as a useful dashboard or as a place with depth, rhythm, and identity?",
             subject: SurfaceID(area: "inventory", slug: "root"),
+            status: .decided(
+                variant: "grounded",
+                rationale:
+                    "Grounded, approved on the device 2026-09-16. It keeps the compact decided hierarchy, "
+                    + "uses opaque grouped surfaces for inventory state, reserves yellow for open containers, "
+                    + "and makes Browse and global controls distinct glass actions. Native iOS 27 swipe "
+                    + "interactions handle closing containers, placing in-hand items, and undoing recent work."
+            ),
             variants: [
                 DesignVariant(
                     id: "functional",
@@ -22,7 +30,7 @@ internal enum InventoryExperiments {
                     title: "Grounded",
                     note:
                         "Lived in's compact rhythm and browse grid, using opaque grouped content. "
-                        + "Yellow marks only open work; glass stays with global controls.",
+                        + "Yellow marks only open work; glass identifies Browse and global controls.",
                     surface: finishSurface {
                         InventoryGroundedDashboardView(fixture: InventoryFixtures.packing)
                     }),
