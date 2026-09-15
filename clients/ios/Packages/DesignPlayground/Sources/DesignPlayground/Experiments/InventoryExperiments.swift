@@ -5,6 +5,15 @@ internal enum InventoryExperiments {
             question:
                 "What should the Inventory tab show first so it works during a move and after it?",
             subject: SurfaceID(area: "inventory", slug: "root"),
+            status: .decided(
+                variant: "composed",
+                rationale:
+                    "Composed, decided on the device 2026-09-15. The functional hierarchy works with open "
+                    + "containers first in thin yellow-highlighted rows, Browse next, and items in hand after "
+                    + "that, while search and scan remain global glass controls at the bottom. The visual "
+                    + "execution remains deliberately undecided: the reviewer found this version too "
+                    + "functional and asked for the beauty, quality, and life of the newer Purchases flow."
+            ),
             variants: [
                 variant(
                     id: "composed",
