@@ -4,156 +4,192 @@ import SwiftUI
 internal struct InventoryGroundedDashboardView: View {
     internal let fixture: InventoryDashboardFixture
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @State private var state: InventoryGroundedDashboardState
+    @State private var moveRequest: InventoryItem?
+    @State private var selectedRoute: InventoryRoute?
+
+    internal init(fixture: InventoryDashboardFixture) {
+        self.fixture = fixture
+        _state = State(initialValue: InventoryGroundedDashboardState(fixture: fixture))
+    }
 
     internal var body: some View {
-        ScrollView {
-            LazyVStack(alignment: .leading, spacing: PopsSpacing.lg) {
+        List {
+            if !state.containers.isEmpty {
                 openContainers
-                browse
-                inHand
-                recentWork
             }
-            .padding(.horizontal, PopsSpacing.lg)
-            .padding(.bottom, PopsSpacing.xxl)
+            browse
+            if !state.inHandItems.isEmpty {
+                inHand
+            }
+            recentWork
         }
+        .inventoryGroundedListStyle()
+        .contentMargins(.top, PopsSpacing.zero, for: .scrollContent)
+        .scrollContentBackground(.hidden)
         .background(Color.popsBackground)
         .refreshable {}
         .safeAreaInset(edge: .bottom) {
             InventoryGlobalControls()
         }
-        .navigationDestination(for: InventoryRoute.self) { route in
+        .navigationDestination(item: $selectedRoute) { route in
             InventoryDestinationView(route: route)
+        }
+        .sheet(item: $moveRequest) { item in
+            InventoryMoveDestinationSheet(
+                item: item,
+                containers: state.containers,
+                onMove: { move(item) }
+            )
         }
     }
 
     private var openContainers: some View {
-        VStack(alignment: .leading, spacing: PopsSpacing.sm) {
-            PopsCard {
-                VStack(alignment: .leading, spacing: PopsSpacing.zero) {
-                    ViewThatFits(in: .horizontal) {
-                        HStack(spacing: PopsSpacing.md) {
-                            openContainerSummary
-                            Spacer(minLength: PopsSpacing.sm)
-                            InventoryGroundedSyncStatus(state: fixture.sync)
-                        }
-                        VStack(alignment: .leading, spacing: PopsSpacing.sm) {
-                            openContainerSummary
-                            InventoryGroundedSyncStatus(state: fixture.sync)
-                        }
-                    }
-                    .padding(.bottom, PopsSpacing.sm)
-
-                    PopsDivider()
-
-                    ForEach(fixture.containers) { container in
-                        NavigationLink(value: InventoryRoute.container(container.id)) {
-                            InventoryGroundedRowLabel(
-                                title: container.name,
-                                detail: "\(container.location) · \(container.updated)",
-                                symbol: "shippingbox",
-                                value: "\(container.itemCount)",
-                                tone: .popsWarning
-                            )
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityElement(children: .combine)
-
-                        if container.id != fixture.containers.last?.id {
-                            PopsDivider()
-                                .padding(.leading, PopsSize.touchTarget + PopsSpacing.md)
-                        }
-                    }
+        Section {
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: PopsSpacing.md) {
+                    openContainerSummary
+                    Spacer(minLength: PopsSpacing.sm)
+                    InventoryGroundedSyncStatus(state: fixture.sync)
+                }
+                VStack(alignment: .leading, spacing: PopsSpacing.sm) {
+                    openContainerSummary
+                    InventoryGroundedSyncStatus(state: fixture.sync)
                 }
             }
-            .overlay {
-                RoundedRectangle(cornerRadius: PopsRadius.card)
-                    .stroke(Color.popsWarning, lineWidth: PopsBorder.hairline)
-                    .accessibilityHidden(true)
+            .listRowBackground(Color.popsWarning.opacity(0.08))
+
+            ForEach(state.containers) { container in
+                Button {
+                    selectedRoute = .container(container.id)
+                } label: {
+                    InventoryGroundedRowLabel(
+                        title: container.name,
+                        detail: "\(container.location) · \(container.updated)",
+                        symbol: "shippingbox",
+                        value: "\(container.itemCount)",
+                        tone: .popsWarning
+                    )
+                }
+                .buttonStyle(.plain)
+                .accessibilityElement(children: .combine)
+                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                    Button {
+                        close(container)
+                    } label: {
+                        Label("Close", systemImage: "checkmark.circle.fill")
+                    }
+                    .tint(.popsWarning)
+                }
             }
         }
+        .listRowBackground(Color.popsSurface)
     }
 
     private var browse: some View {
-        VStack(alignment: .leading, spacing: PopsSpacing.sm) {
-            InventoryGroundedSectionHeader(title: "Browse")
-            InventoryGroundedBrowseTile(
-                title: "Items", count: "846", symbol: "cube", destination: .items,
-                prominence: .wide)
-            if dynamicTypeSize.isAccessibilitySize {
-                VStack(spacing: PopsSpacing.sm) { compactBrowseTiles }
-            } else {
-                HStack(spacing: PopsSpacing.sm) { compactBrowseTiles }
+        Section {
+            VStack(alignment: .leading, spacing: PopsSpacing.sm) {
+                InventoryGroundedBrowseTile(
+                    title: "Items", count: "846", symbol: "cube",
+                    action: { selectedRoute = .items },
+                    prominence: .wide)
+                if dynamicTypeSize.isAccessibilitySize {
+                    VStack(spacing: PopsSpacing.sm) { compactBrowseTiles }
+                } else {
+                    HStack(spacing: PopsSpacing.sm) { compactBrowseTiles }
+                }
             }
+            .listRowInsets(EdgeInsets())
+            .listRowBackground(Color.clear)
+        } header: {
+            InventoryGroundedSectionHeader(title: "Browse")
+                .textCase(nil)
         }
     }
 
     @ViewBuilder private var compactBrowseTiles: some View {
         InventoryGroundedBrowseTile(
-            title: "Containers", count: "38", symbol: "shippingbox", destination: .containers,
+            title: "Containers", count: "38", symbol: "shippingbox",
+            action: { selectedRoute = .containers },
             prominence: .compact)
         InventoryGroundedBrowseTile(
-            title: "Locations", count: "9", symbol: "house", destination: .locations,
+            title: "Locations", count: "9", symbol: "house",
+            action: { selectedRoute = .locations },
             prominence: .compact)
     }
 
-    @ViewBuilder private var inHand: some View {
-        if !fixture.inHand.isEmpty {
-            VStack(alignment: .leading, spacing: PopsSpacing.sm) {
-                InventoryGroundedSectionHeader(
-                    title: "In hand", status: "\(fixture.inHand.count) awaiting placement")
-                InventoryGroundedListPanel {
-                    VStack(spacing: PopsSpacing.zero) {
-                        ForEach(fixture.inHand) { item in
-                            NavigationLink(value: InventoryRoute.item(item.id)) {
-                                InventoryGroundedRowLabel(
-                                    title: item.name, detail: item.detail, symbol: item.symbol)
-                            }
-                            .buttonStyle(.plain)
-
-                            if item.id != fixture.inHand.last?.id {
-                                PopsDivider()
-                                    .padding(.leading, PopsSize.touchTarget + PopsSpacing.md)
-                            }
-                        }
+    private var inHand: some View {
+        Section {
+            ForEach(state.inHandItems) { item in
+                Button {
+                    selectedRoute = .item(item.id)
+                } label: {
+                    InventoryGroundedRowLabel(
+                        title: item.name, detail: item.detail, symbol: item.symbol)
+                }
+                .buttonStyle(.plain)
+                .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                    Button {
+                        moveRequest = item
+                    } label: {
+                        Label("Move to…", systemImage: "folder.fill")
                     }
+                    .tint(.popsAccent)
+                }
+                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                    Button {
+                        putBack(item)
+                    } label: {
+                        Label("Put back", systemImage: "arrow.uturn.backward.circle.fill")
+                    }
+                    .tint(.popsSuccess)
                 }
             }
+        } header: {
+            InventoryGroundedSectionHeader(
+                title: "In hand", status: "\(state.inHandItems.count) awaiting placement")
+                .textCase(nil)
         }
+        .listRowBackground(Color.popsSurface)
     }
 
     private var recentWork: some View {
-        VStack(alignment: .leading, spacing: PopsSpacing.sm) {
-            InventoryGroundedSectionHeader(
-                title: "Recent work", status: "See all", destination: .activity)
-            InventoryGroundedListPanel {
-                VStack(spacing: PopsSpacing.zero) {
-                    ForEach(fixture.activity) { activity in
-                        NavigationLink(value: InventoryRoute.activity) {
-                            InventoryGroundedRowLabel(
-                                title: activity.title,
-                                detail: activity.detail,
-                                symbol: activity.symbol)
-                        }
-                        .buttonStyle(.plain)
-
-                        if activity.id != fixture.activity.last?.id {
-                            PopsDivider()
-                                .padding(.leading, PopsSize.touchTarget + PopsSpacing.md)
-                        }
+        Section {
+            ForEach(state.activities) { activity in
+                Button {
+                    selectedRoute = .activity
+                } label: {
+                    InventoryGroundedRowLabel(
+                        title: activity.title,
+                        detail: activity.detail,
+                        symbol: activity.symbol)
+                }
+                .buttonStyle(.plain)
+                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                    Button {
+                        undo(activity)
+                    } label: {
+                        Label("Undo", systemImage: "arrow.uturn.backward.circle.fill")
                     }
+                    .tint(.popsAccent)
                 }
             }
+        } header: {
+            InventoryGroundedSectionHeader(
+                title: "Recent work", status: "See all", destination: .activity)
+                .textCase(nil)
         }
+        .listRowBackground(Color.popsSurface)
     }
 
     private var openItemCount: Int {
-        fixture.containers.reduce(0) { count, container in count + container.itemCount }
+        state.containers.reduce(0) { count, container in count + container.itemCount }
     }
 
     private var openContainerSummary: some View {
         Label {
             VStack(alignment: .leading, spacing: PopsSpacing.xs) {
-                Text("\(fixture.containers.count) open containers")
+                Text("\(state.containers.count) open containers")
                     .font(.popsHeadline)
                     .foregroundStyle(Color.popsForeground)
                 Text("\(openItemCount) items in open containers")
@@ -166,5 +202,22 @@ internal struct InventoryGroundedDashboardView: View {
                 .foregroundStyle(Color.popsWarning)
                 .frame(minWidth: PopsSize.touchTarget, minHeight: PopsSize.touchTarget)
         }
+    }
+
+    private func close(_ container: InventoryContainer) {
+        state.close(container)
+    }
+
+    private func putBack(_ item: InventoryItem) {
+        state.putBack(item)
+    }
+
+    private func move(_ item: InventoryItem) {
+        state.move(item)
+        moveRequest = nil
+    }
+
+    private func undo(_ activity: InventoryActivity) {
+        state.undo(activity)
     }
 }

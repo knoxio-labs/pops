@@ -1,6 +1,17 @@
 import DesignSystem
 import SwiftUI
 
+extension View {
+    @ViewBuilder internal func inventoryGroundedListStyle() -> some View {
+        #if os(iOS)
+            listStyle(.insetGrouped)
+                .listSectionSpacing(PopsSpacing.lg)
+        #else
+            listStyle(.inset)
+        #endif
+    }
+}
+
 internal struct InventoryGroundedSectionHeader: View {
     internal let title: String
     internal let status: String?
@@ -98,12 +109,12 @@ internal struct InventoryGroundedBrowseTile: View {
     internal let title: String
     internal let count: String
     internal let symbol: String
-    internal let destination: InventoryRoute
+    internal let action: () -> Void
     internal let prominence: InventoryGroundedBrowseProminence
     @ScaledMetric(relativeTo: .body) private var markSize = PopsSize.touchTarget
 
     internal var body: some View {
-        NavigationLink(value: destination) {
+        Button(action: action) {
             Group {
                 if prominence == .wide {
                     HStack(spacing: PopsSpacing.md) {
@@ -113,13 +124,22 @@ internal struct InventoryGroundedBrowseTile: View {
                         value
                     }
                 } else {
-                    VStack(alignment: .leading, spacing: PopsSpacing.sm) {
+                    ViewThatFits(in: .horizontal) {
                         HStack(spacing: PopsSpacing.sm) {
                             symbolView
-                            Spacer(minLength: PopsSpacing.xs)
-                            value
+                            VStack(alignment: .leading, spacing: PopsSpacing.xs) {
+                                compactTitle
+                                compactCount
+                            }
                         }
-                        titleView
+                        VStack(spacing: PopsSpacing.sm) {
+                            symbolView
+                            VStack(spacing: PopsSpacing.xs) {
+                                titleView
+                                compactCount
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
                     }
                 }
             }
@@ -147,6 +167,18 @@ internal struct InventoryGroundedBrowseTile: View {
         Text(title)
             .font(.popsHeadline)
             .foregroundStyle(Color.popsForeground)
+    }
+
+    private var compactTitle: some View {
+        titleView
+            .fixedSize(horizontal: true, vertical: false)
+    }
+
+    private var compactCount: some View {
+        Text(count)
+            .font(.popsCaption.weight(.semibold))
+            .monospacedDigit()
+            .foregroundStyle(Color.popsMutedForeground)
     }
 
     private var value: some View {
@@ -189,6 +221,48 @@ internal struct InventoryGroundedSyncStatus: View {
     @ViewBuilder internal var body: some View {
         if state != .current {
             InventorySyncCapsule(state: state)
+        }
+    }
+}
+
+internal struct InventoryMoveDestinationSheet: View {
+    internal let item: InventoryItem
+    internal let containers: [InventoryContainer]
+    internal let onMove: () -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    internal var body: some View {
+        NavigationStack {
+            List {
+                if !containers.isEmpty {
+                    Section("Open containers") {
+                        ForEach(containers) { container in
+                            Button {
+                                onMove()
+                            } label: {
+                                Label(container.name, systemImage: "shippingbox")
+                            }
+                        }
+                    }
+                }
+
+                Section("Locations") {
+                    Button {
+                        onMove()
+                    } label: {
+                        Label("Choose a location", systemImage: "house")
+                    }
+                }
+            }
+            .navigationTitle("Move \(item.name)")
+            .playgroundTitleDisplay(large: false)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+            }
         }
     }
 }
