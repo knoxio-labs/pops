@@ -21,8 +21,8 @@ internal enum InventoryExperiments {
                     id: "grounded",
                     title: "Grounded",
                     note:
-                        "The same hierarchy in opaque grouped content. Yellow marks only open work; "
-                        + "glass belongs only to the global search and scan controls.",
+                        "Lived in's compact rhythm and browse grid, using opaque grouped content. "
+                        + "Yellow marks only open work; glass stays with global controls.",
                     surface: finishSurface {
                         InventoryGroundedDashboardView(fixture: InventoryFixtures.packing)
                     }),

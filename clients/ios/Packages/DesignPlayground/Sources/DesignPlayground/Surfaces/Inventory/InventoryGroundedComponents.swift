@@ -85,8 +85,86 @@ internal struct InventoryGroundedRowLabel: View {
                 .foregroundStyle(Color.popsMutedForeground)
                 .accessibilityHidden(true)
         }
-        .padding(.vertical, PopsSpacing.sm)
+        .padding(.vertical, PopsSpacing.xs)
         .contentShape(.rect)
+    }
+}
+
+internal enum InventoryGroundedBrowseProminence: Equatable {
+    case wide, compact
+}
+
+internal struct InventoryGroundedBrowseTile: View {
+    internal let title: String
+    internal let count: String
+    internal let detail: String
+    internal let symbol: String
+    internal let destination: InventoryRoute
+    internal let prominence: InventoryGroundedBrowseProminence
+    @ScaledMetric(relativeTo: .body) private var markSize = PopsSize.touchTarget
+
+    internal var body: some View {
+        NavigationLink(value: destination) {
+            Group {
+                if prominence == .wide {
+                    HStack(spacing: PopsSpacing.md) {
+                        symbolView
+                        description
+                        Spacer(minLength: PopsSpacing.sm)
+                        value
+                    }
+                } else {
+                    VStack(alignment: .leading, spacing: PopsSpacing.sm) {
+                        HStack(spacing: PopsSpacing.sm) {
+                            symbolView
+                            Spacer(minLength: PopsSpacing.xs)
+                            value
+                        }
+                        description
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(PopsSpacing.md)
+            .background(Color.popsSurface, in: RoundedRectangle(cornerRadius: PopsRadius.card))
+            .overlay(
+                RoundedRectangle(cornerRadius: PopsRadius.card)
+                    .stroke(Color.popsSeparator, lineWidth: PopsBorder.hairline)
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
+    }
+
+    private var symbolView: some View {
+        Image(systemName: symbol)
+            .font(.popsHeadline)
+            .foregroundStyle(Color.popsForeground)
+            .frame(width: markSize, height: markSize)
+    }
+
+    private var description: some View {
+        VStack(alignment: .leading, spacing: PopsSpacing.xs) {
+            Text(title)
+                .font(.popsHeadline)
+                .foregroundStyle(Color.popsForeground)
+            Text(detail)
+                .font(.popsCaption)
+                .foregroundStyle(Color.popsMutedForeground)
+        }
+    }
+
+    private var value: some View {
+        HStack(spacing: PopsSpacing.sm) {
+            Text(count)
+                .font(.popsHeadline)
+                .monospacedDigit()
+                .foregroundStyle(Color.popsForeground)
+            Image(systemName: "chevron.forward")
+                .font(.popsCaption.weight(.semibold))
+                .foregroundStyle(Color.popsMutedForeground)
+                .accessibilityHidden(true)
+        }
     }
 }
 

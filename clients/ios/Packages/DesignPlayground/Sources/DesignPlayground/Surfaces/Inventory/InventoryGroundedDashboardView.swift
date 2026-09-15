@@ -3,10 +3,11 @@ import SwiftUI
 
 internal struct InventoryGroundedDashboardView: View {
     internal let fixture: InventoryDashboardFixture
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     internal var body: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: PopsSpacing.xl) {
+            LazyVStack(alignment: .leading, spacing: PopsSpacing.lg) {
                 openContainers
                 browse
                 inHand
@@ -26,41 +27,21 @@ internal struct InventoryGroundedDashboardView: View {
     }
 
     private var openContainers: some View {
-        VStack(alignment: .leading, spacing: PopsSpacing.md) {
-            ViewThatFits(in: .horizontal) {
-                HStack(alignment: .firstTextBaseline, spacing: PopsSpacing.sm) {
-                    Text("Open containers")
-                        .font(.popsTitle)
-                        .foregroundStyle(Color.popsForeground)
-                    Spacer(minLength: PopsSpacing.sm)
-                    InventoryGroundedSyncStatus(state: fixture.sync)
-                }
-                VStack(alignment: .leading, spacing: PopsSpacing.sm) {
-                    Text("Open containers")
-                        .font(.popsTitle)
-                        .foregroundStyle(Color.popsForeground)
-                    InventoryGroundedSyncStatus(state: fixture.sync)
-                }
-            }
-
+        VStack(alignment: .leading, spacing: PopsSpacing.sm) {
             PopsCard {
                 VStack(alignment: .leading, spacing: PopsSpacing.zero) {
-                    Label {
-                        VStack(alignment: .leading, spacing: PopsSpacing.xs) {
-                            Text("\(fixture.containers.count) open containers")
-                                .font(.popsHeadline)
-                                .foregroundStyle(Color.popsForeground)
-                            Text("\(openItemCount) items still being packed")
-                                .font(.popsCaption)
-                                .foregroundStyle(Color.popsMutedForeground)
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: PopsSpacing.md) {
+                            openContainerSummary
+                            Spacer(minLength: PopsSpacing.sm)
+                            InventoryGroundedSyncStatus(state: fixture.sync)
                         }
-                    } icon: {
-                        Image(systemName: "shippingbox.fill")
-                            .font(.popsTitle)
-                            .foregroundStyle(Color.popsWarning)
-                            .frame(minWidth: PopsSize.touchTarget, minHeight: PopsSize.touchTarget)
+                        VStack(alignment: .leading, spacing: PopsSpacing.sm) {
+                            openContainerSummary
+                            InventoryGroundedSyncStatus(state: fixture.sync)
+                        }
                     }
-                    .padding(.bottom, PopsSpacing.md)
+                    .padding(.bottom, PopsSpacing.sm)
 
                     PopsDivider()
 
@@ -84,41 +65,40 @@ internal struct InventoryGroundedDashboardView: View {
                     }
                 }
             }
-            .overlay(alignment: .leading) {
+            .overlay {
                 RoundedRectangle(cornerRadius: PopsRadius.card)
-                    .fill(Color.popsWarning)
-                    .frame(width: PopsBorder.emphasis)
+                    .stroke(Color.popsWarning, lineWidth: PopsBorder.hairline)
                     .accessibilityHidden(true)
             }
         }
     }
 
     private var browse: some View {
-        VStack(alignment: .leading, spacing: PopsSpacing.md) {
+        VStack(alignment: .leading, spacing: PopsSpacing.sm) {
             InventoryGroundedSectionHeader(title: "Browse")
-            PopsCard {
-                VStack(spacing: PopsSpacing.zero) {
-                    browseRow(
-                        title: "Items", detail: "Browse, filter, and edit items",
-                        symbol: "cube", value: "846", destination: .items)
-                    PopsDivider()
-                        .padding(.leading, PopsSize.touchTarget + PopsSpacing.md)
-                    browseRow(
-                        title: "Containers", detail: "Review open and packed groups",
-                        symbol: "shippingbox", value: "38", destination: .containers)
-                    PopsDivider()
-                        .padding(.leading, PopsSize.touchTarget + PopsSpacing.md)
-                    browseRow(
-                        title: "Locations", detail: "Find items by room or storage area",
-                        symbol: "house", value: "9", destination: .locations)
-                }
+            InventoryGroundedBrowseTile(
+                title: "Items", count: "846", detail: "Browse, filter, and edit items",
+                symbol: "cube", destination: .items, prominence: .wide)
+            if dynamicTypeSize.isAccessibilitySize {
+                VStack(spacing: PopsSpacing.sm) { compactBrowseTiles }
+            } else {
+                HStack(spacing: PopsSpacing.sm) { compactBrowseTiles }
             }
         }
     }
 
+    @ViewBuilder private var compactBrowseTiles: some View {
+        InventoryGroundedBrowseTile(
+            title: "Containers", count: "38", detail: "Review open and packed groups",
+            symbol: "shippingbox", destination: .containers, prominence: .compact)
+        InventoryGroundedBrowseTile(
+            title: "Locations", count: "9", detail: "Find by room or storage area",
+            symbol: "house", destination: .locations, prominence: .compact)
+    }
+
     @ViewBuilder private var inHand: some View {
         if !fixture.inHand.isEmpty {
-            VStack(alignment: .leading, spacing: PopsSpacing.md) {
+            VStack(alignment: .leading, spacing: PopsSpacing.sm) {
                 InventoryGroundedSectionHeader(
                     title: "In hand", status: "\(fixture.inHand.count) awaiting placement")
                 PopsCard {
@@ -142,7 +122,7 @@ internal struct InventoryGroundedDashboardView: View {
     }
 
     private var recentWork: some View {
-        VStack(alignment: .leading, spacing: PopsSpacing.md) {
+        VStack(alignment: .leading, spacing: PopsSpacing.sm) {
             InventoryGroundedSectionHeader(
                 title: "Recent work", status: "See all", destination: .activity)
             PopsCard {
@@ -170,23 +150,21 @@ internal struct InventoryGroundedDashboardView: View {
         fixture.containers.reduce(0) { count, container in count + container.itemCount }
     }
 
-    private func browseRow(
-        title: String,
-        detail: String,
-        symbol: String,
-        value: String,
-        destination: InventoryRoute
-    ) -> some View {
-        NavigationLink(value: destination) {
-            InventoryGroundedRowLabel(
-                title: title,
-                detail: detail,
-                symbol: symbol,
-                value: value,
-                tone: .popsForeground
-            )
+    private var openContainerSummary: some View {
+        Label {
+            VStack(alignment: .leading, spacing: PopsSpacing.xs) {
+                Text("\(fixture.containers.count) open containers")
+                    .font(.popsHeadline)
+                    .foregroundStyle(Color.popsForeground)
+                Text("\(openItemCount) items still being packed")
+                    .font(.popsCaption)
+                    .foregroundStyle(Color.popsMutedForeground)
+            }
+        } icon: {
+            Image(systemName: "shippingbox.fill")
+                .font(.popsTitle)
+                .foregroundStyle(Color.popsWarning)
+                .frame(minWidth: PopsSize.touchTarget, minHeight: PopsSize.touchTarget)
         }
-        .buttonStyle(.plain)
-        .accessibilityElement(children: .combine)
     }
 }
