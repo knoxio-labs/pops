@@ -40,7 +40,7 @@ internal struct InventoryLivingDashboardView: View {
                 }
             }
 
-            Text("The things still being packed, all in one place.")
+            Text("\(openItemCount) items still being packed")
                 .font(.popsSubheadline)
                 .foregroundStyle(Color.popsMutedForeground)
 
@@ -76,17 +76,21 @@ internal struct InventoryLivingDashboardView: View {
             Text("OPEN CONTAINERS")
                 .font(.popsSectionLabel)
                 .foregroundStyle(Color.popsMutedForeground)
-            Text("\(fixture.containers.count) in motion")
+            Text("\(fixture.containers.count) open containers")
                 .font(.popsAmount)
                 .foregroundStyle(Color.popsForeground)
         }
     }
 
+    private var openItemCount: Int {
+        fixture.containers.reduce(0) { count, container in count + container.itemCount }
+    }
+
     private var browse: some View {
         VStack(alignment: .leading, spacing: PopsSpacing.md) {
-            InventoryLivingSectionLabel(title: "Browse", note: "Everything has a place")
+            InventoryLivingSectionLabel(title: "Browse")
             InventoryLivingBrowseTile(
-                title: "Items", count: "846", detail: "Across your whole inventory",
+                title: "Items", count: "846", detail: "Browse, filter, and edit items",
                 symbol: "cube.fill", destination: .items, prominence: .wide)
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: PopsSpacing.md) { compactBrowseTiles }
@@ -97,17 +101,18 @@ internal struct InventoryLivingDashboardView: View {
 
     @ViewBuilder private var compactBrowseTiles: some View {
         InventoryLivingBrowseTile(
-            title: "Containers", count: "38", detail: "Open and packed",
+            title: "Containers", count: "38", detail: "Review open and packed groups",
             symbol: "shippingbox.fill", destination: .containers, prominence: .compact)
         InventoryLivingBrowseTile(
-            title: "Locations", count: "9", detail: "Rooms and storage",
+            title: "Locations", count: "9", detail: "Find items by room or storage area",
             symbol: "house.fill", destination: .locations, prominence: .compact)
     }
 
     @ViewBuilder private var inHand: some View {
         if !fixture.inHand.isEmpty {
             VStack(alignment: .leading, spacing: PopsSpacing.md) {
-                InventoryLivingSectionLabel(title: "In hand", note: "Between places")
+                InventoryLivingSectionLabel(
+                    title: "In hand", note: "\(fixture.inHand.count) awaiting placement")
                 VStack(spacing: PopsSpacing.zero) {
                     ForEach(fixture.inHand) { item in
                         InventoryLivingItemRow(item: item)

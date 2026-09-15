@@ -151,10 +151,10 @@ internal struct InventoryLivingActivityRow: View {
 
 internal struct InventoryLivingSectionLabel: View {
     internal let title: String
-    internal let note: String
+    internal let note: String?
     internal let destination: InventoryRoute?
 
-    internal init(title: String, note: String, destination: InventoryRoute? = nil) {
+    internal init(title: String, note: String? = nil, destination: InventoryRoute? = nil) {
         self.title = title
         self.note = note
         self.destination = destination
@@ -166,13 +166,13 @@ internal struct InventoryLivingSectionLabel: View {
                 .font(.popsTitle)
                 .foregroundStyle(Color.popsForeground)
             Spacer(minLength: PopsSpacing.sm)
-            if let destination {
+            if let note, let destination {
                 NavigationLink(value: destination) {
                     Text(note)
                         .font(.popsCaption.weight(.semibold))
                         .frame(minHeight: PopsSize.touchTarget)
                 }
-            } else {
+            } else if let note {
                 Text(note)
                     .font(.popsCaption)
                     .foregroundStyle(Color.popsMutedForeground)
