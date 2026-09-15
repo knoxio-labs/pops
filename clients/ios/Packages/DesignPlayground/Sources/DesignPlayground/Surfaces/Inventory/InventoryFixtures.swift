@@ -1,5 +1,3 @@
-import Foundation
-
 internal struct InventoryContainer: Identifiable, Equatable {
     internal let id: String
     internal let name: String
