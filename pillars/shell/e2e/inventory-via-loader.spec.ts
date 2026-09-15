@@ -9,8 +9,7 @@
  * page list this replaces: harmless while the bundle map mounted the whole
  * route table, a 404 on an old bookmark the moment it did not.
  */
-import { expect, test } from '@playwright/test';
-
+import { expect, test } from './fixtures/pillar-rest-guard';
 import { stubShellBoot } from './helpers/pillar-rest';
 
 test.describe('inventory — mounted by the runtime loader', () => {

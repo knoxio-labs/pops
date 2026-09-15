@@ -32,10 +32,13 @@
  *   GET /finance-api/accounts/:id        → its import status, whose `span`
  *                                          is what the overlap check reads
  *                                          (POPS-2504)
+ *   GET /contacts-api/entities           → { data:[], pagination } (account-add
+ *                                          dialog's bank picker, never opened)
+ *   GET /finance-api/currencies          → { data:[…AUD…] } (ditto, currency select)
  */
-import { expect, test } from '@playwright/test';
 import { z } from 'zod';
 
+import { expect, test } from './fixtures/pillar-rest-guard';
 import { AccountSchema, stubFinanceAccount } from './helpers/finance-accounts';
 import { stubImportDrafts } from './helpers/finance-import-drafts';
 import { fulfilWith, stubShellBoot } from './helpers/pillar-rest';
@@ -82,6 +85,39 @@ const AccountGetResponseSchema = z
   })
   .strict();
 
+/**
+ * `GET /contacts-api/entities` — contacts is a separate (Rust) pillar with no
+ * TS contract package; hand-defined from its committed OpenAPI
+ * (`pillars/contacts/openapi/contacts.openapi.json`) the same way
+ * `pillar-rest.ts` hand-defines `/pillars` and `/pillars/health`.
+ */
+const EntitiesListResponseSchema = z
+  .object({
+    data: z.array(z.record(z.string(), z.unknown())),
+    pagination: z
+      .object({ total: z.number(), limit: z.number(), offset: z.number(), hasMore: z.boolean() })
+      .strict(),
+  })
+  .strict();
+
+/** `GET /finance-api/currencies` — `financeCurrenciesContract.list` (`rest-currencies.ts`). */
+const CurrenciesListResponseSchema = z
+  .object({
+    data: z.array(
+      z
+        .object({
+          code: z.string(),
+          name: z.string(),
+          symbol: z.string().nullable(),
+          decimals: z.number().int().nonnegative(),
+          kind: z.enum(['fiat', 'points']),
+          createdAt: z.string(),
+        })
+        .strict()
+    ),
+  })
+  .strict();
+
 /** The account already holds February; the March row is what is left to import. */
 const accountGetBody = {
   data: {
@@ -121,6 +157,38 @@ async function setupMocks(page: Page): Promise<void> {
   await page.route(
     `**/finance-api/accounts/${account.id}`,
     fulfilWith(200, AccountGetResponseSchema, accountGetBody, 'accounts.get')
+  );
+  // The account picker's "add account" dialog primes its bank-entity and
+  // currency dropdowns on mount, even though this walk always picks the one
+  // already-mocked account and never opens that dialog.
+  await page.route(
+    '**/contacts-api/entities?**',
+    fulfilWith(
+      200,
+      EntitiesListResponseSchema,
+      { data: [], pagination: { total: 0, limit: 200, offset: 0, hasMore: false } },
+      'contacts.entities'
+    )
+  );
+  await page.route(
+    '**/finance-api/currencies',
+    fulfilWith(
+      200,
+      CurrenciesListResponseSchema,
+      {
+        data: [
+          {
+            code: 'AUD',
+            name: 'Australian Dollar',
+            symbol: '$',
+            decimals: 2,
+            kind: 'fiat',
+            createdAt: '2026-01-01T00:00:00.000Z',
+          },
+        ],
+      },
+      'currencies.list'
+    )
   );
 }
 

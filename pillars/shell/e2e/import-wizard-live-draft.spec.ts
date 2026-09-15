@@ -46,10 +46,14 @@
  *   POST /finance-api/imports/commit                → the commit result
  *   GET  /contacts-api/entities                     → the one known merchant
  *   GET  /finance-api/accounts                      → the one account
+ *   GET  /finance-api/tag-rules/vocabulary          → { tags:[] } (Tag Review's picker, unused here)
+ *   GET  /finance-api/tag-rules/facets              → { facets:[] } (ditto)
+ *   GET  /finance-api/transactions/suggest-tags     → { tags:[] } (re-suggest after assigning Coles)
+ *   POST /finance-api/imports/reevaluate-pending-rows → echoes the caller's own `result` back
  */
-import { expect, test } from '@playwright/test';
 import { z } from 'zod';
 
+import { expect, test } from './fixtures/pillar-rest-guard';
 import { AccountsListResponseSchema } from './helpers/finance-accounts';
 import {
   type DraftTraffic,
@@ -57,7 +61,7 @@ import {
   type LiveDraftSeed,
   stubLiveImportDraft,
 } from './helpers/finance-import-drafts';
-import { fulfilWith, stubShellBoot } from './helpers/pillar-rest';
+import { fulfilWith, json, stubShellBoot } from './helpers/pillar-rest';
 
 import type { Page } from '@playwright/test';
 
@@ -252,6 +256,38 @@ const EntityLookupResponseSchema = z
       z.object({ id: z.string(), name: z.string(), aliases: z.array(z.string()) }).strict()
     ),
     fetchedAt: z.string(),
+  })
+  .strict();
+
+/** `GET /finance-api/tag-rules/vocabulary` — `financeTagRulesContract.vocabulary` (`rest-tag-rules.ts`). */
+const TagVocabularyResponseSchema = z.object({ tags: z.array(z.string()) }).strict();
+
+/** `GET /finance-api/tag-rules/facets` — `financeTagRulesContract.facets` (`rest-tag-rules.ts`). */
+const TagFacetsResponseSchema = z
+  .object({
+    facets: z.array(
+      z.object({ facet: z.string(), kind: z.enum(['closed', 'open', 'marker']) }).strict()
+    ),
+  })
+  .strict();
+
+/**
+ * `GET /transactions/suggest-tags` — `financeTransactionsContract.suggestTags`
+ * (`rest-transactions.ts`). Only `tags` shape is pinned; nothing here asserts
+ * on a suggestion's content.
+ */
+const SuggestTagsResponseSchema = z
+  .object({
+    tags: z.array(
+      z
+        .object({
+          tag: z.string(),
+          source: z.enum(['ai', 'rule', 'entity']),
+          pattern: z.string().optional(),
+          isNew: z.boolean().optional(),
+        })
+        .strict()
+    ),
   })
   .strict();
 
@@ -519,6 +555,33 @@ async function setupMocks(page: Page): Promise<void> {
     '**/finance-api/accounts?**',
     fulfilWith(200, AccountsListResponseSchema, accountsBody, 'accounts.list')
   );
+  // Tag Review's tag picker primes its vocabulary/facets on mount; this walk
+  // makes no tag edits, so both are answered empty.
+  await page.route(
+    '**/finance-api/tag-rules/vocabulary',
+    fulfilWith(200, TagVocabularyResponseSchema, { tags: [] }, 'tagRules.vocabulary')
+  );
+  await page.route(
+    '**/finance-api/tag-rules/facets',
+    fulfilWith(200, TagFacetsResponseSchema, { facets: [] }, 'tagRules.facets')
+  );
+  // Fired after assigning the uncertain row to "Coles", to refresh its
+  // suggested-tag badges — not asserted on here (Tag Review makes no edits),
+  // so an empty suggestion list is enough.
+  await page.route(
+    /\/finance-api\/transactions\/suggest-tags\?/,
+    fulfilWith(200, SuggestTagsResponseSchema, { tags: [] }, 'transactions.suggestTags')
+  );
+  // Re-evaluates the rows this draft already holds against the just-staged
+  // pending rule. Nothing here asserts on its content — the spec's own
+  // comment notes applying a ChangeSet is local and changes no visible
+  // classification before commit — so the stub echoes the caller's own
+  // `result` back unchanged rather than re-deriving a classification that
+  // belongs to the finance pillar, not this e2e stub.
+  await page.route(/\/finance-api\/imports\/reevaluate-pending-rows$/, (route) => {
+    const body = route.request().postDataJSON() as { result: unknown };
+    return json(route, 200, { result: body.result, affectedCount: 0 });
+  });
 }
 
 test.describe('Finance — import wizard from a staged live draft (mocked)', () => {
