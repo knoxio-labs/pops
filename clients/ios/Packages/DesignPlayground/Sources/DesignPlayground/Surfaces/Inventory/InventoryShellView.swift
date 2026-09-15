@@ -56,12 +56,12 @@ internal struct InventoryShellView: View {
         NavigationLink(value: InventoryRoute.scan) {
             Image(systemName: "barcode.viewfinder")
                 .font(.popsTitle)
+                .foregroundStyle(Color.popsForeground)
                 .frame(width: scanDiameter, height: scanDiameter)
         }
-        .playgroundProminentGlassButton()
-        .buttonBorderShape(.circle)
+        .playgroundGlass(in: Circle())
         .padding(.trailing, PopsSpacing.lg)
-        .padding(.top, PopsSpacing.sm)
+        .padding(.bottom, PopsSpacing.md)
         .accessibilityLabel("Scan an item or container label")
     }
 
