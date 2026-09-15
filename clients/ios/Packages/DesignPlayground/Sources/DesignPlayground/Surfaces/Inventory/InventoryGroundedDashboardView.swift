@@ -1,12 +1,19 @@
 import DesignSystem
 import SwiftUI
 
+private enum InventoryGroundedSwipeRow: Hashable {
+    case container(String)
+    case inHand(String)
+    case activity(String)
+}
+
 internal struct InventoryGroundedDashboardView: View {
     internal let fixture: InventoryDashboardFixture
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var state: InventoryGroundedDashboardState
     @State private var moveRequest: InventoryItem?
     @State private var selectedRoute: InventoryRoute?
+    @State private var activeSwipeRow: InventoryGroundedSwipeRow?
 
     internal init(fixture: InventoryDashboardFixture) {
         self.fixture = fixture
@@ -47,7 +54,7 @@ internal struct InventoryGroundedDashboardView: View {
     }
 
     private var openContainers: some View {
-        PopsCard {
+        InventoryGroundedOpenPanel {
             VStack(alignment: .leading, spacing: PopsSpacing.zero) {
                 ViewThatFits(in: .horizontal) {
                     HStack(spacing: PopsSpacing.md) {
@@ -75,9 +82,16 @@ internal struct InventoryGroundedDashboardView: View {
                         )
                     }
                     .buttonStyle(.plain)
-                    .inventoryGroundedSwipeRow()
+                    .inventoryGroundedSwipeRow(
+                        isActive: activeSwipeRow == .container(container.id))
                     .accessibilityElement(children: .combine)
-                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                    .inventoryGroundedSwipeActions(
+                        edge: .trailing,
+                        onPresentationChanged: {
+                            updateSwipePresentation(
+                                .container(container.id), isPresented: $0)
+                        }
+                    ) {
                         Button {
                             close(container)
                         } label: {
@@ -92,11 +106,6 @@ internal struct InventoryGroundedDashboardView: View {
                     }
                 }
             }
-        }
-        .overlay {
-            RoundedRectangle(cornerRadius: PopsRadius.card)
-                .stroke(Color.popsWarning, lineWidth: PopsBorder.hairline)
-                .accessibilityHidden(true)
         }
     }
 
@@ -141,8 +150,14 @@ internal struct InventoryGroundedDashboardView: View {
                                 title: item.name, detail: item.detail, symbol: item.symbol)
                         }
                         .buttonStyle(.plain)
-                        .inventoryGroundedSwipeRow()
-                        .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                        .inventoryGroundedSwipeRow(
+                            isActive: activeSwipeRow == .inHand(item.id))
+                        .inventoryGroundedSwipeActions(
+                            edge: .leading,
+                            onPresentationChanged: {
+                                updateSwipePresentation(.inHand(item.id), isPresented: $0)
+                            }
+                        ) {
                             Button {
                                 moveRequest = item
                             } label: {
@@ -150,7 +165,12 @@ internal struct InventoryGroundedDashboardView: View {
                             }
                             .tint(.popsAccent)
                         }
-                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        .inventoryGroundedSwipeActions(
+                            edge: .trailing,
+                            onPresentationChanged: {
+                                updateSwipePresentation(.inHand(item.id), isPresented: $0)
+                            }
+                        ) {
                             Button {
                                 putBack(item)
                             } label: {
@@ -185,8 +205,14 @@ internal struct InventoryGroundedDashboardView: View {
                                 symbol: activity.symbol)
                         }
                         .buttonStyle(.plain)
-                        .inventoryGroundedSwipeRow()
-                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        .inventoryGroundedSwipeRow(
+                            isActive: activeSwipeRow == .activity(activity.id))
+                        .inventoryGroundedSwipeActions(
+                            edge: .trailing,
+                            onPresentationChanged: {
+                                updateSwipePresentation(.activity(activity.id), isPresented: $0)
+                            }
+                        ) {
                             Button {
                                 undo(activity)
                             } label: {
@@ -242,5 +268,16 @@ internal struct InventoryGroundedDashboardView: View {
 
     private func undo(_ activity: InventoryActivity) {
         state.undo(activity)
+    }
+
+    private func updateSwipePresentation(
+        _ row: InventoryGroundedSwipeRow,
+        isPresented: Bool
+    ) {
+        if isPresented {
+            activeSwipeRow = row
+        } else if activeSwipeRow == row {
+            activeSwipeRow = nil
+        }
     }
 }

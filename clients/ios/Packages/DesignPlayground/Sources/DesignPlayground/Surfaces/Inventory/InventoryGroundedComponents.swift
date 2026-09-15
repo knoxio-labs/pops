@@ -10,13 +10,31 @@ extension View {
         }
     }
 
-    internal func inventoryGroundedSwipeRow() -> some View {
+    @ViewBuilder internal func inventoryGroundedSwipeActions<Actions: View>(
+        edge: HorizontalEdge,
+        onPresentationChanged: @escaping (Bool) -> Void,
+        @ViewBuilder actions: () -> Actions
+    ) -> some View {
+        if #available(iOS 27.0, macOS 27.0, *) {
+            swipeActions(
+                edge: edge,
+                allowsFullSwipe: false,
+                content: actions,
+                onPresentationChanged: onPresentationChanged
+            )
+        } else {
+            swipeActions(edge: edge, allowsFullSwipe: false, content: actions)
+        }
+    }
+
+    internal func inventoryGroundedSwipeRow(isActive: Bool) -> some View {
         frame(maxWidth: .infinity)
             .background(
-                Color.popsSurface,
+                isActive ? Color.popsSurface : Color.clear,
                 in: RoundedRectangle(cornerRadius: PopsRadius.card)
             )
             .containerShape(RoundedRectangle(cornerRadius: PopsRadius.card))
+            .zIndex(isActive ? 1 : 0)
     }
 }
 
@@ -142,11 +160,7 @@ internal struct InventoryGroundedBrowseTile: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(PopsSpacing.md)
-            .background(Color.popsSurface, in: RoundedRectangle(cornerRadius: PopsRadius.card))
-            .overlay(
-                RoundedRectangle(cornerRadius: PopsRadius.card)
-                    .stroke(Color.popsSeparator, lineWidth: PopsBorder.hairline)
-            )
+            .playgroundGlass(in: RoundedRectangle(cornerRadius: PopsRadius.card))
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
@@ -201,11 +215,32 @@ internal struct InventoryGroundedListPanel<Content: View>: View {
             .padding(.horizontal, PopsSpacing.md)
             .padding(.vertical, PopsSpacing.sm)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.popsSurface, in: RoundedRectangle(cornerRadius: PopsRadius.card))
-            .overlay(
+            .background {
+                RoundedRectangle(cornerRadius: PopsRadius.card)
+                    .fill(Color.popsSurface)
                 RoundedRectangle(cornerRadius: PopsRadius.card)
                     .stroke(Color.popsSeparator, lineWidth: PopsBorder.hairline)
-            )
+            }
+    }
+}
+
+internal struct InventoryGroundedOpenPanel<Content: View>: View {
+    private let content: Content
+
+    internal init(@ViewBuilder content: () -> Content) {
+        self.content = content()
+    }
+
+    internal var body: some View {
+        content
+            .padding(PopsSpacing.lg)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background {
+                RoundedRectangle(cornerRadius: PopsRadius.card)
+                    .fill(Color.popsSurface)
+                RoundedRectangle(cornerRadius: PopsRadius.card)
+                    .stroke(Color.popsWarning, lineWidth: PopsBorder.hairline)
+            }
     }
 }
 
