@@ -75,6 +75,7 @@ internal struct InventoryGroundedDashboardView: View {
                         )
                     }
                     .buttonStyle(.plain)
+                    .inventoryGroundedSwipeRow()
                     .accessibilityElement(children: .combine)
                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                         Button {
@@ -112,6 +113,7 @@ internal struct InventoryGroundedDashboardView: View {
                 HStack(spacing: PopsSpacing.sm) { compactBrowseTiles }
             }
         }
+        .padding(.horizontal, PopsSpacing.xs)
     }
 
     @ViewBuilder private var compactBrowseTiles: some View {
@@ -139,6 +141,7 @@ internal struct InventoryGroundedDashboardView: View {
                                 title: item.name, detail: item.detail, symbol: item.symbol)
                         }
                         .buttonStyle(.plain)
+                        .inventoryGroundedSwipeRow()
                         .swipeActions(edge: .leading, allowsFullSwipe: false) {
                             Button {
                                 moveRequest = item
@@ -182,6 +185,7 @@ internal struct InventoryGroundedDashboardView: View {
                                 symbol: activity.symbol)
                         }
                         .buttonStyle(.plain)
+                        .inventoryGroundedSwipeRow()
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                             Button {
                                 undo(activity)

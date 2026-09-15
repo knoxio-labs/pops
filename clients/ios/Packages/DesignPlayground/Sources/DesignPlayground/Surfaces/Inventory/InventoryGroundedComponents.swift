@@ -9,6 +9,15 @@ extension View {
             self
         }
     }
+
+    internal func inventoryGroundedSwipeRow() -> some View {
+        frame(maxWidth: .infinity)
+            .background(
+                Color.popsSurface,
+                in: RoundedRectangle(cornerRadius: PopsRadius.card)
+            )
+            .containerShape(RoundedRectangle(cornerRadius: PopsRadius.card))
+    }
 }
 
 internal struct InventoryGroundedSectionHeader: View {
