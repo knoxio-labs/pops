@@ -14,13 +14,13 @@ internal struct InventoryGroundedSyncStatus: View {
 internal struct InventoryGroundedFirstRunPanel: View {
     internal var body: some View {
         InventoryGroundedListPanel {
-            VStack(alignment: .leading, spacing: PopsSpacing.lg) {
+            VStack(alignment: .leading, spacing: PopsSpacing.xl) {
                 Image(systemName: "shippingbox.and.arrow.backward")
                     .font(.popsLargeTitle)
                     .foregroundStyle(Color.popsAccent)
                     .frame(minWidth: PopsSize.touchTarget, minHeight: PopsSize.touchTarget)
                     .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: PopsSpacing.sm) {
+                VStack(alignment: .leading, spacing: PopsSpacing.md) {
                     Text("Set up inventory on this phone")
                         .font(.popsTitle)
                         .foregroundStyle(Color.popsForeground)
@@ -36,7 +36,7 @@ internal struct InventoryGroundedFirstRunPanel: View {
                 .buttonStyle(.borderedProminent)
                 .tint(Color.popsAccent)
             }
-            .padding(PopsSpacing.sm)
+            .padding(PopsSpacing.lg)
         }
     }
 }
