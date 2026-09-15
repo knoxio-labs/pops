@@ -139,8 +139,9 @@ internal struct InventoryGroundedBrowseTile: View {
     private var symbolView: some View {
         Image(systemName: symbol)
             .font(.popsHeadline)
-            .foregroundStyle(Color.popsForeground)
+            .foregroundStyle(Color.popsAccent)
             .frame(width: markSize, height: markSize)
+            .background(Color.popsAccent.opacity(0.14), in: .circle)
     }
 
     private var description: some View {
@@ -151,6 +152,7 @@ internal struct InventoryGroundedBrowseTile: View {
             Text(detail)
                 .font(.popsCaption)
                 .foregroundStyle(Color.popsMutedForeground)
+                .lineLimit(2, reservesSpace: prominence == .compact)
         }
     }
 
@@ -165,6 +167,25 @@ internal struct InventoryGroundedBrowseTile: View {
                 .foregroundStyle(Color.popsMutedForeground)
                 .accessibilityHidden(true)
         }
+    }
+}
+
+internal struct InventoryGroundedListPanel<Content: View>: View {
+    private let content: Content
+
+    internal init(@ViewBuilder content: () -> Content) {
+        self.content = content()
+    }
+
+    internal var body: some View {
+        content
+            .padding(.horizontal, PopsSpacing.md)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.popsSurface, in: RoundedRectangle(cornerRadius: PopsRadius.card))
+            .overlay(
+                RoundedRectangle(cornerRadius: PopsRadius.card)
+                    .stroke(Color.popsSeparator, lineWidth: PopsBorder.hairline)
+            )
     }
 }
 

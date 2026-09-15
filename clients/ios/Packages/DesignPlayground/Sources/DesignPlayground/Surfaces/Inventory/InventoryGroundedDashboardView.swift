@@ -101,7 +101,7 @@ internal struct InventoryGroundedDashboardView: View {
             VStack(alignment: .leading, spacing: PopsSpacing.sm) {
                 InventoryGroundedSectionHeader(
                     title: "In hand", status: "\(fixture.inHand.count) awaiting placement")
-                PopsCard {
+                InventoryGroundedListPanel {
                     VStack(spacing: PopsSpacing.zero) {
                         ForEach(fixture.inHand) { item in
                             NavigationLink(value: InventoryRoute.item(item.id)) {
@@ -125,7 +125,7 @@ internal struct InventoryGroundedDashboardView: View {
         VStack(alignment: .leading, spacing: PopsSpacing.sm) {
             InventoryGroundedSectionHeader(
                 title: "Recent work", status: "See all", destination: .activity)
-            PopsCard {
+            InventoryGroundedListPanel {
                 VStack(spacing: PopsSpacing.zero) {
                     ForEach(fixture.activity) { activity in
                         NavigationLink(value: InventoryRoute.activity) {
