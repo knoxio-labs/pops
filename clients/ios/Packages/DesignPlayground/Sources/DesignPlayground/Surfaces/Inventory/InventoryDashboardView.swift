@@ -2,7 +2,7 @@ import DesignSystem
 import SwiftUI
 
 internal enum InventoryDashboardLayout {
-    case searchFirst, packingFirst, placeFirst, overview
+    case composed, searchFirst, packingFirst, placeFirst, overview
 }
 
 internal struct InventoryDashboardView: View {
@@ -24,6 +24,11 @@ internal struct InventoryDashboardView: View {
         }
         .background(Color.popsBackground)
         .refreshable {}
+        .safeAreaInset(edge: .bottom) {
+            if layout == .composed {
+                InventoryGlobalControls()
+            }
+        }
         .navigationDestination(for: InventoryRoute.self) { route in
             InventoryDestinationView(route: route)
         }
@@ -46,25 +51,34 @@ internal struct InventoryDashboardView: View {
 
     @ViewBuilder private var dashboard: some View {
         switch layout {
+        case .composed:
+            openContainers
+            destinations
+            inHandItems
+            recentActivity
         case .searchFirst:
             InventorySearchHero(prominent: true)
             destinations
-            openWork
+            openContainers
+            inHandItems
             recentActivity
         case .packingFirst:
-            openWork
+            openContainers
+            inHandItems
             InventorySearchHero(prominent: false)
             destinations
             recentActivity
         case .placeFirst:
             placeSummary
             destinations
-            openWork
+            openContainers
+            inHandItems
             recentActivity
         case .overview:
             overviewSummary
             recentItems
-            openWork
+            openContainers
+            inHandItems
             destinations
         }
     }
@@ -86,32 +100,25 @@ internal struct InventoryDashboardView: View {
 }
 
 extension InventoryDashboardView {
-    @ViewBuilder private var openWork: some View {
-        if !fixture.containers.isEmpty || !fixture.inHand.isEmpty {
+    @ViewBuilder private var openContainers: some View {
+        if !fixture.containers.isEmpty {
             VStack(alignment: .leading, spacing: PopsSpacing.md) {
                 InventorySectionHeader(
-                    title: fixture.isMoving ? "Keep packing" : "Open work",
+                    title: "Open containers",
                     actionTitle: "All containers", destination: .containers)
                 ForEach(fixture.containers) { container in
-                    NavigationLink(value: InventoryRoute.container(container.id)) {
-                        PopsCard {
-                            PopsRow(
-                                title: container.name,
-                                subtitle:
-                                    "\(container.itemCount) items · \(container.location) · \(container.updated)"
-                            ) {
-                                Image(systemName: "chevron.forward")
-                                    .foregroundStyle(Color.popsMutedForeground)
-                            }
-                        }
-                    }
-                    .buttonStyle(.plain)
+                    InventoryOpenContainerCard(container: container)
                 }
-                if !fixture.inHand.isEmpty {
-                    InventorySectionHeader(title: "In hand", actionTitle: nil, destination: nil)
-                    ForEach(fixture.inHand) { item in
-                        itemLink(item)
-                    }
+            }
+        }
+    }
+
+    @ViewBuilder private var inHandItems: some View {
+        if !fixture.inHand.isEmpty {
+            VStack(alignment: .leading, spacing: PopsSpacing.md) {
+                InventorySectionHeader(title: "In hand", actionTitle: nil, destination: nil)
+                ForEach(fixture.inHand) { item in
+                    itemLink(item)
                 }
             }
         }
@@ -184,31 +191,10 @@ extension InventoryDashboardView {
         VStack(alignment: .leading, spacing: PopsSpacing.md) {
             InventorySectionHeader(title: "Inventory", actionTitle: nil, destination: nil)
             PopsCard {
-                ViewThatFits(in: .horizontal) {
-                    HStack(spacing: PopsSpacing.xl) { summaryFigures }
-                    VStack(alignment: .leading, spacing: PopsSpacing.md) { summaryFigures }
-                }
+                InventorySummaryFigures()
             }
             InventorySearchHero(prominent: false)
         }
-    }
-
-    @ViewBuilder private var summaryFigures: some View {
-        summaryFigure("846", "Items")
-        summaryFigure("38", "Containers")
-        summaryFigure("9", "Locations")
-    }
-
-    private func summaryFigure(_ value: String, _ label: String) -> some View {
-        VStack(alignment: .leading, spacing: PopsSpacing.xs) {
-            Text(value)
-                .font(.popsTitle)
-                .foregroundStyle(Color.popsForeground)
-            Text(label)
-                .font(.popsCaption)
-                .foregroundStyle(Color.popsMutedForeground)
-        }
-        .accessibilityElement(children: .combine)
     }
 
     private var firstRun: some View {

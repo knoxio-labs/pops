@@ -141,3 +141,93 @@ internal struct InventorySyncCapsule: View {
         }
     }
 }
+
+internal struct InventoryOpenContainerCard: View {
+    internal let container: InventoryContainer
+
+    internal var body: some View {
+        NavigationLink(value: InventoryRoute.container(container.id)) {
+            HStack(spacing: PopsSpacing.md) {
+                Image(systemName: "shippingbox.fill")
+                    .font(.popsHeadline)
+                    .foregroundStyle(Color.popsWarning)
+                    .frame(minWidth: PopsSize.touchTarget, minHeight: PopsSize.touchTarget)
+                VStack(alignment: .leading, spacing: PopsSpacing.xs) {
+                    Text(container.name)
+                        .font(.popsHeadline)
+                        .foregroundStyle(Color.popsForeground)
+                    Text(
+                        "\(container.itemCount) items · \(container.location) · \(container.updated)"
+                    )
+                    .font(.popsCaption)
+                    .foregroundStyle(Color.popsMutedForeground)
+                }
+                Spacer(minLength: PopsSpacing.sm)
+                Image(systemName: "chevron.forward")
+                    .foregroundStyle(Color.popsMutedForeground)
+                    .accessibilityHidden(true)
+            }
+            .padding(.horizontal, PopsSpacing.lg)
+            .padding(.vertical, PopsSpacing.xs)
+            .background(Color.popsWarning.opacity(0.12), in: .rect(cornerRadius: PopsRadius.card))
+            .overlay(
+                RoundedRectangle(cornerRadius: PopsRadius.card)
+                    .stroke(Color.popsWarning, lineWidth: PopsBorder.hairline)
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
+    }
+}
+
+internal struct InventoryGlobalControls: View {
+    internal var body: some View {
+        PlaygroundGlassGroup(spacing: PopsSpacing.sm) {
+            HStack(spacing: PopsSpacing.sm) {
+                NavigationLink(value: InventoryRoute.search) {
+                    Label("Search inventory", systemImage: "magnifyingglass")
+                        .font(.popsHeadline)
+                        .frame(maxWidth: .infinity, minHeight: PopsSize.touchTarget)
+                }
+                .playgroundGlassButton()
+
+                NavigationLink(value: InventoryRoute.scan) {
+                    Image(systemName: "barcode.viewfinder")
+                        .font(.popsTitle)
+                        .frame(minWidth: PopsSize.touchTarget, minHeight: PopsSize.touchTarget)
+                }
+                .playgroundProminentGlassButton()
+                .accessibilityLabel("Scan an item or container label")
+            }
+        }
+        .padding(.horizontal, PopsSpacing.lg)
+        .padding(.vertical, PopsSpacing.sm)
+    }
+}
+
+internal struct InventorySummaryFigures: View {
+    internal var body: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: PopsSpacing.xl) { figures }
+            VStack(alignment: .leading, spacing: PopsSpacing.md) { figures }
+        }
+    }
+
+    @ViewBuilder private var figures: some View {
+        figure("846", "Items")
+        figure("38", "Containers")
+        figure("9", "Locations")
+    }
+
+    private func figure(_ value: String, _ label: String) -> some View {
+        VStack(alignment: .leading, spacing: PopsSpacing.xs) {
+            Text(value)
+                .font(.popsTitle)
+                .foregroundStyle(Color.popsForeground)
+            Text(label)
+                .font(.popsCaption)
+                .foregroundStyle(Color.popsMutedForeground)
+        }
+        .accessibilityElement(children: .combine)
+    }
+}

@@ -7,6 +7,13 @@ internal enum InventoryExperiments {
             subject: SurfaceID(area: "inventory", slug: "root"),
             variants: [
                 variant(
+                    id: "composed",
+                    title: "Composed",
+                    note:
+                        "Open containers lead in thin warning cards, Browse follows, then items in hand; search "
+                        + "and scan stay global in the iOS 27 glass controls at the bottom.",
+                    layout: .composed),
+                variant(
                     id: "search-first",
                     title: "Search first",
                     note:
