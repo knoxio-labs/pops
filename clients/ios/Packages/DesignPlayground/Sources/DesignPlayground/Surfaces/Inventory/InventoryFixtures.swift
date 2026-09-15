@@ -11,8 +11,22 @@ internal struct InventoryContainer: Identifiable, Equatable {
 internal struct InventoryItem: Identifiable, Equatable {
     internal let id: String
     internal let name: String
-    internal let detail: String
+    internal let context: InventoryItemContext
     internal let symbol: String
+
+    internal var detail: String {
+        switch context {
+        case .inHand(let origin, let updated):
+            "From \(origin) · \(updated)"
+        case .stored(let container, let location):
+            "\(container) · \(location)"
+        }
+    }
+}
+
+internal enum InventoryItemContext: Equatable {
+    case inHand(origin: String, updated: String)
+    case stored(container: String, location: String)
 }
 
 internal struct InventoryActivity: Identifiable, Equatable {
@@ -56,16 +70,20 @@ internal enum InventoryFixtures {
 
     internal static let items = [
         InventoryItem(
-            id: "passport", name: "Passport", detail: "In hand · picked up 12 min ago",
+            id: "passport", name: "Passport",
+            context: .inHand(origin: "Documents drawer", updated: "8 min ago"),
             symbol: "person.text.rectangle"),
         InventoryItem(
-            id: "router", name: "Wi-Fi router", detail: "In hand · from Office 04",
+            id: "router", name: "Wi-Fi router",
+            context: .inHand(origin: "Office 04", updated: "12 min ago"),
             symbol: "wifi.router"),
         InventoryItem(
-            id: "drill", name: "Cordless drill", detail: "Garage tools · Garage",
+            id: "drill", name: "Cordless drill",
+            context: .stored(container: "Garage tools", location: "Garage"),
             symbol: "wrench.and.screwdriver"),
         InventoryItem(
-            id: "plates", name: "Everyday plates", detail: "Kitchen 12 · Kitchen",
+            id: "plates", name: "Everyday plates",
+            context: .stored(container: "Kitchen 12", location: "Kitchen"),
             symbol: "fork.knife"),
     ]
 

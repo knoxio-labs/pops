@@ -87,14 +87,11 @@ internal struct InventoryDashboardView: View {
         VStack(alignment: .leading, spacing: PopsSpacing.md) {
             InventorySectionHeader(title: "Browse", actionTitle: nil, destination: nil)
             InventoryDestinationCard(
-                title: "Items", detail: "Every item, wherever it is", symbol: "cube",
-                destination: .items)
+                title: "Items", symbol: "cube", destination: .items)
             InventoryDestinationCard(
-                title: "Containers", detail: "Open and packed", symbol: "shippingbox",
-                destination: .containers)
+                title: "Containers", symbol: "shippingbox", destination: .containers)
             InventoryDestinationCard(
-                title: "Locations", detail: "Rooms, storage, and places", symbol: "house",
-                destination: .locations)
+                title: "Locations", symbol: "house", destination: .locations)
         }
     }
 }

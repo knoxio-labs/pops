@@ -25,7 +25,6 @@ internal struct InventorySectionHeader: View {
 
 internal struct InventoryDestinationCard: View {
     internal let title: String
-    internal let detail: String
     internal let symbol: String
     internal let destination: InventoryRoute
 
@@ -41,9 +40,6 @@ internal struct InventoryDestinationCard: View {
                         Text(title)
                             .font(.popsHeadline)
                             .foregroundStyle(Color.popsForeground)
-                        Text(detail)
-                            .font(.popsCaption)
-                            .foregroundStyle(Color.popsMutedForeground)
                     }
                     Spacer(minLength: PopsSpacing.sm)
                     Image(systemName: "chevron.forward")

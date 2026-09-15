@@ -60,7 +60,6 @@ internal enum InventoryBrowseProminence: Equatable {
 internal struct InventoryLivingBrowseTile: View {
     internal let title: String
     internal let count: String
-    internal let detail: String
     internal let symbol: String
     internal let destination: InventoryRoute
     internal let prominence: InventoryBrowseProminence
@@ -100,9 +99,6 @@ internal struct InventoryLivingBrowseTile: View {
                     .monospacedDigit()
                     .foregroundStyle(Color.popsForeground)
             }
-            Text(detail)
-                .font(.popsCaption)
-                .foregroundStyle(Color.popsMutedForeground)
         }
     }
 }

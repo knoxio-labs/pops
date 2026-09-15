@@ -97,7 +97,6 @@ internal enum InventoryGroundedBrowseProminence: Equatable {
 internal struct InventoryGroundedBrowseTile: View {
     internal let title: String
     internal let count: String
-    internal let detail: String
     internal let symbol: String
     internal let destination: InventoryRoute
     internal let prominence: InventoryGroundedBrowseProminence
@@ -109,7 +108,7 @@ internal struct InventoryGroundedBrowseTile: View {
                 if prominence == .wide {
                     HStack(spacing: PopsSpacing.md) {
                         symbolView
-                        description
+                        titleView
                         Spacer(minLength: PopsSpacing.sm)
                         value
                     }
@@ -120,7 +119,7 @@ internal struct InventoryGroundedBrowseTile: View {
                             Spacer(minLength: PopsSpacing.xs)
                             value
                         }
-                        description
+                        titleView
                     }
                 }
             }
@@ -144,16 +143,10 @@ internal struct InventoryGroundedBrowseTile: View {
             .background(Color.popsAccent.opacity(0.14), in: .circle)
     }
 
-    private var description: some View {
-        VStack(alignment: .leading, spacing: PopsSpacing.xs) {
-            Text(title)
-                .font(.popsHeadline)
-                .foregroundStyle(Color.popsForeground)
-            Text(detail)
-                .font(.popsCaption)
-                .foregroundStyle(Color.popsMutedForeground)
-                .lineLimit(2, reservesSpace: prominence == .compact)
-        }
+    private var titleView: some View {
+        Text(title)
+            .font(.popsHeadline)
+            .foregroundStyle(Color.popsForeground)
     }
 
     private var value: some View {

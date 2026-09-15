@@ -77,8 +77,8 @@ internal struct InventoryGroundedDashboardView: View {
         VStack(alignment: .leading, spacing: PopsSpacing.sm) {
             InventoryGroundedSectionHeader(title: "Browse")
             InventoryGroundedBrowseTile(
-                title: "Items", count: "846", detail: "Browse, filter, and edit items",
-                symbol: "cube", destination: .items, prominence: .wide)
+                title: "Items", count: "846", symbol: "cube", destination: .items,
+                prominence: .wide)
             if dynamicTypeSize.isAccessibilitySize {
                 VStack(spacing: PopsSpacing.sm) { compactBrowseTiles }
             } else {
@@ -89,11 +89,11 @@ internal struct InventoryGroundedDashboardView: View {
 
     @ViewBuilder private var compactBrowseTiles: some View {
         InventoryGroundedBrowseTile(
-            title: "Containers", count: "38", detail: "Review open and packed groups",
-            symbol: "shippingbox", destination: .containers, prominence: .compact)
+            title: "Containers", count: "38", symbol: "shippingbox", destination: .containers,
+            prominence: .compact)
         InventoryGroundedBrowseTile(
-            title: "Locations", count: "9", detail: "Find by room or storage area",
-            symbol: "house", destination: .locations, prominence: .compact)
+            title: "Locations", count: "9", symbol: "house", destination: .locations,
+            prominence: .compact)
     }
 
     @ViewBuilder private var inHand: some View {
@@ -156,7 +156,7 @@ internal struct InventoryGroundedDashboardView: View {
                 Text("\(fixture.containers.count) open containers")
                     .font(.popsHeadline)
                     .foregroundStyle(Color.popsForeground)
-                Text("\(openItemCount) items still being packed")
+                Text("\(openItemCount) items in open containers")
                     .font(.popsCaption)
                     .foregroundStyle(Color.popsMutedForeground)
             }

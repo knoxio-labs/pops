@@ -40,7 +40,7 @@ internal struct InventoryLivingDashboardView: View {
                 }
             }
 
-            Text("\(openItemCount) items still being packed")
+            Text("\(openItemCount) items in open containers")
                 .font(.popsSubheadline)
                 .foregroundStyle(Color.popsMutedForeground)
 
@@ -90,8 +90,8 @@ internal struct InventoryLivingDashboardView: View {
         VStack(alignment: .leading, spacing: PopsSpacing.md) {
             InventoryLivingSectionLabel(title: "Browse")
             InventoryLivingBrowseTile(
-                title: "Items", count: "846", detail: "Browse, filter, and edit items",
-                symbol: "cube.fill", destination: .items, prominence: .wide)
+                title: "Items", count: "846", symbol: "cube.fill", destination: .items,
+                prominence: .wide)
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: PopsSpacing.md) { compactBrowseTiles }
                 VStack(spacing: PopsSpacing.md) { compactBrowseTiles }
@@ -101,11 +101,11 @@ internal struct InventoryLivingDashboardView: View {
 
     @ViewBuilder private var compactBrowseTiles: some View {
         InventoryLivingBrowseTile(
-            title: "Containers", count: "38", detail: "Review open and packed groups",
-            symbol: "shippingbox.fill", destination: .containers, prominence: .compact)
+            title: "Containers", count: "38", symbol: "shippingbox.fill",
+            destination: .containers, prominence: .compact)
         InventoryLivingBrowseTile(
-            title: "Locations", count: "9", detail: "Find items by room or storage area",
-            symbol: "house.fill", destination: .locations, prominence: .compact)
+            title: "Locations", count: "9", symbol: "house.fill", destination: .locations,
+            prominence: .compact)
     }
 
     @ViewBuilder private var inHand: some View {
