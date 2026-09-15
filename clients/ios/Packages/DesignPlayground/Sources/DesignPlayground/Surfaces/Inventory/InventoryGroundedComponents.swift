@@ -147,12 +147,12 @@ internal struct InventoryGroundedBrowseTile: View {
     internal let title: String
     internal let count: String
     internal let symbol: String
-    internal let action: () -> Void
+    internal let destination: InventoryRoute
     internal let prominence: InventoryGroundedBrowseProminence
     @ScaledMetric(relativeTo: .body) private var markSize = PopsSize.touchTarget
 
     internal var body: some View {
-        Button(action: action) {
+        NavigationLink(value: destination) {
             Group {
                 if prominence == .wide {
                     horizontalContent
@@ -253,57 +253,5 @@ internal struct InventoryGroundedOpenPanel<Content: View>: View {
                 RoundedRectangle(cornerRadius: PopsRadius.card)
                     .stroke(Color.popsWarning, lineWidth: PopsBorder.hairline)
             }
-    }
-}
-
-internal struct InventoryGroundedSyncStatus: View {
-    internal let state: InventorySyncState
-
-    @ViewBuilder internal var body: some View {
-        if state != .current {
-            InventorySyncCapsule(state: state)
-        }
-    }
-}
-
-internal struct InventoryMoveDestinationSheet: View {
-    internal let item: InventoryItem
-    internal let containers: [InventoryContainer]
-    internal let onMove: () -> Void
-    @Environment(\.dismiss) private var dismiss
-
-    internal var body: some View {
-        NavigationStack {
-            List {
-                if !containers.isEmpty {
-                    Section("Open containers") {
-                        ForEach(containers) { container in
-                            Button {
-                                onMove()
-                            } label: {
-                                Label(container.name, systemImage: "shippingbox")
-                            }
-                        }
-                    }
-                }
-
-                Section("Locations") {
-                    Button {
-                        onMove()
-                    } label: {
-                        Label("Choose a location", systemImage: "house")
-                    }
-                }
-            }
-            .navigationTitle("Move \(item.name)")
-            .playgroundTitleDisplay(large: false)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                }
-            }
-        }
     }
 }

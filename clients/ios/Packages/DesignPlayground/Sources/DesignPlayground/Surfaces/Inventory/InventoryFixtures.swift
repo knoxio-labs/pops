@@ -43,8 +43,15 @@ internal enum InventorySyncState: Equatable {
     case needsAttention(count: Int)
 }
 
+internal struct InventoryCatalogueCounts: Equatable {
+    internal let items: Int
+    internal let containers: Int
+    internal let locations: Int
+}
+
 internal struct InventoryDashboardFixture {
     internal let summary: String
+    internal let catalogue: InventoryCatalogueCounts
     internal let containers: [InventoryContainer]
     internal let inHand: [InventoryItem]
     internal let recentItems: [InventoryItem]
@@ -102,6 +109,7 @@ internal enum InventoryFixtures {
 
     internal static let packing = InventoryDashboardFixture(
         summary: "3 containers open · 2 items in hand",
+        catalogue: InventoryCatalogueCounts(items: 846, containers: 38, locations: 9),
         containers: containers,
         inHand: Array(items.prefix(2)),
         recentItems: Array(items.suffix(2)),
@@ -113,6 +121,7 @@ internal enum InventoryFixtures {
 
     internal static let settled = InventoryDashboardFixture(
         summary: "846 items · 38 containers · 9 locations",
+        catalogue: InventoryCatalogueCounts(items: 846, containers: 38, locations: 9),
         containers: [],
         inHand: [],
         recentItems: Array(items.reversed()),
@@ -124,6 +133,7 @@ internal enum InventoryFixtures {
 
     internal static let firstRun = InventoryDashboardFixture(
         summary: "No local catalogue yet",
+        catalogue: InventoryCatalogueCounts(items: 0, containers: 0, locations: 0),
         containers: [],
         inHand: [],
         recentItems: [],
@@ -136,6 +146,7 @@ internal enum InventoryFixtures {
     internal static func packing(openContainers: Int) -> InventoryDashboardFixture {
         InventoryDashboardFixture(
             summary: openContainers == 0 ? "No containers open · 2 items in hand" : packing.summary,
+            catalogue: packing.catalogue,
             containers: Array(containers.prefix(openContainers)),
             inHand: packing.inHand,
             recentItems: packing.recentItems,
@@ -151,6 +162,7 @@ internal enum InventoryFixtures {
     ) -> InventoryDashboardFixture {
         InventoryDashboardFixture(
             summary: base.summary,
+            catalogue: base.catalogue,
             containers: base.containers,
             inHand: base.inHand,
             recentItems: base.recentItems,

@@ -6,43 +6,40 @@ internal enum InventorySurfaces {
         chrome: .navigationAndTabs,
         states: [
             DesignState.standard {
-                InventoryDashboardView(fixture: InventoryFixtures.packing, layout: .packingFirst)
+                InventoryGroundedDashboardView(fixture: InventoryFixtures.packing)
             },
             DesignState("first-run", "First synchronization") {
-                InventoryDashboardView(fixture: InventoryFixtures.firstRun, layout: .packingFirst)
+                InventoryGroundedDashboardView(fixture: InventoryFixtures.firstRun)
             },
             DesignState("active-packing", "Active packing") {
-                InventoryDashboardView(fixture: InventoryFixtures.packing, layout: .packingFirst)
+                InventoryGroundedDashboardView(fixture: InventoryFixtures.packing)
             },
             DesignState("settled-home", "Settled home") {
-                InventoryDashboardView(fixture: InventoryFixtures.settled, layout: .packingFirst)
+                InventoryGroundedDashboardView(fixture: InventoryFixtures.settled)
             },
             DesignState("offline-stale", "Offline and stale") {
-                InventoryDashboardView(
-                    fixture: InventoryFixtures.withSync(.offline(updated: "2h ago")),
-                    layout: .packingFirst)
+                InventoryGroundedDashboardView(
+                    fixture: InventoryFixtures.withSync(.offline(updated: "2h ago")))
             },
             DesignState("synchronizing", "Synchronizing") {
-                InventoryDashboardView(
-                    fixture: InventoryFixtures.withSync(.synchronizing(progress: "62%")),
-                    layout: .packingFirst)
+                InventoryGroundedDashboardView(
+                    fixture: InventoryFixtures.withSync(.synchronizing(progress: "62%")))
             },
             DesignState("needs-attention", "Needs attention") {
-                InventoryDashboardView(
-                    fixture: InventoryFixtures.withSync(.needsAttention(count: 3)),
-                    layout: .packingFirst)
+                InventoryGroundedDashboardView(
+                    fixture: InventoryFixtures.withSync(.needsAttention(count: 3)))
             },
             DesignState("no-open-containers", "No open containers") {
-                InventoryDashboardView(
-                    fixture: InventoryFixtures.packing(openContainers: 0), layout: .packingFirst)
+                InventoryGroundedDashboardView(
+                    fixture: InventoryFixtures.packing(openContainers: 0))
             },
             DesignState("one-open-container", "One open container") {
-                InventoryDashboardView(
-                    fixture: InventoryFixtures.packing(openContainers: 1), layout: .packingFirst)
+                InventoryGroundedDashboardView(
+                    fixture: InventoryFixtures.packing(openContainers: 1))
             },
             DesignState("several-open-containers", "Several open containers") {
-                InventoryDashboardView(
-                    fixture: InventoryFixtures.packing(openContainers: 3), layout: .packingFirst)
+                InventoryGroundedDashboardView(
+                    fixture: InventoryFixtures.packing(openContainers: 3))
             },
         ]
     )
