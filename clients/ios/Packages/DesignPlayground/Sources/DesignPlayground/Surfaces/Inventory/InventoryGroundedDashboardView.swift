@@ -25,10 +25,11 @@ internal struct InventoryGroundedDashboardView: View {
                 if fixture.isFirstRun {
                     firstRun
                 } else {
+                    if fixture.sync != .current {
+                        syncStatus
+                    }
                     if !state.containers.isEmpty {
                         openContainers
-                    } else if fixture.sync != .current {
-                        syncNotice
                     }
                     browse
                     if !state.inHandItems.isEmpty {

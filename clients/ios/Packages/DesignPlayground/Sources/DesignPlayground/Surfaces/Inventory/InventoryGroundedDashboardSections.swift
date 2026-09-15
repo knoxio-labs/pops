@@ -5,18 +5,8 @@ extension InventoryGroundedDashboardView {
     internal var openContainers: some View {
         InventoryGroundedOpenPanel {
             VStack(alignment: .leading, spacing: PopsSpacing.zero) {
-                ViewThatFits(in: .horizontal) {
-                    HStack(spacing: PopsSpacing.md) {
-                        openContainerSummary
-                        Spacer(minLength: PopsSpacing.sm)
-                        InventoryGroundedSyncStatus(state: fixture.sync)
-                    }
-                    VStack(alignment: .leading, spacing: PopsSpacing.sm) {
-                        openContainerSummary
-                        InventoryGroundedSyncStatus(state: fixture.sync)
-                    }
-                }
-                .padding(.bottom, PopsSpacing.sm)
+                openContainerSummary
+                    .padding(.bottom, PopsSpacing.sm)
 
                 ForEach(state.containers) { container in
                     containerRow(container)
@@ -92,8 +82,12 @@ extension InventoryGroundedDashboardView {
         }
     }
 
-    internal var syncNotice: some View {
-        InventoryGroundedSyncNotice(state: fixture.sync)
+    internal var syncStatus: some View {
+        HStack {
+            Spacer(minLength: PopsSpacing.zero)
+            InventoryGroundedSyncStatus(state: fixture.sync)
+        }
+        .padding(.horizontal, PopsSpacing.xs)
     }
 
     internal var firstRun: some View {
