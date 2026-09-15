@@ -95,6 +95,8 @@ internal struct CatalogTests {
     func areasAreDeduplicated() {
         let areas = Catalog.areas
         #expect(Set(areas).count == areas.count)
-        #expect(areas.first == Catalog.surfaces.first?.id.area)
+        #expect(
+            areas.prefix(5) == ["shell", "transactions", "purchases", "receipts", "inventory"]
+        )
     }
 }

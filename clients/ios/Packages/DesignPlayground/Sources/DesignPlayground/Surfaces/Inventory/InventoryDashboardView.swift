@@ -188,7 +188,7 @@ extension InventoryDashboardView {
         VStack(alignment: .leading, spacing: PopsSpacing.md) {
             InventorySectionHeader(title: "Inventory", actionTitle: nil, destination: nil)
             PopsCard {
-                InventorySummaryFigures()
+                InventorySummaryFigures(counts: fixture.catalogue)
             }
             InventorySearchHero(prominent: false)
         }

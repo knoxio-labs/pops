@@ -202,6 +202,8 @@ internal struct InventoryGlobalControls: View {
 }
 
 internal struct InventorySummaryFigures: View {
+    internal let counts: InventoryCatalogueCounts
+
     internal var body: some View {
         ViewThatFits(in: .horizontal) {
             HStack(spacing: PopsSpacing.xl) { figures }
@@ -210,9 +212,9 @@ internal struct InventorySummaryFigures: View {
     }
 
     @ViewBuilder private var figures: some View {
-        figure("846", "Items")
-        figure("38", "Containers")
-        figure("9", "Locations")
+        figure("\(counts.items)", "Items")
+        figure("\(counts.containers)", "Containers")
+        figure("\(counts.locations)", "Locations")
     }
 
     private func figure(_ value: String, _ label: String) -> some View {
