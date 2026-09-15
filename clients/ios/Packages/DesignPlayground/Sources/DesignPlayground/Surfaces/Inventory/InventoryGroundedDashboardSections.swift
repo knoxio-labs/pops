@@ -82,14 +82,6 @@ extension InventoryGroundedDashboardView {
         }
     }
 
-    internal var syncStatus: some View {
-        HStack {
-            Spacer(minLength: PopsSpacing.zero)
-            InventoryGroundedSyncStatus(state: fixture.sync)
-        }
-        .padding(.horizontal, PopsSpacing.xs)
-    }
-
     internal var firstRun: some View {
         InventoryGroundedFirstRunPanel()
     }

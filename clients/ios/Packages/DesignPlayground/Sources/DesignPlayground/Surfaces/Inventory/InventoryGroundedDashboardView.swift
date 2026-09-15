@@ -25,9 +25,6 @@ internal struct InventoryGroundedDashboardView: View {
                 if fixture.isFirstRun {
                     firstRun
                 } else {
-                    if fixture.sync != .current {
-                        syncStatus
-                    }
                     if !state.containers.isEmpty {
                         openContainers
                     }
@@ -48,6 +45,13 @@ internal struct InventoryGroundedDashboardView: View {
         .refreshable {}
         .navigationDestination(for: InventoryRoute.self) { route in
             InventoryDestinationView(route: route)
+        }
+        .toolbar {
+            if fixture.sync != .current {
+                ToolbarItem(placement: .primaryAction) {
+                    InventoryGroundedSyncStatus(state: fixture.sync)
+                }
+            }
         }
         .sheet(item: $moveRequest) { item in
             InventoryMoveDestinationSheet(
