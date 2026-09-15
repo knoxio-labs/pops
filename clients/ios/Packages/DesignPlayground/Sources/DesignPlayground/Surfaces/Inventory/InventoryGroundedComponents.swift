@@ -2,23 +2,12 @@ import DesignSystem
 import SwiftUI
 
 extension View {
-    @ViewBuilder internal func inventoryGroundedListStyle() -> some View {
-        #if os(iOS)
-            listStyle(.insetGrouped)
-                .listSectionSpacing(PopsSpacing.md)
-        #else
-            listStyle(.inset)
-        #endif
-    }
-
-    internal func inventoryGroundedDataRow() -> some View {
-        listRowInsets(
-            EdgeInsets(
-                top: PopsSpacing.xs,
-                leading: PopsSpacing.md,
-                bottom: PopsSpacing.xs,
-                trailing: PopsSpacing.md
-            ))
+    @ViewBuilder internal func inventoryGroundedSwipeActionsContainer() -> some View {
+        if #available(iOS 27.0, macOS 27.0, *) {
+            swipeActionsContainer()
+        } else {
+            self
+        }
     }
 }
 
@@ -189,7 +178,6 @@ internal struct InventoryGroundedBrowseTile: View {
             .monospacedDigit()
             .foregroundStyle(Color.popsMutedForeground)
     }
-
 }
 
 internal struct InventoryGroundedListPanel<Content: View>: View {

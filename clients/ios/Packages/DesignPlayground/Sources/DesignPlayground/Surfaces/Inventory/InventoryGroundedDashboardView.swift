@@ -14,19 +14,21 @@ internal struct InventoryGroundedDashboardView: View {
     }
 
     internal var body: some View {
-        List {
-            if !state.containers.isEmpty {
-                openContainers
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: PopsSpacing.lg) {
+                if !state.containers.isEmpty {
+                    openContainers
+                }
+                browse
+                if !state.inHandItems.isEmpty {
+                    inHand
+                }
+                recentWork
             }
-            browse
-            if !state.inHandItems.isEmpty {
-                inHand
-            }
-            recentWork
+            .padding(.horizontal, PopsSpacing.lg)
+            .padding(.bottom, PopsSpacing.xxl)
         }
-        .inventoryGroundedListStyle()
-        .contentMargins(.top, PopsSpacing.zero, for: .scrollContent)
-        .scrollContentBackground(.hidden)
+        .inventoryGroundedSwipeActionsContainer()
         .background(Color.popsBackground)
         .refreshable {}
         .safeAreaInset(edge: .bottom) {
@@ -45,66 +47,70 @@ internal struct InventoryGroundedDashboardView: View {
     }
 
     private var openContainers: some View {
-        Section {
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: PopsSpacing.md) {
-                    openContainerSummary
-                    Spacer(minLength: PopsSpacing.sm)
-                    InventoryGroundedSyncStatus(state: fixture.sync)
-                }
-                VStack(alignment: .leading, spacing: PopsSpacing.sm) {
-                    openContainerSummary
-                    InventoryGroundedSyncStatus(state: fixture.sync)
-                }
-            }
-            .listRowBackground(Color.popsWarning.opacity(0.08))
-
-            ForEach(state.containers) { container in
-                Button {
-                    selectedRoute = .container(container.id)
-                } label: {
-                    InventoryGroundedRowLabel(
-                        title: container.name,
-                        detail: "\(container.location) · \(container.updated)",
-                        symbol: "shippingbox",
-                        value: "\(container.itemCount)",
-                        tone: .popsWarning
-                    )
-                }
-                .buttonStyle(.plain)
-                .inventoryGroundedDataRow()
-                .accessibilityElement(children: .combine)
-                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                    Button {
-                        close(container)
-                    } label: {
-                        Label("Close", systemImage: "checkmark.circle.fill")
+        PopsCard {
+            VStack(alignment: .leading, spacing: PopsSpacing.zero) {
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: PopsSpacing.md) {
+                        openContainerSummary
+                        Spacer(minLength: PopsSpacing.sm)
+                        InventoryGroundedSyncStatus(state: fixture.sync)
                     }
-                    .tint(.popsWarning)
+                    VStack(alignment: .leading, spacing: PopsSpacing.sm) {
+                        openContainerSummary
+                        InventoryGroundedSyncStatus(state: fixture.sync)
+                    }
+                }
+                .padding(.bottom, PopsSpacing.sm)
+
+                ForEach(state.containers) { container in
+                    Button {
+                        selectedRoute = .container(container.id)
+                    } label: {
+                        InventoryGroundedRowLabel(
+                            title: container.name,
+                            detail: "\(container.location) · \(container.updated)",
+                            symbol: "shippingbox",
+                            value: "\(container.itemCount)",
+                            tone: .popsWarning
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityElement(children: .combine)
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        Button {
+                            close(container)
+                        } label: {
+                            Label("Close", systemImage: "checkmark.circle.fill")
+                        }
+                        .tint(.popsWarning)
+                    }
+
+                    if container.id != state.containers.last?.id {
+                        PopsDivider()
+                            .padding(.leading, PopsSize.touchTarget + PopsSpacing.md)
+                    }
                 }
             }
         }
-        .listRowBackground(Color.popsSurface)
+        .overlay {
+            RoundedRectangle(cornerRadius: PopsRadius.card)
+                .stroke(Color.popsWarning, lineWidth: PopsBorder.hairline)
+                .accessibilityHidden(true)
+        }
     }
 
     private var browse: some View {
-        Section {
-            VStack(alignment: .leading, spacing: PopsSpacing.sm) {
-                InventoryGroundedBrowseTile(
-                    title: "Items", count: "846", symbol: "cube",
-                    action: { selectedRoute = .items },
-                    prominence: .wide)
-                if dynamicTypeSize.isAccessibilitySize {
-                    VStack(spacing: PopsSpacing.sm) { compactBrowseTiles }
-                } else {
-                    HStack(spacing: PopsSpacing.sm) { compactBrowseTiles }
-                }
-            }
-            .listRowInsets(EdgeInsets())
-            .listRowBackground(Color.clear)
-        } header: {
+        VStack(alignment: .leading, spacing: PopsSpacing.sm) {
             InventoryGroundedSectionHeader(title: "Browse")
-                .textCase(nil)
+            InventoryGroundedBrowseTile(
+                title: "Items", count: "846", symbol: "cube",
+                action: { selectedRoute = .items },
+                prominence: .wide)
+            if dynamicTypeSize.isAccessibilitySize {
+                VStack(spacing: PopsSpacing.sm) { compactBrowseTiles }
+            } else {
+                HStack(spacing: PopsSpacing.sm) { compactBrowseTiles }
+            }
         }
     }
 
@@ -120,69 +126,79 @@ internal struct InventoryGroundedDashboardView: View {
     }
 
     private var inHand: some View {
-        Section {
-            ForEach(state.inHandItems) { item in
-                Button {
-                    selectedRoute = .item(item.id)
-                } label: {
-                    InventoryGroundedRowLabel(
-                        title: item.name, detail: item.detail, symbol: item.symbol)
-                }
-                .buttonStyle(.plain)
-                .inventoryGroundedDataRow()
-                .swipeActions(edge: .leading, allowsFullSwipe: false) {
-                    Button {
-                        moveRequest = item
-                    } label: {
-                        Label("Move to…", systemImage: "folder.fill")
-                    }
-                    .tint(.popsAccent)
-                }
-                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                    Button {
-                        putBack(item)
-                    } label: {
-                        Label("Put back", systemImage: "arrow.uturn.backward.circle.fill")
-                    }
-                    .tint(.popsSuccess)
-                }
-            }
-        } header: {
+        VStack(alignment: .leading, spacing: PopsSpacing.sm) {
             InventoryGroundedSectionHeader(
                 title: "In hand", status: "\(state.inHandItems.count) awaiting placement")
-                .textCase(nil)
+            InventoryGroundedListPanel {
+                VStack(spacing: PopsSpacing.zero) {
+                    ForEach(state.inHandItems) { item in
+                        Button {
+                            selectedRoute = .item(item.id)
+                        } label: {
+                            InventoryGroundedRowLabel(
+                                title: item.name, detail: item.detail, symbol: item.symbol)
+                        }
+                        .buttonStyle(.plain)
+                        .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                            Button {
+                                moveRequest = item
+                            } label: {
+                                Label("Move to…", systemImage: "folder.fill")
+                            }
+                            .tint(.popsAccent)
+                        }
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            Button {
+                                putBack(item)
+                            } label: {
+                                Label("Put back", systemImage: "arrow.uturn.backward.circle.fill")
+                            }
+                            .tint(.popsSuccess)
+                        }
+
+                        if item.id != state.inHandItems.last?.id {
+                            PopsDivider()
+                                .padding(.leading, PopsSize.touchTarget + PopsSpacing.md)
+                        }
+                    }
+                }
+            }
         }
-        .listRowBackground(Color.popsSurface)
     }
 
     private var recentWork: some View {
-        Section {
-            ForEach(state.activities) { activity in
-                Button {
-                    selectedRoute = .activity
-                } label: {
-                    InventoryGroundedRowLabel(
-                        title: activity.title,
-                        detail: activity.detail,
-                        symbol: activity.symbol)
-                }
-                .buttonStyle(.plain)
-                .inventoryGroundedDataRow()
-                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                    Button {
-                        undo(activity)
-                    } label: {
-                        Label("Undo", systemImage: "arrow.uturn.backward.circle.fill")
-                    }
-                    .tint(.popsAccent)
-                }
-            }
-        } header: {
+        VStack(alignment: .leading, spacing: PopsSpacing.sm) {
             InventoryGroundedSectionHeader(
                 title: "Recent work", status: "See all", destination: .activity)
-                .textCase(nil)
+            InventoryGroundedListPanel {
+                VStack(spacing: PopsSpacing.zero) {
+                    ForEach(state.activities) { activity in
+                        Button {
+                            selectedRoute = .activity
+                        } label: {
+                            InventoryGroundedRowLabel(
+                                title: activity.title,
+                                detail: activity.detail,
+                                symbol: activity.symbol)
+                        }
+                        .buttonStyle(.plain)
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            Button {
+                                undo(activity)
+                            } label: {
+                                Label("Undo", systemImage: "arrow.uturn.backward.circle.fill")
+                            }
+                            .tint(.popsAccent)
+                        }
+
+                        if activity.id != state.activities.last?.id {
+                            PopsDivider()
+                                .padding(.leading, PopsSize.touchTarget + PopsSpacing.md)
+                        }
+                    }
+                }
+            }
         }
-        .listRowBackground(Color.popsSurface)
     }
 
     private var openItemCount: Int {
