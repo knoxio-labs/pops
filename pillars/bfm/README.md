@@ -567,7 +567,7 @@ and send it in that header, against the registry's admin surface reachable
 externally through the shell proxy:
 
 ```bash
-curl -sS -X POST https://pops.local/registry-api/service-accounts -H 'Content-Type: application/json' -H "cf-access-jwt-assertion: $ACCESS_JWT" -d '{"name":"bfm","scopes":["finance.transactions","purchases.purchase","purchases.receipt"]}'
+curl -sS -X POST https://pops.local/registry-api/service-accounts -H 'Content-Type: application/json' -H "cf-access-jwt-assertion: $ACCESS_JWT" -d '{"name":"bfm","scopes":["finance.transactions","finance.accounts","finance.checkpoints","purchases.purchase","purchases.receipt"]}'
 ```
 
 Two deployment shapes let a bare `curl` through, which is why this can work on
@@ -589,9 +589,11 @@ sharing `pops_api_key` with moltbot and the MCP gateway, so revoking one
 consumer does not take the others down and `last_used_at` attributes traffic to
 a single process.
 
-Rotate by minting a replacement, swapping the file, restarting, and only then
-revoking the old id (`POST /service-accounts/:id/revoke`) — in that order,
-since revocation takes effect on the next request.
+Rotate by minting a replacement, swapping the file, restarting, verifying the
+replacement account has the complete scope list above and that bfm can reach
+each sibling operation it uses, and only then revoking the old id
+(`POST /service-accounts/:id/revoke`) — in that order, since revocation takes
+effect on the next request.
 
 **Widening the grant is a rotation, not an edit.** The registry's admin surface
 has exactly three operations — list, create, revoke — so there is no way to add

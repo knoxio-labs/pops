@@ -21,7 +21,7 @@
  *
  * A device granted `purchases.read` still gets a `403` from `purchases` unless
  * bfm's account carries the matching scope, and widening bfm's account grants
- * no handset anything. {@link MOBILE_CAPABILITY_SCOPES} records which scope
+ * no handset anything. {@link MOBILE_CAPABILITY_SCOPES} records which scopes
  * each capability leans on so the two can be checked against each other; a
  * test in `api/pillars/__tests__/service-account.test.ts` fails when a
  * capability names a scope `BFM_SERVICE_ACCOUNT_SCOPES` does not carry.
@@ -89,20 +89,21 @@ export type MobileCapability = (typeof MOBILE_CAPABILITIES)[number];
 export const MOBILE_SESSION_CAPABILITY: MobileCapability = 'session.read';
 
 /**
- * The downstream scope each capability leans on, or `null` when it needs none.
+ * The downstream scopes each capability leans on. An empty array means it
+ * needs none.
  *
- * `null` is a real answer rather than a gap: bootstrap probes the federation
+ * An empty array is a real answer rather than a gap: bootstrap probes the federation
  * through the SDK's discovery cache and calls no pillar's domain surface, so
  * there is no grant on bfm's account that could authorise or refuse it.
  *
  * The values are dot PREFIXES, matching how ADR-044 scopes match — `purchases.receipt`
  * authorises `purchases.receipt.upload` and nothing under `purchases.purchase`.
  */
-export const MOBILE_CAPABILITY_SCOPES: Readonly<Record<MobileCapability, string | null>> = {
-  'session.read': null,
-  'finance.transactions.read': 'finance.transactions',
-  'finance.accounts.read': 'finance.accounts',
-  'purchases.read': 'purchases.purchase',
+export const MOBILE_CAPABILITY_SCOPES: Readonly<Record<MobileCapability, readonly string[]>> = {
+  'session.read': [],
+  'finance.transactions.read': ['finance.transactions'],
+  'finance.accounts.read': ['finance.accounts', 'finance.checkpoints'],
+  'purchases.read': ['purchases.purchase'],
   /**
    * The same prefix the upload leans on, because both are purchases' own
    * `receipt.*` module — the bytes are that module's artifact, written by its
@@ -112,8 +113,8 @@ export const MOBILE_CAPABILITY_SCOPES: Readonly<Record<MobileCapability, string 
    * reading one back is drawn at the CAPABILITY, above, which is the axis
    * that is per-device; the scope is per-module and always was.
    */
-  'purchases.receipts.read': 'purchases.receipt',
-  'purchases.receipts.write': 'purchases.receipt',
+  'purchases.receipts.read': ['purchases.receipt'],
+  'purchases.receipts.write': ['purchases.receipt'],
   /**
    * The `purchase.*` module, not `receipt.*`: `receipt.saveDraft` and
    * `purchase.createManual` are both, ultimately, `createPurchase` calls,
@@ -122,7 +123,7 @@ export const MOBILE_CAPABILITY_SCOPES: Readonly<Record<MobileCapability, string 
    * same module widens nothing new to audit, only what that prefix already
    * covers.
    */
-  'purchases.write': 'purchases.purchase',
+  'purchases.write': ['purchases.purchase'],
 };
 
 /**
