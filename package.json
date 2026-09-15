@@ -56,20 +56,20 @@
     "@modelcontextprotocol/sdk": "^1.30.0",
     "@pops/pillar-sdk": "workspace:*",
     "@types/js-yaml": "^4.0.9",
-    "@types/node": "^24.13.3",
+    "@types/node": "^24.13.4",
     "dependency-cruiser": "^18.2.0",
     "husky": "^9.1.7",
     "js-yaml": "^5.4.1",
-    "lint-staged": "^17.5.0",
-    "oxfmt": "^0.66.0",
-    "oxlint": "^1.81.0",
+    "lint-staged": "^17.5.1",
+    "oxfmt": "^0.67.0",
+    "oxlint": "^1.82.0",
     "oxlint-tsgolint": "^7.0.2001",
     "smol-toml": "^1.8.0",
     "tsx": "^4.23.13",
     "typescript": "^6.0.3",
     "vitest": "^4.1.11",
-    "yaml": "^2.9.0",
-    "zod": "^4.5.4"
+    "yaml": "^2.9.1",
+    "zod": "^4.6.2"
   },
   "engines": {
     "node": "^24"

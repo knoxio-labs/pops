@@ -42,14 +42,14 @@
     "drizzle-orm": "^0.45.2",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.3",
-    "zod": "^4.5.4"
+    "zod": "^4.6.2"
   },
   "devDependencies": {
     "@pops/contract-openapi": "workspace:*",
     "@types/better-sqlite3": "^7.6.12",
     "@types/express": "^5.0.4",
     "@types/jsonwebtoken": "^9.0.10",
-    "@types/node": "^24.13.3",
+    "@types/node": "^24.13.4",
     "@types/supertest": "^7.2.1",
     "@vitest/coverage-v8": "^4.1.10",
     "supertest": "^7.1.4",
