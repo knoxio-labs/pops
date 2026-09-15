@@ -18,6 +18,15 @@ internal enum InventoryExperiments {
                             fixture: InventoryFixtures.packing, layout: .composed)
                     }),
                 DesignVariant(
+                    id: "grounded",
+                    title: "Grounded",
+                    note:
+                        "The same hierarchy in opaque grouped content. Yellow marks only open work; "
+                        + "glass belongs only to the global search and scan controls.",
+                    surface: finishSurface {
+                        InventoryGroundedDashboardView(fixture: InventoryFixtures.packing)
+                    }),
+                DesignVariant(
                     id: "lived-in",
                     title: "Lived in",
                     note:
