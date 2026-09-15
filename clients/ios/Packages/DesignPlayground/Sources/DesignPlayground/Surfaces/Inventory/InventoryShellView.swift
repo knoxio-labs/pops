@@ -8,8 +8,8 @@ internal struct InventoryShellView: View {
     @State private var searching = false
     @State private var selected = Self.inventoryTab
 
-    private static let inventoryTab = 1
-    private static let searchTab = 3
+    private static let inventoryTab = 2
+    private static let searchTab = 4
     private let scanDiameter: CGFloat = 56
 
     internal var body: some View {
@@ -17,10 +17,13 @@ internal struct InventoryShellView: View {
             Tab("Transactions", systemImage: "list.bullet", value: 0) {
                 otherTab("Transactions")
             }
+            Tab("Purchases", systemImage: "cart", value: 1) {
+                otherTab("Purchases")
+            }
             Tab("Inventory", systemImage: "shippingbox", value: Self.inventoryTab) {
                 inventory
             }
-            Tab("Accounts", systemImage: "building.columns", value: 2) {
+            Tab("Accounts", systemImage: "building.columns", value: 3) {
                 otherTab("Accounts")
             }
             Tab(value: Self.searchTab, role: .search) {
