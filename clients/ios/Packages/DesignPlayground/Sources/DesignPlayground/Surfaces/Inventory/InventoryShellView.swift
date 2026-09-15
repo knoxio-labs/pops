@@ -1,0 +1,71 @@
+import DesignSystem
+import SwiftUI
+
+internal struct InventoryShellView: View {
+    internal let fixture: InventoryDashboardFixture
+
+    @State private var query = ""
+    @State private var searching = false
+    @State private var selected = Self.inventoryTab
+
+    private static let inventoryTab = 1
+    private static let searchTab = 3
+    private let scanDiameter: CGFloat = 56
+
+    internal var body: some View {
+        TabView(selection: $selected) {
+            Tab("Transactions", systemImage: "list.bullet", value: 0) {
+                otherTab("Transactions")
+            }
+            Tab("Inventory", systemImage: "shippingbox", value: Self.inventoryTab) {
+                inventory
+            }
+            Tab("Accounts", systemImage: "building.columns", value: 2) {
+                otherTab("Accounts")
+            }
+            Tab(value: Self.searchTab, role: .search) {
+                NavigationStack {
+                    InventorySearchResults(fixture: fixture, query: query)
+                        .navigationTitle("Search")
+                        .playgroundTitleDisplay(large: false)
+                }
+                .playgroundSearchable(
+                    text: $query,
+                    isPresented: $searching,
+                    prompt: "Items, containers, and locations"
+                )
+            }
+        }
+        .playgroundMinimizingTabBar()
+    }
+
+    private var inventory: some View {
+        NavigationStack {
+            InventoryGroundedDashboardView(fixture: fixture)
+                .navigationTitle("Inventory")
+                .playgroundTitleDisplay(large: true)
+                .safeAreaInset(edge: .bottom, alignment: .trailing) {
+                    if !fixture.isFirstRun {
+                        scanControl
+                    }
+                }
+        }
+    }
+
+    private var scanControl: some View {
+        NavigationLink(value: InventoryRoute.scan) {
+            Image(systemName: "barcode.viewfinder")
+                .font(.popsTitle)
+                .frame(width: scanDiameter, height: scanDiameter)
+        }
+        .playgroundProminentGlassButton()
+        .buttonBorderShape(.circle)
+        .padding(.trailing, PopsSpacing.lg)
+        .padding(.top, PopsSpacing.sm)
+        .accessibilityLabel("Scan an item or container label")
+    }
+
+    private func otherTab(_ name: String) -> some View {
+        EmptyStateView(message: "\(name) fills the screen here. It has its own surface.")
+    }
+}

@@ -45,11 +45,6 @@ internal struct InventoryGroundedDashboardView: View {
         .inventoryGroundedSwipeActionsContainer()
         .background(Color.popsBackground)
         .refreshable {}
-        .safeAreaInset(edge: .bottom) {
-            if !fixture.isFirstRun {
-                InventoryGlobalControls()
-            }
-        }
         .navigationDestination(for: InventoryRoute.self) { route in
             InventoryDestinationView(route: route)
         }

@@ -3,42 +3,42 @@ internal enum InventorySurfaces {
         id: SurfaceID(area: "inventory", slug: "root"),
         title: "Inventory",
         synopsis: "Find, move, and resume work without losing the Inventory tab stack.",
-        chrome: .navigationAndTabs,
+        chrome: .bare,
         states: [
             DesignState.standard {
-                InventoryGroundedDashboardView(fixture: InventoryFixtures.packing)
+                InventoryShellView(fixture: InventoryFixtures.packing)
             },
             DesignState("first-run", "First synchronization") {
-                InventoryGroundedDashboardView(fixture: InventoryFixtures.firstRun)
+                InventoryShellView(fixture: InventoryFixtures.firstRun)
             },
             DesignState("active-packing", "Active packing") {
-                InventoryGroundedDashboardView(fixture: InventoryFixtures.packing)
+                InventoryShellView(fixture: InventoryFixtures.packing)
             },
             DesignState("settled-home", "Settled home") {
-                InventoryGroundedDashboardView(fixture: InventoryFixtures.settled)
+                InventoryShellView(fixture: InventoryFixtures.settled)
             },
             DesignState("offline-stale", "Offline and stale") {
-                InventoryGroundedDashboardView(
+                InventoryShellView(
                     fixture: InventoryFixtures.withSync(.offline(updated: "2h ago")))
             },
             DesignState("synchronizing", "Synchronizing") {
-                InventoryGroundedDashboardView(
+                InventoryShellView(
                     fixture: InventoryFixtures.withSync(.synchronizing(progress: "62%")))
             },
             DesignState("needs-attention", "Needs attention") {
-                InventoryGroundedDashboardView(
+                InventoryShellView(
                     fixture: InventoryFixtures.withSync(.needsAttention(count: 3)))
             },
             DesignState("no-open-containers", "No open containers") {
-                InventoryGroundedDashboardView(
+                InventoryShellView(
                     fixture: InventoryFixtures.packing(openContainers: 0))
             },
             DesignState("one-open-container", "One open container") {
-                InventoryGroundedDashboardView(
+                InventoryShellView(
                     fixture: InventoryFixtures.packing(openContainers: 1))
             },
             DesignState("several-open-containers", "Several open containers") {
-                InventoryGroundedDashboardView(
+                InventoryShellView(
                     fixture: InventoryFixtures.packing(openContainers: 3))
             },
         ]

@@ -48,4 +48,15 @@ internal struct InventoryGroundedDashboardStateTests {
         #expect(
             firstRun.catalogue == InventoryCatalogueCounts(items: 0, containers: 0, locations: 0))
     }
+
+    @Test("search matches names and inventory context without duplicating items")
+    @MainActor
+    func searchResults() {
+        let results = InventorySearchResults(
+            fixture: InventoryFixtures.packing,
+            query: "office"
+        ).matchingResults
+
+        #expect(results.map(\.title) == ["Wi-Fi router", "Office 04"])
+    }
 }

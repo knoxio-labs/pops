@@ -12,7 +12,7 @@ internal enum InventoryExperiments {
                 rationale:
                     "Grounded, approved on the device 2026-09-16. It keeps the compact decided hierarchy, "
                     + "uses opaque grouped surfaces for inventory state, reserves yellow for open containers, "
-                    + "and makes Browse and global controls distinct glass actions. Native iOS 27 swipe "
+                    + "and makes Browse distinct glass actions. Native iOS 27 swipe "
                     + "interactions handle closing containers, placing in-hand items, and undoing recent work."
             ),
             variants: [
@@ -30,7 +30,7 @@ internal enum InventoryExperiments {
                     title: "Grounded",
                     note:
                         "Lived in's compact rhythm and browse grid, using opaque grouped content. "
-                        + "Yellow marks only open work; glass identifies Browse and global controls.",
+                        + "Yellow marks only open work; glass identifies the Browse destinations.",
                     surface: finishSurface {
                         InventoryGroundedDashboardView(fixture: InventoryFixtures.packing)
                     }),
