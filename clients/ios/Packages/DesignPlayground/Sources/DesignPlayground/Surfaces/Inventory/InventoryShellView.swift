@@ -32,13 +32,13 @@ internal struct InventoryShellView: View {
                         .navigationTitle("Search")
                         .playgroundTitleDisplay(large: false)
                 }
-                .playgroundSearchable(
-                    text: $query,
-                    isPresented: $searching,
-                    prompt: "Items, containers, and locations"
-                )
             }
         }
+        .playgroundSearchTab(
+            text: $query,
+            isPresented: $searching,
+            prompt: "Items, containers, and locations"
+        )
         .playgroundMinimizingTabBar()
     }
 
