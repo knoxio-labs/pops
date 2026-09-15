@@ -5,10 +5,20 @@ extension View {
     @ViewBuilder internal func inventoryGroundedListStyle() -> some View {
         #if os(iOS)
             listStyle(.insetGrouped)
-                .listSectionSpacing(PopsSpacing.lg)
+                .listSectionSpacing(PopsSpacing.md)
         #else
             listStyle(.inset)
         #endif
+    }
+
+    internal func inventoryGroundedDataRow() -> some View {
+        listRowInsets(
+            EdgeInsets(
+                top: PopsSpacing.xs,
+                leading: PopsSpacing.md,
+                bottom: PopsSpacing.xs,
+                trailing: PopsSpacing.md
+            ))
     }
 }
 
@@ -117,21 +127,10 @@ internal struct InventoryGroundedBrowseTile: View {
         Button(action: action) {
             Group {
                 if prominence == .wide {
-                    HStack(spacing: PopsSpacing.md) {
-                        symbolView
-                        titleView
-                        Spacer(minLength: PopsSpacing.sm)
-                        value
-                    }
+                    horizontalContent
                 } else {
                     ViewThatFits(in: .horizontal) {
-                        HStack(spacing: PopsSpacing.sm) {
-                            symbolView
-                            VStack(alignment: .leading, spacing: PopsSpacing.xs) {
-                                compactTitle
-                                compactCount
-                            }
-                        }
+                        horizontalContent
                         VStack(spacing: PopsSpacing.sm) {
                             symbolView
                             VStack(spacing: PopsSpacing.xs) {
@@ -174,6 +173,16 @@ internal struct InventoryGroundedBrowseTile: View {
             .fixedSize(horizontal: true, vertical: false)
     }
 
+    private var horizontalContent: some View {
+        HStack(spacing: PopsSpacing.sm) {
+            symbolView
+            VStack(alignment: .leading, spacing: PopsSpacing.xs) {
+                compactTitle
+                compactCount
+            }
+        }
+    }
+
     private var compactCount: some View {
         Text(count)
             .font(.popsCaption.weight(.semibold))
@@ -181,18 +190,6 @@ internal struct InventoryGroundedBrowseTile: View {
             .foregroundStyle(Color.popsMutedForeground)
     }
 
-    private var value: some View {
-        HStack(spacing: PopsSpacing.sm) {
-            Text(count)
-                .font(.popsHeadline)
-                .monospacedDigit()
-                .foregroundStyle(Color.popsForeground)
-            Image(systemName: "chevron.forward")
-                .font(.popsCaption.weight(.semibold))
-                .foregroundStyle(Color.popsMutedForeground)
-                .accessibilityHidden(true)
-        }
-    }
 }
 
 internal struct InventoryGroundedListPanel<Content: View>: View {

@@ -72,6 +72,7 @@ internal struct InventoryGroundedDashboardView: View {
                     )
                 }
                 .buttonStyle(.plain)
+                .inventoryGroundedDataRow()
                 .accessibilityElement(children: .combine)
                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                     Button {
@@ -128,6 +129,7 @@ internal struct InventoryGroundedDashboardView: View {
                         title: item.name, detail: item.detail, symbol: item.symbol)
                 }
                 .buttonStyle(.plain)
+                .inventoryGroundedDataRow()
                 .swipeActions(edge: .leading, allowsFullSwipe: false) {
                     Button {
                         moveRequest = item
@@ -165,6 +167,7 @@ internal struct InventoryGroundedDashboardView: View {
                         symbol: activity.symbol)
                 }
                 .buttonStyle(.plain)
+                .inventoryGroundedDataRow()
                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                     Button {
                         undo(activity)
