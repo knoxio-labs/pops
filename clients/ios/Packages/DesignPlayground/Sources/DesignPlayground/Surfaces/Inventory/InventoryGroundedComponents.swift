@@ -180,6 +180,7 @@ internal struct InventoryGroundedListPanel<Content: View>: View {
     internal var body: some View {
         content
             .padding(.horizontal, PopsSpacing.md)
+            .padding(.vertical, PopsSpacing.sm)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Color.popsSurface, in: RoundedRectangle(cornerRadius: PopsRadius.card))
             .overlay(
