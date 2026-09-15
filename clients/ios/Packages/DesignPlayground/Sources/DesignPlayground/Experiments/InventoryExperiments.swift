@@ -1,5 +1,33 @@
+import SwiftUI
+
 internal enum InventoryExperiments {
     @MainActor internal static let all: [DesignExperiment] = [
+        DesignExperiment(
+            id: "inventory-root-finish",
+            question:
+                "Should Inventory read as a useful dashboard or as a place with depth, rhythm, and identity?",
+            subject: SurfaceID(area: "inventory", slug: "root"),
+            variants: [
+                DesignVariant(
+                    id: "functional",
+                    title: "Functional",
+                    note:
+                        "The decided hierarchy in conventional cards: clear, direct, and deliberately plain.",
+                    surface: finishSurface {
+                        InventoryDashboardView(
+                            fixture: InventoryFixtures.packing, layout: .composed)
+                    }),
+                DesignVariant(
+                    id: "lived-in",
+                    title: "Lived in",
+                    note:
+                        "The same hierarchy and fixture, using Purchases' lessons: a tinted glass focal point, "
+                        + "related rows sharing material, stronger figures, and a more varied rhythm.",
+                    surface: finishSurface {
+                        InventoryLivingDashboardView(fixture: InventoryFixtures.packing)
+                    }),
+            ]
+        ),
         DesignExperiment(
             id: "inventory-root-priority",
             question:
@@ -47,8 +75,20 @@ internal enum InventoryExperiments {
                         "Catalogue totals and recently touched items make the tab a long-term inventory overview.",
                     layout: .overview),
             ]
-        )
+        ),
     ]
+
+    @MainActor
+    private static func finishSurface<Content: View>(
+        @ViewBuilder content: @escaping () -> Content
+    ) -> DesignSurface {
+        DesignSurface(
+            id: SurfaceID(area: "inventory", slug: "root"),
+            title: "Inventory",
+            chrome: .navigationAndTabs,
+            states: [DesignState.standard { content() }]
+        )
+    }
 
     @MainActor
     private static func variant(
