@@ -28,12 +28,19 @@ extension View {
     }
 
     internal func inventoryGroundedSwipeRow(isActive: Bool) -> some View {
-        frame(maxWidth: .infinity)
-            .background(
-                isActive ? Color.popsSurface : Color.clear,
-                in: RoundedRectangle(cornerRadius: PopsRadius.card)
-            )
-            .containerShape(RoundedRectangle(cornerRadius: PopsRadius.card))
+        let shape = RoundedRectangle(
+            cornerRadius: PopsRadius.card + PopsSpacing.xs,
+            style: .continuous
+        )
+
+        return frame(maxWidth: .infinity)
+            .background {
+                if isActive {
+                    shape.fill(Color.popsSurface)
+                    shape.fill(Color.popsForeground.opacity(0.08))
+                }
+            }
+            .containerShape(shape)
             .zIndex(isActive ? 1 : 0)
     }
 }
