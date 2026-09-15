@@ -10,7 +10,7 @@ internal struct InventoryShellView: View {
 
     private static let inventoryTab = 2
     private static let searchTab = 4
-    private let scanDiameter: CGFloat = 56
+    private let scanDiameter: CGFloat = 60
 
     internal var body: some View {
         TabView(selection: $selected) {
@@ -63,8 +63,8 @@ internal struct InventoryShellView: View {
                 .frame(width: scanDiameter, height: scanDiameter)
         }
         .playgroundGlass(in: Circle())
-        .padding(.trailing, PopsSpacing.lg)
-        .padding(.bottom, PopsSpacing.md)
+        .padding(.trailing, PopsSpacing.xl)
+        .padding(.bottom, PopsSpacing.lg)
         .accessibilityLabel("Scan an item or container label")
     }
 
