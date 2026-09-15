@@ -34,12 +34,11 @@ Four decisions carry the rest of it, and each is a rule the screens landing next
 
 **One figure per screen, in `popsAmount`.** The confirmation is a total with a merchant over it. The reference identifies the purchase and describes nothing about it, so it is last, monospaced and small — the one thing on the screen nobody has to read.
 
-## Where the sibling screens land
+## Stored purchases and the shared form
 
-Two tickets still add substantial surface to this tab, and the layout below is the frame both of them fill rather than layouts that meet in a tab bar.
+The Purchases tab has a separate list; this feature owns capture and draft creation. Stored receipt presentation needs the typed detail repository and UI integration tracked by POPS-3708. The mobile detail and receipt-byte routes already exist.
 
-- **A purchases list (POPS-2376).** Becomes the capture screen's content when there is anything to show — the guidance card and the empty plate are the _empty_ state of that list, not a separate screen. Each row is a `PopsPhoto` thumbnail at `PopsSize.pageWidth`/`pageHeight` proportions beside merchant, date and total, so a row is a small version of the confirmation card. It needs the stored bytes (POPS-2453) before a row can show a receipt rather than a plate.
-- **Editing a saved purchase (POPS-2458).** The confirmation card with the form below it behind an Edit action; the pages strip is the stored receipt once POPS-2453 serves it. Note there is no initialiser building a `ReceiptDraft` from a `ReceiptPurchase`, and that is not an omission: a saved purchase carries a merchant, a total and a count, and a form pre-filled from that would present three line items as zero. That ticket needs the purchase read surface, not a constructor.
+Editing a saved purchase remains POPS-2458. There is no initialiser building a `ReceiptDraft` from a `ReceiptPurchase`: that summary carries a merchant, a total and a count, and a form pre-filled from it would present three line items as zero. Reusing the form requires the full detail model, rather than treating the summary as an editable purchase.
 
 ## The form, and how both entry points reach it
 
@@ -66,7 +65,7 @@ Money is parsed once, in `ReceiptDraftSaveMapping`, using `AppCore`'s `ReceiptMo
 
 The pages on the result screen are the bytes the phone is holding — what the camera produced and what was uploaded, kept by `ReceiptResultViewModel.parts` after the call precisely so the reading can be checked against them. Nothing fetches anything.
 
-A receipt captured on another device, or on this one before the app was relaunched, cannot be drawn at all: the `unreadable` arm deliberately carries `receiptCount` rather than the stored parts' URIs, because no mobile route serves those bytes to a screen that has not just uploaded them. (`ReceiptDraftReading.receiptUris` — carried so a save can name what it is attaching — is addresses into `purchases`' own store, not bytes this screen can draw either.) **POPS-2453** is the BFM read surface that changes that, and until it lands a purchases list can only draw plates. Nothing here fakes it with a placeholder that would imply the image is somewhere it is not.
+This feature does not fetch a receipt captured elsewhere or before the app was relaunched. BFM serves stored receipt bytes and thumbnails, and its generated Swift client exposes `getPurchase`, `getReceipt` and `getReceiptThumbnail`; the handwritten purchases repository and detail UI still need to consume them (POPS-3708). The `unreadable` outcome carries `receiptCount`, not stored-part URIs. `ReceiptDraftReading.receiptUris` identifies the stored parts a save attaches; those references are not drawable bytes and this screen does not resolve them.
 
 A page that is not a drawable image — the contract admits PDF and plain text — draws a plate with a glyph saying which it is, decided by `ReceiptPageMedia`.
 
