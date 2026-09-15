@@ -332,37 +332,48 @@ describe('comparisons — staleness', () => {
 });
 
 describe('comparisons — exclusion + blacklist', () => {
-  it('excludes a media item, purging its comparisons and dropping it from rankings', async () => {
-    const dimId = await firstDimensionId();
-    const a = await makeMovie('A');
-    const b = await makeMovie('B');
-    await client().comparisons.record({
-      dimensionId: dimId,
-      mediaAType: 'movie',
-      mediaAId: a.id,
-      mediaBType: 'movie',
-      mediaBId: b.id,
-      winnerType: 'movie',
-      winnerId: a.id,
-    });
+  // Four sequential API round trips against a real better-sqlite3 database:
+  // ~10-20ms idle, but the case itself timed out at 5012ms on a saturated host
+  // (POPS-2381). The shared `beforeEach` is not the cost here, because vitest
+  // times hooks separately. Budgeted on this case only, so the default still
+  // trips a regression anywhere else in the file.
+  const EXCLUDES_MEDIA_ITEM_TIMEOUT_MS = 20_000;
 
-    const excluded = await client().comparisons.excludeFromDimension({
-      mediaType: 'movie',
-      mediaId: a.id,
-      dimensionId: dimId,
-    });
-    expect(excluded.comparisonsDeleted).toBe(1);
+  it(
+    'excludes a media item, purging its comparisons and dropping it from rankings',
+    async () => {
+      const dimId = await firstDimensionId();
+      const a = await makeMovie('A');
+      const b = await makeMovie('B');
+      await client().comparisons.record({
+        dimensionId: dimId,
+        mediaAType: 'movie',
+        mediaAId: a.id,
+        mediaBType: 'movie',
+        mediaBId: b.id,
+        winnerType: 'movie',
+        winnerId: a.id,
+      });
 
-    const rankings = await client().comparisons.rankings({ dimensionId: dimId });
-    expect(rankings.data.map((r) => r.mediaId)).not.toContain(a.id);
+      const excluded = await client().comparisons.excludeFromDimension({
+        mediaType: 'movie',
+        mediaId: a.id,
+        dimensionId: dimId,
+      });
+      expect(excluded.comparisonsDeleted).toBe(1);
 
-    const included = await client().comparisons.includeInDimension({
-      mediaType: 'movie',
-      mediaId: a.id,
-      dimensionId: dimId,
-    });
-    expect(included.message).toBe('Media included in dimension');
-  });
+      const rankings = await client().comparisons.rankings({ dimensionId: dimId });
+      expect(rankings.data.map((r) => r.mediaId)).not.toContain(a.id);
+
+      const included = await client().comparisons.includeInDimension({
+        mediaType: 'movie',
+        mediaId: a.id,
+        dimensionId: dimId,
+      });
+      expect(included.message).toBe('Media included in dimension');
+    },
+    EXCLUDES_MEDIA_ITEM_TIMEOUT_MS
+  );
 
   it('blacklists a movie: purges its comparisons + recalcs', async () => {
     const dimId = await firstDimensionId();
