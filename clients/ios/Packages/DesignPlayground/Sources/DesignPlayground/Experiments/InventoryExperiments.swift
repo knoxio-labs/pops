@@ -1,0 +1,60 @@
+internal enum InventoryExperiments {
+    @MainActor internal static let all: [DesignExperiment] = [
+        DesignExperiment(
+            id: "inventory-root-priority",
+            question:
+                "What should the Inventory tab show first so it works during a move and after it?",
+            subject: SurfaceID(area: "inventory", slug: "root"),
+            variants: [
+                variant(
+                    id: "search-first",
+                    title: "Search first",
+                    note:
+                        "Finding and scanning are the command centre; open work follows them.",
+                    layout: .searchFirst),
+                variant(
+                    id: "packing-first",
+                    title: "Packing first",
+                    note:
+                        "Open containers and items in hand take the reachable top position while work is active.",
+                    layout: .packingFirst),
+                variant(
+                    id: "place-first",
+                    title: "Place first",
+                    note:
+                        "The home and its location hierarchy orient the screen before individual objects.",
+                    layout: .placeFirst),
+                variant(
+                    id: "overview-first",
+                    title: "Overview first",
+                    note:
+                        "Catalogue totals and recently touched items make the tab a long-term inventory overview.",
+                    layout: .overview),
+            ]
+        )
+    ]
+
+    @MainActor
+    private static func variant(
+        id: String,
+        title: String,
+        note: String,
+        layout: InventoryDashboardLayout
+    ) -> DesignVariant {
+        DesignVariant(
+            id: id,
+            title: title,
+            note: note,
+            surface: DesignSurface(
+                id: SurfaceID(area: "inventory", slug: "root"),
+                title: "Inventory",
+                chrome: .navigationAndTabs,
+                states: [
+                    DesignState.standard {
+                        InventoryDashboardView(fixture: InventoryFixtures.packing, layout: layout)
+                    }
+                ]
+            )
+        )
+    }
+}
