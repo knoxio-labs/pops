@@ -36,12 +36,16 @@ extension View {
         return frame(maxWidth: .infinity)
             .background {
                 if isActive {
-                    shape.fill(Color.popsSurface)
-                    shape.fill(Color.popsForeground.opacity(0.08))
+                    ZStack {
+                        shape.fill(Color.popsSurface)
+                        shape.fill(Color.popsForeground.opacity(0.08))
+                    }
+                    .transition(.opacity)
                 }
             }
             .containerShape(shape)
             .zIndex(isActive ? 1 : 0)
+            .animation(.snappy(duration: 0.18), value: isActive)
     }
 }
 
@@ -127,6 +131,7 @@ internal struct InventoryGroundedRowLabel: View {
             Image(systemName: "chevron.forward")
                 .font(.popsCaption.weight(.semibold))
                 .foregroundStyle(Color.popsMutedForeground)
+                .padding(.trailing, PopsSpacing.sm)
                 .accessibilityHidden(true)
         }
         .padding(.vertical, PopsSpacing.xs)
