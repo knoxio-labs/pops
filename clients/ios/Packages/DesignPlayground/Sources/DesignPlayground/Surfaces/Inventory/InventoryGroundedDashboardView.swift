@@ -46,13 +46,6 @@ internal struct InventoryGroundedDashboardView: View {
         .navigationDestination(for: InventoryRoute.self) { route in
             InventoryDestinationView(route: route)
         }
-        .toolbar {
-            if fixture.sync != .current {
-                ToolbarItem(placement: .primaryAction) {
-                    InventoryGroundedSyncStatus(state: fixture.sync)
-                }
-            }
-        }
         .sheet(item: $moveRequest) { item in
             InventoryMoveDestinationSheet(
                 item: item,

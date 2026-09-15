@@ -21,7 +21,14 @@ extension InventoryGroundedDashboardView {
 
     internal var browse: some View {
         VStack(alignment: .leading, spacing: PopsSpacing.sm) {
-            InventoryGroundedSectionHeader(title: "Browse")
+            HStack(spacing: PopsSpacing.sm) {
+                Text("Browse")
+                    .font(.popsTitle)
+                    .foregroundStyle(Color.popsForeground)
+                Spacer(minLength: PopsSpacing.sm)
+                InventoryGroundedSyncStatus(state: fixture.sync)
+            }
+            .frame(minHeight: PopsSize.touchTarget)
             InventoryGroundedBrowseTile(
                 title: "Items", count: "\(fixture.catalogue.items)", symbol: "cube",
                 destination: .items,
