@@ -27,9 +27,9 @@ export const BFM_SERVICE_ACCOUNT_NAME = 'bfm';
  *
  * One entry per sibling module bfm actually calls: the mobile transactions
  * screens read finance's `transactions.*`, the mobile accounts screen reads
- * finance's `accounts.*`, the receipt upload writes to purchases' `receipt.*`,
- * and the mobile purchases screens read purchases' `purchase.*`. Every later
- * mobile surface widens this list in its own ticket,
+ * finance's `accounts.*` and `checkpoints.*`, the receipt upload writes to
+ * purchases' `receipt.*`, and the mobile purchases screens read purchases'
+ * `purchase.*`. Every later mobile surface widens this list in its own ticket,
  * so it stays a readable record of what bfm calls rather than a wildcard
  * nobody can audit. Scopes match by dot prefix, so `finance.transactions`
  * authorises `finance.transactions.list` but not `finance.budgets.list`, and
@@ -55,6 +55,7 @@ export const BFM_SERVICE_ACCOUNT_NAME = 'bfm';
 export const BFM_SERVICE_ACCOUNT_SCOPES: readonly string[] = [
   'finance.transactions',
   'finance.accounts',
+  'finance.checkpoints',
   'purchases.purchase',
   'purchases.receipt',
 ];

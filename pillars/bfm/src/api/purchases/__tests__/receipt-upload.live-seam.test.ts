@@ -365,6 +365,8 @@ describe('bfm -> purchases receipt upload live seam', () => {
     // would fail here the same way it would fail a deployed bfm.
     const bfmApiKey = await mintServiceAccount(registryProcess.baseUrl, 'bfm-live-seam', [
       'finance.transactions',
+      'finance.accounts',
+      'finance.checkpoints',
       'purchases.purchase',
       'purchases.receipt',
     ]);
