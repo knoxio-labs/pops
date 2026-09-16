@@ -84,6 +84,18 @@ extension View {
         #endif
     }
 
+    @ViewBuilder
+    func playgroundSearchTab(
+        text: Binding<String>, isPresented: Binding<Bool>, prompt: String
+    ) -> some View {
+        #if os(iOS)
+            searchable(text: text, isPresented: isPresented, prompt: prompt)
+                .tabViewSearchActivation(.searchTabSelection)
+        #else
+            searchable(text: text, prompt: prompt)
+        #endif
+    }
+
     /// iOS 26's own glass button styles, which are the reason a hand-rolled
     /// capsule was the wrong answer: the platform ships both the plain and the
     /// prominent one, and they carry the press state, the tint and the
