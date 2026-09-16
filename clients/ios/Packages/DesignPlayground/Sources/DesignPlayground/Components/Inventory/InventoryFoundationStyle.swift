@@ -8,9 +8,9 @@ import SwiftUI
 /// others, and "fixed" means "at the default below", never an unstated
 /// choice.
 ///
-/// Four of the five were decided on the device on 2026-09-16 and the defaults
-/// below are those decisions. `closeActions` is still open; ADR-001 says which
-/// is which.
+/// All five were decided on the device on 2026-09-16 and the defaults below
+/// are those decisions. The other values remain so the rejected variants stay
+/// drawable next to the rationale that rejected them.
 internal struct InventoryFoundationStyle: Equatable {
     /// Whether a container looks different from an item while still being one.
     internal enum ContainerMark: Equatable {

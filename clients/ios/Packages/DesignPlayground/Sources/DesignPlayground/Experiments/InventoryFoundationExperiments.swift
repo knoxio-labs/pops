@@ -130,6 +130,12 @@ internal enum InventoryFoundationExperiments {
         id: "inventory-close-seal",
         question: "Is sealing a box a separate action from closing it?",
         subject: subject,
+        status: .decided(
+            variant: "close-only",
+            rationale:
+                "Close only, decided on the device 2026-09-16. A closed box is a closed box. A second "
+                + "verb whose whole difference is a confirmation on reopening is a step added to "
+                + "unpacking day, paid on every box, for a promise a sticker keeps better."),
         variants: [
             variant(
                 "close-only", "Close only",

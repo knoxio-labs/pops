@@ -49,8 +49,7 @@ internal enum InventoryFoundationSurfaces {
     @MainActor internal static let foundations = InventoryFoundationStaging.surface(
         style: InventoryFoundationStyle(),
         synopsis:
-            "Every Inventory row, badge and action in one place, as decided on 2026-09-16. Close "
-            + "versus seal is still open."
+            "Every Inventory row, badge and action in one place, as decided on 2026-09-16."
     )
 
     @MainActor internal static let surfaces: [DesignSurface] = [foundations]

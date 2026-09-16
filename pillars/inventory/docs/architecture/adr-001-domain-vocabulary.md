@@ -195,6 +195,9 @@ day, and the answers are recorded here so the next screen does not reopen them:
   quiet cloud; stale and needs-attention carry a louder one; saved and
   synchronized show nothing.
 - **The word is "in hand".** It says what is physically true.
+- **Close is the only verb.** A closed box is a closed box. "Seal", a close
+  whose reopening asks first, was drawn and rejected: a confirmation on every
+  box on unpacking day, for a promise a sticker keeps better.
 
 ### Inventory has its own colour
 
@@ -209,9 +212,6 @@ that costs is that Inventory cannot use hue alone to say "this needs you":
 
 ## What is deliberately still open
 
-- Whether "close" and "seal" are two visible actions or one. The playground
-  now draws a sealed box whose reopen asks first, which is the difference in
-  practice; the question is whether that difference earns a second verb.
 - Whether two groups of the same thing in one container can be merged by hand,
   or stay separate records forever.
 
