@@ -67,7 +67,8 @@ internal struct InventoryObservedSwapView: View {
                     selection: template.name,
                     options: InventoryPropertyTemplates.all.map(\.name),
                     footnote: observed.map {
-                        "Reads as \($0.name) because \($0.sampleCount) others with these keys do."
+                        "Read as \($0.name) until now, because \($0.sampleCount) others with "
+                            + "these keys are. Overriding that changes the reading, not the item."
                     }
                 )
             }
