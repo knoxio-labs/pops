@@ -208,7 +208,7 @@ item gets recorded twice.
 
 ## Decided on the device, 2026-09-16
 
-Every question this ADR opened was answered in the playground the same
+All five foundation questions were answered in the playground the same
 day, and the answers are recorded here so the next screen does not reopen them:
 
 - **Containers are squared and tinted.** A container's mark is a rounded square
