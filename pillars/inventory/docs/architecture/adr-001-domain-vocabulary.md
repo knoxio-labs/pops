@@ -79,6 +79,40 @@ A **location** is a place in the home, not an item. It is the one thing here
 that is not an item, because a room is not owned, moved, photographed or
 discarded, and giving it a type would mean inventing fields for it.
 
+**The line between them is whether the thing moves.** A shelf, a cupboard, a
+drawer and a room are locations: they stay put, you never pack one, and asking
+where one is makes no sense. A box, a crate, a bag and a toolcase are
+containers: they travel with their contents, and where one went is the question
+the whole pillar exists to answer. The test is whether the thing itself has a
+placement worth recording — if it does, it is an item, and if it can hold
+things, it is a container.
+
+### Codes are identity, not data
+
+An item's **inventory code** is optional and most items do not have one. It
+comes into existence when the item is labelled, which is a thing you choose to
+do — to a TV, a cable, a brewing setup, a box — rather than something a type
+decides. That is why it is not a field: a field is declared by a type, and
+whether you put a sticker on your television is not a property of televisions.
+
+The consequence for every row and detail screen: the code badge appears only
+where there is a physical label to match it against. A catalogue of hundreds of
+items shows it on the few dozen that carry one.
+
+### A record is a group in one place
+
+A record with a quantity stands for several identical things **in one
+placement**. The same thing in two places is two records, each with its own
+quantity, its own placement and its own optional code — ten screws in the
+garage crate and five in the kitchen drawer are two records, not one record
+with a split location.
+
+So **split** is an action: it moves part of a quantity into a new record, which
+is then independent. Records do not merge on their own when two groups end up
+in the same container, because two groups of the same thing bought a year apart
+are frequently not interchangeable. Whether a manual merge exists at all is
+open.
+
 ### Where a thing is
 
 | Word                   | Means                                                                            |
@@ -139,6 +173,8 @@ looking rather than by argument:
 
 - What to call the in-hand state — "in hand", "unplaced", or "picked up".
 - Whether "close" and "seal" are two visible actions or one.
+- Whether two groups of the same thing in one container can be merged by hand,
+  or stay separate records forever.
 - Whether a container needs a distinct silhouette while remaining an item.
 - Whether state is carried by a badge, a subtitle, an icon, or a combination.
 - How much synchronization state is visible during ordinary use.
@@ -157,7 +193,13 @@ Deciding one of them updates this ADR rather than adding a second word.
   item has; if it only changes what its detail displays, it is a field.
 - Locations being the one non-item makes the hierarchy asymmetric — items nest
   in items, which sit in locations. Accepted, because the alternative gives a
-  room a type and a set of fields nobody would fill in.
+  room a type and a set of fields nobody would fill in. The fixed-versus-movable
+  test is what keeps the line decidable at the edges; fitted furniture is a
+  location, and a chest of drawers you would take with you is a container.
+- A quantity belongs to a placement rather than to a thing, so "how many of
+  these do I own" is a sum across records rather than a number on one. That is
+  a query every screen showing a total has to make, and it is the price of
+  being able to say where each group is.
 - The two-axis state model means a row may have to show two state marks. That
   is a real layout cost, paid deliberately, and it is part of what the badge
   experiment above is deciding how to spend.
