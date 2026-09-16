@@ -26,12 +26,12 @@ export default defineConfig({
      *
      * A per-test timeout override is the one sanctioned exception, and it is
      * scoped to a single case, never to the file or this config. It is for a
-     * test whose own body is the file's heaviest SQLite write path and was
-     * seen once stretching past 5s under a starved scheduler (measured
-     * 5012ms, POPS-2381). Shared `beforeEach` cost is not a reason: hooks run
-     * under `hookTimeout` (10s), not the test's budget. The override names
-     * the measurement beside the constant so the pad stays tied to that
-     * cost; a case that grows slow for any other reason still trips at 5s.
+     * case that has been observed exceeding 5s under a starved scheduler,
+     * with the measurement recorded beside the constant (5012ms, POPS-2381)
+     * so the pad stays tied to an observation rather than a theory about the
+     * file's costs. Shared `beforeEach` cost is never the reason: hooks run
+     * under `hookTimeout`, not the test's budget. Every other case still
+     * trips at 5s.
      */
     environment: 'node',
     exclude: [...configDefaults.exclude, 'app/**', 'overlay-ego/**'],

@@ -332,17 +332,15 @@ describe('comparisons — staleness', () => {
 });
 
 describe('comparisons — exclusion + blacklist', () => {
-  // This case's own work — two movies, one comparison, an
-  // exclude/rankings/include round trip — profiles at ~10-20ms on an idle
-  // machine and stayed under 220ms across 10 runs against 20 CPU-bound
-  // busy-loops, yet once ran 5012ms against vitest's 5000ms default on a
-  // machine saturated by sibling agent sessions (POPS-2381). That was the
-  // test body: vitest runs `beforeEach` under its own `hookTimeout` (10s),
-  // so the shared SQLite open and migrate above cannot produce a test
-  // timeout. The exclude path is this file's heaviest write — it purges
-  // the item's comparisons and recomputes rankings — which is what a
-  // starved scheduler stretches. The timeout is padded only here so the
-  // default keeps acting as a regression trip-wire on every other case.
+  // This case profiles at ~10-20ms on an idle machine and stayed under
+  // 220ms across 10 runs against 20 CPU-bound busy-loops, yet once ran
+  // 5012ms against vitest's 5000ms default on a machine saturated by
+  // sibling agent sessions (POPS-2381). vitest runs `beforeEach` under its
+  // own `hookTimeout`, so that was the test body. The pad records that
+  // observation and nothing more: it is not a claim about which case in
+  // this file does the most work, and it is confined to the one case seen
+  // failing so the default keeps acting as a regression trip-wire on every
+  // other case.
   const EXCLUDES_MEDIA_ITEM_TIMEOUT_MS = 20_000;
 
   it(
