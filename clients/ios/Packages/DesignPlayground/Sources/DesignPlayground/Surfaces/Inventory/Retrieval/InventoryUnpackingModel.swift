@@ -2,7 +2,6 @@
 /// it goes next.
 internal struct InventoryUnpackingLot: Identifiable, Equatable {
     internal let item: InventoryFoundationItem
-    internal var isSelected: Bool = false
 
     internal var id: String { item.id }
 }

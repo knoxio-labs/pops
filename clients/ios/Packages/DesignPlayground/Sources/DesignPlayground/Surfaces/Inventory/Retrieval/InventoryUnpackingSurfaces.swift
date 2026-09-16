@@ -39,6 +39,10 @@ internal enum InventoryUnpackingStaging {
                 InventoryUnpackingWorkspaceView(state: InventoryUnpackingFixtures.nearlyDone)
                     .environment(\.inventoryUnpackingStyle, style)
             },
+            DesignState("all-placed", "Everything placed, box still open") {
+                InventoryUnpackingWorkspaceView(state: InventoryUnpackingFixtures.allPlaced)
+                    .environment(\.inventoryUnpackingStyle, style)
+            },
             DesignState("empty-outcome", "Emptied: store or retire") {
                 InventoryEmptyContainerOutcomeSheet(containerName: "Moving crate 3") { _ in }
             },
