@@ -13,18 +13,33 @@
  */
 import path from 'node:path';
 
-import { transformSync, type PluginObj } from '@babel/core';
+import { transformSync, type PluginObject } from '@babel/core';
 
 import type * as BabelTypes from '@babel/types';
-import type { Plugin } from 'vite';
+import type { Plugin, Rollup } from 'vite';
 
 /** The attribute the overlay's anchor resolver looks for. */
 export const SOURCE_ATTRIBUTE = 'data-pops-design-source';
 
+function toRawSourceMap(
+  map: NonNullable<ReturnType<typeof transformSync>>['map']
+): Rollup.ExistingRawSourceMap | undefined {
+  if (!map) return undefined;
+  return {
+    version: map.version,
+    file: map.file ?? undefined,
+    sourceRoot: map.sourceRoot,
+    sources: map.sources.map((source) => source ?? ''),
+    sourcesContent: map.sourcesContent?.map((content) => content ?? ''),
+    names: [...map.names],
+    mappings: map.mappings,
+  };
+}
+
 const SURFACE = /\/pillars\/design\/src\/(screens|experiments|kit)\/[^?]+\.tsx$/u;
 
 function stamp(repoRoot: string) {
-  return ({ types: t }: { types: typeof BabelTypes }): PluginObj => ({
+  return ({ types: t }: { types: typeof BabelTypes }): PluginObject => ({
     name: 'pops-design-source-stamp',
     visitor: {
       JSXOpeningElement(nodePath, state) {
@@ -65,7 +80,7 @@ export function stampSource(
   repoRoot: string,
   id: string,
   code: string
-): { code: string; map: NonNullable<ReturnType<typeof transformSync>>['map'] } | null {
+): { code: string; map: Rollup.ExistingRawSourceMap | undefined } | null {
   if (!isSurfaceModule(id)) return null;
   const result = transformSync(code, {
     filename: id,
@@ -76,7 +91,7 @@ export function stampSource(
     sourceMaps: true,
   });
   if (!result?.code) return null;
-  return { code: result.code, map: result.map };
+  return { code: result.code, map: toRawSourceMap(result.map) };
 }
 
 export function sourcePlugin(repoRoot: string): Plugin {

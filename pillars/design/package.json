@@ -40,8 +40,8 @@
     "zod": "^4.5.4"
   },
   "devDependencies": {
-    "@babel/core": "^7.29.7",
-    "@babel/types": "^7.29.7",
+    "@babel/core": "^8.0.5",
+    "@babel/types": "^8.0.5",
     "@pops/app-ai": "workspace:*",
     "@pops/app-bfm": "workspace:*",
     "@pops/app-cerebrum": "workspace:*",
