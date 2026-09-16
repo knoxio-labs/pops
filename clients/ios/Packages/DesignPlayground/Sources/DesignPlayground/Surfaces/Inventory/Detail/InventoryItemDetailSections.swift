@@ -45,7 +45,7 @@ internal struct InventoryItemDetailSyncBanner: View {
                         "Last synced a while ago. Anything changed here is saved on this phone and sent when it can be."
                 )
             }
-        } else if detail.item.sync == .queued || detail.item.sync == .saved {
+        } else if detail.item.sync == .queued {
             Section {
                 PopsStatusHeader(
                     tone: .information, title: "Not sent yet",

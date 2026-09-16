@@ -1,8 +1,8 @@
-/// The four questions POPS-3980 leaves open, all live on the item detail
-/// surface. Each varies exactly one field of ``InventoryItemDetailStyle`` and
-/// holds the rest at their defaults, the same discipline
-/// ``InventoryFoundationExperiments`` uses. Joao decides on the device; none
-/// of these are marked `.decided`.
+/// The four questions POPS-3980 raised, all on the item detail surface. Each
+/// varies exactly one field of ``InventoryItemDetailStyle`` and holds the rest
+/// at their defaults, the same discipline ``InventoryFoundationExperiments``
+/// uses. Joao decided on the device on 2026-09-16, so all four are now
+/// decided; the variants stay so the losing answers can be looked at again.
 internal enum InventoryItemDetailExperiments {
     @MainActor internal static let all: [DesignExperiment] = [
         hierarchy, actionPlacement, sectionDisclosure, containerExtension,
@@ -19,7 +19,9 @@ internal enum InventoryItemDetailExperiments {
         status: .decided(
             variant: "richness-adaptive",
             rationale:
-                "Richness-adaptive, decided on the device 2026-09-16. Sections appear as they are needed, and all of them appear while editing, the way the iOS Contacts app does it."
+                "Richness-adaptive, decided on the device 2026-09-16. Sections appear as they "
+                + "are needed, and all of them appear while editing, the way the iOS Contacts "
+                + "app does it."
         ),
         variants: [
             variant(
@@ -44,7 +46,9 @@ internal enum InventoryItemDetailExperiments {
         status: .decided(
             variant: "header",
             rationale:
-                "In the header, side by side, decided on the device 2026-09-16. The verbs sit beside the identity they act on, and a type's capabilities add theirs to the same row."
+                "In the header, side by side, decided on the device 2026-09-16. The verbs sit "
+                + "beside the identity they act on, and a type's capabilities add theirs to "
+                + "the same row."
         ),
         variants: [
             variant(
@@ -92,7 +96,10 @@ internal enum InventoryItemDetailExperiments {
         status: .decided(
             variant: "appended-section",
             rationale:
-                "One section, appended, decided on the device 2026-09-16. A capability contributes header actions and page sections and nothing else, so a container's page is an item's page with open, close and its contents inlined."
+                "One section, appended, decided on the device 2026-09-16. A capability "
+                + "contributes header actions and page sections and nothing else, so a "
+                + "container's page is an item's page with open, close and its contents "
+                + "inlined."
         ),
         variants: [
             variant(
