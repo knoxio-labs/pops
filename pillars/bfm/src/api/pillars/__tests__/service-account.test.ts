@@ -11,6 +11,8 @@ import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { hasScopeFor } from '@pops/pillar-sdk/server';
+
 import { MOBILE_CAPABILITY_SCOPES } from '../../../contract/capabilities.js';
 import {
   BFM_SERVICE_ACCOUNT_NAME,
@@ -118,9 +120,20 @@ describe('the granted scopes', () => {
     expect(BFM_SERVICE_ACCOUNT_SCOPES).toEqual([
       'finance.transactions',
       'finance.accounts',
+      'finance.checkpoints',
       'purchases.purchase',
       'purchases.receipt',
     ]);
+  });
+
+  it('authorises checkpoint history with the production grant', () => {
+    expect(hasScopeFor(BFM_SERVICE_ACCOUNT_SCOPES, 'finance.checkpoints.history')).toBe(true);
+    expect(
+      hasScopeFor(
+        BFM_SERVICE_ACCOUNT_SCOPES.filter((scope) => scope !== 'finance.checkpoints'),
+        'finance.checkpoints.history'
+      )
+    ).toBe(false);
   });
 
   it('grants no root scope, so a widening stays a visible diff', () => {
@@ -152,7 +165,7 @@ describe('the granted scopes', () => {
 describe('every capability has the downstream scope it leans on', () => {
   it('names a scope bfm actually holds, for every capability that needs one', () => {
     const unbacked = Object.entries(MOBILE_CAPABILITY_SCOPES)
-      .filter((entry): entry is [string, string] => entry[1] !== null)
+      .flatMap(([capability, scopes]) => scopes.map((scope) => [capability, scope] as const))
       .filter(([, scope]) => !BFM_SERVICE_ACCOUNT_SCOPES.includes(scope))
       .map(([capability]) => capability);
 
@@ -162,13 +175,13 @@ describe('every capability has the downstream scope it leans on', () => {
   it('recognises an unbacked capability when it sees one', () => {
     // The degenerate case, planted. Without it this reads as green on the day
     // the map is empty or the filter stops matching anything.
-    const planted: Record<string, string | null> = {
-      'session.read': null,
-      'media.watchlist.write': 'media.watchlist',
+    const planted: Record<string, readonly string[]> = {
+      'session.read': [],
+      'media.watchlist.write': ['media.watchlist'],
     };
 
     const unbacked = Object.entries(planted)
-      .filter((entry): entry is [string, string] => entry[1] !== null)
+      .flatMap(([capability, scopes]) => scopes.map((scope) => [capability, scope] as const))
       .filter(([, scope]) => !BFM_SERVICE_ACCOUNT_SCOPES.includes(scope))
       .map(([capability]) => capability);
 
@@ -176,8 +189,8 @@ describe('every capability has the downstream scope it leans on', () => {
   });
 
   it('says explicitly which capabilities need no scope at all', () => {
-    // `null` is an answer, not an omission: bootstrap calls no pillar's domain
-    // surface, so there is no grant that could authorise or refuse it.
-    expect(MOBILE_CAPABILITY_SCOPES['session.read']).toBeNull();
+    // An empty list is an answer, not an omission: bootstrap calls no pillar's
+    // domain surface, so there is no grant that could authorise or refuse it.
+    expect(MOBILE_CAPABILITY_SCOPES['session.read']).toEqual([]);
   });
 });

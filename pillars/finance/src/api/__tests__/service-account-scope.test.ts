@@ -14,6 +14,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { openFinanceDb, type OpenedFinanceDb } from '../../db/index.js';
+import { createAccount } from '../../db/services/accounts.js';
 import { createFinanceApiApp } from '../app.js';
 import { financeScopeMap } from '../middleware/service-account-scope.js';
 import { makeContactsFake } from './contacts-fake.js';
@@ -112,6 +113,20 @@ describe('a live credential whose grant covers the operation', () => {
     const response = await requestOn(
       app(verifierReturning(grantedScopes(['finance.transactions']))),
       (agent) => agent.get('/transactions').set('x-api-key', KEY)
+    );
+
+    expect(response.status).toBe(200);
+  });
+
+  it('admits a checkpoints-scoped account to account balance history', async () => {
+    const accountId = createAccount(financeDb.db, {
+      name: 'Scoped history',
+      kind: 'checking',
+      currency: 'AUD',
+    }).id;
+    const response = await requestOn(
+      app(verifierReturning(grantedScopes(['finance.checkpoints']))),
+      (agent) => agent.get(`/accounts/${accountId}/balance-history`).set('x-api-key', KEY)
     );
 
     expect(response.status).toBe(200);
