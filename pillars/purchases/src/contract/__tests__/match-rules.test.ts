@@ -10,6 +10,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   compileMatchRulePattern,
+  describeForMatching,
   matchPatternFor,
   normalizeMatchDescriptor,
 } from '../match-rules.js';
@@ -59,7 +60,7 @@ describe('compileMatchRulePattern', () => {
     pattern: string,
     matchType: 'exact' | 'contains' | 'regex',
     descriptor: string
-  ) => compileMatchRulePattern(pattern, matchType)(normalizeMatchDescriptor(descriptor));
+  ) => compileMatchRulePattern(pattern, matchType)(describeForMatching(descriptor));
 
   it('takes an exact pattern as the whole merchant', () => {
     expect(matches('AMAZON MKTPLACE AU', 'exact', 'Amazon Mktplace AU 4128')).toBe(true);
@@ -80,6 +81,16 @@ describe('compileMatchRulePattern', () => {
     expect(matches('^woolworths', 'regex', 'Amazon Mktplace AU 4128')).toBe(false);
   });
 
+  it('tests a regex against the raw descriptor, so a digit run is visible', () => {
+    // normalizeMatchDescriptor strips digits, so a pattern anchored on the
+    // store number could never see one if it were tested against the
+    // normalised form — exactly the gap finance closed for the same reason
+    // under POPS-2640. Mirrors that fix's own example.
+    expect(matches('^WOOLWORTHS \\d{4} SYDNEY$', 'regex', 'Woolworths 1234 Sydney')).toBe(true);
+    // A pattern that only held against the digit-stripped form must now miss.
+    expect(matches('^WOOLWORTHS SYDNEY$', 'regex', 'Woolworths 1234 Sydney')).toBe(false);
+  });
+
   it('matches nothing for a pattern that cannot be compiled', () => {
     // A sweep is a batch over every charge in a window. One malformed row
     // must cost that row's matches, never the night's reconciliation.
@@ -93,5 +104,45 @@ describe('compileMatchRulePattern', () => {
     for (const matchType of ['exact', 'contains', 'regex'] as const) {
       expect(matches('', matchType, '4471 0092')).toBe(false);
     }
+  });
+
+  it('still tests exact and contains against the normalised form', () => {
+    // Digits still must not distinguish two rows of the same shop for the
+    // predicate kinds finance did not move.
+    expect(matches('WOOLWORTHS SYDNEY', 'exact', 'Woolworths 1234 Sydney')).toBe(true);
+    expect(matches('WOOLWORTHS', 'contains', 'Woolworths 1234 Sydney')).toBe(true);
+  });
+});
+
+describe('parity with finance', () => {
+  // `patternMatchesDescription` is not importable here — purchases has no
+  // `@pops/finance` dependency, and ADR-042 is explicit that the matcher is
+  // reproduced across the seam rather than imported. These triples are
+  // pinned identically in
+  // `pillars/finance/src/api/modules/__tests__/pattern-match-parity.test.ts`,
+  // so a change to either side that breaks the mirror shows up as a failure
+  // on both.
+  const financeParity = (
+    pattern: string,
+    matchType: 'exact' | 'contains' | 'regex',
+    descriptor: string
+  ) => compileMatchRulePattern(pattern, matchType)(describeForMatching(descriptor));
+
+  it('regex, anchored across a digit run', () => {
+    expect(financeParity('^WOOLWORTHS \\d{4} SYDNEY$', 'regex', 'Woolworths 1234 Sydney')).toBe(
+      true
+    );
+  });
+
+  it('regex, anchor that only held against the normalised form', () => {
+    expect(financeParity('^WOOLWORTHS SYDNEY$', 'regex', 'Woolworths 1234 Sydney')).toBe(false);
+  });
+
+  it('regex, diacritic not folded', () => {
+    expect(financeParity('CAFE', 'regex', 'CAFÉ MOZART')).toBe(false);
+  });
+
+  it('contains, digit-bearing descriptor', () => {
+    expect(financeParity('Woolworths', 'contains', 'Woolworths 1234 Sydney')).toBe(true);
   });
 });
