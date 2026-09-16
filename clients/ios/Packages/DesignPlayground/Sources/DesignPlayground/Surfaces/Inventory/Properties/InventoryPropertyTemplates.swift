@@ -33,7 +33,9 @@ internal enum InventoryPropertyTemplates {
         id: "bulb",
         name: "Light bulb",
         fields: [
-            InventoryTemplateField("Fitting", "Choice", hint: "E27, GU10, B22"),
+            InventoryTemplateField(
+                "Fitting", "Choice", hint: "E27, GU10, B22",
+                choices: ["E27", "GU10", "B22"]),
             InventoryTemplateField("Protocol", "Choice"),
             InventoryTemplateField("Brightness", "Measurement", unit: "lm"),
             InventoryTemplateField("Colour temperature", "Range", unit: "K"),
@@ -72,7 +74,12 @@ internal enum InventoryPropertyTemplates {
         name: "Furniture",
         fields: [
             InventoryTemplateField("Footprint", "Text", hint: "Width × depth × height"),
-            InventoryTemplateField("Material", "Choice"),
+            InventoryTemplateField(
+                "Material", "Choice",
+                choices: [
+                    "Oak", "Pine", "Walnut", "Ash", "Beech", "MDF", "Plywood", "Veneer",
+                    "Rattan", "Metal", "Glass", "Painted wood",
+                ]),
             InventoryTemplateField("Needs two people", "Yes or no"),
         ]
     )

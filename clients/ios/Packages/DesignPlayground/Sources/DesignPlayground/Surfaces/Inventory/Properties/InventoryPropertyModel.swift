@@ -19,10 +19,22 @@ internal struct InventoryUnit: Equatable {
     /// What it measures, "length", "power". Shown when a unit needs
     /// explaining and used to say why an entered one is not recognised.
     internal let dimension: String
+    /// How many of this unit make one of its dimension's base unit: 0.001
+    /// for millimetres, 1 for metres. What ``InventoryUnitConversion``
+    /// multiplies by. Every dimension the catalogue knows only one unit for
+    /// keeps the default, since a dimension of one has nothing to convert
+    /// between.
+    internal let multiplier: Double
+
+    internal init(symbol: String, dimension: String, multiplier: Double = 1) {
+        self.symbol = symbol
+        self.dimension = dimension
+        self.multiplier = multiplier
+    }
 
     internal static let known: [InventoryUnit] = [
-        InventoryUnit(symbol: "mm", dimension: "length"),
-        InventoryUnit(symbol: "cm", dimension: "length"),
+        InventoryUnit(symbol: "mm", dimension: "length", multiplier: 0.001),
+        InventoryUnit(symbol: "cm", dimension: "length", multiplier: 0.01),
         InventoryUnit(symbol: "m", dimension: "length"),
         InventoryUnit(symbol: "kg", dimension: "mass"),
         InventoryUnit(symbol: "L", dimension: "volume"),
@@ -154,12 +166,20 @@ internal struct InventoryTemplateField: Identifiable, Equatable {
     /// What to put in it, for a field whose name does not say. Empty for the
     /// ones that do.
     internal let hint: String?
+    /// The values a choice field accepts, declared by the type. Nil for every
+    /// other kind. See ``InventoryFieldValidation`` for what a value outside
+    /// this list means.
+    internal let choices: [String]?
 
-    internal init(_ key: String, _ kindLabel: String, unit: String? = nil, hint: String? = nil) {
+    internal init(
+        _ key: String, _ kindLabel: String, unit: String? = nil, hint: String? = nil,
+        choices: [String]? = nil
+    ) {
         self.key = key
         self.kindLabel = kindLabel
         self.unit = unit
         self.hint = hint
+        self.choices = choices
     }
 
     internal var id: String { InventoryPropertySchema.normalized(key) }

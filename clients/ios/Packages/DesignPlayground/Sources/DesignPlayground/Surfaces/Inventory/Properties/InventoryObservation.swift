@@ -58,16 +58,22 @@ internal enum InventoryObservation {
     }
 
     /// One key as the cluster records it: how many use it, in whose spelling,
-    /// with what type and unit.
+    /// with what type and, for a measurement, in which unit each peer
+    /// recorded it.
+    ///
+    /// A unit is collected rather than assigned, because the field's settled
+    /// unit is the cluster's majority, not whichever peer this loop visits
+    /// last, see ``InventoryObservedKey/unit``.
     private static func tally(in peers: [InventoryThing]) -> [InventoryObservedKey] {
         var counted: [String: InventoryObservedKey] = [:]
         for property in peers.flatMap(\.properties) where property.origin != .custom {
             let existing = counted[property.id]
+            let unit = property.value.unitSymbol.map { [$0] } ?? []
             counted[property.id] = InventoryObservedKey(
                 key: property.key,
                 count: (existing?.count ?? 0) + 1,
                 kind: property.value.kindLabel,
-                unit: property.value.unitSymbol,
+                units: (existing?.units ?? []) + unit,
                 spellings: (existing?.spellings ?? []) + [property.key]
             )
         }
@@ -128,7 +134,9 @@ internal struct InventoryObservedKey {
     internal let key: String
     internal let count: Int
     internal let kind: String
-    internal let unit: String?
+    /// The unit each peer that recorded this key used, one entry per peer.
+    /// ``unit`` resolves it; nothing here decides the winner early.
+    internal let units: [String]
     internal let spellings: [String]
 
     /// The same key, named the way most of the cluster names it.
@@ -137,10 +145,15 @@ internal struct InventoryObservedKey {
             key: Self.mostCommon(of: spellings) ?? key,
             count: count,
             kind: kind,
-            unit: unit,
+            units: units,
             spellings: spellings
         )
     }
+
+    /// The unit most of the cluster recorded this key in, ties broken
+    /// alphabetically. Not "the last peer counted", which is what a field
+    /// that overwrote rather than tallied its unit used to settle for.
+    internal var unit: String? { Self.mostCommon(of: units) }
 
     /// The most frequent element, ties broken alphabetically so the result
     /// does not depend on what order the catalogue happened to be read in.
