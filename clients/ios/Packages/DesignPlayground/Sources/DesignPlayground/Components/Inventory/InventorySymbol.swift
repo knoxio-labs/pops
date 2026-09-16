@@ -84,6 +84,11 @@ internal struct InventorySymbol: Equatable {
     internal static let reorder = InventorySymbol(
         system: "line.3.horizontal", lucide: "GripVertical")
     internal static let unavailable = InventorySymbol(system: "slash.circle", lucide: "CircleOff")
+    internal static let donated = InventorySymbol(system: "gift", lucide: "Gift")
+    internal static let sold = InventorySymbol(system: "banknote", lucide: "Banknote")
+    internal static let consumed = InventorySymbol(system: "flame", lucide: "Flame")
+    internal static let reduceQuantity = InventorySymbol(
+        system: "minus.circle", lucide: "MinusCircle")
 
     /// Every entry, for the test that checks them and for the sheet that shows
     /// them side by side.
@@ -137,6 +142,10 @@ internal struct InventorySymbol: Equatable {
         ("Group", group),
         ("Reorder", reorder),
         ("Unavailable", unavailable),
+        ("Donated", donated),
+        ("Sold", sold),
+        ("Consumed", consumed),
+        ("Reduce quantity", reduceQuantity),
     ]
 
     /// The glyph for a container in a given state.
