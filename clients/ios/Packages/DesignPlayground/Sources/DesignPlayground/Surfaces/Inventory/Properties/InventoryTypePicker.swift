@@ -4,8 +4,8 @@ import SwiftUI
 /// Choosing what an object is.
 ///
 /// A real `Picker` in a `List` row rather than a drawn one, so what a reviewer
-/// judges is the platform's own menu — its width, where it opens, and what it
-/// does to the row at AX5 — rather than a facsimile of it.
+/// judges is the platform's own menu, its width, where it opens, and what it
+/// does to the row at AX5, rather than a facsimile of it.
 internal struct InventoryTypePicker: View {
     internal let label: String
     internal let selection: String
@@ -41,7 +41,7 @@ internal struct InventoryTypePicker: View {
 /// What swapping one template for another does to what the object knows.
 ///
 /// Three lists rather than a sentence, because the only question worth asking
-/// about a type change is which of these three a given value lands in — and a
+/// about a type change is which of these three a given value lands in, and a
 /// screen that says "your data is safe" without showing the sorting is asking
 /// to be believed rather than read.
 internal struct InventoryTemplateChangeSummary: View {

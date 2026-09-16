@@ -155,7 +155,7 @@ internal enum InventoryComponentCatalog {
         id: "inventory-actions",
         name: "InventoryActionList",
         synopsis:
-            "An item's actions, grouped by what they change. Red only for what cannot be undone — "
+            "An item's actions, grouped by what they change. Red only for what cannot be undone, "
             + "discarding can be, so it is not.",
         states: [
             DesignState("item", "Item") {
@@ -196,7 +196,7 @@ internal enum InventoryComponentCatalog {
         ]
     )
 
-    /// The fixtures that have a state worth marking — the rest would draw an
+    /// The fixtures that have a state worth marking, the rest would draw an
     /// empty row.
     private static let marked = InventoryFoundationFixtures.all.filter {
         !InventoryStateMark.marks(for: $0).isEmpty

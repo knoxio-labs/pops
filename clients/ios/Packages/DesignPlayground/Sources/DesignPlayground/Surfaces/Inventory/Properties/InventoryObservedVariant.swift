@@ -1,7 +1,7 @@
 import DesignSystem
 import SwiftUI
 
-/// Variant 5 — templates observed, never authored.
+/// Variant 5, templates observed, never authored.
 ///
 /// The other four all assume a type exists before the object does: someone
 /// wrote a Cable template, or nobody did and the object has no fields. This
@@ -9,8 +9,8 @@ import SwiftUI
 /// first cable needs no setup and the fourth is offered the shape the first
 /// three settled into.
 ///
-/// Its cost is that the template moves under you — accept a field today and
-/// the cluster may imply a different one next month — and that everything it
+/// Its cost is that the template moves under you, accept a field today and
+/// the cluster may imply a different one next month, and that everything it
 /// offers is a count rather than a decision. Whether that reads as helpful or
 /// as unstable is the thing to look at.
 internal struct InventoryObservedVariantView: View {
@@ -92,7 +92,7 @@ internal struct InventoryObservedVariantView: View {
     }
 
     /// Keys this object has that its cluster does not. Not an error and not a
-    /// second class of property — just the part nobody else has agreed with
+    /// second class of property, just the part nobody else has agreed with
     /// yet, which is how a field gets born here.
     @ViewBuilder
     private func unmatched(_ thing: InventoryThing, observed: InventoryObservedTemplate?)
@@ -143,7 +143,7 @@ internal struct InventoryObservedVariantView: View {
                     inferring
                         ? "The fields come from the catalogue and the values from the photo. The list is "
                             + "the same offline; only the values go missing."
-                        : "The photo could not be read, and the fields are unaffected — they were never "
+                        : "The photo could not be read, and the fields are unaffected, they were never "
                             + "coming from it.")
             }
         }
@@ -172,7 +172,7 @@ internal struct InventoryObservedVariantView: View {
                     Text("Nearly a match")
                 } footer: {
                     Text(
-                        "So nothing can be suggested — no spelling to settle on, and no rename to "
+                        "So nothing can be suggested, no spelling to settle on, and no rename to "
                             + "offer. The first of anything gets no help here, and pretending "
                             + "otherwise would mean inventing a convention from one example.")
                 }

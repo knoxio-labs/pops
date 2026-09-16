@@ -26,7 +26,7 @@ internal struct InventoryHybridFindingView: View {
             } footer: {
                 Text(
                     "Template fields are offered first because they are the ones every cable has; "
-                        + "custom keys follow, with how many items use each — which is also how a "
+                        + "custom keys follow, with how many items use each, which is also how a "
                         + "custom key earns its way into the template.")
             }
             Section {
@@ -59,7 +59,7 @@ internal struct InventoryHybridComparisonView: View {
 }
 
 /// Variant 4's type change. The template is advice, so the values it does not
-/// ask for keep their type and their place in search — they only lose the
+/// ask for keep their type and their place in search, they only lose the
 /// heading they were sitting under.
 internal struct InventoryHybridSwapView: View {
     internal let thing: InventoryThing

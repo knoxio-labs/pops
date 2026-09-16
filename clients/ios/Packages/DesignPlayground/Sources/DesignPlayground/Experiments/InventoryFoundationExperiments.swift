@@ -2,7 +2,7 @@
 ///
 /// Each varies exactly one field of ``InventoryFoundationStyle`` and holds the
 /// others at their defaults. Where a held default changes how a question reads,
-/// the variant's note says so — that is the price of several experiments
+/// the variant's note says so, that is the price of several experiments
 /// sharing a surface, and it is paid here rather than left for a reviewer to
 /// notice. ADR-001 lists these as open; deciding one updates the ADR.
 internal enum InventoryFoundationExperiments {
@@ -16,12 +16,18 @@ internal enum InventoryFoundationExperiments {
         id: "inventory-container-mark",
         question: "Should a container look different from an item, while still being one?",
         subject: subject,
+        status: .decided(
+            variant: "squared",
+            rationale:
+                "Squared, in Inventory's own amber, decided on the device 2026-09-16. A different shape "
+                + "says container at a glance without a second colour, and the tint carries the "
+                + "pillar's identity onto every list."),
         variants: [
             variant(
                 "like-an-item", "Like an item",
                 note:
                     "Same mark as everything else; only the glyph differs. Holds state as badges, so "
-                    + "the Open/Closed chip is doing the distinguishing here — judge the row without it.",
+                    + "the Open/Closed chip is doing the distinguishing here, judge the row without it.",
                 style: .init(containerMark: .likeAnItem)),
             variant(
                 "tinted", "Tinted",
@@ -38,8 +44,13 @@ internal enum InventoryFoundationExperiments {
 
     @MainActor private static let stateTreatment = DesignExperiment(
         id: "inventory-state-treatment",
-        question: "How should an item's state reach the reader — a badge, words, an icon, or both?",
+        question: "How should an item's state reach the reader: a badge, words, an icon, or both?",
         subject: subject,
+        status: .decided(
+            variant: "badge",
+            rationale:
+                "Badge, decided on the device 2026-09-16. A chip is read without being decoded, and "
+                + "it keeps the detail line for the type and the placement."),
         variants: [
             variant(
                 "badge", "Badge",
@@ -66,6 +77,11 @@ internal enum InventoryFoundationExperiments {
         id: "inventory-sync-visibility",
         question: "How much sync state should show while nothing is wrong?",
         subject: subject,
+        status: .decided(
+            variant: "work-in-flight",
+            rationale:
+                "Work in flight and problems, decided on the device 2026-09-16. A change that has not "
+                + "left the phone is worth a quiet mark; a synced one is not worth anything."),
         variants: [
             variant(
                 "problems-only", "Only problems",
@@ -88,6 +104,10 @@ internal enum InventoryFoundationExperiments {
         id: "inventory-in-hand-term",
         question: "What should an item that has been picked up and not put anywhere be called?",
         subject: subject,
+        status: .decided(
+            variant: "in-hand",
+            rationale:
+                "In hand, decided on the device 2026-09-16. It says what is physically true."),
         variants: [
             variant(
                 "in-hand", "In hand",
@@ -96,12 +116,12 @@ internal enum InventoryFoundationExperiments {
             variant(
                 "unplaced", "Unplaced",
                 note:
-                    "Says what the catalogue knows — no placement. Also covers things set down and forgotten.",
+                    "Says what the catalogue knows, no placement. Also covers things set down and forgotten.",
                 style: .init(inHandTerm: .unplaced)),
             variant(
                 "picked-up", "Picked up",
                 note:
-                    "Names the action that caused it, so the way back — Put back — reads as its pair.",
+                    "Names the action that caused it, so the way back, Put back, reads as its pair.",
                 style: .init(inHandTerm: .pickedUp)),
         ]
     )
@@ -113,15 +133,14 @@ internal enum InventoryFoundationExperiments {
         variants: [
             variant(
                 "close-only", "Close only",
-                note:
-                    "One action. A closed box is a closed box. Current default. Look at the actions states.",
-                style: .init(closeActions: .closeOnly)),
+                note: "One action. A closed box is a closed box. Current default.",
+                style: .init(closeActions: .closeOnly), opening: "container-actions"),
             variant(
                 "close-and-seal", "Close and seal",
                 note:
-                    "Seal is offered beside Close and means \"do not open until it arrives\". "
-                    + "Look at the actions states.",
-                style: .init(closeActions: .closeAndSeal)),
+                    "Seal sits beside Close, and a sealed box's one action asks before it acts. "
+                    + "Tap Break the seal.",
+                style: .init(closeActions: .closeAndSeal), opening: "container-actions"),
         ]
     )
 
@@ -130,10 +149,11 @@ internal enum InventoryFoundationExperiments {
         _ id: String,
         _ title: String,
         note: String,
-        style: InventoryFoundationStyle
+        style: InventoryFoundationStyle,
+        opening: String = "default"
     ) -> DesignVariant {
         DesignVariant(
             id: id, title: title, note: note,
-            surface: InventoryFoundationStaging.surface(style: style))
+            surface: InventoryFoundationStaging.surface(style: style, opening: opening))
     }
 }

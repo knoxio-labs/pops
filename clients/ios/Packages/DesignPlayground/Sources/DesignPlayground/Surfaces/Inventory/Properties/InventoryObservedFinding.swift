@@ -2,7 +2,7 @@ import DesignSystem
 import SwiftUI
 
 /// Variant 5's search: the conditions on offer are the keys the catalogue
-/// actually uses, each with how many items use it — so a key nobody has
+/// actually uses, each with how many items use it, so a key nobody has
 /// adopted is visibly a key nobody has adopted.
 internal struct InventoryObservedFindingView: View {
     internal let things: [InventoryThing]
@@ -49,7 +49,7 @@ internal struct InventoryObservedFindingView: View {
 }
 
 /// Variant 5 has no type to swap, and unlike the key/value variant that is not
-/// because nothing is typed — it is because the type is a reading of the
+/// because nothing is typed, it is because the type is a reading of the
 /// catalogue rather than a field on the object. Changing it means changing
 /// what the object records, and the reading follows.
 internal struct InventoryObservedSwapView: View {

@@ -1,6 +1,6 @@
 /// How an item says what it can do.
 ///
-/// The five answers are not five layouts — they are four different things for
+/// The five answers are not five layouts, they are four different things for
 /// the catalogue to be. Each is staged across the same eleven steps
 /// (``InventoryPropertyStaging/steps``) on the same fixtures, because the
 /// approaches separate at the edges rather than on a well-filled cable: what
@@ -12,7 +12,7 @@ internal enum InventoryPropertyExperiment {
         DesignExperiment(
             id: "inventory-item-properties",
             question:
-                "How should an item record what it can do — fixed templates per category, free typed "
+                "How should an item record what it can do, fixed templates per category, free typed "
                 + "key/values, tags and prose, a template that suggests without binding, or one read "
                 + "off what similar items already record?",
             subject: SurfaceID(area: "inventory", slug: "item"),
@@ -29,7 +29,7 @@ internal enum InventoryPropertyExperiment {
                     + "values had nowhere to come from at all, which is the hole all five variants "
                     + "shared. Defining every type up front makes drift impossible by construction "
                     + "rather than correctable after the fact, and moves the remaining work to a "
-                    + "type-authoring surface — a screen worth designing, rather than a problem worth "
+                    + "type-authoring surface, a screen worth designing, rather than a problem worth "
                     + "inferring around."),
             variants: [
                 DesignVariant(

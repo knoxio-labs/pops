@@ -2,7 +2,7 @@ import Testing
 
 @testable import DesignPlayground
 
-/// A template read off the catalogue rather than authored — the fifth
+/// A template read off the catalogue rather than authored, the fifth
 /// variant's whole claim, and the part of it a screenshot cannot check. If the
 /// derivation is wrong the variant is a drawing of a promise.
 @Suite("Inventory observed templates")
@@ -138,7 +138,7 @@ internal struct InventoryRenameSuggestionTests {
 }
 
 /// Swapping a type must not cost an item what it knows, whichever variant is
-/// doing the swapping — the three buckets the screens draw are this.
+/// doing the swapping, the three buckets the screens draw are this.
 @Suite("Inventory type swap")
 internal struct InventoryTypeSwapTests {
     @Test("a cable read as tape keeps its length, carries the rest, and gains the tape fields")

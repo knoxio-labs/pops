@@ -60,7 +60,7 @@ internal struct InventoryPropertySchemaTests {
     }
 }
 
-/// Changing what an object is must not cost it what it knows — the failure
+/// Changing what an object is must not cost it what it knows, the failure
 /// that makes people stop using templates at all.
 @Suite("Inventory template change")
 internal struct InventoryTemplateChangeTests {

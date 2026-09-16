@@ -2,7 +2,7 @@ import DesignSystem
 import SwiftUI
 
 /// A place in the home. Not an item (ADR-001), so no code, no lifecycle, no
-/// sync mark — only what it holds and where it sits.
+/// sync mark, only what it holds and where it sits.
 internal struct InventoryLocationRow: View {
     internal let name: String
     internal let parent: String?
@@ -55,6 +55,7 @@ internal struct InventoryInHandRow: View {
                 Button("Put back") {}
                     .font(.popsSubheadline.weight(.semibold))
                     .playgroundGlassButton()
+                    .tint(.popsInventory)
                     .accessibilityHint("Returns it to \(previous)")
             }
         }
@@ -90,7 +91,7 @@ internal struct InventoryActivityRow: View {
 
 /// A change the server would not take, with what happened and what to do.
 ///
-/// Says which item, what disagreed, and offers one resolution — never "an
+/// Says which item, what disagreed, and offers one resolution, never "an
 /// error occurred", because a repair row the reader cannot act on is a
 /// notification, not a repair.
 internal struct InventoryRepairRow: View {
@@ -116,6 +117,7 @@ internal struct InventoryRepairRow: View {
             Button(resolution) {}
                 .font(.popsSubheadline.weight(.semibold))
                 .playgroundGlassButton()
+                .tint(.popsInventory)
         }
         .padding(.vertical, PopsSpacing.xs)
     }

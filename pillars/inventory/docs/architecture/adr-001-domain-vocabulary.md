@@ -181,19 +181,39 @@ open questions below.
 adding, because the two are different screens and conflating them is how an
 item gets recorded twice.
 
+## Decided on the device, 2026-09-16
+
+Four of the questions this ADR opened were answered in the playground the same
+day, and the answers are recorded here so the next screen does not reopen them:
+
+- **Containers are squared and tinted.** A container's mark is a rounded square
+  in Inventory's colour; an item's is a circle in the muted foreground. A
+  different shape says container at a glance without a second hue.
+- **State is a badge.** Access and lifecycle each get a chip under the detail
+  line, never a word appended to it and never a glyph beside the name.
+- **Sync shows work in flight and problems.** Queued and synchronizing carry a
+  quiet cloud; stale and needs-attention carry a louder one; saved and
+  synchronized show nothing.
+- **The word is "in hand".** It says what is physically true.
+
+### Inventory has its own colour
+
+Every Inventory surface is tinted amber: `popsInventory` in the DesignSystem,
+a more golden amber than `popsWarning` so the two can share a screen. What
+that costs is that Inventory cannot use hue alone to say "this needs you":
+
+- An **open container** is marked by its whole row being washed and edged in
+  the colour. Nothing else on a list is.
+- **Stale** and **needs attention** are told by their glyph and the tier it
+  sits in, not by being amber, because everything is.
+
 ## What is deliberately still open
 
-These are experiments in the playground, not gaps in this ADR. Each is a
-product question with more than one defensible answer, and each is answered by
-looking rather than by argument:
-
-- What to call the in-hand state — "in hand", "unplaced", or "picked up".
-- Whether "close" and "seal" are two visible actions or one.
+- Whether "close" and "seal" are two visible actions or one. The playground
+  now draws a sealed box whose reopen asks first, which is the difference in
+  practice; the question is whether that difference earns a second verb.
 - Whether two groups of the same thing in one container can be merged by hand,
   or stay separate records forever.
-- Whether a container needs a distinct silhouette while remaining an item.
-- Whether state is carried by a badge, a subtitle, an icon, or a combination.
-- How much synchronization state is visible during ordinary use.
 
 Deciding one of them updates this ADR rather than adding a second word.
 

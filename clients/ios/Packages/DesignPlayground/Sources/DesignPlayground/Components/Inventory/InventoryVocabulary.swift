@@ -19,7 +19,7 @@ internal enum InventoryPlacement: Equatable {
     case inHand(previous: String?)
 
     /// The location found by following containers outward. Nil when the chain
-    /// ends in someone's hand rather than in a room — which is a real state,
+    /// ends in someone's hand rather than in a room, which is a real state,
     /// not missing data, and is shown as such.
     internal var effectiveLocation: String? {
         switch self {
@@ -58,6 +58,10 @@ internal enum InventoryPlacement: Equatable {
 internal enum InventoryAccess: Equatable {
     case open
     case closed
+    /// Closed, and not to be opened until it arrives. Only reachable while the
+    /// close-or-seal question is open and the style offers sealing; reopening
+    /// one asks first, which is the whole difference from closed.
+    case sealed
 }
 
 /// Whether an item still exists and counts. Independent of access: a closed
@@ -89,7 +93,7 @@ internal enum InventoryLifecycle: Equatable, CaseIterable {
 /// Two orderings live here and must not be confused. The *progress* order is
 /// the one a change moves through: saved, queued, synchronizing, synchronized.
 /// The *prominence* order is how loudly to show it, and there synchronized and
-/// saved are both silent — saved is where the phone spends most of its time,
+/// saved are both silent, saved is where the phone spends most of its time,
 /// and it must not look like a problem.
 internal enum InventorySync: Equatable, CaseIterable {
     case saved
@@ -133,8 +137,8 @@ internal enum InventorySyncProminence: Int, Comparable {
 internal struct InventoryQuantity: Equatable {
     internal let count: Int
 
-    /// What a row shows. A single thing shows nothing — a "1" on every row is
-    /// noise — and an exhausted group says so rather than showing a zero that
+    /// What a row shows. A single thing shows nothing, a "1" on every row is
+    /// noise, and an exhausted group says so rather than showing a zero that
     /// reads like an error.
     internal var badge: String? {
         switch count {

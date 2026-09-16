@@ -29,7 +29,7 @@ internal struct InventorySymbolTests {
         #expect(missing.isEmpty, "not in the SF Symbols catalogue: \(missing)")
     }
 
-    @Test("the check itself can fail — a name that does not exist is reported missing")
+    @Test("the check itself can fail, a name that does not exist is reported missing")
     func checkIsNotVacuous() {
         #expect(!exists("inventory.not-a-real-symbol"))
     }

@@ -5,7 +5,7 @@ import SwiftUI
 ///
 /// Built on the DesignSystem's own state primitives rather than beside them, so
 /// an Inventory empty state and a Transactions empty state are the same
-/// component saying different things. What this adds is the words — each one
+/// component saying different things. What this adds is the words, each one
 /// says what happened in Inventory's terms and what a person can do next,
 /// which is the part a generic primitive cannot know.
 internal enum InventoryStateNoticeKind: String, CaseIterable, Identifiable {

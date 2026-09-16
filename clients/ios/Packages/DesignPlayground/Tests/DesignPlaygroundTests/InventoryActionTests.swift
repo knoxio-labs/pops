@@ -3,7 +3,7 @@ import Testing
 @testable import DesignPlayground
 
 /// Which verbs an item offers, and how reversible each one looks. The red
-/// rule — destructive styling only for what cannot be undone — is the one most
+/// rule, destructive styling only for what cannot be undone, is the one most
 /// likely to be "fixed" by someone who sees Discard in plain text.
 @Suite("Inventory actions")
 internal struct InventoryActionTests {

@@ -1,12 +1,12 @@
 import DesignSystem
 import SwiftUI
 
-/// Variant 2 — arbitrary typed key/value properties.
+/// Variant 2, arbitrary typed key/value properties.
 ///
 /// No categories and no templates: an object has whatever keys somebody gave
 /// it, each with a type. It never has nothing to show and it never refuses a
 /// fact, which is exactly what the templates variant cannot say. What it gives
-/// up is agreement — nothing makes two cables use the same word for length,
+/// up is agreement, nothing makes two cables use the same word for length,
 /// and a search has to be built out of keys the catalogue happens to contain.
 internal struct InventoryKeyValueVariantView: View {
     internal let step: InventoryPropertyStep
@@ -162,7 +162,7 @@ internal struct InventoryKeyValueVariantView: View {
                 Text("Find")
             } footer: {
                 Text(
-                    "A condition starts by picking a key out of every key the catalogue has ever seen — "
+                    "A condition starts by picking a key out of every key the catalogue has ever seen, "
                         + "\(keyCount(things)) of them here, and two of those mean the same thing.")
             }
             Section {
@@ -193,7 +193,7 @@ internal struct InventoryKeyValueVariantView: View {
         .playgroundInsetGroupedList()
     }
 
-    /// There is no type to swap. Every key an object has, it keeps — which is
+    /// There is no type to swap. Every key an object has, it keeps, which is
     /// this variant's answer to the migration question and also the reason it
     /// has no way to make two cables agree.
     private func swap(_ thing: InventoryThing, to template: InventoryTemplate) -> some View {

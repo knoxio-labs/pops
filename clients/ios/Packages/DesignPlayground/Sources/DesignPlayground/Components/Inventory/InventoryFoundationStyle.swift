@@ -8,8 +8,9 @@ import SwiftUI
 /// others, and "fixed" means "at the default below", never an unstated
 /// choice.
 ///
-/// The defaults are a best guess, not a decision. Each is marked as open in
-/// ADR-001 until the experiment that owns it is decided.
+/// Four of the five were decided on the device on 2026-09-16 and the defaults
+/// below are those decisions. `closeActions` is still open; ADR-001 says which
+/// is which.
 internal struct InventoryFoundationStyle: Equatable {
     /// Whether a container looks different from an item while still being one.
     internal enum ContainerMark: Equatable {
@@ -54,9 +55,9 @@ internal struct InventoryFoundationStyle: Equatable {
         case closeAndSeal
     }
 
-    internal var containerMark: ContainerMark = .tinted
+    internal var containerMark: ContainerMark = .squared
     internal var stateTreatment: StateTreatment = .badge
-    internal var syncVisibility: SyncVisibility = .fromVisible
+    internal var syncVisibility: SyncVisibility = .fromQuiet
     internal var inHandTerm: InHandTerm = .inHand
     internal var closeActions: CloseActions = .closeOnly
 }

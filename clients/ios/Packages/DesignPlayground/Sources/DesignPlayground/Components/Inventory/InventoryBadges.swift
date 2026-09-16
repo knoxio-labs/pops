@@ -4,28 +4,27 @@ import SwiftUI
 /// An item's inventory code, when it has one.
 ///
 /// Monospaced because it is read character by character against a sticker,
-/// and middle-truncated because both ends of a long code are what a reader
-/// matches on. Absent entirely on unlabelled items — ADR-001: most items do
+/// and never truncated: a code with characters missing matches nothing, so a
+/// long one takes its own line instead. Absent entirely on unlabelled items, ADR-001: most items do
 /// not have a code, and a row that reserved space for one would say they do.
 internal struct InventoryCodeBadge: View {
     internal let code: String
 
     internal var body: some View {
-        Label {
+        HStack(spacing: PopsSpacing.xs) {
+            Image(systemName: InventorySymbol.code.system)
+                .font(.popsCaption)
             Text(code)
                 .font(.popsMonospacedCaption)
                 .lineLimit(1)
-                .truncationMode(.middle)
-        } icon: {
-            Image(systemName: InventorySymbol.code.system)
-                .font(.popsCaption)
+                .fixedSize()
         }
         .foregroundStyle(Color.popsMutedForeground)
         .padding(.horizontal, PopsSpacing.sm)
         .padding(.vertical, PopsSpacing.xs)
         .background(Color.popsMutedForeground.opacity(0.12), in: .capsule)
+        .accessibilityElement(children: .ignore)
         .accessibilityLabel("Inventory code \(code)")
-        .textSelection(.enabled)
     }
 }
 
@@ -48,12 +47,14 @@ internal struct InventoryQuantityBadge: View {
 ///
 /// Lifecycle shows only when it is not active; access shows on every
 /// container, because open or closed is a container's primary fact. The two
-/// are separate marks by design — ADR-001 forbids one badge for both.
+/// are separate marks by design, ADR-001 forbids one badge for both.
 internal struct InventoryStateMark: Identifiable, Equatable {
     internal let id: String
     internal let label: String
     internal let symbol: String
-    internal let isWarning: Bool
+    /// Drawn in Inventory's colour at full strength. Only an open container is,
+    /// because it is the one state that is work still in progress.
+    internal let isHighlighted: Bool
 
     internal static func marks(for item: InventoryFoundationItem) -> [InventoryStateMark] {
         var marks: [InventoryStateMark] = []
@@ -61,9 +62,9 @@ internal struct InventoryStateMark: Identifiable, Equatable {
             marks.append(
                 InventoryStateMark(
                     id: "access",
-                    label: access == .open ? "Open" : "Closed",
+                    label: accessLabel(access),
                     symbol: InventorySymbol.container(access).system,
-                    isWarning: access == .open))
+                    isHighlighted: access == .open))
         }
         if item.lifecycle != .active {
             marks.append(
@@ -71,9 +72,17 @@ internal struct InventoryStateMark: Identifiable, Equatable {
                     id: "lifecycle",
                     label: lifecycleLabel(item.lifecycle),
                     symbol: lifecycleSymbol(item.lifecycle),
-                    isWarning: false))
+                    isHighlighted: false))
         }
         return marks
+    }
+
+    private static func accessLabel(_ access: InventoryAccess) -> String {
+        switch access {
+        case .open: "Open"
+        case .closed: "Closed"
+        case .sealed: "Sealed"
+        }
     }
 
     private static func lifecycleLabel(_ lifecycle: InventoryLifecycle) -> String {
@@ -97,8 +106,8 @@ internal struct InventoryStateMark: Identifiable, Equatable {
     }
 }
 
-/// One state mark drawn as a chip. Open containers carry the accent the
-/// dashboard reserves for open work; everything else is quiet.
+/// One state mark drawn as a chip. An open container's is in Inventory's
+/// colour at full strength; everything else is quiet.
 internal struct InventoryStateBadge: View {
     internal let mark: InventoryStateMark
 
@@ -111,7 +120,7 @@ internal struct InventoryStateBadge: View {
             .background(tone.opacity(0.14), in: .capsule)
     }
 
-    private var tone: Color { mark.isWarning ? .popsWarning : .popsMutedForeground }
+    private var tone: Color { mark.isHighlighted ? .popsInventory : .popsMutedForeground }
 }
 
 /// The sync mark, shown only for the tiers the style lets through.

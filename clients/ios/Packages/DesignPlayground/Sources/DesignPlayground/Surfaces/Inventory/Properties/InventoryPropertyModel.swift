@@ -16,7 +16,7 @@
 /// state the screens have to show and an open string has no way to be one.
 internal struct InventoryUnit: Equatable {
     internal let symbol: String
-    /// What it measures — "length", "power". Shown when a unit needs
+    /// What it measures, "length", "power". Shown when a unit needs
     /// explaining and used to say why an entered one is not recognised.
     internal let dimension: String
 
@@ -42,7 +42,7 @@ internal struct InventoryUnit: Equatable {
 ///
 /// The cases are the presentations a value can take on screen, not storage
 /// types: `choice` and `text` would both be a string in a database, and the
-/// difference between them — one comes from a fixed set, the other does not —
+/// difference between them, one comes from a fixed set, the other does not ,
 /// is exactly what a reviewer is deciding about.
 internal enum InventoryPropertyValue: Equatable {
     case text(String)
@@ -141,7 +141,7 @@ internal struct InventoryProperty: Identifiable, Equatable {
         self.origin = origin
     }
 
-    /// Two keys that differ only in case or spacing are one key — see
+    /// Two keys that differ only in case or spacing are one key, see
     /// ``InventoryPropertySchema/normalized(_:)`` for why that is the rule.
     internal var id: String { InventoryPropertySchema.normalized(key) }
 }

@@ -34,7 +34,7 @@ extension InventoryPlacement {
 /// The path from a room to the thing holding an item.
 ///
 /// Collapses to room … container when the full path will not fit, rather than
-/// truncating mid-word — the two ends are the ones a reader needs, and the
+/// truncating mid-word, the two ends are the ones a reader needs, and the
 /// middle is one tap away on the detail screen.
 internal struct InventoryPlacementPath: View {
     internal let placement: InventoryPlacement
@@ -44,7 +44,7 @@ internal struct InventoryPlacementPath: View {
         if placement.isInHand {
             Label(style.inHandTerm.rawValue, systemImage: InventorySymbol.inHand.system)
                 .font(.popsCaption.weight(.semibold))
-                .foregroundStyle(Color.popsAccent)
+                .foregroundStyle(Color.popsInventory)
         } else if placement.crumbs.isEmpty {
             Text("Location unknown")
                 .font(.popsCaption)

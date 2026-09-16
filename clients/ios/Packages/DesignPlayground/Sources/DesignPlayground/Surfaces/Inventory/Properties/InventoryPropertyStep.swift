@@ -1,7 +1,7 @@
 /// Which moment of the item's life a variant is being asked to draw.
 ///
-/// The variants differ most at the edges — creating something the catalogue
-/// has never seen, and finding it again a year later — so a comparison that
+/// The variants differ most at the edges, creating something the catalogue
+/// has never seen, and finding it again a year later, so a comparison that
 /// only showed the detail screen would compare the easy half. Every variant
 /// implements all five, on the same fixtures, and a variant that has nothing
 /// to show for one of them is answering the question by omission.

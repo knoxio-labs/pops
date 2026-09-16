@@ -22,7 +22,7 @@ internal enum InventoryComparison {
         InventoryPropertySchema.duplicate(of: key, in: thing.properties)?.value.display
     }
 
-    /// True when the objects do not all say the same thing — including when
+    /// True when the objects do not all say the same thing, including when
     /// one of them says nothing, which is a difference a reviewer cares about.
     internal static func differs(on key: String, across things: [InventoryThing]) -> Bool {
         let values = things.map { value(of: key, in: $0) }
@@ -66,7 +66,7 @@ internal struct InventoryComparisonGrid: View {
                 .font(.popsCaption)
                 .foregroundStyle(Color.popsMutedForeground)
             ForEach(things) { thing in
-                Text(InventoryComparison.value(of: key, in: thing) ?? "—")
+                Text(InventoryComparison.value(of: key, in: thing) ?? "Not recorded")
                     .font(.popsSubheadline.weight(differs ? .semibold : .regular))
                     .foregroundStyle(differs ? Color.popsForeground : Color.popsMutedForeground)
             }

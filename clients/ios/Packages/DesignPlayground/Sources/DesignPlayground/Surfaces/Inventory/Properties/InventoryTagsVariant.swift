@@ -1,12 +1,12 @@
 import DesignSystem
 import SwiftUI
 
-/// Variant 3 — tags plus a freeform description.
+/// Variant 3, tags plus a freeform description.
 ///
 /// No fields and no values: what an object can do is said in words, and the
 /// rest is a sentence. It is the fastest thing to write, it never has an empty
-/// state, and the sideboard — which the other three struggle to make look like
-/// anything — reads better here than anywhere else.
+/// state, and the sideboard, which the other three struggle to make look like
+/// anything, reads better here than anywhere else.
 ///
 /// What it cannot do is arithmetic. "Every cable that carries at least 30 W"
 /// has no form on this screen, and the search step is where that stops being

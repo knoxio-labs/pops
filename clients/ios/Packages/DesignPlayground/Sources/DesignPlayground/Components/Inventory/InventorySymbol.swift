@@ -9,7 +9,7 @@
 /// The SF Symbol names are checked against the platform's own catalogue in
 /// `InventorySymbolTests`; the Lucide names were checked against the
 /// `lucide-react` build the web client ships (1.31), which no longer has a
-/// `History` icon — `RotateCcwClock` is its equivalent.
+/// `History` icon, `RotateCcwClock` is its equivalent.
 internal struct InventorySymbol: Equatable {
     internal let system: String
     internal let lucide: String
@@ -61,6 +61,10 @@ internal struct InventorySymbol: Equatable {
 
     /// The glyph for a container in a given state.
     internal static func container(_ access: InventoryAccess) -> InventorySymbol {
-        access == .open ? openContainer : closedContainer
+        switch access {
+        case .open: openContainer
+        case .closed: closedContainer
+        case .sealed: seal
+        }
     }
 }

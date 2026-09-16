@@ -1,7 +1,7 @@
 import DesignSystem
 import SwiftUI
 
-/// Variant 1 — category-specific structured templates.
+/// Variant 1, category-specific structured templates.
 ///
 /// A category owns a fixed set of fields and an object has exactly those. The
 /// argument for it is that every cable then answers the same questions in the
@@ -75,7 +75,7 @@ internal struct InventoryTemplateVariantView: View {
     }
 
     /// Facts the template did not ask for. This variant has no field for them,
-    /// so they end up in prose — which is the whole cost of the approach, and
+    /// so they end up in prose, which is the whole cost of the approach, and
     /// is shown rather than quietly dropped.
     @ViewBuilder
     private func unclaimed(_ thing: InventoryThing) -> some View {
@@ -143,7 +143,7 @@ internal struct InventoryTemplateVariantView: View {
             Text(
                 inferring
                     ? "Every proposal lands in a field that already existed, so accepting one is the same as typing it."
-                    : "Nothing is being proposed — the photo could not be read. The fields are the same either way."
+                    : "Nothing is being proposed, the photo could not be read. The fields are the same either way."
             )
         }
     }

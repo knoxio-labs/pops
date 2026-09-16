@@ -2,7 +2,7 @@
 ///
 /// The fifth answer to `inventory-item-properties` needs one thing the other
 /// four assume: somewhere for a template to come from. Here it is what the
-/// catalogue already does — the keys that items like this one keep recording,
+/// catalogue already does, the keys that items like this one keep recording,
 /// counted. Nothing is authored, and a key only becomes a field once enough
 /// objects agree it is one.
 internal struct InventoryObservedTemplate: Equatable {
@@ -35,7 +35,7 @@ internal enum InventoryObservation {
     }
 
     /// The template the cluster implies, or nothing when too few objects
-    /// agree on anything — the first of its kind has nothing to learn from,
+    /// agree on anything, the first of its kind has nothing to learn from,
     /// and saying so is better than inventing a template from one example.
     internal static func observed(
         like subject: InventoryThing,
@@ -75,7 +75,7 @@ internal enum InventoryObservation {
     }
 
     /// Most-used first, and alphabetical between keys the cluster uses
-    /// equally — so the field order is a fact about the catalogue rather than
+    /// equally, so the field order is a fact about the catalogue rather than
     /// about what order a dictionary happened to enumerate in.
     private static func mostUsedFirst(_ one: InventoryObservedKey, _ other: InventoryObservedKey)
         -> Bool
@@ -84,7 +84,7 @@ internal enum InventoryObservation {
     }
 
     /// The spelling the catalogue mostly uses for a key, when it is not the
-    /// one being offered. Case and hyphens only — two genuinely different
+    /// one being offered. Case and hyphens only, two genuinely different
     /// words are a rename, which is ``renameSuggestion(for:given:on:)``.
     internal static func canonicalSpelling(
         of key: String,
@@ -103,7 +103,7 @@ internal enum InventoryObservation {
     /// The observed field a custom key is probably a second name for.
     ///
     /// Two keys are candidates when they measure the same thing and the object
-    /// fills only one of them — a "Cable length" in feet beside a cluster that
+    /// fills only one of them, a "Cable length" in feet beside a cluster that
     /// records "Length" in metres. It is a suggestion and it is shown as one:
     /// nothing here renames anything on its own.
     internal static func renameSuggestion(

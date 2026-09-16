@@ -139,7 +139,7 @@ internal enum InventoryPropertyFixtures {
         ]
     )
 
-    /// The cables live next door — there are four of them and they carry the
+    /// The cables live next door, there are four of them and they carry the
     /// drift, which is more than a fixtures file can hold alongside everything
     /// else. The ones named through here are the ones something outside the
     /// cable set asks for by name; the rest arrive via `all`.

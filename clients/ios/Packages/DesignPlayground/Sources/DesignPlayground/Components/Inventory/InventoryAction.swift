@@ -2,7 +2,7 @@
 ///
 /// Weight decides presentation, and the rule it encodes is the one the ADR's
 /// action list implies: red is for what cannot be undone. Discarding is
-/// reversible — Restore exists — so it is drawn as an ordinary action with a
+/// reversible, Restore exists, so it is drawn as an ordinary action with a
 /// note saying so. Only marking something destroyed, which is a fact about the
 /// world rather than a choice about the record, gets destructive styling and a
 /// confirmation.
@@ -30,6 +30,9 @@ internal struct InventoryAction: Identifiable, Equatable {
     /// What the reader should know before tapping. Present on anything that is
     /// not plainly reversible.
     internal let note: String?
+    /// Asked before the action happens, when there is something to be sure
+    /// about. Present on anything irreversible, and on breaking a seal.
+    internal let confirmation: String?
 
     internal init(
         _ id: String,
@@ -37,7 +40,8 @@ internal struct InventoryAction: Identifiable, Equatable {
         symbol: InventorySymbol,
         heading: Heading,
         weight: Weight = .standard,
-        note: String? = nil
+        note: String? = nil,
+        confirmation: String? = nil
     ) {
         self.id = id
         self.title = title
@@ -45,6 +49,7 @@ internal struct InventoryAction: Identifiable, Equatable {
         self.heading = heading
         self.weight = weight
         self.note = note
+        self.confirmation = confirmation
     }
 
     /// Everything a person can do to this item, in the order a sheet lists it.
@@ -90,6 +95,13 @@ internal struct InventoryAction: Identifiable, Equatable {
             return [
                 InventoryAction("reopen", "Reopen", symbol: .openContainer, heading: .container)
             ]
+        case .sealed:
+            return [
+                InventoryAction(
+                    "reopen", "Break the seal", symbol: .openContainer, heading: .container,
+                    note: "It was sealed so it would not be opened before it arrived.",
+                    confirmation: "Open \(item.name) before it arrives?")
+            ]
         case .open:
             var actions = [
                 InventoryAction(
@@ -100,7 +112,7 @@ internal struct InventoryAction: Identifiable, Equatable {
                 actions.append(
                     InventoryAction(
                         "seal", "Seal", symbol: .seal, heading: .container,
-                        note: "Closed and not to be opened until it arrives"))
+                        note: "Closed, and asks before it is opened again."))
             }
             return actions
         }
@@ -128,7 +140,7 @@ internal struct InventoryAction: Identifiable, Equatable {
         note: "Stops counting. Can be restored.")
 
     private static let destroy = InventoryAction(
-        "destroy", "Mark as destroyed", symbol: .attention, heading: .removal,
-        weight: .irreversible,
-        note: "Cannot be undone")
+        "destroy", "Mark as destroyed", symbol: .destroyed, heading: .removal,
+        weight: .irreversible, note: "Cannot be undone.",
+        confirmation: "It stops counting and cannot be restored.")
 }

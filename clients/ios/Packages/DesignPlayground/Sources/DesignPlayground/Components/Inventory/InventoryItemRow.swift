@@ -1,7 +1,7 @@
 import DesignSystem
 import SwiftUI
 
-/// The canonical row for anything in the catalogue — item or container.
+/// The canonical row for anything in the catalogue, item or container.
 ///
 /// One row for both, because a container is an item (ADR-001); what differs
 /// is the mark and the access state, and both are driven by the item rather
@@ -29,6 +29,15 @@ internal struct InventoryItemRow: View {
             }
         }
         .padding(.vertical, PopsSpacing.xs)
+        .padding(.horizontal, item.access == .open ? PopsSpacing.sm : PopsSpacing.zero)
+        .background {
+            if item.access == .open {
+                RoundedRectangle(cornerRadius: PopsRadius.card, style: .continuous)
+                    .fill(Color.popsInventory.opacity(0.12))
+                RoundedRectangle(cornerRadius: PopsRadius.card, style: .continuous)
+                    .stroke(Color.popsInventory, lineWidth: PopsBorder.hairline)
+            }
+        }
         .accessibilityElement(children: .combine)
     }
 
@@ -48,7 +57,7 @@ internal struct InventoryItemRow: View {
                     Image(systemName: mark.symbol)
                         .font(.popsCaption.weight(.semibold))
                         .foregroundStyle(
-                            mark.isWarning ? Color.popsWarning : Color.popsMutedForeground
+                            mark.isHighlighted ? Color.popsInventory : Color.popsMutedForeground
                         )
                         .accessibilityLabel(mark.label)
                 }
@@ -56,7 +65,7 @@ internal struct InventoryItemRow: View {
         }
     }
 
-    /// Type, then where it is, then — when the style says so — its state in
+    /// Type, then where it is, then, when the style says so, its state in
     /// words. An untyped item says so rather than leaving a gap, because
     /// "no type yet" is the state POPS-4016 has to make findable.
     private var detail: String {
@@ -105,7 +114,7 @@ internal struct InventoryItemMark: View {
         item.isContainer && style.containerMark != .likeAnItem
     }
 
-    private var tone: Color { distinguishes ? .popsAccent : .popsMutedForeground }
+    private var tone: Color { distinguishes ? .popsInventory : .popsMutedForeground }
 
     private var shape: AnyShape {
         item.isContainer && style.containerMark == .squared

@@ -24,7 +24,7 @@ internal enum InventoryFoundationFixtures {
         placement: .inHand(previous: "Documents drawer"), sync: .saved)
 
     /// Inside a container that is itself being carried, so there is no room
-    /// to name — the effective location is genuinely unknown, not missing.
+    /// to name, the effective location is genuinely unknown, not missing.
     internal static let espresso = InventoryFoundationItem(
         id: "espresso",
         name: "Espresso machine with the steam wand that needs descaling every three weeks",
@@ -42,6 +42,12 @@ internal enum InventoryFoundationFixtures {
     internal static let linenBox = InventoryFoundationItem(
         id: "linen-02", name: "Linen 02", typeName: "Storage box", code: "B207",
         placement: .direct(location: "Hall cupboard"), access: .closed)
+
+    /// Only reachable when the style offers sealing; the close-only world has
+    /// no such box, and its gallery does not show one.
+    internal static let sealedBox = InventoryFoundationItem(
+        id: "books-05", name: "Books 05", typeName: "Storage box", code: "B509",
+        placement: .direct(location: "Garage"), access: .sealed)
 
     // Quantity and missing metadata.
 

@@ -110,20 +110,21 @@ internal struct InventoryStateAxisTests {
         #expect(InventoryStateMark.marks(for: InventoryFoundationFixtures.television).isEmpty)
     }
 
-    @Test("an open container is the one state drawn as a warning")
-    func openIsTheWarning() {
+    @Test("an open container is the one state drawn highlighted")
+    func openIsHighlighted() {
         #expect(
-            InventoryStateMark.marks(for: InventoryFoundationFixtures.kitchenBox).first?.isWarning
+            InventoryStateMark.marks(for: InventoryFoundationFixtures.kitchenBox).first?
+                .isHighlighted
                 == true)
         #expect(
-            InventoryStateMark.marks(for: InventoryFoundationFixtures.linenBox).first?.isWarning
+            InventoryStateMark.marks(for: InventoryFoundationFixtures.linenBox).first?.isHighlighted
                 == false)
     }
 }
 
 @Suite("Inventory sync prominence")
 internal struct InventorySyncProminenceTests {
-    @Test("saved and synchronized are both silent — the phone's usual state is not a problem")
+    @Test("saved and synchronized are both silent, the phone's usual state is not a problem")
     func usualStatesAreSilent() {
         #expect(InventorySync.saved.prominence == .silent)
         #expect(InventorySync.synchronized.prominence == .silent)

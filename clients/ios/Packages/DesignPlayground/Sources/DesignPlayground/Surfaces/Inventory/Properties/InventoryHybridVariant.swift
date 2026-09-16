@@ -1,7 +1,7 @@
 import DesignSystem
 import SwiftUI
 
-/// Variant 4 — a template that suggests, and custom properties that are
+/// Variant 4, a template that suggests, and custom properties that are
 /// first-class.
 ///
 /// The template is advice rather than a schema: it says which fields a cable
@@ -124,7 +124,7 @@ internal struct InventoryHybridVariantView: View {
                 Text("Template")
             } footer: {
                 Text(
-                    "A template is offered, never required — and one exists here because other items "
+                    "A template is offered, never required, and one exists here because other items "
                         + "already record these keys, not because somebody wrote it first.")
             }
             Section {

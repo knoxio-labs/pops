@@ -8,16 +8,16 @@
 internal struct InventoryFoundationItem: Identifiable, Equatable {
     internal let id: String
     internal let name: String
-    /// Nil for an item filed before its type exists — the path POPS-4016
+    /// Nil for an item filed before its type exists, the path POPS-4016
     /// designs, and a state every row has to survive.
     internal let typeName: String?
     internal let code: String?
     internal let quantity: InventoryQuantity
-    internal let placement: InventoryPlacement
+    internal var placement: InventoryPlacement
     /// Present only on containers. Its presence is what makes one a container.
-    internal let access: InventoryAccess?
-    internal let lifecycle: InventoryLifecycle
-    internal let sync: InventorySync
+    internal var access: InventoryAccess?
+    internal var lifecycle: InventoryLifecycle
+    internal var sync: InventorySync
 
     internal init(
         id: String,

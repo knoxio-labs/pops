@@ -1,7 +1,7 @@
 /// The rules the property vocabulary has, as opposed to the shapes it has.
 ///
 /// These are here rather than inside a view because every one of them is a
-/// question the experiment has to answer visibly — what counts as the same
+/// question the experiment has to answer visibly, what counts as the same
 /// key, what a template change does to data the new template did not ask for,
 /// what search can and cannot reach. A screen that decides one of them in a
 /// `ForEach` has decided it invisibly.
@@ -9,7 +9,7 @@ internal enum InventoryPropertySchema {
     /// Two keys are the same key when they differ only in case, surrounding
     /// space, inner spacing, or a hyphen where a space would do.
     ///
-    /// The alternative — exact strings — gives a catalogue "Length", "length"
+    /// The alternative, exact strings, gives a catalogue "Length", "length"
     /// and "Cable length " as three properties, which is the failure mode that
     /// turns structured data back into notes.
     internal static func normalized(_ key: String) -> String {
