@@ -131,14 +131,12 @@ describe('the seeded classified vocabulary', () => {
     'fee:late',
     'fee:membership',
     'fee:surcharge',
-    'hobby:brewing',
     'occasion:health',
     'occasion:home',
     'occasion:out',
     'occasion:travel',
     'occasion:work',
     'tax:deductible',
-    'tax:novated-lease',
     'venue:arcade',
     'venue:attraction',
     'venue:bakery',
@@ -173,7 +171,7 @@ describe('the seeded classified vocabulary', () => {
     const { db } = freshMigratedFinanceDb();
 
     expect(listClassifiedVocabulary(db).toSorted()).toEqual(EXPECTED);
-    expect(EXPECTED).toHaveLength(89);
+    expect(EXPECTED).toHaveLength(87);
   });
 
   it('gives every closed-facet value the closed kind', () => {
