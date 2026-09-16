@@ -19,7 +19,9 @@ internal enum InventorySearchExperiments {
         status: .decided(
             variant: "ranked",
             rationale:
-                "One ranked list, decided on the device 2026-09-16. The mark at the head of each row says what kind of thing it is, so grouping by kind would repeat what the glyph already says."
+                "One ranked list, decided on the device 2026-09-16. The mark at the head of each "
+                + "row says what kind of thing it is, so grouping by kind would repeat what the "
+                + "glyph already says."
         ),
         variants: [
             DesignVariant(
@@ -52,7 +54,9 @@ internal enum InventorySearchExperiments {
         status: .decided(
             variant: "sheet-only",
             rationale:
-                "Sheet only, with the filter button in Inventory's colour while a filter is active, decided on the device 2026-09-16. A tinted button says something is on without spending a row of chips above every result list."
+                "Sheet only, with the filter button in Inventory's colour while a filter is "
+                + "active, decided on the device 2026-09-16. A tinted button says something is on "
+                + "without spending a row of chips above every result list."
         ),
         variants: [
             DesignVariant(
