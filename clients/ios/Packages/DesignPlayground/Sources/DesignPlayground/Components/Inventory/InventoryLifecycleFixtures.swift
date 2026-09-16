@@ -15,14 +15,15 @@ internal struct InventoryLifecycleRejection: Identifiable, Equatable {
 /// Every state POPS-3989 requires, once each, built on
 /// ``InventoryFoundationFixtures`` rather than beside it.
 internal enum InventoryLifecycleFixtures {
-    /// A reason for the items whose disposition carries one.
+    /// A reason for the items whose disposition carries one, keyed by item id
+    /// and read only by the gallery's disposition summaries.
     /// ``InventoryFoundationItem`` has no field for this: ADR-001 does not
     /// give a discard a reason of its own, this ticket's own open question
-    /// does, so the mapping lives here rather than growing the model.
+    /// does, so the mapping lives here rather than growing the model. A
+    /// retirement is its own reason and a restored item has none, so only the
+    /// discarded sofa appears.
     internal static let reasons: [String: InventoryDiscardReason] = [
-        "old-sofa": .donated,
-        "camera": .sold,
-        "queued-kettle": .broken,
+        "old-sofa": .donated
     ]
 
     // Partially reduced quantity: some of a group is gone, the rest still

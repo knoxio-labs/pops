@@ -57,18 +57,18 @@ both clients, the contract, and this pillar's code.
 
 ### The thing itself
 
-| Word                    | Means                                                                                                     | Not                                      |
-| ----------------------- | --------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
-| **Item**                | Anything tracked. The only noun for a tracked thing.                                                      | "object", "asset", "thing", "entry"      |
-| **Type**                | The code-defined shape an item has: its fields and its capabilities.                                      | "category", "template", "kind", "class"  |
-| **Field**               | One slot a type declares — name, value kind, unit, allowed values, required or not.                       | "property", "attribute", "key"           |
-| **Value**               | What one item records for one field.                                                                      | "property value", "data"                 |
-| **Value kind**          | What sort of value a field takes: text, choice, yes/no, measurement, range, link.                         | "type" (reserved, above), "data type"    |
-| **Note**                | Free prose on an item. Where anything the type does not ask for goes.                                     | "description", "comment", "custom field" |
-| **Capability**          | A behaviour a type grants, which changes what an item can do and what screens it has. Today: containment. | a field; a tag; a permission             |
-| **Inventory code**      | The identifier POPS assigns and prints on a label.                                                        | "ID", "barcode", "SKU"                   |
-| **External identifier** | An identifier someone else assigned: a barcode, a serial, a model number.                                 | "code" unqualified                       |
-| **Quantity**            | How many identical items one record stands for.                                                           | "count", "amount", "stock"               |
+| Word                    | Means                                                                                                                                                                 | Not                                      |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| **Item**                | Anything tracked. The only noun for a tracked thing.                                                                                                                  | "object", "asset", "thing", "entry"      |
+| **Type**                | The code-defined shape an item has: its fields and its capabilities.                                                                                                  | "category", "template", "kind", "class"  |
+| **Field**               | One slot a type declares — name, value kind, unit, allowed values, required or not.                                                                                   | "property", "attribute", "key"           |
+| **Value**               | What one item records for one field.                                                                                                                                  | "property value", "data"                 |
+| **Value kind**          | What sort of value a field takes: text, choice, yes/no, measurement, range, link.                                                                                     | "type" (reserved, above), "data type"    |
+| **Note**                | Free prose on an item. Where anything the type does not ask for goes.                                                                                                 | "description", "comment", "custom field" |
+| **Capability**          | A behaviour a type grants. It contributes header actions and page sections to the item, and nothing else. Containment, connection, and (for fixtures) being wired in. | a field; a tag; a permission             |
+| **Inventory code**      | The identifier POPS assigns and prints on a label.                                                                                                                    | "ID", "barcode", "SKU"                   |
+| **External identifier** | An identifier someone else assigned: a barcode, a serial, a model number.                                                                                             | "code" unqualified                       |
+| **Quantity**            | How many identical items one record stands for.                                                                                                                       | "count", "amount", "stock"               |
 
 An item with the containment capability is a **container** — a word for a role,
 not for a second entity. A container is an item: it has a type, a placement, a
@@ -86,6 +86,31 @@ containers: they travel with their contents, and where one went is the question
 the whole pillar exists to answer. The test is whether the thing itself has a
 placement worth recording — if it does, it is an item, and if it can hold
 things, it is a container.
+
+### A capability is actions plus sections
+
+Decided on the device 2026-09-16, while reviewing the item detail. Every item
+has the same page: identity, placement, fields, note, provenance, documents,
+activity. A type's capabilities extend that page in exactly two ways, and the
+page never changes shape otherwise:
+
+- **Header actions.** A capability adds verbs beside the ones every item has,
+  side by side in the header, next to the identity they act on. A container
+  adds open, close and "Store here" (put something in); a cable adds connect
+  and disconnect. Furniture that holds things is a container in this sense: it
+  gets "Store here", and it is never picked up, only moved.
+- **Sections.** A capability adds a section below the shared ones, inline. A
+  container adds what it holds; a cable adds what it is connected to.
+
+So a container's page is an item's page with two verbs and one section more,
+and a television's page is an item's page with nothing more. A fixture (a
+power point, a light fitting) is an item too, with the capability of being
+wired into the house, and gets its verbs and its section the same way. A
+capability that wants a tab, a sheet or its own screen is a screen that has
+not been designed yet, not a capability.
+
+Sections appear as they are needed and all of them appear while editing, the
+way the iOS Contacts app does it. Provenance and documents expand in place.
 
 ### Codes are identity, not data
 
@@ -183,7 +208,7 @@ item gets recorded twice.
 
 ## Decided on the device, 2026-09-16
 
-Every question this ADR opened was answered in the playground the same
+All five foundation questions were answered in the playground the same
 day, and the answers are recorded here so the next screen does not reopen them:
 
 - **Containers are squared and tinted.** A container's mark is a rounded square
