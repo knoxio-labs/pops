@@ -1255,8 +1255,8 @@ importers:
         specifier: ^8.0.5
         version: 8.0.5
       '@babel/types':
-        specifier: ^7.29.7
-        version: 7.29.8
+        specifier: ^8.0.5
+        version: 8.0.5
       '@pops/app-ai':
         specifier: workspace:*
         version: link:../ai/app
@@ -11568,7 +11568,7 @@ snapshots:
       istanbul-lib-report: 3.0.1
       istanbul-reports: 3.2.0
       magicast: 0.5.4
-      obug: 2.1.4
+      obug: 2.2.1
       std-env: 4.2.0
       tinyrainbow: 3.1.1
       vitest: 4.1.10(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.13.3)(typescript@6.0.3))(vite@8.2.2(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
