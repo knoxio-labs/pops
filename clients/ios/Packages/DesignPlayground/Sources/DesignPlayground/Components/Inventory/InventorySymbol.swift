@@ -71,6 +71,19 @@ internal struct InventorySymbol: Equatable {
     internal static let signIn = InventorySymbol(system: "person.badge.key", lucide: "KeyRound")
     internal static let storage = InventorySymbol(system: "internaldrive", lucide: "HardDrive")
     internal static let appUpdate = InventorySymbol(system: "arrow.down.app", lucide: "Download")
+    internal static let dictate = InventorySymbol(system: "mic", lucide: "Mic")
+    internal static let camera = InventorySymbol(system: "camera", lucide: "Camera")
+    internal static let library = InventorySymbol(system: "photo.on.rectangle", lucide: "Images")
+    internal static let add = InventorySymbol(system: "plus", lucide: "Plus")
+    internal static let suggest = InventorySymbol(system: "sparkles", lucide: "Sparkles")
+    internal static let externalIdentifier = InventorySymbol(
+        system: "barcode", lucide: "Barcode")
+    internal static let provenance = InventorySymbol(system: "doc.text", lucide: "FileText")
+    internal static let duplicate = InventorySymbol(system: "doc.on.doc", lucide: "Copy")
+    internal static let group = InventorySymbol(system: "square.stack", lucide: "Layers")
+    internal static let reorder = InventorySymbol(
+        system: "line.3.horizontal", lucide: "GripVertical")
+    internal static let unavailable = InventorySymbol(system: "slash.circle", lucide: "CircleOff")
 
     /// Every entry, for the test that checks them and for the sheet that shows
     /// them side by side.
@@ -113,6 +126,17 @@ internal struct InventorySymbol: Equatable {
         ("Sign in", signIn),
         ("Storage", storage),
         ("App update", appUpdate),
+        ("Dictate", dictate),
+        ("Camera", camera),
+        ("Photo library", library),
+        ("Add", add),
+        ("Suggest", suggest),
+        ("External identifier", externalIdentifier),
+        ("Provenance", provenance),
+        ("Duplicate", duplicate),
+        ("Group", group),
+        ("Reorder", reorder),
+        ("Unavailable", unavailable),
     ]
 
     /// The glyph for a container in a given state.
