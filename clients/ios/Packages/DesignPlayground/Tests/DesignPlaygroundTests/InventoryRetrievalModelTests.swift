@@ -98,6 +98,57 @@ internal struct InventoryRetrievalModelTests {
             state.createdDestinations == ["Kitchen"], "the same destination is not listed twice")
     }
 
+    @Test("keeping something in hand is not a placement and not a new destination")
+    func keepInHandIsNotAPlacement() {
+        var state = InventoryUnpackingState(
+            containerName: "Crate 3",
+            remaining: [
+                InventoryFoundationItem(
+                    id: "1", name: "One", typeName: "Thing", placement: .direct(location: "")),
+                InventoryFoundationItem(
+                    id: "2", name: "Two", typeName: "Thing", placement: .direct(location: "")),
+            ])
+
+        state.keepInHand(["1"])
+
+        #expect(state.inHandCount == 1)
+        #expect(state.progress.placedItems == 0)
+        #expect(state.createdDestinations.isEmpty, "the hand is not somewhere an item was put")
+        #expect(state.progress.remainingItems == 1, "it is out of the box")
+        #expect(!state.progress.isComplete)
+    }
+
+    @Test("a box emptied entirely into the hand is not finished unpacking")
+    func everythingInHandIsNotComplete() {
+        var state = InventoryUnpackingState(
+            containerName: "Crate 3",
+            remaining: [
+                InventoryFoundationItem(
+                    id: "1", name: "One", typeName: "Thing", placement: .direct(location: ""))
+            ])
+
+        state.keepInHand(["1"])
+
+        #expect(state.closeOutcome == .empty, "nothing is inside it any more")
+        #expect(!state.progress.isComplete, "but nothing has a new home either")
+        #expect(state.progress.summary.contains("in hand"))
+    }
+
+    @Test("keeping an id that is not inside the container changes nothing")
+    func keepInHandIgnoresUnknownIDs() {
+        var state = InventoryUnpackingState(
+            containerName: "Crate 3",
+            remaining: [
+                InventoryFoundationItem(
+                    id: "1", name: "One", typeName: "Thing", placement: .direct(location: ""))
+            ])
+
+        state.keepInHand(["absent"])
+
+        #expect(state.inHandCount == 0)
+        #expect(state.remaining.count == 1)
+    }
+
     @Test("closing never depends on whether the container is empty")
     func closeOutcomeIsIndependentOfContents() {
         let partial = InventoryUnpackingState(

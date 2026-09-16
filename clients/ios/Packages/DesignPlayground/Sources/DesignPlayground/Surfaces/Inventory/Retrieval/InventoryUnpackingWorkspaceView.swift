@@ -43,7 +43,9 @@ internal struct InventoryUnpackingWorkspaceView: View {
             destinationSheet(for: target)
         }
         .sheet(item: $emptyOutcome) { _ in
-            InventoryEmptyContainerOutcomeSheet(containerName: state.containerName) { _ in
+            InventoryEmptyContainerOutcomeSheet(
+                containerName: state.containerName, inHandCount: state.inHandCount
+            ) { _ in
                 emptyOutcome = nil
             }
         }
@@ -105,7 +107,8 @@ internal struct InventoryUnpackingWorkspaceView: View {
     }
 
     private func keepInHand(_ lot: InventoryUnpackingLot) {
-        state.place([lot.id], at: "In hand")
+        state.keepInHand([lot.id])
+        selection.remove(lot.id)
     }
 
     private func destinationSheet(for target: DestinationTarget) -> some View {

@@ -8,17 +8,26 @@ import SwiftUI
 /// being empty are unrelated facts (ADR-001).
 internal struct InventoryEmptyContainerOutcomeSheet: View {
     internal let containerName: String
+    /// Items that left the box without a destination. They are out, so the
+    /// box is empty, but saying they have a new home would be untrue.
+    internal var inHandCount: Int = 0
     internal let onChoose: (InventoryEmptyContainerChoice) -> Void
     @Environment(\.dismiss) private var dismiss
+
+    private var message: String {
+        inHandCount == 0
+            ? "Everything that was inside has a new home."
+            : "\(inHandCount) of them are still in hand, waiting for somewhere to go."
+    }
 
     internal var body: some View {
         NavigationStack {
             List {
                 Section {
                     PopsStatusHeader(
-                        tone: .success,
+                        tone: inHandCount == 0 ? .success : .information,
                         title: "\(containerName) is empty",
-                        message: "Everything that was inside has a new home.")
+                        message: message)
                 }
                 Section("What happens to the box?") {
                     ForEach(InventoryEmptyContainerChoice.allCases) { choice in

@@ -130,14 +130,32 @@ internal struct InventoryUnpackingProgress: Equatable {
     internal let containerName: String
     internal let totalItems: Int
     internal let placedItems: Int
+    /// Out of the box but not yet anywhere. The hand is not a destination, so
+    /// these count against completion rather than toward it.
+    internal let inHandItems: Int
 
-    internal var remainingItems: Int { max(totalItems - placedItems, 0) }
-    internal var isComplete: Bool { remainingItems == 0 }
+    internal init(
+        containerName: String, totalItems: Int, placedItems: Int, inHandItems: Int = 0
+    ) {
+        self.containerName = containerName
+        self.totalItems = totalItems
+        self.placedItems = placedItems
+        self.inHandItems = inHandItems
+    }
+
+    /// Still inside the container.
+    internal var remainingItems: Int { max(totalItems - placedItems - inHandItems, 0) }
+    /// Every item that started inside now has somewhere to be.
+    internal var isComplete: Bool { remainingItems == 0 && inHandItems == 0 }
 
     internal var summary: String {
-        isComplete
-            ? "Everything placed"
-            : "\(remainingItems) of \(totalItems) still in \(containerName)"
+        switch (remainingItems, inHandItems) {
+        case (0, 0): "Everything placed"
+        case (0, let inHand): "\(containerName) is empty, \(inHand) still in hand"
+        case (let left, 0): "\(left) of \(totalItems) still in \(containerName)"
+        case (let left, let inHand):
+            "\(left) of \(totalItems) still in \(containerName), \(inHand) in hand"
+        }
     }
 }
 

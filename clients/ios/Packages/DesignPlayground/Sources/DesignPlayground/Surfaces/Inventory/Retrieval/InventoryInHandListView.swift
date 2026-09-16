@@ -10,8 +10,11 @@ import SwiftUI
 /// in the plain list is how a reviewer misses that they need a different
 /// response.
 internal struct InventoryInHandListView: View {
+    @Environment(\.inventoryRetrievalStyle) private var style
     @State private var items: [InventoryRetrievalItem]
     @State private var moveTarget: InventoryRetrievalItem?
+    @State private var pendingPutBack: InventoryRetrievalItem?
+    @State private var pendingMove: InventoryRetrievalItem?
 
     internal init(items: [InventoryRetrievalItem]) {
         _items = State(initialValue: items)
@@ -34,6 +37,35 @@ internal struct InventoryInHandListView: View {
                 onChoose: { _ in moveTarget = nil }
             )
         }
+        .confirmationDialog(
+            "Put it back?", isPresented: presenting($pendingPutBack), presenting: pendingPutBack
+        ) { retrieval in
+            Button("Put back") {
+                putBack(retrieval)
+                pendingPutBack = nil
+            }
+            Button("Cancel", role: .cancel) { pendingPutBack = nil }
+        } message: { retrieval in
+            Text("\(retrieval.item.name) goes back to \(destinationName(retrieval)).")
+        }
+        .confirmationDialog(
+            "Move it?", isPresented: presenting($pendingMove), presenting: pendingMove
+        ) { retrieval in
+            Button("Choose a destination") {
+                moveTarget = retrieval
+                pendingMove = nil
+            }
+            Button("Cancel", role: .cancel) { pendingMove = nil }
+        } message: { retrieval in
+            Text("\(retrieval.item.name) leaves your hand once you pick somewhere.")
+        }
+    }
+
+    /// A dialog's on/off binding over the item it is asking about: presented
+    /// while something is pending, and dismissing clears it.
+    private func presenting(_ pending: Binding<InventoryRetrievalItem?>) -> Binding<Bool> {
+        Binding(
+            get: { pending.wrappedValue != nil }, set: { if !$0 { pending.wrappedValue = nil } })
     }
 
     @ViewBuilder private var conflictedSection: some View {
@@ -68,8 +100,10 @@ internal struct InventoryInHandListView: View {
                 ForEach(settled) { retrieval in
                     InventoryFullInHandRow(
                         retrieval: retrieval,
-                        onPutBack: { putBack(retrieval) },
-                        onMove: { moveTarget = retrieval }
+                        onPutBack: {
+                            request(retrieval, confirmed: $pendingPutBack) { putBack($0) }
+                        },
+                        onMove: { request(retrieval, confirmed: $pendingMove) { moveTarget = $0 } }
                     )
                 }
             }
@@ -94,6 +128,22 @@ internal struct InventoryInHandListView: View {
     private func destinationName(_ retrieval: InventoryRetrievalItem) -> String {
         guard case .inHand(let previous) = retrieval.item.placement else { return "its place" }
         return previous ?? "its place"
+    }
+
+    /// Under ``InventoryRetrievalStyle/ConfirmationLevel/confirmEvery`` this
+    /// parks the step in `confirmed` for a dialog to release; under the other
+    /// two levels it runs straight away, which is the whole difference
+    /// between the confirm-pick-up and confirm-every variants.
+    private func request(
+        _ retrieval: InventoryRetrievalItem,
+        confirmed: Binding<InventoryRetrievalItem?>,
+        perform: (InventoryRetrievalItem) -> Void
+    ) {
+        if style.confirmationLevel == .confirmEvery {
+            confirmed.wrappedValue = retrieval
+        } else {
+            perform(retrieval)
+        }
     }
 
     private func putBack(_ retrieval: InventoryRetrievalItem) {
