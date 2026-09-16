@@ -1,5 +1,3 @@
-import SwiftUI
-
 /// Recording an item, from the first keystroke to the correction a minute
 /// later.
 ///

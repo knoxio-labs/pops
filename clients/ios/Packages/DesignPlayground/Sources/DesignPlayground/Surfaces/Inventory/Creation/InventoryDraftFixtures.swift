@@ -73,8 +73,6 @@ internal enum InventoryDraftFixtures {
     internal static let duplicate = InventoryDraft.duplicating(
         InventoryFoundationFixtures.kitchenBox, internalID: "itm-c04a")
 
-    internal static let editing = InventoryDraft.editing(InventoryFoundationFixtures.espresso)
-
     /// The draft a relaunch finds. Not persisted by this package, which cannot
     /// reach disk: what is designed is the affordance that offers it back.
     internal static let resumable = partial
