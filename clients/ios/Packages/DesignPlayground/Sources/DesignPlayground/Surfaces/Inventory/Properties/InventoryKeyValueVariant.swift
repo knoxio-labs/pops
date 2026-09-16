@@ -17,6 +17,7 @@ internal struct InventoryKeyValueVariantView: View {
         case .create(let thing, let inferring): create(thing, inferring: inferring)
         case .edit(let thing): edit(thing)
         case .search(let things, let clauses): search(things, clauses)
+        case .swap(let thing, let template): swap(thing, to: template)
         case .compare(let things): compare(things)
         }
     }
@@ -187,6 +188,35 @@ internal struct InventoryKeyValueVariantView: View {
                 Text(
                     "The rows line up only because both were typed the same way. A \"cable length\" on one "
                         + "of them would have become its own row with a gap beside it.")
+            }
+        }
+        .playgroundInsetGroupedList()
+    }
+
+    /// There is no type to swap. Every key an object has, it keeps — which is
+    /// this variant's answer to the migration question and also the reason it
+    /// has no way to make two cables agree.
+    private func swap(_ thing: InventoryThing, to template: InventoryTemplate) -> some View {
+        List {
+            Section { InventoryThingHeader(thing: thing) }
+            Section {
+                Text("Nothing to swap.")
+                    .font(.popsBody)
+                    .foregroundStyle(Color.popsForeground)
+            } header: {
+                Text("Type")
+            } footer: {
+                Text(
+                    "There are no types here, so an item cannot be the wrong one and no change can "
+                        + "move a value anywhere. Making these look like a \(template.name) means "
+                        + "editing \(thing.properties.count) keys by hand, on every item.")
+            }
+            Section {
+                ForEach(thing.properties) {
+                    InventoryPropertyLine(key: $0.key, value: $0.value.display)
+                }
+            } header: {
+                Text("Unchanged · \(thing.properties.count)")
             }
         }
         .playgroundInsetGroupedList()

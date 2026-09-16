@@ -120,11 +120,11 @@ internal struct InventoryPropertyClauseTests {
     private var catalogue: [InventoryThing] { InventoryPropertyFixtures.all }
 
     @Test(
-        "the staged query finds the cable that carries enough power and not the one that does not")
+        "the staged query finds the cables that carry enough power and not the ones that do not")
     func stagedQueryDiscriminates() {
         let matches = InventoryPropertyFixtures.query.matching(catalogue).map(\.id)
 
-        #expect(matches == ["cable-1m"])
+        #expect(matches == ["cable-1m", "cable-usbc"])
     }
 
     @Test("a clause on a key an item does not have excludes it rather than matching loosely")

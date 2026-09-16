@@ -20,6 +20,7 @@ internal struct InventoryTagsVariantView: View {
         case .create(let thing, let inferring): create(thing, inferring: inferring)
         case .edit(let thing): edit(thing)
         case .search(let things, let clauses): search(things, clauses)
+        case .swap(let thing, let template): swap(thing, to: template)
         case .compare(let things): compare(things)
         }
     }
@@ -165,6 +166,24 @@ internal struct InventoryTagsVariantView: View {
                 Text("There is no table to draw. Comparing these means reading both.")
                     .font(.popsSubheadline)
                     .foregroundStyle(Color.popsMutedForeground)
+            }
+        }
+        .playgroundInsetGroupedList()
+    }
+
+    /// Nothing to swap either, for a different reason: a tag is a word, and a
+    /// word does not belong to a type. The cost lands somewhere else entirely.
+    private func swap(_ thing: InventoryThing, to template: InventoryTemplate) -> some View {
+        List {
+            Section { InventoryThingHeader(thing: thing) }
+            Section {
+                chips(thing.tags)
+            } header: {
+                Text("Unchanged")
+            } footer: {
+                Text(
+                    "Calling this a \(template.name) would change nothing, because no tag was ever "
+                        + "owned by a type. Nothing migrates, and nothing lines up either.")
             }
         }
         .playgroundInsetGroupedList()

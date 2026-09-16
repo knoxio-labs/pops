@@ -23,6 +23,8 @@ internal struct InventoryHybridVariantView: View {
         case .edit(let thing): edit(thing)
         case .search(let things, let clauses):
             InventoryHybridFindingView(things: things, clauses: clauses)
+        case .swap(let thing, let template):
+            InventoryHybridSwapView(thing: thing, template: template)
         case .compare(let things):
             InventoryHybridComparisonView(things: things)
         }
@@ -116,10 +118,14 @@ internal struct InventoryHybridVariantView: View {
                 InventoryPropertyLine(
                     key: "Looks like",
                     value: thing.template?.name ?? "Nothing recognised",
-                    footnote: inferring ? "From the name and the photo" : "Inference unavailable"
+                    footnote: origin(of: thing, inferring: inferring)
                 )
             } header: {
                 Text("Template")
+            } footer: {
+                Text(
+                    "A template is offered, never required — and one exists here because other items "
+                        + "already record these keys, not because somebody wrote it first.")
             }
             Section {
                 if inferring {
@@ -145,6 +151,17 @@ internal struct InventoryHybridVariantView: View {
             }
         }
         .playgroundInsetGroupedList()
+    }
+
+    /// Where the offered template came from. The first review asked this of
+    /// the variant and it had no answer: a template nobody can account for is
+    /// one that has to be authored up front, which was the objection.
+    private func origin(of thing: InventoryThing, inferring: Bool) -> String {
+        let peers = InventoryObservation.cluster(like: thing, in: InventoryPropertyFixtures.all)
+        if peers.count >= 2 {
+            return "\(peers.count) other items here record these keys"
+        }
+        return inferring ? "From the name and the photo" : "Inference unavailable"
     }
 
     private func edit(_ thing: InventoryThing) -> some View {

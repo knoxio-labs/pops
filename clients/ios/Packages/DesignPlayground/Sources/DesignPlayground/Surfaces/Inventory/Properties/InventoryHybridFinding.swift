@@ -27,7 +27,8 @@ internal struct InventoryHybridFindingView: View {
             } footer: {
                 Text(
                     "Template fields are offered first because they are the ones every cable has; "
-                        + "custom keys follow, with how many items use each.")
+                        + "custom keys follow, with how many items use each — which is also how a "
+                        + "custom key earns its way into the template.")
             }
             Section {
                 ForEach(matches) { InventoryMatchRow(thing: $0, clauses: clauses) }
@@ -53,6 +54,36 @@ internal struct InventoryHybridComparisonView: View {
                     "Template fields line up. A custom key only one of them has would show as a "
                         + "row with one gap.")
             }
+        }
+        .playgroundInsetGroupedList()
+    }
+}
+
+/// Variant 4's type change. The template is advice, so the values it does not
+/// ask for keep their type and their place in search — they only lose the
+/// heading they were sitting under.
+internal struct InventoryHybridSwapView: View {
+    internal let thing: InventoryThing
+    internal let template: InventoryTemplate
+
+    internal var body: some View {
+        List {
+            Section {
+                InventoryThingHeader(thing: thing)
+                InventoryTypePicker(
+                    label: "Type",
+                    selection: template.name,
+                    options: InventoryPropertyTemplates.all.map(\.name) + ["No type"],
+                    footnote: "Was \(thing.category). A type suggests fields; it never removes any."
+                )
+            }
+            InventoryTemplateChangeSummary(
+                change: InventoryTemplateChange(thing: thing, changingTo: template),
+                carriedTitle: "Also recorded",
+                carriedNote:
+                    "\(template.name) does not ask for these. They keep their type and their unit, "
+                    + "and a search can still reach them."
+            )
         }
         .playgroundInsetGroupedList()
     }

@@ -18,6 +18,11 @@ internal enum InventoryPropertyStep: Equatable {
     case search([InventoryThing], [InventoryPropertyClause])
     /// Two near-identical objects, where the difference is the point.
     case compare([InventoryThing])
+    /// Changing what an object is, and what that does to what it knows.
+    /// Added after the first review: the four original variants all assumed a
+    /// type was already chosen, which is the assumption a reviewer asked to
+    /// see broken.
+    case swap(InventoryThing, to: InventoryTemplate)
 
     internal var title: String {
         switch self {
@@ -25,6 +30,7 @@ internal enum InventoryPropertyStep: Equatable {
         case .create: "New item"
         case .search: "Search"
         case .compare: "Compare"
+        case .swap(let thing, _): thing.name
         }
     }
 }

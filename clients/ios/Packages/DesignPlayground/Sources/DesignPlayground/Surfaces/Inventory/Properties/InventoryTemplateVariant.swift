@@ -20,6 +20,8 @@ internal struct InventoryTemplateVariantView: View {
         case .edit(let thing): edit(thing)
         case .search(let things, let clauses):
             InventoryTemplateFindingView(things: things, clauses: clauses)
+        case .swap(let thing, let template):
+            InventoryTemplateSwapView(thing: thing, template: template)
         case .compare(let things):
             InventoryTemplateComparisonView(things: things)
         }

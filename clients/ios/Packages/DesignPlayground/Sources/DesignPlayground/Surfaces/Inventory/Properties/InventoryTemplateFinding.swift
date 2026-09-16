@@ -58,3 +58,33 @@ internal struct InventoryTemplateComparisonView: View {
         .playgroundInsetGroupedList()
     }
 }
+
+/// Variant 1's type change, which is the variant's sharpest edge: the fields
+/// are the record, so a value the new category does not ask for stops being a
+/// value at all.
+internal struct InventoryTemplateSwapView: View {
+    internal let thing: InventoryThing
+    internal let template: InventoryTemplate
+
+    internal var body: some View {
+        List {
+            Section {
+                InventoryThingHeader(thing: thing)
+                InventoryTypePicker(
+                    label: "Category",
+                    selection: template.name,
+                    options: InventoryPropertyTemplates.all.map(\.name),
+                    footnote: "Was \(thing.category). One category, one set of fields."
+                )
+            }
+            InventoryTemplateChangeSummary(
+                change: InventoryTemplateChange(thing: thing, changingTo: template),
+                carriedTitle: "Moves to the note",
+                carriedNote:
+                    "\(template.name) has no field for these, so they become text. "
+                    + "They stay readable and stop being searchable."
+            )
+        }
+        .playgroundInsetGroupedList()
+    }
+}

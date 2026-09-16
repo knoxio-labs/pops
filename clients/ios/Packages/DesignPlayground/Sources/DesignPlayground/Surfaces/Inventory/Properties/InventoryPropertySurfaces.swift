@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The eleven conditions every variant is drawn in.
+/// The thirteen conditions every variant is drawn in.
 ///
 /// One list, used by the surface and by all four variants, so a variant cannot
 /// quietly answer an easier set of questions than its neighbour. The order is
@@ -24,6 +24,9 @@ internal enum InventoryPropertyStaging {
         InventoryStagedStep(
             id: "box", title: "Storage box", step: .detail(InventoryPropertyFixtures.box)),
         InventoryStagedStep(
+            id: "drifted", title: "A key spelled another way",
+            step: .detail(InventoryPropertyFixtures.lightningCable)),
+        InventoryStagedStep(
             id: "furniture", title: "Furniture, almost no data",
             step: .detail(InventoryPropertyFixtures.sideboard)),
         InventoryStagedStep(
@@ -44,6 +47,9 @@ internal enum InventoryPropertyStaging {
         InventoryStagedStep(
             id: "compare", title: "Comparing two cables",
             step: .compare(InventoryPropertyFixtures.cables)),
+        InventoryStagedStep(
+            id: "swap", title: "Swapping the type",
+            step: .swap(InventoryPropertyFixtures.cable, to: InventoryPropertyTemplates.tape)),
     ]
 
     /// A surface staging one presentation across every step.

@@ -2,7 +2,7 @@ import SwiftUI
 
 /// How an item says what it can do.
 ///
-/// The four answers are not four layouts — they are four different things for
+/// The five answers are not five layouts — they are four different things for
 /// the catalogue to be. Each is staged across the same eleven steps
 /// (``InventoryPropertyStaging/steps``) on the same fixtures, because the
 /// approaches separate at the edges rather than on a well-filled cable: what
@@ -15,7 +15,8 @@ internal enum InventoryPropertyExperiment {
             id: "inventory-item-properties",
             question:
                 "How should an item record what it can do — fixed templates per category, free typed "
-                + "key/values, tags and prose, or a template that suggests without binding?",
+                + "key/values, tags and prose, a template that suggests without binding, or one read "
+                + "off what similar items already record?",
             subject: SurfaceID(area: "inventory", slug: "item"),
             variants: [
                 DesignVariant(
@@ -53,6 +54,16 @@ internal enum InventoryPropertyExperiment {
                         + "property on one screen is the cost to look at.",
                     surface: InventoryPropertyStaging.surface {
                         InventoryHybridVariantView(step: $0)
+                    }),
+                DesignVariant(
+                    id: "observed",
+                    title: "Observed",
+                    note:
+                        "The template is read off the catalogue rather than authored: the fields are "
+                        + "what four other cables already record. Nothing to set up, and the shape "
+                        + "moves under you.",
+                    surface: InventoryPropertyStaging.surface {
+                        InventoryObservedVariantView(step: $0)
                     }),
             ]
         )

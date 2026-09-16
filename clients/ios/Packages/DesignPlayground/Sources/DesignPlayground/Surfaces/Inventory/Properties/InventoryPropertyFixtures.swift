@@ -1,53 +1,11 @@
-/// The objects every variant is drawn against.
+/// The objects every variant is drawn against, cables aside.
 ///
-/// Identical across the four, because two designs shown different data are not
+/// Identical across the five, because two designs shown different data are not
 /// comparable and a reviewer will notice the data instead of the design. The
-/// set is chosen to be awkward on purpose: two cables that differ only in the
-/// numbers (so comparison has something to do), a bulb whose useful fact is a
+/// set is chosen to be awkward on purpose: a bulb whose useful fact is a
 /// protocol, a sideboard with almost nothing, and an adapter nobody has
-/// categorised.
+/// categorised. The cables are next door in ``InventoryCableFixtures``.
 internal enum InventoryPropertyFixtures {
-    internal static let cable = InventoryThing(
-        id: "cable-2m",
-        name: "USB-A to USB-C cable, 2 m",
-        symbol: "cable.connector",
-        location: "Office 04 · Study",
-        category: "Cable",
-        template: InventoryPropertyTemplates.cable,
-        properties: [
-            InventoryProperty("End A", .choice("USB-A")),
-            InventoryProperty("End B", .choice("USB-C")),
-            InventoryProperty("Data rate", .measure(0.48, unit: "Gbps")),
-            InventoryProperty("Power", .measure(18, unit: "W")),
-            InventoryProperty("Length", .measure(2, unit: "m")),
-            InventoryProperty("Braided", .flag(false)),
-            InventoryProperty("Bought with", .text("Old Kindle"), origin: .custom),
-        ],
-        tags: ["charges a phone", "slow data", "long"],
-        notes: "The soft white one. Fine for charging overnight, useless for a drive.",
-        suggestions: []
-    )
-
-    internal static let shortCable = InventoryThing(
-        id: "cable-1m",
-        name: "USB-A to USB-C cable, 1 m",
-        symbol: "cable.connector",
-        location: "Kitchen 12 · Kitchen",
-        category: "Cable",
-        template: InventoryPropertyTemplates.cable,
-        properties: [
-            InventoryProperty("End A", .choice("USB-A")),
-            InventoryProperty("End B", .choice("USB-C")),
-            InventoryProperty("Data rate", .measure(10, unit: "Gbps")),
-            InventoryProperty("Power", .measure(60, unit: "W")),
-            InventoryProperty("Length", .measure(1, unit: "m")),
-            InventoryProperty("Braided", .flag(true)),
-        ],
-        tags: ["charges a laptop", "fast data", "short"],
-        notes: "Black braided. The one to grab for a drive or a fast charge.",
-        suggestions: []
-    )
-
     internal static let bulb = InventoryThing(
         id: "bulb-e27",
         name: "Smart bulb, E27",
@@ -181,12 +139,19 @@ internal enum InventoryPropertyFixtures {
         ]
     )
 
-    internal static let all: [InventoryThing] = [
-        cable, shortCable, bulb, tape, box, sideboard, adapter,
-    ]
+    /// The cables live next door — there are four of them and they carry the
+    /// drift, which is more than a fixtures file can hold alongside everything
+    /// else. Named through here so callers have one door.
+    internal static let cable = InventoryCableFixtures.cable
+    internal static let shortCable = InventoryCableFixtures.shortCable
+    internal static let powerCable = InventoryCableFixtures.powerCable
+    internal static let lightningCable = InventoryCableFixtures.lightningCable
+
+    internal static let all: [InventoryThing] =
+        InventoryCableFixtures.all + [bulb, tape, box, sideboard, adapter]
 
     /// The two the comparison step puts side by side.
-    internal static let cables: [InventoryThing] = [cable, shortCable]
+    internal static let cables: [InventoryThing] = InventoryCableFixtures.cables
 
     /// What somebody typed into the editor, and has not committed. Collides
     /// with `editing`'s "Cable length" under the normalisation rule, which is
