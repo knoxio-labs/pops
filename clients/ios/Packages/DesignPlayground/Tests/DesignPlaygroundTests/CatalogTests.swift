@@ -60,12 +60,16 @@ internal struct CatalogTests {
         }
     }
 
-    @Test("At most one open experiment sits on a surface")
-    func oneOpenExperimentPerSubject() {
-        let subjects = Catalog.experiments.filter(\.isOpen).map(\.subject)
+    /// Several open experiments on one surface are allowed on purpose — see
+    /// ``DesignExperiment`` for what the author owes a reviewer in exchange.
+    /// Their ids still have to be distinct, because an id is what a comment and
+    /// a recorded decision are anchored to.
+    @Test("Experiment ids are unique")
+    func experimentIDsAreUnique() {
+        let ids = Catalog.experiments.map(\.id)
         #expect(
-            Set(subjects).count == subjects.count,
-            "two open experiments share a subject, so which one a reviewer is answering is ambiguous"
+            Set(ids).count == ids.count,
+            "two experiments share an id, so a decision recorded against it names both"
         )
     }
 

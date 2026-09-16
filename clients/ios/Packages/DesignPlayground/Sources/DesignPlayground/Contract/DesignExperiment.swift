@@ -5,9 +5,18 @@
 /// designs side by side on the device is a decision somebody can make in a
 /// minute.
 ///
-/// At most one open experiment should sit on a surface. That is a convention
-/// here rather than an invariant — `CatalogTests` checks it, because nothing
-/// in the type system can.
+/// Several open experiments may sit on one surface, and often should: a
+/// screen's vocabulary, its status treatment and how much sync it shows are
+/// separate questions, and making them queue behind one another answers two of
+/// them by default while the third is being looked at.
+///
+/// What that costs is worth stating, because it is now the author's job rather
+/// than a test's. Each variant stages a whole surface, so a variant of one open
+/// experiment has already taken a position on every other open question about
+/// that surface. When that position is load-bearing, say so in the variant's
+/// ``DesignVariant/note`` — "status as a badge here, which the status
+/// experiment has not settled" — so a reviewer answering this question knows
+/// what it is holding fixed.
 public struct DesignExperiment: Identifiable {
     public enum Status: Equatable {
         /// Still a question.
