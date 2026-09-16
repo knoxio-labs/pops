@@ -18,6 +18,21 @@ internal enum InventoryPropertyExperiment {
                 + "key/values, tags and prose, a template that suggests without binding, or one read "
                 + "off what similar items already record?",
             subject: SurfaceID(area: "inventory", slug: "item"),
+            status: .decided(
+                variant: "templates",
+                rationale:
+                    "Templates, decided on the device 2026-09-16. Observed was the better answer to "
+                    + "who writes the types, and it turned out not to be one: its cluster is keyed on "
+                    + "a category somebody still types, so it removed field definitions and never type "
+                    + "definitions. Three of its consequences decided it. A key that becomes popular "
+                    + "retroactively blanks every item filed before it, with nothing to separate "
+                    + "\"never asked\" from \"does not apply\". An item filed with no type sits outside "
+                    + "every type-based search and nothing chases it. And a field's unit and choice "
+                    + "values had nowhere to come from at all, which is the hole all five variants "
+                    + "shared. Defining every type up front makes drift impossible by construction "
+                    + "rather than correctable after the fact, and moves the remaining work to a "
+                    + "type-authoring surface — a screen worth designing, rather than a problem worth "
+                    + "inferring around."),
             variants: [
                 DesignVariant(
                     id: "templates",
