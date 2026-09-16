@@ -26,10 +26,11 @@ export default defineConfig({
      *
      * A per-test timeout override is the one sanctioned exception, and it is
      * scoped to a single case, never to the file or this config. It is for a
-     * test whose own assertions are cheap but whose shared `beforeEach` opens
-     * a real `better-sqlite3` file and migrates it on disk, which a starved
-     * scheduler can stall past 5s (measured 5012ms, POPS-2381). The override
-     * names the measurement beside the constant so the pad stays tied to that
+     * test whose own body is the file's heaviest SQLite write path and was
+     * seen once stretching past 5s under a starved scheduler (measured
+     * 5012ms, POPS-2381). Shared `beforeEach` cost is not a reason: hooks run
+     * under `hookTimeout` (10s), not the test's budget. The override names
+     * the measurement beside the constant so the pad stays tied to that
      * cost; a case that grows slow for any other reason still trips at 5s.
      */
     environment: 'node',

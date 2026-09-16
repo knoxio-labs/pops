@@ -335,13 +335,14 @@ describe('comparisons — exclusion + blacklist', () => {
   // This case's own work — two movies, one comparison, an
   // exclude/rankings/include round trip — profiles at ~10-20ms on an idle
   // machine and stayed under 220ms across 10 runs against 20 CPU-bound
-  // busy-loops. The margin it lost instead lives in the shared `beforeEach`
-  // above: a real `better-sqlite3` open plus a drizzle migrate against disk,
-  // paid fresh by every test in this file. That native I/O is what a
-  // starved scheduler can stall past vitest's 5000ms default — measured at
-  // 5012ms on a machine saturated by sibling agent sessions (POPS-2381).
-  // The timeout is padded only here so the default keeps acting as a
-  // regression trip-wire on every other case in the file.
+  // busy-loops, yet once ran 5012ms against vitest's 5000ms default on a
+  // machine saturated by sibling agent sessions (POPS-2381). That was the
+  // test body: vitest runs `beforeEach` under its own `hookTimeout` (10s),
+  // so the shared SQLite open and migrate above cannot produce a test
+  // timeout. The exclude path is this file's heaviest write — it purges
+  // the item's comparisons and recomputes rankings — which is what a
+  // starved scheduler stretches. The timeout is padded only here so the
+  // default keeps acting as a regression trip-wire on every other case.
   const EXCLUDES_MEDIA_ITEM_TIMEOUT_MS = 20_000;
 
   it(
