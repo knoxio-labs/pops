@@ -9,6 +9,7 @@
  * and that the fallback is a working shell rather than an app-less one.
  */
 import { expect, test } from './fixtures/pillar-rest-guard';
+import { stubFinanceDashboardEmpty } from './helpers/finance-dashboard';
 import {
   failRegistry,
   IN_REPO_PILLARS,
@@ -35,6 +36,11 @@ test.describe('Shell — boot install set', () => {
   test('mounts exactly the pillars the registry lists', async ({ page }) => {
     await stubRegistry(page, ['finance', 'media']);
     await stubPillarHealth(page, ['finance', 'media']);
+    // The only test in this file whose registry both answers AND lists a
+    // pillar, so the only one where `/` reaches a mounted Finance dashboard
+    // rather than a fallback. Its reads are answered empty: what is asserted
+    // below is which pillars reached the rail, not what any of them rendered.
+    await stubFinanceDashboardEmpty(page);
 
     await page.goto('/');
 
