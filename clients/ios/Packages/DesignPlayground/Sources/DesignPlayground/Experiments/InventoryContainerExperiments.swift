@@ -19,7 +19,9 @@ internal enum InventoryContainerExperiments {
         status: .decided(
             variant: "unified-section",
             rationale:
-                "Unified section, decided on the device 2026-09-16. The container section is inlined in the item detail; a capability contributes sections to the one page, never a screen."
+                "Unified section, decided on the device 2026-09-16. The container section is "
+                + "inlined in the item detail; a capability contributes sections to the one "
+                + "page, never a screen."
         ),
         variants: [
             detailVariant(
@@ -42,7 +44,9 @@ internal enum InventoryContainerExperiments {
         status: .decided(
             variant: "grouped-card",
             rationale:
-                "One card, several rows: not a new decision. POPS-3981 decided this on the dashboard on 2026-09-15 and this question should not have been reopened; the answer is exactly the dashboard's open-containers panel."
+                "One card, several rows: not a new decision. POPS-3981 decided this on the "
+                + "dashboard on 2026-09-15 and this question should not have been reopened; "
+                + "the answer is exactly the dashboard's open-containers panel."
         ),
         variants: [
             openVariant(
@@ -95,7 +99,9 @@ internal enum InventoryContainerExperiments {
         status: .decided(
             variant: "later-move-action",
             rationale:
-                "No destination field, decided on the device 2026-09-16. Destination is not part of a container's schema; if a box is headed somewhere, its name says so, and getting there is a move like any other."
+                "No destination field, decided on the device 2026-09-16. Destination is not "
+                + "part of a container's schema; if a box is headed somewhere, its name says "
+                + "so, and getting there is a move like any other."
         ),
         variants: [
             detailVariant(
