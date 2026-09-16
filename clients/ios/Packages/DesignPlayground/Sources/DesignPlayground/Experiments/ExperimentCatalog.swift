@@ -22,6 +22,7 @@ internal enum ExperimentCatalog {
         + InventoryContainerExperiments.all
         + InventoryItemDetailExperiments.all
         + InventorySearchExperiments.all
+        + InventoryUntypedExperiments.all
         + PurchasesExperiments.all
         + AccountsExperiments.all
 }
