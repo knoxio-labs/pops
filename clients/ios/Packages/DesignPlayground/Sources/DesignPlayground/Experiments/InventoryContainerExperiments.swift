@@ -16,6 +16,11 @@ internal enum InventoryContainerExperiments {
         question:
             "Is a container's workspace a section inside its item detail, or a screen detail links to?",
         subject: detailSubject,
+        status: .decided(
+            variant: "unified-section",
+            rationale:
+                "Unified section, decided on the device 2026-09-16. The container section is inlined in the item detail; a capability contributes sections to the one page, never a screen."
+        ),
         variants: [
             detailVariant(
                 "unified-section", "Unified section",
@@ -34,6 +39,11 @@ internal enum InventoryContainerExperiments {
         id: "inventory-open-containers-representation",
         question: "How should several simultaneous open containers be shown together?",
         subject: openSubject,
+        status: .decided(
+            variant: "grouped-card",
+            rationale:
+                "One card, several rows: not a new decision. POPS-3981 decided this on the dashboard on 2026-09-15 and this question should not have been reopened; the answer is exactly the dashboard's open-containers panel."
+        ),
         variants: [
             openVariant(
                 "list", "Plain list",
@@ -57,6 +67,10 @@ internal enum InventoryContainerExperiments {
         id: "inventory-container-full-declaration",
         question: "How, or whether, should \"full\" be expressed?",
         subject: detailSubject,
+        status: .decided(
+            variant: "manual",
+            rationale:
+                "Manual, decided on the device 2026-09-16. Full is a yes/no a person sets."),
         variants: [
             detailVariant(
                 "manual", "Manual declaration",
@@ -78,6 +92,11 @@ internal enum InventoryContainerExperiments {
         id: "inventory-container-destination",
         question: "Is a destination a current field, a packing annotation, or a later move action?",
         subject: detailSubject,
+        status: .decided(
+            variant: "later-move-action",
+            rationale:
+                "No destination field, decided on the device 2026-09-16. Destination is not part of a container's schema; if a box is headed somewhere, its name says so, and getting there is a move like any other."
+        ),
         variants: [
             detailVariant(
                 "current-field", "Current field",
