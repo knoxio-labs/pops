@@ -141,10 +141,10 @@ internal enum InventoryPropertyFixtures {
 
     /// The cables live next door — there are four of them and they carry the
     /// drift, which is more than a fixtures file can hold alongside everything
-    /// else. Named through here so callers have one door.
+    /// else. The ones named through here are the ones something outside the
+    /// cable set asks for by name; the rest arrive via `all`.
     internal static let cable = InventoryCableFixtures.cable
     internal static let shortCable = InventoryCableFixtures.shortCable
-    internal static let powerCable = InventoryCableFixtures.powerCable
     internal static let lightningCable = InventoryCableFixtures.lightningCable
 
     internal static let all: [InventoryThing] =

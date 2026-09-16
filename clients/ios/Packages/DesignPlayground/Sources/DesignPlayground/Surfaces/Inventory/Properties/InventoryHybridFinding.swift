@@ -1,4 +1,3 @@
-import DesignSystem
 import SwiftUI
 
 /// Variant 4's two payoffs: a search that offers the template's fields first

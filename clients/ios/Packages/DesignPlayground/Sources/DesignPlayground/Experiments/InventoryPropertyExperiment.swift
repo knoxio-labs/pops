@@ -1,5 +1,3 @@
-import SwiftUI
-
 /// How an item says what it can do.
 ///
 /// The five answers are not five layouts — they are four different things for

@@ -23,14 +23,4 @@ internal enum InventoryPropertyStep: Equatable {
     /// type was already chosen, which is the assumption a reviewer asked to
     /// see broken.
     case swap(InventoryThing, to: InventoryTemplate)
-
-    internal var title: String {
-        switch self {
-        case .detail(let thing), .edit(let thing): thing.name
-        case .create: "New item"
-        case .search: "Search"
-        case .compare: "Compare"
-        case .swap(let thing, _): thing.name
-        }
-    }
 }
