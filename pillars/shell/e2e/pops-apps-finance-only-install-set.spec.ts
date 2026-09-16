@@ -28,6 +28,7 @@
  * was written for.
  */
 import { expect, test } from './fixtures/pillar-rest-guard';
+import { stubFinanceDashboardEmpty } from './helpers/finance-dashboard';
 import {
   CROSS_MODULE_SEARCH_SECTIONS,
   failRegistry,
@@ -79,6 +80,12 @@ test.describe('Shell — POPS_APPS=finance,core install set', () => {
   }) => {
     await stubPillarHealth(page, ['finance', 'media']);
     await stubRegistry(page, ['finance', 'media']);
+    // The only test here whose registry ANSWERS before it lands on
+    // `/finance`, so it is the only one that actually mounts the Finance
+    // dashboard and fires its reads. The subject is the rail beside the
+    // dashboard, not the dashboard, so they are answered empty — the same
+    // trade `global-search.spec.ts` makes for `/`.
+    await stubFinanceDashboardEmpty(page);
     await page.goto('/finance');
 
     // The live registry is the source of truth while it answers, so media is

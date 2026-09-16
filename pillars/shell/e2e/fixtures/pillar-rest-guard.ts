@@ -21,6 +21,15 @@
  * and the fixture's teardown — which runs after the spec's own `afterEach`
  * hooks — throws if the record isn't empty, naming every method and URL that
  * got there.
+ *
+ * What this does NOT catch, and why the opt-outs still have to be deliberate:
+ * only a request the page actually issues before the test body ends is
+ * recorded. A spec whose last assertion resolves on the router (a URL, a
+ * redirect) can finish while the page it just mounted is still resolving its
+ * lazy chunk, and the query that chunk fires lands after `afterEach` has
+ * called `page.unrouteAll` — past every handler, this one included. So a
+ * green run means "nothing unstubbed fired in time", not "this spec stubs
+ * everything its pages read". POPS-4033 closes that gap.
  */
 import { test as base, expect } from '@playwright/test';
 

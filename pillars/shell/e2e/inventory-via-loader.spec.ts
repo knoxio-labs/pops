@@ -13,6 +13,17 @@ import { expect, test } from './fixtures/pillar-rest-guard';
 import { stubShellBoot } from './helpers/pillar-rest';
 
 test.describe('inventory — mounted by the runtime loader', () => {
+  test.use({
+    allowUnroutedPillarRest:
+      'every assertion here is about the route table surviving the wire — a ' +
+      'URL, a redirect keeping its query string, the absence of a load error ' +
+      '— and none reads a body. Each page that mounts fires its own ' +
+      'inventory-api reads (items, items/stats/distinct-types, ' +
+      'locations/tree, reports/dashboard, reports/insurance); stubbing them ' +
+      "would assert the inventory app's own data flow, which is that " +
+      "pillar's tests' job",
+  });
+
   let errors: string[] = [];
 
   test.beforeEach(async ({ page }) => {

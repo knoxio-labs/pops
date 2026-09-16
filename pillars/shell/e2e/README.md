@@ -51,6 +51,14 @@ narrowly as the resilience claim itself — see `shell-navigation.spec.ts` for a
 file-wide example and `ai-via-loader.spec.ts` for a single-test one. Anywhere
 else, an unrouted call means a missing stub, not a reason to opt out.
 
+What it does not catch yet: only a request issued before the test body ends is
+recorded. A spec whose last assertion resolves on the router can finish while
+the page it mounted is still resolving its lazy chunk, and the query that chunk
+fires lands after `afterEach` has called `page.unrouteAll` — past every handler,
+the catch-all included. So a green run means "nothing unstubbed fired in time",
+not "this spec stubs everything its pages read", and the opt-outs still have to
+be written deliberately rather than read off a red run. POPS-4033 closes it.
+
 ## Two shells, two projects
 
 `playwright.config.ts` boots two Vite dev servers so one run can cross the

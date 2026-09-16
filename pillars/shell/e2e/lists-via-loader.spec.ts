@@ -10,6 +10,15 @@ import { expect, test } from './fixtures/pillar-rest-guard';
 import { stubShellBoot } from './helpers/pillar-rest';
 
 test.describe('lists — mounted by the runtime loader', () => {
+  test.use({
+    allowUnroutedPillarRest:
+      'both assertions here are about the route table surviving the wire — ' +
+      'the rail marking lists current, a deep link mounting rather than ' +
+      '404ing — and neither reads a body. The index page fires an unstubbed ' +
+      "lists-api aggregate read; stubbing it would assert the lists app's " +
+      "own data flow, which is that pillar's tests' job",
+  });
+
   let errors: string[] = [];
 
   test.beforeEach(async ({ page }) => {
