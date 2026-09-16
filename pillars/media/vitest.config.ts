@@ -23,6 +23,15 @@ export default defineConfig({
      * actually removed. Measured after the change, `discovery.test.ts` runs
      * twelve consecutive times green under eight deliberate spin loops, its
      * assertions taking ~600ms of a 5000ms budget (POPS-1909).
+     *
+     * A per-test timeout override is the one sanctioned exception, and it is
+     * scoped to a single case, never to the file or this config. It is for a
+     * case that has been observed exceeding 5s under a starved scheduler,
+     * with the measurement recorded beside the constant (5012ms, POPS-2381)
+     * so the pad stays tied to an observation rather than a theory about the
+     * file's costs. Shared `beforeEach` cost is never the reason: hooks run
+     * under `hookTimeout`, not the test's budget. Every other case still
+     * trips at 5s.
      */
     environment: 'node',
     exclude: [...configDefaults.exclude, 'app/**', 'overlay-ego/**'],
