@@ -1,5 +1,7 @@
 import { EmptyStateTab } from '@pops/ui';
 
+import { SignedAmount } from '../../SignedAmount';
+
 import type { ProcessedTransaction } from '../../../store/importStore';
 
 interface SkippedTabProps {
@@ -31,7 +33,9 @@ export function SkippedTab({ transactions }: SkippedTabProps) {
               <tr key={idx} className="hover:bg-muted">
                 <td className="px-4 py-2">{t.date}</td>
                 <td className="px-4 py-2">{t.description}</td>
-                <td className="px-4 py-2">${Math.abs(t.amount).toFixed(2)}</td>
+                <td className="px-4 py-2">
+                  <SignedAmount amount={t.amount} />
+                </td>
                 <td className="px-4 py-2 text-sm text-muted-foreground">{t.skipReason}</td>
               </tr>
             ))}

@@ -39,10 +39,10 @@ describe.each(PROMPTS)('%s prompt — closed-namespace classification', (_name, 
   it('renders one enumerated field per closed facet', () => {
     const prompt = build();
 
-    expect(prompt).toContain('- venue: exactly one of [supermarket, cafe]');
-    expect(prompt).toContain('- occasion: exactly one of [home, out]');
+    expect(prompt).toContain('- venue: at most one of [supermarket, cafe]');
+    expect(prompt).toContain('- occasion: at most one of [home, out]');
     expect(prompt).toContain('- contains: any of [groceries, food]');
-    expect(prompt).toContain('- channel: exactly one of [online]');
+    expect(prompt).toContain('- channel: at most one of [online]');
     expect(prompt).toContain('- fee: any of [surcharge]');
   });
 
@@ -55,7 +55,7 @@ describe.each(PROMPTS)('%s prompt — closed-namespace classification', (_name, 
   });
 
   it('states the cardinality of a single-valued facet in words as well as shape', () => {
-    expect(build()).toMatch(/occasion: exactly one of/);
+    expect(build()).toMatch(/occasion: at most one of/);
   });
 
   it('never invites the model to coin a value', () => {
@@ -68,7 +68,7 @@ describe.each(PROMPTS)('%s prompt — closed-namespace classification', (_name, 
 
   it('carries no value that is absent from the vocabulary it was given', () => {
     const prompt = build();
-    const listed = [...prompt.matchAll(/^- \w+: (?:exactly one|any) of \[(.*)\]$/gm)].flatMap(
+    const listed = [...prompt.matchAll(/^- \w+: (?:at most one|any) of \[(.*)\]$/gm)].flatMap(
       (match) => (match[1] ?? '').split(', ')
     );
     const allowed = new Set(VOCAB.map((tag) => tag.split(':')[1]));
@@ -93,9 +93,9 @@ describe.each(PROMPTS)('%s prompt — closed-namespace classification', (_name, 
   it('drops a facet the vocabulary has no values for rather than offering an empty list', () => {
     const prompt = buildPrompt({ description: 'X' }, ['venue:cafe']);
 
-    expect(prompt).toContain('- venue: exactly one of [cafe]');
+    expect(prompt).toContain('- venue: at most one of [cafe]');
     expect(prompt).not.toContain('- occasion:');
-    expect(prompt).not.toMatch(/^- \w+: (?:exactly one|any) of \[\]$/m);
+    expect(prompt).not.toMatch(/^- \w+: (?:at most one|any) of \[\]$/m);
   });
 
   it('presents the values in the order it was given them — the usage ranking', () => {

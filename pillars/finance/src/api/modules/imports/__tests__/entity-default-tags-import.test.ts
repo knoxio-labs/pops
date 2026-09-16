@@ -80,6 +80,7 @@ function makeContext(contacts: ContactEntity[]): ProcessContext {
     importBatchId: 'batch-1',
     entityDefaultTags: importsService.buildDefaultTagsByEntity(contacts),
     correctionRules: [],
+    preAcceptThreshold: 0,
   };
 }
 

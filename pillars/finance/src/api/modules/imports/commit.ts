@@ -155,7 +155,8 @@ function writeTransactionsPhase(
       // A loan repayment expands to its interest + principal legs here
       // (POPS-2830); every other row is its own single-element array, so the
       // insert loop below doesn't need to know the split happened at all.
-      const rows = expandLoanRepaymentRow(tx, transactionColumns(txn, entityId));
+      const columns = transactionColumns(txn, entityId);
+      const rows = expandLoanRepaymentRow(tx, columns);
       const firstLeg = inserted.length;
       for (const columns of rows) {
         const row = importsService.insertImportTransaction(tx, columns);
@@ -170,7 +171,7 @@ function writeTransactionsPhase(
       // A split loan repayment is one suggestion across its legs; count it once.
       const firstLegId = inserted[firstLeg]?.id;
       if (firstLegId !== undefined) recordAiSuggestionOutcome(tx, txn, firstLegId);
-      tagVocabularyService.incrementVocabularyUsage(tx, txn.tags ?? []);
+      tagVocabularyService.incrementVocabularyUsage(tx, columns.tags);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       console.error(`[CommitImport] Transaction write failed: ${errorMessage}`);

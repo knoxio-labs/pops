@@ -345,6 +345,28 @@ export function freshnessProbePaths(baseImage, dockerfile = '') {
 }
 
 /**
+ * Chunk paths no build ships, whose response must forbid caching.
+ *
+ * A deploy deletes the previous build's hashed chunks, so a tab still running
+ * that build asks for files that are gone. nginx sends that 404 with no
+ * `Cache-Control` unless the header is added `always`, and Cloudflare then
+ * caches it for four hours in the edge and the browser. A chunk that 404s
+ * once stays broken for everyone behind that edge, reload or not.
+ *
+ * Both a root path and an `/assets/` path are probed because the images put
+ * their chunks in different places: a pillar module host serves them at its
+ * root, the shell and design under `/assets/`. An SPA fallback that answers a
+ * missing path with a revalidating entry document satisfies the same contract.
+ *
+ * @param {string} baseImage Runtime stage base image.
+ * @returns {readonly string[]} Paths to probe; empty for non-nginx images.
+ */
+export function missingChunkProbePaths(baseImage) {
+  if (!/^nginx(:|$)/u.test(baseImage)) return [];
+  return ['/smoke-probe-missing-chunk.js', '/assets/smoke-probe-missing-chunk.js'];
+}
+
+/**
  * Where an nginx runtime stage puts the built frontend.
  *
  * The `root` every one of these images' conf declares, and the default the
@@ -856,6 +878,27 @@ async function main() {
             `FAIL — ${image} serves its entry document without forcing revalidation, ` +
               `so a deploy leaves browsers on the previous bundle: ` +
               `${stale.map((o) => o.path).join(', ')}`
+          );
+          await reportFailure(containerId, image, mountPaths);
+          process.exitCode = 1;
+          return;
+        }
+      }
+
+      const chunkPaths = missingChunkProbePaths(baseImage);
+      if (chunkPaths.length > 0) {
+        console.log(`Reading the cache policy ${image} gives a chunk that does not exist:`);
+        const origin = `http://127.0.0.1:${await resolveHostPort(containerId, port)}`;
+        const observed = await probeFreshness({ origin, paths: chunkPaths });
+        for (const { path, cacheControl } of observed) {
+          console.log(`  ${path} → Cache-Control: ${cacheControl}`);
+        }
+        const cacheable = observed.filter((o) => !o.revalidates);
+        if (cacheable.length > 0) {
+          console.error(
+            `FAIL — ${image} answers a missing chunk with a cacheable response, so a ` +
+              '404 during a deploy is cached for hours: ' +
+              cacheable.map((o) => o.path).join(', ')
           );
           await reportFailure(containerId, image, mountPaths);
           process.exitCode = 1;

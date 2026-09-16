@@ -76,6 +76,30 @@ describe('toDraftPayload', () => {
   });
 });
 
+describe('toDraftPayload — a row left unassigned survives the draft round trip (POPS-3748)', () => {
+  it('carries entity.matchType "none" through a JSON round trip with no entityId/entityName', () => {
+    // "Leave unassigned" writes exactly this shape (`useReviewActions.moveOneToMatched`)
+    // and needs no new field: `matchType` is already part of the persisted
+    // `EntityMatch` shape, so a plain JSON round trip — what a server draft
+    // actually does to the payload — is enough to prove it resumes intact.
+    useImportStore.setState({
+      ...initialState,
+      processedTransactions: {
+        ...emptyProcessed,
+        matched: [processed('unassigned-1', 'matched')],
+      },
+    });
+    const payload = toDraftPayload(useImportStore.getState());
+    const roundTripped = JSON.parse(JSON.stringify(payload)) as typeof payload;
+
+    expect(isDraftPayload(roundTripped)).toBe(true);
+    const [row] = roundTripped.processedTransactions.matched;
+    expect(row?.entity).toEqual({ matchType: 'none' });
+    expect(row?.entity).not.toHaveProperty('entityId');
+    expect(row?.entity).not.toHaveProperty('entityName');
+  });
+});
+
 describe('isDraftPayload', () => {
   it.each([
     ['currentStep', 'four'],

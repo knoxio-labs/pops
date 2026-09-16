@@ -9,10 +9,8 @@ import { Alert, Button, DataTable, PageHeader, Skeleton } from '@pops/ui';
 import { unwrap } from '../finance-api-helpers.js';
 import { transactionsSuggestTags, transactionsUpdate } from '../finance-api/index.js';
 import { buildColumns, buildTransactionFilters, type Transaction } from './transactions/columns';
-import { DeleteTransactionDialog } from './transactions/DeleteTransactionDialog';
-import { PurchaseDetailDialog } from './transactions/purchase-detail/PurchaseDetailDialog';
 import { usePurchaseLinkSummaries } from './transactions/purchase-link/usePurchaseLinkSummaries';
-import { TransactionFormDialog } from './transactions/TransactionFormDialog';
+import { TransactionDialogs } from './transactions/TransactionDialogs';
 import { useInitialAccountFilter } from './transactions/useInitialAccountFilter';
 import { useTransactionsPage } from './transactions/useTransactionsPage';
 
@@ -148,7 +146,7 @@ function useTransactionColumns(
     onTagSuggest,
     onEdit: state.handleEdit,
     onDelete: state.setDeletingTx,
-    onUnlink: state.confirmUnlink,
+    onUnlink: state.setUnlinkingTx,
     onShowPurchase,
   });
 }
@@ -186,23 +184,11 @@ export function TransactionsPage() {
         onFilteredCountChange={setFilteredCount}
         initialColumnFilters={initialColumnFilters}
       />
-      <TransactionFormDialog
-        open={state.isDialogOpen}
-        onOpenChange={state.setIsDialogOpen}
-        editingTransaction={state.editingTransaction}
-        form={state.form}
-        isSubmitting={state.isSubmitting}
-        onSubmit={state.onSubmit}
-        entities={state.entities}
-        accounts={state.accounts}
+      <TransactionDialogs
+        state={state}
+        purchaseTx={purchaseTx}
+        onClosePurchase={() => setPurchaseTx(null)}
       />
-      <DeleteTransactionDialog
-        deletingTx={state.deletingTx}
-        setDeletingTx={state.setDeletingTx}
-        isDeleting={state.deleteMutation.isPending}
-        onConfirm={(tx) => state.confirmDelete(tx)}
-      />
-      <PurchaseDetailDialog transaction={purchaseTx} onClose={() => setPurchaseTx(null)} />
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Separator } from '@pops/ui';
 
+import { useImportStore } from '../../../store/importStore';
 import { PendingImportList } from '../pending/PendingImportList';
 import { usePendingImports } from '../pending/usePendingImports';
 
@@ -15,7 +16,12 @@ import { usePendingImports } from '../pending/usePendingImports';
  */
 export function ContinuePending() {
   const { t } = useTranslation('finance');
-  const { items } = usePendingImports();
+  const { items: pending } = usePendingImports();
+  // The server cannot tell this tab's lease from another's, so the draft the
+  // wizard is on would read "open in another tab" and its take-over would
+  // navigate to the URL already showing.
+  const currentDraftId = useImportStore((state) => state.draftId);
+  const items = pending?.filter((item) => item.draft.id !== currentDraftId);
   if (items === undefined || items.length === 0) return null;
   return (
     <>

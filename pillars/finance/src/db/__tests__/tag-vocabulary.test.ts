@@ -238,11 +238,11 @@ describe('upsertVocabularyTag — derived facet and kind', () => {
   it('derives both from the tag string', () => {
     const { db, raw } = freshDb();
     try {
-      upsertVocabularyTag(db, 'venue:bar', 'user');
+      upsertVocabularyTag(db, 'channel:online', 'user');
 
       expect(
-        raw.prepare('SELECT facet, kind FROM tag_vocabulary WHERE tag = ?').get('venue:bar')
-      ).toEqual({ facet: 'venue', kind: 'closed' });
+        raw.prepare('SELECT facet, kind FROM tag_vocabulary WHERE tag = ?').get('channel:online')
+      ).toEqual({ facet: 'channel', kind: 'closed' });
     } finally {
       raw.close();
     }
@@ -267,13 +267,13 @@ describe('upsertVocabularyTag — derived facet and kind', () => {
   it('corrects facet/kind on a row written before those columns carried a value', () => {
     const { db, raw } = freshDb();
     try {
-      raw.prepare("INSERT INTO tag_vocabulary (tag, is_active) VALUES ('venue:bar', 0)").run();
+      raw.prepare("INSERT INTO tag_vocabulary (tag, is_active) VALUES ('channel:online', 0)").run();
 
-      upsertVocabularyTag(db, 'venue:bar', 'user');
+      upsertVocabularyTag(db, 'channel:online', 'user');
 
       expect(
-        raw.prepare('SELECT facet, kind FROM tag_vocabulary WHERE tag = ?').get('venue:bar')
-      ).toEqual({ facet: 'venue', kind: 'closed' });
+        raw.prepare('SELECT facet, kind FROM tag_vocabulary WHERE tag = ?').get('channel:online')
+      ).toEqual({ facet: 'channel', kind: 'closed' });
     } finally {
       raw.close();
     }

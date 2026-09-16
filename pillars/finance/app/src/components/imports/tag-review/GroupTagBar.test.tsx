@@ -6,7 +6,7 @@ import { GroupTagBar } from './GroupTagBar';
 const VOCABULARY = ['venue:bar', 'venue:cafe', 'contains:alcohol', 'Legacy'];
 
 const FACETS = [
-  { facet: 'venue', kind: 'closed' },
+  { facet: 'channel', kind: 'closed' },
   { facet: 'contains', kind: 'open' },
   { facet: 'trip', kind: 'open' },
 ] as const;
@@ -156,7 +156,7 @@ describe('GroupTagBar', () => {
 
     expect(screen.getByLabelText('Create trip:cairns-2026')).toBeInTheDocument();
     expect(screen.getByLabelText('Create contains:cairns-2026')).toBeInTheDocument();
-    expect(screen.queryByLabelText('Create venue:cairns-2026')).toBeNull();
+    expect(screen.queryByLabelText('Create channel:cairns-2026')).toBeNull();
 
     fireEvent.click(screen.getByLabelText('Create trip:cairns-2026'));
 
@@ -187,11 +187,11 @@ describe('GroupTagBar', () => {
     const props = renderBar();
     const input = screen.getByPlaceholderText('+ Add tag…');
 
-    fireEvent.change(input, { target: { value: 'venue:speakeasy' } });
+    fireEvent.change(input, { target: { value: 'channel:speakeasy' } });
     fireEvent.keyDown(input, { key: 'Enter' });
 
     expect(screen.getByText(/fixed set/i)).toBeInTheDocument();
-    expect(screen.queryByLabelText('Create venue:speakeasy')).toBeNull();
+    expect(screen.queryByLabelText('Create channel:speakeasy')).toBeNull();
     expect(props.onAddTag).not.toHaveBeenCalled();
   });
 

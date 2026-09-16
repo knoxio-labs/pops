@@ -48,11 +48,13 @@ export function findSimilarTransactions(
 /**
  * How grouped transactions are ordered. `ai-first` puts the groups an AI
  * guess produced ahead of the rest, then larger groups first — right where
- * a guess is waiting to be accepted. `size` is count-descending only, for a
- * bucket where nothing is waiting and the only thing to find is the biggest
- * merchant (the matched tab, POPS-2448).
+ * a guess is waiting to be accepted. `name` is alphabetical by entity name,
+ * for a bucket where nothing is waiting and a merchant is found by scanning
+ * for it (the matched tab, POPS-2448).
  */
-export type GroupOrder = 'ai-first' | 'size';
+export type GroupOrder = 'ai-first' | 'name';
+
+const byEntityName = new Intl.Collator(undefined, { sensitivity: 'base', numeric: true });
 
 /**
  * Group transactions by AI-suggested entity name
@@ -78,7 +80,8 @@ export function groupTransactionsByEntity(
   }
 
   return Array.from(groups.values()).toSorted((a, b) => {
-    if (order === 'ai-first' && a.aiSuggestion !== b.aiSuggestion) return a.aiSuggestion ? -1 : 1;
+    if (order === 'name') return byEntityName.compare(a.entityName, b.entityName);
+    if (a.aiSuggestion !== b.aiSuggestion) return a.aiSuggestion ? -1 : 1;
     return b.transactions.length - a.transactions.length;
   });
 }

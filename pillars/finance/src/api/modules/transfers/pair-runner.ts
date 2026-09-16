@@ -33,6 +33,7 @@ function toPairCandidate(row: TransactionRow): PairCandidate {
     id: row.id,
     amount: row.amountCents,
     accountId: row.accountId,
+    type: row.type,
     date: row.date,
     description: row.description,
     relatedTransactionId: row.relatedTransactionId,
@@ -66,7 +67,7 @@ export function predictPairOutcome(
   row: TransactionRow,
   windowDays: number
 ): PairPrediction {
-  if (row.relatedTransactionId !== null || row.matchRuleId !== null) return { kind: 'skipped' };
+  if (row.relatedTransactionId !== null) return { kind: 'skipped' };
 
   const candidates = transferPairsService.findPairCandidates(db, row, windowDays);
   const forward = findPairForTransaction(
@@ -89,8 +90,7 @@ export function predictPairOutcome(
  * Try to pair `row` with its unique transfer counterpart, linking both sides on
  * success.
  *
- * - `skipped` — the row is already linked or classified by a correction rule
- *   (rules outrank pairing), so it is not a pairing candidate.
+ * - `skipped` — the row is already linked, or the link write refused it.
  * - `no-match` — no candidate satisfies the predicate.
  * - `ambiguous` — a candidate exists but the match is not mutually unique, so it
  *   is left for manual resolution rather than linked.

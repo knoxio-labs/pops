@@ -78,6 +78,7 @@ export function ReviewStep() {
         handleCancelEdit={editing.handleCancelEdit}
         handleEntitySelect={reviewActions.handleEntitySelect}
         handleBulkEntitySelect={reviewActions.handleBulkEntitySelect}
+        handleLeaveUnassigned={reviewActions.handleLeaveUnassigned}
         handleCreateEntityWithName={bulk.handleCreateEntityWithName}
         handleAcceptAiSuggestion={bulk.handleAcceptAiSuggestion}
         handleAcceptAll={bulk.handleAcceptAll}

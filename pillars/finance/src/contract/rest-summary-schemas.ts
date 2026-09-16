@@ -14,8 +14,9 @@
  * 2. Every share is nullable, and is `null` exactly when the denominator is
  *    zero. A share of a zero total is undefined, not `0`.
  *
- * There is no income figure, by decision: the ledger holds zero `income` rows
- * (POPS-250), so the field would be a permanent zero that reads as measured.
+ * The top-level totals and breakdowns are spend. `income` measures the income
+ * tile's types over the same window with the same conventions, and `net` is
+ * income minus spend — fees and transfers are in neither.
  */
 import { z } from 'zod';
 
@@ -75,6 +76,36 @@ export const EntitySpendSchema = z.object({
   entityName: z.string().nullable(),
   spend: SpendMeasureSchema,
   shareOfTotal: z.number().nullable(),
+});
+
+export const IncomeSummarySchema = z.object({
+  total: SpendMeasureSchema,
+  /** `null` for `all`, which has no period before it. */
+  previousTotal: SpendMeasureSchema.nullable(),
+  deltaCents: z.number().int().nullable(),
+  /** Fractional change; `null` when the previous period's income was zero. */
+  deltaRatio: z.number().nullable(),
+  byAccount: z.array(
+    AccountSpendSchema.omit({ spend: true }).extend({ income: SpendMeasureSchema })
+  ),
+  byMonth: z.array(
+    z.object({
+      month: z.string(),
+      income: SpendMeasureSchema,
+      byAccount: z.array(z.object({ accountId: z.string(), income: SpendMeasureSchema })),
+    })
+  ),
+  /** Who paid in, with the same unattributed `null` bucket as spend. */
+  byEntity: z.array(EntitySpendSchema.omit({ spend: true }).extend({ income: SpendMeasureSchema })),
+});
+
+export const NetSummarySchema = z.object({
+  /** Income minus spend. Read the two sides' row counts before calling it measured. */
+  cents: z.number().int(),
+  previousCents: z.number().int().nullable(),
+  deltaCents: z.number().int().nullable(),
+  /** The same dense month axis as `byMonth`. */
+  byMonth: z.array(z.object({ month: z.string(), cents: z.number().int() })),
 });
 
 export const LargestChargeSchema = z.object({
@@ -145,6 +176,8 @@ export const FinanceSummarySchema = z.object({
   byMonth: z.array(MonthSpendSchema),
   byTag: z.array(TagSpendSchema),
   byEntity: z.array(EntitySpendSchema),
+  income: IncomeSummarySchema,
+  net: NetSummarySchema,
   inference: SummaryInferenceSchema,
 });
 

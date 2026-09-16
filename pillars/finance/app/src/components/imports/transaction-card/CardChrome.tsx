@@ -3,6 +3,7 @@ import { useState } from 'react';
 
 import { Button, Collapsible, CollapsibleContent, CollapsibleTrigger } from '@pops/ui';
 
+import { SignedAmount } from '../../SignedAmount';
 import { LocationField } from '../LocationField';
 import { HeaderBadges } from './badges';
 
@@ -43,7 +44,7 @@ export function CardHeader({
           <HeaderBadges transaction={transaction} />
         </div>
         <div className="text-sm text-muted-foreground">
-          {transaction.date} • ${Math.abs(transaction.amount).toFixed(2)}
+          {transaction.date} • <SignedAmount amount={transaction.amount} />
         </div>
         {ruleProvenance && (
           <div className="mt-1 text-xs text-muted-foreground">

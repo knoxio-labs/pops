@@ -101,7 +101,7 @@
  * depth.
  *
  * Usage:
- *   node scripts/ci/check-line-budget-headroom.mjs [--base <ref>] [--headroom <n>] [--repo <dir>]
+ *   node scripts/ci/check-line-budget-headroom.mjs [--base <ref>] [--head <ref>] [--headroom <n>] [--repo <dir>]
  *   node scripts/ci/check-line-budget-headroom.mjs --self-test
  */
 
@@ -659,6 +659,12 @@ function verdictStatus(count, max, headroom) {
  * @param {string} params.cwd
  * @param {string} params.baseRef Local or `origin/<ref>`-resolved branch name.
  * @param {number} params.headroom
+ * @param {string} [params.headRef] The commit to project — a ref or a raw
+ *   sha. Defaults to `HEAD`. A pre-push hook has to project the SHA git is
+ *   actually about to send, which is not always the checked-out `HEAD` (a
+ *   `git push origin <sha>:refs/heads/x`, or a push while several refs are
+ *   being sent at once) — every caller that reads `HEAD` today reads this
+ *   instead, so CI (which never passes it) is unaffected.
  * @returns {{ verdicts: FileVerdict[], resolvedBase?: string, skippedReason?: string, fatal?: boolean }}
  *   `skippedReason` with `fatal: true` means the question could not be
  *   answered and the caller must not read a pass into it; without `fatal` it
@@ -666,7 +672,7 @@ function verdictStatus(count, max, headroom) {
  *   projection actually used, which the report names so a reader can tell
  *   `origin/main` from a stale local `main`.
  */
-export function evaluate({ cwd, baseRef, headroom }) {
+export function evaluate({ cwd, baseRef, headroom, headRef = 'HEAD' }) {
   const configPath = join(repoRoot, '.oxlintrc.json');
   /** @type {unknown} */
   let rawConfig;
@@ -713,20 +719,25 @@ export function evaluate({ cwd, baseRef, headroom }) {
     };
   }
 
-  const currentBranch = tryGit(['rev-parse', '--abbrev-ref', 'HEAD'], cwd);
-  if (currentBranch === baseRef.replace(/^refs\/heads\//, '')) {
+  // Same-commit check by sha rather than by branch name: `headRef` may be a
+  // raw sha with no branch pointing at it (a detached pre-push target), and a
+  // name comparison would never fire for that shape even when it IS the base
+  // branch's current tip.
+  const headSha = tryGit(['rev-parse', headRef], cwd);
+  const resolvedBaseSha = tryGit(['rev-parse', resolvedBase], cwd);
+  if (headSha !== undefined && headSha === resolvedBaseSha) {
     return {
       verdicts: [],
-      skippedReason: `HEAD is ${currentBranch} itself — nothing to land on top of`,
+      skippedReason: `${headRef} is ${resolvedBase} itself — nothing to land on top of`,
     };
   }
 
-  const mergeBase = tryGit(['merge-base', resolvedBase, 'HEAD'], cwd);
+  const mergeBase = tryGit(['merge-base', resolvedBase, headRef], cwd);
   if (mergeBase === undefined) {
     return {
       verdicts: [],
       skippedReason:
-        `no merge-base between ${resolvedBase} and HEAD — a shallow clone or an unrelated history. ` +
+        `no merge-base between ${resolvedBase} and ${headRef} — a shallow clone or an unrelated history. ` +
         'Fetch full history (actions/checkout `fetch-depth: 0`) and run again',
       fatal: true,
     };
@@ -745,14 +756,14 @@ export function evaluate({ cwd, baseRef, headroom }) {
       '--name-only',
       '--diff-filter=ACMR',
       mergeBase,
-      'HEAD',
+      headRef,
     ],
     cwd
   );
   if (changedRaw === undefined) {
     return {
       verdicts: [],
-      skippedReason: `git diff ${mergeBase}..HEAD failed — the touched-file list is unknown, which is not the same as empty`,
+      skippedReason: `git diff ${mergeBase}..${headRef} failed — the touched-file list is unknown, which is not the same as empty`,
       fatal: true,
     };
   }
@@ -767,11 +778,11 @@ export function evaluate({ cwd, baseRef, headroom }) {
   const unreadable = [];
 
   // Every candidate blob this loop could need, fetched in one round trip:
-  // up to three refs (HEAD, the target's tip, the merge-base) per touched
+  // up to three refs (headRef, the target's tip, the merge-base) per touched
   // file, whether or not a given file turns out to need all three.
   const blobs = readBlobsBatch(
     changed.flatMap((file) => [
-      { ref: 'HEAD', path: file },
+      { ref: headRef, path: file },
       { ref: resolvedBase, path: file },
       { ref: mergeBase, path: file },
     ]),
@@ -781,9 +792,9 @@ export function evaluate({ cwd, baseRef, headroom }) {
     blobs.get(`${ref}:${file}`) ?? { kind: 'error', message: 'not fetched' };
 
   for (const file of changed) {
-    const branchHead = blobAt('HEAD', file);
+    const branchHead = blobAt(headRef, file);
     if (branchHead.kind === 'error') {
-      unreadable.push(`${file} at HEAD (${branchHead.message})`);
+      unreadable.push(`${file} at ${headRef} (${branchHead.message})`);
       continue;
     }
     if (branchHead.kind === 'absent') continue; // deleted in a later commit on this branch — nothing to budget.
@@ -1060,6 +1071,8 @@ function run() {
   const args = process.argv.slice(2);
   const baseIdx = args.indexOf('--base');
   const baseRef = baseIdx >= 0 ? args[baseIdx + 1] : 'main';
+  const headIdx = args.indexOf('--head');
+  const headRef = headIdx >= 0 ? args[headIdx + 1] : 'HEAD';
   const headroomIdx = args.indexOf('--headroom');
   const headroom = headroomIdx >= 0 ? Number(args[headroomIdx + 1]) : DEFAULT_HEADROOM;
   // `--repo` exists so the guard's own tests can run the BINARY against a
@@ -1073,6 +1086,10 @@ function run() {
 
   if (baseRef === undefined || baseRef.length === 0 || baseRef.startsWith('--')) {
     console.error('check-line-budget-headroom: --base needs a ref (e.g. --base main).');
+    return false;
+  }
+  if (headRef === undefined || headRef.length === 0 || headRef.startsWith('--')) {
+    console.error('check-line-budget-headroom: --head needs a ref or sha (e.g. --head abc123).');
     return false;
   }
   if (cwd === undefined || cwd.length === 0 || cwd.startsWith('--')) {
@@ -1092,7 +1109,12 @@ function run() {
     return false;
   }
 
-  const { verdicts, resolvedBase, skippedReason, fatal } = evaluate({ cwd, baseRef, headroom });
+  const { verdicts, resolvedBase, skippedReason, fatal } = evaluate({
+    cwd,
+    baseRef,
+    headroom,
+    headRef,
+  });
   if (skippedReason !== undefined) {
     // A guard that cannot answer says so on stderr and exits non-zero. The
     // alternative — a friendly line on stdout and exit 0 — is the shape
@@ -1564,7 +1586,7 @@ function main() {
   const args = process.argv.slice(2);
   if (args.includes('--help') || args.includes('-h')) {
     console.log(
-      'Usage: node scripts/ci/check-line-budget-headroom.mjs [--base <ref>] [--headroom <n>] [--repo <dir>] [--self-test]\n' +
+      'Usage: node scripts/ci/check-line-budget-headroom.mjs [--base <ref>] [--head <ref>] [--headroom <n>] [--repo <dir>] [--self-test]\n' +
         "Projects every linted file this branch touches onto the target branch's current tip and\n" +
         'reports each one’s remaining headroom, failing when the projected line count crosses the\n' +
         'oxlint max-lines cap and annotating when it merely approaches it.'

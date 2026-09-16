@@ -83,10 +83,12 @@ describe('buildConfirmedTransactions', () => {
     expect(confirmed?.entityId).toBeUndefined();
   });
 
-  it('drops a matched row missing both entityId and entityName (no provenance to persist)', () => {
-    const result = buildConfirmedTransactions([matched({ entity: { matchType: 'exact' } })]);
+  it('keeps a matched row with no entity — a purchase left unassigned commits (POPS-3748)', () => {
+    const result = buildConfirmedTransactions([matched({ entity: { matchType: 'none' } })]);
 
-    expect(result).toHaveLength(0);
+    expect(result).toHaveLength(1);
+    expect(result[0]?.entityId).toBeUndefined();
+    expect(result[0]?.entityName).toBeUndefined();
   });
 
   it('keeps an entity-optional credit type (loan) with no entity — not silently dropped (#3607)', () => {
@@ -107,30 +109,137 @@ describe('buildConfirmedTransactions', () => {
     expect(result[0]).toMatchObject({ transactionType: 'reversal' });
   });
 
-  it('still drops a refund with no entity (merchant transactions require a payee)', () => {
+  it('commits one value on a single-valued facet when the suggestions carry two (POPS-3734)', () => {
+    const [confirmed] = buildConfirmedTransactions([
+      matched({
+        suggestedTags: [
+          { tag: 'venue:takeaway', source: 'rule' },
+          { tag: 'contains:food', source: 'rule' },
+          { tag: 'venue:restaurant', source: 'ai' },
+          { tag: 'contains:alcohol', source: 'ai' },
+        ],
+      }),
+    ]);
+
+    expect(confirmed?.tags).toEqual(['venue:takeaway', 'contains:food', 'contains:alcohol']);
+  });
+
+  it('keeps a refund with no entity — left unassigned commits like any other type (POPS-3748)', () => {
     const result = buildConfirmedTransactions([
       matched({ transactionType: 'refund', entity: { matchType: 'none' } }),
+    ]);
+
+    expect(result).toHaveLength(1);
+  });
+
+  it('still drops a refund whose entity id is a pending:contact placeholder (POPS-2692)', () => {
+    const result = buildConfirmedTransactions([
+      matched({
+        transactionType: 'refund',
+        entity: {
+          entityId: 'pending:contact:4c42ebf6-f6b7-4ce5-91ab-70ac3645ecbd',
+          entityName: 'Apple',
+          matchType: 'learned',
+        },
+      }),
     ]);
 
     expect(result).toHaveLength(0);
   });
 });
 
-describe('partitionConfirmable (#3765 — dropped rows are surfaced, not lost)', () => {
-  it('returns a dropped entity-required row instead of silently discarding it', () => {
-    const droppable = matched({ transactionType: 'purchase', entity: { matchType: 'exact' } });
-    const { confirmed, dropped } = partitionConfirmable([droppable]);
+describe('buildConfirmedTransactions — pre-accepting suggestions (POPS-3671)', () => {
+  it('ticks a suggestion the server allowed, and leaves one it did not unticked but offered', () => {
+    const [confirmed] = buildConfirmedTransactions([
+      matched({
+        suggestedTags: [
+          { tag: 'venue:supermarket', source: 'ai', confidence: 0.92, preAccept: true },
+          { tag: 'occasion:out', source: 'ai', confidence: 0.31, preAccept: false },
+        ],
+      }),
+    ]);
 
-    expect(confirmed).toHaveLength(0);
-    expect(dropped).toEqual([droppable]);
+    expect(confirmed?.tags).toEqual(['venue:supermarket']);
+    expect(confirmed?.suggestedTags?.map((s) => s.tag)).toEqual([
+      'venue:supermarket',
+      'occasion:out',
+    ]);
   });
 
-  it('treats an unset transaction type with no entity as droppable (requiresEntity default)', () => {
+  it('still ticks a suggestion with no pre-accept decision — rule, entity, or a draft from before', () => {
+    const [confirmed] = buildConfirmedTransactions([
+      matched({
+        suggestedTags: [
+          { tag: 'contains:groceries', source: 'rule', pattern: 'WOOLWORTHS' },
+          { tag: 'venue:supermarket', source: 'entity' },
+          { tag: 'channel:in-person', source: 'ai' },
+        ],
+      }),
+    ]);
+
+    expect(confirmed?.tags).toEqual([
+      'contains:groceries',
+      'venue:supermarket',
+      'channel:in-person',
+    ]);
+  });
+
+  it('ticks nothing when every AI suggestion was held back', () => {
+    const [confirmed] = buildConfirmedTransactions([
+      matched({ suggestedTags: [{ tag: 'contains:food', source: 'ai', preAccept: false }] }),
+    ]);
+
+    expect(confirmed?.tags).toEqual([]);
+  });
+});
+
+describe('buildConfirmedTransactions — pre-accept meets the single-valued facet limit (POPS-3671, POPS-3668)', () => {
+  it('ticks the allowed value when a held-back suggestion comes first on the same single-valued facet', () => {
+    const [confirmed] = buildConfirmedTransactions([
+      matched({
+        suggestedTags: [
+          { tag: 'venue:club', source: 'ai', confidence: 0.3, preAccept: false },
+          { tag: 'venue:pub', source: 'rule', pattern: 'PALMS' },
+        ],
+      }),
+    ]);
+
+    // Filtering after the facet merge would let venue:club claim the facet, skip
+    // venue:pub, and then drop club: a held-back suggestion displacing a ticked one.
+    expect(confirmed?.tags).toEqual(['venue:pub']);
+    expect(confirmed?.suggestedTags?.map((s) => s.tag)).toEqual(['venue:club', 'venue:pub']);
+  });
+
+  it('ticks the first allowed AI value behind a held-back one on the same facet', () => {
+    const [confirmed] = buildConfirmedTransactions([
+      matched({
+        suggestedTags: [
+          { tag: 'venue:takeaway', source: 'ai', confidence: 0.2, preAccept: false },
+          { tag: 'venue:restaurant', source: 'ai', confidence: 0.9, preAccept: true },
+          { tag: 'venue:cafe', source: 'ai', confidence: 0.85, preAccept: true },
+        ],
+      }),
+    ]);
+
+    expect(confirmed?.tags).toEqual(['venue:restaurant']);
+  });
+});
+
+describe('partitionConfirmable (#3765 — dropped rows are surfaced, not lost)', () => {
+  it('keeps a purchase with no entity confirmed — left unassigned, it is not dropped (POPS-3748)', () => {
+    const unassigned = matched({ transactionType: 'purchase', entity: { matchType: 'none' } });
+    const { confirmed, dropped } = partitionConfirmable([unassigned]);
+
+    expect(confirmed).toEqual([unassigned]);
+    expect(dropped).toHaveLength(0);
+  });
+
+  it('keeps an unset transaction type with no entity confirmed (requiresEntity default, POPS-3748)', () => {
     const untyped = matched({ transactionType: undefined, entity: { matchType: 'none' } });
     const { confirmed, dropped } = partitionConfirmable([untyped]);
 
-    expect(confirmed).toHaveLength(0);
-    expect(dropped).toEqual([untyped]);
+    expect(confirmed).toEqual([untyped]);
+    expect(dropped).toHaveLength(0);
   });
 
   /**
@@ -177,7 +286,15 @@ describe('partitionConfirmable (#3765 — dropped rows are surfaced, not lost)',
   it('partition is disjoint and exhaustive over the input, and confirmed matches the commit filter', () => {
     const rows = [
       matched({ checksum: 'a' }),
-      matched({ checksum: 'b', transactionType: 'purchase', entity: { matchType: 'exact' } }),
+      matched({
+        checksum: 'b',
+        transactionType: 'purchase',
+        entity: {
+          entityId: 'pending:contact:4c42ebf6-f6b7-4ce5-91ab-70ac3645ecbd',
+          entityName: 'Placeholder',
+          matchType: 'learned',
+        },
+      }),
       matched({ checksum: 'c', transactionType: 'loan', entity: { matchType: 'none' } }),
       matched({ checksum: 'd', transactionType: 'refund', entity: { matchType: 'none' } }),
     ];
@@ -298,8 +415,22 @@ describe('dropReason — an untyped credit is never committed as spend (POPS-275
     expect(dropReason(matched())).toBeNull();
   });
 
-  it('reports the missing merchant, not the missing type, on an untyped debit', () => {
-    expect(dropReason(matched({ entity: { matchType: 'none' } }))).toBe('entity');
+  it('commits an untyped debit with no merchant', () => {
+    expect(dropReason(matched({ entity: { matchType: 'none' } }))).toBeNull();
+  });
+
+  it('still reports a placeholder merchant, not a missing type, on an untyped debit (POPS-2692)', () => {
+    expect(
+      dropReason(
+        matched({
+          entity: {
+            entityId: 'pending:contact:4c42ebf6-f6b7-4ce5-91ab-70ac3645ecbd',
+            entityName: 'Placeholder',
+            matchType: 'learned',
+          },
+        })
+      )
+    ).toBe('entity');
   });
 
   it('keeps the untyped credit out of the commit payload and in the dropped list', () => {

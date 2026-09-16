@@ -11,18 +11,23 @@ const READING_NOTE =
   'Every amount comes as { cents, transactionCount }: transactionCount 0 means nothing ' +
   'matched, so say "no data" rather than "$0.00" — a category nothing has ever been filed ' +
   'under and one that genuinely netted to zero are different answers. Shares are null when ' +
-  'the total they are a share of is zero. There is no income figure because the ledger holds ' +
-  'no income rows at all.';
+  'the total they are a share of is zero. The top-level total and breakdowns are spend; ' +
+  'income counts income, loan, rebate and tax rows, and a row mistyped as income (a friend ' +
+  'paying you back) is counted as income until it is corrected. net.cents is income minus ' +
+  'spend — fees and transfers are in neither.';
 
 const summaryGet: ToolDef = {
   name: 'finance.summary.get',
   description:
-    'Spend for one window and the period before it, aggregated by the finance pillar — use ' +
-    'this instead of paging finance.transactions.list and adding it up. Returns the resolved ' +
-    'window and the range it is compared against, the total and previous total with their ' +
-    'delta, spend by account, by month (stacked by account), by tag and by entity, and an ' +
-    'inference block: largest charge, how concentrated spend is across the top merchants, ' +
-    `subscriptions, and foreign spend with its FX fees. ${READING_NOTE}`,
+    'Spend, income and net for one window and the period before it, aggregated by the ' +
+    'finance pillar — use this instead of paging finance.transactions.list and adding it up. ' +
+    'Returns the resolved window and the range it is compared against, the spend total and ' +
+    'previous total with their delta, spend by account, by month (stacked by account), by ' +
+    'tag and by entity; an income block with the same total, previous total and delta, by ' +
+    'account, by month and by payer entity; a net block (income minus spend) for the window, ' +
+    'the previous period and each month; and an inference block: largest charge, how ' +
+    'concentrated spend is across the top merchants, subscriptions, and foreign spend with ' +
+    `its FX fees. ${READING_NOTE}`,
   inputSchema: {
     type: 'object',
     properties: {

@@ -12,6 +12,7 @@
  * non-throwing form.
  */
 import { transactionCorrectionsService, UnmatchablePatternError } from '../../../db/index.js';
+import { isPlaceholderEntityId } from '../../../db/services/tag-rule-write-guards.js';
 import { ValidationError } from '../../shared/errors.js';
 
 import type { ChangeSetOp } from '../../../contract/rest-corrections.js';
@@ -58,6 +59,21 @@ export function assertPatternCompiles(op: AddOp): void {
     throw new ValidationError(
       `Pattern is not a valid regular expression: ${op.data.descriptionPattern}`,
       { pattern: op.data.descriptionPattern }
+    );
+  }
+}
+
+/**
+ * Reject a ChangeSet `add` or `edit` scoped to an unresolved `temp:`
+ * placeholder entity id (POPS-3717). The import commit resolves placeholders
+ * before it gets here; the REST apply route never does, so the check lives on
+ * the write itself, as the tag-rule guard does.
+ */
+export function assertEntityIdResolved(entityId: string | null | undefined): void {
+  if (isPlaceholderEntityId(entityId)) {
+    throw new ValidationError(
+      `Refusing to scope a rule to unresolved placeholder entity id '${entityId}'`,
+      { entityId }
     );
   }
 }

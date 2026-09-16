@@ -22,8 +22,8 @@ extension ReceiptDraftTests {
     func extractionPreFillsTheForm() {
         let draft = ReceiptDraft.fake(.tillNamedItems())
 
-        #expect(draft.merchant.value == "Kmart Broadway")
-        #expect(draft.address.value == "1 Bay Street, Broadway NSW")
+        #expect(draft.printedMerchant.value == "Kmart Broadway")
+        #expect(draft.printedAddress.value == "1 Bay Street, Broadway NSW")
         #expect(draft.date.value == "2026-08-20 17:42")
         #expect(draft.total.value == "31.00")
         #expect(
@@ -42,8 +42,8 @@ extension ReceiptDraftTests {
     func absentFieldsAreStillFields() {
         let draft = ReceiptDraft.fake(.unnamedItems())
 
-        #expect(draft.address.isEmpty)
-        #expect(!draft.address.wasExtracted)
+        #expect(draft.printedAddress.isEmpty)
+        #expect(!draft.printedAddress.wasExtracted)
         #expect(draft.date.isEmpty)
         #expect(draft.lines.allSatisfy { $0.description.isEmpty })
         #expect(draft.lines.count == 2, "an unnamed line is still a line")
@@ -83,8 +83,10 @@ extension ReceiptDraftTests {
     func blankDraftIsTheSameForm() {
         let blank = ReceiptDraft.blank(currency: "AUD")
 
-        #expect(blank.merchant.isEmpty)
-        #expect(!blank.merchant.wasExtracted)
+        #expect(blank.printedMerchant.isEmpty)
+        #expect(!blank.printedMerchant.wasExtracted)
+        #expect(
+            blank.merchantResolution == .unresolved, "a hand-entered purchase has no merchant yet")
         #expect(blank.lines.count == 1, "somewhere to type without hunting for an Add control")
         #expect(blank.adjustments.isEmpty)
         #expect(blank.hints.isEmpty)
@@ -123,9 +125,10 @@ extension ReceiptDraftTests {
     func whitespaceIsNotAnEdit() {
         var draft = ReceiptDraft.fake(.tillNamedItems())
 
-        draft.merchant.value = "Kmart Broadway  "
+        draft.date.value = "2026-08-20 17:42  "
 
-        #expect(!draft.merchant.isEdited)
+        #expect(!draft.date.isEdited)
+        #expect(!draft.isEdited)
     }
 
     @Test("a row the model missed can be added, and knows it was not read")
@@ -181,17 +184,17 @@ extension ReceiptDraftTests {
         #expect(draft.problems.contains(.totalMissing))
         #expect(!draft.isSaveable)
 
-        draft.merchant.value = "Kmart"
+        draft.date.value = "2026-08-21"
         draft.lines[0].description.value = "Cheetos"
 
-        #expect(draft.merchant.value == "Kmart", "an unrelated field stopped accepting input")
+        #expect(draft.date.value == "2026-08-21", "an unrelated field stopped accepting input")
         #expect(draft.lines[0].description.value == "Cheetos")
         #expect(draft.total.value.isEmpty, "the cleared field refilled itself")
     }
 
     @Test("a line with no amount is reported against that line and no other")
     func aLineMissingItsAmountIsReported() {
-        var draft = ReceiptDraft.fake(.tillNamedItems())
+        var draft = ReceiptDraft.fake(.tillNamedItems()).attributed()
         let emptied = draft.lines[1].id
 
         draft.lines[1].amount.value = ""
@@ -206,7 +209,7 @@ extension ReceiptDraftTests {
     /// correct.
     @Test("a line with an amount and no name is saveable")
     func anUnnamedLineIsFine() {
-        let draft = ReceiptDraft.fake(.unnamedItems())
+        let draft = ReceiptDraft.fake(.unnamedItems()).attributed()
 
         #expect(draft.problems.isEmpty)
         #expect(draft.isSaveable)
@@ -224,7 +227,7 @@ extension ReceiptDraftTests {
     /// omitting an amount they were never asked for.
     @Test("an offered row with nothing in it is not reported")
     func aBlankRowIsNotAProblem() {
-        var draft = ReceiptDraft.blank(currency: nil)
+        var draft = ReceiptDraft.blank(currency: nil).attributed()
 
         draft.addLine()
 
@@ -241,9 +244,56 @@ extension ReceiptDraftTests {
         #expect(!draft.isSaveable, "it still cannot be saved")
         #expect(!draft.reportsMissingTotal, "and it does not say so in red before anyone types")
 
-        draft.merchant.value = "Market stall"
+        draft.merchantResolution = .created(value: "Market stall")
 
         #expect(draft.reportsMissingTotal, "once there is something to save, say what stops it")
+    }
+
+    /// The Save button is disabled while the merchant is unresolved, and a
+    /// disabled button with nothing beside it is a screen refusing to say
+    /// what it wants. A reading whose merchant the server did not match is
+    /// wrong on arrival, so it is named on arrival.
+    @Test("a reading with no merchant behind it says so before anyone types")
+    func anUnmatchedMerchantIsNamedOnOpen() {
+        let draft = ReceiptDraft.fake(.tillNamedItems())
+
+        #expect(!draft.isSaveable)
+        #expect(draft.reportsUnresolvedMerchant)
+    }
+
+    /// The same restraint the total gets: a form nobody has touched does not
+    /// open by listing what is missing from it.
+    @Test("a blank form names its missing merchant only once there is something to save")
+    func aBlankFormNamesTheMerchantLate() {
+        var draft = ReceiptDraft.blank(currency: nil)
+
+        #expect(!draft.reportsUnresolvedMerchant)
+
+        draft.total.value = "12.00"
+
+        #expect(draft.reportsUnresolvedMerchant)
+    }
+
+    @Test("pointing the purchase at a merchant withdraws the complaint")
+    func resolvingTheMerchantWithdrawsTheComplaint() {
+        var draft = ReceiptDraft.fake(.tillNamedItems())
+
+        draft.setMerchant(.chosen(id: "ent-kmart"))
+
+        #expect(!draft.reportsUnresolvedMerchant)
+        #expect(draft.isSaveable)
+    }
+
+    /// A server's own match is a proposal nobody has looked at, but it is
+    /// still an entity: it saves, so it must not be drawn as an error.
+    @Test("a merchant the server matched is not complained about")
+    func aServerMatchIsNotAComplaint() {
+        var draft = ReceiptDraft.fake(.tillNamedItems())
+
+        draft.setMerchant(.matched(id: "ent-kmart"))
+
+        #expect(!draft.reportsUnresolvedMerchant)
+        #expect(draft.isSaveable)
     }
 
     /// A reading that arrived with a total and had it emptied is a real

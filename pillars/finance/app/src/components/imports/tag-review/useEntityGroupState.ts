@@ -6,6 +6,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
+import { mergeTagsReplacingSingleValued } from '../../../lib/tag-merge';
 import { groupTagSources } from './groupTagSources';
 import { unionTags } from './tagReviewUtils';
 
@@ -42,8 +43,11 @@ function applySuggestionsToGroup(
     const currentTags = localTags[tx.checksum] ?? [];
     const suggestions = (suggestedTagMeta[tx.checksum] ?? []).map((s) => s.tag);
     if (suggestions.length === 0) continue;
-    const mergedTags = Array.from(new Set([...currentTags, ...suggestions]));
-    if (mergedTags.length === currentTags.length) continue; // all suggestions already present
+    const mergedTags = mergeTagsReplacingSingleValued(currentTags, suggestions);
+    const unchanged =
+      mergedTags.length === currentTags.length &&
+      mergedTags.every((tag) => currentTags.includes(tag));
+    if (unchanged) continue;
     onUpdateTag(tx.checksum, mergedTags);
     applied++;
   }
@@ -104,8 +108,11 @@ export function useEntityGroupState(props: EntityGroupStateInput) {
     (tag: string) => setGroupStagedTags((prev) => prev.filter((t) => t !== tag)),
     []
   );
+  // A single-valued facet's incoming value replaces whatever is already
+  // staged on that axis, so the staged pills never show two venues at once
+  // and the eventual group merge never has a stale one to drop silently.
   const addGroupStagedTag = useCallback(
-    (tag: string) => setGroupStagedTags((prev) => (prev.includes(tag) ? prev : [...prev, tag])),
+    (tag: string) => setGroupStagedTags((prev) => mergeTagsReplacingSingleValued(prev, [tag])),
     []
   );
 

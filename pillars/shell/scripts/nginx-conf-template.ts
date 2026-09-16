@@ -42,6 +42,15 @@ export const NGINX_CONF_HEAD = `server {
     location /assets/ {
         expires 1y;
         add_header Cache-Control "public, immutable";
+        try_files $uri @missing;
+    }
+
+    # A 404 carries no Cache-Control unless it is added \`always\`, and
+    # Cloudflare then caches a missing \`.js\` path for four hours in the edge
+    # and the browser. A chunk that 404s once would stay broken for that long.
+    location @missing {
+        add_header Cache-Control "no-store" always;
+        return 404;
     }
 
     # nginx's bundled mime.types maps .js but not .mjs, so an emitted .mjs
@@ -56,6 +65,7 @@ export const NGINX_CONF_HEAD = `server {
         default_type application/javascript;
         expires 1y;
         add_header Cache-Control "public, immutable";
+        try_files $uri @missing;
     }
 `;
 

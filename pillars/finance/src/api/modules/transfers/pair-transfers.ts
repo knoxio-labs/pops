@@ -17,6 +17,8 @@
  * does not flip that flag.
  */
 
+import type { TransactionType } from '../../../contract/corrections-constants.js';
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 const DEFAULT_WINDOW_DAYS = 3;
 
@@ -25,6 +27,8 @@ export interface PairCandidate {
   id: string;
   amount: number;
   accountId: string;
+  /** Only a row already typed `transfer` may be paired; see {@link findPairForTransaction}. */
+  type: TransactionType;
   /** Calendar date, `YYYY-MM-DD`; `transactions.date` carries no time component. */
   date: string;
   /** The bank's descriptor; read only for a transfer reference that breaks a tie. */
@@ -91,11 +95,17 @@ export function isTransferPairEnabled(): boolean {
 /**
  * Find the unique transfer counterpart of `target` within `candidates`.
  *
- * A candidate `C` is eligible when it is a different, still-unlinked row with
- * the same absolute amount, the opposite sign, a different account, and a date
- * within `windowDays` of the target (inclusive). A `target` that is itself
- * already linked yields `none`. Among eligible candidates the closest date
- * wins; a single closest candidate is a `match`.
+ * Both legs must already be typed `transfer`: a `target` that is not yields
+ * `none`, and a candidate that is not is never eligible. Amount, sign, account
+ * and date alone cannot tell a transfer from a card purchase and a friend's
+ * same-day reimbursement of it (POPS-3940), and a reimbursement row can itself
+ * be typed `transfer`, so one transfer-typed leg is not enough either.
+ *
+ * A candidate `C` is eligible when it is a different, still-unlinked,
+ * transfer-typed row with the same absolute amount, the opposite sign, a
+ * different account, and a date within `windowDays` of the target (inclusive).
+ * A `target` that is itself already linked yields `none`. Among eligible
+ * candidates the closest date wins; a single closest candidate is a `match`.
  *
  * A tie among the closest is broken only by a bank transfer reference that the
  * target and exactly one of them both carry. It is a tie-breaker and nothing
@@ -111,7 +121,7 @@ export function findPairForTransaction(
   candidates: readonly PairCandidate[],
   windowDays: number = getTransferPairWindowDays()
 ): PairResult {
-  if (target.relatedTransactionId !== null) return { kind: 'none' };
+  if (target.relatedTransactionId !== null || target.type !== 'transfer') return { kind: 'none' };
 
   const targetAbs = Math.abs(target.amount);
   const targetSign = Math.sign(target.amount);
@@ -122,6 +132,7 @@ export function findPairForTransaction(
     (candidate) =>
       candidate.id !== target.id &&
       candidate.relatedTransactionId === null &&
+      candidate.type === 'transfer' &&
       Math.abs(candidate.amount) === targetAbs &&
       Math.sign(candidate.amount) === -targetSign &&
       candidate.accountId !== target.accountId &&

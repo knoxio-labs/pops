@@ -13,7 +13,7 @@
  */
 import { and, eq, inArray, sql } from 'drizzle-orm';
 
-import { tagVocabulary } from '../schema.js';
+import { tagVocabulary, transactions } from '../schema.js';
 import { CLASSIFIED_TAG_FACETS, parseTagFacet, tagFacetKind } from '../tag-facets.js';
 
 import type { FinanceDb } from './internal.js';
@@ -283,4 +283,36 @@ export function loadKnownTagSet(db: FinanceDb): KnownTagSet {
 /** Whether one tag is in the active vocabulary. Prefer {@link loadKnownTagSet} in a loop. */
 export function isKnownTag(db: FinanceDb, tag: string): boolean {
   return loadKnownTagSet(db).has(tag);
+}
+
+/** One active vocabulary row whose maintained count disagrees with the ledger. */
+export interface VocabularyUsageDrift {
+  tag: string;
+  usageCount: number;
+  actual: number;
+}
+
+/**
+ * Active vocabulary rows whose `usage_count` disagrees with the number of
+ * transactions carrying the tag, ordered by tag; empty when consistent.
+ *
+ * Reports, never repairs: a recount stays an explicit migration, as 0114 was
+ * (POPS-3740). Counts `DISTINCT` rows, matching the `Set`-based accounting in
+ * {@link applyVocabularyUsageDelta}, so a tag duplicated on one row counts
+ * once. Retired rows are skipped because nothing maintains their count.
+ */
+export function findVocabularyUsageDrift(db: FinanceDb): VocabularyUsageDrift[] {
+  // One aggregate pass over the ledger rather than one scan per vocabulary
+  // row: `/health` runs this on every container healthcheck poll.
+  return db.all<VocabularyUsageDrift>(sql`
+    SELECT v.tag AS tag, v.usage_count AS usageCount, COALESCE(c.actual, 0) AS actual
+    FROM ${tagVocabulary} v
+    LEFT JOIN (
+      SELECT je.value AS tag, COUNT(DISTINCT r.id) AS actual
+      FROM ${transactions} r, json_each(r.tags) je
+      GROUP BY je.value
+    ) c ON c.tag = v.tag
+    WHERE v.is_active = 1 AND v.usage_count <> COALESCE(c.actual, 0)
+    ORDER BY v.tag
+  `);
 }

@@ -52,11 +52,17 @@ function classifyVerification(lookup: unknown, isError: boolean): EntityVerifica
  * no entities at all. Callers may therefore read "not in `entities`" as "does
  * not exist" — but only once `entities` is defined; it is `undefined` while
  * the fetch is in flight.
+ *
+ * The set is never considered fresh (`staleTime: 0`), overriding the shell's
+ * five-minute default: an entity created in another tab would otherwise stay
+ * missing from these pickers until that window lapsed, reading as "does not
+ * exist". With no stale window, regaining focus or remounting refetches.
  */
 export function useEntities() {
   const entityQuery = useQuery({
     queryKey: ['contacts', 'entities', 'lookup'],
     queryFn: fetchEntities,
+    staleTime: 0,
   });
   const { data: lookup } = entityQuery;
   const pendingEntities = useImportStore((s) => s.pendingEntities);

@@ -423,6 +423,23 @@ describe('buildCommitPayload', () => {
     expect(elementAt(payload.transactions, 0).entityId).toBe(danglingTempId);
   });
 
+  it('omits entityId/entityName for a row left unassigned, rather than sending empty strings (POPS-3748)', () => {
+    const unassigned = makeConfirmedTransaction({ entityId: undefined, entityName: undefined });
+
+    const payload = buildCommitPayload({
+      pendingEntities: [],
+      pendingChangeSets: [],
+      pendingTagRuleChangeSets: [],
+      confirmedTransactions: [unassigned],
+      source: SOURCE,
+    });
+
+    expect(payload.transactions).toHaveLength(1);
+    expect(elementAt(payload.transactions, 0).entityId).toBeUndefined();
+    expect(elementAt(payload.transactions, 0).entityName).toBeUndefined();
+    expect(JSON.stringify(payload.transactions[0])).not.toContain('entityId');
+  });
+
   it('returns a snapshot, not a live reference', () => {
     const entities = [makePendingEntity()];
     const changeSets = [makePendingChangeSet(sampleChangeSet)];
@@ -468,8 +485,8 @@ describe('buildCommitPayload staged tag rule reconciliation (POPS-3106)', () => 
 
   it('does not send a tag the user edited away after staging the rule', () => {
     // The reported failure: a rule staged with `venue:bar`, the chip then
-    // changed to `venue:pub`. The UI showed Pub; the commit still carried Bar
-    // and was refused whole against the closed `venue` namespace.
+    // changed to `venue:pub`. The UI showed Pub, but the commit still carried
+    // Bar — the edit never reached the staged rule payload at all.
     const txn = makeConfirmedTransaction({
       checksum: 'chk-palms',
       tags: ['occasion:out', 'venue:pub'],

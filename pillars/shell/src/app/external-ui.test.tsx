@@ -254,6 +254,53 @@ describe('external pillar UI — runtime mount (Option A)', () => {
 });
 
 /**
+ * A failed import in WebKit names no URL, and the same `TypeError` comes back
+ * whether the deploy removed the file or the pillar's UI container is down.
+ * The boundary probes the pillar's entry to tell the two apart: on 2026-09-13
+ * `/media-ui/media.js` answered 502 through pops-shell and the page reloaded,
+ * losing what the reader had in hand. These run the real boundary and the
+ * real probe, with only `fetch` stubbed.
+ */
+describe('external pillar UI — a failed import in WebKit', () => {
+  const RELOAD_KEY = 'pops:stale-chunk-reload-at';
+  const webkitImportError = new TypeError('Importing a module script failed.');
+
+  afterEach(() => {
+    sessionStorage.clear();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  function mountFailingPillar(status: number) {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const probe = vi.fn((_url: string, _init: RequestInit) => Promise.resolve({ status }));
+    vi.stubGlobal('fetch', probe);
+    const importer = vi.fn<RemoteModuleImporter>(() => Promise.reject(webkitImportError));
+    const entry = synthesizeExternalBundleEntry(descriptor(), importer);
+    if (entry === null) throw new Error('expected a synthesized entry');
+    mountSynthesizedRoutes(routesOf(entry), '/acme');
+    return probe;
+  }
+
+  it('shows the placeholder and does not reload when the pillar answers 502', async () => {
+    const probe = mountFailingPillar(502);
+
+    expect(await screen.findByTestId('external-pillar-load-error')).toBeInTheDocument();
+    expect(probe).toHaveBeenCalledOnce();
+    expect(probe.mock.calls[0]?.[0]).toMatch(/^https:\/\/cdn\.example\.com\/acme\/index\.js\?v=/);
+    expect(sessionStorage.getItem(RELOAD_KEY)).toBeNull();
+  });
+
+  it('reloads, rendering nothing, when the pillar is up and the build is stale', async () => {
+    const probe = mountFailingPillar(200);
+
+    await waitFor(() => expect(sessionStorage.getItem(RELOAD_KEY)).not.toBeNull());
+    expect(probe).toHaveBeenCalledOnce();
+    expect(screen.queryByTestId('external-pillar-load-error')).not.toBeInTheDocument();
+  });
+});
+
+/**
  * The production importer, against a real module.
  *
  * `defaultRemoteModuleImporter` had never been run by anything: every test

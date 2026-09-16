@@ -94,7 +94,7 @@ extension ReceiptDraftHintTests {
             failures: [
                 ReceiptGateFailure(kind: .unreadableTotal, detail: "smudged", deltaCents: nil)
             ]
-        )
+        ).attributed()
 
         #expect(draft.isSaveable)
 
@@ -163,7 +163,7 @@ extension ReceiptDraftHintTests {
         var draft = ReceiptDraft.fake(.tillNamedItems())
 
         draft.lines[0].description.value = "Cheetos cheese and bacon balls"
-        draft.merchant.value = "Kmart"
+        draft.date.value = "2026-08-21"
 
         #expect(draft.reconciliation == .reconciledAsRead)
     }

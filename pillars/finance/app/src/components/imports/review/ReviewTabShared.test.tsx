@@ -26,13 +26,14 @@ function baseProps(overrides: Partial<ReviewTabBaseProps> = {}): ReviewTabBasePr
   const transactions = [aiSuggestedTx()];
   return {
     transactions,
-    groups: groupTransactionsByEntity(transactions, 'size'),
+    groups: groupTransactionsByEntity(transactions, 'name'),
     viewMode: 'list',
     onViewModeChange: vi.fn(),
     onEntitySelect: vi.fn(),
     onBulkEntitySelect: vi.fn(),
     onCreateEntityWithName: vi.fn(),
     onAcceptAiSuggestion: vi.fn(),
+    onLeaveUnassigned: vi.fn(),
     onAcceptAll: vi.fn(),
     onCreateAndAssignAll: vi.fn(),
     onEdit: vi.fn(),

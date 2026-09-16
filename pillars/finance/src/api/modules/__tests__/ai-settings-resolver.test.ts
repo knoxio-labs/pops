@@ -31,7 +31,7 @@ import { setBulk } from '@pops/pillar-settings/service';
 
 import { openFinanceDb, type FinanceDb, type OpenedFinanceDb } from '../../../db/index.js';
 
-const { resolveAiMaxTokens, resolveAiString, invalidateAiSettingsCache } =
+const { resolveAiMaxTokens, resolveAiPercent, resolveAiString, invalidateAiSettingsCache } =
   await import('../ai-settings-resolver.js');
 
 const SETTING_KEY = 'finance.aiCategorizer.model';
@@ -96,6 +96,41 @@ describe('resolveAiMaxTokens — precedence ladder', () => {
     setBulk(db, [{ key: MAX_TOKENS_KEY, value: 'not-a-number' }]);
     invalidateAiSettingsCache();
     expect(resolveAiMaxTokens(db, MAX_TOKENS_KEY, undefined, 200)).toBe(200);
+  });
+});
+
+describe('resolveAiPercent — a whole-number percentage returned as a fraction (POPS-3671)', () => {
+  const PERCENT_KEY = 'finance.aiCategorizer.preAcceptConfidencePercent';
+
+  function stored(value: string): number {
+    setBulk(db, [{ key: PERCENT_KEY, value }]);
+    invalidateAiSettingsCache();
+    return resolveAiPercent(db, PERCENT_KEY, undefined, 80);
+  }
+
+  it('returns the default as a fraction when nothing is set', () => {
+    expect(resolveAiPercent(db, PERCENT_KEY, undefined, 80)).toBe(0.8);
+  });
+
+  it('prefers a valid stored percentage', () => {
+    expect(stored('65')).toBe(0.65);
+  });
+
+  it('keeps a stored 0, which pre-accepts everything, instead of falling through', () => {
+    expect(stored('0')).toBe(0);
+  });
+
+  it('keeps a stored 100', () => {
+    expect(stored('100')).toBe(1);
+  });
+
+  it.each([
+    ['above 100', '101'],
+    ['negative', '-5'],
+    ['a fraction entered as-is', '0.8'],
+    ['not a number', 'high'],
+  ])('falls back to the default when the stored value is %s', (_label, value) => {
+    expect(stored(value)).toBe(0.8);
   });
 });
 

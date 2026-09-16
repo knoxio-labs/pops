@@ -20,6 +20,7 @@ import {
 } from './ai-categorizer-api.js';
 import { AiCategorizationError, throwApiError } from './ai-categorizer-error.js';
 import {
+  AXIS_OPTIONALITY,
   buildTransactionData,
   CONFIDENCE_RULES,
   ENTITY_NAME_RULES,
@@ -69,14 +70,16 @@ export function buildBatchPrompt(
     .join('\n');
   const facets = closedFacetOptions(knownTags, tagDescriptions);
 
-  return `Given these ${inputs.length} bank transactions, identify the merchant/entity name and classify EACH one on every tag axis below.
+  return `Given these ${inputs.length} bank transactions, identify the merchant/entity name and classify each one on the tag axes below.
+
+${AXIS_OPTIONALITY}
 
 ${lines}
 
 Tag axes and their available values:
 ${closedFacetFields(facets)}${knownEntitiesSection(knownEntityNames, BATCH_KNOWN_ENTITY_INSTRUCTION)}
 
-Reply with a JSON array of exactly ${inputs.length} objects, one per transaction. Each object carries the number of the line it answers as "n": [{"n": 1, "entityName": "...", ${closedFacetReplyShape(facets)}, "confidence": 0.0-1.0}, ...]
+Reply with a JSON array of exactly ${inputs.length} objects, one per transaction. Each object carries the number of the line it answers as "n": [{"n": 1, "entityName": "...", ${closedFacetReplyShape(facets)}, "confidence": 0.0-1.0, "tagConfidence": 0.0-1.0}, ...]
 
 ${ENTITY_NAME_RULES}
 

@@ -13,10 +13,9 @@ import { describe, expect, it } from 'vitest';
 import { listVocabularyDescriptions } from '../services/tag-vocabulary.js';
 import { freshMigratedFinanceDb } from './migrated-db.js';
 
-/** Every venue the ledger uses. gift-shop has no rows and is POPS-3689's; attraction has none either, but 0106 described it. */
+/** Every venue the ledger uses. gift-shop has no rows and is POPS-3689's; attraction and service-station have none either, but 0106 and 0118 described them. */
 const DESCRIBED_VENUES = [
   'venue:arcade',
-  'venue:auto',
   'venue:bakery',
   'venue:bottle-shop',
   'venue:butcher',
@@ -28,11 +27,13 @@ const DESCRIBED_VENUES = [
   'venue:electronics',
   'venue:hardware',
   'venue:homewares',
+  'venue:mechanic',
   'venue:parking',
   'venue:pharmacy',
   'venue:pub',
   'venue:restaurant',
   'venue:sauna',
+  'venue:service-station',
   'venue:sex-shop',
   'venue:shopping-centre',
   'venue:supermarket',

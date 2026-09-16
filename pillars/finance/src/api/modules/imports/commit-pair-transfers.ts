@@ -9,8 +9,8 @@
  * "different account" predicate correctly compares `accountId` (POPS-2769), but
  * the flag stays off pending a separate decision to enable it — this is not
  * that decision. It runs LAST in the commit — after correction rules and the
- * retroactive reclassify — so a rule-classified row is already stamped and is
- * skipped by the pairing engine, honouring "rules take precedence".
+ * retroactive reclassify — so every row already carries the type its rule gave
+ * it, and the matcher pairs only rows typed `transfer`.
  */
 import { transactionsService, type FinanceDb } from '../../../db/index.js';
 import { attemptPairForRow } from '../transfers/pair-runner.js';

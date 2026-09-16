@@ -8,9 +8,11 @@
  * below, since each debit sees the credit as its unique best match even
  * though the credit itself is ambiguous between them.
  */
+import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
 import { freshMigratedFinanceDb } from '../../../../db/__tests__/migrated-db.js';
+import { transactions } from '../../../../db/schema.js';
 import { resolveAccountIdByName } from '../../../../db/services/account-lookup.js';
 import { createAccount } from '../../../../db/services/accounts.js';
 import {
@@ -40,7 +42,7 @@ function seed(
     description: 'seed',
     accountId: resolveAccountIdByName(db, accountName),
     date: '2026-07-01',
-    type: amountCents < 0 ? 'purchase' : 'income',
+    type: 'transfer',
     ...overrides,
     amountCents,
   });
@@ -101,6 +103,54 @@ describe('predictPairOutcome', () => {
     // The deposit's only candidate is the Everyday debit, but that debit's
     // unique best is the card — so the pairing is not mutual and must not link.
     expect(predictPairOutcome(db, payId, 3).kind).not.toBe('match');
+  });
+
+  it('does not pair a card purchase with a same-day reimbursement, whatever the reimbursement is typed (POPS-3940)', () => {
+    const db = freshDb();
+    createAccount(db, { name: 'Up', kind: 'checking', currency: 'AUD' });
+    const amazon = seed(db, 'Amex', {
+      amountCents: -12239,
+      date: '2026-04-27',
+      description: 'AMAZON RETA* AMAZON AU',
+      type: 'purchase',
+    });
+    const andrew = seed(db, 'Up', {
+      amountCents: 12239,
+      date: '2026-04-27',
+      description: 'Andrew Borg',
+      type: 'income',
+    });
+    expect(predictPairOutcome(db, amazon, 3).kind).toBe('no-match');
+    expect(predictPairOutcome(db, andrew, 3).kind).toBe('no-match');
+
+    const andrewAsTransfer = seed(db, 'Up', {
+      amountCents: 12239,
+      date: '2026-05-06',
+      description: 'Andrew Borg',
+    });
+    const secondAmazon = seed(db, 'Amex', {
+      amountCents: -12239,
+      date: '2026-05-06',
+      description: 'AMAZON MARKETPLACE AU',
+      type: 'purchase',
+    });
+    expect(predictPairOutcome(db, secondAmazon, 3).kind).toBe('no-match');
+    expect(predictPairOutcome(db, andrewAsTransfer, 3).kind).toBe('no-match');
+  });
+
+  it('predicts a match for a rule-classified transfer leg (POPS-3939)', () => {
+    const db = freshDb();
+    const debit = seed(db, 'Bendigo', { amountCents: -5000 });
+    const credit = seed(db, 'Amex', { amountCents: 5000 });
+    db.update(transactions)
+      .set({ matchType: 'learned', matchRuleId: 'r1', matchConfidence: 0.9 })
+      .where(eq(transactions.id, debit.id))
+      .run();
+    const ruled = { ...debit, matchType: 'learned' as const, matchRuleId: 'r1' };
+
+    const prediction = predictPairOutcome(db, ruled, 3);
+    expect(prediction.kind).toBe('match');
+    if (prediction.kind === 'match') expect(prediction.counterpart.id).toBe(credit.id);
   });
 
   it('predicts no-match with an empty candidate pool', () => {

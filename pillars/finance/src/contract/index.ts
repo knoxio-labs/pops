@@ -13,6 +13,9 @@ export {
   type Correction,
   type CorrectionRow,
 } from './corrections-pure.js';
+// The facet cardinality rule, shared with the app so a client-side tag merge
+// cannot put a second value on a single-valued facet the server would refuse.
+export { exceedsFacetCardinality } from '../db/tag-facets.js';
 export {
   derivePatternFromDescriptions,
   longestCommonSubstring,

@@ -7,7 +7,6 @@
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { coherentType } from '../../../../db/__tests__/coherent-type.js';
 import { freshMigratedFinanceDb } from '../../../../db/__tests__/migrated-db.js';
 import { transactions } from '../../../../db/schema.js';
 import { resolveAccountIdByName } from '../../../../db/services/account-lookup.js';
@@ -43,11 +42,7 @@ function seed(
     description: 'seed',
     accountId: resolveAccountIdByName(db, accountName),
     date: '2026-07-01',
-    // A credit leg is the whole point of these fixtures, and `purchase` — the
-    // service default — is refused on one (POPS-2685). Every case that cares
-    // which type a row carries still overrides it; these assert on the type
-    // pairing WRITES, not the one it started from.
-    type: coherentType(amountCents),
+    type: 'transfer',
     ...overrides,
     amountCents,
   });
@@ -112,18 +107,64 @@ describe('pairTransfersPhase (enabled)', () => {
     expect(getTransaction(db, existing.id).type).toBe('transfer');
   });
 
-  it('skips a correction-rule-classified batch row (rules take precedence)', () => {
+  it('links an Everyday to ANZ credit card payment when a rule classified both legs (POPS-3939)', () => {
     const db = freshDb();
-    const a = seed(db, 'Amex', { amountCents: -5000 });
-    const b = seed(db, 'Bendigo', { amountCents: 5000 });
+    createAccount(db, { name: 'ANZ Everyday', kind: 'checking', currency: 'AUD' });
+    const outgoing = seed(db, 'ANZ Everyday', {
+      description: 'ANZ M-BANKING FUNDS TFER TRANSFER 743085 TO 4564XXXXXXXX7373',
+      amountCents: -375000,
+      date: '2026-03-02',
+      entityId: 'e-anz-card',
+      entityName: 'ANZ Credit Card',
+    });
+    const incoming = seed(db, 'ANZ Credit Card', {
+      description: 'PAYMENT THANKYOU 743085',
+      amountCents: 375000,
+      date: '2026-03-02',
+      entityId: 'e-anz-everyday',
+      entityName: 'ANZ Everyday',
+    });
+    for (const [id, ruleId] of [
+      [outgoing.id, 'r-anz-tfer'],
+      [incoming.id, 'r-anz-payment'],
+    ] as const) {
+      db.update(transactions)
+        .set({ matchType: 'learned', matchRuleId: ruleId, matchConfidence: 0.95 })
+        .where(eq(transactions.id, id))
+        .run();
+    }
+
+    expect(pairTransfersPhase(db, [outgoing.id, incoming.id])).toBe(1);
+
+    expect(getTransaction(db, outgoing.id)).toMatchObject({
+      relatedTransactionId: incoming.id,
+      type: 'transfer',
+      entityName: 'ANZ Credit Card',
+      matchRuleId: 'r-anz-tfer',
+    });
+    expect(getTransaction(db, incoming.id)).toMatchObject({
+      relatedTransactionId: outgoing.id,
+      type: 'transfer',
+      entityName: 'ANZ Everyday',
+      matchRuleId: 'r-anz-payment',
+    });
+  });
+
+  it('still refuses a leg a rule typed purchase', () => {
+    const db = freshDb();
+    const ruledPurchase = seed(db, 'Amex', { amountCents: -5000, type: 'purchase' });
+    const transfer = seed(db, 'Bendigo', { amountCents: 5000 });
     db.update(transactions)
       .set({ matchType: 'learned', matchRuleId: 'r1', matchConfidence: 0.9 })
-      .where(eq(transactions.id, a.id))
+      .where(eq(transactions.id, ruledPurchase.id))
       .run();
-    expect(pairTransfersPhase(db, [a.id, b.id])).toBe(0);
-    expect(getTransaction(db, a.id).relatedTransactionId).toBeNull();
-    expect(getTransaction(db, a.id).matchRuleId).toBe('r1');
-    expect(getTransaction(db, b.id).relatedTransactionId).toBeNull();
+    expect(pairTransfersPhase(db, [ruledPurchase.id, transfer.id])).toBe(0);
+    expect(getTransaction(db, ruledPurchase.id)).toMatchObject({
+      relatedTransactionId: null,
+      type: 'purchase',
+      matchRuleId: 'r1',
+    });
+    expect(getTransaction(db, transfer.id).relatedTransactionId).toBeNull();
   });
 
   it('does not link when two debits compete for one credit (mutual-uniqueness fails)', () => {

@@ -152,10 +152,7 @@ describe('bulkComputeSpend — after paired-transfer linking (POPS-2753)', () =>
     process.env['FINANCE_TRANSFER_PAIR_ENABLED'] = 'true';
   });
 
-  it('drops both legs of a newly-linked transfer out of spend, even though each leg was tagged as if it were a purchase', () => {
-    // Each leg is seeded carrying the category tag a miscategorized row would
-    // carry — the assertion is that *linking* (not manual retyping) is what
-    // removes them from spend, on both accounts, leaving zero net effect.
+  it('never takes a purchase out of spend by pairing it, even with a transfer-shaped counterpart (POPS-3940)', () => {
     const outgoing = createTransaction(db, {
       description: 'ANZ M-BANKING FUNDS TFER TRANSFER 754244',
       accountId: seededAccountId(db, 'Amex'),
@@ -170,6 +167,30 @@ describe('bulkComputeSpend — after paired-transfer linking (POPS-2753)', () =>
       amountCents: 50_000,
       date: '2026-05-10',
       type: 'income',
+      tags: [CATEGORY],
+    });
+
+    const spendBefore = spendOn(db);
+    expect(spendBefore).toBeGreaterThan(0);
+    expect(pairTransfersPhase(db, [outgoing.id, incoming.id])).toBe(0);
+    expect(spendOn(db)).toBe(spendBefore);
+  });
+
+  it('keeps a linked pair of transfer legs out of spend', () => {
+    const outgoing = createTransaction(db, {
+      description: 'ANZ M-BANKING FUNDS TFER TRANSFER 754244',
+      accountId: seededAccountId(db, 'Amex'),
+      amountCents: -50_000,
+      date: '2026-05-10',
+      type: 'transfer',
+      tags: [CATEGORY],
+    });
+    const incoming = createTransaction(db, {
+      description: 'PAYMENT THANKYOU 754244',
+      accountId: seededAccountId(db, 'ANZ Credit Card'),
+      amountCents: 50_000,
+      date: '2026-05-10',
+      type: 'transfer',
       tags: [CATEGORY],
     });
 

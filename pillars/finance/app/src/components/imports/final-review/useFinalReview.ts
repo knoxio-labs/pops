@@ -14,6 +14,7 @@ import { useImportStore } from '../../../store/importStore';
 import { IMPORT_DRAFTS_LIST_KEY } from '../hooks/useDraftWriteThrough';
 import { rulesStepHasProposals } from '../rule-creation/utils';
 import { TAG_REVIEW_STEP } from '../step-labels';
+import { useTagFacets } from '../tag-review/useTagTaxonomy';
 import { useTagRuleAddCollisions } from './useTagRuleAddCollisions';
 
 import type { PendingTagRuleChangeSet } from '../../../store/importStore';
@@ -74,6 +75,7 @@ function useDerivedCounts(
       manual: processedTransactions.failed.length,
       skipped: processedTransactions.skipped.length,
       total: confirmedTransactions.length,
+      noMerchant: confirmedTransactions.filter((t) => !t.entityId).length,
     }),
     [processedTransactions, confirmedTransactions]
   );
@@ -129,6 +131,7 @@ function commitBodyFor(slice: ReturnType<typeof useStoreSlice>, commitKey: strin
  */
 export function useFinalReview() {
   const slice = useStoreSlice();
+  const facets = useTagFacets();
   const reconciledTagRuleChangeSets = useReconciledTagRules(slice);
   const counts = useDerivedCounts(slice, reconciledTagRuleChangeSets);
   const tagRuleAddCollisions = useTagRuleAddCollisions(
@@ -169,7 +172,9 @@ export function useFinalReview() {
   const cancelConfirm = () => setConfirmOpen(false);
   const confirmCommit = () => commitMutation.mutate(commitBodyFor(slice, commitKey));
   const goBack = () => {
-    if (rulesStepHasProposals(slice.confirmedTransactions, slice.pendingTagRuleChangeSets)) {
+    if (
+      rulesStepHasProposals(slice.confirmedTransactions, slice.pendingTagRuleChangeSets, facets)
+    ) {
       slice.prevStep();
     } else {
       slice.goToStep(TAG_REVIEW_STEP);

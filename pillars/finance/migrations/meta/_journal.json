@@ -442,6 +442,76 @@
       "when": 1788800000010,
       "tag": "0111_venue_and_contains_descriptions",
       "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "version": "7",
+      "when": 1788800000011,
+      "tag": "0112_venue_gym",
+      "breakpoints": true
+    },
+    {
+      "idx": 64,
+      "version": "7",
+      "when": 1788800000012,
+      "tag": "0113_fee_account_keeping",
+      "breakpoints": true
+    },
+    {
+      "idx": 65,
+      "version": "7",
+      "when": 1788800000013,
+      "tag": "0114_recount_vocabulary_usage",
+      "breakpoints": true
+    },
+    {
+      "idx": 66,
+      "version": "7",
+      "when": 1788800000014,
+      "tag": "0115_fee_account_keeping_backfill",
+      "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1788800000015,
+      "tag": "0116_narrow_fee_membership",
+      "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1788800000016,
+      "tag": "0117_strip_fee_tags_from_non_fee_rows",
+      "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "7",
+      "when": 1788800000017,
+      "tag": "0118_venue_mechanic_service_station",
+      "breakpoints": true
+    },
+    {
+      "idx": 70,
+      "version": "7",
+      "when": 1788800000018,
+      "tag": "0119_vocabulary_kind_matches_facet",
+      "breakpoints": true
+    },
+    {
+      "idx": 71,
+      "version": "7",
+      "when": 1788800000019,
+      "tag": "0120_venue_occasion_open_facets",
+      "breakpoints": true
+    },
+    {
+      "idx": 72,
+      "version": "7",
+      "when": 1788800000020,
+      "tag": "0121_fast_food_replaces_food",
+      "breakpoints": true
     }
   ]
 }

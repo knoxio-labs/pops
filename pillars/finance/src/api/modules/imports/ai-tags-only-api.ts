@@ -17,14 +17,17 @@ import {
   closedFacetFields,
   closedFacetOptions,
   closedFacetReplyShape,
+  sanitizePromptField,
   type TagDescriptions,
 } from '../vocabulary-prompt.js';
-import { callRawApi, type ApiCallResponse } from './ai-categorizer-api.js';
+import { callRawApi, parseConfidence, type ApiCallResponse } from './ai-categorizer-api.js';
 import { parseJsonArrayReply } from './ai-categorizer-batch-api.js';
 import { throwApiError } from './ai-categorizer-error.js';
 import {
+  AXIS_OPTIONALITY,
   buildMatchedTransactionData,
   PROMPT_VERSION_TAGS_ONLY,
+  tagConfidenceRule,
   TAGS_RULES,
 } from './ai-categorizer-prompt.js';
 import { logRejectedTagValues, validateAiTags, type RawTagFields } from './ai-tag-validation.js';
@@ -39,11 +42,30 @@ export const TAGS_ONLY_OPERATION = 'imports.tags_only';
 export interface TagsOnlyInput {
   entityName: string;
   input: CategorizerInput;
+  /** The type the ladder resolved the row to — always a spend type on this pass (POPS-3678). */
+  transactionType?: string;
+  /**
+   * The distinct classified tag sets on this merchant's earlier committed
+   * transactions (POPS-3673), bounded by `loadPriorTagSets`. Absent when the
+   * merchant has none, which leaves the line exactly as it was without them.
+   */
+  priorTagSets?: string[][];
 }
 
-/** One row's classification. No `entityName` and no `confidence` — the merchant was given, not guessed. */
+const PRIOR_TAGS_RULE =
+  '- "Previously tagged" lists how earlier transactions from the same merchant were tagged. It is precedent, not a constraint: classify each transaction on its own evidence, because a merchant can change what it sells.';
+
+function renderPriorTagSets(sets: readonly (readonly string[])[] | undefined): string {
+  if (sets === undefined || sets.length === 0) return '';
+  const rendered = sets.map((tags) => `[${tags.map(sanitizePromptField).join(', ')}]`);
+  return ` | Previously tagged: ${rendered.join('; ')}`;
+}
+
+/** One row's classification. No `entityName` — the merchant was given, not guessed. */
 export interface TagsOnlyEntry {
   tags: string[];
+  /** The model's confidence in `tags`, or absent when it gave none (POPS-3671). */
+  confidence?: number;
   /** How many returned values the closed-set validation refused (POPS-2606). Absent when nothing was refused. */
   rejectedTagValues?: number;
   /** The `PROMPT_VERSION_*` of the call that produced this entry (POPS-3677). */
@@ -68,9 +90,9 @@ export interface TagsOnlyApiCallOptions {
 }
 
 /**
- * Render the tag-only prompt. The reply shape carries the facet fields alone,
- * so a model that volunteers an `entityName` is answering a question that was
- * not asked and the field is ignored — the entity is not the model's to revise
+ * Render the tag-only prompt. The reply shape carries the facet fields and a
+ * confidence in them, so a model that volunteers an `entityName` is answering a
+ * question that was not asked and the field is ignored — the entity is not the model's to revise
  * here, and a row's merchant must not change on a tag pass.
  */
 export function buildTagsOnlyPrompt(
@@ -80,22 +102,28 @@ export function buildTagsOnlyPrompt(
 ): string {
   const lines = inputs
     .map(
-      ({ entityName, input }, i) =>
-        `${i + 1}. ${buildMatchedTransactionData(entityName, input).replaceAll('\n', ' | ')}`
+      ({ entityName, input, transactionType, priorTagSets }, i) =>
+        `${i + 1}. ${buildMatchedTransactionData(entityName, input, transactionType).replaceAll('\n', ' | ')}${renderPriorTagSets(priorTagSets)}`
     )
     .join('\n');
   const facets = closedFacetOptions(knownTags, tagDescriptions);
+  const hasPriors = inputs.some(({ priorTagSets }) => (priorTagSets?.length ?? 0) > 0);
 
-  return `Given these ${inputs.length} bank transactions, each already identified as the merchant named on its line, classify EACH one on every tag axis below. The merchant is given — do not revise it.
+  return `Given these ${inputs.length} bank transactions, each already identified as the merchant named on its line, classify each one on the tag axes below. The merchant is given — do not revise it.
+
+${AXIS_OPTIONALITY}
 
 ${lines}
 
 Tag axes and their available values:
 ${closedFacetFields(facets)}
 
-Reply with a JSON array of exactly ${inputs.length} objects, one per transaction. Each object carries the number of the line it answers as "n": [{"n": 1, ${closedFacetReplyShape(facets)}}, ...]
+Reply with a JSON array of exactly ${inputs.length} objects, one per transaction. Each object carries the number of the line it answers as "n": [{"n": 1, ${closedFacetReplyShape(facets)}, "confidence": 0.0-1.0}, ...]
 
-${TAGS_RULES}
+${TAGS_RULES}${hasPriors ? `\n${PRIOR_TAGS_RULE}` : ''}
+
+confidence rules:
+${tagConfidenceRule('confidence')}
 
 Return ONLY the JSON array, no markdown, no explanation.`;
 }
@@ -123,7 +151,12 @@ export function parseTagsOnlyEntries(
     if (item === null) return null;
     const { tags, rejected } = validateAiTags(item as RawTagFields, knownTags);
     logRejectedTagValues(rejected);
-    return { tags, ...(rejected.length > 0 ? { rejectedTagValues: rejected.length } : {}) };
+    const confidence = parseConfidence(item['confidence']);
+    return {
+      tags,
+      ...(confidence === undefined ? {} : { confidence }),
+      ...(rejected.length > 0 ? { rejectedTagValues: rejected.length } : {}),
+    };
   });
 }
 

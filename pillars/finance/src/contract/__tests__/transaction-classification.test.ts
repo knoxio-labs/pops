@@ -11,9 +11,60 @@ import { describe, expect, it } from 'vitest';
 import {
   classifyFromDescription,
   FEE_TAGS,
+  feeTagsOnNonFeeType,
   GIFT_CARD_TAG,
   resolveCommittedType,
+  withoutFeeTagsOnNonFeeType,
 } from '../transaction-classification.js';
+
+describe('feeTagsOnNonFeeType', () => {
+  it('flags nothing on a fee row, whatever fee values it carries', () => {
+    expect(feeTagsOnNonFeeType('fee', ['fee:late', 'FEE:interest', 'venue:bank'])).toEqual([]);
+  });
+
+  it('flags every fee value on a purchase, verbatim, and leaves other facets alone', () => {
+    expect(
+      feeTagsOnNonFeeType('purchase', ['venue:gym', 'fee:membership', 'contains:fees'])
+    ).toEqual(['fee:membership']);
+  });
+
+  it('matches the prefix case-insensitively and trimmed', () => {
+    expect(feeTagsOnNonFeeType('transfer', ['FEE:late', '  fee:atm ', 'Fee:x'])).toEqual([
+      'FEE:late',
+      '  fee:atm ',
+      'Fee:x',
+    ]);
+  });
+
+  it('flags nothing when the row carries no fee value', () => {
+    expect(feeTagsOnNonFeeType('purchase', ['venue:cafe', 'feel:good'])).toEqual([]);
+    expect(feeTagsOnNonFeeType('purchase', [])).toEqual([]);
+  });
+
+  it('treats a missing type as not a fee', () => {
+    expect(feeTagsOnNonFeeType(null, ['fee:late'])).toEqual(['fee:late']);
+    expect(feeTagsOnNonFeeType(undefined, ['fee:late'])).toEqual(['fee:late']);
+  });
+
+  it('does not treat a type that merely resembles fee as one', () => {
+    expect(feeTagsOnNonFeeType('Fee', ['fee:late'])).toEqual(['fee:late']);
+  });
+});
+
+describe('withoutFeeTagsOnNonFeeType', () => {
+  it('drops only the flagged values, preserving order', () => {
+    expect(
+      withoutFeeTagsOnNonFeeType('purchase', ['venue:gym', 'FEE:membership', 'contains:x'])
+    ).toEqual(['venue:gym', 'contains:x']);
+  });
+
+  it('keeps a fee row intact', () => {
+    expect(withoutFeeTagsOnNonFeeType('fee', ['fee:late', 'venue:bank'])).toEqual([
+      'fee:late',
+      'venue:bank',
+    ]);
+  });
+});
 
 describe('classifyFromDescription — fees', () => {
   it.each([
@@ -28,8 +79,24 @@ describe('classifyFromDescription — fees', () => {
     ['CASH ADVANCE FEE', 'fee:atm'],
     ['CASH ADVANCE INTEREST', 'fee:interest'],
     ['CARD SURCHARGE', 'fee:surcharge'],
+    ['ACCOUNT SERVICING FEE MINIMUM $2000 IN DEPOSITS NOT RECEIVED', 'fee:account-keeping'],
+    ['ACCOUNT KEEPING FEE', 'fee:account-keeping'],
+    ['MONTHLY ACCOUNT FEE', 'fee:account-keeping'],
+    ['ACCOUNT SERVICE FEE', 'fee:account-keeping'],
+    ['ANYTOWN GYM MEMBERSHIP FEE', 'fee:membership'],
   ])('%s is a fee tagged %s', (description, tag) => {
     expect(classifyFromDescription(description)).toMatchObject({ type: 'fee', tag });
+  });
+
+  // The credit that undoes the charge is typed the same as the debit, so the
+  // two net out in a fee report — no reversal special-case, the same
+  // convention every other fee pattern here follows (unlike the ATM-withdrawal
+  // override just above, which is specific to that one descriptor shape).
+  it('types the reversal credit the same as the charge, so totals net', () => {
+    expect(classifyFromDescription('REVERSAL OF ACCOUNT SERVICING FEE')).toMatchObject({
+      type: 'fee',
+      tag: 'fee:account-keeping',
+    });
   });
 
   it('matches regardless of case, digits and punctuation in the descriptor', () => {
@@ -50,6 +117,7 @@ describe('classifyFromDescription — fees', () => {
     'WOOLWORTHS METRO 1234',
     'ATM CBA GEORGE ST',
     'INTEREST FREE FURNITURE PTY LTD',
+    'ACCOUNT SUPPLIES WAREHOUSE',
   ])('does not type an ordinary merchant: %s', (description) => {
     expect(classifyFromDescription(description)).toBeNull();
   });

@@ -370,27 +370,27 @@ describe('RuleCreationStep — rule provenance (POPS-3106)', () => {
 });
 
 describe('RuleCreationStep — closed tag axes (POPS-3106)', () => {
-  function closedVenueImport() {
-    taxonomy.facets = [{ facet: 'venue', kind: 'closed' }];
-    taxonomy.tags = ['venue:bar'];
+  function closedChannelImport() {
+    taxonomy.facets = [{ facet: 'channel', kind: 'closed' }];
+    taxonomy.tags = ['channel:offline'];
     storeState = {
       ...storeState,
       confirmedTransactions: [
-        makeTxn({ checksum: 'a', tags: ['venue:speakeasy'] }),
-        makeTxn({ checksum: 'b', tags: ['venue:speakeasy'] }),
+        makeTxn({ checksum: 'a', tags: ['channel:mystery'] }),
+        makeTxn({ checksum: 'b', tags: ['channel:mystery'] }),
       ],
     };
   }
 
   it('names a closed-axis value the vocabulary does not hold on its proposal', async () => {
-    closedVenueImport();
+    closedChannelImport();
     render(withQuery(<RuleCreationStep />));
-    expect((await screen.findByRole('alert')).textContent).toContain('venue:speakeasy');
+    expect((await screen.findByRole('alert')).textContent).toContain('channel:mystery');
   });
 
   it('stages the valid proposal and not the refused one, though both were ticked', async () => {
-    taxonomy.facets = [{ facet: 'venue', kind: 'closed' }];
-    taxonomy.tags = ['venue:bar'];
+    taxonomy.facets = [{ facet: 'channel', kind: 'closed' }];
+    taxonomy.tags = ['channel:offline'];
     storeState = {
       ...storeState,
       confirmedTransactions: [
@@ -398,25 +398,25 @@ describe('RuleCreationStep — closed tag axes (POPS-3106)', () => {
           checksum: 'a',
           entityId: 'e-speakeasy',
           entityName: 'Speakeasy',
-          tags: ['venue:speakeasy'],
+          tags: ['channel:mystery'],
         }),
         makeTxn({
           checksum: 'b',
           entityId: 'e-speakeasy',
           entityName: 'Speakeasy',
-          tags: ['venue:speakeasy'],
+          tags: ['channel:mystery'],
         }),
         makeTxn({
           checksum: 'c',
           entityId: 'e-griffin',
           entityName: 'Griffin',
-          tags: ['venue:bar'],
+          tags: ['channel:offline'],
         }),
         makeTxn({
           checksum: 'd',
           entityId: 'e-griffin',
           entityName: 'Griffin',
-          tags: ['venue:bar'],
+          tags: ['channel:offline'],
         }),
       ],
     };
@@ -426,18 +426,18 @@ describe('RuleCreationStep — closed tag axes (POPS-3106)', () => {
     fireEvent.click(screen.getByRole('button', { name: /create 1 rule/i }));
     expect(mockAddPendingTagRuleChangeSet).toHaveBeenCalledTimes(1);
     const staged = JSON.stringify(mockAddPendingTagRuleChangeSet.mock.calls);
-    expect(staged).toContain('venue:bar');
-    expect(staged).not.toContain('venue:speakeasy');
+    expect(staged).toContain('channel:offline');
+    expect(staged).not.toContain('channel:mystery');
   });
 
   it('stages a closed-axis value the vocabulary holds', async () => {
-    taxonomy.facets = [{ facet: 'venue', kind: 'closed' }];
-    taxonomy.tags = ['venue:bar'];
+    taxonomy.facets = [{ facet: 'channel', kind: 'closed' }];
+    taxonomy.tags = ['channel:offline'];
     storeState = {
       ...storeState,
       confirmedTransactions: [
-        makeTxn({ checksum: 'a', tags: ['venue:bar'] }),
-        makeTxn({ checksum: 'b', tags: ['venue:bar'] }),
+        makeTxn({ checksum: 'a', tags: ['channel:offline'] }),
+        makeTxn({ checksum: 'b', tags: ['channel:offline'] }),
       ],
     };
     render(withQuery(<RuleCreationStep />));

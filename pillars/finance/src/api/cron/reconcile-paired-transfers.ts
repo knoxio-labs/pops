@@ -4,7 +4,7 @@
  *
  * The commit-time phase only pairs a freshly-imported transfer against rows that
  * already exist when its batch commits; a leg imported before its counterpart
- * stays unlinked. This worker sweeps every still-unpaired, un-rule-classified row
+ * stays unlinked. This worker sweeps every still-unpaired row
  * and links the ones that now have a unique mutual counterpart, using the exact
  * same `attemptPairForRow` orchestrator as the commit phase — so both trigger
  * points share one definition of a valid pair.

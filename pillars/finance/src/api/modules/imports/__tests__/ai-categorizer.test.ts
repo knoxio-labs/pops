@@ -108,9 +108,15 @@ describe('categorizeWithAi — live call (mocked SDK)', () => {
     });
 
     expect(createMock).toHaveBeenCalledTimes(1);
-    const req = createMock.mock.calls[0]?.[0] as { model: string; max_tokens: number };
+    const req = createMock.mock.calls[0]?.[0] as {
+      model: string;
+      max_tokens: number;
+      temperature?: number;
+    };
     expect(req.model).toBe('claude-haiku-4-5-20251001');
     expect(req.max_tokens).toBe(200);
+    // Closed-set classification: the same row must not be sampled two ways (POPS-3669).
+    expect(req.temperature).toBe(0);
 
     expect(out.result?.entityName).toBe('Woolworths');
     expect(out.result?.tags).toEqual(['venue:supermarket', 'contains:groceries']);
@@ -363,6 +369,6 @@ describe('categorizeWithAi — tag descriptions reach the prompt', () => {
   it('falls back to the bare list when the caller supplies no descriptions', async () => {
     await categorizeWithAi({ description: 'PRICELINE PHARMACY' }, undefined, VOCAB, { db });
 
-    expect(promptSent()).toContain('- occasion: exactly one of [home, out]');
+    expect(promptSent()).toContain('- occasion: at most one of [home, out]');
   });
 });

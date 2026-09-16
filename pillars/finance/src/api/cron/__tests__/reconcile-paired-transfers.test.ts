@@ -4,10 +4,11 @@
  * feature gate, linking, ambiguity, cross-pass idempotency, and the
  * recursive-timer / stop() lifecycle.
  */
+import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { coherentType } from '../../../db/__tests__/coherent-type.js';
 import { freshMigratedFinanceDb } from '../../../db/__tests__/migrated-db.js';
+import { transactions } from '../../../db/schema.js';
 import { resolveAccountIdByName } from '../../../db/services/account-lookup.js';
 import { createAccount } from '../../../db/services/accounts.js';
 import {
@@ -43,11 +44,7 @@ function seed(
     description: 'seed',
     accountId: resolveAccountIdByName(db, accountName),
     date: '2026-07-01',
-    // A credit leg is the whole point of these fixtures, and `purchase` — the
-    // service default — is refused on one (POPS-2685). Every case that cares
-    // which type a row carries still overrides it; these assert on the type
-    // pairing WRITES, not the one it started from.
-    type: coherentType(amountCents),
+    type: 'transfer',
     ...overrides,
     amountCents,
   });
@@ -92,6 +89,41 @@ describe('reconcile-paired-transfers worker', () => {
     expect(stats.examined).toBe(2);
     expect(getTransaction(db, a.id).relatedTransactionId).toBe(b.id);
     expect(getTransaction(db, b.id).type).toBe('transfer');
+  });
+
+  it('sweeps rule-classified legs: an Up card payment links to its Amex receipt (POPS-3939)', () => {
+    process.env[ENABLED] = 'true';
+    const db = freshDb();
+    const upLeg = seed(db, 'UP', {
+      amountCents: -300000,
+      date: '2026-08-18',
+      description: 'Amex Credit Card',
+      entityId: 'e-amex',
+      entityName: 'Amex',
+    });
+    const amexLeg = seed(db, 'Amex', {
+      amountCents: 300000,
+      date: '2026-08-18',
+      description: 'PayID Payment Received, Thank you',
+    });
+    db.update(transactions)
+      .set({ matchType: 'learned', matchRuleId: 'r-amex-card', matchConfidence: 0.95 })
+      .where(eq(transactions.id, upLeg.id))
+      .run();
+
+    const handle = startReconcilePairedTransfersWorker({ db, intervalMs: LONG_INTERVAL });
+    const stats = handle.runOnce();
+    handle.stop();
+
+    expect(stats.examined).toBe(2);
+    expect(stats.linked).toBe(1);
+    expect(getTransaction(db, upLeg.id)).toMatchObject({
+      relatedTransactionId: amexLeg.id,
+      type: 'transfer',
+      entityName: 'Amex',
+      matchRuleId: 'r-amex-card',
+    });
+    expect(getTransaction(db, amexLeg.id).relatedTransactionId).toBe(upLeg.id);
   });
 
   it('leaves competing debits unlinked and counts them ambiguous', () => {

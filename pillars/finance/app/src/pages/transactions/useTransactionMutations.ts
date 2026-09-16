@@ -25,6 +25,7 @@ export interface MutationDeps {
   setIsDialogOpen: (v: boolean) => void;
   setEditingTransaction: (t: Transaction | null) => void;
   setDeletingTx: (t: Transaction | null) => void;
+  setUnlinkingTx: (t: Transaction | null) => void;
 }
 
 interface UpdateInput {
@@ -87,7 +88,10 @@ function useRestoreDeleteMutations(deps: MutationDeps) {
   const unlinkMutation = useMutation({
     mutationFn: async (input: DeleteInput) =>
       unwrap(await transactionsUnlinkTransfer({ path: { id: input.id } })),
-    onSuccess: () => toast.success('Transfer unlinked'),
+    onSuccess: () => {
+      toast.success('Transfer unlinked');
+      deps.setUnlinkingTx(null);
+    },
     onError: (err: Error) => toast.error(err.message),
     onSettled: invalidate,
   });

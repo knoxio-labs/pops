@@ -141,15 +141,23 @@ export function useTransactionsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [deletingTx, setDeletingTx] = useState<Transaction | null>(null);
+  const [unlinkingTx, setUnlinkingTx] = useState<Transaction | null>(null);
 
   const { query, availableTags, entitiesQuery, accountsQuery } = useTransactionsPageQueries();
 
-  const { createMutation, updateMutation, deleteMutation, confirmDelete, confirmUnlink } =
-    useTransactionMutations({
-      setIsDialogOpen,
-      setEditingTransaction,
-      setDeletingTx,
-    });
+  const {
+    createMutation,
+    updateMutation,
+    deleteMutation,
+    unlinkMutation,
+    confirmDelete,
+    confirmUnlink,
+  } = useTransactionMutations({
+    setIsDialogOpen,
+    setEditingTransaction,
+    setDeletingTx,
+    setUnlinkingTx,
+  });
 
   const form = useForm<TransactionFormValues>({
     resolver: standardSchemaResolver(TransactionFormSchema),
@@ -184,6 +192,9 @@ export function useTransactionsPage() {
     setDeletingTx,
     deleteMutation,
     confirmDelete,
+    unlinkingTx,
+    setUnlinkingTx,
+    unlinkMutation,
     confirmUnlink,
     handleAdd,
     handleEdit,

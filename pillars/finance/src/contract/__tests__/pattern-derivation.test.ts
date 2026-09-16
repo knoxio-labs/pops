@@ -103,3 +103,53 @@ describe('derivePatternFromDescriptions', () => {
     }
   });
 });
+
+describe('derivePatternFromDescriptions refuses an over-reaching pattern (POPS-3665, POPS-3679)', () => {
+  // A prod rule scoped to Amazon, pattern `A* AM`, was learned from
+  // `AMZNPRIMEA* AMZNPRIMEA` and also matched `AMAZON RETA* AMAZON AU
+  // SYDNEY` / `AMAZON RETA* AMAZON AU`, stamping fee:membership on retail
+  // rows. Verified directly: the longest common substring of all three real
+  // descriptors together is exactly `A* AM` — confirming the shape, even
+  // though two natural Prime renewals alone do not shrink this far (their
+  // shared `AMZNPRIME`/`PRIME` token survives). The second "Prime" row below
+  // is a synthetic descriptor engineered to share nothing with the first
+  // except that fragment, standing in for whatever real variation once
+  // produced it.
+  const primeRenewals = ['AMZNPRIMEA* AMZNPRIMEA', 'QQQQQQQQQA* AMWWWWWWWWW'];
+  const retailSiblings = ['AMAZON RETA* AMAZON AU SYDNEY', 'AMAZON RETA* AMAZON AU'];
+
+  it('refuses the Amazon Prime vs retail shape', () => {
+    // Without the guard this derives to "A* AM", the exact prod pattern.
+    expect(derivePatternFromDescriptions(primeRenewals, retailSiblings)).toBeNull();
+  });
+
+  it('refuses the Qantas Wine vs Qantas flight shape', () => {
+    // QANTAS, learned from QANTAS WINE MASCOT, also matched QANTAS MASCOT.
+    // Real suburb variation keeps `QANTAS WINE` intact (it doesn't match a
+    // flight descriptor); this synthetic companion isolates the shorter
+    // `QANTAS`-only fragment the guard must still catch.
+    const qantasWine = ['QANTAS WINE MASCOT', 'QANTAS ZZZZZZZZZZZZ'];
+    const qantasFlight = ['QANTAS MASCOT'];
+    expect(derivePatternFromDescriptions(qantasWine, qantasFlight)).toBeNull();
+  });
+
+  it('does not refuse a group whose pattern stays inside its own siblings', () => {
+    expect(
+      derivePatternFromDescriptions(
+        ['WOOLWORTHS 1234 SYDNEY', 'WOOLWORTHS 5678 NEWTOWN'],
+        ['COLES 1234 SYDNEY']
+      )
+    ).toBe('WOOLWORTHS');
+  });
+
+  it('refuses a pattern that is a pure run of digits', () => {
+    // A statement reference or store number recurs across unrelated
+    // merchants (`2200`, `215`); the only thing these two descriptions share
+    // is the digits between them.
+    expect(derivePatternFromDescriptions(['A 2200 B', 'C 2200 D'])).toBeNull();
+  });
+
+  it('refuses a pattern whose non-digit content is below the length floor', () => {
+    expect(derivePatternFromDescriptions(['XX 2200A YY', 'ZZ 2200A WW'])).toBeNull();
+  });
+});

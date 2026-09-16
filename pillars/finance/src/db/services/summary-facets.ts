@@ -13,10 +13,13 @@ import { desc, sql } from 'drizzle-orm';
 import { transactions } from '../schema.js';
 import {
   ROW_COUNT,
+  SPEND,
   SPEND_CENTS,
+  measureWithinRange,
   shareOfTotal,
   spendWithinRange,
   toMeasure,
+  type LedgerMeasure,
   type SpendMeasure,
   type SummaryRange,
 } from './summary-sql.js';
@@ -71,6 +74,13 @@ export function spendByTag(
   }));
 }
 
+export interface EntityAmount {
+  entityId: string | null;
+  entityName: string | null;
+  amount: SpendMeasure;
+  shareOfTotal: number | null;
+}
+
 interface EntityRow {
   entityId: string | null;
   entityName: string | null;
@@ -79,33 +89,50 @@ interface EntityRow {
 }
 
 /**
- * Spend per entity, with every unresolved row collapsed into one `null`
+ * A measure per entity, with every unresolved row collapsed into one `null`
  * bucket so the shares still account for the whole window. `entity_name` is
  * only a label (the id is operative), so the unattributed bucket carries no
  * name even where individual rows happen to have one.
  */
-export function spendByEntity(
+export interface EntityQuery {
+  range: SummaryRange;
+  totalCents: number;
+  limit: number;
+}
+
+export function entityAmounts(
   db: FinanceDb,
-  range: SummaryRange,
-  totalCents: number,
-  limit: number
-): EntitySpend[] {
+  measure: LedgerMeasure,
+  { range, totalCents, limit }: EntityQuery
+): EntityAmount[] {
   const rows = db.all<EntityRow>(sql`
     SELECT ${transactions.entityId} AS entityId,
            MAX(${transactions.entityName}) AS entityName,
-           ${SPEND_CENTS} AS cents,
+           ${measure.cents} AS cents,
            ${ROW_COUNT} AS transactionCount
     FROM ${transactions}
-    WHERE ${spendWithinRange(range)}
+    WHERE ${measureWithinRange(measure, range)}
     GROUP BY ${transactions.entityId}
-    ORDER BY ${desc(SPEND_CENTS)}, ${transactions.entityId}
+    ORDER BY ${desc(measure.cents)}, ${transactions.entityId}
     LIMIT ${limit}
   `);
 
   return rows.map((row) => ({
     entityId: row.entityId,
     entityName: row.entityId === null ? null : row.entityName,
-    spend: toMeasure(row),
+    amount: toMeasure(row),
     shareOfTotal: shareOfTotal(row.cents ?? 0, totalCents),
+  }));
+}
+
+export function spendByEntity(
+  db: FinanceDb,
+  range: SummaryRange,
+  totalCents: number,
+  limit: number
+): EntitySpend[] {
+  return entityAmounts(db, SPEND, { range, totalCents, limit }).map(({ amount, ...entity }) => ({
+    ...entity,
+    spend: amount,
   }));
 }

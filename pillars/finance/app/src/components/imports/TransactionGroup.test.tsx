@@ -40,6 +40,7 @@ function renderGroup(overrides: Partial<Parameters<typeof TransactionGroup>[0]> 
       onBulkEntitySelect={vi.fn()}
       onCreateEntityWithName={vi.fn()}
       onAcceptAiSuggestion={vi.fn()}
+      onLeaveUnassigned={vi.fn()}
       onEdit={vi.fn()}
       entities={[
         { id: 'ent-1', name: 'Bunnings Warehouse' },
@@ -164,6 +165,29 @@ describe('TransactionGroup — forcing a type for an untyped credit in the bulk 
     expect(
       screen.queryByRole('group', { name: /transaction type required/i })
     ).not.toBeInTheDocument();
+  });
+});
+
+describe('TransactionGroup — the header total keeps the direction of money', () => {
+  it('nets credits against debits instead of adding their magnitudes', () => {
+    renderGroup({
+      group: makeGroup({
+        transactions: [
+          { ...makeTxn('a'), amount: -3000 },
+          { ...makeTxn('b'), amount: 1000 },
+        ],
+      }),
+    });
+
+    expect(screen.getByText(/^Total:/)).toHaveTextContent('Total: -$2000.00');
+  });
+
+  it('marks an all-credit group as money in', () => {
+    renderGroup({
+      group: makeGroup({ transactions: [{ ...makeTxn('a'), amount: 2052.43 }] }),
+    });
+
+    expect(screen.getByText(/^Total:/)).toHaveTextContent('Total: +$2052.43');
   });
 });
 

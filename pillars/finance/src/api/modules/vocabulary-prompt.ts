@@ -132,14 +132,17 @@ export function closedFacetOptions(
  *
  * This is the shape POPS-2606 turns on: the model is given a set of
  * classification fields with enumerated answers, not an open tag list to
- * generate into. `exactly one of` / `any of` states the cardinality inline as
+ * generate into. `at most one of` / `any of` states the cardinality inline as
  * well as in the JSON shape, because the two together are what make a second
- * `occasion` read as a violated instruction rather than an oversight.
+ * `occasion` read as a violated instruction rather than an oversight. It is
+ * `at most`, not `exactly` (POPS-3667): `exactly one of` read as an obligation
+ * to pick one, and a model obliged to pick picks the head of the list on a row
+ * where no value is true.
  *
  * A facet renders in one of two forms, chosen by whether any of its values
  * carries a definition (POPS-3285):
  *
- * - **Compact**, `- channel: exactly one of [online, in-person]`, when none
+ * - **Compact**, `- channel: at most one of [online, in-person]`, when none
  *   does. This is what every facet looked like before descriptions existed,
  *   and it stays the shape for an axis whose values need no gloss.
  * - **Block**, one value per line, when at least one does. A bare list of five
@@ -155,7 +158,7 @@ export function closedFacetOptions(
 export function closedFacetFields(options: ClosedFacetOptions[]): string {
   return options
     .map(({ facet, single, values }) => {
-      const cardinality = single ? 'exactly one of' : 'any of';
+      const cardinality = single ? 'at most one of' : 'any of';
       if (!values.some((entry) => entry.description !== null)) {
         return `- ${facet}: ${cardinality} [${values.map((entry) => entry.value).join(', ')}]`;
       }

@@ -11,7 +11,11 @@
  * The payload's shape lives in `live-draft-payload.ts`; the per-row settle
  * and drop in `live-draft-rows.ts`.
  */
-import { importDraftsService, type FinanceDb } from '../../../db/index.js';
+import {
+  importDraftsService,
+  transactionCorrectionsService,
+  type FinanceDb,
+} from '../../../db/index.js';
 import { processImportCore } from '../imports/process-service.js';
 import {
   countsOf,
@@ -109,9 +113,23 @@ async function classifyInto(
     transactions: fresh.map((row) => row.parsed),
     importBatchId: batchId,
   });
+  // A type a person's correction rule sets outranks the mapper, whose credit
+  // type is only a default ("every other credit is income"). A rule that sets
+  // no type leaves the ladder's descriptor guess on the row, and the mapper
+  // still wins over that, so the rule's own type is read rather than inferred
+  // from `ruleProvenance`.
+  const typedRuleIds = new Set(
+    transactionCorrectionsService
+      .listActiveTransactionCorrectionsForMatching(input.db)
+      .filter((rule) => rule.transactionType !== null)
+      .map((rule) => rule.id)
+  );
   const assertType = (row: ProcessedTransaction): ProcessedTransaction => ({
     ...row,
-    transactionType: mappedType.get(row.checksum) ?? row.transactionType,
+    transactionType:
+      row.ruleProvenance !== undefined && typedRuleIds.has(row.ruleProvenance.ruleId)
+        ? row.transactionType
+        : (mappedType.get(row.checksum) ?? row.transactionType),
   });
   const arrived = new Set(
     [...output.matched, ...output.uncertain, ...output.failed].map((row) => row.checksum)

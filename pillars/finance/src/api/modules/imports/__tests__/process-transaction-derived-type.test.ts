@@ -56,6 +56,7 @@ function makeContext(correctionRules: CorrectionRow[] = []): ProcessContext {
     importBatchId: 'batch-1',
     entityDefaultTags: new Map(),
     correctionRules,
+    preAcceptThreshold: 0,
   };
 }
 

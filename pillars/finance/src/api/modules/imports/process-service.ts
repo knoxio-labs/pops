@@ -20,6 +20,7 @@ import {
 } from '../../../db/index.js';
 import { type ContactsClient } from '../../contacts/client.js';
 import { type PendingAiItem, resolvePendingAi } from './ai-batch-resolver.js';
+import { getPreAcceptThreshold } from './ai-categorizer-config.js';
 import { AiCircuitBreaker } from './ai-circuit-breaker.js';
 import { resolveTagsForMatched } from './ai-tags-resolver.js';
 import { buildFailure } from './process-transaction-helpers.js';
@@ -239,6 +240,7 @@ export async function processImportCore(args: ProcessCoreInput): Promise<Process
     importBatchId,
     entityDefaultTags,
     correctionRules,
+    preAcceptThreshold: getPreAcceptThreshold(db),
   };
 
   const { errors } = await runProcessLoop({

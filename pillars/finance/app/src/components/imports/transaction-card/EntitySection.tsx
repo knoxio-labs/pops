@@ -8,15 +8,12 @@ import {
   resolveEntityExistence,
   type EntityVerification,
 } from '../entity-existence';
-import { EntitySelect } from '../EntitySelect';
 import {
   classifyAssignedEntity,
   isUnresolvedEntity,
   type UnresolvedEntityState,
 } from '../lib/assigned-entity';
-import { needsTransactionType } from '../review/buildConfirmed';
-import { ForcedTypePrompt } from './ForcedTypePrompt';
-import { usePendingTypedAssignment } from './usePendingTypedAssignment';
+import { TypedEntityPicker } from './TypedEntityPicker';
 
 import type { ProcessedTransaction } from '@pops/finance';
 
@@ -107,67 +104,27 @@ interface EntitySectionProps {
     transactionType?: TransactionType
   ) => void;
   onAcceptAiSuggestion?: (transaction: ProcessedTransaction) => void;
+  /** Resolve the row with no merchant. Omitted, the action does not render. */
+  onLeaveUnassigned?: (
+    transaction: ProcessedTransaction,
+    transactionType?: TransactionType
+  ) => void;
 }
 
-type TypedEntityPickerProps = Pick<
-  EntitySectionProps,
-  'transaction' | 'entities' | 'onEntitySelect' | 'onCreateEntityWithName'
->;
+/** Whether the row is already resolved with deliberately no merchant. */
+function isLeftUnassigned(transaction: ProcessedTransaction): boolean {
+  return transaction.status === 'matched' && transaction.entity?.matchType === 'none';
+}
 
-/**
- * The picker itself, plus the forced-type prompt for a credit with no type
- * yet (POPS-2754) — `moveOneToMatched` would otherwise carry the row into
- * `matched` still untyped. Split out of `EntitySection` to keep the pending-
- * assignment state machine's branching out of the parent component.
- */
-function TypedEntityPicker({
-  transaction,
-  entities,
-  onEntitySelect,
-  onCreateEntityWithName,
-}: TypedEntityPickerProps) {
-  const forceType = needsTransactionType(transaction);
-  const { pending, type, setType, request, cancel, confirm } = usePendingTypedAssignment(
-    (assignment, chosenType) =>
-      assignment.kind === 'select'
-        ? onEntitySelect?.(transaction, assignment.entityId, assignment.entityName, chosenType)
-        : onCreateEntityWithName?.(transaction, assignment.entityName, chosenType)
-  );
-
+/** Marks a matched row with no merchant as resolved rather than pending. */
+function UnassignedNotice() {
   return (
-    <>
-      <EntitySelect
-        entities={entities ?? []}
-        value={pending?.kind === 'select' ? pending.entityId : (transaction.entity?.entityId ?? '')}
-        onChange={(entityId, entityName) => {
-          if (forceType) {
-            request({ kind: 'select', entityId, entityName });
-            return;
-          }
-          onEntitySelect?.(transaction, entityId, entityName);
-        }}
-        onCreate={
-          onCreateEntityWithName
-            ? (entityName) => {
-                if (forceType) {
-                  request({ kind: 'create', entityName });
-                  return;
-                }
-                onCreateEntityWithName(transaction, entityName);
-              }
-            : undefined
-        }
-      />
-      {pending && (
-        <ForcedTypePrompt
-          message={`This is a credit with no type yet — choose one to finish assigning “${pending.entityName}”.`}
-          type={type}
-          onTypeChange={setType}
-          onConfirm={confirm}
-          onCancel={cancel}
-        />
-      )}
-    </>
+    <div
+      role="status"
+      className="mb-2 p-2 rounded-md border text-xs text-muted-foreground bg-muted/40"
+    >
+      Unassigned: no merchant on this transaction. Pick one below if it needs one.
+    </div>
   );
 }
 
@@ -187,6 +144,7 @@ export function EntitySection(props: EntitySectionProps) {
     onEntitySelect,
     onCreateEntityWithName,
     onAcceptAiSuggestion,
+    onLeaveUnassigned,
   } = props;
   const suggestedName =
     transaction.entity?.matchType === 'ai' ? transaction.entity.entityName : undefined;
@@ -205,11 +163,13 @@ export function EntitySection(props: EntitySectionProps) {
       {isUnresolvedEntity(assigned) && (
         <UnresolvedEntityNotice state={assigned} entityName={transaction.entity?.entityName} />
       )}
+      {isLeftUnassigned(transaction) && <UnassignedNotice />}
       <TypedEntityPicker
         transaction={transaction}
         entities={entities}
         onEntitySelect={onEntitySelect}
         onCreateEntityWithName={onCreateEntityWithName}
+        onLeaveUnassigned={onLeaveUnassigned}
       />
     </div>
   );

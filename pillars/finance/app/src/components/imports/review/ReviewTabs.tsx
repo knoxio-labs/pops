@@ -49,6 +49,7 @@ export interface ReviewTabsProps {
     transactionType?: TransactionType
   ) => void;
   handleAcceptAiSuggestion: (t: ProcessedTransaction) => void;
+  handleLeaveUnassigned: (t: ProcessedTransaction, transactionType?: TransactionType) => void;
   handleAcceptAll: (ts: ProcessedTransaction[]) => void;
   handleCreateAndAssignAll: (
     ts: ProcessedTransaction[],
@@ -70,6 +71,7 @@ function buildTabSharedProps(props: ReviewTabsProps) {
     onBulkEntitySelect: props.handleBulkEntitySelect,
     onCreateEntityWithName: props.handleCreateEntityWithName,
     onAcceptAiSuggestion: props.handleAcceptAiSuggestion,
+    onLeaveUnassigned: props.handleLeaveUnassigned,
     onAcceptAll: props.handleAcceptAll,
     onCreateAndAssignAll: props.handleCreateAndAssignAll,
     onEdit: props.handleEdit,

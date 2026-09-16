@@ -12,6 +12,7 @@ import {
   listImportDrafts,
 } from '../../../../db/services/import-drafts.js';
 import { insertImportTransaction } from '../../../../db/services/imports.js';
+import { createOrUpdateTransactionCorrection } from '../../../../db/services/transaction-corrections.js';
 import { makeContactsFake } from '../../../__tests__/contacts-fake.js';
 import { upTransaction } from '../../up-bank/__tests__/fixtures.js';
 import { toParsedTransaction, upChecksum } from '../../up-bank/map-transaction.js';
@@ -128,6 +129,72 @@ describe('stageMappedRows', () => {
       balanceCents: null,
     });
     expect(getImportDraft(db, first.draftId)?.balanceReportedCents).toBe(100);
+  });
+
+  it("lets a correction rule's type beat the mapper's income default on a credit", async () => {
+    createOrUpdateTransactionCorrection(db, {
+      descriptionPattern: 'ANDREW BORG',
+      matchType: 'contains',
+      transactionType: 'transfer',
+    });
+    const credit = (id: string, description: string) =>
+      toParsedTransaction(
+        upTransaction({ id, cents: 1_095, description, createdAt: '2026-09-05T09:00:00+10:00' }),
+        { accountId, accountLabel: 'Up Everyday' }
+      );
+
+    const { draftId } = await stageMappedRows({
+      db,
+      contacts,
+      target: target(),
+      rows: [credit('ruled', 'Andrew Borg'), credit('unruled', 'Salary')],
+      balanceCents: 100,
+    });
+
+    const { matched, uncertain, failed } = readLiveDraftPayload(
+      getImportDraft(db, draftId)!
+    ).processedTransactions;
+    const typeOf = (id: string) =>
+      [...matched, ...uncertain, ...failed].find((t) => t.checksum === upChecksum(accountId, id))
+        ?.transactionType;
+    expect(typeOf('ruled')).toBe('transfer');
+    expect(typeOf('unruled')).toBe('income');
+  });
+
+  it("keeps the mapper's income on a credit whose rule sets no type, though its descriptor reads as a transfer", async () => {
+    createOrUpdateTransactionCorrection(db, {
+      descriptionPattern: 'PAYMENT THANK YOU',
+      matchType: 'contains',
+      entityId: 'entity-employer',
+      entityName: 'Employer',
+    });
+
+    const { draftId } = await stageMappedRows({
+      db,
+      contacts,
+      target: target(),
+      rows: [
+        toParsedTransaction(
+          upTransaction({
+            id: 'payroll',
+            cents: 250_000,
+            description: 'Payment Thank You Employer',
+            createdAt: '2026-09-05T09:00:00+10:00',
+          }),
+          { accountId, accountLabel: 'Up Everyday' }
+        ),
+      ],
+      balanceCents: 100,
+    });
+
+    const { matched, uncertain, failed } = readLiveDraftPayload(
+      getImportDraft(db, draftId)!
+    ).processedTransactions;
+    const row = [...matched, ...uncertain, ...failed].find(
+      (t) => t.checksum === upChecksum(accountId, 'payroll')
+    );
+    expect(row?.ruleProvenance?.pattern).toBe('PAYMENT THANK YOU');
+    expect(row?.transactionType).toBe('income');
   });
 
   it('starts a new draft once the collecting one has been claimed', async () => {

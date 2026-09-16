@@ -16,6 +16,8 @@ export * from './merge-account-errors.js';
 export * from './loan-errors.js';
 export * from './checkpoint-errors.js';
 export * from './tag-rule-errors.js';
+export { FacetCardinalityError } from './facet-cardinality-guard.js';
+export { FeeTagOnNonFeeTypeError } from './fee-tag-guard.js';
 
 export class WishListItemNotFoundError extends Error {
   override readonly name = 'WishListItemNotFoundError' as const;

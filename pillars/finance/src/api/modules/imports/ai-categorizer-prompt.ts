@@ -13,10 +13,10 @@ import type { CategorizerInput } from './ai-categorizer-types.js';
  * — bump on every prompt-shape change so accept/reject quality is joinable
  * per prompt revision.
  */
-export const PROMPT_VERSION_CATEGORIZE = 'categorize-v3.2';
+export const PROMPT_VERSION_CATEGORIZE = 'categorize-v4.3';
 
 /** Versioned telemetry tag for the batched categorizer prompt (CF096/#3671). */
-export const PROMPT_VERSION_CATEGORIZE_BATCH = 'categorize-batch-v3.2';
+export const PROMPT_VERSION_CATEGORIZE_BATCH = 'categorize-batch-v4.3';
 
 /**
  * Versioned telemetry tag for the tag-only prompt (POPS-2596) — the shape that
@@ -24,7 +24,7 @@ export const PROMPT_VERSION_CATEGORIZE_BATCH = 'categorize-batch-v3.2';
  * categorize versions so this path's cost and its accept/reject quality are
  * readable on their own rather than folded into entity categorization.
  */
-export const PROMPT_VERSION_TAGS_ONLY = 'tags-v2.2';
+export const PROMPT_VERSION_TAGS_ONLY = 'tags-v3.4';
 
 /**
  * Render the allowlisted transaction fields as the prompt's "Transaction data"
@@ -40,6 +40,8 @@ export function buildTransactionData(input: CategorizerInput): string {
   if (input.date !== undefined && input.date !== '') {
     lines.push(`Date: ${sanitizePromptField(input.date)}`);
   }
+  const location = input.location === undefined ? '' : sanitizePromptField(input.location);
+  if (location !== '') lines.push(`Location: ${location}`);
   return lines.join('\n');
 }
 
@@ -49,9 +51,20 @@ export function buildTransactionData(input: CategorizerInput): string {
  * merchant name is sanitized at this boundary like every other interpolated
  * field — it reaches here from the contacts pillar, which is not a source the
  * prompt gets to trust unconditionally.
+ *
+ * `transactionType` is rendered only here (POPS-3678). A row reaches this shape
+ * already resolved, so its type is known; a row reaches the categorize shapes
+ * precisely because nothing could type it yet, and there is none to send.
  */
-export function buildMatchedTransactionData(entityName: string, input: CategorizerInput): string {
-  return `Merchant: ${sanitizePromptField(entityName)}\n${buildTransactionData(input)}`;
+export function buildMatchedTransactionData(
+  entityName: string,
+  input: CategorizerInput,
+  transactionType?: string
+): string {
+  const lines = [`Merchant: ${sanitizePromptField(entityName)}`];
+  const type = transactionType === undefined ? '' : sanitizePromptField(transactionType);
+  if (type !== '') lines.push(`Type: ${type}`);
+  return `${lines.join('\n')}\n${buildTransactionData(input)}`;
 }
 
 export const ENTITY_NAME_RULES = `entityName rules:
@@ -63,6 +76,17 @@ export const ENTITY_NAME_RULES = `entityName rules:
 - If you cannot identify a real merchant from the description, return entityName as null.
   Do NOT invent placeholder names like "Unknown Membership Organization", "Generic Merchant", "Unidentified Vendor", or similar — null is the correct answer when the merchant is unrecoverable.`;
 
+/**
+ * Stated in each prompt's opening, before the transaction and the axis list
+ * (POPS-3667). It used to live only at the tail of {@link TAGS_RULES}, after an
+ * opening that told the model to classify on every axis, and the opening won:
+ * a crypto wallet top-up came back `occasion:out + contains:food +
+ * venue:takeaway + channel:in-person`, the head of each usage-ranked list, where
+ * the true answer on every offered axis was null.
+ */
+export const AXIS_OPTIONALITY =
+  'Classify on an axis only where a listed value is actually true of the transaction. Leave every other axis null (or [] for a list axis): an empty axis is a correct answer, not a gap to fill.';
+
 export const TAGS_RULES = `tag rules:
 - Each tag field above is a closed set. Choose only from the values listed for that field.
 - Where a value is followed by a description, that description is its definition. Classify against it, not against what the word suggests on its own.
@@ -70,8 +94,19 @@ export const TAGS_RULES = `tag rules:
 - A value that is not listed is not available. If nothing listed fits a field, return null (or [] for a list field) — do NOT invent a value, coin a near-synonym, or return a value from a different field's list.
 - Choose the most specific listed value that is true of the transaction, and omit a field you would only be guessing at. Omitting is a correct answer rather than a failure: routine provisioning — a grocery run, a fuel stop, a subscription — genuinely has no occasion, and leaving the field null is right where picking the nearest value is wrong.`;
 
+/**
+ * What a tag confidence means (POPS-3671). Shared by every shape that asks for
+ * one: the categorize shapes call the field `tagConfidence`, beside the
+ * merchant's `confidence`; the tag-only shape, which has no merchant to rate,
+ * calls it `confidence`.
+ */
+export function tagConfidenceRule(field: string): string {
+  return `- ${field} (0.0-1.0) is your confidence that every tag you returned is true of the transaction. 1.0 only when the transaction leaves no doubt; lower it for each tag you inferred rather than read; an answer with no tags at all can still be confident.`;
+}
+
 export const CONFIDENCE_RULES = `confidence rules:
-- Your confidence (0.0-1.0) that entityName is the correct merchant. 1.0 only when the description unambiguously names a known brand; lower it for an inferred/guessed name, and lower it further when entityName is null.`;
+- confidence (0.0-1.0) is your confidence that entityName is the correct merchant. 1.0 only when the description unambiguously names a known brand; lower it for an inferred/guessed name, and lower it further when entityName is null.
+${tagConfidenceRule('tagConfidence')}`;
 
 export function knownEntitiesSection(knownEntityNames: string[], reuseInstruction: string): string {
   return knownEntityNames.length > 0

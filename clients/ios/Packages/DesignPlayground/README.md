@@ -61,6 +61,28 @@ in every case.
 The overrides are applied to the surface, not to the cover, so the inspector
 stays readable while the surface is at AX5 in dark.
 
+## Persistent copy earns its space
+
+Supporting copy must add information the surrounding label, count, hierarchy,
+or context does not already provide. It earns its place when it does at least
+one of these jobs:
+
+- defines a state or scope precisely;
+- helps distinguish one destination from another;
+- predicts what someone can find or do after an interaction;
+- supplies information needed to decide or recover.
+
+Delete copy that merely paraphrases a heading, explains an obvious noun, or
+adds brand cadence without helping someone act. Prefer literal state over a
+metaphor that needs its own explanation. For example, `3 open containers · 53
+items still being packed` communicates more than `3 in motion` followed by a
+sentence explaining the metaphor.
+
+Empty states and exceptional moments can carry more voice, but their useful
+information and next action still come first. Persistent product UI is not a
+landing page; decorative microcopy becomes content noise when it does not
+increase information scent.
+
 ## It cannot reach a network, by construction
 
 The package depends on `AppCore` and `DesignSystem`. Both declare no

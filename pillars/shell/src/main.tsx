@@ -9,6 +9,7 @@ import { ErrorBoundary } from '@pops/ui';
 import { App } from './app/App';
 import { fetchBootRegistry, resolveBootRegistry } from './app/boot-snapshot';
 import { preloadRemoteBundles } from './app/preload-remote-bundles';
+import { shellDocumentProbeUrl } from './app/remote-entry-url';
 
 import type { BootRegistry } from './app/boot-snapshot';
 
@@ -51,7 +52,7 @@ function mount(bootRegistry: BootRegistry): void {
 
   reactRoot.render(
     <StrictMode>
-      <ErrorBoundary>
+      <ErrorBoundary staleChunkProbeUrl={shellDocumentProbeUrl}>
         <App bootRegistry={bootRegistry} />
       </ErrorBoundary>
     </StrictMode>

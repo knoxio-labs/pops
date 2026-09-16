@@ -1,5 +1,6 @@
 import { isPendingContactId } from '@pops/finance';
 
+import { mergeTagsReplacingSingleValued } from '../../../lib/tag-merge';
 import { requiresEntity } from '../../../lib/transaction-type';
 
 import type {
@@ -30,14 +31,12 @@ export function needsTransactionType(t: {
 /**
  * Why a matched row would be dropped at commit, or `null` when it commits.
  *
- * Two things can be missing. A type that {@link requiresEntity} (a
- * `purchase`/`refund`, or an unset/unknown type) needs a resolved merchant
- * (`entityId` + `entityName`); the entity-optional types commit without one. A
- * `pending:contact:` id is not a resolved merchant, however complete the pair
- * looks: it is the placeholder a commit wrote when contacts could not be
- * reached, and a correction rule carrying one hands it to every future import
- * of the same merchant. Committing on it writes a transaction whose entity
- * resolves to nothing (POPS-2692).
+ * A row with no merchant commits with a `null` entity. A `pending:contact:` id
+ * does not: it is not a resolved merchant however complete the
+ * `{ entityId, entityName }` pair looks, since it is the placeholder a commit
+ * wrote when contacts could not be reached, and a correction rule carrying one
+ * hands it to every future import of the same merchant. Committing on it
+ * writes a transaction whose entity resolves to nothing (POPS-2692).
  *
  * A **credit** (amount >= 0) additionally needs a type of its own. The pillar
  * refuses to store one without it rather than defaulting to `purchase`
@@ -54,8 +53,9 @@ export function needsTransactionType(t: {
 export function dropReason(t: ContractProcessedTransaction): DropReason | null {
   if (needsTransactionType(t)) return 'type';
   const entityId = t.entity?.entityId;
-  const hasEntity = Boolean(entityId && t.entity?.entityName && !isPendingContactId(entityId));
-  if (requiresEntity(t.transactionType) && !hasEntity) return 'entity';
+  if (requiresEntity(t.transactionType) && entityId && isPendingContactId(entityId)) {
+    return 'entity';
+  }
   return null;
 }
 
@@ -122,7 +122,13 @@ export function buildConfirmedTransactions(
     transactionType: t.transactionType,
     entityId: t.entity?.entityId,
     entityName: t.entity?.entityName,
-    tags: (t.suggestedTags ?? []).map((s) => s.tag),
+    // An AI suggestion the server marked not to pre-accept is offered, not ticked (POPS-3671).
+    // Filtered before the single-valued merge, so a held-back value cannot displace a ticked one
+    // on the same facet and then be dropped, leaving the facet empty.
+    tags: mergeTagsReplacingSingleValued(
+      [],
+      (t.suggestedTags ?? []).filter((s) => s.preAccept !== false).map((s) => s.tag)
+    ),
     suggestedTags: t.suggestedTags,
     matchType: t.entity?.matchType,
     matchRuleId: t.ruleProvenance?.ruleId,

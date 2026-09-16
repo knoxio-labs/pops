@@ -186,4 +186,16 @@ describe('LiveFeedSection', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Sync now' }));
     expect(await screen.findByText(/Up had nothing new/)).toBeDefined();
   });
+
+  it('says why a sync failed instead of claiming Up had nothing new (POPS-3657)', async () => {
+    mocks.list.mockResolvedValue(ok({ data: [] }));
+    mocks.triggerSync.mockResolvedValue(ok({ data: job('running') }));
+    mocks.getSyncJob.mockResolvedValue(
+      ok({ data: { ...job('running'), status: 'failed', error: 'Up rejected the token.' } })
+    );
+    renderSection();
+    fireEvent.click(await screen.findByRole('button', { name: 'Sync now' }));
+    expect(await screen.findByText('Up rejected the token.')).toBeDefined();
+    expect(screen.queryByText(/Up had nothing new/)).toBeNull();
+  });
 });

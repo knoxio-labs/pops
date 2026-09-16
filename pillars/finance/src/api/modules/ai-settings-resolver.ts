@@ -4,7 +4,7 @@
  * to pick its model and token cap: an operator's stored setting, then the
  * site's existing env var (where one exists), then the site's own default.
  *
- * The whole four-key group is read in a single `getBulk` and cached
+ * The whole group is read in a single `getBulk` and cached
  * in-process, keyed per `FinanceDb` handle so two handles open in the same
  * process (every test suite opens its own) never read each other's settings;
  * `invalidateAiSettingsCache` is called from the settings write handlers
@@ -23,15 +23,19 @@ import { getBulk } from '@pops/pillar-settings/service';
 import {
   AI_CATEGORIZER_MAX_TOKENS_KEY,
   AI_CATEGORIZER_MODEL_KEY,
+  AI_CATEGORIZER_PRE_ACCEPT_PERCENT_KEY,
   RULE_GEN_MAX_TOKENS_KEY,
   RULE_GEN_MODEL_KEY,
 } from '../../contract/settings/ai-settings-keys.js';
 
 import type { FinanceDb } from '../../db/index.js';
 
+// A key missing here is never read: every resolve falls through to its env var
+// or default, silently, whatever the operator saved.
 const AI_SETTINGS_KEYS = [
   AI_CATEGORIZER_MODEL_KEY,
   AI_CATEGORIZER_MAX_TOKENS_KEY,
+  AI_CATEGORIZER_PRE_ACCEPT_PERCENT_KEY,
   RULE_GEN_MODEL_KEY,
   RULE_GEN_MAX_TOKENS_KEY,
 ] as const;
@@ -99,4 +103,25 @@ export function resolveAiMaxTokens(
   const raw = resolveAiString(db, settingKey, envVar, String(fallback));
   const parsed = Number(raw);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+/**
+ * Same precedence as {@link resolveAiString}, parsed as a whole-number
+ * percentage and returned as a fraction in `[0, 1]` (POPS-3671). Stored as a
+ * percentage because the settings form renders a number input with no `step`,
+ * which a browser treats as integer-only. `0` is a real value — pre-accept
+ * everything — so unlike {@link resolveAiMaxTokens} it does not fall through;
+ * a non-integer or out-of-range value at any tier does.
+ */
+export function resolveAiPercent(
+  db: FinanceDb,
+  settingKey: string,
+  envVar: string | undefined,
+  fallbackPercent: number
+): number {
+  const raw = resolveAiString(db, settingKey, envVar, String(fallbackPercent));
+  const parsed = Number(raw);
+  const percent =
+    Number.isInteger(parsed) && parsed >= 0 && parsed <= 100 ? parsed : fallbackPercent;
+  return percent / 100;
 }

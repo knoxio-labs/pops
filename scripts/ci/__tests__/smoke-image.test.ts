@@ -10,6 +10,7 @@ import {
   forcesRevalidation,
   freshVolumeName,
   freshnessProbePaths,
+  missingChunkProbePaths,
   isUnmappedMediaType,
   reachedTheBuild,
   representativeByExtension,
@@ -543,6 +544,37 @@ describe('resolveHealthPath', () => {
 
   it('does not treat a lookalike name as nginx', () => {
     expect(resolveHealthPath('nginxinc-unofficial:1')).toBe('/health');
+  });
+});
+
+describe('missingChunkProbePaths', () => {
+  it('probes a root chunk and an /assets/ chunk for nginx images', () => {
+    expect(missingChunkProbePaths('nginx:1.31.5-alpine')).toEqual([
+      '/smoke-probe-missing-chunk.js',
+      '/assets/smoke-probe-missing-chunk.js',
+    ]);
+  });
+
+  it('probes .js paths, the extension Cloudflare caches by default', () => {
+    for (const path of missingChunkProbePaths('nginx')) expect(path).toMatch(/\.js$/u);
+  });
+
+  it('asks nothing of application images', () => {
+    expect(missingChunkProbePaths('node:24-slim')).toEqual([]);
+  });
+
+  it('does not treat a lookalike name as nginx', () => {
+    expect(missingChunkProbePaths('nginx-proxy-manager:latest')).toEqual([]);
+  });
+});
+
+describe('forcesRevalidation on a 404', () => {
+  it('fails the header nginx sends a 404 without `always`', () => {
+    expect(forcesRevalidation(null)).toBe(false);
+  });
+
+  it('passes the no-store the @missing location sends', () => {
+    expect(forcesRevalidation('no-store')).toBe(true);
   });
 });
 

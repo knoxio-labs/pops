@@ -10,6 +10,7 @@
  * entity-scoped half of the tag-rule pass. This module holds the pure half of
  * the fix: what a freshly computed set and the row's existing one merge into.
  */
+import { mergeTagsReplacingSingleValued } from '../../../lib/tag-merge';
 import { TX_BUCKETS, type LocalTxState } from './local-tx-reconcile';
 
 import type { SuggestedTag } from '@pops/finance';
@@ -34,12 +35,15 @@ export function isPersistedEntityId(entityId: string): boolean {
   return !entityId.startsWith(PENDING_ENTITY_PREFIX);
 }
 
-function dedupeByTag(tags: readonly SuggestedTag[]): SuggestedTag[] {
-  const seen = new Set<string>();
+function dedupeWithinFacetLimits(tags: readonly SuggestedTag[]): SuggestedTag[] {
+  const kept = mergeTagsReplacingSingleValued(
+    [],
+    tags.map((suggestion) => suggestion.tag)
+  );
   const result: SuggestedTag[] = [];
   for (const suggestion of tags) {
-    if (seen.has(suggestion.tag)) continue;
-    seen.add(suggestion.tag);
+    if (!kept.includes(suggestion.tag)) continue;
+    if (result.some((entry) => entry.tag === suggestion.tag)) continue;
     result.push(suggestion);
   }
   return result;
@@ -72,7 +76,9 @@ function dedupeByTag(tags: readonly SuggestedTag[]): SuggestedTag[] {
  * pending-ChangeSet tags above.
  *
  * Ordering reproduces the server's own priority (rule > ai > entity) so a
- * recomputed row reads the same as one the matcher resolved itself.
+ * recomputed row reads the same as one the matcher resolved itself, and that
+ * order decides a single-valued facet: the first value on it is kept and later
+ * ones dropped, so a fresh rule's venue replaces a kept one (POPS-3668).
  */
 export function mergeRecomputedTags(
   existing: readonly SuggestedTag[] | undefined,
@@ -83,7 +89,7 @@ export function mergeRecomputedTags(
   );
   const freshNonEntity = fresh.filter((s) => s.source !== 'entity');
   const freshEntity = fresh.filter((s) => s.source === 'entity');
-  return dedupeByTag([...freshNonEntity, ...kept, ...freshEntity]);
+  return dedupeWithinFacetLimits([...freshNonEntity, ...kept, ...freshEntity]);
 }
 
 /**

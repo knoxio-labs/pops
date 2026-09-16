@@ -23,6 +23,12 @@ export interface AiCacheEntry {
    */
   confidence: number;
   /**
+   * The model's confidence that `tags` are true of the transaction (POPS-3671).
+   * Absent when the reply omitted or malformed it — with no default, because an
+   * absent tag confidence must not pre-accept a suggestion.
+   */
+  tagConfidence?: number;
+  /**
    * How many values the model returned that were refused by the closed-set
    * validation (POPS-2606). Absent when nothing was refused. Counted into the
    * batch's {@link AiCounters}; the values themselves are logged at the point
@@ -60,6 +66,11 @@ export interface AiBatchCallResult {
  * the model. This is the PII boundary: the raw CSV row and any
  * account/card/reference columns are intentionally absent from this shape, so
  * nothing outside these fields can reach the Anthropic API.
+ *
+ * `location` is inside the boundary on purpose (POPS-3678): it is parsed out of
+ * the merchant descriptor itself, not an account or card column, so it carries
+ * nothing the description did not already, and it is the field `occasion:travel`
+ * needs where the merchant name alone says nothing about where the money went.
  */
 export interface CategorizerInput {
   /** Merchant text from the mapped description column (what the model classifies). */
@@ -68,19 +79,22 @@ export interface CategorizerInput {
   amount?: number;
   /** Transaction date (YYYY-MM-DD) — disambiguates recurring merchants. */
   date?: string;
+  /** Where the charge was made, as parsed from the merchant descriptor. */
+  location?: string;
 }
 
 /**
  * Project a parsed transaction down to the {@link CategorizerInput} allowlist.
- * `rawRow`, `account`, `location` and `checksum` are dropped here so they can
- * never be interpolated into the prompt sent to Claude (CF008).
+ * `rawRow`, `account` and `checksum` are dropped here so they can never be
+ * interpolated into the prompt sent to Claude (CF008).
  */
 export function toCategorizerInput(
-  transaction: Pick<ParsedTransaction, 'description' | 'amount' | 'date'>
+  transaction: Pick<ParsedTransaction, 'description' | 'amount' | 'date' | 'location'>
 ): CategorizerInput {
   return {
     description: transaction.description,
     amount: transaction.amount,
     date: transaction.date,
+    ...(transaction.location === undefined ? {} : { location: transaction.location }),
   };
 }

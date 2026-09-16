@@ -29,6 +29,8 @@ public enum ReceiptDraftCopy {
     internal static let unreconciledMessage =
         "The items below don't sum to the printed total. Check them against the receipt "
         + "before saving."
+    internal static let saveAndAddAnother = "Save and add another"
+    internal static let saving = "Saving"
 
     // MARK: sections
 
@@ -55,6 +57,37 @@ public enum ReceiptDraftCopy {
     internal static let itemQuantityPlaceholder = "—"
     internal static let itemUnitNotePlaceholder = "Unit price or weight"
     internal static let addItem = "Add an item"
+    internal static let resolvedByPerson = "You chose this record"
+    internal static let resolvedByCreation = "You are creating this record"
+    internal static let resolvedByServer = "Matched automatically — not checked yet"
+    internal static let searchChoices = "Search"
+    internal static let noMatches = "Nothing on file matches that."
+    internal static let nothingOnFile = "Nothing on file yet."
+    internal static let cancelChoosing = "Cancel"
+    internal static let newRecordPlaceholder = "Name"
+    internal static let merchantPlaceholderSelect = "Choose or create a merchant"
+    internal static let addressPlaceholderSelect = "Choose or create a branch"
+    internal static let createMerchantSection = "New merchant"
+    internal static let createAddressSection = "New branch"
+
+    internal static func createRecord(_ value: String) -> String {
+        value.isEmpty ? "Create" : "Create “\(value)”"
+    }
+
+    internal static func printedAs(_ value: String) -> String {
+        "The receipt says “\(value)”"
+    }
+    internal static let onlineLabel = "Bought online"
+    internal static let onlineCaption = "No branch to record."
+    internal static let includedLabel = "In the item prices"
+    internal static let addAdjustment = "Add an adjustment"
+    internal static let itemListPriceLabel = "Was"
+    internal static let itemListPricePlaceholder = "Normal price"
+    internal static let itemDetails = "Details"
+
+    internal static func removeAdjustment(_ label: String) -> String {
+        "Remove \(label)"
+    }
 
     /// Named after what it removes rather than after the gesture, so
     /// VoiceOver says which row is about to go.
@@ -85,6 +118,7 @@ public enum ReceiptDraftCopy {
     // MARK: problems
 
     internal static let totalMissing = "A total is needed before this can be saved."
+    internal static let merchantUnresolved = "A merchant is needed before this can be saved."
     internal static let lineAmountMissing = "An amount is needed, or remove the line."
 
     /// The gate's complaints that name no field, kept as one line under the

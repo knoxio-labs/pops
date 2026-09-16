@@ -183,10 +183,12 @@ vi.mock('./TransactionCard', async () => {
     TransactionCard: ({
       transaction,
       onAcceptAiSuggestion,
+      onLeaveUnassigned,
       onEdit,
     }: {
       transaction: { description: string; entity?: { entityName?: string } };
       onAcceptAiSuggestion?: (t: unknown) => void;
+      onLeaveUnassigned?: (t: unknown) => void;
       onEdit?: (t: unknown) => void;
     }) =>
       React.createElement(
@@ -214,6 +216,17 @@ vi.mock('./TransactionCard', async () => {
               },
             },
             'Accept AI'
+          ),
+        onLeaveUnassigned &&
+          React.createElement(
+            'button',
+            {
+              'data-testid': `leave-unassigned-${transaction.description}`,
+              onClick: () => {
+                onLeaveUnassigned(transaction);
+              },
+            },
+            'Leave unassigned'
           )
       ),
   };
@@ -314,7 +327,9 @@ vi.mock('../../lib/transaction-utils', () => ({
 
 vi.mock('@pops/ui', async () => {
   const React = await import('react');
+  const actual = await vi.importActual<typeof import('@pops/ui')>('@pops/ui');
   return {
+    cn: actual.cn,
     Button: ({ children, onClick, disabled, ...rest }: Record<string, unknown>) =>
       React.createElement(
         'button',
@@ -1151,13 +1166,34 @@ describe('ReviewStep — matched tab grouping (POPS-2448)', () => {
   });
 });
 
-describe('ReviewStep — committed count + dropped-rows notice (#3765)', () => {
-  it('counts only committable matched rows and surfaces the ones that will be dropped', () => {
+describe('ReviewStep — committed count + dropped-rows notice (#3765, POPS-3748)', () => {
+  it('commits a matched purchase with no entity — leaving it unassigned no longer drops it', () => {
     const committable = makeTx('WOOLWORTHS OK', { status: 'matched' });
-    // purchase (requires an entity) with no resolved entity → dropped at confirm.
-    const dropped = makeTx('MYSTERY ROW', { status: 'matched', entity: { matchType: 'exact' } });
+    const unassigned = makeTx('MYSTERY ROW', { status: 'matched', entity: { matchType: 'none' } });
     mockProcessedTransactions = {
-      matched: [committable, dropped],
+      matched: [committable, unassigned],
+      uncertain: [],
+      failed: [],
+      skipped: [],
+    };
+    render(reviewStepTree());
+
+    expect(screen.getByText('Continue to Tag Review (2)')).toBeInTheDocument();
+    expect(screen.queryByText(/won't be imported/)).toBeNull();
+  });
+
+  it('still drops a purchase whose entity is a pending:contact placeholder (POPS-2692)', () => {
+    const committable = makeTx('WOOLWORTHS OK', { status: 'matched' });
+    const placeholder = makeTx('MYSTERY ROW', {
+      status: 'matched',
+      entity: {
+        entityId: 'pending:contact:4c42ebf6-f6b7-4ce5-91ab-70ac3645ecbd',
+        entityName: 'Mystery',
+        matchType: 'learned',
+      },
+    });
+    mockProcessedTransactions = {
+      matched: [committable, placeholder],
       uncertain: [],
       failed: [],
       skipped: [],
@@ -1169,7 +1205,7 @@ describe('ReviewStep — committed count + dropped-rows notice (#3765)', () => {
     // The dropped row is surfaced with the fix its own reason calls for, not
     // silently gone (POPS-2754 split the two reasons apart).
     expect(
-      screen.getByText(/assign a merchant entity, or change the type to a non-merchant one/)
+      screen.getByText(/replace the placeholder with a real merchant, or leave the row unassigned/)
     ).toBeInTheDocument();
     expect(screen.queryByText(/set a transaction type on the money coming in/)).toBeNull();
   });
@@ -1192,7 +1228,9 @@ describe('ReviewStep — committed count + dropped-rows notice (#3765)', () => {
 
     expect(screen.getByText(/set a transaction type on the money coming in/)).toBeInTheDocument();
     expect(
-      screen.queryByText(/assign a merchant entity, or change the type to a non-merchant one/)
+      screen.queryByText(
+        /replace the placeholder with a real merchant, or leave the row unassigned/
+      )
     ).toBeNull();
   });
 
@@ -1206,6 +1244,35 @@ describe('ReviewStep — committed count + dropped-rows notice (#3765)', () => {
     render(reviewStepTree());
 
     expect(screen.getByText('Continue to Tag Review (2)')).toBeInTheDocument();
-    expect(screen.queryByText(/a merchant entity or a non-merchant type/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/won't be imported/)).not.toBeInTheDocument();
+  });
+});
+
+describe('ReviewStep — leaving a row unassigned (POPS-3748)', () => {
+  it('lets a failed purchase row with no merchant be left unassigned, which enables Continue', () => {
+    const failedPurchase = makeTx('UNKNOWN CHARGE', {
+      status: 'failed',
+      entity: { matchType: 'none' },
+    });
+    mockProcessedTransactions = {
+      matched: [],
+      uncertain: [],
+      failed: [failedPurchase],
+      skipped: [],
+    };
+    render(reviewStepTree());
+
+    const continueButton = screen.getByText(/Continue to Tag Review/).closest('button');
+    expect(continueButton).toBeDisabled();
+
+    // The failed tab renders grouped by default, which goes through the
+    // TransactionGroup mock rather than TransactionCard; switch to the list
+    // view first so the row-level "Leave unassigned" action is on screen.
+    fireEvent.click(screen.getAllByText('List')[0] as Element);
+
+    fireEvent.click(screen.getByTestId('leave-unassigned-UNKNOWN CHARGE'));
+
+    expect(screen.getByText('Continue to Tag Review (1)')).toBeInTheDocument();
+    expect(screen.getByText('Continue to Tag Review (1)').closest('button')).not.toBeDisabled();
   });
 });

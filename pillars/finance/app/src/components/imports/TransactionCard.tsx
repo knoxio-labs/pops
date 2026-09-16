@@ -30,6 +30,10 @@ interface TransactionCardProps {
     transactionType?: TransactionType
   ) => void;
   onAcceptAiSuggestion?: (transaction: ProcessedTransaction) => void;
+  onLeaveUnassigned?: (
+    transaction: ProcessedTransaction,
+    transactionType?: TransactionType
+  ) => void;
   onEdit?: (transaction: ProcessedTransaction) => void;
   entities?: Array<{ id: string; name: string }>;
   entityVerification?: EntityVerification;
@@ -46,6 +50,7 @@ export function TransactionCard({
   onEntitySelect,
   onCreateEntityWithName,
   onAcceptAiSuggestion,
+  onLeaveUnassigned,
   onEdit,
   entities,
   entityVerification,
@@ -84,6 +89,7 @@ export function TransactionCard({
           onEntitySelect={onEntitySelect}
           onCreateEntityWithName={onCreateEntityWithName}
           onAcceptAiSuggestion={onAcceptAiSuggestion}
+          onLeaveUnassigned={onLeaveUnassigned}
         />
       )}
       {readonly && (

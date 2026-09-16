@@ -13,6 +13,8 @@ import {
   entityPrecreateOutboxService,
   openFinanceDb,
   resolveAccountIdByName,
+  tagVocabulary,
+  tagVocabularyService,
   transactions,
   transactionsService,
   type OpenedFinanceDb,
@@ -185,5 +187,36 @@ describe('GET /health — the contacts seam', () => {
     const res = await requestOn(app(), (r) => r.get('/health'));
 
     expect(res.body.contacts.outbox).toEqual({ pending: 1, deadLettered: 1 });
+  });
+});
+
+describe('GET /health — vocabulary usage drift (POPS-3740)', () => {
+  it('surfaces a drifted vocabulary count without failing the probe', async () => {
+    tagVocabularyService.upsertVocabularyTag(financeDb.db, 'drift:example', 'user');
+    transactionsService.createTransaction(financeDb.db, {
+      description: 'Untracked tag write',
+      accountId: amexAccountId,
+      amountCents: -1000,
+      date: '2026-01-01',
+      type: 'purchase',
+      tags: ['drift:example'],
+    });
+    // Force the maintained count out of step with the row the write above
+    // just created, independent of whatever `createTransaction` did to it.
+    financeDb.db
+      .update(tagVocabulary)
+      .set({ usageCount: 0 })
+      .where(eq(tagVocabulary.tag, 'drift:example'))
+      .run();
+
+    const res = await requestOn(app(), (r) => r.get('/health'));
+
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
+    expect(res.body.vocabulary.usageDrift).toContainEqual({
+      tag: 'drift:example',
+      usageCount: 0,
+      actual: 1,
+    });
   });
 });

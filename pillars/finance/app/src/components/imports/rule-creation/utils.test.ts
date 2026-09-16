@@ -8,6 +8,7 @@ import {
   computeProposals,
   IMPORT_BATCH_SOURCE,
   previouslyStagedProposalIds,
+  rulesStepHasProposals,
 } from './utils';
 
 import type { ConfirmedTransaction } from '@pops/finance';
@@ -137,6 +138,67 @@ describe('computeProposals pattern derivation', () => {
         txn({ description: 'SIMBA CAR HIRE', entityId: 'e1', tags: ['trip:cairns-2026'] }),
       ])
     ).toEqual([]);
+  });
+});
+
+describe('computeProposals refuses a pattern that reaches into a sibling (POPS-3665, POPS-3679)', () => {
+  it('drops the proposal when the tagged group’s pattern also matches an untagged sibling row', () => {
+    // Same shape as the prod Amazon Prime/retail bug: the tagged rows alone
+    // derive a pattern that also matches an untagged row for the same
+    // entity, which this batch left out of the group entirely.
+    const proposals = computeProposals([
+      txn({
+        description: 'AMZNPRIMEA* AMZNPRIMEA',
+        entityId: 'e-amazon',
+        entityName: 'Amazon',
+        checksum: 'p1',
+        tags: ['fee:membership'],
+      }),
+      txn({
+        description: 'QQQQQQQQQA* AMWWWWWWWWW',
+        entityId: 'e-amazon',
+        entityName: 'Amazon',
+        checksum: 'p2',
+        tags: ['fee:membership'],
+      }),
+      txn({
+        description: 'AMAZON RETA* AMAZON AU SYDNEY',
+        entityId: 'e-amazon',
+        entityName: 'Amazon',
+        checksum: 'r1',
+        tags: [],
+      }),
+      txn({
+        description: 'AMAZON RETA* AMAZON AU',
+        entityId: 'e-amazon',
+        entityName: 'Amazon',
+        checksum: 'r2',
+        tags: [],
+      }),
+    ]);
+
+    expect(proposals).toEqual([]);
+  });
+
+  it('still proposes a rule when the group has no untagged sibling to reach into', () => {
+    const [proposal] = computeProposals([
+      txn({
+        description: 'AMZNPRIMEA* AMZNPRIMEA',
+        entityId: 'e-amazon',
+        entityName: 'Amazon',
+        checksum: 'p1',
+        tags: ['fee:membership'],
+      }),
+      txn({
+        description: 'QQQQQQQQQA* AMWWWWWWWWW',
+        entityId: 'e-amazon',
+        entityName: 'Amazon',
+        checksum: 'p2',
+        tags: ['fee:membership'],
+      }),
+    ]);
+
+    expect(proposal?.pattern).toBe('A* AM');
   });
 });
 
@@ -350,5 +412,44 @@ describe('what a previous visit to the Rules step staged (POPS-3676)', () => {
         [entry('review-1', 'tag-review:Woolworths', 'WOOLWORTHS', ['Other'])]
       )
     ).toEqual([]);
+  });
+});
+
+describe('computeProposals marker-facet tags (POPS-3704)', () => {
+  const facets = [
+    { facet: 'contains', kind: 'open' as const },
+    { facet: 'person', kind: 'marker' as const },
+    { facet: 'flag', kind: 'marker' as const },
+  ];
+
+  it('proposes a rule without the marker tags the group’s rows carry', () => {
+    const proposals = computeProposals(
+      [
+        txn({
+          description: 'GITHUB SPONSORS',
+          checksum: 'g0',
+          entityId: 'e1',
+          entityName: 'GitHub',
+          tags: ['person:x', 'contains:software'],
+        }),
+      ],
+      [],
+      facets
+    );
+    expect(proposals.map((p) => p.tags)).toEqual([['contains:software']]);
+  });
+
+  it('offers no proposal for a group whose only common tags are markers', () => {
+    const rows = [
+      txn({
+        description: 'GITHUB SPONSORS',
+        checksum: 'g0',
+        entityId: 'e1',
+        entityName: 'GitHub',
+        tags: ['person:x', 'flag:needs-review'],
+      }),
+    ];
+    expect(computeProposals(rows, [], facets)).toEqual([]);
+    expect(rulesStepHasProposals(rows, [], facets)).toBe(false);
   });
 });
