@@ -150,6 +150,12 @@ The contract (zod) is the single source of truth; OpenAPI, api-types, and the
 generated manifest are downstream projections. No hand-authored OpenAPI, no
 hand-authored paths.
 
+## Decisions
+
+- [ADR-001](docs/architecture/adr-001-domain-vocabulary.md) — one word per
+  thing. The nouns every screen, contract and ticket uses, the two that were
+  contested, and the five the design playground is still deciding by looking.
+
 ## Domain docs
 
 Feature-level documentation is colocated with the code it describes. The ones
