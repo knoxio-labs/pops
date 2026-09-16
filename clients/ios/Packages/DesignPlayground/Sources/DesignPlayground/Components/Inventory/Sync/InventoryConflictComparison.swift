@@ -185,7 +185,7 @@ internal struct InventoryFinalValueEditor: View {
                     PopsTextField(
                         placeholder: field.onThisPhone,
                         text: Binding(
-                            get: { values[field.field] ?? field.onThisPhone },
+                            get: { values[field.field] ?? "" },
                             set: { values[field.field] = $0 }))
                     Text(
                         "This phone said \(field.onThisPhone). "
