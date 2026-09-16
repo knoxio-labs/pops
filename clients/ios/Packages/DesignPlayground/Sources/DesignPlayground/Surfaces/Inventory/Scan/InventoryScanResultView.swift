@@ -1,4 +1,3 @@
-import DesignSystem
 import SwiftUI
 
 /// What happens between a code being read and a screen opening. Most scans

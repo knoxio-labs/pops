@@ -1,5 +1,3 @@
-import SwiftUI
-
 /// The two open questions POPS-3982 asks visually, on top of the decided
 /// foundation. Both restage ``InventorySearchSurfaces/search``, see
 /// ``DesignExperiment`` for why several open experiments on one surface is
