@@ -1,8 +1,9 @@
-/// The four questions POPS-3986 leaves open. Close-versus-seal is
-/// POPS-3979's `inventory-close-seal`, still open there and not repeated
-/// here; every variant below draws the container-detail or open-containers
-/// surface with one knob turned and the rest at ``InventoryContainerStyle``'s
-/// default.
+/// The four questions POPS-3986 raised, all decided on the device
+/// 2026-09-16; the variants stay so the losing answers can be looked at
+/// again. Close-versus-seal is POPS-3979's `inventory-close-seal`, still open
+/// there and not repeated here; every variant below draws the
+/// container-detail or open-containers surface with one knob turned and the
+/// rest at ``InventoryContainerStyle``'s default.
 internal enum InventoryContainerExperiments {
     @MainActor internal static let all: [DesignExperiment] = [
         detailStructure, openRepresentation, fullDeclaration, destinationField,
