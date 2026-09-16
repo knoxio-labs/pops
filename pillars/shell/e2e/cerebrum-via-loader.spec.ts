@@ -8,8 +8,7 @@
  * of two exports of this app; it now ships inside the pillar's bundle and is
  * resolved by slot.
  */
-import { expect, test } from '@playwright/test';
-
+import { expect, test } from './fixtures/pillar-rest-guard';
 import { stubShellBoot } from './helpers/pillar-rest';
 
 test.describe('cerebrum — mounted by the runtime loader', () => {
@@ -55,23 +54,33 @@ test.describe('cerebrum — mounted by the runtime loader', () => {
    * added. Before it, the modal opened on its empty state for any pillar that
    * had left the static bundle map.
    */
-  test('the capture hotkey opens cerebrum’s overlay from the remote bundle', async ({ page }) => {
-    await page.goto('/cerebrum');
-    await expect(page.getByRole('button', { name: 'Cerebrum', exact: true })).toBeVisible();
+  test.describe('open the overlay without stubbing its own dropdown data', () => {
+    test.use({
+      allowUnroutedPillarRest:
+        'the ingest form fetches its own templates/scopes/tags for dropdown ' +
+        'options on mount; the assertions below only check the dialog and a ' +
+        'textbox rendered, not that those dropdowns have options, so this is ' +
+        'the same "mounted, unstubbed API" shape as `ai-via-loader.spec.ts`',
+    });
 
-    // `ControlOrMeta`, which Playwright resolves per platform, because the
-    // manifest declares `mod+shift+k` and the matcher resolves `mod` the same
-    // way. This pressed `Meta` for a while: `mod` was an alias for the Apple
-    // key, so the chord was unreachable on the Linux runner and on every
-    // Linux and Windows reader (POPS-3319). Pressing Meta here asserted a
-    // shortcut half the clients could not use.
-    await page.keyboard.press('ControlOrMeta+Shift+KeyK');
+    test('the capture hotkey opens cerebrum’s overlay from the remote bundle', async ({ page }) => {
+      await page.goto('/cerebrum');
+      await expect(page.getByRole('button', { name: 'Cerebrum', exact: true })).toBeVisible();
 
-    const dialog = page.getByRole('dialog');
-    await expect(dialog).toBeVisible();
-    // The overlay's own content, not merely a dialog frame: the empty state is
-    // also a visible dialog, which is exactly what a missing slot produces.
-    await expect(dialog.getByTestId('external-pillar-load-error')).toHaveCount(0);
-    await expect(dialog.getByRole('textbox').first()).toBeVisible();
+      // `ControlOrMeta`, which Playwright resolves per platform, because the
+      // manifest declares `mod+shift+k` and the matcher resolves `mod` the same
+      // way. This pressed `Meta` for a while: `mod` was an alias for the Apple
+      // key, so the chord was unreachable on the Linux runner and on every
+      // Linux and Windows reader (POPS-3319). Pressing Meta here asserted a
+      // shortcut half the clients could not use.
+      await page.keyboard.press('ControlOrMeta+Shift+KeyK');
+
+      const dialog = page.getByRole('dialog');
+      await expect(dialog).toBeVisible();
+      // The overlay's own content, not merely a dialog frame: the empty state is
+      // also a visible dialog, which is exactly what a missing slot produces.
+      await expect(dialog.getByTestId('external-pillar-load-error')).toHaveCount(0);
+      await expect(dialog.getByRole('textbox').first()).toBeVisible();
+    });
   });
 });

@@ -8,14 +8,16 @@
  * here the shell mounts everything, so what is under test is the round trip:
  * typing issues the POST, and the sections that come back become the panel.
  */
-import { expect, test, type Page } from '@playwright/test';
-
+import { expect, test } from './fixtures/pillar-rest-guard';
+import { stubFinanceDashboardEmpty } from './helpers/finance-dashboard';
 import {
   CROSS_MODULE_SEARCH_SECTIONS,
   SEARCH_QUERY,
   stubOrchestratorSearch,
   stubShellBoot,
 } from './helpers/pillar-rest';
+
+import type { Page } from '@playwright/test';
 
 function searchBox(page: Page) {
   return page.getByRole('textbox', { name: 'Search POPS' });
@@ -24,6 +26,7 @@ function searchBox(page: Page) {
 test.describe('Shell — federated search', () => {
   test.beforeEach(async ({ page }) => {
     await stubShellBoot(page);
+    await stubFinanceDashboardEmpty(page);
     await page.goto('/');
     await expect(searchBox(page)).toBeVisible();
   });

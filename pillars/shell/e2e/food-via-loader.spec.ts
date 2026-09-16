@@ -7,11 +7,19 @@
  * that can show it survived the round trip — a flattened tree still renders a
  * tab, it just rebuilds the chrome underneath it every time.
  */
-import { expect, test } from '@playwright/test';
-
+import { expect, test } from './fixtures/pillar-rest-guard';
 import { stubShellBoot } from './helpers/pillar-rest';
 
 test.describe('food — mounted by the runtime loader', () => {
+  test.use({
+    allowUnroutedPillarRest:
+      'every assertion here is about the route table surviving the wire — a ' +
+      'URL, a tab nav, the absence of a load error — and none reads a body. ' +
+      'The tabs that do mount a data page fire food-api reads (ingredients, ' +
+      'conversions/units, conversions/weights); stubbing them would assert ' +
+      "the food app's own data flow, which is that pillar's tests' job",
+  });
+
   let errors: string[] = [];
 
   test.beforeEach(async ({ page }) => {

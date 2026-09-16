@@ -8,8 +8,8 @@
  * browser can show is that the resolved set is what actually reaches the DOM,
  * and that the fallback is a working shell rather than an app-less one.
  */
-import { expect, test } from '@playwright/test';
-
+import { expect, test } from './fixtures/pillar-rest-guard';
+import { stubFinanceDashboardEmpty } from './helpers/finance-dashboard';
 import {
   failRegistry,
   IN_REPO_PILLARS,
@@ -36,6 +36,11 @@ test.describe('Shell — boot install set', () => {
   test('mounts exactly the pillars the registry lists', async ({ page }) => {
     await stubRegistry(page, ['finance', 'media']);
     await stubPillarHealth(page, ['finance', 'media']);
+    // The only test in this file whose registry both answers AND lists a
+    // pillar, so the only one where `/` reaches a mounted Finance dashboard
+    // rather than a fallback. Its reads are answered empty: what is asserted
+    // below is which pillars reached the rail, not what any of them rendered.
+    await stubFinanceDashboardEmpty(page);
 
     await page.goto('/');
 
@@ -93,6 +98,11 @@ test.describe('Shell — boot install set', () => {
   });
 
   test('a registry answering with garbage is treated as no answer', async ({ page }) => {
+    // `stubRegistry` first, for the shell-manifest stub it also registers —
+    // this test's subject is the snapshot fetch alone, so the manifest fetch
+    // `IndexRedirect` needs is answered normally. The override below is
+    // registered after, so it shadows only the snapshot route.
+    await stubRegistry(page, IN_REPO_PILLARS);
     await page.route(/\/registry-api\/registry\/pillars$/, (route) =>
       json(route, 200, { pillars: 'not-a-list' })
     );
