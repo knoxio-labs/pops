@@ -1,5 +1,3 @@
-import Foundation
-
 /// How full a container is, when the style says to show one at all.
 ///
 /// ADR-001 leaves how "full" is expressed open; this exists so the manual and

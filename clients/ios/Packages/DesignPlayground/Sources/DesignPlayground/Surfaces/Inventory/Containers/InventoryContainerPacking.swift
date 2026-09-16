@@ -1,5 +1,3 @@
-import Foundation
-
 /// Which containers are legal "put in" destinations for a given item.
 ///
 /// A container cannot be put into itself or into anything already inside it —
