@@ -61,12 +61,16 @@ internal struct InventoryFieldValidationOutcomeView: View {
         }
     }
 
+    /// Parking for review is the only outcome that writes: the other two hold
+    /// Save until the value is resolved, so both draw it as unavailable. The
+    /// label, the tone and the footer have to agree, or the variant shows a
+    /// button that contradicts the sentence under it.
     private var saveLabel: String {
-        outcome == .blocksSave ? "Save (disabled)" : "Save"
+        outcome != .parksForReview ? "Save (disabled)" : "Save"
     }
 
     private var saveTone: Color {
-        outcome == .blocksSave ? .popsMutedForeground : .popsAccent
+        outcome != .parksForReview ? .popsMutedForeground : .popsAccent
     }
 
     private var saveFooter: String {
