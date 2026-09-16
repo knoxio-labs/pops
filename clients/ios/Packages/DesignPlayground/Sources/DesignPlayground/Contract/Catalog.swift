@@ -57,6 +57,7 @@ internal enum Catalog {
         + InventoryItemDetailSurfaces.surfaces
         + InventoryUntypedSurfaces.surfaces
         + InventorySyncSurfaces.surfaces
+        + InventoryCreationSurfaces.surfaces
         + AccountsSurfaces.surfaces
         + PairingSurfaces.surfaces
 
