@@ -6,7 +6,7 @@
 
 /// One identifier someone else assigned. ADR-001: not "code" unqualified,
 /// which is POPS's own inventory code and lives on the item itself.
-internal struct InventoryExternalIdentifier: Identifiable, Equatable {
+internal struct InventoryDetailExternalIdentifier: Identifiable, Equatable {
     internal let kind: String
     internal let value: String
 
@@ -64,7 +64,7 @@ internal struct InventoryContainerSummary: Equatable {
 
 /// A change the server disagreed with. Reuses ``InventoryRepairRow``'s words
 /// rather than inventing a second "something went wrong" vocabulary.
-internal struct InventoryConflict: Equatable {
+internal struct InventoryDetailConflict: Equatable {
     internal let problem: String
     internal let resolution: String
 }
@@ -73,7 +73,7 @@ internal struct InventoryConflict: Equatable {
 internal struct InventoryItemDetail: Identifiable {
     internal let item: InventoryFoundationItem
     internal let photos: [InventoryPhoto]
-    internal let externalIdentifiers: [InventoryExternalIdentifier]
+    internal let externalIdentifiers: [InventoryDetailExternalIdentifier]
     internal let description: String?
     internal let fields: [InventoryDetailField]
     internal let capabilities: [String]
@@ -85,7 +85,7 @@ internal struct InventoryItemDetail: Identifiable {
     internal let provenance: InventoryProvenance?
     internal let documents: InventoryDocuments
     internal let activity: [InventoryActivityEntry]
-    internal let conflict: InventoryConflict?
+    internal let conflict: InventoryDetailConflict?
 
     internal var id: String { item.id }
 }

@@ -59,7 +59,7 @@ internal struct InventoryItemDetailSyncBanner: View {
 /// Identifiers someone else assigned, ADR-001's distinction from POPS's own
 /// inventory code, which the header already shows.
 internal struct InventoryItemDetailIdentifiersSection: View {
-    internal let identifiers: [InventoryExternalIdentifier]
+    internal let identifiers: [InventoryDetailExternalIdentifier]
 
     @ViewBuilder internal var body: some View {
         if !identifiers.isEmpty {

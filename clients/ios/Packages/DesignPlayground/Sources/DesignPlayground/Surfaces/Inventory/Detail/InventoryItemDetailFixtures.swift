@@ -38,8 +38,8 @@ internal enum InventoryItemDetailFixtures {
             InventoryPhoto(caption: "Steam wand", isBroken: false),
         ],
         externalIdentifiers: [
-            InventoryExternalIdentifier(kind: "Serial", value: "SN-88213-EU"),
-            InventoryExternalIdentifier(kind: "Model number", value: "ECM-SW-4"),
+            InventoryDetailExternalIdentifier(kind: "Serial", value: "SN-88213-EU"),
+            InventoryDetailExternalIdentifier(kind: "Model number", value: "ECM-SW-4"),
         ],
         description: "Descale every three weeks; the wand clogs first.",
         fields: [
@@ -174,7 +174,7 @@ internal enum InventoryItemDetailFixtures {
     internal static let conflicting = InventoryItemDetail(
         item: Base.conflicted,
         photos: [],
-        externalIdentifiers: [InventoryExternalIdentifier(kind: "Serial", value: "RT-4471")],
+        externalIdentifiers: [InventoryDetailExternalIdentifier(kind: "Serial", value: "RT-4471")],
         description: nil,
         fields: [InventoryDetailField(key: "Wi-Fi standard", value: "802.11ax")],
         capabilities: [],
@@ -183,7 +183,7 @@ internal enum InventoryItemDetailFixtures {
         provenance: nil,
         documents: .none,
         activity: [],
-        conflict: InventoryConflict(
+        conflict: InventoryDetailConflict(
             problem: "Moved on this phone to Office 04; the server has it discarded.",
             resolution: "Keep this phone's placement"))
 
