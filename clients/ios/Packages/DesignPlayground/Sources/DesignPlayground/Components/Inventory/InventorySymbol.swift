@@ -89,6 +89,9 @@ internal struct InventorySymbol: Equatable {
     internal static let consumed = InventorySymbol(system: "flame", lucide: "Flame")
     internal static let reduceQuantity = InventorySymbol(
         system: "minus.circle", lucide: "MinusCircle")
+    internal static let create = InventorySymbol(system: "plus", lucide: "Plus")
+    internal static let rename = InventorySymbol(system: "pencil", lucide: "Pencil")
+    internal static let manage = InventorySymbol(system: "ellipsis.circle", lucide: "Ellipsis")
 
     /// Every entry, for the test that checks them and for the sheet that shows
     /// them side by side.
@@ -146,6 +149,9 @@ internal struct InventorySymbol: Equatable {
         ("Sold", sold),
         ("Consumed", consumed),
         ("Reduce quantity", reduceQuantity),
+        ("Create", create),
+        ("Rename", rename),
+        ("Manage", manage),
     ]
 
     /// The glyph for a container in a given state.
