@@ -1,0 +1,66 @@
+/// One glyph per concept, on both clients.
+///
+/// A concept drawn with two different symbols on two screens reads as two
+/// concepts, so every Inventory component takes its glyph from here and
+/// nowhere else. Each entry carries the Lucide icon the web client uses for
+/// the same concept, so the two stay paired by construction rather than by
+/// someone remembering.
+///
+/// The SF Symbol names are checked against the platform's own catalogue in
+/// `InventorySymbolTests`; the Lucide names were checked against the
+/// `lucide-react` build the web client ships (1.31), which no longer has a
+/// `History` icon — `RotateCcwClock` is its equivalent.
+internal struct InventorySymbol: Equatable {
+    internal let system: String
+    internal let lucide: String
+
+    internal static let item = InventorySymbol(system: "cube", lucide: "Box")
+    internal static let openContainer = InventorySymbol(
+        system: "shippingbox", lucide: "PackageOpen")
+    internal static let closedContainer = InventorySymbol(
+        system: "shippingbox.fill", lucide: "Package")
+    internal static let location = InventorySymbol(system: "house", lucide: "House")
+    internal static let inHand = InventorySymbol(system: "hand.raised", lucide: "Hand")
+    internal static let activity = InventorySymbol(
+        system: "clock.arrow.circlepath", lucide: "RotateCcwClock")
+    internal static let repair = InventorySymbol(
+        system: "arrow.trianglehead.2.clockwise.rotate.90", lucide: "RefreshCw")
+    internal static let code = InventorySymbol(system: "qrcode", lucide: "QrCode")
+    internal static let queued = InventorySymbol(
+        system: "icloud.and.arrow.up", lucide: "CloudUpload")
+    internal static let synced = InventorySymbol(system: "checkmark.icloud", lucide: "CloudCheck")
+    internal static let stale = InventorySymbol(
+        system: "exclamationmark.triangle", lucide: "TriangleAlert")
+    internal static let attention = InventorySymbol(
+        system: "exclamationmark.circle.fill", lucide: "CircleAlert")
+    internal static let move = InventorySymbol(
+        system: "arrow.up.and.down.and.arrow.left.and.right", lucide: "Move")
+    internal static let split = InventorySymbol(system: "scissors", lucide: "Scissors")
+    internal static let label = InventorySymbol(system: "tag", lucide: "Tag")
+    internal static let seal = InventorySymbol(system: "lock", lucide: "Lock")
+    internal static let close = InventorySymbol(
+        system: "shippingbox.and.arrow.backward", lucide: "PackageCheck")
+    internal static let restore = InventorySymbol(
+        system: "arrow.uturn.backward", lucide: "ArchiveRestore")
+    internal static let discard = InventorySymbol(system: "trash", lucide: "Trash2")
+    internal static let retired = InventorySymbol(system: "archivebox", lucide: "Archive")
+    internal static let lost = InventorySymbol(
+        system: "questionmark.circle", lucide: "CircleQuestionMark")
+    internal static let destroyed = InventorySymbol(system: "xmark.octagon", lucide: "OctagonX")
+
+    /// Every entry, for the test that checks them and for the sheet that shows
+    /// them side by side.
+    internal static let all: [(name: String, symbol: InventorySymbol)] = [
+        ("Item", item), ("Open container", openContainer), ("Closed container", closedContainer),
+        ("Location", location), ("In hand", inHand), ("Activity", activity), ("Repair", repair),
+        ("Inventory code", code), ("Queued", queued), ("Synced", synced), ("Stale", stale),
+        ("Needs attention", attention), ("Move", move), ("Split", split), ("Label", label),
+        ("Seal", seal), ("Close", close), ("Restore", restore), ("Discard", discard),
+        ("Retired", retired), ("Lost", lost), ("Destroyed", destroyed),
+    ]
+
+    /// The glyph for a container in a given state.
+    internal static func container(_ access: InventoryAccess) -> InventorySymbol {
+        access == .open ? openContainer : closedContainer
+    }
+}

@@ -142,10 +142,26 @@ produced states that cannot exist.
 
 ### Whether the device agrees with the server
 
-**Saved**, **queued**, **synchronizing**, **synchronized**, **stale**, **needs
-attention** — in that order of escalation. "Saved" means written locally and
-nothing more; it is the state the phone is in most of the time and the one that
-must not look like a problem.
+Six states, and two orderings that must not be confused.
+
+A change **moves through** saved → queued → synchronizing → synchronized.
+Separately, the local copy can go **stale**, and a change can fail into **needs
+attention**.
+
+How **loudly** each is shown is a different order entirely:
+
+| Prominence | States                | Shown as                          |
+| ---------- | --------------------- | --------------------------------- |
+| Silent     | saved, synchronized   | Nothing at all                    |
+| Quiet      | queued, synchronizing | A mark that can be ignored        |
+| Visible    | stale                 | Something a reader will notice    |
+| Urgent     | needs attention       | Something that asks to be handled |
+
+"Saved" means written locally and nothing more. It is where the phone spends
+most of its time, so it shares the silent tier with "synchronized" rather than
+sitting below it — a state the phone is almost always in must not look like a
+problem. How much of the quiet tier is visible during ordinary use is one of the
+open questions below.
 
 ### What a person does
 

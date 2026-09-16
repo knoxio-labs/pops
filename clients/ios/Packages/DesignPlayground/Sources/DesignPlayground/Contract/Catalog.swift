@@ -51,12 +51,13 @@ internal enum Catalog {
         + ReceiptSurfaces.surfaces
         + InventorySurfaces.surfaces
         + InventoryPropertySurfaces.surfaces
+        + InventoryFoundationSurfaces.surfaces
         + AccountsSurfaces.surfaces
         + PairingSurfaces.surfaces
 
     static let experiments: [DesignExperiment] = ExperimentCatalog.all
 
-    static let components: [DesignComponent] = ComponentCatalog.all
+    static let components: [DesignComponent] = ComponentCatalog.all + InventoryComponentCatalog.all
 
     /// Areas in the order they were registered, deduplicated. Not sorted:
     /// registration order is an editorial decision about what matters most,
