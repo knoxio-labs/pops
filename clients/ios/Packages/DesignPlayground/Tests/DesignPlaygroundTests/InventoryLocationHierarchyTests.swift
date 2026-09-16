@@ -78,4 +78,26 @@ internal struct InventoryLocationHierarchyTests {
         #expect(!options.contains { $0.id == "garage" || $0.id == "garage-tools" })
         #expect(options.contains { $0.id == "study" })
     }
+
+    @Test("an excluded open container is not offered either, or a box could go inside itself")
+    func chooserExcludesOpenContainers() {
+        let options = InventoryDestinationChooser.options(
+            tree: Fixtures.small,
+            openContainers: [("crate-3", "Moving crate 3"), ("crate-4", "Moving crate 4")],
+            excluding: ["crate-3"])
+
+        #expect(!options.contains { $0.id == "crate-3" })
+        #expect(options.contains { $0.id == "crate-4" })
+    }
+
+    @Test("excluding a container does not stop the same id appearing as the location it also is")
+    func chooserExclusionAppliesToEveryTier() {
+        let options = InventoryDestinationChooser.options(
+            tree: Fixtures.small,
+            recentIDs: ["garage"],
+            openContainers: [("garage", "Garage")],
+            excluding: ["garage"])
+
+        #expect(!options.contains { $0.id == "garage" })
+    }
 }

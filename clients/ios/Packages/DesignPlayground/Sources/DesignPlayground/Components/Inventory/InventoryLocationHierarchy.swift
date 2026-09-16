@@ -141,7 +141,8 @@ internal enum InventoryDestinationChooser {
         }
 
         mutating func appendContainers(_ containers: [(id: String, name: String)]) {
-            for container in containers where seen.insert(container.id).inserted {
+            for container in containers
+            where !excludedIDs.contains(container.id) && seen.insert(container.id).inserted {
                 options.append(
                     InventoryDestinationOption(
                         id: container.id, title: container.name, path: "Open container",
