@@ -16,6 +16,11 @@ internal enum InventorySearchExperiments {
             "Do results read as sections by kind, or as one list ranked by relevance, and, if "
             + "grouped, does a container (an item, ADR-001) count once or twice?",
         subject: SurfaceID(area: "inventory", slug: "search"),
+        status: .decided(
+            variant: "ranked",
+            rationale:
+                "One ranked list, decided on the device 2026-09-16. The mark at the head of each row says what kind of thing it is, so grouping by kind would repeat what the glyph already says."
+        ),
         variants: [
             DesignVariant(
                 id: "by-kind",
@@ -44,6 +49,11 @@ internal enum InventorySearchExperiments {
             "When a filter is active, does it show as a removable chip above the results, or only "
             + "inside the sheet that set it?",
         subject: SurfaceID(area: "inventory", slug: "search"),
+        status: .decided(
+            variant: "sheet-only",
+            rationale:
+                "Sheet only, with the filter button in Inventory's colour while a filter is active, decided on the device 2026-09-16. A tinted button says something is on without spending a row of chips above every result list."
+        ),
         variants: [
             DesignVariant(
                 id: "chips",
@@ -55,8 +65,8 @@ internal enum InventorySearchExperiments {
                 id: "sheet-only",
                 title: "Sheet only",
                 note:
-                    "Nothing above the list but the filter button itself, filled to say something is "
-                    + "on. Removing one means reopening the sheet.",
+                    "Nothing above the list but the filter button itself, filled and in Inventory's "
+                    + "colour to say something is on. Removing one means reopening the sheet.",
                 surface: surface(showsFilterChips: false)),
         ]
     )

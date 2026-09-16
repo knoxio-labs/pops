@@ -42,8 +42,10 @@ internal struct InventorySearchFilterButton: View {
                 systemName: hasActiveFilters
                     ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle"
             )
+            .foregroundStyle(hasActiveFilters ? Color.popsInventory : Color.popsAccent)
         }
-        .accessibilityLabel("Filter and sort")
+        .accessibilityLabel(
+            hasActiveFilters ? "Filter and sort, a filter is active" : "Filter and sort")
     }
 }
 
