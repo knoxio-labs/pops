@@ -63,6 +63,14 @@ internal struct InventorySymbol: Equatable {
     /// The things waiting for a type. A tray, because it is a pile of work
     /// somebody else clears rather than something to be answered here.
     internal static let waiting = InventorySymbol(system: "tray", lucide: "Inbox")
+    internal static let offline = InventorySymbol(system: "wifi.slash", lucide: "WifiOff")
+    internal static let held = InventorySymbol(system: "pause.circle", lucide: "CirclePause")
+    internal static let media = InventorySymbol(system: "photo.stack", lucide: "Images")
+    internal static let resolved = InventorySymbol(
+        system: "checkmark.circle", lucide: "CircleCheck")
+    internal static let signIn = InventorySymbol(system: "person.badge.key", lucide: "KeyRound")
+    internal static let storage = InventorySymbol(system: "internaldrive", lucide: "HardDrive")
+    internal static let appUpdate = InventorySymbol(system: "arrow.down.app", lucide: "Download")
 
     /// Every entry, for the test that checks them and for the sheet that shows
     /// them side by side.
@@ -98,6 +106,13 @@ internal struct InventorySymbol: Equatable {
         ("Photo", photo),
         ("Update", update),
         ("Waiting for a type", waiting),
+        ("Offline", offline),
+        ("Held", held),
+        ("Staged media", media),
+        ("Resolved", resolved),
+        ("Sign in", signIn),
+        ("Storage", storage),
+        ("App update", appUpdate),
     ]
 
     /// The glyph for a container in a given state.
