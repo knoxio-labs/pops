@@ -78,6 +78,34 @@ internal struct InventoryActionTests {
         #expect(!ids(Fixtures.television).contains("label"))
     }
 
+    @Test("every active item can have its details edited")
+    func editIsAlwaysOffered() {
+        #expect(ids(Fixtures.cable).contains("edit"))
+        #expect(ids(Fixtures.television).contains("edit"))
+        #expect(ids(Fixtures.kitchenBox).contains("edit"))
+    }
+
+    @Test("an item that has no way back is not offered an edit either")
+    func removedItemsCannotBeEdited() {
+        #expect(!ids(Fixtures.kettle).contains("edit"))
+        #expect(!ids(Fixtures.lamp).contains("edit"))
+    }
+
+    @Test("a coded item reprints its own code instead of being labelled afresh")
+    func codedItemReprints() {
+        let actions = InventoryAction.available(for: Fixtures.television, style: defaults)
+        let print = actions.first { $0.id == "print" }
+
+        #expect(print != nil)
+        #expect(print?.note == "Reprints K7Q2")
+        #expect(!actions.map(\.id).contains("label"))
+    }
+
+    @Test("an uncoded item is labelled, never asked to reprint a code it has not got")
+    func uncodedItemHasNothingToReprint() {
+        #expect(!ids(Fixtures.cable).contains("print"))
+    }
+
     @Test("discarding is reversible and is not drawn as destructive")
     func discardIsNotRed() {
         let discard = InventoryAction.available(for: Fixtures.cable, style: defaults).first {
