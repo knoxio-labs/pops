@@ -201,13 +201,13 @@ describe('0067_tag_namespace', () => {
     expect(ruleTagsOf('r-spot')).toEqual(['contains:household']);
   });
 
-  it('rebuilds the vocabulary as the 83 namespaced values', () => {
+  it('rebuilds the vocabulary as the 77 namespaced values', () => {
     seedVocabulary('Bar', 'Groceries', 'Eurovision');
 
     migrate();
 
     const active = activeVocabulary();
-    expect(active).toHaveLength(83);
+    expect(active).toHaveLength(77);
     expect(active).toContain('venue:bar');
     expect(active).toContain('contains:groceries');
     // Values that exist only in the vocabulary are namespaced too.
@@ -221,13 +221,29 @@ describe('0067_tag_namespace', () => {
         tag: string;
       }[]
     ).map((row) => row.tag);
-    expect(deactivated).toEqual(['Bar', 'Eurovision', 'Groceries']);
+    // Deactivated rows are the three flat pre-migration values, plus a fixed
+    // set of personal instance values the historical relabel below still
+    // writes onto a transaction that once carried the matching flat tag —
+    // still written, just no longer offered by a fresh database as active
+    // choices. Pinning by facet rather than by value keeps the assertion from
+    // naming any of them.
+    const flatDeactivated = deactivated.filter((tag) => !tag.includes(':'));
+    const namespacedDeactivated = deactivated.filter((tag) => tag.includes(':'));
+    expect(flatDeactivated).toEqual(['Bar', 'Eurovision', 'Groceries']);
+    expect(namespacedDeactivated).toHaveLength(5);
+    expect(namespacedDeactivated.map((tag) => tag.split(':')[0]).toSorted()).toEqual([
+      'asset',
+      'asset',
+      'hobby',
+      'tax',
+      'trip',
+    ]);
   });
 
   it('seeds the vocabulary into a database that has none', () => {
     migrate();
 
-    expect(activeVocabulary()).toHaveLength(83);
+    expect(activeVocabulary()).toHaveLength(77);
   });
 
   it('preserves the source of a vocabulary value it reactivates', () => {
