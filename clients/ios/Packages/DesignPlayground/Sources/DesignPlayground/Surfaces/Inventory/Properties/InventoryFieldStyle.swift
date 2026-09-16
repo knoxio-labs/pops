@@ -1,5 +1,3 @@
-import SwiftUI
-
 /// The four open questions POPS-4015 leaves, as the knobs a screen turns.
 ///
 /// A choice field's values and a field's unit are declared by the type's code
@@ -44,8 +42,4 @@ internal struct InventoryFieldStyle: Equatable {
     internal var unitPresentation: UnitPresentation = .suffixInField
     internal var driftTreatment: DriftTreatment = .flaggedInline
     internal var validationOutcome: ValidationOutcome = .blocksSave
-}
-
-extension EnvironmentValues {
-    @Entry internal var inventoryFieldStyle = InventoryFieldStyle()
 }

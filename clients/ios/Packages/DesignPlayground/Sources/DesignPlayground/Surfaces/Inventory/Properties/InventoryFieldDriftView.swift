@@ -27,8 +27,23 @@ internal struct InventoryFieldDriftView: View {
             } footer: {
                 Text(footer)
             }
+            Section {
+                InventoryPropertyLine(key: "Recorded against", value: recordedChoices)
+                InventoryPropertyLine(key: "Declared today", value: currentChoices)
+            } header: {
+                Text("What the type asked for, then and now")
+            }
         }
         .playgroundInsetGroupedList()
+    }
+
+    private var recordedChoices: String {
+        InventoryFieldFixtures.driftedBulbField.choices?.joined(separator: ", ") ?? ""
+    }
+
+    private var currentChoices: String {
+        (InventoryPropertyTemplates.bulb.fields.first { $0.key == "Fitting" }?.choices ?? [])
+            .joined(separator: ", ")
     }
 
     private func line(_ property: InventoryProperty) -> some View {

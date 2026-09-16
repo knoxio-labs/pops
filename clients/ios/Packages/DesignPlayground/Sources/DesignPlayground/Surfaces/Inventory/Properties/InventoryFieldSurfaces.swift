@@ -1,5 +1,3 @@
-import SwiftUI
-
 /// The surface POPS-4015's four experiments are staged against.
 ///
 /// One surface, four states, each answering one question at its default
