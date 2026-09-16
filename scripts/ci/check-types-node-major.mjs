@@ -5,7 +5,7 @@
  * type declarations for it).
  *
  * POPS-1926 pinned every workspace package's `@types/node` to the major the
- * fleet actually runs — `^24.13.3` today, both in `pnpm-workspace.yaml`'s
+ * fleet actually runs — `^24.13.4` today, both in `pnpm-workspace.yaml`'s
  * `overrides` and in the root `package.json`'s own `devDependencies`. Nothing
  * enforced that a package added AFTERWARDS keeps it. `libs/contract-openapi`
  * (POPS-2057, PR #4088) was authored before that pin merged and declared
