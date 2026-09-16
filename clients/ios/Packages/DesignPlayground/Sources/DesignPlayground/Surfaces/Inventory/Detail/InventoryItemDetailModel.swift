@@ -21,8 +21,6 @@ internal struct InventoryDetailField: Identifiable, Equatable {
     internal let value: String
 
     internal var id: String { key }
-
-    internal static let notSet = "Not set"
 }
 
 /// A photograph as the gallery holds it, or the reason it cannot show one.

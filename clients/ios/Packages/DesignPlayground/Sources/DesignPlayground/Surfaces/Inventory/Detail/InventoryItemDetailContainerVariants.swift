@@ -21,7 +21,7 @@ internal struct InventoryItemDetailContentsSwap: View {
             .pickerStyle(.segmented)
         }
         if showingContents {
-            Section("Contents") {
+            Section("\(summary.itemCount) items") {
                 ForEach(contents) { InventoryItemRow(item: $0) }
             }
         }

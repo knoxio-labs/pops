@@ -16,6 +16,11 @@ internal enum InventoryItemDetailExperiments {
             "Should every section always appear, or should an empty one disappear and a "
             + "well-documented item's sections reorder toward what it actually has?",
         subject: subject,
+        status: .decided(
+            variant: "richness-adaptive",
+            rationale:
+                "Richness-adaptive, decided on the device 2026-09-16. Sections appear as they are needed, and all of them appear while editing, the way the iOS Contacts app does it."
+        ),
         variants: [
             variant(
                 "fixed-order", "Fixed order",
@@ -36,6 +41,11 @@ internal enum InventoryItemDetailExperiments {
         id: "item-detail-action-placement",
         question: "Does the placement action live in the header or in a persistent bottom bar?",
         subject: subject,
+        status: .decided(
+            variant: "header",
+            rationale:
+                "In the header, side by side, decided on the device 2026-09-16. The verbs sit beside the identity they act on, and a type's capabilities add theirs to the same row."
+        ),
         variants: [
             variant(
                 "header", "In the header",
@@ -54,6 +64,11 @@ internal enum InventoryItemDetailExperiments {
         question:
             "Do provenance, documents and activity expand in place, or push to their own screen?",
         subject: subject,
+        status: .decided(
+            variant: "inline",
+            rationale:
+                "Inline, decided on the device 2026-09-16. Provenance and documents expand in place."
+        ),
         variants: [
             variant(
                 "inline", "Inline, expandable",
@@ -74,6 +89,11 @@ internal enum InventoryItemDetailExperiments {
             "How does a container-capable item's page extend an ordinary item's, without becoming "
             + "an unrelated design?",
         subject: subject,
+        status: .decided(
+            variant: "appended-section",
+            rationale:
+                "One section, appended, decided on the device 2026-09-16. A capability contributes header actions and page sections and nothing else, so a container's page is an item's page with open, close and its contents inlined."
+        ),
         variants: [
             variant(
                 "appended-section", "One section, appended",
