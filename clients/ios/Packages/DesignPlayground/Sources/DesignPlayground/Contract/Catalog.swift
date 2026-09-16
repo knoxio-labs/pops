@@ -50,6 +50,7 @@ internal enum Catalog {
         + [PurchaseDetailSurfaces.surface]
         + ReceiptSurfaces.surfaces
         + InventorySurfaces.surfaces
+        + InventoryPropertySurfaces.surfaces
         + AccountsSurfaces.surfaces
         + PairingSurfaces.surfaces
 

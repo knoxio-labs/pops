@@ -16,5 +16,6 @@ internal enum ExperimentCatalog {
     /// and what the length limits allow, and the areas are where it wanted to
     /// come apart.
     internal static let all: [DesignExperiment] =
-        InventoryExperiments.all + PurchasesExperiments.all + AccountsExperiments.all
+        InventoryExperiments.all + InventoryPropertyExperiment.all + PurchasesExperiments.all
+        + AccountsExperiments.all
 }
