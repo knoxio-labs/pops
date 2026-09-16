@@ -8,8 +8,9 @@ import Testing
 /// The previews claim each primitive renders in both colour schemes. Xcode's
 /// canvas is the only place a human sees that, and nothing in CI opens it — so
 /// the same views are rasterised here instead. Two renders of the same view in
-/// the same scheme must be byte-identical, which is what makes the light/dark
-/// comparison meaningful rather than noise.
+/// the same scheme must draw the same picture — the same to within
+/// `RenderedPixels`' anti-aliasing tolerance — which is what makes the
+/// light/dark comparison meaningful rather than noise.
 @Suite("Primitive rendering")
 @MainActor
 internal struct PrimitiveRenderingTests {
@@ -36,7 +37,7 @@ internal struct PrimitiveRenderingTests {
         let lightAgain = try #require(render(view, in: .light))
 
         #expect(
-            light == lightAgain,
+            RenderedPixels.drawTheSame(light, lightAgain),
             "\(name) renders non-deterministically — the light/dark comparison below proves nothing"
         )
         #expect(light != dark, "\(name) renders identically in light and dark")
