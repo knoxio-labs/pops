@@ -47,6 +47,14 @@ internal struct InventorySymbol: Equatable {
     internal static let lost = InventorySymbol(
         system: "questionmark.circle", lucide: "CircleQuestionMark")
     internal static let destroyed = InventorySymbol(system: "xmark.octagon", lucide: "OctagonX")
+    internal static let edit = InventorySymbol(system: "pencil", lucide: "Pencil")
+    internal static let printLabel = InventorySymbol(system: "printer", lucide: "Printer")
+    internal static let search = InventorySymbol(system: "magnifyingglass", lucide: "Search")
+    internal static let addNew = InventorySymbol(system: "plus", lucide: "Plus")
+    internal static let pickExisting = InventorySymbol(
+        system: "checklist", lucide: "ListChecks")
+    internal static let capability = InventorySymbol(system: "switch.2", lucide: "ToggleRight")
+    internal static let photo = InventorySymbol(system: "photo", lucide: "Image")
 
     /// Every entry, for the test that checks them and for the sheet that shows
     /// them side by side.
@@ -56,7 +64,9 @@ internal struct InventorySymbol: Equatable {
         ("Inventory code", code), ("Queued", queued), ("Synced", synced), ("Stale", stale),
         ("Needs attention", attention), ("Move", move), ("Split", split), ("Label", label),
         ("Seal", seal), ("Close", close), ("Restore", restore), ("Discard", discard),
-        ("Retired", retired), ("Lost", lost), ("Destroyed", destroyed),
+        ("Retired", retired), ("Lost", lost), ("Destroyed", destroyed), ("Edit", edit),
+        ("Print label", printLabel), ("Search", search), ("Add new", addNew),
+        ("Pick existing", pickExisting), ("Containment capability", capability), ("Photo", photo),
     ]
 
     /// The glyph for a container in a given state.

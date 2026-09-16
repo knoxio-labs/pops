@@ -119,14 +119,21 @@ internal struct InventoryAction: Identifiable, Equatable {
     }
 
     private static func recordActions(_ item: InventoryFoundationItem) -> [InventoryAction] {
-        var actions: [InventoryAction] = []
+        var actions: [InventoryAction] = [
+            InventoryAction("edit", "Edit details", symbol: .edit, heading: .record)
+        ]
         if item.quantity.count > 1 {
             actions.append(
                 InventoryAction(
                     "split", "Split", symbol: .split, heading: .record,
                     note: "Move some of the \(item.quantity.count) into a separate group"))
         }
-        if item.code == nil {
+        if let code = item.code {
+            actions.append(
+                InventoryAction(
+                    "print", "Print label", symbol: .printLabel, heading: .record,
+                    note: "Reprints \(code)"))
+        } else {
             actions.append(InventoryAction("label", "Label", symbol: .label, heading: .record))
         }
         return actions
