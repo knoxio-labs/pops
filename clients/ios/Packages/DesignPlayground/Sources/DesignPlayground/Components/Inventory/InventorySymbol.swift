@@ -55,18 +55,49 @@ internal struct InventorySymbol: Equatable {
         system: "checklist", lucide: "ListChecks")
     internal static let capability = InventorySymbol(system: "switch.2", lucide: "ToggleRight")
     internal static let photo = InventorySymbol(system: "photo", lucide: "Image")
+    /// A type arriving with a release, which is the only way one arrives
+    /// (ADR-001). A download rather than a cloud, because nothing is fetched:
+    /// the type was in the app before the phone noticed what it covers.
+    internal static let update = InventorySymbol(
+        system: "arrow.down.circle", lucide: "ArrowDownToLine")
+    /// The things waiting for a type. A tray, because it is a pile of work
+    /// somebody else clears rather than something to be answered here.
+    internal static let waiting = InventorySymbol(system: "tray", lucide: "Inbox")
 
     /// Every entry, for the test that checks them and for the sheet that shows
     /// them side by side.
     internal static let all: [(name: String, symbol: InventorySymbol)] = [
-        ("Item", item), ("Open container", openContainer), ("Closed container", closedContainer),
-        ("Location", location), ("In hand", inHand), ("Activity", activity), ("Repair", repair),
-        ("Inventory code", code), ("Queued", queued), ("Synced", synced), ("Stale", stale),
-        ("Needs attention", attention), ("Move", move), ("Split", split), ("Label", label),
-        ("Seal", seal), ("Close", close), ("Restore", restore), ("Discard", discard),
-        ("Retired", retired), ("Lost", lost), ("Destroyed", destroyed), ("Edit", edit),
-        ("Print label", printLabel), ("Search", search), ("Add new", addNew),
-        ("Pick existing", pickExisting), ("Containment capability", capability), ("Photo", photo),
+        ("Item", item),
+        ("Open container", openContainer),
+        ("Closed container", closedContainer),
+        ("Location", location),
+        ("In hand", inHand),
+        ("Activity", activity),
+        ("Repair", repair),
+        ("Inventory code", code),
+        ("Queued", queued),
+        ("Synced", synced),
+        ("Stale", stale),
+        ("Needs attention", attention),
+        ("Move", move),
+        ("Split", split),
+        ("Label", label),
+        ("Seal", seal),
+        ("Close", close),
+        ("Restore", restore),
+        ("Discard", discard),
+        ("Retired", retired),
+        ("Lost", lost),
+        ("Destroyed", destroyed),
+        ("Edit", edit),
+        ("Print label", printLabel),
+        ("Search", search),
+        ("Add new", addNew),
+        ("Pick existing", pickExisting),
+        ("Containment capability", capability),
+        ("Photo", photo),
+        ("Update", update),
+        ("Waiting for a type", waiting),
     ]
 
     /// The glyph for a container in a given state.
