@@ -19,7 +19,7 @@
  * enforces that both ways round.
  */
 
-import { CORE_SCHEMA, load as loadYaml } from 'js-yaml';
+import { CORE_SCHEMA, loadAll as loadYamlAll } from 'js-yaml';
 import { parse as parseTomlSource } from 'smol-toml';
 
 /**
@@ -61,7 +61,17 @@ export class ConfigParseError extends Error {
  */
 export function parseYaml(text, label) {
   try {
-    return loadYaml(text, { schema: CORE_SCHEMA });
+    // js-yaml 5's `load` throws on an empty source instead of returning
+    // `undefined` (v4's behaviour, which `config-parse.test.ts` pins as a
+    // null document, not a parse failure). `loadAll` still reports it as
+    // zero documents, so read through that and keep the empty-is-null
+    // contract instead of inheriting the new exception.
+    const documents = loadYamlAll(text, { schema: CORE_SCHEMA });
+    if (documents.length === 0) return null;
+    if (documents.length > 1) {
+      throw new Error('expected a single document in the stream, but found more');
+    }
+    return documents[0];
   } catch (error) {
     throw new ConfigParseError(label, error);
   }
