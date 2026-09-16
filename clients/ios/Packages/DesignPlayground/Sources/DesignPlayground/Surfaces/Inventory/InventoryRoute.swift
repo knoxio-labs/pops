@@ -16,7 +16,22 @@ internal enum InventoryRoute: Hashable {
 internal struct InventoryDestinationView: View {
     internal let route: InventoryRoute
 
-    internal var body: some View {
+    @ViewBuilder internal var body: some View {
+        switch route {
+        case .items:
+            InventoryRecordBrowseView(kind: .item).navigationTitle(title)
+        case .containers:
+            InventoryRecordBrowseView(kind: .container).navigationTitle(title)
+        case .locations:
+            InventoryLocationsBrowseView().navigationTitle(title)
+        case .scan:
+            InventoryScanView()
+        case .search, .container, .item, .activity, .syncRepair:
+            placeholder
+        }
+    }
+
+    private var placeholder: some View {
         List {
             Section {
                 Label(detail, systemImage: symbol)

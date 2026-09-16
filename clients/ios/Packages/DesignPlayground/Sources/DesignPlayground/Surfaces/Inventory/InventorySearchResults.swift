@@ -1,108 +1,175 @@
 import DesignSystem
 import SwiftUI
 
-internal struct InventorySearchResult: Identifiable, Equatable {
-    internal let id: String
-    internal let title: String
-    internal let detail: String
-    internal let symbol: String
-    internal let route: InventoryRoute
+/// One row in the ranked layout, where an item, a container and a location
+/// share a list with no headers between them.
+private enum InventorySearchRankedRow: Identifiable {
+    case match(InventorySearchMatch)
+    case location(InventoryLocationRecord)
+
+    fileprivate var id: String {
+        switch self {
+        case .match(let match): "match-\(match.id)"
+        case .location(let location): "location-\(location.id)"
+        }
+    }
 }
 
+/// Global Inventory search: the active-search surface for typing, the
+/// default screen before anything is typed, and every non-ordinary
+/// condition, offline, stale, syncing, first sync required, filtered to
+/// nothing.
+///
+/// A view rather than a fixed catalogue lookup, so the search tab and every
+/// gallery state run the same matching and grouping code the real feature
+/// would.
 internal struct InventorySearchResults: View {
-    internal let fixture: InventoryDashboardFixture
     internal let query: String
+    internal var syncState: InventorySyncState = .current
+    internal var isFirstRun = false
+    internal var isIndexing = false
+    internal var groupingStyle: InventorySearchGroupingStyle = .byKind
+    internal var showsFilterChips = true
+    internal var onSelectQuery: (String) -> Void = { _ in }
+
+    @State private var activeFilters: Set<InventorySearchFilter>
+    @State private var sort: InventorySearchSort = .relevance
+    @State private var showingFilters = false
+
+    internal init(
+        query: String,
+        syncState: InventorySyncState = .current,
+        isFirstRun: Bool = false,
+        isIndexing: Bool = false,
+        groupingStyle: InventorySearchGroupingStyle = .byKind,
+        presetFilters: Set<InventorySearchFilter> = [],
+        showsFilterChips: Bool = true,
+        onSelectQuery: @escaping (String) -> Void = { _ in }
+    ) {
+        self.query = query
+        self.syncState = syncState
+        self.isFirstRun = isFirstRun
+        self.isIndexing = isIndexing
+        self.groupingStyle = groupingStyle
+        self.showsFilterChips = showsFilterChips
+        self.onSelectQuery = onSelectQuery
+        _activeFilters = State(initialValue: presetFilters)
+    }
 
     internal var body: some View {
-        Group {
-            if fixture.isFirstRun {
-                ContentUnavailableView(
-                    "Inventory is not on this phone",
-                    systemImage: "shippingbox.and.arrow.backward",
-                    description: Text("Start synchronization from the Inventory tab."))
-            } else if query.isEmpty {
-                List(recentResults) { result in
-                    resultLink(result)
+        content
+            .environment(\.inventoryStyle, InventoryFoundationStyle(syncVisibility: .everything))
+            .navigationDestination(for: InventoryRoute.self) { InventoryDestinationView(route: $0) }
+            .playgroundTrailingBarItem {
+                InventorySearchFilterButton(hasActiveFilters: !activeFilters.isEmpty) {
+                    showingFilters = true
                 }
-                .playgroundInsetGroupedList()
-            } else if matchingResults.isEmpty {
-                ContentUnavailableView.search(text: query)
+            }
+            .sheet(isPresented: $showingFilters) {
+                NavigationStack {
+                    InventorySearchFilterSheet(activeFilters: $activeFilters, sort: $sort)
+                }
+            }
+    }
+
+    @ViewBuilder private var content: some View {
+        if isFirstRun {
+            InventoryStateNotice(kind: .unavailable)
+        } else if isIndexing {
+            InventoryStateNotice(kind: .loading)
+        } else if trimmedQuery.isEmpty {
+            defaultList
+        } else if rawMatches.isEmpty && matchingLocations.isEmpty {
+            ContentUnavailableView.search(text: query)
+        } else if filteredMatches.isEmpty && matchingLocations.isEmpty {
+            filteredEmptyView
+        } else {
+            resultsList
+        }
+    }
+
+    private var trimmedQuery: String { query.trimmingCharacters(in: .whitespacesAndNewlines) }
+
+    private var rawMatches: [InventorySearchMatch] {
+        InventorySearchEngine.search(query, in: InventorySearchFixtures.records)
+    }
+
+    private var filteredMatches: [InventorySearchMatch] {
+        guard !activeFilters.isEmpty else { return rawMatches }
+        return rawMatches.filter { match in activeFilters.allSatisfy { $0.matches(match.record) } }
+    }
+
+    private var matchingLocations: [InventoryLocationRecord] {
+        InventorySearchFixtures.locations.filter { $0.matches(trimmedQuery) }
+    }
+
+    private var groups: [InventorySearchGroup] {
+        InventorySearchGrouping.groups(
+            for: filteredMatches.sorted(by: sort), locations: matchingLocations,
+            style: groupingStyle)
+    }
+
+    private var rankedRows: [InventorySearchRankedRow] {
+        filteredMatches.sorted(by: sort).map(InventorySearchRankedRow.match)
+            + matchingLocations.map(InventorySearchRankedRow.location)
+    }
+
+    private var defaultList: some View {
+        List {
+            InventoryRecentSearches(
+                queries: InventorySearchFixtures.recentQueries,
+                scanned: InventorySearchFixtures.recentlyScanned,
+                onSelectQuery: onSelectQuery)
+        }
+        .playgroundInsetGroupedList()
+    }
+
+    private var filteredEmptyView: some View {
+        InventoryFilteredEmptyView(
+            matchCount: rawMatches.count, query: query, onClear: { activeFilters = [] })
+    }
+
+    @ViewBuilder private var resultsList: some View {
+        List {
+            InventorySearchSyncBanner(syncState: syncState)
+            if showsFilterChips && !activeFilters.isEmpty {
+                InventorySearchFilterChips(
+                    filters: activeFilters, onRemove: { activeFilters.remove($0) }
+                )
+                .listRowSeparator(.hidden)
+            }
+            if groupingStyle == .ranked {
+                Section { rankedRowsContent }
             } else {
-                List(matchingResults) { result in
-                    resultLink(result)
+                ForEach(groups) { group in
+                    Section {
+                        groupContent(group)
+                    } header: {
+                        InventorySearchGroupHeader(group: group)
+                    }
                 }
-                .playgroundInsetGroupedList()
             }
         }
-        .navigationDestination(for: InventoryRoute.self) { route in
-            InventoryDestinationView(route: route)
-        }
+        .playgroundInsetGroupedList()
+        .tint(.popsInventory)
     }
 
-    internal var matchingResults: [InventorySearchResult] {
-        let search = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !search.isEmpty else { return recentResults }
-        return allResults.filter { result in
-            result.title.localizedCaseInsensitiveContains(search)
-                || result.detail.localizedCaseInsensitiveContains(search)
-        }
-    }
-
-    private var recentResults: [InventorySearchResult] {
-        fixture.recentItems.map(itemResult)
-    }
-
-    private var allResults: [InventorySearchResult] {
-        let items = uniqueItems.map(itemResult)
-        let containers = fixture.containers.map { container in
-            InventorySearchResult(
-                id: "container-\(container.id)",
-                title: container.name,
-                detail: "Container · \(container.location)",
-                symbol: "shippingbox",
-                route: .container(container.id))
-        }
-        let locations = Set(fixture.containers.map(\.location)).sorted().map { location in
-            InventorySearchResult(
-                id: "location-\(location)",
-                title: location,
-                detail: "Location",
-                symbol: "house",
-                route: .locations)
-        }
-        return items + containers + locations
-    }
-
-    private var uniqueItems: [InventoryItem] {
-        var seen = Set<String>()
-        return (fixture.inHand + fixture.recentItems).filter { seen.insert($0.id).inserted }
-    }
-
-    private func itemResult(_ item: InventoryItem) -> InventorySearchResult {
-        InventorySearchResult(
-            id: "item-\(item.id)",
-            title: item.name,
-            detail: item.detail,
-            symbol: item.symbol,
-            route: .item(item.id))
-    }
-
-    private func resultLink(_ result: InventorySearchResult) -> some View {
-        NavigationLink(value: result.route) {
-            Label {
-                VStack(alignment: .leading, spacing: PopsSpacing.xs) {
-                    Text(result.title)
-                        .font(.popsHeadline)
-                        .foregroundStyle(Color.popsForeground)
-                    Text(result.detail)
-                        .font(.popsCaption)
-                        .foregroundStyle(Color.popsMutedForeground)
-                }
-            } icon: {
-                Image(systemName: result.symbol)
-                    .foregroundStyle(Color.popsAccent)
-                    .frame(minWidth: PopsSize.touchTarget, minHeight: PopsSize.touchTarget)
+    @ViewBuilder private var rankedRowsContent: some View {
+        ForEach(rankedRows) { row in
+            switch row {
+            case .match(let match): InventorySearchResultRow(match: match)
+            case .location(let location): InventorySearchLocationRow(location: location)
             }
+        }
+    }
+
+    @ViewBuilder
+    private func groupContent(_ group: InventorySearchGroup) -> some View {
+        switch group {
+        case .items(let matches), .containers(let matches):
+            ForEach(matches) { InventorySearchResultRow(match: $0) }
+        case .locations(let locations):
+            ForEach(locations) { InventorySearchLocationRow(location: $0) }
         }
     }
 }

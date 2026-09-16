@@ -28,9 +28,12 @@ internal struct InventoryShellView: View {
             }
             Tab(value: Self.searchTab, role: .search) {
                 NavigationStack {
-                    InventorySearchResults(fixture: fixture, query: query)
-                        .navigationTitle("Search")
-                        .playgroundTitleDisplay(large: false)
+                    InventorySearchResults(
+                        query: query, syncState: fixture.sync, isFirstRun: fixture.isFirstRun,
+                        onSelectQuery: { query = $0 }
+                    )
+                    .navigationTitle("Search")
+                    .playgroundTitleDisplay(large: false)
                 }
             }
         }
