@@ -59,7 +59,7 @@ internal enum InventoryContainerSurfaces {
     private static let defaultStyle = InventoryContainerStyle()
 
     @MainActor internal static let browser = DesignSurface(
-        id: SurfaceID(area: "inventory", slug: "containers"),
+        id: SurfaceID(area: "inventory", slug: "container-browser"),
         title: "Containers",
         synopsis: "Every container-capable item, sectioned by whether it can still be added to.",
         chrome: .navigationLarge,
