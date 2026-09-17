@@ -45,7 +45,7 @@
     "verify:manifest": "tsx scripts/verify-manifest.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.124.0",
+    "@anthropic-ai/sdk": "^0.125.0",
     "@pops/ai-telemetry": "workspace:*",
     "@pops/pillar-express": "workspace:*",
     "@pops/pillar-sdk": "workspace:*",
@@ -59,13 +59,13 @@
     "express": "^5.1.0",
     "papaparse": "^5.7.0",
     "sharp": "^0.35.4",
-    "zod": "^4.5.4"
+    "zod": "^4.6.2"
   },
   "devDependencies": {
     "@pops/contract-openapi": "workspace:*",
     "@types/better-sqlite3": "^7.6.12",
     "@types/express": "^5.0.4",
-    "@types/node": "^24.13.3",
+    "@types/node": "^24.13.4",
     "@types/papaparse": "^5.5.2",
     "@types/supertest": "^7.2.1",
     "@vitest/coverage-v8": "^4.1.10",

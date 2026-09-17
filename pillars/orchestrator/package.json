@@ -15,11 +15,11 @@
     "@pops/pillar-sdk": "workspace:*",
     "@pops/types": "workspace:*",
     "express": "^5.1.0",
-    "zod": "^4.5.4"
+    "zod": "^4.6.2"
   },
   "devDependencies": {
     "@types/express": "^5.0.4",
-    "@types/node": "^24.13.3",
+    "@types/node": "^24.13.4",
     "@types/supertest": "^7.2.1",
     "@vitest/coverage-v8": "^4.1.10",
     "supertest": "^7.1.4",

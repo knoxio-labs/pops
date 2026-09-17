@@ -31,10 +31,10 @@
     "@ts-rest/core": "3.53.0-rc.1",
     "bullmq": "^6.3.4",
     "ioredis": "^5.11.0",
-    "zod": "^4.5.4"
+    "zod": "^4.6.2"
   },
   "devDependencies": {
-    "@types/node": "^24.13.3",
+    "@types/node": "^24.13.4",
     "@vitest/coverage-v8": "^4.1.10",
     "typescript": "^6.0.3",
     "vitest": "^4.1.11"

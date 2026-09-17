@@ -223,7 +223,7 @@ describe('the guard as CI runs it', () => {
     const rootManifest = JSON.parse(readFileSync('package.json', 'utf8')) as {
       devDependencies?: Record<string, string>;
     };
-    expect(rootManifest.devDependencies?.['@types/node']).toBe('^24.13.3');
+    expect(rootManifest.devDependencies?.['@types/node']).toBe('^24.13.4');
     expect(typesNodeMajor(rootManifest.devDependencies?.['@types/node'] ?? '')).toBe('24');
   });
 });
