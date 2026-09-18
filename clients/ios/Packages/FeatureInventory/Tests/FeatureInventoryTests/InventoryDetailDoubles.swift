@@ -76,6 +76,7 @@ internal struct InventoryHistoryOverlay: InventoryQuerySource {
     }
     func inventoryInHand() -> [InventoryItem] { base.inventoryInHand() }
     func inventoryOpenContainers() -> [InventoryItem] { base.inventoryOpenContainers() }
+    func inventoryContainers() -> [InventoryItem] { base.inventoryContainers() }
     func inventoryRecents(limit: Int) -> [InventoryItem] { base.inventoryRecents(limit: limit) }
     func inventoryRecentEvents(limit: Int) -> [InventoryEvent] {
         base.inventoryRecentEvents(limit: limit)

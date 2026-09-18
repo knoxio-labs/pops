@@ -25,7 +25,6 @@ internal struct InventorySymbol: Hashable, Sendable {
     internal static let openContainer = InventorySymbol(system: "shippingbox")
     internal static let closedContainer = InventorySymbol(system: "shippingbox.fill")
     internal static let location = InventorySymbol(system: "house")
-    internal static let inHand = InventorySymbol(system: "hand.raised")
     internal static let queued = InventorySymbol(system: "icloud.and.arrow.up")
     internal static let synced = InventorySymbol(system: "checkmark.icloud")
     internal static let stale = InventorySymbol(system: "exclamationmark.triangle")
@@ -35,20 +34,15 @@ internal struct InventorySymbol: Hashable, Sendable {
     /// Out of a container and onto the place the container stands, which is
     /// not the same as Pick up: nothing ends up in hand.
     internal static let takeOut = InventorySymbol(system: "tray.and.arrow.up")
-    internal static let label = InventorySymbol(system: "tag")
     /// Open and Close are one pair: the box each verb leaves behind, opened
     /// or shut, with no arrows. SF Symbols has no opened box, so Open is
     /// `shippingbox` rebuilt with its flaps folded out, at the same weights,
     /// and ships in this package's asset catalogue.
     internal static let open = InventorySymbol(system: "shippingbox.open", isCustom: true)
-    internal static let close = InventorySymbol(system: "shippingbox")
     internal static let restore = InventorySymbol(system: "arrow.uturn.backward")
-    internal static let discard = InventorySymbol(system: "trash")
-    internal static let retired = InventorySymbol(system: "archivebox")
     internal static let search = InventorySymbol(system: "magnifyingglass")
     internal static let scan = InventorySymbol(system: "qrcode.viewfinder")
     internal static let dictate = InventorySymbol(system: "mic")
-    internal static let addNew = InventorySymbol(system: "plus")
     internal static let storeHere = InventorySymbol(system: "square.and.arrow.down")
     internal static let rename = InventorySymbol(system: "pencil")
     internal static let manage = InventorySymbol(system: "ellipsis.circle")

@@ -38,11 +38,6 @@ extension View {
         modifier(InventoryMotionModifier(animation: animation, value: value))
     }
 
-    /// Fades the view in the first time it appears, and shows it at once
-    /// under Reduce Motion.
-    internal func inventoryFadeIn() -> some View {
-        modifier(InventoryFadeInModifier())
-    }
 }
 
 private struct InventoryMotionModifier<Value: Equatable>: ViewModifier {
@@ -52,19 +47,5 @@ private struct InventoryMotionModifier<Value: Equatable>: ViewModifier {
 
     func body(content: Content) -> some View {
         content.animation(reduceMotion ? nil : animation, value: value)
-    }
-}
-
-private struct InventoryFadeInModifier: ViewModifier {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var shown = false
-
-    func body(content: Content) -> some View {
-        content
-            .opacity(shown || reduceMotion ? 1 : 0)
-            .onAppear {
-                guard !shown else { return }
-                withAnimation(reduceMotion ? nil : InventoryMotion.smooth) { shown = true }
-            }
     }
 }
