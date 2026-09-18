@@ -89,7 +89,7 @@ internal struct InventoryInHandRowLabel: View {
     }
 
     /// The row's second line: where it came from, or why Put back is gone.
-    internal static func fromLine(_ previous: InventoryPreviousPlace) -> String {
+    nonisolated internal static func fromLine(_ previous: InventoryPreviousPlace) -> String {
         switch previous {
         case .place(let name, _): "From \(name)"
         case .deleted: "Previous place deleted"
