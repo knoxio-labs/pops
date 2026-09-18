@@ -1,83 +1,33 @@
-/// How an item says what it can do.
+/// How an item says what it can do, settled on the device for templates.
 ///
-/// The five answers are not five layouts — they are four different things for
-/// the catalogue to be. Each is staged across the same eleven steps
-/// (``InventoryPropertyStaging/steps``) on the same fixtures, because the
-/// approaches separate at the edges rather than on a well-filled cable: what
-/// creating something uncategorised feels like, what happens to a fact the
-/// template never asked for, and whether "every cable that carries at least
-/// 30 W" is a search anybody can write.
+/// Staged on New item's typed state, where a type's template brings its fields.
 internal enum InventoryPropertyExperiment {
     @MainActor internal static let all: [DesignExperiment] = [
         DesignExperiment(
             id: "inventory-item-properties",
             question:
-                "How should an item record what it can do — fixed templates per category, free typed "
+                "How should an item record what it can do, fixed templates per category, free typed "
                 + "key/values, tags and prose, a template that suggests without binding, or one read "
                 + "off what similar items already record?",
-            subject: SurfaceID(area: "inventory", slug: "item"),
+            subject: InventoryCreationSurfaces.createID,
             status: .decided(
                 variant: "templates",
                 rationale:
-                    "Templates, decided on the device 2026-09-16. Observed was the better answer to "
-                    + "who writes the types, and it turned out not to be one: its cluster is keyed on "
-                    + "a category somebody still types, so it removed field definitions and never type "
-                    + "definitions. Three of its consequences decided it. A key that becomes popular "
-                    + "retroactively blanks every item filed before it, with nothing to separate "
-                    + "\"never asked\" from \"does not apply\". An item filed with no type sits outside "
-                    + "every type-based search and nothing chases it. And a field's unit and choice "
-                    + "values had nowhere to come from at all, which is the hole all five variants "
-                    + "shared. Defining every type up front makes drift impossible by construction "
-                    + "rather than correctable after the fact, and moves the remaining work to a "
-                    + "type-authoring surface — a screen worth designing, rather than a problem worth "
-                    + "inferring around."),
+                    "Decided by Joao on the device, 2026-09-16: templates. Observed was the better "
+                    + "answer to who writes the types, and it turned out not to be one: its cluster is "
+                    + "keyed on a category somebody still types, so it removed field definitions and "
+                    + "never type definitions. A key that becomes popular retroactively blanks every "
+                    + "item filed before it, an item filed with no type sits outside every type-based "
+                    + "search, and a field's unit and choice values had nowhere to come from at all. "
+                    + "Defining every type up front makes drift impossible by construction rather "
+                    + "than correctable after the fact."),
             variants: [
                 DesignVariant(
                     id: "templates",
                     title: "Templates",
                     note:
-                        "A category owns a fixed set of fields. Everything agrees; a fact the template "
-                        + "never asked for has nowhere to go but the note.",
-                    surface: InventoryPropertyStaging.surface {
-                        InventoryTemplateVariantView(step: $0)
-                    }),
-                DesignVariant(
-                    id: "properties",
-                    title: "Key/value",
-                    note:
-                        "Any typed key on any item, no categories. Nothing is ever refused, and nothing "
-                        + "makes two cables use the same word for length.",
-                    surface: InventoryPropertyStaging.surface {
-                        InventoryKeyValueVariantView(step: $0)
-                    }),
-                DesignVariant(
-                    id: "tags",
-                    title: "Tags and prose",
-                    note:
-                        "Capabilities in words and a description. Fastest to write, best for the "
-                        + "sideboard, and \"at least 30 W\" cannot be asked at all.",
-                    surface: InventoryPropertyStaging.surface {
-                        InventoryTagsVariantView(step: $0)
-                    }),
-                DesignVariant(
-                    id: "hybrid",
-                    title: "Hybrid",
-                    note:
-                        "The template suggests fields and custom keys are first-class. Two kinds of "
-                        + "property on one screen is the cost to look at.",
-                    surface: InventoryPropertyStaging.surface {
-                        InventoryHybridVariantView(step: $0)
-                    }),
-                DesignVariant(
-                    id: "observed",
-                    title: "Observed",
-                    note:
-                        "The template is read off the catalogue rather than authored: the fields are "
-                        + "what four other cables already record. Nothing to set up, and the shape "
-                        + "moves under you.",
-                    surface: InventoryPropertyStaging.surface {
-                        InventoryObservedVariantView(step: $0)
-                    }),
+                        "A type owns a fixed set of fields, and choosing the type brings them into the form.",
+                    surface: InventoryCreationSurfaces.create(opening: "typed"))
             ]
         )
     ]

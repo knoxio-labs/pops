@@ -1,7 +1,7 @@
 /// The rules the property vocabulary has, as opposed to the shapes it has.
 ///
 /// These are here rather than inside a view because every one of them is a
-/// question the experiment has to answer visibly — what counts as the same
+/// question the experiment has to answer visibly, what counts as the same
 /// key, what a template change does to data the new template did not ask for,
 /// what search can and cannot reach. A screen that decides one of them in a
 /// `ForEach` has decided it invisibly.
@@ -9,7 +9,7 @@ internal enum InventoryPropertySchema {
     /// Two keys are the same key when they differ only in case, surrounding
     /// space, inner spacing, or a hyphen where a space would do.
     ///
-    /// The alternative — exact strings — gives a catalogue "Length", "length"
+    /// The alternative, exact strings, gives a catalogue "Length", "length"
     /// and "Cable length " as three properties, which is the failure mode that
     /// turns structured data back into notes.
     internal static func normalized(_ key: String) -> String {
@@ -34,41 +34,6 @@ internal enum InventoryPropertySchema {
         -> [InventoryProperty]
     {
         properties.filter { !$0.value.hasSupportedUnit }
-    }
-}
-
-/// What changing an object's template does to what it already knows.
-///
-/// A template change that drops data is the reason people stop trusting
-/// templates, so nothing here drops any: a value the new template did not ask
-/// for survives as a custom property and says so.
-internal struct InventoryTemplateChange: Equatable {
-    /// Values the new template asked for, now belonging to it.
-    internal let kept: [InventoryProperty]
-    /// Values the new template did not ask for, kept as custom properties.
-    internal let carriedAsCustom: [InventoryProperty]
-    /// Fields the new template asks for that nothing has filled in.
-    internal let blankFields: [InventoryTemplateField]
-
-    internal init(thing: InventoryThing, changingTo template: InventoryTemplate) {
-        let wanted = Set(template.fields.map(\.id))
-        var kept: [InventoryProperty] = []
-        var carried: [InventoryProperty] = []
-
-        for property in thing.properties {
-            if property.origin == .custom {
-                carried.append(property)
-            } else if wanted.contains(property.id) {
-                kept.append(InventoryProperty(property.key, property.value, origin: .template))
-            } else {
-                carried.append(InventoryProperty(property.key, property.value, origin: .custom))
-            }
-        }
-
-        let filled = Set((kept + carried).map(\.id))
-        self.kept = kept
-        self.carriedAsCustom = carried
-        self.blankFields = template.fields.filter { !filled.contains($0.id) }
     }
 }
 

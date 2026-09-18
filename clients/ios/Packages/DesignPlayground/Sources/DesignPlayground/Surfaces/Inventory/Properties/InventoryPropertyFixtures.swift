@@ -139,7 +139,7 @@ internal enum InventoryPropertyFixtures {
         ]
     )
 
-    /// The cables live next door — there are four of them and they carry the
+    /// The cables live next door, there are four of them and they carry the
     /// drift, which is more than a fixtures file can hold alongside everything
     /// else. The ones named through here are the ones something outside the
     /// cable set asks for by name; the rest arrive via `all`.
@@ -152,13 +152,6 @@ internal enum InventoryPropertyFixtures {
 
     /// The two the comparison step puts side by side.
     internal static let cables: [InventoryThing] = InventoryCableFixtures.cables
-
-    /// What somebody typed into the editor, and has not committed. Collides
-    /// with `editing`'s "Cable length" under the normalisation rule, which is
-    /// the whole reason it is spelled differently.
-    internal static let draftKey = "cable-length"
-    internal static let draftValue = "1.5"
-    internal static let draftUnit = "m"
 
     /// The search the search step is showing the result of.
     internal static let query: [InventoryPropertyClause] = [
