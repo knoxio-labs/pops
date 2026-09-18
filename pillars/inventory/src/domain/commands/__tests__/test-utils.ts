@@ -83,6 +83,9 @@ export interface SeedItem {
   access?: 'open' | 'closed';
   lifecycle?: ItemRow['lifecycle'];
   deletedAt?: string;
+  quantity?: number;
+  code?: string;
+  typeKey?: string;
 }
 
 function seededPlacementKind(seed: SeedItem): ItemRow['placementKind'] {
@@ -105,6 +108,9 @@ export function seedItem(h: Harness, seed: SeedItem): void {
       access: seed.isContainer ? (seed.access ?? 'open') : null,
       lifecycle: seed.lifecycle ?? 'active',
       deletedAt: seed.deletedAt ?? null,
+      quantity: seed.quantity ?? 1,
+      code: seed.code ?? null,
+      typeKey: seed.typeKey ?? null,
       lastEditedTime: '2026-09-18T00:00:00.000Z',
       seq: 0,
     })
