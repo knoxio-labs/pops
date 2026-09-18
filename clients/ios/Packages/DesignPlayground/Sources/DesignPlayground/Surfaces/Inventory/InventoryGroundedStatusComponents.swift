@@ -11,6 +11,55 @@ internal struct InventoryGroundedSyncStatus: View {
     }
 }
 
+internal struct InventorySyncCapsule: View {
+    internal let state: InventorySyncState
+
+    internal var body: some View {
+        NavigationLink(value: InventoryRoute.syncRepair) {
+            Label(label, systemImage: symbol)
+                .font(.popsCaption.weight(.semibold))
+                .foregroundStyle(tone)
+                .padding(.horizontal, PopsSpacing.md)
+                .frame(minHeight: PopsSize.touchTarget)
+                .background(Color.popsSurface, in: .capsule)
+                .overlay(Capsule().stroke(tone, lineWidth: PopsBorder.hairline))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(accessibilityLabel)
+    }
+
+    private var label: String {
+        switch state {
+        case .current: "Up to date"
+        case .offline(let updated): "Offline · \(updated)"
+        case .synchronizing(let progress): "Syncing · \(progress)"
+        case .needsAttention(let count): "\(count) need attention"
+        }
+    }
+
+    private var accessibilityLabel: String {
+        "Sync status: \(label). Opens sync and repair details."
+    }
+
+    private var symbol: String {
+        switch state {
+        case .current: "checkmark.circle.fill"
+        case .offline: "wifi.slash"
+        case .synchronizing: "arrow.trianglehead.2.clockwise.rotate.90"
+        case .needsAttention: "exclamationmark.triangle.fill"
+        }
+    }
+
+    private var tone: Color {
+        switch state {
+        case .current: Color.popsSuccess
+        case .offline: Color.popsMutedForeground
+        case .synchronizing: Color.popsAccent
+        case .needsAttention: Color.popsWarning
+        }
+    }
+}
+
 internal struct InventoryGroundedFirstRunPanel: View {
     internal var body: some View {
         InventoryGroundedListPanel {
@@ -37,48 +86,6 @@ internal struct InventoryGroundedFirstRunPanel: View {
                 .tint(Color.popsAccent)
             }
             .padding(PopsSpacing.lg)
-        }
-    }
-}
-
-internal struct InventoryMoveDestinationSheet: View {
-    internal let item: InventoryItem
-    internal let containers: [InventoryContainer]
-    internal let onMove: () -> Void
-    @Environment(\.dismiss) private var dismiss
-
-    internal var body: some View {
-        NavigationStack {
-            List {
-                if !containers.isEmpty {
-                    Section("Open containers") {
-                        ForEach(containers) { container in
-                            Button {
-                                onMove()
-                            } label: {
-                                Label(container.name, systemImage: "shippingbox")
-                            }
-                        }
-                    }
-                }
-
-                Section("Locations") {
-                    Button {
-                        onMove()
-                    } label: {
-                        Label("Choose a location", systemImage: "house")
-                    }
-                }
-            }
-            .navigationTitle("Move \(item.name)")
-            .playgroundTitleDisplay(large: false)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                }
-            }
         }
     }
 }

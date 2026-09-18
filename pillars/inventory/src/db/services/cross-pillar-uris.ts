@@ -1,7 +1,7 @@
 /**
  * Cross-pillar URI denormalisation helpers.
  *
- * `home_inventory.purchase_transaction_uri` is a soft reference to a row the
+ * `items.purchase_transaction_uri` is a soft reference to a row the
  * finance pillar owns. It is not independently settable: it is derived from
  * `purchase_transaction_id`, which the item contract already carries, so the
  * two can never disagree. `purchaseTransactionUriFor` is the single place that
@@ -25,7 +25,7 @@
  */
 import { and, eq, isNotNull, isNull, ne, sql } from 'drizzle-orm';
 
-import { homeInventory } from '../schema.js';
+import { items } from '../schema.js';
 
 import type { InventoryDb } from './internal.js';
 
@@ -48,9 +48,9 @@ export function purchaseTransactionUriFor(
 /** Return every distinct, non-null `purchase_transaction_uri` on inventory rows. */
 export function listDistinctPurchaseTransactionUris(db: InventoryDb): string[] {
   const rows = db
-    .selectDistinct({ uri: homeInventory.purchaseTransactionUri })
-    .from(homeInventory)
-    .where(isNotNull(homeInventory.purchaseTransactionUri))
+    .selectDistinct({ uri: items.purchaseTransactionUri })
+    .from(items)
+    .where(isNotNull(items.purchaseTransactionUri))
     .all();
   return rows.map((r) => r.uri).filter((u): u is string => typeof u === 'string' && u.length > 0);
 }
@@ -67,12 +67,12 @@ export function listDistinctPurchaseTransactionUris(db: InventoryDb): string[] {
 export function countRowsMissingPurchaseTransactionUri(db: InventoryDb): number {
   const rows = db
     .select({ count: sql<number>`count(*)` })
-    .from(homeInventory)
+    .from(items)
     .where(
       and(
-        isNotNull(homeInventory.purchaseTransactionId),
-        ne(homeInventory.purchaseTransactionId, ''),
-        isNull(homeInventory.purchaseTransactionUri)
+        isNotNull(items.purchaseTransactionId),
+        ne(items.purchaseTransactionId, ''),
+        isNull(items.purchaseTransactionUri)
       )
     )
     .all();
@@ -89,9 +89,9 @@ export function markPurchaseTransactionUriStale(
   stampIso: string
 ): number {
   const result = db
-    .update(homeInventory)
+    .update(items)
     .set({ purchaseTransactionStaleAt: stampIso })
-    .where(eq(homeInventory.purchaseTransactionUri, uri))
+    .where(eq(items.purchaseTransactionUri, uri))
     .run();
   return result.changes;
 }
@@ -99,9 +99,9 @@ export function markPurchaseTransactionUriStale(
 /** Clear staleness — used when an earlier 404 resolves on a later tick. */
 export function clearPurchaseTransactionUriStale(db: InventoryDb, uri: string): number {
   const result = db
-    .update(homeInventory)
+    .update(items)
     .set({ purchaseTransactionStaleAt: null })
-    .where(eq(homeInventory.purchaseTransactionUri, uri))
+    .where(eq(items.purchaseTransactionUri, uri))
     .run();
   return result.changes;
 }

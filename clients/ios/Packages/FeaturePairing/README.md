@@ -12,11 +12,12 @@ That boundary is asserted, not merely intended: `ModuleBoundaryTests` in `AppCor
 | ------------------------------------------- | ---------------------------------------- |
 | The screen and the form                     | here                                     |
 | The camera permission decision              | `AppCore` — `CameraAuthorizing`          |
+| The QR capture session and preview          | `AppCore` — `QRScannerCoordinator`       |
 | Key generation, token storage, the exchange | `Auth` — `BFMDevicePairingService`       |
 | `POST /devices/pair` and its four outcomes  | `BFMClient` — `BFMHTTPClient.pairDevice` |
 | The error vocabulary both sides speak       | `AppCore` — `PairingError`               |
 
-`CameraAuthorizing` lives in `AppCore` rather than here because `FeatureReceiptCapture` needs the same permission decision, and features may not import one another — `ModuleBoundaryTests`' "no feature imports another feature" rule is what would fail if it stayed put and a second feature reached for it.
+`CameraAuthorizing` lives in `AppCore` rather than here because `FeatureReceiptCapture` needs the same permission decision, and features may not import one another — `ModuleBoundaryTests`' "no feature imports another feature" rule is what would fail if it stayed put and a second feature reached for it. `QRScannerCoordinator` moved there for the same reason once the Inventory scan screen needed the same QR capture session (POPS-4077); this package now wraps `AppCore`'s coordinator and preview view in the SwiftUI surface that is actually its own — the sheet's copy, cancel button and layout.
 
 ## The manual path is not a fallback screen
 
@@ -40,12 +41,12 @@ The one bound that _is_ enforced is the contract's own `maxLength`, because the 
 
 The package declares macOS as well as iOS so `swift build` and `swift test` run on a developer machine and a CI runner without booting a simulator. Keeping that working costs platform conditionals, and the rule is that they stay at the edges:
 
-- **Whole-file**, for the camera — `QRScannerView.swift`, `QRScannerCoordinator.swift`, `CaptureSessionHolder.swift`. There is no honest macOS build of a phone's QR scanner, and a stub that compiled would be something a test could pass against.
+- **Whole-file**, for the camera — `QRScannerView.swift` here, and `AppCore`'s `QRScannerCoordinator.swift`, `QRScannerPreviewView.swift`, `CaptureSessionHolder.swift`. There is no honest macOS build of a phone's QR scanner, and a stub that compiled would be something a test could pass against.
 - **One expression**, for a platform API with no counterpart — the scanner sheet in `PairingView`, the two iOS-only text-entry modifiers in `PairingFormFields`, `SystemSettings.url`, and `UIDevice.current.name` in `DeviceDescription`. Each is isolated so one conditional covers every call site rather than appearing at each.
 
 Nothing the screen _decides_ sits inside one, which is the point: which sentence a failure produces, what a scanned payload means, and when the form may be submitted are all answered in under a second by `swift test`.
 
-`CaptureSessionHolder` is the one `@unchecked Sendable` in the package, and it is an assertion rather than a silencing — the reasoning, and why it is preferred to `@preconcurrency import AVFoundation`, is in the file.
+`CaptureSessionHolder`, in `AppCore` now, is the one `@unchecked Sendable` behind this screen's camera, and it is an assertion rather than a silencing — the reasoning, and why it is preferred to `@preconcurrency import AVFoundation`, is in the file.
 
 ## Dynamic Type
 

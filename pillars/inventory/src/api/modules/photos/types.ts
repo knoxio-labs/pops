@@ -4,6 +4,18 @@ import type { ItemPhotoRow } from '../../../db/index.js';
 
 export type { ItemPhotoRow };
 
+/**
+ * A photo row the legacy photo API can serve: one that still has a file on
+ * the images volume. Photos attached by content hash only (Inventory ADR-002
+ * D9) have no `file_path` and are invisible to this API.
+ */
+export type FilePhotoRow = ItemPhotoRow & { filePath: string };
+
+/** Narrow a photo row to {@link FilePhotoRow}. */
+export function hasFilePath(row: ItemPhotoRow): row is FilePhotoRow {
+  return row.filePath !== null;
+}
+
 /** API response shape for an item photo. */
 export interface ItemPhoto {
   id: number;
@@ -14,14 +26,14 @@ export interface ItemPhoto {
   createdAt: string;
 }
 
-/** Map a SQLite row to the API response shape. */
-export function toPhoto(row: ItemPhotoRow): ItemPhoto {
+/** Map a photo row to the legacy API shape, whose `sortOrder` is the row's `position`. */
+export function toPhoto(row: FilePhotoRow): ItemPhoto {
   return {
     id: row.id,
     itemId: row.itemId,
     filePath: row.filePath,
     caption: row.caption,
-    sortOrder: row.sortOrder,
+    sortOrder: row.position,
     createdAt: row.createdAt,
   };
 }

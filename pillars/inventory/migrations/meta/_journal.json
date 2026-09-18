@@ -50,6 +50,13 @@
       "when": 1781650200005,
       "tag": "0011_inventory_source_ref",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1781650200006,
+      "tag": "0012_items_single_identity",
+      "breakpoints": true
     }
   ]
 }

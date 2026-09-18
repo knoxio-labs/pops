@@ -27,6 +27,7 @@ internal struct ContrastTests {
         ("popsDestructive", .popsDestructive),
         ("popsSuccess", .popsSuccess),
         ("popsWarning", .popsWarning),
+        ("popsInventory", .popsInventory),
     ]
 
     private static func luminance(_ color: Color, in scheme: ColorScheme) -> Double {
