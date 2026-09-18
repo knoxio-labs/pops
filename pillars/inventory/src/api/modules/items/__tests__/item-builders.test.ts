@@ -1,6 +1,7 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 
 import { buildCreateValues } from '../create-builder.js';
+import { placementForCreate } from '../legacy-placement.js';
 import { buildInventoryUpdate } from '../update-builder.js';
 
 import type { NullableColumnKeys } from '../nullable-column-keys.js';
@@ -9,6 +10,8 @@ import type { CreateInventoryItemInput, UpdateInventoryItemInput } from '../type
 type UpdateStringKeys = NullableColumnKeys<UpdateInventoryItemInput, string>;
 type UpdateNumberKeys = NullableColumnKeys<UpdateInventoryItemInput, number>;
 type CreateStringKeys = NullableColumnKeys<CreateInventoryItemInput, string>;
+
+const IN_HAND = placementForCreate({});
 
 function createInput(overrides: Partial<CreateInventoryItemInput> = {}): CreateInventoryItemInput {
   return { itemName: 'Kettle', inUse: false, deductible: false, ...overrides };
@@ -41,12 +44,14 @@ describe('NullableColumnKeys', () => {
 
 describe('buildInventoryUpdate', () => {
   it('returns null when no field was supplied', () => {
-    expect(buildInventoryUpdate({})).toBeNull();
-    expect(buildInventoryUpdate({ brand: undefined, replacementValue: undefined })).toBeNull();
+    expect(buildInventoryUpdate({}, null)).toBeNull();
+    expect(
+      buildInventoryUpdate({ brand: undefined, replacementValue: undefined }, null)
+    ).toBeNull();
   });
 
   it('omits keys left undefined and writes the ones supplied', () => {
-    const updates = buildInventoryUpdate({ brand: 'Sunbeam', model: undefined });
+    const updates = buildInventoryUpdate({ brand: 'Sunbeam', model: undefined }, null);
 
     expect(updates).not.toBeNull();
     expect(updates).toHaveProperty('brand', 'Sunbeam');
@@ -54,29 +59,29 @@ describe('buildInventoryUpdate', () => {
   });
 
   it('writes null to clear a string field', () => {
-    expect(buildInventoryUpdate({ notes: null })).toMatchObject({ notes: null });
+    expect(buildInventoryUpdate({ notes: null }, null)).toMatchObject({ note: null });
   });
 
   it('writes null to clear a number field, and keeps zero', () => {
-    expect(buildInventoryUpdate({ replacementValue: null })).toMatchObject({
+    expect(buildInventoryUpdate({ replacementValue: null }, null)).toMatchObject({
       replacementValue: null,
     });
-    expect(buildInventoryUpdate({ purchasePrice: 0 })).toMatchObject({ purchasePrice: 0 });
+    expect(buildInventoryUpdate({ purchasePrice: 0 }, null)).toMatchObject({ purchasePrice: 0 });
   });
 
   it('maps booleans onto the integer columns, false included', () => {
-    expect(buildInventoryUpdate({ inUse: false, deductible: true })).toMatchObject({
+    expect(buildInventoryUpdate({ inUse: false, deductible: true }, null)).toMatchObject({
       inUse: 0,
       deductible: 1,
     });
   });
 
   it('clears inUse back to unreviewed (NULL) on an explicit null (POPS-2432)', () => {
-    expect(buildInventoryUpdate({ inUse: null })).toMatchObject({ inUse: null });
+    expect(buildInventoryUpdate({ inUse: null }, null)).toMatchObject({ inUse: null });
   });
 
   it('derives the purchase transaction URI and drops the stale verdict', () => {
-    expect(buildInventoryUpdate({ purchaseTransactionId: 'tx-1' })).toMatchObject({
+    expect(buildInventoryUpdate({ purchaseTransactionId: 'tx-1' }, null)).toMatchObject({
       purchaseTransactionId: 'tx-1',
       purchaseTransactionUri: 'pops://finance/transaction/tx-1',
       purchaseTransactionStaleAt: null,
@@ -84,7 +89,7 @@ describe('buildInventoryUpdate', () => {
   });
 
   it('clears the derived URI when the id it derives from is cleared', () => {
-    expect(buildInventoryUpdate({ purchaseTransactionId: null })).toMatchObject({
+    expect(buildInventoryUpdate({ purchaseTransactionId: null }, null)).toMatchObject({
       purchaseTransactionId: null,
       purchaseTransactionUri: null,
       purchaseTransactionStaleAt: null,
@@ -92,14 +97,14 @@ describe('buildInventoryUpdate', () => {
   });
 
   it('leaves the derived URI alone when the id is not part of the update', () => {
-    const updates = buildInventoryUpdate({ brand: 'Sunbeam' });
+    const updates = buildInventoryUpdate({ brand: 'Sunbeam' }, null);
 
     expect(Object.keys(updates ?? {})).not.toContain('purchaseTransactionUri');
     expect(Object.keys(updates ?? {})).not.toContain('purchaseTransactionStaleAt');
   });
 
   it('stamps lastEditedTime on every write', () => {
-    const updates = buildInventoryUpdate({ brand: 'Sunbeam' });
+    const updates = buildInventoryUpdate({ brand: 'Sunbeam' }, null);
 
     expect(Number.isNaN(Date.parse(updates?.lastEditedTime ?? ''))).toBe(false);
   });
@@ -110,12 +115,13 @@ describe('buildCreateValues', () => {
     const values = buildCreateValues(
       'item-1',
       '2026-09-06T00:00:00.000Z',
-      createInput({ brand: 'Sunbeam', purchasePrice: 42.5, inUse: true, deductible: true })
+      createInput({ brand: 'Sunbeam', purchasePrice: 42.5, inUse: true, deductible: true }),
+      IN_HAND
     );
 
     expect(values).toMatchObject({
       id: 'item-1',
-      itemName: 'Kettle',
+      name: 'Kettle',
       brand: 'Sunbeam',
       purchasePrice: 42.5,
       inUse: 1,
@@ -125,10 +131,10 @@ describe('buildCreateValues', () => {
   });
 
   it('omits absent nullable keys so a column default, if any, applies (POPS-3020)', () => {
-    const values = buildCreateValues('item-1', '2026-09-06T00:00:00.000Z', createInput());
+    const values = buildCreateValues('item-1', '2026-09-06T00:00:00.000Z', createInput(), IN_HAND);
 
     expect(Object.keys(values)).not.toContain('brand');
-    expect(Object.keys(values)).not.toContain('notes');
+    expect(Object.keys(values)).not.toContain('note');
     expect(Object.keys(values)).not.toContain('condition');
     expect(Object.keys(values)).not.toContain('replacementValue');
     expect(Object.keys(values)).not.toContain('purchasePrice');
@@ -138,7 +144,8 @@ describe('buildCreateValues', () => {
     const values = buildCreateValues(
       'item-1',
       '2026-09-06T00:00:00.000Z',
-      createInput({ brand: null, replacementValue: null })
+      createInput({ brand: null, replacementValue: null }),
+      IN_HAND
     );
 
     expect(values).toMatchObject({ brand: null, replacementValue: null });
@@ -149,11 +156,14 @@ describe('buildCreateValues', () => {
       buildCreateValues(
         'item-1',
         '2026-09-06T00:00:00.000Z',
-        createInput({ purchaseTransactionId: 'tx-1' })
+        createInput({ purchaseTransactionId: 'tx-1' }),
+        IN_HAND
       )
     ).toMatchObject({ purchaseTransactionUri: 'pops://finance/transaction/tx-1' });
 
-    expect(buildCreateValues('item-1', '2026-09-06T00:00:00.000Z', createInput())).toMatchObject({
+    expect(
+      buildCreateValues('item-1', '2026-09-06T00:00:00.000Z', createInput(), IN_HAND)
+    ).toMatchObject({
       purchaseTransactionUri: null,
     });
   });
@@ -162,7 +172,8 @@ describe('buildCreateValues', () => {
     const values = buildCreateValues(
       'item-1',
       '2026-09-06T00:00:00.000Z',
-      createInput({ inUse: undefined })
+      createInput({ inUse: undefined }),
+      IN_HAND
     );
 
     expect(Object.keys(values)).not.toContain('inUse');
@@ -172,7 +183,8 @@ describe('buildCreateValues', () => {
     const values = buildCreateValues(
       'item-1',
       '2026-09-06T00:00:00.000Z',
-      createInput({ inUse: null })
+      createInput({ inUse: null }),
+      IN_HAND
     );
 
     expect(Object.keys(values)).not.toContain('inUse');
@@ -182,7 +194,8 @@ describe('buildCreateValues', () => {
     const values = buildCreateValues(
       'item-1',
       '2026-09-06T00:00:00.000Z',
-      createInput({ inUse: false })
+      createInput({ inUse: false }),
+      IN_HAND
     );
 
     expect(values).toMatchObject({ inUse: 0 });

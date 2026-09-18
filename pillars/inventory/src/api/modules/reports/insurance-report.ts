@@ -1,7 +1,7 @@
 import { asc, eq } from 'drizzle-orm';
 
 import {
-  homeInventory,
+  items,
   type InventoryDb,
   itemDocuments,
   itemPhotos,
@@ -76,8 +76,10 @@ function buildLookups(db: InventoryDb): Lookups {
   for (const loc of db.select().from(locations).all()) locationNameMap.set(loc.id, loc.name);
 
   const firstPhotoMap = new Map<string, string>();
-  for (const photo of db.select().from(itemPhotos).orderBy(asc(itemPhotos.sortOrder)).all()) {
-    if (!firstPhotoMap.has(photo.itemId)) firstPhotoMap.set(photo.itemId, photo.filePath);
+  for (const photo of db.select().from(itemPhotos).orderBy(asc(itemPhotos.position)).all()) {
+    if (photo.filePath !== null && !firstPhotoMap.has(photo.itemId)) {
+      firstPhotoMap.set(photo.itemId, photo.filePath);
+    }
   }
 
   const receiptMap = new Map<string, number[]>();
@@ -94,26 +96,26 @@ function buildLookups(db: InventoryDb): Lookups {
   return { locationNameMap, firstPhotoMap, receiptMap };
 }
 
-type InventoryRow = typeof homeInventory.$inferSelect;
+type ItemRow = typeof items.$inferSelect;
 
-function compareItems(a: InventoryRow, b: InventoryRow, sortBy: 'value' | 'name' | 'type'): number {
+function compareItems(a: ItemRow, b: ItemRow, sortBy: 'value' | 'name' | 'type'): number {
   switch (sortBy) {
     case 'value':
       return (b.replacementValue ?? 0) - (a.replacementValue ?? 0);
     case 'name':
-      return a.itemName.localeCompare(b.itemName);
+      return a.name.localeCompare(b.name);
     case 'type':
-      return (a.type ?? '').localeCompare(b.type ?? '');
+      return (a.legacyType ?? '').localeCompare(b.legacyType ?? '');
   }
 }
 
-function toReportItem(item: InventoryRow, lookups: Lookups): InsuranceReportItem {
+function toReportItem(item: ItemRow, lookups: Lookups): InsuranceReportItem {
   return {
     id: item.id,
-    itemName: item.itemName,
-    assetId: item.assetId,
+    itemName: item.name,
+    assetId: item.code,
     brand: item.brand,
-    type: item.type,
+    type: item.legacyType,
     condition: item.condition,
     warrantyExpires: item.warrantyExpires,
     replacementValue: item.replacementValue,
@@ -161,7 +163,7 @@ export function getInsuranceReport(
     locationIds = includeChildren ? getLocationSubtreeIds(db, locationId) : new Set([locationId]);
   }
 
-  const allItems = db.select().from(homeInventory).all();
+  const allItems = db.select().from(items).all();
   const lookups = buildLookups(db);
 
   const filteredItems = allItems
@@ -170,12 +172,12 @@ export function getInsuranceReport(
     )
     .toSorted((a, b) => compareItems(a, b, sortBy));
 
-  const items = filteredItems.map((item) => toReportItem(item, lookups));
+  const reportItems = filteredItems.map((item) => toReportItem(item, lookups));
   const totalValue = filteredItems.reduce((sum, item) => sum + (item.replacementValue ?? 0), 0);
 
   return {
-    groups: buildGroups(items, lookups),
-    totalItems: items.length,
+    groups: buildGroups(reportItems, lookups),
+    totalItems: reportItems.length,
     totalValue,
   };
 }

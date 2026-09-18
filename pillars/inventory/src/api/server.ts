@@ -20,13 +20,14 @@ import {
 } from '@pops/pillar-sdk/bootstrap';
 import { resolveSelfBaseUrl } from '@pops/pillar-sdk/pillar-env';
 
-import { openInventoryDb } from '../db/index.js';
+import { backfillPhotoMedia, openInventoryDb } from '../db/index.js';
 import { createInventoryApiApp } from './app.js';
 import { startCrossPillarReconciliationWorker } from './cron/reconcile-cross-pillar.js';
 import { resolveReconcileIntervalMs } from './cron/reconcile-interval.js';
 import { createDocumentsClient } from './documents/client.js';
 import { resolveInventorySqlitePath } from './inventory-sqlite-path.js';
 import { buildInventoryCapabilityReporter, buildInventoryManifest } from './manifest.js';
+import { getInventoryImagesDir } from './modules/photos/paths.js';
 
 function resolvePort(): number {
   const raw = process.env['PORT'];
@@ -60,8 +61,23 @@ const server = app.listen(port, () => {
   console.warn(`[inventory-api] Listening on port ${port}`);
 });
 
+// Off the boot path: it reads every legacy photo file, and nothing served
+// before it finishes depends on the hashes it adds.
+backfillPhotoMedia(inventoryDb.db, getInventoryImagesDir()).then(
+  (result) => {
+    if (result.missing.length > 0 || result.unreadable.length > 0) {
+      console.error('[inventory-api] Photo media backfill skipped files', result);
+    } else if (result.hashed > 0) {
+      console.warn('[inventory-api] Photo media backfill', result);
+    }
+  },
+  (err: unknown) => {
+    console.error('[inventory-api] Photo media backfill failed', err);
+  }
+);
+
 /**
- * Soft-URI reconciliation cron: resolves `home_inventory.purchase_transaction_uri`
+ * Soft-URI reconciliation cron: resolves `items.purchase_transaction_uri`
  * against finance and stamps `purchase_transaction_stale_at` when finance
  * answers 404.
  *

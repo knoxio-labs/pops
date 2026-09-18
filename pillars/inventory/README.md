@@ -1,7 +1,7 @@
 # @pops/inventory
 
-The **inventory** pillar — items, locations, containers, warranties, and
-insurance. A
+The **inventory** pillar — items (a container is an item), locations,
+warranties, and insurance. A
 standalone REST service that owns its own SQLite DB, serves a
 [ts-rest](https://ts-rest.com) contract built from zod, exports a `./manifest`,
 and self-registers with the `registry` pillar on boot. Port **3002**.
@@ -72,6 +72,30 @@ pillars/inventory/
 Everything inside the pillar imports across subdirs using **relative paths**
 (a relative specifier such as ../db/index.js from within src/api/), never via the package name.
 
+## Data model
+
+One identity per physical thing (Inventory ADR-002). `items` holds every item,
+containers included: a container is a row with `is_container = 1` and an
+`open`/`closed` `access`. Where an item is lives in `placement_kind` (a
+location, a containing item, or in hand) with its matching reference, and CHECK
+constraints refuse any other combination. `events` is the append-only history
+and sync change sequence; triggers refuse updates and deletes. `mutations`,
+`media` and `sync_meta` back the sync protocol.
+
+Migration `0012_items_single_identity` built this from `home_inventory` and
+`containers` and dropped both. It aborts, writing nothing, when an id or a
+case-insensitive code is held twice across the two old tables; the operator
+resolves the clash by hand and restarts. A row pointing at a record that does
+not exist never aborts it: the row is kept whole, as JSON, in
+`migration_0012_orphans` with the reference it lacks and is not copied; an
+item or box whose location is gone is migrated in hand, and an item whose box
+is gone keeps its own location if that exists. After boot, legacy photos that only have
+a `file_path` are hashed into `media` in the background.
+
+The legacy `/items` and `/locations` routes keep their request and response
+shapes over the new tables (`containerId` is `containing_item_id`, `assetId`
+is `code`, `type` is `legacy_type`). The `/containers` routes are gone.
+
 ## Registration
 
 On boot, when `POPS_REGISTRY_ENABLED=true`, the server calls `bootstrapPillar`
@@ -82,7 +106,7 @@ authenticates.
 
 ## Cross-pillar reconciliation
 
-`home_inventory.purchase_transaction_uri` is a soft reference to a row the
+`items.purchase_transaction_uri` is a soft reference to a row the
 finance pillar owns, alongside a nullable `purchase_transaction_stale_at`. It is
 derived, never supplied: both item write paths compute it from the
 `purchaseTransactionId` the item contract already carries, so the two cannot
