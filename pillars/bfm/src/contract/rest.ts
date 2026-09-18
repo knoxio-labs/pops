@@ -53,6 +53,7 @@ import {
 } from './receipt-draft.js';
 import { bfmDeviceContract } from './rest-device.js';
 import { mobileFinanceContract } from './rest-mobile-finance.js';
+import { mobileInventoryContract } from './rest-mobile-inventory.js';
 import {
   MOBILE_PERIMETER_RESPONSES,
   MOBILE_REQUEST_RESPONSES,
@@ -245,6 +246,7 @@ export const bfmContract = c.router(
     operator: bfmOperatorContract,
     mobile: mobileContract,
     mobileFinance: mobileFinanceContract,
+    mobileInventory: mobileInventoryContract,
     mobilePurchases: mobilePurchasesContract,
   },
   {
