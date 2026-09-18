@@ -37,17 +37,7 @@ internal struct ShellContentView: View {
 
     @ViewBuilder private var banner: some View {
         if degradation != .none {
-            PopsCard {
-                VStack(alignment: .leading, spacing: PopsSpacing.md) {
-                    Text(ShellCopy.degraded)
-                        .font(.popsBody)
-                        .foregroundStyle(Color.popsMutedForeground)
-                    if degradation == .failed {
-                        PopsButton(ShellCopy.retry) {}
-                    }
-                }
-            }
-            .padding([.horizontal, .top], PopsSpacing.lg)
+            ShellDegradationBanner(showsRetry: degradation == .failed)
         }
     }
 }

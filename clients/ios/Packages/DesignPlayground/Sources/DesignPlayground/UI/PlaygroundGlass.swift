@@ -2,8 +2,8 @@ import SwiftUI
 
 /// Several pieces of glass that belong to one control.
 ///
-/// iOS 26 renders glass elements that sit near each other as a family — they
-/// pick up each other's edges and merge as they approach — but only inside a
+/// iOS 26 renders glass elements that sit near each other as a family, they
+/// pick up each other's edges and merge as they approach, but only inside a
 /// container. A row of separate floating buttons without one is a row of
 /// unrelated blobs, each drawing its own hard rim.
 internal struct PlaygroundGlassGroup<Content: View>: View {
@@ -26,8 +26,8 @@ extension View {
     /// This file holds every platform conditional in the package, and holds
     /// them alone. The package builds for macOS as well as iOS so `swift build`
     /// and `swift test` run without Xcode or a simulator, and three of the
-    /// APIs the playground is built on — `glassEffect`, the navigation title
-    /// display mode, and `fullScreenCover` — do not exist there. Collected
+    /// APIs the playground is built on, `glassEffect`, the navigation title
+    /// display mode, and `fullScreenCover`, do not exist there. Collected
     /// here, every other file reads as if they did.
     ///
     /// The playground uses real glass for its own chrome rather than drawing a
@@ -44,7 +44,7 @@ extension View {
         #endif
     }
 
-    /// The inset-grouped list style, which is iOS-only — on the host
+    /// The inset-grouped list style, which is iOS-only, on the host
     /// toolchain the platform's own default stands in. Here for the reason
     /// stated above: this file holds the package's platform conditionals, and
     /// a second `#if os(iOS)` somewhere else is how two of them drift.
@@ -57,7 +57,7 @@ extension View {
         #endif
     }
 
-    /// The tab bar that shrinks to a capsule as content scrolls under it —
+    /// The tab bar that shrinks to a capsule as content scrolls under it ,
     /// iOS 26's own behaviour, and iOS-only. Without it the bar stays full
     /// height and the search capsule beside it never gets the room it expands
     /// into, so the arrangement being reviewed is not the one that ships.
@@ -134,6 +134,18 @@ extension View {
         #endif
     }
 
+    /// A trailing item in the navigation bar. Same reason as
+    /// ``playgroundLeadingBarItem``: `topBarTrailing` is an iOS-only
+    /// placement.
+    @ViewBuilder
+    func playgroundTrailingBarItem<Item: View>(@ViewBuilder item: () -> Item) -> some View {
+        #if os(iOS)
+            toolbar { ToolbarItem(placement: .topBarTrailing, content: item) }
+        #else
+            toolbar { ToolbarItem(content: item) }
+        #endif
+    }
+
     /// Sets the navigation title's display mode, which is an iOS-only
     /// modifier. Same shape, and the same reason, as `DesignSystem`'s
     /// keyboard-type helper.
@@ -147,7 +159,7 @@ extension View {
     }
 
     /// Presents a surface's stage: full-screen where the platform has that,
-    /// and a sheet where it does not. The stage wants the whole device — see
+    /// and a sheet where it does not. The stage wants the whole device, see
     /// ``StageView`` for why it is presented rather than pushed.
     @ViewBuilder
     func playgroundStage<Item: Identifiable, Content: View>(
@@ -158,6 +170,43 @@ extension View {
             fullScreenCover(item: item, content: content)
         #else
             sheet(item: item, content: content)
+        #endif
+    }
+}
+
+extension View {
+    /// An item in the bottom bar, which is an iOS-only placement. Same reason,
+    /// and the same shape, as ``playgroundLeadingBarItem``: iOS 26 draws the
+    /// bottom bar in glass and puts the prominent action on its trailing edge,
+    /// and a hand-rolled strip under the content gets none of that.
+    @ViewBuilder
+    func playgroundBottomBarItem<Item: View>(@ViewBuilder item: () -> Item) -> some View {
+        #if os(iOS)
+            toolbar { ToolbarItem(placement: .bottomBar, content: item) }
+        #else
+            toolbar { ToolbarItem(content: item) }
+        #endif
+    }
+
+    /// The figures-and-a-point keyboard, which is iOS-only. `PopsTextField`
+    /// keeps its own copy of this behind a private helper; a plain `TextField`
+    /// in a system form row cannot reach it.
+    @ViewBuilder
+    func playgroundDecimalKeyboard() -> some View {
+        #if os(iOS)
+            keyboardType(.decimalPad)
+        #else
+            self
+        #endif
+    }
+
+    /// A choice list pushed as its own screen, which macOS has no style for.
+    @ViewBuilder
+    func playgroundPushedPicker() -> some View {
+        #if os(iOS)
+            pickerStyle(.navigationLink)
+        #else
+            pickerStyle(.menu)
         #endif
     }
 }
