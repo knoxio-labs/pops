@@ -1,5 +1,4 @@
 import AppCore
-import Foundation
 
 /// Something that happened to one item, in the ADR's verbs: one line in Item
 /// detail's History section and on the History page, and the full account
