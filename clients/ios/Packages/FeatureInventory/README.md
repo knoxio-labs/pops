@@ -14,7 +14,7 @@ Until that query answers once, the dashboard shows a skeleton. A store that ends
 
 The dashboard, its panels, tiles, rows and sync pill are the design playground's grounded dashboard (POPS-3978), moved here and fed from `InventoryDashboard` instead of fixtures. The `InventoryGrounded*` names are kept so the screens still to move can be carried over with their references intact.
 
-Most of what the dashboard links to has not moved yet, and resolves to a pending screen until it does: the items browser, In hand and selection mode (POPS-4065), Sync and repair (POPS-4074), and the scanner (POPS-4078). Item detail (POPS-4062), containers and locations (POPS-4064) have moved.
+Most of what the dashboard links to has moved: item detail (POPS-4062), containers and locations (POPS-4064), the items browser and In hand (POPS-4065). Sync and repair (POPS-4074) and the scanner (POPS-4078) still resolve to a pending screen.
 
 ## One placement picker
 
@@ -25,3 +25,16 @@ Most of what the dashboard links to has not moved yet, and resolves to a pending
 
 `InventoryLocationTree` (`Picker/InventoryLocationTree.swift`, read in `InventoryLocationTree+Reading.swift`) is the one flattened read of the place hierarchy every one of these draws from — the browser, a place's own page, and the picker's location level all read the same tree rather than each walking `InventoryLocation` rows themselves. A location has no kind of its own (ADR-002): the browser, the row label and the create sheet draw one place glyph and ask only for a name and a parent, where the design's playground fixtures carried a room-shelf-drawer kind that nothing in the replica records.
 
+## Search, the items browser and In hand
+
+`Search/`, `Browse/` and `InHand/` are the three ways to end up looking at one item outside its own page, each over one query built the same way the dashboard's is:
+
+- `InventorySearchViewModel` ranks the replica's own search in tiers — name prefix, name contains, then everything else, records before places — through `InventorySearchRanking.swift`, narrowed by the missing-type and include-inactive filters (`InventorySearchFilter.swift`) and remembering recent queries (`InventorySearchRecents.swift`) in `AppStorage`, not the replica.
+- `InventoryItemsBrowserViewModel` reads every non-container item in one query (`inventoryItems(includeInactive:)`), sectioned by initial when sorted by name and otherwise left in the replica's own order, with the same missing-type and include-inactive filters Search uses.
+- `InventoryInHandViewModel` reads the dashboard's own In-hand rows as a page of their own, with Put back and Put all back (`InHand/InventoryInHand.swift`): Put back does nothing for a row whose previous place was deleted, and Put all back only appears once there is more than one thing in hand.
+
+Move, from any of the three, still opens a pending screen (`inventoryMoveSheet`): it was written before the placement picker existed in this package. Now that Containers and Locations (POPS-4064) have landed the real picker, wiring Move to it is unblocked but not done in this slice.
+
+## Deduplication
+
+Search, Browse and In hand share the row, list-panel, motion, symbol and platform-glass components the containers and locations screens already draw from (`Components/`), rather than each carrying its own copy: a screen that needs a new one of these adds it there, not beside itself.

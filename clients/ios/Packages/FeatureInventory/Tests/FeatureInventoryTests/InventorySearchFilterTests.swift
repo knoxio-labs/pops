@@ -38,7 +38,8 @@ internal struct InventorySearchFilterTests {
 
         #expect(filter.matches(Fixture.record("untyped", type: nil)))
         #expect(!filter.matches(Fixture.record("typed", type: "tool")))
-        #expect(!filter.matches(Fixture.record("untyped but inactive", type: nil, lifecycle: .lost)))
+        #expect(
+            !filter.matches(Fixture.record("untyped but inactive", type: nil, lifecycle: .lost)))
     }
 
     @Test(

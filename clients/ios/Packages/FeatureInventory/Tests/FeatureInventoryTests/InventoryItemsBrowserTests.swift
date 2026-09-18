@@ -10,8 +10,7 @@ import Testing
 internal struct InventoryItemsBrowserTests {
     private typealias Fixture = InventoryListFixture
 
-    private static func store(status: InventoryReplicaStatus = .current) -> InMemoryInventoryStore
-    {
+    private static func store(status: InventoryReplicaStatus = .current) -> InMemoryInventoryStore {
         let store = InMemoryInventoryStore(
             items: [
                 Fixture.item("drill", "Drill", code: "B412", addedDaysAgo: 2),
@@ -45,7 +44,8 @@ internal struct InventoryItemsBrowserTests {
         defer { task.cancel() }
 
         #expect(model.sections.map(\.title) == ["This week", "Earlier"])
-        #expect(model.sections.map { $0.records.map(\.id) } == [["drill", "cable"], ["saw", "lamp"]])
+        #expect(
+            model.sections.map { $0.records.map(\.id) } == [["drill", "cable"], ["saw", "lamp"]])
     }
 
     @Test("sorted by name, the list is one section per initial")
