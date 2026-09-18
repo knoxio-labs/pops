@@ -19,6 +19,7 @@ public struct InventoryFlowView: View {
 
     /// Reads and writes through `dependencies.inventory`, and nothing else.
     public init(dependencies: AppDependencies) {
+        store = dependencies.inventory
         _model = State(wrappedValue: InventoryDashboardViewModel(store: dependencies.inventory))
         store = dependencies.inventory
     }
@@ -34,7 +35,7 @@ public struct InventoryFlowView: View {
                     }
                 }
                 .navigationDestination(for: InventoryRoute.self) { route in
-                    InventoryDestinationView(route: route)
+                    InventoryDestinationView(route: route, store: store)
                 }
         }
         .inventoryItemFormPresentation(store: store)
