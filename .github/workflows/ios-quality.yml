@@ -24,8 +24,12 @@ name: iOS Quality
 # THE SDK CEILING RUNS THE OTHER WAY. The runner image's newest iOS SDK is what
 # caps the app's deployment target, not the reverse: an SDK older than the
 # deployment target does not build, and an SPM `platforms:` floor cannot be
-# overridden from the command line. That constraint is why the app targets iOS
-# 26 — see the `deploymentTarget` note in `clients/ios/project.yml`.
+# overridden from the command line. That constraint is why this job runs on the
+# `xcode-27` image rather than `macos-latest`: the GA macOS images stopped at
+# Xcode 26.x when iOS 27 shipped, and `xcode-27` was the only hosted image with
+# an iOS 27 SDK. It is still labelled preview by GitHub, which means it can
+# queue longer; move back to a GA `macos-*` label once one carries the pinned
+# Xcode. See the `deploymentTarget` note in `clients/ios/project.yml`.
 #
 # `pillars/bfm/**` is in the path filter deliberately, and the whole pillar
 # rather than just its `openapi/` directory. The contract is the input the Swift
@@ -211,7 +215,7 @@ jobs:
     # FAILED leaves the output empty, so this stays skipped and the workflow goes
     # red on the scope job — never green over an unbuilt tree.
     if: ${{ !cancelled() && (github.event_name != 'merge_group' || needs.scope.outputs.selected == 'true') }}
-    runs-on: macos-latest
+    runs-on: xcode-27
     # A wedged simulator is the classic macOS-CI failure and it does not fail —
     # it hangs. Without a ceiling that burns the job's full 6h default.
     timeout-minutes: 45

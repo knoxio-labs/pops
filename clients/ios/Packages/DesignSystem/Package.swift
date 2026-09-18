@@ -14,7 +14,7 @@ let strictSwiftSettings: [SwiftSetting] = [
 // and `#Preview` are unavailable and the package only builds through Xcode.
 let package = Package(
     name: "DesignSystem",
-    platforms: [.iOS("26.0"), .macOS("15.0")],
+    platforms: [.iOS("27.0"), .macOS("15.0")],
     products: [
         .library(name: "DesignSystem", targets: ["DesignSystem"]),
         .library(name: "DesignSystemTestSupport", targets: ["DesignSystemTestSupport"]),

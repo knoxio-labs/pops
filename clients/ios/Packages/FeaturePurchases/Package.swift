@@ -8,7 +8,7 @@ let strictSwiftSettings: [SwiftSetting] = [
 
 let package = Package(
     name: "FeaturePurchases",
-    platforms: [.iOS("26.0"), .macOS("15.0")],
+    platforms: [.iOS("27.0"), .macOS("15.0")],
     products: [.library(name: "FeaturePurchases", targets: ["FeaturePurchases"])],
     dependencies: [
         .package(path: "../AppCore"),

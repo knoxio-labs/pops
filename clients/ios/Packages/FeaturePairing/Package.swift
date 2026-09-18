@@ -21,7 +21,7 @@ let strictSwiftSettings: [SwiftSetting] = [
 // counted and argued in the README.
 let package = Package(
     name: "FeaturePairing",
-    platforms: [.iOS("26.0"), .macOS("15.0")],
+    platforms: [.iOS("27.0"), .macOS("15.0")],
     products: [.library(name: "FeaturePairing", targets: ["FeaturePairing"])],
     dependencies: [
         .package(path: "../AppCore"),
