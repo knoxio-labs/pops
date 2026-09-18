@@ -59,7 +59,7 @@ const CreateItemBody = z.object({
   condition: z.string().nullable().optional(),
   /**
    * `null` (or absent) means "nobody has reviewed this row" — the tri-state
-   * `home_inventory.in_use` was designed to carry. Only an explicit
+   * `items.in_use` was designed to carry. Only an explicit
    * `true`/`false` marks the row reviewed (POPS-2432).
    */
   inUse: z.boolean().nullable().optional(),

@@ -1,19 +1,8 @@
 /**
  * Invariant tests for the locations service against an in-memory SQLite
- * seeded with the canonical `locations` migration. Pure DB + service
- * layer.
- *
- * The locations CREATE TABLE is read from the package's own migration at
- * `pillars/inventory/migrations/0005_fancy_crystal.sql`, the sole source
- * of truth for this tag. `home_inventory` is inlined with the columns
- * this slice exercises because its canonical migration bundles unrelated
- * FK tables.
+ * brought up by the real migration journal. Pure DB + service layer.
  */
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-
-import Database from 'better-sqlite3';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
+import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import {
@@ -22,7 +11,7 @@ import {
   LocationSelfParentError,
   ParentLocationNotFoundError,
 } from '../errors.js';
-import { homeInventory } from '../schema.js';
+import { items } from '../schema.js';
 import {
   getDeleteStats,
   getDescendantLocationIds,
@@ -38,62 +27,13 @@ import {
   listLocations,
   updateLocation,
 } from '../services/locations.js';
+import { seedInventoryItem } from './item-fixture.js';
+import { openMigratedTestDb } from './migrated-db.js';
 
 import type { InventoryDb } from '../services/internal.js';
 
-const LOCATIONS_MIGRATION = join(__dirname, '../../../migrations/0005_fancy_crystal.sql');
-
-const HOME_INVENTORY_DDL = `
-CREATE TABLE home_inventory (
-  id text PRIMARY KEY NOT NULL,
-  notion_id text UNIQUE,
-  item_name text NOT NULL,
-  brand text,
-  model text,
-  item_id text,
-  room text,
-  location text,
-  type text,
-  condition text DEFAULT 'good',
-  in_use integer,
-  deductible integer,
-  purchase_date text,
-  warranty_expires text,
-  replacement_value real,
-  resale_value real,
-  purchase_transaction_id text,
-  purchase_transaction_uri text,
-  purchase_transaction_stale_at text,
-  purchased_from_id text,
-  purchased_from_name text,
-  purchase_price real,
-  owner_uri text,
-  owner_stale_at text,
-  asset_id text UNIQUE,
-  source_ref text UNIQUE,
-  notes text,
-  location_id text REFERENCES locations(id) ON DELETE set null,
-  container_id text,
-  created_at text NOT NULL DEFAULT (datetime('now')),
-  updated_at text NOT NULL DEFAULT (datetime('now')),
-  last_edited_time text NOT NULL
-);
-CREATE INDEX idx_inventory_location ON home_inventory (location_id);
-CREATE INDEX idx_inventory_name ON home_inventory (item_name);
-CREATE INDEX idx_inventory_purchase_transaction_uri ON home_inventory (purchase_transaction_uri);
-CREATE INDEX idx_inventory_owner_uri ON home_inventory (owner_uri);
-`;
-
 function freshDb(): InventoryDb {
-  const raw = new Database(':memory:');
-  raw.pragma('foreign_keys = ON');
-  const sql = readFileSync(LOCATIONS_MIGRATION, 'utf8');
-  for (const stmt of sql.split('--> statement-breakpoint')) {
-    const trimmed = stmt.trim();
-    if (trimmed.length > 0) raw.exec(trimmed);
-  }
-  raw.exec(HOME_INVENTORY_DDL);
-  return drizzle(raw);
+  return openMigratedTestDb().db;
 }
 
 function seedItem(
@@ -101,10 +41,8 @@ function seedItem(
   name: string,
   locationId: string | null
 ): { id: string; locationId: string | null } {
-  const id = crypto.randomUUID();
-  const now = new Date().toISOString();
-  db.insert(homeInventory).values({ id, itemName: name, locationId, lastEditedTime: now }).run();
-  return { id, locationId };
+  const row = seedInventoryItem(db, { name, ...(locationId === null ? {} : { locationId }) });
+  return { id: row.id, locationId };
 }
 
 describe('listLocations', () => {
@@ -231,6 +169,13 @@ describe('createLocation', () => {
     expect(row.sortOrder).toBe(0);
   });
 
+  it('stamps created_at and updated_at with the same instant as last_edited_time', () => {
+    const row = createLocation(db, { name: 'Home' });
+    expect(row.createdAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
+    expect(row.createdAt).toBe(row.lastEditedTime);
+    expect(row.updatedAt).toBe(row.lastEditedTime);
+  });
+
   it('creates a child location under an existing parent', () => {
     const parent = createLocation(db, { name: 'Home' });
     const child = createLocation(db, { name: 'Kitchen', parentId: parent.id });
@@ -320,6 +265,26 @@ describe('deleteLocation', () => {
   it('throws LocationNotFoundError when missing', () => {
     expect(() => deleteLocation(db, 'nope')).toThrowError(LocationNotFoundError);
   });
+
+  it('puts the items placed there in hand, remembering the deleted place', () => {
+    const shelf = createLocation(db, { name: 'Shelf' });
+    const other = createLocation(db, { name: 'Other' });
+    const onShelf = seedItem(db, 'Lamp', shelf.id);
+    const elsewhere = seedItem(db, 'Chair', other.id);
+
+    deleteLocation(db, shelf.id);
+
+    const moved = db.select().from(items).where(eq(items.id, onShelf.id)).get();
+    expect(moved).toMatchObject({
+      placementKind: 'hand',
+      locationId: null,
+      previousPlacementKind: 'location',
+      previousLocationId: shelf.id,
+      previousContainingItemId: null,
+    });
+    const untouched = db.select().from(items).where(eq(items.id, elsewhere.id)).get();
+    expect(untouched).toMatchObject({ placementKind: 'location', locationId: other.id });
+  });
 });
 
 describe('getDescendantLocationIds', () => {
@@ -408,7 +373,7 @@ describe('getLocationItems', () => {
       offset: 0,
     });
     expect(result.total).toBe(2);
-    expect(result.rows.map((r) => r.itemName).toSorted()).toEqual(['Fridge', 'Oven']);
+    expect(result.rows.map((r) => r.name).toSorted()).toEqual(['Fridge', 'Oven']);
   });
 
   it('includes descendant items when includeChildren is true', () => {
@@ -446,7 +411,7 @@ describe('getLocationItems', () => {
       offset: 2,
     });
     expect(page2.rows).toHaveLength(2);
-    expect(page2.rows[0]!.itemName).not.toBe(page1.rows[0]!.itemName);
+    expect(page2.rows[0]!.name).not.toBe(page1.rows[0]!.name);
   });
 
   it('throws LocationNotFoundError when location missing', () => {

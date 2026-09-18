@@ -37,8 +37,18 @@ describe('the checked-in design surface', () => {
     }
   });
 
-  it('never stacks two active experiments on one screen', () => {
-    const screens = catalog.experiments.filter((e) => e.status === 'active').map((e) => e.screen);
-    expect(new Set(screens).size).toBe(screens.length);
+  /**
+   * Several active experiments may share a screen, deliberately: a screen's
+   * vocabulary, its status treatment and its density are separate questions,
+   * and queueing them answers two by default while the third is reviewed. What
+   * the author owes in exchange is a variant note saying which other open
+   * question that variant has taken a position on.
+   *
+   * Ids still have to be distinct: an id is what a comment thread and a
+   * recorded decision are anchored to.
+   */
+  it('has unique experiment ids', () => {
+    const ids = catalog.experiments.map((e) => e.id);
+    expect(new Set(ids).size).toBe(ids.length);
   });
 });

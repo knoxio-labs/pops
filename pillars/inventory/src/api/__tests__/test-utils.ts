@@ -17,7 +17,6 @@ import { createTestTransport } from './test-http.js';
 import type { Express } from 'express';
 
 import type { LocationTreeNodeShape } from '../../contract/rest-locations.js';
-import type { Container } from '../../db/index.js';
 import type { InventoryItem } from '../modules/items/types.js';
 import type { Location } from '../modules/locations/types.js';
 import type { Test } from './test-http.js';
@@ -66,10 +65,6 @@ interface LocationEnvelope {
   data: Location;
   message: string;
 }
-interface ContainerEnvelope {
-  data: Container;
-  message: string;
-}
 interface DeleteAck {
   message?: string;
   requiresConfirmation?: boolean;
@@ -100,13 +95,6 @@ export interface ItemListQuery {
   deductible?: 'true' | 'false';
   locationId?: string;
   containerId?: string;
-}
-
-export interface ContainerCreateBody {
-  label: string;
-  code?: string | null;
-  originLocationId?: string | null;
-  notes?: string | null;
 }
 
 const transport = createTestTransport();
@@ -152,24 +140,6 @@ export function makeClient(app: Express) {
             ? r.delete(`/locations/${id}`).query({ force: true })
             : r.delete(`/locations/${id}`)
         ),
-    },
-    containers: {
-      list: (query: { state?: string } = {}) =>
-        send<{ data: Container[]; total: number }>(r.get('/containers').query(query)),
-      get: (id: string) => send<{ data: Container }>(r.get(`/containers/${id}`)),
-      items: (id: string, query: { limit?: number; offset?: number } = {}) =>
-        send<{ data: InventoryItem[]; pagination: Pagination }>(
-          r.get(`/containers/${id}/items`).query(query)
-        ),
-      create: (body: ContainerCreateBody) =>
-        send<ContainerEnvelope>(r.post('/containers').send(body)),
-      update: (id: string, data: Partial<ContainerCreateBody>) =>
-        send<ContainerEnvelope>(r.patch(`/containers/${id}`).send(data)),
-      seal: (id: string) => send<ContainerEnvelope>(r.post(`/containers/${id}/seal`).send({})),
-      move: (id: string, destinationLocationId: string) =>
-        send<ContainerEnvelope>(r.post(`/containers/${id}/move`).send({ destinationLocationId })),
-      unpack: (id: string) => send<ContainerEnvelope>(r.post(`/containers/${id}/unpack`).send({})),
-      delete: (id: string) => send<{ message: string }>(r.delete(`/containers/${id}`)),
     },
   };
 }

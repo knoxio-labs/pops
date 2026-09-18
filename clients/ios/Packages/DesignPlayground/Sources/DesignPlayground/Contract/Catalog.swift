@@ -5,14 +5,14 @@
 /// The web playground discovers its screens with `import.meta.glob`, so a file
 /// in the right directory is registered by existing. Swift has no runtime
 /// globbing, and the honest alternatives are a build-time generator or a list.
-/// This is the list — one line per surface, and a surface not on it simply
+/// This is the list, one line per surface, and a surface not on it simply
 /// does not appear.
 ///
 /// That drift is real, and `SurfaceRegistrationTests` is what makes it visible
 /// rather than silent: it scans `Surfaces/` for `SurfaceID` literals and fails
 /// when one of them is not in this list. Same shape as
 /// `RenderComparisonTraitScanner` and `TokenDisciplineScanner` in
-/// `DesignSystem` — a text scan, because nothing in the type system
+/// `DesignSystem`, a text scan, because nothing in the type system
 /// distinguishes "a view" from "a view meant to be reviewed".
 ///
 /// ## Why nothing here fetches
@@ -24,7 +24,7 @@
 ///
 /// The stronger half of the guarantee is the package graph. This package links
 /// `AppCore`, `DesignSystem` and the `Feature*` packages, and not one of them
-/// depends on `Auth` or `BFMClient` — the only two modules in the tree that
+/// depends on `Auth` or `BFMClient`, the only two modules in the tree that
 /// hold key material or perform HTTP, a rule `ModuleBoundaryTests` enforces by
 /// reading every manifest. So there is no code path from here that could reach
 /// a network even by mistake. The playground works with the phone in flight
@@ -50,13 +50,21 @@ internal enum Catalog {
         + [PurchaseDetailSurfaces.surface]
         + ReceiptSurfaces.surfaces
         + InventorySurfaces.surfaces
-        + InventoryPropertySurfaces.surfaces
+        + InventorySearchSurfaces.surfaces
+        + InventoryContainerSurfaces.surfaces
+        + InventoryItemDetailSurfaces.surfaces
+        + InventoryUntypedSurfaces.surfaces
+        + InventorySyncSurfaces.surfaces
+        + InventoryCreationSurfaces.surfaces
+        + InventoryRetrievalSurfaces.surfaces
+        + InventoryLifecycleSurfaces.surfaces
+        + InventoryLocationSurfaces.surfaces
         + AccountsSurfaces.surfaces
         + PairingSurfaces.surfaces
 
     static let experiments: [DesignExperiment] = ExperimentCatalog.all
 
-    static let components: [DesignComponent] = ComponentCatalog.all
+    static let components: [DesignComponent] = ComponentCatalog.all + InventoryComponentCatalog.all
 
     /// Areas in the order they were registered, deduplicated. Not sorted:
     /// registration order is an editorial decision about what matters most,

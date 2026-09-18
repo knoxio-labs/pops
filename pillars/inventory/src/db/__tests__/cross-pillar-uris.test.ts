@@ -2,58 +2,16 @@
  * Tests for the cross-pillar URI denormalisation service helpers.
  * Pure DB + service layer.
  */
-import Database from 'better-sqlite3';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { crossPillarUrisService } from '../index.js';
-import { homeInventory } from '../schema.js';
+import { items } from '../schema.js';
+import { openMigratedTestDb } from './migrated-db.js';
 
 import type { InventoryDb } from '../services/internal.js';
 
-const HOME_INVENTORY_DDL = `
-CREATE TABLE home_inventory (
-  id text PRIMARY KEY NOT NULL,
-  notion_id text UNIQUE,
-  item_name text NOT NULL,
-  brand text,
-  model text,
-  item_id text,
-  room text,
-  location text,
-  type text,
-  condition text DEFAULT 'good',
-  in_use integer,
-  deductible integer,
-  purchase_date text,
-  warranty_expires text,
-  replacement_value real,
-  resale_value real,
-  purchase_transaction_id text,
-  purchase_transaction_uri text,
-  purchase_transaction_stale_at text,
-  purchased_from_id text,
-  purchased_from_name text,
-  purchase_price real,
-  owner_uri text,
-  owner_stale_at text,
-  asset_id text UNIQUE,
-  source_ref text UNIQUE,
-  notes text,
-  location_id text,
-  container_id text,
-  created_at text NOT NULL DEFAULT (datetime('now')),
-  updated_at text NOT NULL DEFAULT (datetime('now')),
-  last_edited_time text NOT NULL
-);
-CREATE INDEX idx_inventory_purchase_transaction_uri ON home_inventory (purchase_transaction_uri);
-CREATE INDEX idx_inventory_owner_uri ON home_inventory (owner_uri);
-`;
-
 function freshDb(): InventoryDb {
-  const raw = new Database(':memory:');
-  raw.exec(HOME_INVENTORY_DDL);
-  return drizzle(raw);
+  return openMigratedTestDb().db;
 }
 
 function seed(
@@ -61,10 +19,12 @@ function seed(
   id: string,
   row: { purchase?: string | null; transactionId?: string | null } = {}
 ): void {
-  db.insert(homeInventory)
+  db.insert(items)
     .values({
       id,
-      itemName: `item-${id}`,
+      name: `item-${id}`,
+      placementKind: 'hand',
+      seq: 0,
       lastEditedTime: '2026-06-15T00:00:00.000Z',
       purchaseTransactionId: row.transactionId ?? null,
       purchaseTransactionUri: row.purchase ?? null,
@@ -155,10 +115,10 @@ describe('crossPillarUrisService.markStale / clearStale', () => {
     expect(changed).toBe(2);
     const stamps = db
       .select({
-        id: homeInventory.id,
-        s: homeInventory.purchaseTransactionStaleAt,
+        id: items.id,
+        s: items.purchaseTransactionStaleAt,
       })
-      .from(homeInventory)
+      .from(items)
       .all();
     expect(stamps.find((r) => r.id === 'a')?.s).toBe(stamp);
     expect(stamps.find((r) => r.id === 'b')?.s).toBe(stamp);
@@ -177,10 +137,7 @@ describe('crossPillarUrisService.markStale / clearStale', () => {
       'pops://finance/transaction/x'
     );
     expect(cleared).toBe(1);
-    const stamps = db
-      .select({ s: homeInventory.purchaseTransactionStaleAt })
-      .from(homeInventory)
-      .all();
+    const stamps = db.select({ s: items.purchaseTransactionStaleAt }).from(items).all();
     expect(stamps[0]?.s).toBeNull();
   });
 });

@@ -17,7 +17,7 @@
 import { and, eq, sql } from 'drizzle-orm';
 
 import {
-  homeInventory,
+  items,
   type InventoryDb,
   type InventorySearchScope,
   searchFilterScope,
@@ -34,7 +34,7 @@ type Req = ServerInferRequest<typeof inventorySearchContract>;
 
 const DEFAULT_LIMIT = 20;
 
-type Row = typeof homeInventory.$inferSelect;
+type Row = typeof items.$inferSelect;
 
 interface InventoryItemHitData extends Record<string, unknown> {
   itemName: string;
@@ -54,34 +54,34 @@ interface SearchHit {
 
 function rowToData(row: Row): InventoryItemHitData {
   return {
-    itemName: row.itemName,
-    assetId: row.assetId,
-    location: row.location,
-    type: row.type,
+    itemName: row.name,
+    assetId: row.code,
+    location: row.locationText,
+    type: row.legacyType,
     condition: row.condition,
   };
 }
 
 /**
- * The `homeInventory` columns a filter scope narrows on. Applied to every
+ * The `items` columns a filter scope narrows on. Applied to every
  * tier's own SQL so an excluded row is never scanned in the first place,
  * rather than filtered out of an already-capped result.
  */
 function scopeConditions(scope: InventorySearchScope): SQL[] {
   const conditions: SQL[] = [];
-  if (scope.room !== undefined) conditions.push(eq(homeInventory.room, scope.room));
-  if (scope.type !== undefined) conditions.push(eq(homeInventory.type, scope.type));
+  if (scope.room !== undefined) conditions.push(eq(items.room, scope.room));
+  if (scope.type !== undefined) conditions.push(eq(items.legacyType, scope.type));
   if (scope.condition !== undefined) {
-    conditions.push(sql`lower(${homeInventory.condition}) = lower(${scope.condition})`);
+    conditions.push(sql`lower(${items.condition}) = lower(${scope.condition})`);
   }
-  if (scope.inUse !== undefined) conditions.push(eq(homeInventory.inUse, scope.inUse ? 1 : 0));
+  if (scope.inUse !== undefined) conditions.push(eq(items.inUse, scope.inUse ? 1 : 0));
   if (scope.deductible !== undefined) {
-    conditions.push(eq(homeInventory.deductible, scope.deductible ? 1 : 0));
+    conditions.push(eq(items.deductible, scope.deductible ? 1 : 0));
   }
   if (scope.locationId !== undefined) {
-    conditions.push(eq(homeInventory.locationId, scope.locationId));
+    conditions.push(eq(items.locationId, scope.locationId));
   }
-  if (scope.assetId !== undefined) conditions.push(eq(homeInventory.assetId, scope.assetId));
+  if (scope.assetId !== undefined) conditions.push(eq(items.code, scope.assetId));
   return conditions;
 }
 
@@ -100,8 +100,8 @@ interface SearchScan {
 function searchAssetExact(scan: SearchScan): void {
   const rows = scan.db
     .select()
-    .from(homeInventory)
-    .where(and(sql`lower(${homeInventory.assetId}) = ${scan.lowerText}`, ...scan.conditions))
+    .from(items)
+    .where(and(sql`lower(${items.code}) = ${scan.lowerText}`, ...scan.conditions))
     .all();
   for (const row of rows) {
     scan.hits.push({
@@ -117,10 +117,10 @@ function searchAssetExact(scan: SearchScan): void {
 function searchAssetPrefix(scan: SearchScan): void {
   const rows = scan.db
     .select()
-    .from(homeInventory)
+    .from(items)
     .where(
       and(
-        sql`lower(${homeInventory.assetId}) like ${scan.lowerText + '%'} and lower(${homeInventory.assetId}) != ${scan.lowerText}`,
+        sql`lower(${items.code}) like ${scan.lowerText + '%'} and lower(${items.code}) != ${scan.lowerText}`,
         ...scan.conditions
       )
     )
@@ -149,13 +149,8 @@ function classifyNameMatch(
 function searchByName(scan: SearchScan): void {
   const rows = scan.db
     .select()
-    .from(homeInventory)
-    .where(
-      and(
-        sql`lower(${homeInventory.itemName}) like ${'%' + scan.lowerText + '%'}`,
-        ...scan.conditions
-      )
-    )
+    .from(items)
+    .where(and(sql`lower(${items.name}) like ${'%' + scan.lowerText + '%'}`, ...scan.conditions))
     .all();
 
   const seenIds = new Set(scan.hits.map((h) => h.uri));
@@ -163,7 +158,7 @@ function searchByName(scan: SearchScan): void {
     if (scan.hits.length >= scan.limit) break;
     const uri = `/inventory/items/${row.id}`;
     if (seenIds.has(uri)) continue;
-    const { score, matchType } = classifyNameMatch(row.itemName.toLowerCase(), scan.lowerText);
+    const { score, matchType } = classifyNameMatch(row.name.toLowerCase(), scan.lowerText);
     scan.hits.push({ uri, score, matchField: 'itemName', matchType, data: rowToData(row) });
   }
 }

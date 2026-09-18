@@ -3,7 +3,6 @@ import SwiftUI
 
 internal enum InventoryGroundedSwipeRow: Hashable {
     case container(String)
-    case inHand(String)
     case activity(String)
 }
 
@@ -11,7 +10,9 @@ internal struct InventoryGroundedDashboardView: View {
     internal let fixture: InventoryDashboardFixture
     @Environment(\.dynamicTypeSize) internal var dynamicTypeSize
     @State internal var state: InventoryGroundedDashboardState
-    @State internal var moveRequest: InventoryItem?
+    @State internal var moving: InventoryInHandMoveRequest?
+    @State internal var offer: InventoryUndoOffer?
+    @State internal var inHandSelection = InventorySelection()
     @State internal var activeSwipeRow: InventoryGroundedSwipeRow?
 
     internal init(fixture: InventoryDashboardFixture) {
@@ -29,7 +30,7 @@ internal struct InventoryGroundedDashboardView: View {
                         openContainers
                     }
                     browse
-                    if !state.inHandItems.isEmpty {
+                    if !state.inHand.isEmpty {
                         inHand
                     }
                     if !state.activities.isEmpty {
@@ -37,6 +38,9 @@ internal struct InventoryGroundedDashboardView: View {
                     }
                 }
             }
+            .inventoryMotion(value: state.containers.map(\.id))
+            .inventoryMotion(value: state.inHand.items.map(\.id))
+            .inventoryMotion(value: state.activities.map(\.id))
             .padding(.horizontal, PopsSpacing.lg)
             .padding(.bottom, PopsSpacing.xxl)
         }
@@ -46,12 +50,13 @@ internal struct InventoryGroundedDashboardView: View {
         .navigationDestination(for: InventoryRoute.self) { route in
             InventoryDestinationView(route: route)
         }
-        .sheet(item: $moveRequest) { item in
-            InventoryMoveDestinationSheet(
-                item: item,
-                containers: state.containers,
-                onMove: { move(item) }
-            )
-        }
+        .inventoryInHandSelectionBar(
+            $inHandSelection, list: state.inHand,
+            onPutBack: { ids in
+                if let next = state.inHand.putBack(ids) { offer = next }
+            },
+            onMove: { moving = $0 }
+        )
+        .inventoryInHandActions($state.inHand, moving: $moving, offer: $offer)
     }
 }

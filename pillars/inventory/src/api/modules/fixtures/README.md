@@ -2,10 +2,10 @@
 
 A fixture is house infrastructure an item plugs into but the user does not own —
 power outlets, ethernet ports, HDMI wall plates, light switches. They live in
-their own table, not in `home_inventory`. Deleting a fixture cascades away its
+their own table, not in `items`. Deleting a fixture cascades away its
 `item_fixture_connections` rows (`onDelete: 'cascade'` on `fixtureId`, with
 `foreign_keys = ON` set in `src/db/open-inventory-db.ts`) and touches nothing
-else: `item_connections` references `home_inventory` only. Deletion is one row
+else: `item_connections` references `items` only. Deletion is one row
 at a time — there is no bulk endpoint in the contract.
 
 `type` is free text, not an enum, so a new kind of fixture never needs a

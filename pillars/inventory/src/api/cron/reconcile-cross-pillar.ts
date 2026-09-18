@@ -10,7 +10,7 @@ import {
  * Cross-pillar URI reconciliation worker.
  *
  * Nightly job that walks the distinct `purchase_transaction_uri` values on
- * `home_inventory` and asks finance — via the typed `pillar()` proxy from
+ * `items` and asks finance — via the typed `pillar()` proxy from
  * `@pops/pillar-sdk/server` — whether each reference still resolves.
  * Reconciliation outcomes:
  *
