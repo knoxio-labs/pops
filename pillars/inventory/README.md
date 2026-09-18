@@ -66,6 +66,7 @@ pillars/inventory/
 └── src/
     ├── contract/   PUBLIC: ts-rest contract, types, zod schemas, manifest, errors, settings
     ├── api/        PRIVATE: Express server, ts-rest handlers, registry wiring
+    ├── domain/     PRIVATE: the command layer (revisioned, event-logged writes)
     └── db/         PRIVATE: drizzle schema, migrations, services, the SQLite opener
 ```
 
@@ -231,6 +232,9 @@ hand-authored paths.
 Feature-level documentation is colocated with the code it describes. The ones
 that exist:
 
+- [`src/domain/commands/`](src/domain/commands/README.md) — the command
+  layer: how one mutation is replayed, deferred, checked against its base
+  revision, recorded and stored, and how an op is added.
 - [`src/api/modules/fixtures/`](src/api/modules/fixtures/README.md) — what a
   fixture is, who calls it, and what it deliberately does not do.
 - [`src/api/modules/reports/`](src/api/modules/reports/README.md) — the
