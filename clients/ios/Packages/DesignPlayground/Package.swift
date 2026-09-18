@@ -21,7 +21,7 @@ let strictSwiftSettings: [SwiftSetting] = [
 // `@Observable` is unavailable and the package only builds through Xcode.
 let package = Package(
     name: "DesignPlayground",
-    platforms: [.iOS("26.0"), .macOS("15.0")],
+    platforms: [.iOS("27.0"), .macOS("15.0")],
     products: [.library(name: "DesignPlayground", targets: ["DesignPlayground"])],
     dependencies: [
         .package(path: "../AppCore"),

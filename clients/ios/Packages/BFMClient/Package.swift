@@ -27,7 +27,7 @@ let strictSwiftSettings: [SwiftSetting] = [
 // against it, and the package only builds through Xcode's iOS SDK.
 let package = Package(
     name: "BFMClient",
-    platforms: [.iOS("26.0"), .macOS("15.0")],
+    platforms: [.iOS("27.0"), .macOS("15.0")],
     products: [.library(name: "BFMClient", targets: ["BFMClient"])],
     // `AppCore` is the one sibling edge, and it is the reason this package is
     // named in `ModuleBoundaryTests.implementationPackages`: a repository over

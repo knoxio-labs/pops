@@ -14,7 +14,7 @@ let strictSwiftSettings: [SwiftSetting] = [
 // `@Observable` is unavailable and the package only builds through Xcode.
 let package = Package(
     name: "FeatureReceiptCapture",
-    platforms: [.iOS("26.0"), .macOS("15.0")],
+    platforms: [.iOS("27.0"), .macOS("15.0")],
     products: [.library(name: "FeatureReceiptCapture", targets: ["FeatureReceiptCapture"])],
     dependencies: [
         .package(path: "../AppCore"),
