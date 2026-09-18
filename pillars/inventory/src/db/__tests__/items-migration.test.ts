@@ -736,6 +736,12 @@ describe('0012_items_single_identity on rows pointing at records that do not exi
     insertItem(raw, { id: 'i-ok', name: 'Drill', locationId: 'l-garage' });
     insertItem(raw, { id: 'i-lost', name: 'Kettle', locationId: 'l-gone' });
     insertItem(raw, { id: 'i-boxless', name: 'Saw', containerId: 'c-gone' });
+    insertItem(raw, {
+      id: 'i-both-gone',
+      name: 'Ladder',
+      locationId: 'l-gone',
+      containerId: 'c-gone',
+    });
     insertContainer(raw, { id: 'c-lost', label: 'Lost box', state: 'sealed', origin: 'l-gone' });
     insertContainer(raw, {
       id: 'c-half',
@@ -833,6 +839,7 @@ describe('0012_items_single_identity on rows pointing at records that do not exi
     expect(orphans().map(({ table, id, reason }) => ({ table, id, reason }))).toEqual([
       { table: 'containers', id: 'c-half', reason: 'missing location' },
       { table: 'containers', id: 'c-lost', reason: 'missing location' },
+      { table: 'home_inventory', id: 'i-both-gone', reason: 'missing location and container' },
       { table: 'home_inventory', id: 'i-boxless', reason: 'missing container' },
       { table: 'home_inventory', id: 'i-lost', reason: 'missing location' },
       { table: 'item_connections', id: 42, reason: 'missing item' },
@@ -880,6 +887,18 @@ describe('0012_items_single_identity on rows pointing at records that do not exi
     expect(byKey.get('home_inventory/i-boxless')).toMatchObject({ container_id: 'c-gone' });
   });
 
+  it('captures a row missing both its location and its container exactly once, pre-update', () => {
+    const dualOrphans = orphans().filter((o) => o.id === 'i-both-gone');
+    expect(dualOrphans).toHaveLength(1);
+    expect(dualOrphans[0]?.reason).toBe('missing location and container');
+    expect(dualOrphans[0]?.row).toMatchObject({
+      id: 'i-both-gone',
+      item_name: 'Ladder',
+      location_id: 'l-gone',
+      container_id: 'c-gone',
+    });
+  });
+
   it('copies every row whose references exist', () => {
     expect(all(`SELECT id FROM item_photos`)).toEqual([{ id: 11 }]);
     expect(all(`SELECT id FROM item_uploaded_files`)).toEqual([{ id: 21 }]);
@@ -905,7 +924,7 @@ describe('0012_items_single_identity on rows pointing at records that do not exi
         previous_location_id: null,
         previous_containing_item_id: null,
       },
-      ...['c-lost', 'i-boxless', 'i-lost'].map((id) => ({
+      ...['c-lost', 'i-both-gone', 'i-boxless', 'i-lost'].map((id) => ({
         id,
         placement_kind: 'hand',
         location_id: null,

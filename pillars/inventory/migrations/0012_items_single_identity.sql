@@ -76,6 +76,11 @@ UPDATE `containers`
 SET `origin_location_id` = NULL
 WHERE (`origin_location_id` IS NOT NULL AND `origin_location_id` NOT IN (SELECT `id` FROM `locations`));
 --> statement-breakpoint
+-- A row can be missing its location, its container, or both; classifying it
+-- against the original columns before either UPDATE below runs means a
+-- dual-defect row is captured once, with its pre-update values and a reason
+-- naming both, instead of twice with the second capture seeing a
+-- half-updated row.
 INSERT INTO `migration_0012_orphans` (`table_name`, `row_json`, `reason`, `captured_at`)
 SELECT
     'home_inventory',
@@ -92,33 +97,20 @@ SELECT
         'purchase_transaction_stale_at', `purchase_transaction_stale_at`, 'owner_uri', `owner_uri`, 'owner_stale_at', `owner_stale_at`,
         'container_id', `container_id`, 'source_ref', `source_ref`
     ),
-    'missing location',
+    CASE
+        WHEN (`location_id` IS NOT NULL AND `location_id` NOT IN (SELECT `id` FROM `locations`))
+            AND (`container_id` IS NOT NULL AND `container_id` NOT IN (SELECT `id` FROM `containers`))
+        THEN 'missing location and container'
+        WHEN (`location_id` IS NOT NULL AND `location_id` NOT IN (SELECT `id` FROM `locations`))
+        THEN 'missing location'
+        ELSE 'missing container'
+    END,
     strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
 FROM `home_inventory`
-WHERE (`location_id` IS NOT NULL AND `location_id` NOT IN (SELECT `id` FROM `locations`));
+WHERE (`location_id` IS NOT NULL AND `location_id` NOT IN (SELECT `id` FROM `locations`))
+    OR (`container_id` IS NOT NULL AND `container_id` NOT IN (SELECT `id` FROM `containers`));
 --> statement-breakpoint
 UPDATE `home_inventory` SET `location_id` = NULL WHERE (`location_id` IS NOT NULL AND `location_id` NOT IN (SELECT `id` FROM `locations`));
---> statement-breakpoint
-INSERT INTO `migration_0012_orphans` (`table_name`, `row_json`, `reason`, `captured_at`)
-SELECT
-    'home_inventory',
-    json_object(
-        'id', `id`, 'notion_id', `notion_id`, 'item_name', `item_name`,
-        'brand', `brand`, 'model', `model`, 'item_id', `item_id`,
-        'room', `room`, 'location', `location`, 'type', `type`,
-        'condition', `condition`, 'in_use', `in_use`, 'deductible', `deductible`,
-        'purchase_date', `purchase_date`, 'warranty_expires', `warranty_expires`, 'replacement_value', `replacement_value`,
-        'resale_value', `resale_value`, 'purchase_transaction_id', `purchase_transaction_id`, 'purchased_from_id', `purchased_from_id`,
-        'purchased_from_name', `purchased_from_name`, 'purchase_price', `purchase_price`, 'asset_id', `asset_id`,
-        'notes', `notes`, 'location_id', `location_id`, 'created_at', `created_at`,
-        'updated_at', `updated_at`, 'last_edited_time', `last_edited_time`, 'purchase_transaction_uri', `purchase_transaction_uri`,
-        'purchase_transaction_stale_at', `purchase_transaction_stale_at`, 'owner_uri', `owner_uri`, 'owner_stale_at', `owner_stale_at`,
-        'container_id', `container_id`, 'source_ref', `source_ref`
-    ),
-    'missing container',
-    strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
-FROM `home_inventory`
-WHERE `container_id` IS NOT NULL AND `container_id` NOT IN (SELECT `id` FROM `containers`);
 --> statement-breakpoint
 UPDATE `home_inventory` SET `container_id` = NULL
 WHERE `container_id` IS NOT NULL AND `container_id` NOT IN (SELECT `id` FROM `containers`);
