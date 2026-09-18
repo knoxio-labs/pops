@@ -11,8 +11,9 @@ internal struct ModuleBoundaryTests {
     /// Packages allowed to name a concrete implementation of an `AppCore` seam,
     /// because they are the mechanism: `Auth` owns pairing, key material and the
     /// middleware that attaches a token; `BFMClient` owns the generated types
-    /// and the calls that carry them.
-    private let implementationPackages: Set<String> = ["Auth", "BFMClient"]
+    /// and the calls that carry them; `InventoryReplica` owns the phone's
+    /// on-device database and the Inventory reads answered from it.
+    private let implementationPackages: Set<String> = ["Auth", "BFMClient", "InventoryReplica"]
 
     /// The modules the generated BFM client is written against. Naming one is
     /// how a generated type would reach a second module — the types themselves
@@ -47,14 +48,17 @@ internal struct ModuleBoundaryTests {
     ]
 
     /// Every SPM dependency the app is allowed to resolve from outside this
-    /// repo, per package. All Apple's, all there because a generated OpenAPI
-    /// client does not compile without them.
+    /// repo, per package. Apple's OpenAPI runtime is there because a generated
+    /// client does not compile without it. GRDB is the one that is not Apple's:
+    /// Inventory ADR-002 D11 chose it for the phone's database, and only the
+    /// package that owns that database may reach for it.
     private let allowedExternalPackages: [String: Set<String>] = [
         "BFMClient": [
             "https://github.com/apple/swift-openapi-runtime",
             "https://github.com/apple/swift-openapi-urlsession",
         ],
         "Auth": ["https://github.com/apple/swift-openapi-runtime"],
+        "InventoryReplica": ["https://github.com/groue/GRDB.swift"],
     ]
 
     @Test("the scan finds the packages it is asserting about")
