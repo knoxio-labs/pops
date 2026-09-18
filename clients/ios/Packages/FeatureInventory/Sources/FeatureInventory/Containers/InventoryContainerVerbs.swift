@@ -64,7 +64,8 @@ internal enum InventoryContainerVerb: String, Identifiable, CaseIterable {
     internal func command(for item: InventoryItem) -> InventoryCommand? {
         switch self {
         case .pickUp: .moveItem(id: item.id, to: .hand, verb: .pickUp)
-        case .putBack: item.previousPlacement.flatMap(Self.placement).map {
+        case .putBack:
+            item.previousPlacement.flatMap(Self.placement).map {
                 .moveItem(id: item.id, to: $0, verb: .putBack)
             }
         case .open: .setItemAccess(id: item.id, access: .open)

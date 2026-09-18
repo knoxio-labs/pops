@@ -37,7 +37,6 @@ extension View {
     ) -> some View {
         modifier(InventoryMotionModifier(animation: animation, value: value))
     }
-
 }
 
 private struct InventoryMotionModifier<Value: Equatable>: ViewModifier {

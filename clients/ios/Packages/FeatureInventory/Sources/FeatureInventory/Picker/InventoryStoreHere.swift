@@ -45,13 +45,15 @@ internal struct InventoryStoreCandidate: Identifiable, Equatable {
             : source.inventorySearch(text: text, includeInactive: false)
         let crumbs = InventoryPlacementCrumbs(source: source)
         let refused = refusedIds(for: target, source: source)
-        return found.filter { $0.isLive && $0.placement != target.placement && !refused.contains($0.id) }
-            .map { item in
-                InventoryStoreCandidate(
-                    id: item.id, name: item.name, crumbs: crumbs.names(of: item.placement),
-                    isInHand: item.placement == .hand, access: item.containment?.access,
-                    photo: item.photos.first?.sha256)
-            }
+        return found.filter {
+            $0.isLive && $0.placement != target.placement && !refused.contains($0.id)
+        }
+        .map { item in
+            InventoryStoreCandidate(
+                id: item.id, name: item.name, crumbs: crumbs.names(of: item.placement),
+                isInHand: item.placement == .hand, access: item.containment?.access,
+                photo: item.photos.first?.sha256)
+        }
     }
 
     /// The target container and every container it sits inside.

@@ -47,7 +47,9 @@ internal struct InventoryPlacementChoices: Equatable {
     internal let containers: [InventoryDestination]
     internal let offered: Set<String>?
 
-    internal init(reading source: any InventoryQuerySource, for subject: InventoryPlacementRequest.Subject) {
+    internal init(
+        reading source: any InventoryQuerySource, for subject: InventoryPlacementRequest.Subject
+    ) {
         let full = InventoryLocationTree(reading: source)
         let crumbs = InventoryPlacementCrumbs(source: source)
         switch subject {
@@ -103,7 +105,8 @@ internal struct InventoryPlacementChoices: Equatable {
                 destination = tree.node(id).map { InventoryDestination(place: $0, in: tree) }
             case .container(let id) where !blocked.contains(id):
                 destination = source.inventoryItem(id: id).flatMap {
-                    $0.isLive ? Self.destination(container: $0, crumbs: crumbs, source: source) : nil
+                    $0.isLive
+                        ? Self.destination(container: $0, crumbs: crumbs, source: source) : nil
                 }
             case .container, .hand:
                 destination = nil

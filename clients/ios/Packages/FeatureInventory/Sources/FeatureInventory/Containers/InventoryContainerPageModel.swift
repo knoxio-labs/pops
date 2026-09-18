@@ -10,6 +10,14 @@ import Observation
 /// the store cannot know: the selection, a Full switch flipped and not yet
 /// answered, and whether the page has seen the container hold anything, which
 /// is what makes an empty container "just emptied" rather than simply empty.
+
+/// The manual Full switch's optimistic value while a write is in flight, or
+/// none while the switch simply reflects the store's own answer.
+private enum PendingFull: Equatable {
+    case none
+    case value(Bool)
+}
+
 @MainActor @Observable
 internal final class InventoryContainerPageModel {
     internal let id: InventoryItem.ID
@@ -18,7 +26,7 @@ internal final class InventoryContainerPageModel {
     internal var selection = InventorySelection()
     internal var moving: InventoryPlacementRequest?
     internal var storing = false
-    internal private(set) var pendingFull: Bool?
+    private var pendingFull = PendingFull.none
     private var sawContents = false
     private var emptiedResolved = false
 
@@ -56,18 +64,21 @@ internal final class InventoryContainerPageModel {
     }
 
     internal func isFull(_ profile: InventoryContainerProfile) -> Bool {
-        pendingFull ?? profile.isFull
+        if case .value(let value) = pendingFull { return value }
+        return profile.isFull
     }
 
     /// Flips the manual Full switch. The switch shows the new value at once
     /// and settles on the store's answer.
     internal func setFull(_ isFull: Bool) async {
-        pendingFull = isFull
+        pendingFull = .value(isFull)
         await runner.perform([.setItemFull(id: id, isFull: isFull)])
-        pendingFull = nil
+        pendingFull = .none
     }
 
-    internal func perform(_ verb: InventoryContainerVerb, on profile: InventoryContainerProfile) async {
+    internal func perform(_ verb: InventoryContainerVerb, on profile: InventoryContainerProfile)
+        async
+    {
         switch verb {
         case .storeHere:
             storing = true
@@ -82,7 +93,8 @@ internal final class InventoryContainerPageModel {
 
     /// Picks up the given rows: they leave the container for someone's hand.
     internal func pickUp(_ ids: Set<String>, in profile: InventoryContainerProfile) async {
-        let message = ids.count == 1 ? "Picked up \(title(ids, in: profile))" : "Picked up \(ids.count)"
+        let message =
+            ids.count == 1 ? "Picked up \(title(ids, in: profile))" : "Picked up \(ids.count)"
         await leave(ids, to: .hand, verb: .pickUp, message: message, symbol: .inHand)
     }
 
@@ -96,10 +108,13 @@ internal final class InventoryContainerPageModel {
     }
 
     internal func move(_ ids: Set<String>, in profile: InventoryContainerProfile) {
-        moving = InventoryPlacementRequest(subject: .items(ids.sorted()), title: title(ids, in: profile))
+        moving = InventoryPlacementRequest(
+            subject: .items(ids.sorted()), title: title(ids, in: profile))
     }
 
-    internal func choose(_ choice: InventoryEmptiedContainerChoice, profile: InventoryContainerProfile) async {
+    internal func choose(
+        _ choice: InventoryEmptiedContainerChoice, profile: InventoryContainerProfile
+    ) async {
         switch choice {
         case .keep:
             moving = InventoryPlacementRequest(
@@ -130,7 +145,9 @@ internal final class InventoryContainerPageModel {
         message: String, symbol: InventorySymbol
     ) async {
         guard !ids.isEmpty else { return }
-        let commands = ids.sorted().map { InventoryCommand.moveItem(id: $0, to: placement, verb: verb) }
+        let commands = ids.sorted().map {
+            InventoryCommand.moveItem(id: $0, to: placement, verb: verb)
+        }
         if await runner.perform(commands, announcing: message, symbol: symbol) {
             selection.deselectAll()
         }

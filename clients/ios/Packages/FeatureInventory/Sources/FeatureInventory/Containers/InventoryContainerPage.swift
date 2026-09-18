@@ -42,8 +42,10 @@ internal struct InventoryContainerPage: View {
         return ScrollView {
             VStack(alignment: .leading, spacing: PopsSpacing.md) {
                 InventoryContainerHeader(profile: profile)
-                InventoryContainerActionRow(verbs: InventoryContainerVerb.row(for: profile.item)) {
-                    verb in Task { await model.perform(verb, on: profile) }
+                InventoryContainerActionRow(
+                    verbs: InventoryContainerVerb.row(for: profile.item)
+                ) { verb in
+                    Task { await model.perform(verb, on: profile) }
                 }
                 InventoryContainerContentsSection(profile: profile, model: model)
             }
@@ -83,7 +85,9 @@ internal struct InventoryContainerHeader: View {
         VStack(alignment: .leading, spacing: PopsSpacing.xs) {
             Text(profile.name)
                 .font(.popsTitle)
-                .foregroundStyle(profile.isActive ? Color.popsForeground : Color.popsMutedForeground)
+                .foregroundStyle(
+                    profile.isActive ? Color.popsForeground : Color.popsMutedForeground
+                )
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .accessibilityAddTraits(.isHeader)
@@ -91,7 +95,8 @@ internal struct InventoryContainerHeader: View {
                 .font(.popsSubheadline)
                 .foregroundStyle(Color.popsMutedForeground)
                 .lineLimit(1)
-            InventoryPlacementPath(crumbs: profile.crumbs, isInHand: profile.item.placement == .hand)
+            InventoryPlacementPath(
+                crumbs: profile.crumbs, isInHand: profile.item.placement == .hand)
             let marks = InventoryStateMark.marks(for: profile.item)
             if !marks.isEmpty {
                 HStack(spacing: PopsSpacing.xs) {

@@ -94,7 +94,9 @@ internal struct InventoryContainerContentsSection: View {
     }
 
     private func row(_ entry: InventoryContainedEntry) -> some View {
-        NavigationLink(value: InventoryRoute.record(id: entry.id, isContainer: entry.item.isContainer)) {
+        NavigationLink(
+            value: InventoryRoute.record(id: entry.id, isContainer: entry.item.isContainer)
+        ) {
             InventoryGroundedRowLabel(
                 title: entry.item.name,
                 detail: "\(entry.typeName ?? "No type yet") · "
@@ -106,36 +108,36 @@ internal struct InventoryContainerContentsSection: View {
         .buttonStyle(.plain)
         .inventorySelectable(entry.id, in: $model.selection)
         .inventoryGroundedSwipeActions(
-            edge: .leading,
-            onPresentationChanged: { _ in },
-            actions: {
-                if !model.selection.isSelecting {
-                    Button {
-                        model.move([entry.id], in: profile)
-                    } label: {
-                        Label("Move to…", systemImage: "folder.fill")
-                    }
-                    .tint(.popsAccent)
-                }
-            }
+            edge: .leading, onPresentationChanged: { _ in }, actions: { moveAction(entry) }
         )
         .inventoryGroundedSwipeActions(
-            edge: .trailing,
-            onPresentationChanged: { _ in },
-            actions: {
-                if !model.selection.isSelecting {
-                    Button {
-                        Task { await model.pickUp([entry.id], in: profile) }
-                    } label: {
-                        Label {
-                            Text("Pick up")
-                        } icon: {
-                            InventorySymbol.inHand.image
-                        }
-                    }
-                    .tint(.popsInventory)
+            edge: .trailing, onPresentationChanged: { _ in }, actions: { pickUpAction(entry) })
+    }
+
+    @ViewBuilder private func moveAction(_ entry: InventoryContainedEntry) -> some View {
+        if !model.selection.isSelecting {
+            Button {
+                model.move([entry.id], in: profile)
+            } label: {
+                Label("Move to…", systemImage: "folder.fill")
+            }
+            .tint(.popsAccent)
+        }
+    }
+
+    @ViewBuilder private func pickUpAction(_ entry: InventoryContainedEntry) -> some View {
+        if !model.selection.isSelecting {
+            Button {
+                Task { await model.pickUp([entry.id], in: profile) }
+            } label: {
+                Label {
+                    Text("Pick up")
+                } icon: {
+                    InventorySymbol.inHand.image
                 }
-            })
+            }
+            .tint(.popsInventory)
+        }
     }
 
     private func thumbnail(_ sha256: String) async -> Data? {
