@@ -6,6 +6,7 @@
  */
 import { getPillarRegistry } from './pillars/registry.js';
 
+import type { ServiceAccountVerifier } from '@pops/pillar-sdk/server';
 import type { PillarRegistryEntry } from '@pops/types';
 
 import type { OpenedInventoryDb } from '../db/index.js';
@@ -29,6 +30,12 @@ export interface InventoryApiDeps {
    * `pillars/inventory/src/api/rest/handlers.ts`.
    */
   documents?: DocumentsClient;
+  /**
+   * Resolves a presented `X-API-Key` to its service account. Defaults to a
+   * registry-backed verifier; tests inject a fake so no test needs a live
+   * registry. See `middleware/service-account-scope.ts`.
+   */
+  serviceAccountVerifier?: ServiceAccountVerifier;
 }
 
 export interface HealthResponse {

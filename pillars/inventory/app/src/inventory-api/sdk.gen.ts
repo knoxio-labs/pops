@@ -4,6 +4,9 @@ import { client } from './client.gen';
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import type {
+  CodesSuggestData,
+  CodesSuggestErrors,
+  CodesSuggestResponses,
   ConnectionsConnectData,
   ConnectionsConnectErrors,
   ConnectionsConnectResponses,
@@ -159,6 +162,21 @@ import type {
   SettingsSetManyErrors,
   SettingsSetManyResponses,
   SettingsSetResponses,
+  SyncChangesData,
+  SyncChangesErrors,
+  SyncChangesResponses,
+  SyncItemEventsData,
+  SyncItemEventsErrors,
+  SyncItemEventsResponses,
+  SyncMutationsData,
+  SyncMutationsErrors,
+  SyncMutationsResponses,
+  SyncSnapshotData,
+  SyncSnapshotErrors,
+  SyncSnapshotResponses,
+  TypesCatalogueData,
+  TypesCatalogueErrors,
+  TypesCatalogueResponses,
 } from './types.gen';
 
 export type Options<
@@ -178,6 +196,21 @@ export type Options<
    */
   meta?: keyof ClientMeta extends never ? Record<string, unknown> : ClientMeta;
 };
+
+/**
+ * Free codes for a new item: a stem followed by the next unused numbers
+ */
+export const codesSuggest = <ThrowOnError extends boolean = false>(
+  options?: Options<CodesSuggestData, ThrowOnError>
+): RequestResult<CodesSuggestResponses, CodesSuggestErrors, ThrowOnError> =>
+  (options?.client ?? client).post<CodesSuggestResponses, CodesSuggestErrors, ThrowOnError>({
+    url: '/codes/suggest',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
 
 /**
  * Disconnect two items by their item ids
@@ -933,6 +966,65 @@ export const settingsResetKey = <ThrowOnError extends boolean = false>(
       'Content-Type': 'application/json',
       ...options.headers,
     },
+  });
+
+/**
+ * Rows and events changed after `since`, tombstones included, in seq order
+ */
+export const syncChanges = <ThrowOnError extends boolean = false>(
+  options: Options<SyncChangesData, ThrowOnError>
+): RequestResult<SyncChangesResponses, SyncChangesErrors, ThrowOnError> =>
+  (options.client ?? client).get<SyncChangesResponses, SyncChangesErrors, ThrowOnError>({
+    url: '/sync/changes',
+    ...options,
+  });
+
+/**
+ * An item's history, newest first
+ */
+export const syncItemEvents = <ThrowOnError extends boolean = false>(
+  options: Options<SyncItemEventsData, ThrowOnError>
+): RequestResult<SyncItemEventsResponses, SyncItemEventsErrors, ThrowOnError> =>
+  (options.client ?? client).get<SyncItemEventsResponses, SyncItemEventsErrors, ThrowOnError>({
+    url: '/sync/items/{id}/events',
+    ...options,
+  });
+
+/**
+ * Apply up to 50 mutations in order, each in its own transaction, idempotently
+ */
+export const syncMutations = <ThrowOnError extends boolean = false>(
+  options?: Options<SyncMutationsData, ThrowOnError>
+): RequestResult<SyncMutationsResponses, SyncMutationsErrors, ThrowOnError> =>
+  (options?.client ?? client).post<SyncMutationsResponses, SyncMutationsErrors, ThrowOnError>({
+    url: '/sync/mutations',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
+
+/**
+ * One page of live items and locations; the first page fixes the high-water seq the feed resumes from
+ */
+export const syncSnapshot = <ThrowOnError extends boolean = false>(
+  options: Options<SyncSnapshotData, ThrowOnError>
+): RequestResult<SyncSnapshotResponses, SyncSnapshotErrors, ThrowOnError> =>
+  (options.client ?? client).get<SyncSnapshotResponses, SyncSnapshotErrors, ThrowOnError>({
+    url: '/sync/snapshot',
+    ...options,
+  });
+
+/**
+ * The type catalogue; `ETag` is its version, and a matching `If-None-Match` is 304
+ */
+export const typesCatalogue = <ThrowOnError extends boolean = false>(
+  options?: Options<TypesCatalogueData, ThrowOnError>
+): RequestResult<TypesCatalogueResponses, TypesCatalogueErrors, ThrowOnError> =>
+  (options?.client ?? client).get<TypesCatalogueResponses, TypesCatalogueErrors, ThrowOnError>({
+    url: '/types',
+    ...options,
   });
 
 /**

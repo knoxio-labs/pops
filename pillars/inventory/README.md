@@ -66,6 +66,7 @@ pillars/inventory/
 └── src/
     ├── contract/   PUBLIC: ts-rest contract, types, zod schemas, manifest, errors, settings
     ├── api/        PRIVATE: Express server, ts-rest handlers, registry wiring
+    ├── domain/     PRIVATE: the command layer (revisioned, event-logged writes)
     └── db/         PRIVATE: drizzle schema, migrations, services, the SQLite opener
 ```
 
@@ -100,9 +101,82 @@ is `code`, `type` is `legacy_type`). The `/containers` routes are gone.
 
 On boot, when `POPS_REGISTRY_ENABLED=true`, the server calls `bootstrapPillar`
 from `@pops/pillar-sdk`, which POSTs the manifest to the `registry` pillar
-(`/registry/register`) and tears the entry down on `SIGTERM`. There is no
-per-request auth: the pillar trusts the docker network and the gateway in front
-authenticates.
+(`/registry/register`) and tears the entry down on `SIGTERM`.
+
+## Who may call it
+
+An inbound service-account gate covers the whole contract surface
+([ADR-044](../../docs/architecture/adr-044-inbound-service-account-scope-enforcement.md)),
+adopting the shape purchases already carries. It is derived from
+`inventoryContract` rather than a hand-kept path list, so a new route —
+including the sync surface `rest-sync.ts` adds — is gated the moment it
+exists. `/health`, `/pillars` and `/openapi` are outside the contract and
+stay ungated, and so are the raw byte-serving photo/document/thumbnail routes
+in `files/router.ts`, matching prior behaviour: this slice adds a gate over
+the ts-rest surface, not a general perimeter.
+
+A caller presenting an `X-API-Key` is held to the service account behind it:
+an unknown or revoked key is `401`, a live key whose grant misses the
+operation is `403` logged with the account name and the exact missing scope,
+and a registry that cannot be reached is `503` rather than admission. Scopes
+are dotted and match by prefix, so `inventory.items` authorises
+`inventory.items.list` and nothing under `inventory.locations`.
+
+**A caller presenting no key is still admitted, and that is a decision, not
+an omission.** `requireCredential` is `false`. Browser traffic through the
+shell's nginx proxy presents none, and so does every other caller already
+reaching this pillar over the docker network with no key; closing that path
+is a fleet-wide decision about ADR-027's trust boundary, not this pillar's to
+make alone.
+`INVENTORY_REQUIRE_SERVICE_ACCOUNT_CREDENTIAL`
+(`resolveRequireCredential` in `src/api/middleware/service-account-scope.ts`)
+flips that posture to mandatory for the duration of a run — for a live-seam
+suite that needs to prove a presented key is actually checked rather than
+merely admitted alongside everything else — and is gated on
+`NODE_ENV !== 'production'` as well, so a stray value left set in a real
+deployment can never reach it.
+
+**This gate must not deploy before the registry grants below are in place.**
+bfm's service account needs its grant widened to `inventory.sync`,
+`inventory.types`, `inventory.codes` and `inventory.media`, and the MCP
+service account's grant must include `inventory` (ADR-048's mobile
+capabilities and the MCP tools both reach this pillar with a key). Until
+those grants exist, every one of those callers starts answering `403` the
+moment this ships — precisely what POPS-1878 did to purchases when its own
+gate landed ahead of the MCP grant. Minting or widening a grant is a row in
+the registry DB, an operator step rather than a repo change.
+
+## Sync protocol
+
+`src/contract/rest-sync.ts` is the protocol bfm relays to the phone under
+`/mobile/inventory/*` (Inventory ADR-002, D9 and D10), in three sub-routers so
+the gate above derives three grants: `inventory.sync` (`GET /sync/snapshot`,
+`GET /sync/changes`, `GET /sync/items/:id/events`, `POST /sync/mutations`),
+`inventory.types` (`GET /types`) and `inventory.codes`
+(`POST /codes/suggest`).
+
+- Every one of those routes needs `Pops-Inventory-Protocol: <n>`; missing or
+  below `sync_meta.min_protocol` is `426 client_too_old`, checked by
+  `src/api/sync/protocol.ts` ahead of the handlers.
+- The snapshot serves live items and locations in pages whose opaque cursor
+  pins the high-water `seq` of the first page; the change feed then serves
+  every row (tombstones included) and every event after a `seq`. A cursor or
+  feed position from another `sync_meta.epoch`, or a `since` above the latest
+  `seq`, is `409 resync_required`; a cursor this server did not issue is
+  `400 invalid_cursor`.
+- `POST /sync/mutations` runs up to 50 mutations through the command layer
+  in order, one transaction each, and answers one outcome per mutation.
+  `Pops-Actor: device:<deviceId>;label=<percent-encoded label>` names the
+  phone the change is recorded against, and is believed only from a caller
+  whose account holds `inventory.sync`; no key records `web`, any other key
+  `service:<account>`.
+- Events carry `before`/`after` keyed by wire field. A move records both
+  `placement` and `previousPlacement`, each in the item row's placement
+  shape (`{ kind: 'location', locationId }`, `{ kind: 'container', itemId }`,
+  `{ kind: 'hand' }`, and `null` for no previous placement).
+- Connections, fixtures and uploaded files are not on the snapshot or the
+  feed: Inventory ADR-002 keeps them on their current tables and routes.
+  Whether the phone needs connections at all is POPS-4110.
 
 ## Cross-pillar reconciliation
 
@@ -190,6 +264,9 @@ hand-authored paths.
 Feature-level documentation is colocated with the code it describes. The ones
 that exist:
 
+- [`src/domain/commands/`](src/domain/commands/README.md) — the command
+  layer: how one mutation is replayed, deferred, checked against its base
+  revision, recorded and stored, and how an op is added.
 - [`src/api/modules/fixtures/`](src/api/modules/fixtures/README.md) — what a
   fixture is, who calls it, and what it deliberately does not do.
 - [`src/api/modules/reports/`](src/api/modules/reports/README.md) — the
