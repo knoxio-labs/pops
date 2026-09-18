@@ -40,6 +40,7 @@
     "generate:command-vectors": "tsx scripts/generate-command-vectors.ts"
   },
   "dependencies": {
+    "@pops/pillar-express": "workspace:*",
     "@pops/pillar-sdk": "workspace:*",
     "@pops/pillar-settings": "workspace:*",
     "@pops/types": "workspace:*",
