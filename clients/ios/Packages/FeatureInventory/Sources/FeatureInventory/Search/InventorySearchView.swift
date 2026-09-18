@@ -38,11 +38,13 @@ internal struct InventorySearchView: View {
         }
         .tint(.popsInventory)
         .inventoryRecordSelectionBar(
-            $selection, records: model.hitRecords, writer: model.writer, moving: $moving)
+            $selection, records: model.hitRecords, writer: model.writer, moving: $moving
+        )
         .inventoryMoveSheet($moving)
         .inventoryWriterFeedback(model.writer)
-        .task(id: TaskKey(key: model.observationKey, scanned: storedScanned, generation: generation))
-        {
+        .task(
+            id: TaskKey(key: model.observationKey, scanned: storedScanned, generation: generation)
+        ) {
             await model.observe(scannedIDs: InventorySearchRecents.decode(storedScanned))
         }
     }

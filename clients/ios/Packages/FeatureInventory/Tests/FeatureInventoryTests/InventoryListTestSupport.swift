@@ -58,13 +58,12 @@ internal enum InventoryListFixture {
     }
 }
 
-/// Waits for `condition` to hold, within a bounded number of scheduler turns,
-/// so a store that never answers fails the test instead of hanging it.
+/// Waits for `condition` to hold, signalled by Observation the moment a
+/// tracked property it reads changes rather than polled for by yielding,
+/// and bounded by a deadline so a condition that never holds fails the
+/// test instead of hanging the suite.
 @MainActor
-internal func eventually(_ condition: () -> Bool) async -> Bool {
-    for _ in 0..<1_000 {
-        if condition() { return true }
-        await Task.yield()
-    }
+internal func eventually(_ condition: @escaping @Sendable @MainActor () -> Bool) async -> Bool {
+    await awaitObservedCondition(condition)
     return condition()
 }

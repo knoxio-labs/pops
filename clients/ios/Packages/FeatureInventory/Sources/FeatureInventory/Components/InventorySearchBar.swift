@@ -19,8 +19,10 @@ internal struct InventorySearchBar<FilterOptions: View>: View {
     internal var add: InventorySearchBarAdd?
     internal var onFilter: (() -> Void)?
     internal var scan: (() -> Void)?
+    internal var onSubmit: () -> Void = {}
     @ViewBuilder internal let filterOptions: () -> FilterOptions
     @ScaledMetric(relativeTo: .body) private var height = PopsSize.touchTarget
+    @FocusState private var isFocused: Bool
 
     internal var body: some View {
         InventoryGlassGroup(spacing: PopsSpacing.sm) {
@@ -47,6 +49,8 @@ internal struct InventorySearchBar<FilterOptions: View>: View {
                 .submitLabel(.search)
                 .autocorrectionDisabled()
                 .tint(.popsInventory)
+                .focused($isFocused)
+                .onSubmit(onSubmit)
             trailingButton
         }
         .font(.popsBody)
@@ -72,6 +76,7 @@ internal struct InventorySearchBar<FilterOptions: View>: View {
             .transition(.opacity)
         } else if query.isEmpty {
             Button {
+                isFocused = true
             } label: {
                 InventorySymbol.dictate.image
                     .foregroundStyle(Color.popsInventory)
@@ -153,11 +158,12 @@ extension InventorySearchBar where FilterOptions == EmptyView {
     internal init(
         query: Binding<String>, prompt: String, isFiltered: Bool, filterSummary: String,
         onFilter: @escaping () -> Void, scan: (() -> Void)? = nil,
-        add: InventorySearchBarAdd? = nil
+        onSubmit: @escaping () -> Void = {}, add: InventorySearchBarAdd? = nil
     ) {
         self.init(
             query: query, prompt: prompt, isFiltered: isFiltered, filterSummary: filterSummary,
-            add: add, onFilter: onFilter, scan: scan, filterOptions: { EmptyView() })
+            add: add, onFilter: onFilter, scan: scan, onSubmit: onSubmit,
+            filterOptions: { EmptyView() })
     }
 }
 

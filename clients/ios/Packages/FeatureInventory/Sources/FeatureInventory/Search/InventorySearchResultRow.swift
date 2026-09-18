@@ -197,16 +197,6 @@ internal struct InventoryPlaceRowLabel: View {
     }
 }
 
-internal struct InventoryRowChevron: View {
-    internal var body: some View {
-        Image(systemName: "chevron.forward")
-            .font(.popsCaption.weight(.semibold))
-            .foregroundStyle(Color.popsMutedForeground)
-            .padding(.trailing, PopsSpacing.sm)
-            .accessibilityHidden(true)
-    }
-}
-
 /// One ranked hit, pushed to its own page.
 internal struct InventorySearchHitRow: View {
     internal let hit: InventorySearchHit

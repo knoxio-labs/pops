@@ -85,8 +85,7 @@ extension View {
 
     /// A trailing item in the navigation bar; `topBarTrailing` is iOS-only.
     @ViewBuilder
-    internal func inventoryTrailingBarItem<Item: View>(@ViewBuilder item: () -> Item) -> some View
-    {
+    internal func inventoryTrailingBarItem<Item: View>(@ViewBuilder item: () -> Item) -> some View {
         #if os(iOS)
             toolbar { ToolbarItem(placement: .topBarTrailing, content: item) }
         #else

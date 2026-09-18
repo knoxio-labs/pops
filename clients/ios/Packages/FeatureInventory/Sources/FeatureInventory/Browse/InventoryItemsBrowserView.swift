@@ -75,7 +75,8 @@ internal struct InventoryItemsBrowserView: View {
         .inventoryNewItemSheet(isPresented: $adding)
         .tint(.popsInventory)
         .inventoryRecordSelectionBar(
-            $selection, records: model.shown, writer: model.writer, moving: $moving)
+            $selection, records: model.shown, writer: model.writer, moving: $moving
+        )
         .inventoryMoveSheet($moving)
         .inventoryWriterFeedback(model.writer)
     }
