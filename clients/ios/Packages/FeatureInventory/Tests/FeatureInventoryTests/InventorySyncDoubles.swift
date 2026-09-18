@@ -13,6 +13,8 @@ private struct EmptyInventorySource: InventoryQuerySource {
     func inventoryContents(ofContainer containerId: String) -> [InventoryItem] { [] }
     func inventoryInHand() -> [InventoryItem] { [] }
     func inventoryOpenContainers() -> [InventoryItem] { [] }
+    func inventoryContainers() -> [InventoryItem] { [] }
+    func inventoryItems(includeInactive: Bool) -> [InventoryItem] { [] }
     func inventoryRecents(limit: Int) -> [InventoryItem] { [] }
     func inventoryRecentEvents(limit: Int) -> [InventoryEvent] { [] }
     func inventoryCounts() -> InventoryCounts {

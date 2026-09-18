@@ -60,7 +60,7 @@ internal struct InventorySyncView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: PopsSpacing.lg) {
                 header(page)
-                InventorySyncCountTiles(tiles: tiles(page))
+                InventoryCountTiles(tiles: tiles(page))
                 if !page.repairRows.isEmpty { needsAttention(page) }
                 if !page.waitingRows.isEmpty { waiting(page) }
                 if !page.resolvedRows.isEmpty { resolved(page) }
@@ -105,16 +105,16 @@ internal struct InventorySyncView: View {
         }
     }
 
-    private func tiles(_ page: InventorySyncPage) -> [InventorySyncCount] {
+    private func tiles(_ page: InventorySyncPage) -> [InventoryCountTile] {
         [
-            InventorySyncCount(
+            InventoryCountTile(
                 title: "Waiting", count: page.waitingRows.count,
                 symbol: InventorySymbol.queued.system
             ),
-            InventorySyncCount(
+            InventoryCountTile(
                 title: "Needs attention", count: page.repairRows.count,
                 symbol: InventorySymbol.attention.system),
-            InventorySyncCount(
+            InventoryCountTile(
                 title: "Resolved today", count: page.resolvedToday,
                 symbol: InventorySymbol.resolved.system),
         ]
