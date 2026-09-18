@@ -22,19 +22,27 @@ internal enum InventoryInHand {
     /// what the undo capsule says about them, or nil when none has. A row
     /// whose previous place was deleted, or that never had one, stays in
     /// hand, waiting for a Move.
+    /// One row Put back is taking, and where.
+    private struct Returning {
+        let id: InventoryItem.ID
+        let placeName: String
+        let placement: InventoryPlacement
+    }
+
     internal static func putBack(
         _ ids: Set<InventoryItem.ID>, from items: [Item]
     ) -> (commands: [InventoryCommand], offer: InventoryUndoOffer)? {
-        let returning = items.compactMap { item -> (Item, String, InventoryPlacement)? in
+        let returning = items.compactMap { item -> Returning? in
             guard ids.contains(item.id), case .place(let name, let placement) = item.previous
             else { return nil }
-            return (item, name, placement)
+            return Returning(id: item.id, placeName: name, placement: placement)
         }
         guard let first = returning.first else { return nil }
         let message =
-            returning.count == 1 ? "Put back in \(first.1)" : "Put \(returning.count) back"
+            returning.count == 1
+            ? "Put back in \(first.placeName)" : "Put \(returning.count) back"
         return (
-            returning.map { .moveItem(id: $0.0.id, to: $0.2, verb: .putBack) },
+            returning.map { .moveItem(id: $0.id, to: $0.placement, verb: .putBack) },
             InventoryUndoOffer(message: message, symbol: .restore)
         )
     }
@@ -43,8 +51,7 @@ internal enum InventoryInHand {
 extension InventoryWriter {
     /// Puts back every one of `ids` that has somewhere to go, with one Undo
     /// for all of them. Does nothing when none has.
-    internal func putBack(_ ids: Set<InventoryItem.ID>, from items: [InventoryInHand.Item]) async
-    {
+    internal func putBack(_ ids: Set<InventoryItem.ID>, from items: [InventoryInHand.Item]) async {
         guard let plan = InventoryInHand.putBack(ids, from: items) else { return }
         await perform(plan.commands, offering: plan.offer)
     }

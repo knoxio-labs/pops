@@ -57,8 +57,17 @@ internal struct InventoryInHandView: View {
         .inventoryGroundedSwipeActionsContainer()
         .inventoryCollapsingTitle("In hand")
         .background(Color.popsBackground)
-        .toolbar {
-            if !selection.isSelecting, model.offersPutAllBack {
+        .inHandChrome(page, model: model, selection: $selection, moving: $moving)
+    }
+}
+
+extension View {
+    fileprivate func inHandChrome(
+        _ page: InventoryInHandPage, model: InventoryInHandViewModel,
+        selection: Binding<InventorySelection>, moving: Binding<InventoryMoveRequest?>
+    ) -> some View {
+        toolbar {
+            if !selection.wrappedValue.isSelecting, model.offersPutAllBack {
                 ToolbarItem(placement: .inventoryBottomBar) {
                     Button("Put all back") { Task { await model.putAllBack() } }
                         .disabled(!model.canPutAllBack)
@@ -67,11 +76,11 @@ internal struct InventoryInHandView: View {
         }
         .tint(.popsInventory)
         .inventoryInHandSelectionBar(
-            $selection, items: page.items,
+            selection, items: page.items,
             onPutBack: { ids in Task { await model.putBack(ids) } },
-            onMove: { moving = $0 }
+            onMove: { moving.wrappedValue = $0 }
         )
-        .inventoryMoveSheet($moving)
+        .inventoryMoveSheet(moving)
         .inventoryWriterFeedback(model.writer)
     }
 }
