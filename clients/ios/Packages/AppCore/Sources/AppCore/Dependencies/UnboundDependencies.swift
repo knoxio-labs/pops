@@ -1,3 +1,5 @@
+import Foundation
+
 internal struct UnboundTransactionsRepository: TransactionsRepository {
     func transactions(after cursor: String?) async throws -> TransactionPage {
         throw RepositoryError.dependencyNotBound
@@ -47,5 +49,46 @@ internal struct UnboundAccountsRepository: AccountsRepository {
 
     func accountDetail(id: Account.ID) async throws -> AccountDetail? {
         throw RepositoryError.dependencyNotBound
+    }
+}
+
+/// Public, unlike every other `Unbound*` type here: it is also
+/// `AppDependencies.init(inventory:)`'s default value (see the comment
+/// there), and a default argument's expression is compiled into every
+/// calling module, which means the initializer it calls has to be visible
+/// there too.
+public struct UnboundInventoryStore: InventoryStore {
+    public init() {}
+
+    public func observe<Value: Sendable>(_ query: InventoryQuery<Value>) -> AsyncStream<Value> {
+        AsyncStream { $0.finish() }
+    }
+
+    public func perform(_ command: InventoryCommand) async throws -> InventoryReceipt {
+        throw RepositoryError.dependencyNotBound
+    }
+
+    public func undo(_ receipt: InventoryReceipt) async throws {
+        throw RepositoryError.dependencyNotBound
+    }
+
+    public func resolve(
+        _ repairId: InventoryRepair.ID, with choice: InventoryRepairChoice
+    ) async throws {
+        throw RepositoryError.dependencyNotBound
+    }
+
+    public func download() async throws {
+        throw RepositoryError.dependencyNotBound
+    }
+
+    public func refresh() async {}
+
+    public func photo(_ sha256: String, variant: InventoryPhotoVariant) async throws -> Data {
+        throw RepositoryError.dependencyNotBound
+    }
+
+    public func status() -> AsyncStream<InventoryReplicaStatus> {
+        AsyncStream { $0.finish() }
     }
 }
