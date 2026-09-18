@@ -15,9 +15,3 @@
 public protocol SessionEventSink: Sendable {
     func send(_ event: SessionEvent) async
 }
-
-/// The real sink. `SessionStore.send` is synchronous and main-actor-isolated,
-/// which Swift accepts as the witness for an `async` requirement — the hop is
-/// the `await` at the call site, and there is no second implementation to keep
-/// in step with the first.
-extension SessionStore: SessionEventSink {}
