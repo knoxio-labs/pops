@@ -26,6 +26,17 @@ public final class InMemoryInventoryStore: InventoryStore, @unchecked Sendable {
     enum UndoEntry {
         case item(InventoryItem?)
         case location(InventoryLocation?)
+        /// A single command mutated several rows as one unit (for instance,
+        /// deleting a location reparents its children): every row's own id
+        /// and prior value, restored together on undo.
+        case batch([UndoRow])
+    }
+
+    /// One row's prior value within an `UndoEntry.batch`, addressed by its
+    /// own id rather than the receipt's `entityId`.
+    enum UndoRow {
+        case item(id: String, previous: InventoryItem?)
+        case location(id: String, previous: InventoryLocation?)
     }
 
     let state: Mutex<State>
@@ -92,6 +103,15 @@ public final class InMemoryInventoryStore: InventoryStore, @unchecked Sendable {
                 current.items[receipt.entityId] = previous
             case .location(let previous):
                 current.locations[receipt.entityId] = previous
+            case .batch(let rows):
+                for row in rows {
+                    switch row {
+                    case .item(let id, let previous):
+                        current.items[id] = previous
+                    case .location(let id, let previous):
+                        current.locations[id] = previous
+                    }
+                }
             }
             return current
         }
