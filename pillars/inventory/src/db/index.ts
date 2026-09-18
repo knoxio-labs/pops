@@ -12,6 +12,11 @@ export * from './schema.js';
 export type { InventoryDb } from './services/internal.js';
 
 export { openInventoryDb, type OpenedInventoryDb } from './open-inventory-db.js';
+export {
+  backfillPhotoMedia,
+  mediaRelativePath,
+  type PhotoMediaBackfillResult,
+} from './backfill-photo-media.js';
 
 export * as locationsService from './services/locations.js';
 export * as connectionsService from './services/connections.js';
