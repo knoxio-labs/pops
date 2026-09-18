@@ -16,13 +16,25 @@
 /// state the screens have to show and an open string has no way to be one.
 internal struct InventoryUnit: Equatable {
     internal let symbol: String
-    /// What it measures — "length", "power". Shown when a unit needs
+    /// What it measures, "length", "power". Shown when a unit needs
     /// explaining and used to say why an entered one is not recognised.
     internal let dimension: String
+    /// How many of this unit make one of its dimension's base unit: 0.001
+    /// for millimetres, 1 for metres. What ``InventoryUnitConversion``
+    /// multiplies by. Every dimension the catalogue knows only one unit for
+    /// keeps the default, since a dimension of one has nothing to convert
+    /// between.
+    internal let multiplier: Double
+
+    internal init(symbol: String, dimension: String, multiplier: Double = 1) {
+        self.symbol = symbol
+        self.dimension = dimension
+        self.multiplier = multiplier
+    }
 
     internal static let known: [InventoryUnit] = [
-        InventoryUnit(symbol: "mm", dimension: "length"),
-        InventoryUnit(symbol: "cm", dimension: "length"),
+        InventoryUnit(symbol: "mm", dimension: "length", multiplier: 0.001),
+        InventoryUnit(symbol: "cm", dimension: "length", multiplier: 0.01),
         InventoryUnit(symbol: "m", dimension: "length"),
         InventoryUnit(symbol: "kg", dimension: "mass"),
         InventoryUnit(symbol: "L", dimension: "volume"),
@@ -42,7 +54,7 @@ internal struct InventoryUnit: Equatable {
 ///
 /// The cases are the presentations a value can take on screen, not storage
 /// types: `choice` and `text` would both be a string in a database, and the
-/// difference between them — one comes from a fixed set, the other does not —
+/// difference between them, one comes from a fixed set, the other does not ,
 /// is exactly what a reviewer is deciding about.
 internal enum InventoryPropertyValue: Equatable {
     case text(String)
@@ -62,19 +74,6 @@ internal enum InventoryPropertyValue: Equatable {
             "\(Self.figure(amount)) \(unit)"
         case .span(let low, let high, let unit):
             "\(Self.figure(low))–\(Self.figure(high)) \(unit)"
-        }
-    }
-
-    /// The type, named the way the person entering it would name it. Shown by
-    /// the variants that let somebody pick one.
-    internal var kindLabel: String {
-        switch self {
-        case .text: "Text"
-        case .choice: "Choice"
-        case .flag: "Yes or no"
-        case .measure: "Measurement"
-        case .span: "Range"
-        case .link: "Link"
         }
     }
 
@@ -116,14 +115,6 @@ internal enum InventoryInferenceConfidence: String, Equatable {
     case certain
     case likely
     case guess
-
-    internal var label: String {
-        switch self {
-        case .certain: "Read off the label"
-        case .likely: "Likely"
-        case .guess: "Guess"
-        }
-    }
 }
 
 internal struct InventoryProperty: Identifiable, Equatable {
@@ -141,7 +132,7 @@ internal struct InventoryProperty: Identifiable, Equatable {
         self.origin = origin
     }
 
-    /// Two keys that differ only in case or spacing are one key — see
+    /// Two keys that differ only in case or spacing are one key, see
     /// ``InventoryPropertySchema/normalized(_:)`` for why that is the rule.
     internal var id: String { InventoryPropertySchema.normalized(key) }
 }
@@ -154,12 +145,25 @@ internal struct InventoryTemplateField: Identifiable, Equatable {
     /// What to put in it, for a field whose name does not say. Empty for the
     /// ones that do.
     internal let hint: String?
+    /// The values a choice field accepts, declared by the type. Nil for every
+    /// other kind. See ``InventoryFieldValidation`` for what a value outside
+    /// this list means.
+    internal let choices: [String]?
+    /// Whether the type puts this field beside the placement on an item's
+    /// page, rather than in the details under the actions. The type decides,
+    /// because what identifies a cable is not what identifies a bulb.
+    internal let highlighted: Bool
 
-    internal init(_ key: String, _ kindLabel: String, unit: String? = nil, hint: String? = nil) {
+    internal init(
+        _ key: String, _ kindLabel: String, unit: String? = nil, hint: String? = nil,
+        choices: [String]? = nil, highlighted: Bool = false
+    ) {
         self.key = key
         self.kindLabel = kindLabel
         self.unit = unit
         self.hint = hint
+        self.choices = choices
+        self.highlighted = highlighted
     }
 
     internal var id: String { InventoryPropertySchema.normalized(key) }
@@ -189,12 +193,4 @@ internal struct InventoryThing: Identifiable, Equatable {
     internal let notes: String
     /// Proposed but unaccepted. Empty once somebody has been through them.
     internal let suggestions: [InventoryProperty]
-
-    internal var accepted: [InventoryProperty] {
-        properties.filter { $0.origin != .custom }
-    }
-
-    internal var custom: [InventoryProperty] {
-        properties.filter { $0.origin == .custom }
-    }
 }

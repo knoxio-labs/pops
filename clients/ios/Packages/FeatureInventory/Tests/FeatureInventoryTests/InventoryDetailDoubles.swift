@@ -94,23 +94,21 @@ internal struct InventoryHistoryOverlay: InventoryQuerySource {
 }
 
 extension InventoryItemDetailViewModel {
-    /// Starts observing and waits for the first answer, within a bounded
-    /// number of scheduler turns so a store that never answers fails the
-    /// test instead of hanging it.
+    /// Starts observing and waits for the first answer, or gives up after a
+    /// deadline so a store that never answers fails the test instead of
+    /// hanging it.
     func startAndAwaitDetail() async -> (Task<Void, Never>, InventoryItemDetail?) {
         let task = Task { await observe() }
-        for _ in 0..<1_000 where phase == .loading {
-            await Task.yield()
-        }
+        await awaitObservedCondition { [self] in phase != .loading }
         return (task, detail)
     }
 
-    /// Waits until `condition` holds against the latest answer.
-    func awaitDetail(where condition: (InventoryItemDetail) -> Bool) async -> InventoryItemDetail? {
-        for _ in 0..<1_000 {
-            if let detail, condition(detail) { return detail }
-            await Task.yield()
-        }
-        return nil
+    /// Waits until `condition` holds against the latest answer, within the
+    /// same deadline.
+    func awaitDetail(where condition: @escaping @Sendable (InventoryItemDetail) -> Bool) async
+        -> InventoryItemDetail?
+    {
+        await awaitObservedCondition { [self] in detail.map(condition) ?? false }
+        return detail
     }
 }

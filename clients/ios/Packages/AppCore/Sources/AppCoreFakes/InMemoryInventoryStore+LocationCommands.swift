@@ -53,16 +53,22 @@ extension InMemoryInventoryStore {
     /// Reparents every direct child location and every item placed directly
     /// here (ADR-002 D2): a child place moves to this one's parent, and a
     /// direct item either follows it there or, at a root, goes in hand
-    /// remembering this place as its previous placement.
+    /// remembering this place as its previous placement. Every row this
+    /// touches (the location itself, each reparented child location, each
+    /// moved item) is recorded so undo can put all of them back, not just
+    /// the deleted location.
     private static func applyDeleteLocation(
         id: InventoryLocation.ID, mutationId: String, into state: inout State
     ) throws {
         let location = try require(state.locations[id])
+        var rows: [InMemoryInventoryStore.UndoRow] = [.location(id: id, previous: location)]
         for (childId, child) in state.locations where child.parentId == id {
+            rows.append(.location(id: childId, previous: child))
             state.locations[childId] = bumped(
                 child, seq: &state.nextSeq, parentId: .set(location.parentId))
         }
         for (itemId, item) in state.items where item.placement == .location(id) {
+            rows.append(.item(id: itemId, previous: item))
             if let parentId = location.parentId {
                 state.items[itemId] = bumped(
                     item, seq: &state.nextSeq, placement: .set(.location(parentId)))
@@ -72,7 +78,7 @@ extension InMemoryInventoryStore {
                     previousPlacement: .set(.location(id)))
             }
         }
-        state.undoLog[mutationId] = .location(location)
+        state.undoLog[mutationId] = .batch(rows)
         state.locations[id] = bumped(location, seq: &state.nextSeq, deletedAt: .set(Date()))
     }
 }

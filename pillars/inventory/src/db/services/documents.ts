@@ -12,7 +12,7 @@
  */
 import { and, asc, count, eq } from 'drizzle-orm';
 
-import { homeInventory, itemDocuments } from '../schema.js';
+import { items, itemDocuments } from '../schema.js';
 import {
   DocumentConflictError,
   DocumentCreateFailedError,
@@ -41,11 +41,7 @@ export {
 } from './documents-errors.js';
 
 function assertItemExists(db: InventoryDb, id: string): void {
-  const [row] = db
-    .select({ id: homeInventory.id })
-    .from(homeInventory)
-    .where(eq(homeInventory.id, id))
-    .all();
+  const [row] = db.select({ id: items.id }).from(items).where(eq(items.id, id)).all();
   if (!row) throw new DocumentItemNotFoundError(id);
 }
 

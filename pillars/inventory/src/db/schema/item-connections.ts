@@ -1,7 +1,7 @@
 import { sql } from 'drizzle-orm';
 import { check, index, integer, sqliteTable, text, unique } from 'drizzle-orm/sqlite-core';
 
-import { homeInventory } from './inventory.js';
+import { items } from './items.js';
 
 export const itemConnections = sqliteTable(
   'item_connections',
@@ -9,10 +9,10 @@ export const itemConnections = sqliteTable(
     id: integer('id').primaryKey({ autoIncrement: true }),
     itemAId: text('item_a_id')
       .notNull()
-      .references(() => homeInventory.id, { onDelete: 'cascade' }),
+      .references(() => items.id, { onDelete: 'cascade' }),
     itemBId: text('item_b_id')
       .notNull()
-      .references(() => homeInventory.id, { onDelete: 'cascade' }),
+      .references(() => items.id, { onDelete: 'cascade' }),
     createdAt: text('created_at')
       .notNull()
       .default(sql`(datetime('now'))`),

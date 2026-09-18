@@ -3,9 +3,9 @@
  */
 import { z } from 'zod';
 
-import type { InventoryRow } from '../../../db/index.js';
+import type { ItemRow } from '../../../db/index.js';
 
-export type { InventoryRow };
+export type { ItemRow };
 
 /** API response shape (camelCase). */
 export interface InventoryItem {
@@ -36,17 +36,24 @@ export interface InventoryItem {
   lastEditedTime: string;
 }
 
-/** Map a SQLite row to the API response shape. */
-export function toInventoryItem(row: InventoryRow): InventoryItem {
+/**
+ * Map an `items` row to the legacy API response shape, whose field names
+ * predate Inventory ADR-002: `itemName` is `name`, `type` the read-only
+ * `legacy_type`, `location` the free-text `location_text`, `assetId` the
+ * `code`, `notes` the `note` and `containerId` the `containing_item_id`.
+ * `locationId` is the row's own location, so it is null for an item placed
+ * in a container.
+ */
+export function toInventoryItem(row: ItemRow): InventoryItem {
   return {
     id: row.id,
-    itemName: row.itemName,
+    itemName: row.name,
     brand: row.brand,
     model: row.model,
     itemId: row.itemId,
     room: row.room,
-    location: row.location,
-    type: row.type,
+    location: row.locationText,
+    type: row.legacyType,
     condition: row.condition,
     inUse: row.inUse === null ? null : row.inUse === 1,
     deductible: row.deductible === 1,
@@ -58,10 +65,10 @@ export function toInventoryItem(row: InventoryRow): InventoryItem {
     purchaseTransactionId: row.purchaseTransactionId,
     purchasedFromId: row.purchasedFromId,
     purchasedFromName: row.purchasedFromName,
-    assetId: row.assetId,
-    notes: row.notes,
+    assetId: row.code,
+    notes: row.note,
     locationId: row.locationId,
-    containerId: row.containerId,
+    containerId: row.containingItemId,
     lastEditedTime: row.lastEditedTime,
   };
 }
@@ -106,7 +113,7 @@ export const CreateInventoryItemSchema = z.object({
   condition: z.string().nullable().optional(),
   /**
    * `null` (or absent) means "nobody has reviewed this row" — the tri-state
-   * `home_inventory.in_use` was designed to carry. Only an explicit
+   * `items.in_use` was designed to carry. Only an explicit
    * `true`/`false` marks the row reviewed (POPS-2432).
    */
   inUse: z.boolean().nullable().optional(),

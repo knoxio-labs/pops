@@ -10,7 +10,7 @@
  */
 import { and, asc, count, eq, or } from 'drizzle-orm';
 
-import { homeInventory, itemConnections } from '../schema.js';
+import { items, itemConnections } from '../schema.js';
 import {
   ConnectionConflictError,
   ConnectionItemNotFoundError,
@@ -55,11 +55,7 @@ function normalisePair(inputA: string, inputB: string): [string, string] {
 }
 
 function assertItemExists(db: InventoryDb, id: string): void {
-  const [row] = db
-    .select({ id: homeInventory.id })
-    .from(homeInventory)
-    .where(eq(homeInventory.id, id))
-    .all();
+  const [row] = db.select({ id: items.id }).from(items).where(eq(items.id, id)).all();
   if (!row) throw new ConnectionItemNotFoundError(id);
 }
 
@@ -161,13 +157,13 @@ export { deleteConnection as delete };
 export function trace(db: InventoryDb, itemId: string, maxDepth: number): TraceNode {
   const [startItem] = db
     .select({
-      id: homeInventory.id,
-      itemName: homeInventory.itemName,
-      assetId: homeInventory.assetId,
-      type: homeInventory.type,
+      id: items.id,
+      itemName: items.name,
+      assetId: items.code,
+      type: items.legacyType,
     })
-    .from(homeInventory)
-    .where(eq(homeInventory.id, itemId))
+    .from(items)
+    .where(eq(items.id, itemId))
     .all();
 
   if (!startItem) throw new ConnectionItemNotFoundError(itemId);
@@ -202,13 +198,13 @@ export function trace(db: InventoryDb, itemId: string, maxDepth: number): TraceN
 
       const [neighbor] = db
         .select({
-          id: homeInventory.id,
-          itemName: homeInventory.itemName,
-          assetId: homeInventory.assetId,
-          type: homeInventory.type,
+          id: items.id,
+          itemName: items.name,
+          assetId: items.code,
+          type: items.legacyType,
         })
-        .from(homeInventory)
-        .where(eq(homeInventory.id, neighborId))
+        .from(items)
+        .where(eq(items.id, neighborId))
         .all();
 
       if (!neighbor) continue;
