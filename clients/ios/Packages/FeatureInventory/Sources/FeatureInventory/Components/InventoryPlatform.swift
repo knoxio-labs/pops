@@ -27,4 +27,15 @@ extension View {
             self
         #endif
     }
+
+    /// The one call to action on a sheet or a screen, in the platform's
+    /// prominent glass button style.
+    @ViewBuilder
+    internal func inventoryProminentGlassButton() -> some View {
+        #if os(iOS)
+            buttonStyle(.glassProminent)
+        #else
+            buttonStyle(.borderedProminent)
+        #endif
+    }
 }
