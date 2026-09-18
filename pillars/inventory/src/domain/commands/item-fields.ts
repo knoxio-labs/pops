@@ -2,27 +2,16 @@ import { z } from 'zod';
 
 import { ACCESS_STATES, LIFECYCLES, type ItemInsert, type ItemRow } from '../../db/index.js';
 import { CommandRejected } from './errors.js';
+import {
+  placementSchema,
+  previousPlacementSchema,
+  type Placement,
+  type PreviousPlacement,
+} from './placement-schema.js';
 
 import type { JsonValue } from './outcome.js';
 
-/** Where an item is, as the wire and the event log spell it. */
-export const placementSchema = z.discriminatedUnion('kind', [
-  z.object({ kind: z.literal('location'), locationId: z.string().min(1) }),
-  z.object({ kind: z.literal('container'), itemId: z.string().min(1) }),
-  z.object({ kind: z.literal('hand') }),
-]);
-/** A value of {@link placementSchema}. */
-export type Placement = z.infer<typeof placementSchema>;
-
-/** The place an in-hand item was taken from; never itself `hand`. */
-export const previousPlacementSchema = z
-  .discriminatedUnion('kind', [
-    z.object({ kind: z.literal('location'), locationId: z.string().min(1) }),
-    z.object({ kind: z.literal('container'), itemId: z.string().min(1) }),
-  ])
-  .nullable();
-/** A value of {@link previousPlacementSchema}. */
-export type PreviousPlacement = z.infer<typeof previousPlacementSchema>;
+export { placementSchema, previousPlacementSchema, type Placement, type PreviousPlacement };
 
 /** How one wire field of an item is read from, and written to, its row. */
 export interface FieldCodec<Row, Insert> {
