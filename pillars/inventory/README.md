@@ -179,6 +179,11 @@ hand-authored paths.
 - [ADR-001](docs/architecture/adr-001-domain-vocabulary.md) — one word per
   thing. The nouns every screen, contract and ticket uses, the two that were
   contested, and the five the design playground is still deciding by looking.
+- [ADR-002](docs/architecture/adr-002-inventory-technical-design.md) — the
+  technical design for the Inventory rebuild: one item identity for items and
+  containers, the placement and lifecycle model, the append-only event log, the
+  served type catalogue, the sync and conflict protocol with bfm and iOS, and the
+  phased delivery. Builds on ADR-001 for every noun used here.
 
 ## Domain docs
 
