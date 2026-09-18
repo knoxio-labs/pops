@@ -169,7 +169,7 @@ So the interlace is composited into a single image and the system rims only the 
 The dependency direction is one-way:
 
 - A feature depends on `AppCore` and `DesignSystem`. It may **not** name a concrete implementation of anything — it reads a protocol from `AppCore`, and only `App/` knows what implements it. See [Packages/AppCore/README.md](Packages/AppCore/README.md).
-- Concrete implementations live in the package that owns the mechanism: `Auth` for pairing, key material and the authenticating transport; `BFMClient` for the generated types and the calls that carry them. Both depend on `AppCore`; `App/` binds them.
+- Concrete implementations live in the package that owns the mechanism: `Auth` for pairing, key material and the authenticating transport; `BFMClient` for the generated types and the calls that carry them; `InventoryReplica` for the on-device Inventory database. Each depends on `AppCore`; `App/` binds them.
 - **Nothing depends on a feature.** A `Feature*` module importing another `Feature*` module is the failure this layout exists to prevent — it is what turns a set of screens back into one screen-shaped monolith.
 
 Half of that is compiler-enforced — a package can only `import` what its own `Package.swift` declares. The other half, a wrong edge being added to a `Package.swift` in the first place, is asserted by a test in `AppCore` rather than by any tool.
