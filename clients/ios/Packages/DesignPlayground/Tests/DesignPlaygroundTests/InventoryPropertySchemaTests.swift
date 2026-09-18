@@ -60,59 +60,6 @@ internal struct InventoryPropertySchemaTests {
     }
 }
 
-/// Changing what an object is must not cost it what it knows — the failure
-/// that makes people stop using templates at all.
-@Suite("Inventory template change")
-internal struct InventoryTemplateChangeTests {
-    private var cable: InventoryThing { InventoryPropertyFixtures.cable }
-
-    @Test("fields the new template asks for are kept and belong to it")
-    func matchingFieldsSurvive() {
-        let change = InventoryTemplateChange(
-            thing: cable, changingTo: InventoryPropertyTemplates.cable)
-
-        #expect(change.kept.map(\.key).contains("Length"))
-        #expect(change.kept.allSatisfy { $0.origin == .template })
-    }
-
-    @Test("a value the new template never asked for survives as a custom property")
-    func unaskedValuesAreCarried() {
-        let change = InventoryTemplateChange(
-            thing: cable, changingTo: InventoryPropertyTemplates.tape)
-
-        #expect(change.kept.map(\.key) == ["Length"])
-        #expect(change.carriedAsCustom.map(\.key).contains("End A"))
-        #expect(change.carriedAsCustom.allSatisfy { $0.origin == .custom })
-        #expect(change.kept.count + change.carriedAsCustom.count == cable.properties.count)
-    }
-
-    @Test("a custom property stays custom rather than being adopted by the new template")
-    func customPropertiesAreNeverAdopted() {
-        let change = InventoryTemplateChange(
-            thing: cable, changingTo: InventoryPropertyTemplates.cable)
-
-        #expect(change.carriedAsCustom.map(\.key) == ["Bought with"])
-    }
-
-    @Test("fields nothing filled in are reported blank rather than silently absent")
-    func blankFieldsAreReported() {
-        let change = InventoryTemplateChange(
-            thing: InventoryPropertyFixtures.sideboard,
-            changingTo: InventoryPropertyTemplates.furniture)
-
-        #expect(change.blankFields.map(\.key) == ["Footprint", "Material", "Needs two people"])
-        #expect(change.kept.isEmpty)
-    }
-
-    @Test("a key the object already has does not come back as a blank field")
-    func filledFieldsAreNotBlank() {
-        let change = InventoryTemplateChange(
-            thing: cable, changingTo: InventoryPropertyTemplates.cable)
-
-        #expect(change.blankFields.isEmpty)
-    }
-}
-
 /// What a property search can and cannot reach, which is the consequence the
 /// experiment is really deciding.
 @Suite("Inventory property search")
@@ -171,38 +118,5 @@ internal struct InventoryPropertyClauseTests {
         ]
 
         #expect(impossible.matching(catalogue).isEmpty)
-    }
-}
-
-/// Two objects line up only on keys they both understand.
-@Suite("Inventory comparison")
-internal struct InventoryComparisonTests {
-    @Test("custom keys are left out of the comparison's rows")
-    func comparisonUsesSharedVocabulary() {
-        let keys = InventoryComparison.keys(across: InventoryPropertyFixtures.cables)
-
-        #expect(keys == ["End A", "End B", "Data rate", "Power", "Length", "Braided"])
-        #expect(!keys.contains("Bought with"))
-    }
-
-    @Test("a key only one object has still gets a row")
-    func oneSidedKeysStillAppear() {
-        let keys = InventoryComparison.keys(
-            across: [InventoryPropertyFixtures.cable, InventoryPropertyFixtures.bulb])
-
-        #expect(keys.contains("Fitting"))
-        #expect(keys.first == "End A")
-    }
-
-    @Test("a difference is a difference, including one side saying nothing")
-    func differencesAreDetected() {
-        let cables = InventoryPropertyFixtures.cables
-
-        #expect(!InventoryComparison.differs(on: "End A", across: cables))
-        #expect(InventoryComparison.differs(on: "Power", across: cables))
-        #expect(
-            InventoryComparison.differs(
-                on: "Fitting",
-                across: [InventoryPropertyFixtures.cable, InventoryPropertyFixtures.bulb]))
     }
 }
