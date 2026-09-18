@@ -1,4 +1,3 @@
-import DesignSystem
 import SwiftUI
 
 /// A container's page: the approved item detail with the container's verbs in

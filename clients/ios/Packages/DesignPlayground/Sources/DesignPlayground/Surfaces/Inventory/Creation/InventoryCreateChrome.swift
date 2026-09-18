@@ -1,4 +1,3 @@
-import DesignSystem
 import SwiftUI
 
 /// Leaving with something entered, which asks only when there is something to

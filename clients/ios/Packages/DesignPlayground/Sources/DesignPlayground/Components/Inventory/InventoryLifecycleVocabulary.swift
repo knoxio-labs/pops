@@ -1,5 +1,3 @@
-import Foundation
-
 /// Why an item was discarded. Recorded on the history event and nowhere
 /// else: the badge stays the lifecycle word (ADR-001's closed vocabulary), so
 /// a donated jacket reads Discarded wherever it is listed.

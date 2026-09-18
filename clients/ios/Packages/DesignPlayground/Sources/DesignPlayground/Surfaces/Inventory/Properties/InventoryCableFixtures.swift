@@ -96,8 +96,4 @@ internal enum InventoryCableFixtures {
     )
 
     internal static let all: [InventoryThing] = [cable, shortCable, powerCable, lightningCable]
-
-    /// The two the comparison step puts side by side: same ends, different
-    /// numbers, so the difference is the only thing to look at.
-    internal static let cables: [InventoryThing] = [cable, shortCable]
 }

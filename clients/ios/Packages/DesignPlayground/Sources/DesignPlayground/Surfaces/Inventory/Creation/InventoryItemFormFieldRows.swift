@@ -1,4 +1,3 @@
-import DesignSystem
 import SwiftUI
 
 /// The values a choice field accepts when its type does not spell them out.

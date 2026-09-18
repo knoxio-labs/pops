@@ -61,16 +61,4 @@ extension InventoryPlacementChoice {
         case .directLocation, .inHand: .popsMutedForeground
         }
     }
-
-    /// What the row says under its label. Says what is still missing rather
-    /// than drawing an empty line.
-    internal var destinationDetail: String {
-        switch self {
-        case .currentContainer(_, let location): location ?? "Open container"
-        case .anotherContainer(let container, let location):
-            container == nil ? "Not chosen yet" : (location ?? "Open container")
-        case .directLocation(let location): location == nil ? "Not chosen yet" : "Location"
-        case .inHand: "Nothing is put anywhere yet"
-        }
-    }
 }

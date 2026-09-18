@@ -1,5 +1,3 @@
-import SwiftUI
-
 internal enum InventoryExperiments {
     @MainActor internal static let all: [DesignExperiment] = [
         DesignExperiment(

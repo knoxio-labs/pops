@@ -1,5 +1,3 @@
-import SwiftUI
-
 /// POPS-3982's surfaces: Search in the tab shell, the Items browser, and the
 /// shared scanner.
 @MainActor

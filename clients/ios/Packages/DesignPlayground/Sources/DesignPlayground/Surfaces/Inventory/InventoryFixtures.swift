@@ -11,15 +11,6 @@ internal struct InventoryItem: Identifiable, Equatable {
     internal let name: String
     internal let context: InventoryItemContext
     internal let symbol: String
-
-    internal var detail: String {
-        switch context {
-        case .inHand(let origin, let updated):
-            "From \(origin) · \(updated)"
-        case .stored(let container, let location):
-            "\(container) · \(location)"
-        }
-    }
 }
 
 internal enum InventoryItemContext: Equatable {

@@ -1,5 +1,3 @@
-import Foundation
-
 /// Where one side of a disagreement came from.
 internal enum InventorySyncSource: Equatable {
     case thisPhone

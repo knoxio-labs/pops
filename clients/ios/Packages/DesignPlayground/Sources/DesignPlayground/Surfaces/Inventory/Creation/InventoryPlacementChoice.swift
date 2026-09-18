@@ -25,15 +25,6 @@ internal enum InventoryPlacementKind: String, CaseIterable, Identifiable {
 
     internal var id: String { rawValue }
 
-    internal var label: String {
-        switch self {
-        case .currentContainer: "Here"
-        case .anotherContainer: "A container"
-        case .directLocation: "A location"
-        case .inHand: "In hand"
-        }
-    }
-
     /// The segments a given entry point can offer. "Here" is not a segment
     /// when there is no here.
     internal static func offered(for origin: InventoryCreationOrigin) -> [InventoryPlacementKind] {

@@ -77,19 +77,6 @@ internal enum InventoryPropertyValue: Equatable {
         }
     }
 
-    /// The type, named the way the person entering it would name it. Shown by
-    /// the variants that let somebody pick one.
-    internal var kindLabel: String {
-        switch self {
-        case .text: "Text"
-        case .choice: "Choice"
-        case .flag: "Yes or no"
-        case .measure: "Measurement"
-        case .span: "Range"
-        case .link: "Link"
-        }
-    }
-
     internal var unitSymbol: String? {
         switch self {
         case .measure(_, let unit), .span(_, _, let unit): unit
@@ -128,14 +115,6 @@ internal enum InventoryInferenceConfidence: String, Equatable {
     case certain
     case likely
     case guess
-
-    internal var label: String {
-        switch self {
-        case .certain: "Read off the label"
-        case .likely: "Likely"
-        case .guess: "Guess"
-        }
-    }
 }
 
 internal struct InventoryProperty: Identifiable, Equatable {
@@ -214,12 +193,4 @@ internal struct InventoryThing: Identifiable, Equatable {
     internal let notes: String
     /// Proposed but unaccepted. Empty once somebody has been through them.
     internal let suggestions: [InventoryProperty]
-
-    internal var accepted: [InventoryProperty] {
-        properties.filter { $0.origin != .custom }
-    }
-
-    internal var custom: [InventoryProperty] {
-        properties.filter { $0.origin == .custom }
-    }
 }

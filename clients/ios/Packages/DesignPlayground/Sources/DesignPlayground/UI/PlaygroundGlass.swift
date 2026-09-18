@@ -84,18 +84,6 @@ extension View {
         #endif
     }
 
-    @ViewBuilder
-    func playgroundSearchTab(
-        text: Binding<String>, isPresented: Binding<Bool>, prompt: String
-    ) -> some View {
-        #if os(iOS)
-            searchable(text: text, isPresented: isPresented, prompt: prompt)
-                .tabViewSearchActivation(.searchTabSelection)
-        #else
-            searchable(text: text, prompt: prompt)
-        #endif
-    }
-
     /// iOS 26's own glass button styles, which are the reason a hand-rolled
     /// capsule was the wrong answer: the platform ships both the plain and the
     /// prominent one, and they carry the press state, the tint and the
@@ -175,19 +163,6 @@ extension View {
 }
 
 extension View {
-    /// An item in the bottom bar, which is an iOS-only placement. Same reason,
-    /// and the same shape, as ``playgroundLeadingBarItem``: iOS 26 draws the
-    /// bottom bar in glass and puts the prominent action on its trailing edge,
-    /// and a hand-rolled strip under the content gets none of that.
-    @ViewBuilder
-    func playgroundBottomBarItem<Item: View>(@ViewBuilder item: () -> Item) -> some View {
-        #if os(iOS)
-            toolbar { ToolbarItem(placement: .bottomBar, content: item) }
-        #else
-            toolbar { ToolbarItem(content: item) }
-        #endif
-    }
-
     /// The figures-and-a-point keyboard, which is iOS-only. `PopsTextField`
     /// keeps its own copy of this behind a private helper; a plain `TextField`
     /// in a system form row cannot reach it.

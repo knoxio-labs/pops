@@ -1,5 +1,3 @@
-import SwiftUI
-
 /// POPS-3989's surfaces: Item detail through every lifecycle state and the
 /// More menu's actions, and an item's History page.
 @MainActor

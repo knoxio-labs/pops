@@ -1,5 +1,3 @@
-import Foundation
-
 /// A surface and state named on the command line, opened straight onto its
 /// stage so a simulator run can be pointed at one screen without tapping to it.
 ///

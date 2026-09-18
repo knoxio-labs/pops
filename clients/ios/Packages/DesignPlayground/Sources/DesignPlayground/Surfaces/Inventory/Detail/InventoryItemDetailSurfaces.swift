@@ -1,5 +1,3 @@
-import SwiftUI
-
 /// The item detail surface POPS-3980 asks for, in every state it has to
 /// survive.
 internal enum InventoryItemDetailStaging {

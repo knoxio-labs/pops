@@ -1,5 +1,3 @@
-import Foundation
-
 /// Search and the Items browser's own data, built on
 /// ``InventoryFoundationFixtures`` rather than beside it, so a result row and
 /// the same row elsewhere show the same item.

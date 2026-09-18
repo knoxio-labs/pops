@@ -1,5 +1,3 @@
-import SwiftUI
-
 /// In hand, opened from the dashboard's In hand header, in every state
 /// POPS-3987 asks it to survive, and the item page a loose item is found on.
 @MainActor

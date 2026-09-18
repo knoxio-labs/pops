@@ -61,11 +61,6 @@ internal struct InventoryPropertyClause: Identifiable, Equatable {
         "\(InventoryPropertySchema.normalized(key))-\(comparison.rawValue)-\(value)"
     }
 
-    internal var display: String {
-        comparison == .present
-            ? "\(key) \(comparison.rawValue)" : "\(key) \(comparison.rawValue) \(value)"
-    }
-
     internal func matches(_ thing: InventoryThing) -> Bool {
         guard let property = InventoryPropertySchema.duplicate(of: key, in: thing.properties)
         else { return false }

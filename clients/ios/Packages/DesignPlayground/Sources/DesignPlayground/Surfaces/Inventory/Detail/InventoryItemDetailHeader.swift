@@ -50,7 +50,6 @@ internal enum InventoryItemDetailPrimaryAction {
 /// rather than beside it.
 internal struct InventoryItemDetailHeader: View {
     internal let detail: InventoryItemDetail
-    @Environment(\.inventoryStyle) private var style
     @ScaledMetric(relativeTo: .largeTitle) private var heroHeight = PopsSize.pageHeight * 1.5
 
     internal var body: some View {

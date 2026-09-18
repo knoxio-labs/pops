@@ -1,4 +1,3 @@
-import DesignSystem
 import SwiftUI
 
 /// The lifecycle half of Item detail's More menu.

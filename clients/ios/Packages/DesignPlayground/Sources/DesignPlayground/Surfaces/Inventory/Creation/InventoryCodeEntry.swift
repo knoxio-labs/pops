@@ -45,25 +45,10 @@ internal enum InventoryCodeAssist: Equatable {
     case offline
     case unavailable(reason: String)
 
-    /// The only assist state that stops a create. Everything else is a
-    /// position on a code that is optional anyway.
-    internal var blocksCreation: Bool {
-        guard case .collision = self else { return false }
-        return true
-    }
-
-    internal var isWorking: Bool { self == .suggesting }
-
     /// What the row says under the field: only the fact that blocks a
     /// create. Every other state is carried by the control beside the field.
     internal var note: String? {
         guard case .collision(let existing) = self else { return nil }
         return InventoryDraftIssue.codeTaken(existing).message
-    }
-
-    /// The suggestion's runners-up, when it made any.
-    internal var alternatives: [String] {
-        guard case .offered(let alternatives) = self else { return [] }
-        return alternatives
     }
 }
