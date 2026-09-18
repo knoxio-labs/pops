@@ -17,7 +17,7 @@ import { PillarCallError, type CallFailure, type CallResult } from '@pops/pillar
 
 import {
   crossPillarUrisService,
-  homeInventory,
+  items,
   openInventoryDb,
   type OpenedInventoryDb,
 } from '../../../db/index.js';
@@ -56,10 +56,12 @@ interface SeededRow {
 
 function seedRow(row: SeededRow): void {
   inventoryDb.db
-    .insert(homeInventory)
+    .insert(items)
     .values({
       id: row.id,
-      itemName: `item-${row.id}`,
+      name: `item-${row.id}`,
+      placementKind: 'hand',
+      seq: 0,
       lastEditedTime: FROZEN_NOW.toISOString(),
       purchaseTransactionId: row.purchaseTransactionId ?? null,
       purchaseTransactionUri: row.purchaseTransactionUri ?? null,
@@ -72,11 +74,11 @@ function readRow(id: string): {
 } {
   const rows = inventoryDb.db
     .select({
-      id: homeInventory.id,
-      purchaseTransactionStaleAt: homeInventory.purchaseTransactionStaleAt,
+      id: items.id,
+      purchaseTransactionStaleAt: items.purchaseTransactionStaleAt,
     })
-    .from(homeInventory)
-    .where(eq(homeInventory.id, id))
+    .from(items)
+    .where(eq(items.id, id))
     .all();
   const row = rows[0];
   if (!row) throw new Error(`row ${id} not found`);
@@ -323,7 +325,7 @@ describe('runReconciliation — 404', () => {
 
     expect(counters).toEqual({ ok: 0, notFound: 1, unavailable: 0, badUri: 0, misconfigured: 0 });
     expect(readRow('row-2').purchaseTransactionStaleAt).toBe(FROZEN_NOW.toISOString());
-    expect(inventoryDb.db.select().from(homeInventory).all()).toHaveLength(1);
+    expect(inventoryDb.db.select().from(items).all()).toHaveLength(1);
   });
 
   it('treats a PillarCallError(not-found) the same as a CallResult not-found', async () => {

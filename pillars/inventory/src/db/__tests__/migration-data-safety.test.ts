@@ -11,7 +11,9 @@
  * it with the real opener, which applies every entry after that point. The
  * entry under test is `0008_cross_pillar_uri_denorm`, which adds four columns
  * to `home_inventory` and backfills `purchase_transaction_uri` from the
- * legacy `purchase_transaction_id` column for rows that have one.
+ * legacy `purchase_transaction_id` column for rows that have one. The rows
+ * are read back from `items`, which `0012_items_single_identity` carries
+ * them into, so the chain as a whole is what is proven.
  */
 import { mkdtempSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -132,7 +134,7 @@ describe('applying the rest of the journal to a populated inventory database', (
   });
 
   it('loses no rows from any seeded table', () => {
-    expect(count('home_inventory')).toBe(ITEMS.length);
+    expect(count('items')).toBe(ITEMS.length);
     expect(count('locations')).toBe(1);
   });
 
@@ -142,7 +144,7 @@ describe('applying the rest of the journal to a populated inventory database', (
 
   it('backfills the URI from the legacy id for a row that has one', () => {
     const stored = opened.raw
-      .prepare(`SELECT purchase_transaction_uri FROM home_inventory WHERE id = ?`)
+      .prepare(`SELECT purchase_transaction_uri FROM items WHERE id = ?`)
       .get('i-couch') as { purchase_transaction_uri: string | null };
     expect(stored.purchase_transaction_uri).toBe('pops://finance/transaction/txn-1234');
   });
@@ -150,7 +152,7 @@ describe('applying the rest of the journal to a populated inventory database', (
   it('leaves the URI null rather than inventing one, for both null and empty legacy ids', () => {
     const stored = new Map(
       rows<{ id: string; purchase_transaction_uri: string | null }>(
-        `SELECT id, purchase_transaction_uri FROM home_inventory`
+        `SELECT id, purchase_transaction_uri FROM items`
       ).map((row) => [row.id, row.purchase_transaction_uri])
     );
     expect(stored.get('i-heirloom-clock')).toBeNull();
@@ -162,7 +164,7 @@ describe('applying the rest of the journal to a populated inventory database', (
       purchase_transaction_stale_at: string | null;
       owner_uri: string | null;
       owner_stale_at: string | null;
-    }>(`SELECT purchase_transaction_stale_at, owner_uri, owner_stale_at FROM home_inventory`);
+    }>(`SELECT purchase_transaction_stale_at, owner_uri, owner_stale_at FROM items`);
     for (const row of stored) {
       expect(row.purchase_transaction_stale_at).toBeNull();
       expect(row.owner_uri).toBeNull();
@@ -173,18 +175,16 @@ describe('applying the rest of the journal to a populated inventory database', (
   it('keeps every original column untouched', () => {
     const stored = rows<{
       id: string;
-      item_name: string;
+      name: string;
       location_id: string | null;
       purchase_transaction_id: string | null;
-    }>(
-      `SELECT id, item_name, location_id, purchase_transaction_id FROM home_inventory ORDER BY id`
-    );
+    }>(`SELECT id, name, location_id, purchase_transaction_id FROM items ORDER BY id`);
     expect(stored).toEqual(
       [...ITEMS]
         .sort((a, b) => a.id.localeCompare(b.id))
         .map((item) => ({
           id: item.id,
-          item_name: item.itemName,
+          name: item.itemName,
           location_id: item.locationId,
           purchase_transaction_id: item.purchaseTransactionId,
         }))
@@ -193,7 +193,7 @@ describe('applying the rest of the journal to a populated inventory database', (
 
   it('keeps every item attached to its location, and tolerates one with none', () => {
     const stored = rows<{ id: string; location_name: string | null }>(
-      `SELECT i.id, l.name AS location_name FROM home_inventory i
+      `SELECT i.id, l.name AS location_name FROM items i
        LEFT JOIN locations l ON l.id = i.location_id ORDER BY i.id`
     );
     const byId = new Map(stored.map((row) => [row.id, row.location_name]));

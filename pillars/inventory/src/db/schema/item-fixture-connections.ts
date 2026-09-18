@@ -2,7 +2,7 @@ import { sql } from 'drizzle-orm';
 import { index, integer, sqliteTable, text, unique } from 'drizzle-orm/sqlite-core';
 
 import { fixtures } from './fixtures.js';
-import { homeInventory } from './inventory.js';
+import { items } from './items.js';
 
 export const itemFixtureConnections = sqliteTable(
   'item_fixture_connections',
@@ -10,7 +10,7 @@ export const itemFixtureConnections = sqliteTable(
     id: integer('id').primaryKey({ autoIncrement: true }),
     itemId: text('item_id')
       .notNull()
-      .references(() => homeInventory.id, { onDelete: 'cascade' }),
+      .references(() => items.id, { onDelete: 'cascade' }),
     fixtureId: text('fixture_id')
       .notNull()
       .references(() => fixtures.id, { onDelete: 'cascade' }),

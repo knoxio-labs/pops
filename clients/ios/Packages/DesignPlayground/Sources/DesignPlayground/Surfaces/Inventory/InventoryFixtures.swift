@@ -11,15 +11,6 @@ internal struct InventoryItem: Identifiable, Equatable {
     internal let name: String
     internal let context: InventoryItemContext
     internal let symbol: String
-
-    internal var detail: String {
-        switch context {
-        case .inHand(let origin, let updated):
-            "From \(origin) · \(updated)"
-        case .stored(let container, let location):
-            "\(container) · \(location)"
-        }
-    }
 }
 
 internal enum InventoryItemContext: Equatable {
@@ -61,17 +52,19 @@ internal struct InventoryDashboardFixture {
 
 @MainActor
 internal enum InventoryFixtures {
-    internal static let containers = [
+    internal static let containers = InventoryContainerFixtures.all.filter(\.isOpen).map {
         InventoryContainer(
-            id: "kitchen-12", name: "Kitchen 12", location: "Kitchen", itemCount: 18,
-            updated: "8 min ago"),
-        InventoryContainer(
-            id: "office-04", name: "Office 04", location: "Study", itemCount: 11,
-            updated: "Yesterday"),
-        InventoryContainer(
-            id: "garage-tools", name: "Garage tools", location: "Garage", itemCount: 24,
-            updated: "Monday"),
-    ]
+            id: $0.id, name: $0.item.name,
+            location: $0.item.placement.effectiveLocation ?? "",
+            itemCount: $0.contents.itemCount, updated: $0.updated)
+    }
+
+    /// The same catalogue the Containers and Locations screens are drawn from.
+    internal static let catalogue: InventoryCatalogueCounts = {
+        let total = InventoryLocationFixtures.home.total
+        return InventoryCatalogueCounts(
+            items: total.items, containers: total.containers, locations: total.places)
+    }()
 
     internal static let items = [
         InventoryItem(
@@ -98,7 +91,8 @@ internal enum InventoryFixtures {
             detail: "Office 04 → In hand · 12 min ago",
             symbol: "arrow.right"),
         InventoryActivity(
-            id: "closed-linen", title: "Linen 02 closed", detail: "19 items · Yesterday",
+            id: "closed-linen", title: "Linen 02 closed",
+            detail: "\(InventoryContainerFixtures.closed.contents.itemCount) items · Yesterday",
             symbol: "shippingbox.fill"),
         InventoryActivity(
             id: "added-drill", title: "Cordless drill added", detail: "Garage tools · Monday",
@@ -106,8 +100,8 @@ internal enum InventoryFixtures {
     ]
 
     internal static let packing = InventoryDashboardFixture(
-        summary: "3 containers open · 2 items in hand",
-        catalogue: InventoryCatalogueCounts(items: 846, containers: 38, locations: 9),
+        summary: "\(containers.count) containers open · 2 items in hand",
+        catalogue: catalogue,
         containers: containers,
         inHand: Array(items.prefix(2)),
         recentItems: Array(items.suffix(2)),
@@ -118,8 +112,10 @@ internal enum InventoryFixtures {
     )
 
     internal static let settled = InventoryDashboardFixture(
-        summary: "846 items · 38 containers · 9 locations",
-        catalogue: InventoryCatalogueCounts(items: 846, containers: 38, locations: 9),
+        summary:
+            "\(catalogue.items) items · \(catalogue.containers) containers · "
+            + "\(catalogue.locations) locations",
+        catalogue: catalogue,
         containers: [],
         inHand: [],
         recentItems: Array(items.reversed()),

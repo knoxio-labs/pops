@@ -213,12 +213,12 @@ extension InMemoryInventoryStore {
         state.items[id] = bumped(
             item, seq: &state.nextSeq,
             quantity: .set(InventoryQuantity(count: item.quantity.count - quantity)))
+        state.nextSeq += 1
         state.items[newItemId] = InventoryItem(
             id: newItemId, revision: 1, seq: state.nextSeq, name: item.name,
             typeKey: item.typeKey, fields: item.fields, note: item.note,
             quantity: InventoryQuantity(count: quantity), placement: item.placement,
             createdAt: now, updatedAt: now)
-        state.nextSeq += 1
     }
 
     private static func applyAttachPhoto(

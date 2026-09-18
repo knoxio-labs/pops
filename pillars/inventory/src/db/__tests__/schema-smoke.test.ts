@@ -9,28 +9,36 @@ import { getTableName } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
 import {
-  containers,
+  events,
   fixtures,
-  homeInventory,
   itemConnections,
   itemDocuments,
   itemFixtureConnections,
   itemPhotos,
+  items,
   itemUploadedFiles,
   locations,
+  media,
+  mutations,
+  settings,
+  syncMeta,
 } from '../schema.js';
 
 describe('inventory schema table names', () => {
   it.each([
-    [containers, 'containers'],
+    [events, 'events'],
     [fixtures, 'fixtures'],
-    [homeInventory, 'home_inventory'],
+    [items, 'items'],
     [itemConnections, 'item_connections'],
     [itemDocuments, 'item_documents'],
     [itemFixtureConnections, 'item_fixture_connections'],
     [itemPhotos, 'item_photos'],
     [itemUploadedFiles, 'item_uploaded_files'],
     [locations, 'locations'],
+    [media, 'media'],
+    [mutations, 'mutations'],
+    [settings, 'settings'],
+    [syncMeta, 'sync_meta'],
   ])('resolves %#: %s', (table, expectedName) => {
     expect(getTableName(table)).toBe(expectedName);
   });

@@ -3,14 +3,20 @@ import SwiftUI
 
 internal struct InventoryShellView: View {
     internal let fixture: InventoryDashboardFixture
+    /// Opens the shell on the search tab, staged as given.
+    internal var search: InventorySearchStage?
 
-    @State private var query = ""
-    @State private var searching = false
-    @State private var selected = Self.inventoryTab
+    @State private var selected: Int
 
     private static let inventoryTab = 2
     private static let searchTab = 4
     private let scanDiameter: CGFloat = 60
+
+    internal init(fixture: InventoryDashboardFixture, search: InventorySearchStage? = nil) {
+        self.fixture = fixture
+        self.search = search
+        _selected = State(initialValue: search == nil ? Self.inventoryTab : Self.searchTab)
+    }
 
     internal var body: some View {
         TabView(selection: $selected) {
@@ -28,18 +34,18 @@ internal struct InventoryShellView: View {
             }
             Tab(value: Self.searchTab, role: .search) {
                 NavigationStack {
-                    InventorySearchResults(fixture: fixture, query: query)
-                        .navigationTitle("Search")
-                        .playgroundTitleDisplay(large: false)
+                    InventorySearchScreen(stage: searchStage)
                 }
             }
         }
-        .playgroundSearchTab(
-            text: $query,
-            isPresented: $searching,
-            prompt: "Items, containers, and locations"
-        )
         .playgroundMinimizingTabBar()
+    }
+
+    private var searchStage: InventorySearchStage {
+        if let search { return search }
+        var stage = InventorySearchStage()
+        if fixture.isFirstRun { stage.phase = .firstLaunch }
+        return stage
     }
 
     private var inventory: some View {

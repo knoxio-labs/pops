@@ -1,11 +1,6 @@
 import { and, asc, count, eq } from 'drizzle-orm';
 
-import {
-  fixtures,
-  homeInventory,
-  type InventoryDb,
-  itemFixtureConnections,
-} from '../../../db/index.js';
+import { fixtures, items, type InventoryDb, itemFixtureConnections } from '../../../db/index.js';
 import { ConflictError, NotFoundError } from '../../shared/errors.js';
 import {
   isForeignKeyConstraintError,
@@ -111,11 +106,7 @@ export function connectItemToFixture(
       throw new ConflictError(`Item '${itemId}' is already connected to fixture '${fixtureId}'`);
     }
     if (isForeignKeyConstraintError(err)) {
-      const [item] = db
-        .select({ id: homeInventory.id })
-        .from(homeInventory)
-        .where(eq(homeInventory.id, itemId))
-        .all();
+      const [item] = db.select({ id: items.id }).from(items).where(eq(items.id, itemId)).all();
       if (!item) throw new NotFoundError('Inventory item', itemId);
       throw new NotFoundError('Fixture', fixtureId);
     }
