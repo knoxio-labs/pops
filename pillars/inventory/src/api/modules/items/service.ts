@@ -1,23 +1,20 @@
 /**
- * Inventory items service — CRUD operations using Drizzle ORM against the
- * per-pillar `inventory.db` handle.
+ * Inventory items read service, using Drizzle ORM against the per-pillar
+ * `inventory.db` handle. Every read here excludes a tombstoned row, since
+ * `item.delete` (POPS-4053) marks `deleted_at` rather than removing the row.
+ * The legacy `/items` routes' writes go through the command layer
+ * (`../../domain/commands`) instead of this module.
  *
  * The `InventoryDb` handle is passed in explicitly to every function rather
  * than resolved via a module-global getter, keeping this service free of
  * ambient state and trivially testable with an in-memory db.
  */
-import crypto from 'crypto';
-
 import { and, count, eq, inArray, isNotNull, isNull, like, sql, sum, type SQL } from 'drizzle-orm';
 
 import { items, type InventoryDb, locationsService } from '../../../db/index.js';
-import { isSourceRefConflict } from '../../../db/services/source-ref-conflict.js';
-import { NotFoundError, ValidationError } from '../../shared/errors.js';
-import { buildCreateValues } from './create-builder.js';
-import { placementForCreate, placementForUpdate } from './legacy-placement.js';
-import { buildInventoryUpdate } from './update-builder.js';
+import { NotFoundError } from '../../shared/errors.js';
 
-import type { CreateInventoryItemInput, ItemRow, UpdateInventoryItemInput } from './types.js';
+import type { ItemRow } from './types.js';
 
 /** Count + rows + value aggregates for a paginated list. */
 export interface InventoryListResult {
@@ -168,114 +165,4 @@ export function getInventoryItem(db: InventoryDb, id: string): ItemRow {
 /** The row a given `source_ref` already names, if any, tombstoned or not. */
 export function getBySourceRef(db: InventoryDb, sourceRef: string): ItemRow | undefined {
   return db.select().from(items).where(eq(items.sourceRef, sourceRef)).get();
-}
-
-/** Longest containment chain the legacy writer walks (ADR-002 D2's cap). */
-const MAX_CONTAINMENT_DEPTH = 32;
-
-/**
- * Refuse a legacy `containerId` that names no live container, or that would
- * put the item inside itself or its own contents. Throws rather than letting
- * a bad id reach the `containing_item_id` foreign key or the placement CHECK
- * as an unmapped constraint error.
- */
-function assertContainerTarget(db: InventoryDb, itemId: string | null, containerId: string): void {
-  const container = db
-    .select({ id: items.id })
-    .from(items)
-    .where(and(eq(items.id, containerId), eq(items.isContainer, 1), isNull(items.deletedAt)))
-    .get();
-  if (!container) throw new NotFoundError('Container', containerId);
-  if (itemId === null) return;
-
-  let ancestor: string | null = container.id;
-  for (let depth = 0; ancestor !== null; depth += 1) {
-    if (ancestor === itemId || depth >= MAX_CONTAINMENT_DEPTH) {
-      throw new ValidationError('An item cannot be placed inside itself or its own contents');
-    }
-    const next = db
-      .select({ containingItemId: items.containingItemId })
-      .from(items)
-      .where(eq(items.id, ancestor))
-      .get();
-    ancestor = next?.containingItemId ?? null;
-  }
-}
-
-/**
- * Create a new inventory item. Returns the created row.
- * Generates a local UUID and inserts directly into SQLite.
- *
- * Idempotent when `input.sourceRef` is supplied (POPS-2433): two concurrent
- * calls naming the same reference race to the insert, the loser's write
- * raises the `items_source_ref` UNIQUE violation, and that loser returns the
- * winner's row rather than surfacing the error or minting a second one. A
- * caller with no `sourceRef` gets the old, non-idempotent behaviour — a plain
- * insert.
- */
-export function createInventoryItem(db: InventoryDb, input: CreateInventoryItemInput): ItemRow {
-  const id = crypto.randomUUID();
-  const now = new Date().toISOString();
-
-  if (typeof input.containerId === 'string') assertContainerTarget(db, null, input.containerId);
-  const values = buildCreateValues(id, now, input, placementForCreate(input));
-
-  try {
-    db.insert(items).values(values).run();
-  } catch (err) {
-    if (typeof input.sourceRef === 'string' && input.sourceRef.length > 0) {
-      const existing = isSourceRefConflict(err) ? getBySourceRef(db, input.sourceRef) : undefined;
-      if (existing !== undefined) return existing;
-    }
-    throw err;
-  }
-
-  return getInventoryItem(db, id);
-}
-
-/**
- * Update an existing inventory item. Returns the updated row.
- */
-export function updateInventoryItem(
-  db: InventoryDb,
-  id: string,
-  input: UpdateInventoryItemInput
-): ItemRow {
-  const current = getInventoryItem(db, id);
-
-  if (typeof input.containerId === 'string') assertContainerTarget(db, id, input.containerId);
-  const updates = buildInventoryUpdate(input, placementForUpdate(current, input));
-  if (updates) {
-    db.update(items).set(updates).where(eq(items.id, id)).run();
-  }
-
-  return getInventoryItem(db, id);
-}
-
-/**
- * Delete an inventory item by ID. Throws NotFoundError if missing.
- *
- * Deleting a container empties it rather than deleting what was inside, as
- * before Inventory ADR-002: its contents go in hand, remembering the
- * container. `containing_item_id` has no `ON DELETE` action, so they have to
- * move before the row goes.
- */
-export function deleteInventoryItem(db: InventoryDb, id: string): void {
-  getInventoryItem(db, id);
-
-  db.transaction((tx) => {
-    tx.update(items)
-      .set({
-        placementKind: 'hand',
-        containingItemId: null,
-        previousPlacementKind: 'container',
-        previousLocationId: null,
-        previousContainingItemId: id,
-        lastEditedTime: new Date().toISOString(),
-      })
-      .where(eq(items.containingItemId, id))
-      .run();
-    const result = tx.delete(items).where(eq(items.id, id)).run();
-    if (result.changes === 0) throw new NotFoundError('Inventory item', id);
-  });
 }
