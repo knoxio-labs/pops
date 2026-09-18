@@ -1886,6 +1886,9 @@ importers:
 
   pillars/inventory:
     dependencies:
+      '@pops/pillar-express':
+        specifier: workspace:*
+        version: link:../../libs/pillar-express
       '@pops/pillar-sdk':
         specifier: workspace:*
         version: link:../../libs/sdk
