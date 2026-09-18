@@ -12,7 +12,7 @@ internal struct InventorySearchView: View {
     @AppStorage(InventorySearchRecents.scannedKey) private var storedScanned = ""
     @State private var showingFilters = false
     @State private var selection = InventorySelection()
-    @State private var moving: InventoryMoveRequest?
+    @State private var moving: InventoryPlacementRequest?
     /// Bumped by Retry to restart the observation after the store ended it.
     @State private var generation = 0
 
@@ -40,7 +40,10 @@ internal struct InventorySearchView: View {
         .inventoryRecordSelectionBar(
             $selection, records: model.hitRecords, writer: model.writer, moving: $moving
         )
-        .inventoryMoveSheet($moving)
+        .inventoryPlacementPicker($moving, runner: model.runner) { _ in
+            selection.deselectAll()
+        }
+        .inventoryRunnerChrome(model.runner)
         .inventoryWriterFeedback(model.writer)
         .task(
             id: TaskKey(key: model.observationKey, scanned: storedScanned, generation: generation)

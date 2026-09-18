@@ -128,6 +128,27 @@ internal struct InventoryItemsBrowserTests {
 
         #expect(model.phase == .unavailable)
     }
+
+    @Test("Move from the Items browser issues item.move through the model's own runner")
+    func moveIssuesItemMoveThroughTheRunner() async throws {
+        let recording = RecordingInventoryStore(Self.store())
+        let model = InventoryItemsBrowserViewModel(store: recording, now: { Fixture.now })
+        let task = await Self.loaded(model)
+        defer { task.cancel() }
+
+        let moving = InventoryRecordActions.moveRequest(["drill"], from: model.shown)
+        #expect(moving.title == "Drill")
+
+        let destination = InventoryDestination(id: "garage", name: "Garage", kind: .location)
+        let plan = InventoryPlacementPlan(
+            request: moving, destination: destination, tree: InventoryLocationTree(nodes: []))
+        let landed = await model.runner.perform(
+            plan.commands, announcing: plan.message, symbol: .move)
+
+        #expect(landed)
+        #expect(
+            recording.commands == [.moveItem(id: "drill", to: .location("garage"), verb: .move)])
+    }
 }
 
 /// A store whose every stream ends at once without a value, as an unbound

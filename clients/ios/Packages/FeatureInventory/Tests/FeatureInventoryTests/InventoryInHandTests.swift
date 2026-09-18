@@ -64,4 +64,38 @@ internal struct InventoryInHandTests {
         let after = try #require(await afterIterator.next())
         #expect(after.items.map(\.id) == ["a"])
     }
+
+    @Test("a Move request names the one row it carries, or counts several")
+    func moveRequestNamesOneRowOrCountsSeveral() {
+        let one = InventoryInHand.moveRequest(for: [Self.item("a", previous: .nowhere)])
+        let many = InventoryInHand.moveRequest(
+            for: [Self.item("a", previous: .nowhere), Self.item("b", previous: .nowhere)])
+
+        #expect(one.subject == .items(["a"]))
+        #expect(one.title == "a")
+        #expect(many.subject == .items(["a", "b"]))
+        #expect(many.title == "2 things")
+    }
+
+    @Test("Move from In hand issues item.move through the model's own runner")
+    func moveIssuesItemMoveThroughTheRunner() async throws {
+        let recording = RecordingInventoryStore(
+            InMemoryInventoryStore(
+                items: [InventoryFixture.item("a", "Widget", at: .hand)],
+                locations: [InventoryFixture.location("kitchen", "Kitchen")]))
+        let model = InventoryInHandViewModel(store: recording)
+        let task = Task { await model.observe() }
+        defer { task.cancel() }
+        _ = await eventually { !model.items.isEmpty }
+
+        let moving = InventoryInHand.moveRequest(for: model.items)
+        let destination = InventoryDestination(id: "kitchen", name: "Kitchen", kind: .location)
+        let plan = InventoryPlacementPlan(
+            request: moving, destination: destination, tree: InventoryLocationTree(nodes: []))
+        let landed = await model.runner.perform(
+            plan.commands, announcing: plan.message, symbol: .move)
+
+        #expect(landed)
+        #expect(recording.commands == [.moveItem(id: "a", to: .location("kitchen"), verb: .move)])
+    }
 }

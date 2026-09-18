@@ -32,6 +32,18 @@ internal enum InventoryRecordActions {
     internal static func subject(_ records: [InventoryRecord]) -> String {
         records.count == 1 ? records[0].name : "\(records.count)"
     }
+
+    /// A Move request for selected records: one is named, several are
+    /// counted, the same way `InventoryInHand.moveRequest(for:)` titles an
+    /// in-hand Move.
+    internal static func moveRequest(_ ids: Set<String>, from records: [InventoryRecord])
+        -> InventoryPlacementRequest
+    {
+        let chosen = records.filter { ids.contains($0.id) }
+        return InventoryPlacementRequest(
+            subject: .items(ids.sorted()),
+            title: chosen.count == 1 ? subject(chosen) : "\(ids.count) items")
+    }
 }
 
 extension InventoryWriter {
@@ -54,7 +66,7 @@ extension View {
         _ selection: Binding<InventorySelection>,
         records: [InventoryRecord],
         writer: InventoryWriter,
-        moving: Binding<InventoryMoveRequest?>
+        moving: Binding<InventoryPlacementRequest?>
     ) -> some View {
         inventorySelectionBar(
             selection, all: records.map(\.id),
@@ -64,11 +76,7 @@ extension View {
                     Task { await writer.pickUp(ids, from: records) }
                 },
                 InventorySelectionAction(title: "Move", symbol: .move) { ids in
-                    let chosen = records.filter { ids.contains($0.id) }
-                    moving.wrappedValue = InventoryMoveRequest(
-                        ids: ids,
-                        title: chosen.count == 1
-                            ? InventoryRecordActions.subject(chosen) : "\(ids.count) items")
+                    moving.wrappedValue = InventoryRecordActions.moveRequest(ids, from: records)
                 },
                 InventorySelectionAction(title: "Discard", symbol: .discard) { ids in
                     selection.wrappedValue.deselectAll()

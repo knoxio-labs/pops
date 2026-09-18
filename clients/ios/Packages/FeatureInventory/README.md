@@ -42,7 +42,7 @@ Two things it reaches for belong to other screens, and it asks for them rather t
 - `InventoryItemsBrowserViewModel` reads every non-container item in one query (`inventoryItems(includeInactive:)`), sectioned by initial when sorted by name and otherwise left in the replica's own order, with the same missing-type and include-inactive filters Search uses.
 - `InventoryInHandViewModel` reads the dashboard's own In-hand rows as a page of their own, with Put back and Put all back (`InHand/InventoryInHand.swift`): Put back does nothing for a row whose previous place was deleted, and Put all back only appears once there is more than one thing in hand.
 
-Move, from any of the three, still opens a pending screen (`inventoryMoveSheet`): it was written before the placement picker existed in this package. Now that Containers and Locations (POPS-4064) have landed the real picker, wiring Move to it is unblocked but not done in this slice.
+Move, from any of the three, and from the dashboard's own In hand section, goes through the same `inventoryPlacementPicker` and `InventoryCommandRunner` Containers and Locations use (POPS-4064): each view model carries its own runner, built from the same store as its `InventoryWriter`.
 
 ## Deduplication
 

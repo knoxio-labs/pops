@@ -28,6 +28,8 @@ internal final class InventoryItemsBrowserViewModel {
     internal var sort = InventoryItemSort.recent
     internal private(set) var phase: Phase = .loading
     internal let writer: InventoryWriter
+    /// Move's writes: the one runner every placement picker in this package shares.
+    internal let runner: InventoryCommandRunner
 
     private let store: any InventoryStore
     private let now: @Sendable () -> Date
@@ -36,6 +38,7 @@ internal final class InventoryItemsBrowserViewModel {
         self.store = store
         self.now = now
         writer = InventoryWriter(store: store)
+        runner = InventoryCommandRunner(store: store)
     }
 
     internal var observationKey: InventoryObservationKey {

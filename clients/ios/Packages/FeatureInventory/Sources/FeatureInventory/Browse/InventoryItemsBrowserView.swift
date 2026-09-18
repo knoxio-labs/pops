@@ -9,7 +9,7 @@ internal struct InventoryItemsBrowserView: View {
     @State private var showingFilters = false
     @State private var adding = false
     @State private var selection = InventorySelection()
-    @State private var moving: InventoryMoveRequest?
+    @State private var moving: InventoryPlacementRequest?
     /// Bumped by Retry to restart the observation after the store ended it.
     @State private var generation = 0
 
@@ -74,11 +74,7 @@ internal struct InventoryItemsBrowserView: View {
         }
         .inventoryNewItemSheet(isPresented: $adding)
         .tint(.popsInventory)
-        .inventoryRecordSelectionBar(
-            $selection, records: model.shown, writer: model.writer, moving: $moving
-        )
-        .inventoryMoveSheet($moving)
-        .inventoryWriterFeedback(model.writer)
+        .chrome(selection: $selection, moving: $moving, model: model)
     }
 
     private var searchBar: some View {
@@ -151,6 +147,22 @@ internal struct InventoryItemsBrowserSkeleton: View {
 }
 
 extension View {
+    /// Move and the writer's Undo capsule and refusal alert: the same chrome
+    /// every list in this package shows, over its own selection and model.
+    fileprivate func chrome(
+        selection: Binding<InventorySelection>, moving: Binding<InventoryPlacementRequest?>,
+        model: InventoryItemsBrowserViewModel
+    ) -> some View {
+        inventoryRecordSelectionBar(
+            selection, records: model.shown, writer: model.writer, moving: moving
+        )
+        .inventoryPlacementPicker(moving, runner: model.runner) { _ in
+            selection.wrappedValue.deselectAll()
+        }
+        .inventoryRunnerChrome(model.runner)
+        .inventoryWriterFeedback(model.writer)
+    }
+
     /// What New item opens. The item form moves into this package in its own
     /// change (POPS-4063) and replaces this sheet's body; until then it is a
     /// pending screen.

@@ -32,11 +32,14 @@ internal final class InventoryInHandViewModel {
 
     internal private(set) var phase: Phase = .loading
     internal let writer: InventoryWriter
+    /// Move's writes: the one runner every placement picker in this package shares.
+    internal let runner: InventoryCommandRunner
     private let store: any InventoryStore
 
     internal init(store: any InventoryStore) {
         self.store = store
         writer = InventoryWriter(store: store)
+        runner = InventoryCommandRunner(store: store)
     }
 
     internal var items: [InventoryInHand.Item] {

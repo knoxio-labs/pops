@@ -57,57 +57,34 @@ extension InventoryWriter {
     }
 }
 
-/// Which rows a Move carries, and what the picker is titled.
-internal struct InventoryMoveRequest: Identifiable, Equatable {
-    internal let ids: Set<String>
-    internal let title: String
-
-    internal var id: String { ids.sorted().joined(separator: ",") }
-
-    /// A Move for in-hand rows: one row is named, several are counted.
-    internal init(inHand items: [InventoryInHand.Item]) {
+extension InventoryInHand {
+    /// A Move request for in-hand rows: one row is named, several are
+    /// counted, matching the title Search and Browse give their own
+    /// `InventoryPlacementRequest`.
+    internal static func moveRequest(for items: [Item]) -> InventoryPlacementRequest {
         if items.count == 1, let only = items.first {
-            self.init(ids: [only.id], title: only.name)
-        } else {
-            self.init(ids: Set(items.map(\.id)), title: "\(items.count) things")
+            return InventoryPlacementRequest(subject: .items([only.id]), title: only.name)
         }
-    }
-
-    internal init(ids: Set<String>, title: String) {
-        self.ids = ids
-        self.title = title
+        return InventoryPlacementRequest(
+            subject: .items(items.map(\.id)), title: "\(items.count) things")
     }
 }
 
 extension View {
-    /// What a Move opens. The destination picker moves into this package with
-    /// containers and locations (POPS-4064) and replaces this sheet's body;
-    /// until then it is the pending screen the dashboard already shows.
-    internal func inventoryMoveSheet(_ request: Binding<InventoryMoveRequest?>) -> some View {
-        sheet(item: request) { request in
-            NavigationStack {
-                InventoryPendingScreen(
-                    title: "Move \(request.title)",
-                    detail: "The place picker opens here.",
-                    symbol: InventorySymbol.move.system)
-            }
-        }
-    }
-
     /// Selection mode's bar for in-hand rows: Put back and Move. A row that
     /// leaves the list by any route stops counting as selected.
     internal func inventoryInHandSelectionBar(
         _ selection: Binding<InventorySelection>,
         items: [InventoryInHand.Item],
         onPutBack: @escaping (Set<String>) -> Void,
-        onMove: @escaping (InventoryMoveRequest) -> Void
+        onMove: @escaping (InventoryPlacementRequest) -> Void
     ) -> some View {
         inventorySelectionBar(
             selection, all: items.map(\.id),
             actions: [
                 InventorySelectionAction(title: "Put back", symbol: .restore, perform: onPutBack),
                 InventorySelectionAction(title: "Move", symbol: .move) { ids in
-                    onMove(InventoryMoveRequest(inHand: items.filter { ids.contains($0.id) }))
+                    onMove(InventoryInHand.moveRequest(for: items.filter { ids.contains($0.id) }))
                 },
             ]
         )

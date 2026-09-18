@@ -7,7 +7,7 @@ import SwiftUI
 internal struct InventoryInHandView: View {
     @State private var model: InventoryInHandViewModel
     @State private var selection = InventorySelection()
-    @State private var moving: InventoryMoveRequest?
+    @State private var moving: InventoryPlacementRequest?
     /// Bumped by Retry to restart the observation after the store ended it.
     @State private var generation = 0
 
@@ -45,7 +45,7 @@ internal struct InventoryInHandView: View {
                     InventoryInHandRows(
                         items: page.items, selection: $selection,
                         onPutBack: { item in Task { await model.putBack([item.id]) } },
-                        onMove: { moving = InventoryMoveRequest(inHand: [$0]) },
+                        onMove: { moving = InventoryInHand.moveRequest(for: [$0]) },
                         loadPhoto: { await model.thumbnail($0) })
                 }
             }
@@ -64,7 +64,7 @@ internal struct InventoryInHandView: View {
 extension View {
     fileprivate func inHandChrome(
         _ page: InventoryInHandPage, model: InventoryInHandViewModel,
-        selection: Binding<InventorySelection>, moving: Binding<InventoryMoveRequest?>
+        selection: Binding<InventorySelection>, moving: Binding<InventoryPlacementRequest?>
     ) -> some View {
         toolbar {
             if !selection.wrappedValue.isSelecting, model.offersPutAllBack {
@@ -80,7 +80,10 @@ extension View {
             onPutBack: { ids in Task { await model.putBack(ids) } },
             onMove: { moving.wrappedValue = $0 }
         )
-        .inventoryMoveSheet(moving)
+        .inventoryPlacementPicker(moving, runner: model.runner) { _ in
+            selection.wrappedValue.deselectAll()
+        }
+        .inventoryRunnerChrome(model.runner)
         .inventoryWriterFeedback(model.writer)
     }
 }
