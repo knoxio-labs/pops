@@ -8,7 +8,7 @@
  * `select *` — the BFS works on in-memory adjacency maps so cycles, deep
  * chains, and dense fan-out don't reissue queries per node.
  */
-import { homeInventory, itemConnections } from '../schema.js';
+import { items, itemConnections } from '../schema.js';
 import { ConnectionItemNotFoundError } from './connections-errors.js';
 
 import type { GraphData, GraphEdge, GraphNode } from './connections-types.js';
@@ -76,12 +76,12 @@ export function getConnectionGraph(db: InventoryDb, itemId: string, maxDepth: nu
   const allConnections = db.select().from(itemConnections).all();
   const allItems = db
     .select({
-      id: homeInventory.id,
-      itemName: homeInventory.itemName,
-      assetId: homeInventory.assetId,
-      type: homeInventory.type,
+      id: items.id,
+      itemName: items.name,
+      assetId: items.code,
+      type: items.legacyType,
     })
-    .from(homeInventory)
+    .from(items)
     .all();
 
   const itemMap = new Map(allItems.map((item) => [item.id, item]));

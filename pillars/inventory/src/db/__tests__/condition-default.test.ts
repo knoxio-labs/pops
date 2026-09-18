@@ -1,5 +1,5 @@
 /**
- * The `home_inventory.condition` default has to agree in three places, and
+ * The `items.condition` default has to agree in three places, and
  * nothing else checks that it does.
  *
  * drizzle applies a static `.default(value)` client-side rather than emitting
@@ -22,7 +22,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { INVENTORY_CONDITIONS } from '../../contract/types/condition.js';
 import { openInventoryDb } from '../open-inventory-db.js';
-import { homeInventory } from '../schema.js';
+import { items } from '../schema.js';
 
 interface ColumnInfo {
   name: string;
@@ -42,19 +42,19 @@ afterEach(() => {
 function migratedConditionDefault(): string | null {
   const { raw } = openInventoryDb(join(tmpDir, 'inventory.db'));
   try {
-    const columns = raw.pragma('table_info(home_inventory)') as ColumnInfo[];
+    const columns = raw.pragma('table_info(items)') as ColumnInfo[];
     return columns.find((column) => column.name === 'condition')?.dflt_value ?? null;
   } finally {
     raw.close();
   }
 }
 
-describe('home_inventory.condition default', () => {
+describe('items.condition default', () => {
   it('is a value the edit form can preselect', () => {
-    expect(INVENTORY_CONDITIONS).toContain(homeInventory.condition.default);
+    expect(INVENTORY_CONDITIONS).toContain(items.condition.default);
   });
 
   it('agrees between the drizzle schema and the migrated database', () => {
-    expect(migratedConditionDefault()).toBe(`'${String(homeInventory.condition.default)}'`);
+    expect(migratedConditionDefault()).toBe(`'${String(items.condition.default)}'`);
   });
 });

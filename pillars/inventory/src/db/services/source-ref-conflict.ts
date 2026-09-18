@@ -1,15 +1,15 @@
 /**
- * Recognise the `home_inventory.source_ref` unique violation (POPS-2433).
+ * Recognise the `items.source_ref` unique violation (POPS-2433).
  *
  * Two concurrent creates naming the same external slot both pass whatever
  * in-process check their caller runs and race to the insert; the loser's
- * write raises `SQLITE_CONSTRAINT_UNIQUE` on `idx_inventory_source_ref`,
+ * write raises `SQLITE_CONSTRAINT_UNIQUE` on `items_source_ref`,
  * which `createInventoryItem` uses to fetch and return the winner's row
  * instead of minting a second one.
  *
- * Message-matched against the index name, not just the code: `home_inventory`
- * carries two other unique indexes (`asset_id`, `notion_id`) that must NOT be
- * swallowed here — a genuine asset-id collision should still surface as an
+ * Message-matched against the index name, not just the code: `items`
+ * carries two other unique indexes (`code`, `notion_id`) that must NOT be
+ * swallowed here — a genuine code collision should still surface as an
  * error rather than being misread as an idempotent replay.
  *
  * Shape follows the sibling detectors in `pillars/finance/src/db/services/`
@@ -36,7 +36,7 @@ function matchesSourceRefUnique(err: Error): boolean {
   if (typeof code !== 'string') return false;
   if (code !== 'SQLITE_CONSTRAINT_UNIQUE' && code !== 'SQLITE_CONSTRAINT') return false;
   return (
-    /UNIQUE constraint failed: home_inventory\.source_ref/.test(err.message) ||
-    /UNIQUE constraint failed: index 'idx_inventory_source_ref'/.test(err.message)
+    /UNIQUE constraint failed: items\.source_ref/.test(err.message) ||
+    /UNIQUE constraint failed: index 'items_source_ref'/.test(err.message)
   );
 }

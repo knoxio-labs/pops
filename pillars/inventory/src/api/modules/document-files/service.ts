@@ -8,7 +8,7 @@ import { extname, join, resolve } from 'node:path';
 
 import { count, desc, eq } from 'drizzle-orm';
 
-import { homeInventory, type InventoryDb, itemUploadedFiles } from '../../../db/index.js';
+import { items, type InventoryDb, itemUploadedFiles } from '../../../db/index.js';
 import { NotFoundError, ValidationError } from '../../shared/errors.js';
 import { getInventoryDocumentsDir } from './paths.js';
 import {
@@ -26,11 +26,7 @@ export interface UploadedFileListResult {
 
 /** Validate that an inventory item exists. */
 function assertItemExists(db: InventoryDb, itemId: string): void {
-  const [item] = db
-    .select({ id: homeInventory.id })
-    .from(homeInventory)
-    .where(eq(homeInventory.id, itemId))
-    .all();
+  const [item] = db.select({ id: items.id }).from(items).where(eq(items.id, itemId)).all();
   if (!item) throw new NotFoundError('Inventory item', itemId);
 }
 

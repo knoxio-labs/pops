@@ -39,6 +39,7 @@ internal struct ChromeHost<Content: View, Inspector: View>: View {
     let title: String
     /// What the sheet is presented over, when the surface supplies one.
     let backdrop: (@MainActor () -> AnyView)?
+    var sheetDetents: SheetDetents = .adjustable
     @ViewBuilder let content: Content
     /// Placed by the chrome rather than over it. A `.sheet` is a system
     /// presentation and renders above everything in the presenting view's
@@ -128,7 +129,7 @@ internal struct ChromeHost<Content: View, Inspector: View>: View {
                 .surfaceEnvironment(settings)
                 inspector
             }
-            .presentationDetents([.medium, .large])
+            .presentationDetents(sheetDetents.detents)
             .presentationDragIndicator(.visible)
             // The sheet must not be dismissible: it is the thing being
             // reviewed, and a swipe that closed it would leave the stage

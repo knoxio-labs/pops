@@ -15,9 +15,13 @@ alternatives would actually be built differently.
 2. Name the **question**, in one sentence, in the terms a reviewer would use —
    "does the review step read better as a dense table or a card grid" — not
    "improve import review".
-3. Check the screen has no active experiment already: at most one is allowed
-   per screen and the registry rejects a second. `rg 'screen: <screen-id>'
-pillars/design/src/experiments/*/experiment.yaml`.
+3. Check what else is already open on that screen: `rg 'screen: <screen-id>'
+pillars/design/src/experiments/*/experiment.yaml`. Several active
+   experiments on one screen are fine — vocabulary, status treatment and
+   density are separate questions and queueing them answers two by default.
+   What you owe the reviewer is a line in each variant's note naming the other
+   open question it has taken a position on, since every variant stages a whole
+   screen and so has already answered them all.
 4. Decide the variants. Two is usually right. A variant that differs only in a
    value (a padding, a colour) is a tweak, not a variant — make it a state or
    just change it.
