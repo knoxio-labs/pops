@@ -18,6 +18,12 @@ internal struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var composition = AppComposition()
 
+    /// The pillar named by the last `pops` URL this build could not route
+    /// anywhere. Drives ``unsupportedPillarAlertPresented`` rather than a
+    /// plain `Bool`, so the alert's title still has the pillar's name once
+    /// SwiftUI reads it to render.
+    @State private var unsupportedPillar: String?
+
     internal var body: some View {
         content
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -34,8 +40,27 @@ internal struct RootView: View {
                 Task { await composition.shell.reloadBootstrap() }
             }
             .onOpenURL { url in
-                handleOpenPopsURL(url, router: composition.entityRouter)
+                let outcome = handleOpenPopsURL(url, router: composition.entityRouter)
+                guard case .unsupported(let pillar)? = outcome else { return }
+                unsupportedPillar = pillar
             }
+            .alert(
+                RootCopy.opensIn(unsupportedPillar ?? ""),
+                isPresented: unsupportedPillarAlertPresented
+            ) {}
+    }
+
+    /// `true` while ``unsupportedPillar`` holds a pillar name; setting it to
+    /// `false` (the alert's own dismissal) clears that state rather than
+    /// leaving a stale pillar name behind for the next link.
+    private var unsupportedPillarAlertPresented: Binding<Bool> {
+        Binding(
+            get: { unsupportedPillar != nil },
+            set: { isPresented in
+                guard !isPresented else { return }
+                unsupportedPillar = nil
+            }
+        )
     }
 
     /// What `loadBootstrap` is keyed on. `nil` while unpaired, which is a value
