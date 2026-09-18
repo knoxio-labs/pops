@@ -213,6 +213,20 @@ describe('locations REST — writes go through the command engine (POPS-4053)', 
     expect(JSON.parse(written?.after ?? '{}')).toMatchObject({ name: 'Loft' });
   });
 
+  it('a PATCH whose move is refused rolls back the rename it already applied', async () => {
+    const api = client();
+    const home = await api.locations.create({ name: 'Home' });
+    const kitchen = await api.locations.create({ name: 'Kitchen', parentId: home.data.id });
+
+    await expect(
+      api.locations.update(home.data.id, { name: 'House', parentId: kitchen.data.id })
+    ).rejects.toMatchObject({ status: 409 });
+
+    const after = await api.locations.get(home.data.id);
+    expect(after.data).toMatchObject({ name: 'Home', parentId: null });
+    expect(eventsFor(home.data.id).map((event) => event.kind)).toEqual(['created']);
+  });
+
   it('a legacy delete tombstones the row rather than removing it, with a deleted event from actor web', async () => {
     const api = client();
     const created = await api.locations.create({ name: 'Attic' });

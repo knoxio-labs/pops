@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { LocationNotFoundError, type InventoryDb, locationsService } from '../../db/index.js';
 import { toLocation } from '../modules/locations/types.js';
 import { ConflictError, NotFoundError, ValidationError } from '../shared/errors.js';
-import { runLegacyMutation } from './command-bridge.js';
+import { inOneLegacyWrite, runLegacyMutation } from './command-bridge.js';
 import { runHttp } from './error-mapping.js';
 
 import type { ServerInferRequest } from '@ts-rest/core';
@@ -171,7 +171,10 @@ export function makeLocationsHandlers(db: InventoryDb) {
     update: ({ params, body }: Req['update']) =>
       runHttp(() => ({
         status: 200 as const,
-        body: { data: handleUpdate(db, params.id, body), message: 'Location updated' },
+        body: {
+          data: inOneLegacyWrite(db, () => handleUpdate(db, params.id, body)),
+          message: 'Location updated',
+        },
       })),
 
     delete: ({ params, query }: Req['delete']) =>

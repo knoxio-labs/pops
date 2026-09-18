@@ -40,3 +40,15 @@ export function runLegacyMutation(db: CommandDb, request: LegacyMutationRequest)
   };
   return runMutation(db, mutation, WEB_ACTOR);
 }
+
+/**
+ * Run a legacy route's several mutations as one write. A legacy `PATCH` can
+ * need more than one op (`item.move` then `item.setCode` then `item.edit`,
+ * or `location.rename` then `location.move`); a later one refused throws out
+ * of this transaction and rolls back the ones already applied, so the caller
+ * never sees an error over a half-applied edit. Each `runMutation` inside
+ * nests as a savepoint on the same connection.
+ */
+export function inOneLegacyWrite<T>(db: CommandDb, write: () => T): T {
+  return db.transaction(() => write(), { behavior: 'immediate' });
+}

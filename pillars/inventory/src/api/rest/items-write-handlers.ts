@@ -16,7 +16,7 @@ import {
 import * as service from '../modules/items/service.js';
 import { toInventoryItem } from '../modules/items/types.js';
 import { ConflictError, NotFoundError, ValidationError } from '../shared/errors.js';
-import { runLegacyMutation } from './command-bridge.js';
+import { inOneLegacyWrite, runLegacyMutation } from './command-bridge.js';
 import { runHttp } from './error-mapping.js';
 
 import type { ServerInferRequest } from '@ts-rest/core';
@@ -211,7 +211,8 @@ function handleDelete(db: InventoryDb, id: string) {
 export function makeItemsWriteHandlers(db: InventoryDb) {
   return {
     create: ({ body }: Req['create']) => runHttp(() => handleCreate(db, body)),
-    update: ({ params, body }: Req['update']) => runHttp(() => handleUpdate(db, params.id, body)),
+    update: ({ params, body }: Req['update']) =>
+      runHttp(() => inOneLegacyWrite(db, () => handleUpdate(db, params.id, body))),
     delete: ({ params }: Req['delete']) => runHttp(() => handleDelete(db, params.id)),
   };
 }

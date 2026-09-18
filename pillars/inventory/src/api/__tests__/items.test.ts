@@ -594,6 +594,30 @@ describe('items REST — writes go through the command engine (POPS-4053)', () =
     expect(kinds).toContain('edited');
   });
 
+  it('a PATCH whose later mutation is refused rolls back the move it already applied', async () => {
+    const api = client();
+    const shelf = await api.locations.create({ name: 'Shelf' });
+    const desk = await api.locations.create({ name: 'Desk' });
+    await api.items.create({ itemName: 'Router', assetId: 'NET01' });
+    const created = await api.items.create({ itemName: 'Radio', locationId: shelf.data.id });
+
+    await expect(
+      api.items.update(created.data.id, {
+        itemName: 'AM Radio',
+        locationId: desk.data.id,
+        assetId: 'NET01',
+      })
+    ).rejects.toMatchObject({ status: 409 });
+
+    const after = await api.items.get(created.data.id);
+    expect(after.data).toMatchObject({
+      itemName: 'Radio',
+      locationId: shelf.data.id,
+      assetId: null,
+    });
+    expect(eventsFor(created.data.id).map((event) => event.kind)).toEqual(['created']);
+  });
+
   it('a container delete empties it through a picked_up event on its contents, actor web', async () => {
     const api = client();
     const box = seedInventoryItem(inventoryDb.db, { name: 'Box', isContainer: true }).id;
