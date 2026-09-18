@@ -150,6 +150,15 @@ The contract (zod) is the single source of truth; OpenAPI, api-types, and the
 generated manifest are downstream projections. No hand-authored OpenAPI, no
 hand-authored paths.
 
+## Decisions
+
+- [inventory ADR-002](docs/architecture/adr-002-inventory-technical-design.md): the
+  technical design for the Inventory rebuild: one item identity for items and
+  containers, the placement and lifecycle model, the append-only event log, the
+  served type catalogue, the sync and conflict protocol with bfm and iOS, and the
+  phased delivery. Builds on inventory ADR-001 (domain vocabulary), which has not
+  yet landed on `main`.
+
 ## Domain docs
 
 Feature-level documentation is colocated with the code it describes. The ones
