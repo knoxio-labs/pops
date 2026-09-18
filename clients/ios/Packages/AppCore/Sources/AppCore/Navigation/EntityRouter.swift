@@ -3,8 +3,8 @@
 /// ``unsupported`` is not a failure: the URI parsed cleanly, but no feature
 /// has registered a handler for its `(pillar, type)` pair — most often
 /// because the code names a pillar or type this build never drew a screen
-/// for. ADR-002 D13 calls this the approved one-line hand-off, not an error
-/// state.
+/// for. It is shown as a one-line hand-off to the owning pillar, not as an
+/// error state.
 public enum EntityRouteOutcome: Equatable, Sendable {
     case handled
     case unsupported(pillar: String)

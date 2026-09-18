@@ -1,7 +1,8 @@
 /// A soft cross-pillar reference (ADR-042): `pops://<pillar>/<type>/<id>`.
 ///
 /// Printed on an Inventory label as `pops://inventory/item/<id>` or
-/// `pops://inventory/location/<id>` (ADR-002 D13) and read back by the QR
+/// `pops://inventory/location/<id>`, the singular shape `parseSoftUri` in
+/// `libs/sdk/src/soft-uri.ts` accepts, and read back by the QR
 /// scanner or the `pops` URL scheme. The type is always singular — a
 /// container is an item, not a second type — which is why there is no
 /// `containers` case to route.

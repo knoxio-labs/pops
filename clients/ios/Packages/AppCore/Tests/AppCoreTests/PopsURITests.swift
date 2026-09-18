@@ -37,7 +37,7 @@ internal struct PopsURITests {
         #expect(parsePopsURI(uri) == nil)
     }
 
-    @Test("splits the singular Inventory item reference ADR-002 D13 specifies")
+    @Test("splits the singular Inventory item reference printed on labels")
     func splitsTheInventoryItemReference() {
         #expect(
             parsePopsURI("pops://inventory/item/9c5e1e0e-1c1a-4b7a-9c1a-9c1a9c1a9c1a")
@@ -46,7 +46,7 @@ internal struct PopsURITests {
                     id: "9c5e1e0e-1c1a-4b7a-9c1a-9c1a9c1a9c1a"))
     }
 
-    @Test("splits the Inventory location reference ADR-002 D13 specifies")
+    @Test("splits the Inventory location reference printed on labels")
     func splitsTheInventoryLocationReference() {
         #expect(
             parsePopsURI("pops://inventory/location/loc-1")
