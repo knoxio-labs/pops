@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 
 @testable import DesignPlayground
@@ -14,7 +15,19 @@ import Testing
 /// rather than trusted.
 @Suite("Inventory symbols")
 internal struct InventorySymbolTests {
+    /// Whether the module ships the custom symbol. An Xcode build compiles the
+    /// asset catalogue and the image resolves; SwiftPM's command-line build only
+    /// copies the catalogue into the bundle, so there the symbol's own SVG has
+    /// to be inside the copied catalogue instead.
     private func existsInModule(_ name: String) -> Bool {
+        if resolvesFromModule(name) { return true }
+        guard let catalogue = Bundle.module.url(forResource: "Symbols", withExtension: "xcassets")
+        else { return false }
+        let svg = catalogue.appendingPathComponent("\(name).symbolset/\(name).svg")
+        return FileManager.default.fileExists(atPath: svg.path)
+    }
+
+    private func resolvesFromModule(_ name: String) -> Bool {
         #if canImport(UIKit)
             UIImage(named: name, in: .module, with: nil) != nil
         #else
