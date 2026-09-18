@@ -56,4 +56,39 @@ internal struct AppDependenciesTests {
 
         #expect(accounts.count == 2)
     }
+
+    @Test("an unbound inventory store fails rather than trapping")
+    func unboundInventoryFails() async {
+        await #expect(throws: RepositoryError.dependencyNotBound) {
+            _ = try await AppDependencies.unbound.inventory.perform(
+                .createItem(
+                    InventoryNewItem(id: "item-1", name: "Drill", typeKey: nil, placement: .hand)))
+        }
+    }
+
+    @Test("an unbound inventory store's observe stream finishes rather than hanging")
+    func unboundInventoryObserveFinishes() async {
+        var iterator = AppDependencies.unbound.inventory.observe(.item(id: "item-1"))
+            .makeAsyncIterator()
+
+        let value = await iterator.next()
+
+        #expect(value == nil)
+    }
+
+    @Test("a bound inventory container hands back what it was given")
+    func boundInventoryContainerResolves() async throws {
+        let store = InMemoryInventoryStore(
+            items: [
+                InventoryItem(
+                    id: "item-1", revision: 1, seq: 1, name: "Drill", typeKey: nil,
+                    placement: .hand, createdAt: .now, updatedAt: .now)
+            ])
+        let dependencies = AppDependencies.fake(inventory: store)
+
+        var iterator = dependencies.inventory.observe(.item(id: "item-1")).makeAsyncIterator()
+        let value = try #require(await iterator.next())
+
+        #expect(value?.name == "Drill")
+    }
 }

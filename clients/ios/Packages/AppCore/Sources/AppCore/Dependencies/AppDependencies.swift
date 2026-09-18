@@ -11,6 +11,7 @@ public struct AppDependencies: Sendable {
     public let receiptCapture: any ReceiptCaptureRepository
     public let purchases: any PurchasesRepository
     public let accounts: any AccountsRepository
+    public let inventory: any InventoryStore
 
     public init(
         transactions: any TransactionsRepository,
@@ -18,7 +19,14 @@ public struct AppDependencies: Sendable {
         reachability: any ReachabilityWitness,
         receiptCapture: any ReceiptCaptureRepository,
         purchases: any PurchasesRepository,
-        accounts: any AccountsRepository
+        accounts: any AccountsRepository,
+        // Defaulted, unlike every other seam here: `inventory` (POPS-4049) is
+        // the newest one, and every existing composition root and preview
+        // that builds an `AppDependencies` by hand predates it. Each will
+        // wire a real binding as its own Inventory slice lands; until then
+        // this keeps them compiling against the same failure-first
+        // behaviour `.unbound` already gives every seam nothing has bound.
+        inventory: any InventoryStore = UnboundInventoryStore()
     ) {
         self.transactions = transactions
         self.pairing = pairing
@@ -26,6 +34,7 @@ public struct AppDependencies: Sendable {
         self.receiptCapture = receiptCapture
         self.purchases = purchases
         self.accounts = accounts
+        self.inventory = inventory
     }
 
     /// What the environment holds until something binds it. Every call fails
@@ -39,7 +48,8 @@ public struct AppDependencies: Sendable {
         reachability: UnboundReachabilityWitness(),
         receiptCapture: UnboundReceiptCaptureRepository(),
         purchases: UnboundPurchasesRepository(),
-        accounts: UnboundAccountsRepository()
+        accounts: UnboundAccountsRepository(),
+        inventory: UnboundInventoryStore()
     )
 }
 

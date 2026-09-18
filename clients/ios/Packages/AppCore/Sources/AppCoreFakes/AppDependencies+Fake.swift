@@ -9,10 +9,12 @@ extension AppDependencies {
         reachability: any ReachabilityWitness = FakeReachabilityWitness(),
         receiptCapture: any ReceiptCaptureRepository = InMemoryReceiptCaptureRepository(),
         purchases: any PurchasesRepository = InMemoryPurchasesRepository(),
-        accounts: any AccountsRepository = InMemoryAccountsRepository()
+        accounts: any AccountsRepository = InMemoryAccountsRepository(),
+        inventory: any InventoryStore = InMemoryInventoryStore()
     ) -> AppDependencies {
         AppDependencies(
             transactions: transactions, pairing: pairing, reachability: reachability,
-            receiptCapture: receiptCapture, purchases: purchases, accounts: accounts)
+            receiptCapture: receiptCapture, purchases: purchases, accounts: accounts,
+            inventory: inventory)
     }
 }
