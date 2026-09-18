@@ -4,6 +4,7 @@ import Testing
 
 @testable import DesignSystem
 
+@MainActor
 @Suite("Shimmer")
 internal struct PopsShimmerTests {
     @Test(
