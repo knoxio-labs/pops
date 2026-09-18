@@ -20,6 +20,7 @@ internal struct InventorySymbol: Hashable, Sendable {
     internal static let move = InventorySymbol(
         system: "arrow.up.and.down.and.arrow.left.and.right")
     internal static let restore = InventorySymbol(system: "arrow.uturn.backward")
+    internal static let offline = InventorySymbol(system: "wifi.slash")
 
     /// A row's kind glyph: a container by its access, anything else as an
     /// item.
