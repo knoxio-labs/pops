@@ -3,7 +3,7 @@ import Observation
 /// The observable session the root view switches on.
 @MainActor
 @Observable
-public final class SessionStore {
+public final class SessionStore: Sendable {
     public private(set) var state: SessionState
 
     public init(state: SessionState = .unpaired) {
