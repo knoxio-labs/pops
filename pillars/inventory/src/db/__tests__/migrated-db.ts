@@ -6,11 +6,7 @@
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import Database from 'better-sqlite3';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
-import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
-
-import type { InventoryDb } from '../services/internal.js';
+import { openMigratedMemoryDb, type MigratedMemoryDb } from '../open-migrated-memory-db.js';
 
 /** The package's migrations folder. */
 export const MIGRATIONS_DIR = join(
@@ -22,16 +18,9 @@ export const MIGRATIONS_DIR = join(
 );
 
 /** A migrated in-memory database: the drizzle handle and the raw connection. */
-export interface MigratedTestDb {
-  db: InventoryDb;
-  raw: Database.Database;
-}
+export type MigratedTestDb = MigratedMemoryDb;
 
 /** Open `:memory:` with foreign keys on and apply every journal entry. */
 export function openMigratedTestDb(): MigratedTestDb {
-  const raw = new Database(':memory:');
-  raw.pragma('foreign_keys = ON');
-  const db = drizzle(raw);
-  migrate(db, { migrationsFolder: MIGRATIONS_DIR });
-  return { db, raw };
+  return openMigratedMemoryDb();
 }
