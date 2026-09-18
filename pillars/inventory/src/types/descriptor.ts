@@ -66,8 +66,8 @@ export interface CatalogueIncompatibility {
 /**
  * Compares `previous` against `next` and returns every breaking change that
  * has no registered migration: a type or field removed, a choice dropped
- * from a `choice` field, or a `measurement`/`range` field's dimension
- * changed. Adding a type, a field or a choice is never breaking. Empty means
+ * from a `choice` field, a field's kind changed, or a `measurement`/`range`
+ * field's dimension changed. Adding a type, a field or a choice is never breaking. Empty means
  * `next` is safe to ship as-is.
  */
 export function findIncompatibilities(
@@ -92,29 +92,46 @@ export function findIncompatibilities(
     }
     for (const previousField of previousType.fields) {
       const nextField = nextType.fields.find((field) => field.key === previousField.key);
-      if (!nextField) {
-        incompatibilities.push({
-          typeKey: previousType.key,
-          reason: `field "${previousField.key}" was removed`,
-        });
-        continue;
-      }
-      if ((previousField.dimension ?? null) !== (nextField.dimension ?? null)) {
-        incompatibilities.push({
-          typeKey: previousType.key,
-          reason: `field "${previousField.key}" changed dimension from "${previousField.dimension}" to "${nextField.dimension}"`,
-        });
-      }
-      const droppedChoices = (previousField.choices ?? []).filter(
-        (choice) => !(nextField.choices ?? []).includes(choice)
-      );
-      if (droppedChoices.length > 0) {
-        incompatibilities.push({
-          typeKey: previousType.key,
-          reason: `field "${previousField.key}" dropped choice(s): ${droppedChoices.join(', ')}`,
-        });
-      }
+      incompatibilities.push(...fieldIncompatibilities(previousType.key, previousField, nextField));
     }
   }
   return incompatibilities;
+}
+
+type FieldDescriptor = TypeDefinition['fields'][number];
+
+function fieldIncompatibilities(
+  typeKey: string,
+  previousField: FieldDescriptor,
+  nextField: FieldDescriptor | undefined
+): CatalogueIncompatibility[] {
+  const key = previousField.key;
+  if (!nextField) {
+    return [{ typeKey, reason: `field "${key}" was removed` }];
+  }
+  if (previousField.kind !== nextField.kind) {
+    return [
+      {
+        typeKey,
+        reason: `field "${key}" changed kind from "${previousField.kind}" to "${nextField.kind}"`,
+      },
+    ];
+  }
+  const found: CatalogueIncompatibility[] = [];
+  if ((previousField.dimension ?? null) !== (nextField.dimension ?? null)) {
+    found.push({
+      typeKey,
+      reason: `field "${key}" changed dimension from "${previousField.dimension}" to "${nextField.dimension}"`,
+    });
+  }
+  const droppedChoices = (previousField.choices ?? []).filter(
+    (choice) => !(nextField.choices ?? []).includes(choice)
+  );
+  if (droppedChoices.length > 0) {
+    found.push({
+      typeKey,
+      reason: `field "${key}" dropped choice(s): ${droppedChoices.join(', ')}`,
+    });
+  }
+  return found;
 }

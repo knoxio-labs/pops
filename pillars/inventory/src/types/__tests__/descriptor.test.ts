@@ -145,6 +145,23 @@ describe('findIncompatibilities', () => {
     );
   });
 
+  it('fails when a field changes kind with no registered migration', () => {
+    const before = projectCatalogue([gadgetV1], units);
+    const rekinded = defineType({
+      key: 'gadget',
+      name: 'Gadget',
+      fields: [
+        { key: 'Colour', label: 'Colour', kind: 'text' },
+        { key: 'Weight', label: 'Weight', kind: 'measurement', dimension: 'mass', unit: 'kg' },
+      ],
+    });
+    const after = projectCatalogue([rekinded], units);
+    const incompatibilities = findIncompatibilities(before, after, []);
+    expect(incompatibilities).toEqual([
+      { typeKey: 'gadget', reason: 'field "Colour" changed kind from "choice" to "text"' },
+    ]);
+  });
+
   it('fails when a field is removed with no registered migration', () => {
     const before = projectCatalogue([gadgetV1], units);
     const shrunk = defineType({
