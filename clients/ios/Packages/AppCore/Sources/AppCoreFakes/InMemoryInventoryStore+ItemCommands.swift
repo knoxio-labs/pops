@@ -13,9 +13,10 @@ extension InMemoryInventoryStore {
         switch command {
         case .createItem(let new):
             try applyCreateItem(new, mutationId: mutationId, into: &state)
-        case .editItem(let id, let name, let note, let fields):
+        case .editItem(let id, let name, let note, let fields, let externalIds):
             try applyEditItem(
-                id: id, edit: ItemEdit(name: name, note: note, fields: fields),
+                id: id,
+                edit: ItemEdit(name: name, note: note, fields: fields, externalIds: externalIds),
                 mutationId: mutationId, into: &state)
         case .changeItemType(let id, let typeKey, let fields):
             try applyChangeItemType(
@@ -73,7 +74,7 @@ extension InMemoryInventoryStore {
         let now = Date()
         let item = InventoryItem(
             id: new.id, revision: 1, seq: state.nextSeq, name: new.name, typeKey: new.typeKey,
-            fields: new.fields, note: new.note,
+            fields: new.fields, note: new.note, externalIds: new.externalIds,
             quantity: InventoryQuantity(count: new.quantity), placement: new.placement,
             containment: isContainer ? InventoryContainment(access: .open, isFull: false) : nil,
             createdAt: now, updatedAt: now)
@@ -88,6 +89,7 @@ extension InMemoryInventoryStore {
         let name: String?
         let note: InventoryFieldUpdate<String>
         let fields: [String: InventoryFieldValue?]
+        let externalIds: [InventoryExternalIdentifier]?
     }
 
     private static func applyEditItem(
@@ -106,7 +108,8 @@ extension InMemoryInventoryStore {
         state.items[id] = bumped(
             item, seq: &state.nextSeq,
             name: edit.name.map { FieldPatch.set($0) } ?? .unchanged, note: .set(updatedNote),
-            fields: .set(updatedFields))
+            fields: .set(updatedFields),
+            externalIds: edit.externalIds.map { .set($0) } ?? .unchanged)
     }
 
     private static func applyChangeItemType(

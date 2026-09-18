@@ -133,4 +133,29 @@ internal struct InMemoryInventoryStoreTests {
         #expect(item?.placement == .hand)
         #expect(item?.previousPlacement == .location("loc-1"))
     }
+
+    @Test("external ids persist on create, are replaced by an edit naming them, kept otherwise")
+    func externalIdentifiersFollowCreateAndEdit() async throws {
+        let store = InMemoryInventoryStore()
+        let serial = InventoryExternalIdentifier(kind: "serial", value: "SN-1")
+        let model = InventoryExternalIdentifier(kind: "model", value: "M-2")
+        _ = try await store.perform(
+            .createItem(
+                InventoryNewItem(
+                    id: "item-1", name: "Drill", typeKey: nil, externalIds: [serial],
+                    placement: .hand)))
+        _ = try await store.perform(
+            .editItem(id: "item-1", name: "Cordless drill", note: .unchanged, fields: [:]))
+
+        var iterator = store.observe(.item(id: "item-1")).makeAsyncIterator()
+        let renamed = try #require(await iterator.next())
+        #expect(renamed?.externalIds == [serial])
+
+        _ = try await store.perform(
+            .editItem(
+                id: "item-1", name: nil, note: .unchanged, fields: [:], externalIds: [model]))
+
+        let replaced = try #require(await iterator.next())
+        #expect(replaced?.externalIds == [model])
+    }
 }
