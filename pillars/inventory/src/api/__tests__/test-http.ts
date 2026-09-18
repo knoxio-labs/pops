@@ -22,15 +22,19 @@
  * descheduled past vitest's 5s default, and — rarer, and the more telling —
  * a response carrying a status no code path in the app under test can
  * produce, when a connection outlives the ephemeral server it belonged to and
- * lands on whatever bound the same port next. Inventory's sighting is of the
- * second kind: `items.test.ts > distinctTypes returns the unique non-null set
- * sorted` came back `HTTP 403` under the full-workspace run and passed 3/3 in
- * isolation. That status is diagnostic rather than merely suspicious here —
- * this pillar mounts no authorisation middleware, does not use
- * `@pops/pillar-express` at all, and the string `403` appears nowhere in its
- * source; the only statuses its own routes and their static-file helper can
- * emit are 200/304/400/404/500/502/503/504. A 403 cannot have come from the
- * app the test built.
+ * lands on whatever bound the same port next. Inventory's sighting predates
+ * `middleware/service-account-scope.ts` (POPS-4048): at the time,
+ * `items.test.ts > distinctTypes returns the unique non-null set sorted` came
+ * back `HTTP 403` under the full-workspace run and passed 3/3 in isolation,
+ * and that status was diagnostic rather than merely suspicious — this pillar
+ * mounted no authorisation middleware, did not use `@pops/pillar-express` at
+ * all, and the string `403` appeared nowhere in its source; the only statuses
+ * its own routes and their static-file helper could emit were
+ * 200/304/400/404/500/502/503/504. A 403 could not have come from the app the
+ * test built. The gate now legitimately answers 401/403/503 for a
+ * credentialled caller, so that argument no longer applies on its own — a
+ * stray 403 in an unrelated suite is still worth checking against this file's
+ * diagnosis first, since the same connection-reuse hazard remains.
  *
  * One server per test file instead: pre-listened, bound explicitly to
  * `127.0.0.1` (a `::`-bound server does not own the IPv4 loopback tuple

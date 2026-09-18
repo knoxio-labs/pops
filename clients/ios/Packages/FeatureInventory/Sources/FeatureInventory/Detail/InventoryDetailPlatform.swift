@@ -2,19 +2,16 @@ import SwiftUI
 
 #if canImport(UIKit)
     import UIKit
-#elseif canImport(AppKit)
-    import AppKit
 #endif
 
-/// Puts a string on the system pasteboard.
+/// Puts a string on the system pasteboard. A no-op on the host toolchain,
+/// which has no pasteboard this package ships against, the same call
+/// `SystemSettings` makes for its own UIKit-only API.
 @MainActor
 internal enum InventoryPasteboard {
     internal static func copy(_ text: String) {
         #if canImport(UIKit)
             UIPasteboard.general.string = text
-        #elseif canImport(AppKit)
-            NSPasteboard.general.clearContents()
-            NSPasteboard.general.setString(text, forType: .string)
         #endif
     }
 }

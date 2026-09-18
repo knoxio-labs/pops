@@ -18,7 +18,6 @@ internal struct InventoryDetailRecord: Identifiable, Equatable {
     /// Where Put back would return an in-hand item.
     internal let previous: InventoryPreviousPlace
 
-    internal var isContainer: Bool { access != nil }
     internal var symbol: InventorySymbol { .record(access: access) }
 }
 

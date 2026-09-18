@@ -5,8 +5,10 @@
  * Boots the Express app via `createInventoryApiApp` against a per-test
  * temp inventory.db and drives endpoints through supertest (see
  * `makeClient`). Domain errors translate to HTTP status: NotFound → 404,
- * cycle / self-parent → 409, zod failures → 400. No auth layer — the
- * pillar trusts the docker network.
+ * cycle / self-parent → 409, zod failures → 400. Every request here carries
+ * no `X-API-Key`, so it is admitted regardless of the inbound
+ * service-account gate (`middleware/service-account-scope.ts`) — that
+ * gate's own behaviour is covered in `service-account-scope.test.ts`.
  *
  * Service-layer invariants (cycle detection, tree assembly, cascade
  * delete) live in the db package's own tests; duplicating them here would
