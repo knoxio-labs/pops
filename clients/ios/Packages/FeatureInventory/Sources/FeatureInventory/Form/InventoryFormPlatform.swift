@@ -1,17 +1,6 @@
 import SwiftUI
 
 extension View {
-    /// The form's inset-grouped list, which is iOS-only; the host's default
-    /// list stands in for `swift test`.
-    @ViewBuilder
-    internal func inventoryInsetGroupedList() -> some View {
-        #if os(iOS)
-            listStyle(.insetGrouped)
-        #else
-            self
-        #endif
-    }
-
     /// The one call to action in a navigation bar, as iOS 26's prominent
     /// glass button.
     @ViewBuilder

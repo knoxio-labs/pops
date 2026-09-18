@@ -18,12 +18,12 @@ internal struct InventoryFormEditTests {
 
     private struct Opened {
         let form: InventoryItemFormModel
-        let store: RecordingInventoryStore
+        let store: RecordingFormStore
         let loading: Task<Void, Never>
     }
 
     private func open() async -> Opened {
-        let store = RecordingInventoryStore(
+        let store = RecordingFormStore(
             FormFixtureSource(items: [stored], catalogue: FormFixture.catalogue))
         let form = InventoryItemFormModel(
             request: .edit("item-1"), store: store, suggester: .unbound)
@@ -130,7 +130,7 @@ internal struct InventoryFormEditTests {
 
     @Test("an item that is gone shows the form as unavailable")
     func missingItemIsUnavailable() async {
-        let store = RecordingInventoryStore(FormFixtureSource(catalogue: FormFixture.catalogue))
+        let store = RecordingFormStore(FormFixtureSource(catalogue: FormFixture.catalogue))
         let form = InventoryItemFormModel(
             request: .edit("missing"), store: store, suggester: .unbound)
         let loading = await form.startAndAwaitReady()

@@ -42,7 +42,7 @@ internal struct FormFixtureSource: InventoryQuerySource {
 
 /// A store that records every command in order and applies none, answering
 /// every query from a `FormFixtureSource` it can change mid-test.
-internal final class RecordingInventoryStore: InventoryStore, Sendable {
+internal final class RecordingFormStore: InventoryStore, Sendable {
     private struct State {
         var source: FormFixtureSource
         var performed: [InventoryCommand] = []
@@ -152,22 +152,19 @@ internal enum FormFixture {
 
 extension InventoryItemFormModel {
     /// Starts following the store and waits until the form is ready, or
-    /// gives up after a bounded number of turns so a store that never
-    /// answers fails the test instead of hanging it.
+    /// gives up after a deadline so a store that never answers fails the
+    /// test instead of hanging it.
     @discardableResult
     func startAndAwaitReady() async -> Task<Void, Never> {
         let task = Task { await load() }
-        for _ in 0..<1_000 where phase == .loading {
-            await Task.yield()
-        }
+        await awaitObservedCondition { [self] in phase != .loading }
         return task
     }
 
-    func await(_ condition: () -> Bool) async -> Bool {
-        for _ in 0..<1_000 {
-            if condition() { return true }
-            await Task.yield()
-        }
-        return false
+    /// Waits until `condition` holds, within the same deadline.
+    func await(_ condition: @escaping @Sendable @MainActor () -> Bool) async -> Bool {
+        if condition() { return true }
+        await awaitObservedCondition(condition)
+        return condition()
     }
 }

@@ -21,7 +21,6 @@ public struct InventoryFlowView: View {
     public init(dependencies: AppDependencies) {
         store = dependencies.inventory
         _model = State(wrappedValue: InventoryDashboardViewModel(store: dependencies.inventory))
-        store = dependencies.inventory
     }
 
     public var body: some View {

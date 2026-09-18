@@ -4,7 +4,6 @@ import AppCore
 /// so a screen that later needs one finds it where every other glyph is.
 extension InventorySymbol {
     internal static let camera = InventorySymbol(system: "camera")
-    internal static let photo = InventorySymbol(system: "photo")
     internal static let suggest = InventorySymbol(system: "sparkles")
     internal static let offline = InventorySymbol(system: "wifi.slash")
     internal static let add = InventorySymbol(system: "plus")

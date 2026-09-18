@@ -17,7 +17,7 @@ internal struct InventoryFormModelTests {
 
     @Test("create sends item.create, then a dependent set-code for the same id")
     func createComposesCreateThenCode() async throws {
-        let store = RecordingInventoryStore(
+        let store = RecordingFormStore(
             FormFixtureSource(
                 locations: [
                     InventoryLocation(
@@ -45,7 +45,7 @@ internal struct InventoryFormModelTests {
 
     @Test("create without a code sends no set-code")
     func blankCodeSendsNoSetCode() async {
-        let store = RecordingInventoryStore(FormFixtureSource(catalogue: FormFixture.catalogue))
+        let store = RecordingFormStore(FormFixtureSource(catalogue: FormFixture.catalogue))
         let form = model(store)
         let loading = await form.startAndAwaitReady()
         defer { loading.cancel() }
@@ -58,7 +58,7 @@ internal struct InventoryFormModelTests {
 
     @Test("a code already held by another item blocks create, whatever its case")
     func heldCodeBlocksCreate() async {
-        let store = RecordingInventoryStore(
+        let store = RecordingFormStore(
             FormFixtureSource(
                 items: [FormFixture.item("item-9", "Kitchen 09", code: "B412")],
                 catalogue: FormFixture.catalogue))
@@ -82,7 +82,7 @@ internal struct InventoryFormModelTests {
 
     @Test("an item's own code is not a collision when editing it")
     func ownCodeIsNotACollision() async {
-        let store = RecordingInventoryStore(
+        let store = RecordingFormStore(
             FormFixtureSource(
                 items: [FormFixture.item("item-9", "Kitchen 09", code: "B412")],
                 catalogue: FormFixture.catalogue))
@@ -98,7 +98,7 @@ internal struct InventoryFormModelTests {
 
     @Test("a code that fails after its create lands is retried alone")
     func failedCodeRetriesWithoutRecreating() async {
-        let store = RecordingInventoryStore(FormFixtureSource(catalogue: FormFixture.catalogue))
+        let store = RecordingFormStore(FormFixtureSource(catalogue: FormFixture.catalogue))
         store.fail("setCode")
         let form = model(store)
         let loading = await form.startAndAwaitReady()
@@ -121,7 +121,7 @@ internal struct InventoryFormModelTests {
 
     @Test("offline shows the offline assist state and asks the server nothing")
     func offlineShowsOfflineAssist() async {
-        let store = RecordingInventoryStore(
+        let store = RecordingFormStore(
             FormFixtureSource(
                 catalogue: FormFixture.catalogue, status: .offline(lastRefreshAt: nil)))
         let asked = Counter()
@@ -146,7 +146,7 @@ internal struct InventoryFormModelTests {
 
     @Test("a suggestion fills the code and keeps the runners-up; typing over it is an edit")
     func suggestionIsOffered() async {
-        let store = RecordingInventoryStore(FormFixtureSource(catalogue: FormFixture.catalogue))
+        let store = RecordingFormStore(FormFixtureSource(catalogue: FormFixture.catalogue))
         let form = model(
             store, suggester: InventoryCodeSuggester { _, _, _ in ["CBL-0042", "CBL-0043"] })
         let loading = await form.startAndAwaitReady()
@@ -162,7 +162,7 @@ internal struct InventoryFormModelTests {
 
     @Test("a server that cannot suggest shows unavailable, not an error")
     func unboundSuggesterIsUnavailable() async {
-        let store = RecordingInventoryStore(FormFixtureSource(catalogue: FormFixture.catalogue))
+        let store = RecordingFormStore(FormFixtureSource(catalogue: FormFixture.catalogue))
         let form = model(store)
         let loading = await form.startAndAwaitReady()
         defer { loading.cancel() }
