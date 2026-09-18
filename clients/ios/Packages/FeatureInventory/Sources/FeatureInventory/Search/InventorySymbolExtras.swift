@@ -1,0 +1,17 @@
+extension InventorySymbol {
+    internal static let location = InventorySymbol(system: "house")
+    internal static let inHand = InventorySymbol(system: "hand.raised")
+    internal static let activity = InventorySymbol(system: "clock.arrow.circlepath")
+    internal static let code = InventorySymbol(system: "qrcode")
+    internal static let discard = InventorySymbol(system: "trash")
+    internal static let retired = InventorySymbol(system: "archivebox")
+    internal static let lost = InventorySymbol(system: "questionmark.circle")
+    internal static let destroyed = InventorySymbol(system: "xmark.octagon")
+    internal static let search = InventorySymbol(system: "magnifyingglass")
+    internal static let scan = InventorySymbol(system: "qrcode.viewfinder")
+    internal static let addNew = InventorySymbol(system: "plus")
+    internal static let update = InventorySymbol(system: "arrow.down.circle")
+    internal static let waiting = InventorySymbol(system: "tray")
+    internal static let offline = InventorySymbol(system: "wifi.slash")
+    internal static let dictate = InventorySymbol(system: "mic")
+}
