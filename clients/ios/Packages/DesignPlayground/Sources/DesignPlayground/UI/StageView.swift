@@ -20,11 +20,11 @@ internal struct StageView: View {
     @State private var inspectorLift: CGFloat = 0
     @Environment(\.dismiss) private var dismiss
 
-    init(surface: DesignSurface) {
+    init(surface: DesignSurface, stateID: String? = nil) {
         self.surface = surface
         _settings = State(
             initialValue: StageSettings(
-                stateID: surface.openingState?.id ?? "default",
+                stateID: stateID ?? surface.openingState?.id ?? "default",
                 chrome: surface.chrome
             )
         )
@@ -40,7 +40,10 @@ internal struct StageView: View {
     /// size — an inspector rendered at AX5 in dark, because the surface is,
     /// would be unusable at exactly the sizes it is there to explore.
     private var stage: some View {
-        ChromeHost(settings: settings, title: surface.title, backdrop: surface.backdrop) {
+        ChromeHost(
+            settings: settings, title: surface.title, backdrop: surface.backdrop,
+            sheetDetents: surface.sheetDetents
+        ) {
             currentState
         } inspector: {
             InspectorView(

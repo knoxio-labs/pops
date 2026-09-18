@@ -1,5 +1,5 @@
 /**
- * Allowed values for `home_inventory.condition`. Stored title-case in the DB
+ * Allowed values for `items.condition`. Stored title-case in the DB
  * but matched case-insensitively in the items list filter, so the values can
  * be used directly in both the edit form and the filter dropdown without
  * casing transforms.

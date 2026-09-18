@@ -23,12 +23,15 @@ public struct DesignSurface: Identifiable {
     /// a stand-in backdrop cannot answer whether that works. Surfaces that do
     /// not care get the stand-in.
     let backdrop: (@MainActor () -> AnyView)?
+    /// The heights the surface may take under ``Chrome/sheet``.
+    public let sheetDetents: SheetDetents
 
     public init(
         id: SurfaceID,
         title: String,
         synopsis: String? = nil,
         chrome: Chrome = .navigationLarge,
+        sheetDetents: SheetDetents = .adjustable,
         states: [DesignState]
     ) {
         self.id = id
@@ -36,6 +39,7 @@ public struct DesignSurface: Identifiable {
         self.synopsis = synopsis
         self.chrome = chrome
         self.states = states
+        self.sheetDetents = sheetDetents
         self.backdrop = nil
     }
 
@@ -44,6 +48,7 @@ public struct DesignSurface: Identifiable {
         title: String,
         synopsis: String? = nil,
         chrome: Chrome = .navigationLarge,
+        sheetDetents: SheetDetents = .adjustable,
         states: [DesignState],
         @ViewBuilder backdrop: @MainActor @escaping () -> Backdrop
     ) {
@@ -52,6 +57,7 @@ public struct DesignSurface: Identifiable {
         self.synopsis = synopsis
         self.chrome = chrome
         self.states = states
+        self.sheetDetents = sheetDetents
         self.backdrop = { AnyView(backdrop()) }
     }
 
@@ -60,5 +66,24 @@ public struct DesignSurface: Identifiable {
 
     public func state(id: String) -> DesignState? {
         states.first { $0.id == id }
+    }
+}
+
+/// The heights a sheet surface is presented at.
+///
+/// A property of the surface rather than a separate ``Chrome`` case, because
+/// the inspector's chrome override should still offer one "Sheet", and the
+/// height a sheet opens at is part of the screen's design.
+public enum SheetDetents: Sendable {
+    /// Medium and large, with the grabber moving between them.
+    case adjustable
+    /// Full height only, for a screen that is a whole task rather than a peek.
+    case large
+
+    var detents: Set<PresentationDetent> {
+        switch self {
+        case .adjustable: [.medium, .large]
+        case .large: [.large]
+        }
     }
 }

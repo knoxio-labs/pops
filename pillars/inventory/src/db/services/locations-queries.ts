@@ -11,7 +11,7 @@
 import { asc, count, eq, inArray } from 'drizzle-orm';
 
 import { LocationNotFoundError } from '../errors.js';
-import { homeInventory, locations } from '../schema.js';
+import { items, locations } from '../schema.js';
 
 import type { LocationRow } from '../row-types.js';
 import type { InventoryDb } from './internal.js';
@@ -29,7 +29,7 @@ export interface DeleteLocationStats {
 }
 
 export interface LocationItemsResult {
-  rows: (typeof homeInventory.$inferSelect)[];
+  rows: (typeof items.$inferSelect)[];
   total: number;
 }
 
@@ -106,17 +106,17 @@ export function getLocationItems(
 
   const rows = db
     .select()
-    .from(homeInventory)
-    .where(inArray(homeInventory.locationId, locationIds))
-    .orderBy(homeInventory.itemName)
+    .from(items)
+    .where(inArray(items.locationId, locationIds))
+    .orderBy(items.name)
     .limit(limit)
     .offset(offset)
     .all();
 
   const [countResult] = db
     .select({ total: count() })
-    .from(homeInventory)
-    .where(inArray(homeInventory.locationId, locationIds))
+    .from(items)
+    .where(inArray(items.locationId, locationIds))
     .all();
 
   return { rows, total: countResult?.total ?? 0 };
@@ -130,8 +130,8 @@ export function getDeleteStats(db: InventoryDb, id: string): DeleteLocationStats
 
   const [directItems] = db
     .select({ total: count() })
-    .from(homeInventory)
-    .where(eq(homeInventory.locationId, id))
+    .from(items)
+    .where(eq(items.locationId, id))
     .all();
   const itemCount = directItems?.total ?? 0;
 
@@ -139,8 +139,8 @@ export function getDeleteStats(db: InventoryDb, id: string): DeleteLocationStats
   if (descendantIds.length > 0) {
     const [descAgg] = db
       .select({ total: count() })
-      .from(homeInventory)
-      .where(inArray(homeInventory.locationId, descendantIds))
+      .from(items)
+      .where(inArray(items.locationId, descendantIds))
       .all();
     totalItemCount += descAgg?.total ?? 0;
   }
