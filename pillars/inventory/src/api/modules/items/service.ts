@@ -44,7 +44,7 @@ export interface ListInventoryItemsOptions {
 }
 
 function buildInventoryConditions(db: InventoryDb, opts: ListInventoryItemsOptions): SQL[] {
-  const conditions: SQL[] = [];
+  const conditions: SQL[] = [isNull(items.deletedAt)];
   if (opts.search) conditions.push(like(items.name, `%${opts.search}%`));
   if (opts.room) conditions.push(eq(items.room, opts.room));
   if (opts.type) conditions.push(eq(items.legacyType, opts.type));
@@ -120,7 +120,7 @@ export function searchByAssetId(db: InventoryDb, assetId: string): ItemRow | nul
   const [row] = db
     .select()
     .from(items)
-    .where(sql`LOWER(${items.code}) = LOWER(${assetId})`)
+    .where(and(sql`LOWER(${items.code}) = LOWER(${assetId})`, isNull(items.deletedAt)))
     .all();
   return row ?? null;
 }
@@ -132,7 +132,7 @@ export function countByAssetPrefix(db: InventoryDb, prefix: string): number {
   const [result] = db
     .select({ count: sql<number>`COUNT(*)` })
     .from(items)
-    .where(sql`LOWER(${items.code}) LIKE LOWER(${prefix + '%'})`)
+    .where(and(sql`LOWER(${items.code}) LIKE LOWER(${prefix + '%'})`, isNull(items.deletedAt)))
     .all();
   return result?.count ?? 0;
 }
@@ -142,22 +142,31 @@ export function getDistinctTypes(db: InventoryDb): string[] {
   const rows = db
     .selectDistinct({ type: items.legacyType })
     .from(items)
-    .where(isNotNull(items.legacyType))
+    .where(and(isNotNull(items.legacyType), isNull(items.deletedAt)))
     .orderBy(items.legacyType)
     .all();
   return rows.map((r) => r.type).filter((t): t is string => t !== null);
 }
 
-/** Get a single inventory item by id. Throws NotFoundError if missing. */
+/**
+ * Get a single, non-tombstoned inventory item by id. Throws NotFoundError
+ * when missing or already deleted: the legacy routes hard-deleted a row, so
+ * a tombstone left by `item.delete` (POPS-4053) has to look the same as
+ * gone.
+ */
 export function getInventoryItem(db: InventoryDb, id: string): ItemRow {
-  const [row] = db.select().from(items).where(eq(items.id, id)).all();
+  const [row] = db
+    .select()
+    .from(items)
+    .where(and(eq(items.id, id), isNull(items.deletedAt)))
+    .all();
 
   if (!row) throw new NotFoundError('Inventory item', id);
   return row;
 }
 
-/** The row a given `source_ref` already names, if any. */
-function getBySourceRef(db: InventoryDb, sourceRef: string): ItemRow | undefined {
+/** The row a given `source_ref` already names, if any, tombstoned or not. */
+export function getBySourceRef(db: InventoryDb, sourceRef: string): ItemRow | undefined {
   return db.select().from(items).where(eq(items.sourceRef, sourceRef)).get();
 }
 

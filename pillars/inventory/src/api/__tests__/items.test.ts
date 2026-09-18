@@ -19,7 +19,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { INVENTORY_CONDITIONS } from '../../contract/types/condition.js';
 import { seedInventoryItem } from '../../db/__tests__/item-fixture.js';
 import { crossPillarUrisService, openInventoryDb, type OpenedInventoryDb } from '../../db/index.js';
-import { items } from '../../db/schema.js';
+import { events, items } from '../../db/schema.js';
 import { createInventoryApiApp } from '../app.js';
 import { createTestTransport } from './test-http.js';
 import { HttpError, makeClient } from './test-utils.js';
@@ -522,5 +522,86 @@ describe('items REST — placing items in a container item (ADR-002 D1)', () => 
       .where(eq(items.id, created.data.id))
       .get();
     expect(stored).toEqual({ name: 'Router', code: 'NET01', legacyType: 'Networking' });
+  });
+});
+
+describe('items REST — writes go through the command engine (POPS-4053)', () => {
+  function eventsFor(id: string) {
+    return inventoryDb.db.select().from(events).where(eq(events.entityId, id)).all();
+  }
+
+  it('a legacy PATCH writes an edited event with actor web', async () => {
+    const api = client();
+    const created = await api.items.create({ itemName: 'Drill' });
+
+    await api.items.update(created.data.id, { itemName: 'Cordless Drill', brand: 'Bosch' });
+
+    const written = eventsFor(created.data.id).find((event) => event.kind === 'edited');
+    expect(written).toMatchObject({ actorKind: 'web', actorId: null, actorLabel: null });
+    expect(JSON.parse(written?.after ?? '{}')).toMatchObject({
+      name: 'Cordless Drill',
+      brand: 'Bosch',
+    });
+  });
+
+  it('a legacy create writes a created event with actor web', async () => {
+    const created = await client().items.create({ itemName: 'Kettle' });
+
+    const written = eventsFor(created.data.id).find((event) => event.kind === 'created');
+    expect(written).toMatchObject({ actorKind: 'web', entityRevision: 1 });
+  });
+
+  it('DELETE tombstones the row rather than removing it, with a deleted event from actor web', async () => {
+    const api = client();
+    const created = await api.items.create({ itemName: 'Fan' });
+
+    await api.items.delete(created.data.id);
+
+    const row = inventoryDb.db
+      .select({ deletedAt: items.deletedAt })
+      .from(items)
+      .where(eq(items.id, created.data.id))
+      .get();
+    expect(row?.deletedAt).not.toBeNull();
+
+    const written = eventsFor(created.data.id).find((event) => event.kind === 'deleted');
+    expect(written).toMatchObject({ actorKind: 'web' });
+  });
+
+  it('treats a tombstoned item as gone from every legacy read', async () => {
+    const api = client();
+    const created = await api.items.create({ itemName: 'Speaker' });
+    await api.items.delete(created.data.id);
+
+    await expect(api.items.get(created.data.id)).rejects.toMatchObject({ status: 404 });
+    await expect(api.items.update(created.data.id, { itemName: 'x' })).rejects.toMatchObject({
+      status: 404,
+    });
+    await expect(api.items.delete(created.data.id)).rejects.toMatchObject({ status: 404 });
+    const list = await api.items.list();
+    expect(list.data.find((row) => row.id === created.data.id)).toBeUndefined();
+  });
+
+  it('a PATCH that both moves and edits an item issues two mutations, not one', async () => {
+    const api = client();
+    const shelf = await api.locations.create({ name: 'Shelf' });
+    const created = await api.items.create({ itemName: 'Radio' });
+
+    await api.items.update(created.data.id, { itemName: 'AM Radio', locationId: shelf.data.id });
+
+    const kinds = eventsFor(created.data.id).map((event) => event.kind);
+    expect(kinds).toContain('moved');
+    expect(kinds).toContain('edited');
+  });
+
+  it('a container delete empties it through a picked_up event on its contents, actor web', async () => {
+    const api = client();
+    const box = seedInventoryItem(inventoryDb.db, { name: 'Box', isContainer: true }).id;
+    const created = await api.items.create({ itemName: 'Cable', containerId: box });
+
+    await api.items.delete(box);
+
+    const written = eventsFor(created.data.id).find((event) => event.kind === 'picked_up');
+    expect(written).toMatchObject({ actorKind: 'web' });
   });
 });

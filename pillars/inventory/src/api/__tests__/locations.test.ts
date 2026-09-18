@@ -18,9 +18,11 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { locationsService, openInventoryDb, type OpenedInventoryDb } from '../../db/index.js';
+import { events, locations } from '../../db/schema.js';
 import { createInventoryApiApp } from '../app.js';
 import { createTestTransport } from './test-http.js';
 import { makeClient } from './test-utils.js';
@@ -185,5 +187,46 @@ describe('locations REST — raw HTTP wire smoke', () => {
     const rows = locationsService.listLocations(inventoryDb.db);
     expect(rows.total).toBe(1);
     expect(rows.rows[0]?.name).toBe('Garage');
+  });
+});
+
+describe('locations REST — writes go through the command engine (POPS-4053)', () => {
+  function eventsFor(id: string) {
+    return inventoryDb.db.select().from(events).where(eq(events.entityId, id)).all();
+  }
+
+  it('a legacy create writes a created event with actor web', async () => {
+    const created = await client().locations.create({ name: 'Attic' });
+
+    const written = eventsFor(created.data.id).find((event) => event.kind === 'created');
+    expect(written).toMatchObject({ actorKind: 'web', entityRevision: 1 });
+  });
+
+  it('a legacy rename writes an edited event with actor web', async () => {
+    const api = client();
+    const created = await api.locations.create({ name: 'Attic' });
+
+    await api.locations.update(created.data.id, { name: 'Loft' });
+
+    const written = eventsFor(created.data.id).find((event) => event.kind === 'edited');
+    expect(written).toMatchObject({ actorKind: 'web' });
+    expect(JSON.parse(written?.after ?? '{}')).toMatchObject({ name: 'Loft' });
+  });
+
+  it('a legacy delete tombstones the row rather than removing it, with a deleted event from actor web', async () => {
+    const api = client();
+    const created = await api.locations.create({ name: 'Attic' });
+
+    await api.locations.delete(created.data.id);
+
+    const row = inventoryDb.db
+      .select({ deletedAt: locations.deletedAt })
+      .from(locations)
+      .where(eq(locations.id, created.data.id))
+      .get();
+    expect(row?.deletedAt).not.toBeNull();
+
+    const written = eventsFor(created.data.id).find((event) => event.kind === 'deleted');
+    expect(written).toMatchObject({ actorKind: 'web' });
   });
 });

@@ -9,7 +9,7 @@
  */
 import { randomUUID } from 'node:crypto';
 
-import { asc, eq } from 'drizzle-orm';
+import { and, asc, eq, isNull } from 'drizzle-orm';
 
 import {
   LocationCycleError,
@@ -119,7 +119,7 @@ export function getChildren(db: InventoryDb, parentId: string): LocationRow[] {
   return db
     .select()
     .from(locations)
-    .where(eq(locations.parentId, parentId))
+    .where(and(eq(locations.parentId, parentId), isNull(locations.deletedAt)))
     .orderBy(asc(locations.sortOrder), asc(locations.name))
     .all();
 }
