@@ -169,6 +169,13 @@ describe('createLocation', () => {
     expect(row.sortOrder).toBe(0);
   });
 
+  it('stamps created_at and updated_at with the same instant as last_edited_time', () => {
+    const row = createLocation(db, { name: 'Home' });
+    expect(row.createdAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
+    expect(row.createdAt).toBe(row.lastEditedTime);
+    expect(row.updatedAt).toBe(row.lastEditedTime);
+  });
+
   it('creates a child location under an existing parent', () => {
     const parent = createLocation(db, { name: 'Home' });
     const child = createLocation(db, { name: 'Kitchen', parentId: parent.id });

@@ -148,6 +148,8 @@ export function createLocation(db: InventoryDb, input: CreateLocationInput): Loc
       parentId: input.parentId ?? null,
       sortOrder: input.sortOrder ?? 0,
       lastEditedTime: now,
+      createdAt: now,
+      updatedAt: now,
     })
     .run();
 
