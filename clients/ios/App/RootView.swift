@@ -33,6 +33,9 @@ internal struct RootView: View {
                 guard phase == .active else { return }
                 Task { await composition.shell.reloadBootstrap() }
             }
+            .onOpenURL { url in
+                handleOpenPopsURL(url, router: composition.entityRouter)
+            }
     }
 
     /// What `loadBootstrap` is keyed on. `nil` while unpaired, which is a value
