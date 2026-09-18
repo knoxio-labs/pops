@@ -173,6 +173,9 @@ internal struct InventoryGroundedListPanel<Content: View>: View {
             .padding(.horizontal, PopsSpacing.md)
             .padding(.vertical, PopsSpacing.sm)
             .frame(maxWidth: .infinity, alignment: .leading)
+            .inventorySelectionHighlights(
+                edgeInset: PopsSpacing.sm, in: RoundedRectangle(cornerRadius: PopsRadius.card)
+            )
             .background {
                 RoundedRectangle(cornerRadius: PopsRadius.card)
                     .fill(Color.popsSurface)

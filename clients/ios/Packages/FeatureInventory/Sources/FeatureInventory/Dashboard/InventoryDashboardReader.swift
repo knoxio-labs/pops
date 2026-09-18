@@ -21,16 +21,28 @@ extension InventoryDashboard {
                 itemCount: source.inventoryContents(ofContainer: container.id).count,
                 updatedAt: container.updatedAt)
         }
-        let rowSync = InventoryRowSync(status: status, ledger: ledger)
-        inHand = source.inventoryInHand().map { item in
-            InHandItem(
+        inHand = InHandItem.all(
+            reading: source, places: places,
+            rowSync: InventoryRowSync(status: status, ledger: ledger))
+        recentWork = source.inventoryRecentEvents(limit: recentLimit).map {
+            InventoryActivityLine.activity(for: $0, source: source, places: places)
+        }
+    }
+}
+
+extension InventoryDashboard.InHandItem {
+    /// Every in-hand row, read against one state: the dashboard's section
+    /// and the In hand page list exactly the same rows.
+    internal static func all(
+        reading source: any InventoryQuerySource, places: InventoryPlaceNames,
+        rowSync: InventoryRowSync
+    ) -> [Self] {
+        source.inventoryInHand().map { item in
+            Self(
                 id: item.id, name: item.name, access: item.containment?.access,
                 quantity: item.quantity, sync: rowSync.sync(of: item.id),
                 photo: item.photos.first?.sha256,
                 previous: places.previousPlace(item.previousPlacement))
-        }
-        recentWork = source.inventoryRecentEvents(limit: recentLimit).map {
-            InventoryActivityLine.activity(for: $0, source: source, places: places)
         }
     }
 }
@@ -58,17 +70,36 @@ internal struct InventoryPlaceNames {
     /// The location a placement resolves to once every container is walked
     /// outward, or nil when the chain ends in someone's hand.
     internal func effectiveLocation(of placement: InventoryPlacement) -> String? {
+        walk(placement).location
+    }
+
+    /// Where a placement is, as a reader follows it from the room inward:
+    /// the effective location when there is one, then every container from
+    /// outermost to innermost.
+    internal func path(of placement: InventoryPlacement) -> [String] {
+        let walked = walk(placement)
+        return (walked.location.map { [$0] } ?? []) + walked.containers.reversed()
+    }
+
+    /// Follows containers outward, collecting their names innermost first,
+    /// to the location that ends the chain; nil when it ends in a hand, at a
+    /// gone container, or past the depth guard.
+    private func walk(
+        _ placement: InventoryPlacement
+    ) -> (containers: [String], location: String?) {
+        var containers: [String] = []
         var current = placement
         for _ in 0..<Self.maximumDepth {
             switch current {
-            case .location(let id): return liveLocation(id)?.name
-            case .hand: return nil
+            case .location(let id): return (containers, liveLocation(id)?.name)
+            case .hand: return (containers, nil)
             case .container(let id):
-                guard let container = liveItem(id) else { return nil }
+                guard let container = liveItem(id) else { return (containers, nil) }
+                containers.append(container.name)
                 current = container.placement
             }
         }
-        return nil
+        return (containers, nil)
     }
 
     /// What an in-hand row says about where it came from. A remembered place

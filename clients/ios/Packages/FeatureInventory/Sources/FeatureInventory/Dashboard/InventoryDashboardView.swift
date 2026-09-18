@@ -10,13 +10,14 @@ internal enum InventoryGroundedSwipeRow: Hashable {
 /// Recent work, as the approved grounded dashboard draws them.
 ///
 /// Move opens a pending sheet until the destination picker moves into this
-/// package (POPS-4064). Selection mode on the In hand rows moves with the In
-/// hand page (POPS-4065); until then a row's mark is only its mark.
+/// package (POPS-4064). A row's mark selects it, and selecting In hand rows
+/// puts the In hand page's Put back and Move bar in place of the tab bar.
 internal struct InventoryDashboardView: View {
     @Bindable internal var model: InventoryDashboardViewModel
     @Environment(\.dynamicTypeSize) internal var dynamicTypeSize
     @State internal var activeSwipeRow: InventoryGroundedSwipeRow?
-    @State private var moving: InventoryDashboard.InHandItem?
+    @State internal var inHandSelection = InventorySelection()
+    @State private var moving: InventoryMoveRequest?
     /// Bumped by Retry to restart the observation after the store ended it.
     @State private var generation = 0
 
@@ -32,27 +33,13 @@ internal struct InventoryDashboardView: View {
             }
         }
         .task(id: generation) { await model.observe() }
-        .inventoryUndoCapsule($model.undoOffer) { offer in
-            Task { await model.undo(offer) }
-        }
-        .sheet(item: $moving) { item in
-            NavigationStack {
-                InventoryPendingScreen(
-                    title: "Move \(item.name)",
-                    detail: "The place picker opens here.",
-                    symbol: InventorySymbol.move.system)
-            }
-        }
-        .alert(
-            InventoryCopy.failureTitle,
-            isPresented: Binding(
-                get: { model.failure != nil }, set: { if !$0 { model.failure = nil } }),
-            presenting: model.failure
-        ) { _ in
-            Button("OK", role: .cancel) {}
-        } message: { failure in
-            Text(InventoryCopy.message(for: failure))
-        }
+        .inventoryWriterFeedback(model.writer)
+        .inventoryInHandSelectionBar(
+            $inHandSelection, items: model.dashboard?.inHand ?? [],
+            onPutBack: { ids in Task { await model.putBack(ids) } },
+            onMove: { moving = $0 }
+        )
+        .inventoryMoveSheet($moving)
     }
 
     private func content(_ dashboard: InventoryDashboard) -> some View {
@@ -89,6 +76,6 @@ internal struct InventoryDashboardView: View {
     }
 
     internal func move(_ item: InventoryDashboard.InHandItem) {
-        moving = item
+        moving = InventoryMoveRequest(inHand: [item])
     }
 }
