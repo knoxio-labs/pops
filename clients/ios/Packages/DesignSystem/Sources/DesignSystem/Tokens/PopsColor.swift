@@ -31,6 +31,16 @@ extension Color {
 
     /// A degraded outcome that has not failed.
     public static let popsWarning = Color(popsToken: "popsWarning")
+
+    /// Inventory's own colour: the tint every Inventory screen carries, and the
+    /// wash behind an open container's row.
+    ///
+    /// An amber on purpose, and a more golden one than ``popsWarning`` so the
+    /// two can sit on one screen. Inventory therefore cannot use hue to say
+    /// "this needs you": an open container is marked by its row being
+    /// highlighted, and a stale or failed state by its glyph, never by amber
+    /// alone.
+    public static let popsInventory = Color(popsToken: "popsInventory")
 }
 
 extension Color {

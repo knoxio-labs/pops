@@ -20,6 +20,7 @@ internal struct ColorTokenTests {
         ("popsDestructive", .popsDestructive),
         ("popsSuccess", .popsSuccess),
         ("popsWarning", .popsWarning),
+        ("popsInventory", .popsInventory),
     ]
 
     private static func resolved(_ color: Color, in scheme: ColorScheme) -> Color.Resolved {
