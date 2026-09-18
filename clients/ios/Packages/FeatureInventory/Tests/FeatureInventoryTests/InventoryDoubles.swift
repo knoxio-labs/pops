@@ -1,6 +1,5 @@
 import AppCore
 import Foundation
-import Observation
 
 @testable import FeatureInventory
 
