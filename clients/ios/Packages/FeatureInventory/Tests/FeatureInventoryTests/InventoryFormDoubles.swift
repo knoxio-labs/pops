@@ -1,0 +1,173 @@
+import AppCore
+import Foundation
+import Synchronization
+
+@testable import FeatureInventory
+
+/// A replica the form reads, with a search that covers codes the way the
+/// real replica's does (name, code and note), which the shared in-memory fake
+/// does not: its search matches names only.
+internal struct FormFixtureSource: InventoryQuerySource {
+    var items: [InventoryItem] = []
+    var locations: [InventoryLocation] = []
+    var catalogue = InventoryCatalogue(version: "test", units: [], types: [])
+    var status: InventoryReplicaStatus = .current
+
+    func inventoryItem(id: String) -> InventoryItem? { items.first { $0.id == id } }
+    func inventoryLocation(id: String) -> InventoryLocation? { locations.first { $0.id == id } }
+    func inventoryLocationTree() -> [InventoryLocation] { locations }
+    func inventoryContents(ofLocation locationId: String) -> [InventoryItem] { [] }
+    func inventoryContents(ofContainer containerId: String) -> [InventoryItem] { [] }
+    func inventoryInHand() -> [InventoryItem] { [] }
+    func inventoryOpenContainers() -> [InventoryItem] { [] }
+    func inventoryRecents(limit: Int) -> [InventoryItem] { [] }
+    func inventoryRecentEvents(limit: Int) -> [InventoryEvent] { [] }
+    func inventoryCounts() -> InventoryCounts {
+        InventoryCounts(items: 0, containers: 0, locations: 0)
+    }
+
+    func inventorySearch(text: String, includeInactive: Bool) -> [InventoryItem] {
+        items.filter { item in
+            item.name.localizedCaseInsensitiveContains(text)
+                || (item.code?.localizedCaseInsensitiveContains(text) ?? false)
+        }
+    }
+
+    func inventoryItemHistory(itemId: String) -> [InventoryEvent] { [] }
+    func inventoryLocationHistory(locationId: String) -> [InventoryEvent] { [] }
+    func inventoryCatalogue() -> InventoryCatalogue { catalogue }
+    func inventorySyncLedger() -> InventoryReplicaSyncLedger { InventoryReplicaSyncLedger() }
+    func inventoryReplicaStatus() -> InventoryReplicaStatus { status }
+}
+
+/// A store that records every command in order and applies none, answering
+/// every query from a `FormFixtureSource` it can change mid-test.
+internal final class RecordingInventoryStore: InventoryStore, Sendable {
+    private struct State {
+        var source: FormFixtureSource
+        var performed: [InventoryCommand] = []
+        var failing: Set<String> = []
+        var observers: [UUID: @Sendable (FormFixtureSource) -> Void] = [:]
+    }
+
+    private let state: Mutex<State>
+
+    internal init(_ source: FormFixtureSource) {
+        state = Mutex(State(source: source))
+    }
+
+    internal var performed: [InventoryCommand] { state.withLock { $0.performed } }
+
+    /// Makes every command of this kind throw `RepositoryError.unavailable`.
+    internal func fail(_ kind: String) {
+        state.withLock { _ = $0.failing.insert(kind) }
+    }
+
+    internal func setStatus(_ status: InventoryReplicaStatus) {
+        let (source, observers) = state.withLock { current in
+            current.source.status = status
+            return (current.source, Array(current.observers.values))
+        }
+        for observer in observers { observer(source) }
+    }
+
+    func observe<Value: Sendable>(_ query: InventoryQuery<Value>) -> AsyncStream<Value> {
+        AsyncStream { continuation in
+            let id = UUID()
+            let source = state.withLock { current in
+                current.observers[id] = { continuation.yield(query.read($0)) }
+                return current.source
+            }
+            continuation.yield(query.read(source))
+            continuation.onTermination = { [weak self] _ in
+                self?.state.withLock { _ = $0.observers.removeValue(forKey: id) }
+            }
+        }
+    }
+
+    func perform(_ command: InventoryCommand) async throws -> InventoryReceipt {
+        let kind = Self.kind(of: command)
+        try state.withLock { current in
+            current.performed.append(command)
+            if current.failing.contains(kind) { throw RepositoryError.unavailable }
+        }
+        return InventoryReceipt(
+            mutationId: UUID().uuidString, entityKind: .item, entityId: command.entityId ?? "")
+    }
+
+    func undo(_ receipt: InventoryReceipt) async throws {}
+    func resolve(_ repairId: InventoryRepair.ID, with choice: InventoryRepairChoice) async throws {}
+    func download() async throws {}
+    func refresh() async {}
+
+    func photo(_ sha256: String, variant: InventoryPhotoVariant) async throws -> Data {
+        throw RepositoryError.unavailable
+    }
+
+    func status() -> AsyncStream<InventoryReplicaStatus> { observe(.replicaStatus) }
+
+    private static func kind(of command: InventoryCommand) -> String {
+        switch command {
+        case .createItem: "create"
+        case .setItemCode: "setCode"
+        default: "other"
+        }
+    }
+}
+
+internal enum FormFixture {
+    static let epoch = Date(timeIntervalSinceReferenceDate: 800_000_000)
+
+    static let units = [
+        InventoryUnit(key: "mm", dimension: "length", multiplierToBase: 0.001),
+        InventoryUnit(key: "cm", dimension: "length", multiplierToBase: 0.01),
+        InventoryUnit(key: "m", dimension: "length", multiplierToBase: 1),
+        InventoryUnit(key: "W", dimension: "power", multiplierToBase: 1),
+    ]
+
+    static let connector = InventoryFieldDefinition(
+        key: "end_a", label: "End A", kind: .choice, choices: ["USB-A", "USB-C", "Lightning"])
+    static let length = InventoryFieldDefinition(
+        key: "length", label: "Length", kind: .measurement, dimension: "length", defaultUnit: "m")
+    static let wattage = InventoryFieldDefinition(
+        key: "wattage", label: "Wattage", kind: .measurement, dimension: "power", defaultUnit: "W",
+        required: true)
+
+    static let cable = InventoryType(
+        key: "cable", name: "Cable", capabilities: [], fields: [connector, length])
+    static let charger = InventoryType(
+        key: "charger", name: "Charger", capabilities: [], fields: [wattage])
+
+    static let catalogue = InventoryCatalogue(version: "v1", units: units, types: [cable, charger])
+
+    static func item(
+        _ id: String, _ name: String, code: String? = nil, typeKey: String? = nil,
+        fields: [String: InventoryFieldValue] = [:], placement: InventoryPlacement = .hand
+    ) -> InventoryItem {
+        InventoryItem(
+            id: id, revision: 1, seq: 1, name: name, typeKey: typeKey, fields: fields, code: code,
+            placement: placement, createdAt: epoch, updatedAt: epoch)
+    }
+}
+
+extension InventoryItemFormModel {
+    /// Starts following the store and waits until the form is ready, or
+    /// gives up after a bounded number of turns so a store that never
+    /// answers fails the test instead of hanging it.
+    @discardableResult
+    func startAndAwaitReady() async -> Task<Void, Never> {
+        let task = Task { await load() }
+        for _ in 0..<1_000 where phase == .loading {
+            await Task.yield()
+        }
+        return task
+    }
+
+    func await(_ condition: () -> Bool) async -> Bool {
+        for _ in 0..<1_000 {
+            if condition() { return true }
+            await Task.yield()
+        }
+        return false
+    }
+}
