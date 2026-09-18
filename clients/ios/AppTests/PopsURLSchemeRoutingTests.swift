@@ -45,6 +45,26 @@ internal struct PopsURLSchemeRoutingTests {
         #expect(outcome == .unsupported(pillar: "inventory"))
     }
 
+    /// `RootView` does not read `.unsupported`'s pillar directly — it feeds it
+    /// through ``RootCopy/opensIn(_:)`` to build the alert title. A regression
+    /// that changes what `opensIn` does to that pillar name (or a routing
+    /// change that starts handing it something other than the raw pillar
+    /// string) needs to fail here, at the seam between the two, not only in
+    /// `RootCopyPresentationTests`, which never sees a real outcome.
+    @Test("the unsupported outcome's pillar produces the copy RootView shows")
+    func unsupportedOutcomeProducesTheCopyRootViewShows() throws {
+        let router = EntityRouterRegistry()
+
+        let url = try #require(URL(string: "pops://inventory/location/loc-1"))
+        let outcome = handleOpenPopsURL(url, router: router)
+
+        guard case .unsupported(let pillar)? = outcome else {
+            Issue.record("expected .unsupported, got \(String(describing: outcome))")
+            return
+        }
+        #expect(RootCopy.opensIn(pillar) == "Opens in Inventory")
+    }
+
     /// A URL that never parses as a ``PopsURI`` — wrong scheme, or too few
     /// segments — never reaches the router at all, so a handler for an
     /// unrelated pair is left untouched rather than invoked with garbage, and
