@@ -5,7 +5,6 @@ import AppCore
 extension InventorySymbol {
     internal static let camera = InventorySymbol(system: "camera")
     internal static let suggest = InventorySymbol(system: "sparkles")
-    internal static let offline = InventorySymbol(system: "wifi.slash")
     internal static let add = InventorySymbol(system: "plus")
 
     /// Where an item will go, in the dashboard's vocabulary: an open
