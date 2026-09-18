@@ -114,11 +114,71 @@ const deletedAtCodec: ItemCodec = {
   columns: (value) => ({ deletedAt: parseFieldValue(z.string().nullable(), 'deletedAt', value) }),
 };
 
+/** An item's `fields` JSON blob as the wire and the event log spell it: an object keyed by field name. */
+export const itemFieldsBlobSchema = z.record(z.string(), z.json());
+
+const nameCodec: ItemCodec = {
+  read: (row) => row.name,
+  columns: (value) => ({ name: parseFieldValue(z.string().trim().min(1), 'name', value) }),
+};
+
+const noteCodec: ItemCodec = {
+  read: (row) => row.note,
+  columns: (value) => ({
+    note: parseFieldValue(z.string().trim().min(1).nullable(), 'note', value),
+  }),
+};
+
+const fieldsCodec: ItemCodec = {
+  read: (row) => JSON.parse(row.fields) as JsonValue,
+  columns: (value) => ({
+    fields: JSON.stringify(parseFieldValue(itemFieldsBlobSchema, 'fields', value)),
+  }),
+};
+
+/** An item's external ids: cross-references such as a manufacturer serial number. */
+export const externalIdsSchema = z.array(
+  z.object({ kind: z.string().min(1), value: z.string().min(1) })
+);
+
+const externalIdsCodec: ItemCodec = {
+  read: (row) => JSON.parse(row.externalIds) as JsonValue,
+  columns: (value) => ({
+    externalIds: JSON.stringify(parseFieldValue(externalIdsSchema, 'externalIds', value)),
+  }),
+};
+
+const quantityCodec: ItemCodec = {
+  read: (row) => row.quantity,
+  columns: (value) => ({ quantity: parseFieldValue(z.number().int().min(1), 'quantity', value) }),
+};
+
+const codeCodec: ItemCodec = {
+  read: (row) => row.code,
+  columns: (value) => ({
+    code: parseFieldValue(z.string().trim().min(1).max(64).nullable(), 'code', value),
+  }),
+};
+
+const typeKeyCodec: ItemCodec = {
+  read: (row) => row.typeKey,
+  columns: (value) => ({
+    typeKey: parseFieldValue(z.string().min(1).nullable(), 'typeKey', value),
+  }),
+};
+
+const isContainerCodec: ItemCodec = {
+  read: (row) => row.isContainer === 1,
+  columns: (value) => ({ isContainer: Number(parseFieldValue(z.boolean(), 'isContainer', value)) }),
+};
+
 /**
  * Every item field the command layer can write, keyed by its wire name (the
  * name events record). `placement` is one field, so a move is compared as a
  * whole; `previousPlacement` moves with it whenever an item enters or leaves
- * the hand.
+ * the hand. `fields` and `externalIds` are recorded and compared as whole
+ * JSON blobs: `item.edit`'s per-key `fields` patch is resolved to the full
+ * blob before it reaches the engine (see `item-edit.ts`).
  */
 export const ITEM_FIELD_CODECS: Readonly<Record<string, ItemCodec>> = {
   placement: placementCodec,
@@ -127,4 +187,12 @@ export const ITEM_FIELD_CODECS: Readonly<Record<string, ItemCodec>> = {
   isFull: isFullCodec,
   lifecycle: lifecycleCodec,
   deletedAt: deletedAtCodec,
+  name: nameCodec,
+  note: noteCodec,
+  fields: fieldsCodec,
+  externalIds: externalIdsCodec,
+  quantity: quantityCodec,
+  code: codeCodec,
+  typeKey: typeKeyCodec,
+  isContainer: isContainerCodec,
 };

@@ -36,7 +36,8 @@
     "generate:manifest": "tsx scripts/generate-manifest.ts",
     "verify:manifest": "tsx scripts/verify-manifest.ts",
     "generate:openapi": "tsx scripts/generate-openapi.ts",
-    "generate:api-types": "tsx scripts/generate-api-types.ts"
+    "generate:api-types": "tsx scripts/generate-api-types.ts",
+    "generate:command-vectors": "tsx scripts/generate-command-vectors.ts"
   },
   "dependencies": {
     "@pops/pillar-sdk": "workspace:*",

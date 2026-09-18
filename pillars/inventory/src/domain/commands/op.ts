@@ -20,18 +20,33 @@ export interface Written {
 }
 
 /**
+ * What an `effects` hook receives: the same context its op's `plan` saw, so
+ * it can record further changes (through `recordUpdate`/`recordCreate`/
+ * `recordSideEffect` in `write.ts`, which all need the actor and
+ * `mutationId` an effect's own writes are attributed to) rather than only
+ * touching the database directly.
+ */
+export type EffectContext = PlanContext;
+
+/**
  * What an update op intends. `changes` holds the intended value of every
  * field the op sets, unchanged ones included: the engine compares them with
  * the row to decide the event's diff, a conflict, or convergence. `effects`
- * runs after the row and its event are written, in the same transaction, for
- * ops that also change other rows.
+ * runs after the row and its event are written (or would have been, had
+ * `changes` produced one — the engine calls it either way, so an op whose
+ * real change lives entirely in a related table, such as an item's photos,
+ * can still record it), in the same transaction, for ops that also change
+ * other rows. When `effects` itself records a further change to the same
+ * entity (`recordSideEffect` in `write.ts`), it returns the `Written` that
+ * left, which becomes the mutation's outcome instead of the primary write's;
+ * an op whose effects touch only other entities returns nothing.
  */
 export interface UpdatePlan {
   readonly eventKind: string;
   readonly changes: FieldValues;
   readonly reason?: string | null;
   readonly compensatesSeq?: number;
-  readonly effects?: (db: CommandDb, written: Written) => void;
+  readonly effects?: (ctx: EffectContext, written: Written) => Written | void;
 }
 
 /**
@@ -42,7 +57,7 @@ export interface CreatePlan {
   readonly eventKind: string;
   readonly changes: FieldValues;
   readonly insert: (db: CommandDb, stamp: WriteStamp) => void;
-  readonly effects?: (db: CommandDb, written: Written) => void;
+  readonly effects?: (ctx: EffectContext, written: Written) => void;
 }
 
 /**
