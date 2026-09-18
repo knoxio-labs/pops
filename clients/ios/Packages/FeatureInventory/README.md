@@ -14,7 +14,7 @@ Until that query answers once, the dashboard shows a skeleton. A store that ends
 
 The dashboard, its panels, tiles, rows and sync pill are the design playground's grounded dashboard (POPS-3978), moved here and fed from `InventoryDashboard` instead of fixtures. The `InventoryGrounded*` names are kept so the screens still to move can be carried over with their references intact.
 
-Most of what the dashboard links to has moved: item detail (POPS-4062), containers and locations (POPS-4064), the items browser and In hand (POPS-4065). Sync and repair (POPS-4074) and the scanner (POPS-4078) still resolve to a pending screen.
+Most of what the dashboard links to has moved: item detail (POPS-4062), containers and locations (POPS-4064), the item form (POPS-4063), the items browser and In hand (POPS-4065). Sync and repair (POPS-4074) and the scanner (POPS-4078) still resolve to a pending screen.
 
 ## One placement picker
 
@@ -24,6 +24,15 @@ Most of what the dashboard links to has moved: item detail (POPS-4062), containe
 - `InventoryStoreHereSheet` (`Picker/InventoryStoreHereSheet.swift`) is Store here's own sheet: a new item or an existing one, chosen from `InventoryStoreCandidate.candidates(reading:for:query:)`, stored with the `store` verb.
 
 `InventoryLocationTree` (`Picker/InventoryLocationTree.swift`, read in `InventoryLocationTree+Reading.swift`) is the one flattened read of the place hierarchy every one of these draws from — the browser, a place's own page, and the picker's location level all read the same tree rather than each walking `InventoryLocation` rows themselves. A location has no kind of its own (ADR-002): the browser, the row label and the create sheet draw one place glyph and ask only for a name and a parent, where the design's playground fixtures carried a room-shelf-drawer kind that nothing in the replica records.
+
+## The item form
+
+New item and Edit item are one sheet (`Form/`), installed once over the whole stack by `InventoryFlowView`. A screen opens it through the `inventoryItemForm` environment value with an `InventoryItemFormRequest`; nothing pushes it as a route. Its fields are drawn from the catalogue descriptor the store serves, so a type the server adds renders without an app release.
+
+Two things it reaches for belong to other screens, and it asks for them rather than owning them:
+
+- **Where it goes.** The destination row opens the same `inventoryPlacementPicker` the containers and locations screens install (POPS-4064).
+- **A suggested code.** Suggestions are the server's alone (`POST /codes/suggest`), and `InventoryStore` carries no call for them, so the form takes an `InventoryCodeSuggester`. Until the app binds one it answers as a server that cannot suggest, which the form shows as the approved unavailable state. A typed code is always checked against the replica, online or not.
 
 ## Search, the items browser and In hand
 

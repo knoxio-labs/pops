@@ -37,6 +37,7 @@ public struct InventoryFlowView: View {
                     InventoryDestinationView(route: route, store: store)
                 }
         }
+        .inventoryItemFormPresentation(store: store)
     }
 
     private var scanControl: some View {
