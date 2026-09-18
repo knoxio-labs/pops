@@ -7,8 +7,8 @@ import SwiftUI
 internal struct InventoryItemsBrowserView: View {
     @State private var model: InventoryItemsBrowserViewModel
     @State private var showingFilters = false
-    @State private var adding = false
     @State private var selection = InventorySelection()
+    @Environment(\.inventoryItemForm) private var itemForm
     @State private var moving: InventoryPlacementRequest?
     /// Bumped by Retry to restart the observation after the store ended it.
     @State private var generation = 0
@@ -50,7 +50,7 @@ internal struct InventoryItemsBrowserView: View {
                 if catalogue.records.isEmpty {
                     InventoryDashedActionButton(
                         title: "Add an item", symbol: InventorySymbol.item.system
-                    ) { adding = true }
+                    ) { itemForm?(.create(placement: nil)) }
                     .inventoryFadeIn()
                 } else {
                     InventoryCountTiles(tiles: model.tiles)
@@ -72,7 +72,6 @@ internal struct InventoryItemsBrowserView: View {
             InventorySearchFilterSheet(
                 filter: $model.filter, sort: $model.sort, types: catalogue.types)
         }
-        .inventoryNewItemSheet(isPresented: $adding)
         .tint(.popsInventory)
         .chrome(selection: $selection, moving: $moving, model: model)
     }
@@ -84,7 +83,7 @@ internal struct InventoryItemsBrowserView: View {
             isFiltered: model.filter.isActive || model.sort != .recent,
             filterSummary: model.filter.summary,
             onFilter: { showingFilters = true },
-            add: InventorySearchBarAdd(label: "New item") { adding = true })
+            add: InventorySearchBarAdd(label: "New item") { itemForm?(.create(placement: nil)) })
     }
 
     @ViewBuilder private var list: some View {
@@ -161,18 +160,5 @@ extension View {
         }
         .inventoryRunnerChrome(model.runner)
         .inventoryWriterFeedback(model.writer)
-    }
-
-    /// What New item opens. The item form moves into this package in its own
-    /// change (POPS-4063) and replaces this sheet's body; until then it is a
-    /// pending screen.
-    internal func inventoryNewItemSheet(isPresented: Binding<Bool>) -> some View {
-        sheet(isPresented: isPresented) {
-            NavigationStack {
-                InventoryPendingScreen(
-                    title: "New item", detail: "The item form opens here.",
-                    symbol: InventorySymbol.item.system)
-            }
-        }
     }
 }
