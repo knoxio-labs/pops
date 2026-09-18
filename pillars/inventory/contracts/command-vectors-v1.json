@@ -593,8 +593,10 @@
         "baseRevision": null,
         "dependsOn": [],
         "args": {
-          "name": "Garage",
-          "parentId": "10000000-0000-4000-8000-000000000001"
+          "location": {
+            "name": "Garage",
+            "parentId": "10000000-0000-4000-8000-000000000001"
+          }
         },
         "clientTime": "2026-09-19T00:00:00.000Z"
       },
