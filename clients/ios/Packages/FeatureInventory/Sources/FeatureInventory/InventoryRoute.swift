@@ -17,6 +17,7 @@ internal enum InventoryRoute: Hashable, Sendable {
     case item(InventoryItem.ID)
     case container(InventoryItem.ID)
     case place(InventoryLocation.ID)
+    case repair(InventoryRepair.ID)
 
     /// Where a row for an item opens: a container's page when it is one, the
     /// item page otherwise (D1: both are items, but not the same screen).
