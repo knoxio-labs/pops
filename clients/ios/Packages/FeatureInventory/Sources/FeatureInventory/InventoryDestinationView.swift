@@ -5,12 +5,12 @@ import SwiftUI
 /// Turns a route into its screen.
 ///
 /// Every route the dashboard links to already resolves here, so a link never
-/// lands on a blank page. Item detail, the items browser and In hand have
-/// moved; containers and locations (POPS-4064), Sync and repair (POPS-4074),
-/// and the scanner (POPS-4078) have not. Until each lands its route shows a
-/// pending screen. Recent activity has no approved design at all; the
-/// playground draws the same pending screen for it. Nothing reaches this
-/// from the app until the Inventory tab is wired (POPS-4066).
+/// lands on a blank page. Item detail, containers, locations, the items
+/// browser and In hand have moved; Sync and repair (POPS-4074) and the
+/// scanner (POPS-4078) have not. Until each lands its route shows a pending
+/// screen. Recent activity has no approved design at all; the playground
+/// draws the same pending screen for it. Nothing reaches this from the app
+/// until the Inventory tab is wired (POPS-4066).
 internal struct InventoryDestinationView: View {
     internal let route: InventoryRoute
     internal let store: any InventoryStore
@@ -23,6 +23,14 @@ internal struct InventoryDestinationView: View {
             InventoryInHandView(store: store)
         case .item(let id):
             InventoryItemDetailScreen(itemId: id, store: store)
+        case .container(let id):
+            InventoryContainerPage(model: InventoryContainerPageModel(id: id, store: store))
+        case .locations:
+            InventoryLocationBrowserView(model: InventoryLocationBrowserModel(store: store))
+        case .place(let id):
+            InventoryLocationPage(model: InventoryLocationPageModel(id: id, store: store))
+        case .containers:
+            InventoryContainerBrowserView(model: InventoryContainerBrowserModel(store: store))
         default:
             InventoryPendingScreen(title: title, detail: detail, symbol: symbol)
         }

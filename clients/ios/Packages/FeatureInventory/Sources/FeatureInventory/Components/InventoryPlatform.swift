@@ -28,19 +28,30 @@ extension View {
         #endif
     }
 
-    /// Hides the tab bar while `hidden`, so a bottom bar can take its place.
-    /// Only iOS has one.
+    /// The platform's glass button: every verb that is not the screen's one
+    /// call to action.
     @ViewBuilder
-    internal func inventoryHidesTabBar(_ hidden: Bool) -> some View {
+    internal func inventoryGlassButton() -> some View {
         #if os(iOS)
-            toolbar(hidden ? .hidden : .automatic, for: .tabBar)
+            buttonStyle(.glass)
         #else
-            self
+            buttonStyle(.bordered)
         #endif
     }
 
-    /// The inset-grouped list style, which is iOS-only; on the host toolchain
-    /// the platform's own default stands in.
+    /// The one call to action on a sheet or a screen, in the platform's
+    /// prominent glass button style.
+    @ViewBuilder
+    internal func inventoryProminentGlassButton() -> some View {
+        #if os(iOS)
+            buttonStyle(.glassProminent)
+        #else
+            buttonStyle(.borderedProminent)
+        #endif
+    }
+
+    /// The inset-grouped list style, which is iOS-only; on the host
+    /// toolchain the platform's own default stands in.
     @ViewBuilder
     internal func inventoryInsetGroupedList() -> some View {
         #if os(iOS)
@@ -50,14 +61,15 @@ extension View {
         #endif
     }
 
-    /// The one call to action on a sheet, in the platform's prominent glass
-    /// button style.
+    /// `searchable` with an explicit presentation binding, which is iOS-only.
     @ViewBuilder
-    internal func inventoryProminentGlassButton() -> some View {
+    internal func inventorySearchable(
+        text: Binding<String>, isPresented: Binding<Bool>, prompt: String
+    ) -> some View {
         #if os(iOS)
-            buttonStyle(.glassProminent)
+            searchable(text: text, isPresented: isPresented, prompt: prompt)
         #else
-            buttonStyle(.borderedProminent)
+            searchable(text: text, prompt: prompt)
         #endif
     }
 
@@ -79,6 +91,17 @@ extension View {
             toolbar { ToolbarItem(placement: .topBarTrailing, content: item) }
         #else
             toolbar { ToolbarItem(content: item) }
+        #endif
+    }
+
+    /// Hides the tab bar while `hidden`, so a bottom bar can take its place.
+    /// Only iOS has one.
+    @ViewBuilder
+    internal func inventoryHidesTabBar(_ hidden: Bool) -> some View {
+        #if os(iOS)
+            toolbar(hidden ? .hidden : .automatic, for: .tabBar)
+        #else
+            self
         #endif
     }
 }

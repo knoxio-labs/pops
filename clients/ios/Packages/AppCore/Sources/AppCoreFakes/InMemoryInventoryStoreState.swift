@@ -45,6 +45,10 @@ extension InMemoryInventoryStore {
                 .sorted { $0.name < $1.name }
         }
 
+        func inventoryContainers() -> [InventoryItem] {
+            items.values.filter { $0.isContainer && !$0.isDeleted }.sorted { $0.name < $1.name }
+        }
+
         func inventoryRecents(limit: Int) -> [InventoryItem] {
             Array(items.values.sorted { $0.updatedAt > $1.updatedAt }.prefix(limit))
         }
