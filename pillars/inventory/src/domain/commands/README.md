@@ -3,10 +3,10 @@
 The write path for `items` and `locations`: every change made here gets a
 revision, a `seq` and a history event, and is checked for conflicts
 ([ADR-002](../../../docs/architecture/adr-002-inventory-technical-design.md),
-D6 and D8). `runMutation` in `engine.ts` is the entry point. No route calls it
-yet: the sync routes arrive with POPS-4052, and the legacy `/items` and
-`/locations` handlers still write the tables directly until POPS-4053 moves
-them onto it.
+D6 and D8). `runMutation` in `engine.ts` is the entry point.
+`POST /sync/mutations` (`src/api/rest/sync-handlers.ts`) calls it; the legacy
+`/items` and `/locations` handlers still write the tables directly until
+POPS-4053 moves them onto it.
 
 Every op the pillar defines is registered here: `item.move`, `item.setAccess`,
 `item.setFull`, `item.setLifecycle`, `item.restoreDeleted`, `event.revert`
