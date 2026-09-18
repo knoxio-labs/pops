@@ -4,8 +4,6 @@ import Testing
 
 #if canImport(UIKit)
     import UIKit
-#else
-    import AppKit
 #endif
 
 /// POPS-3985's hierarchy logic: what a place holds directly versus through
@@ -33,13 +31,11 @@ internal struct InventoryLocationHierarchyTests {
         InventoryLocationNode(id: "loft", name: "Loft", parentID: "home"),
     ])
 
-    private func exists(_ name: String) -> Bool {
-        #if canImport(UIKit)
+    #if canImport(UIKit)
+        private func exists(_ name: String) -> Bool {
             UIImage(systemName: name) != nil
-        #else
-            NSImage(systemSymbolName: name, accessibilityDescription: nil) != nil
-        #endif
-    }
+        }
+    #endif
 
     @Test("a tally counts places below, containers, and items directly and inside containers")
     func tallyFollowsTheWholeSubtree() {
@@ -158,15 +154,17 @@ internal struct InventoryLocationHierarchyTests {
         #expect(destination.symbol == InventoryPlaceKind.shelf.symbol)
     }
 
-    @Test("every glyph a place kind or a fixture names exists")
-    func glyphsResolve() {
-        let names =
-            InventoryPlaceKind.allCases.map(\.symbol)
-            + Fixtures.home.nodes.flatMap { node in
-                node.items.map(\.symbol) + node.containers.flatMap { $0.contents.map(\.symbol) }
-            }
-        let missing = names.filter { !exists($0) }
-        #expect(missing.isEmpty, "not in the SF Symbols catalogue: \(missing)")
-        #expect(!exists("inventory.not-a-real-symbol"))
-    }
+    #if canImport(UIKit)
+        @Test("every glyph a place kind or a fixture names exists")
+        func glyphsResolve() {
+            let names =
+                InventoryPlaceKind.allCases.map(\.symbol)
+                + Fixtures.home.nodes.flatMap { node in
+                    node.items.map(\.symbol) + node.containers.flatMap { $0.contents.map(\.symbol) }
+                }
+            let missing = names.filter { !exists($0) }
+            #expect(missing.isEmpty, "not in the SF Symbols catalogue: \(missing)")
+            #expect(!exists("inventory.not-a-real-symbol"))
+        }
+    #endif
 }

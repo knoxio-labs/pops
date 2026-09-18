@@ -3,9 +3,11 @@
  *
  * Boots the Express app via the production `createInventoryApiApp`
  * factory against a per-test temp inventory.db and drives every endpoint
- * through supertest (see `makeClient`). The pillar trusts the docker net
- * — there is no auth layer to exercise. Service `NotFoundError`s surface
- * as HTTP 404.
+ * through supertest (see `makeClient`). Every request here carries no
+ * `X-API-Key`, so it is admitted regardless of the inbound service-account
+ * gate (`middleware/service-account-scope.ts`) — that gate's own behaviour
+ * is covered in `service-account-scope.test.ts`. Service `NotFoundError`s
+ * surface as HTTP 404.
  */
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';

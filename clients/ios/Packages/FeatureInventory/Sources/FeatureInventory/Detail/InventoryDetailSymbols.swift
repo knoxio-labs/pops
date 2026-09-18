@@ -1,5 +1,3 @@
-import SwiftUI
-
 /// The glyphs Item detail, its menu and History draw beyond the dashboard's,
 /// taken from the design playground's one-glyph-per-concept set with the
 /// same SF Symbol for each concept.
