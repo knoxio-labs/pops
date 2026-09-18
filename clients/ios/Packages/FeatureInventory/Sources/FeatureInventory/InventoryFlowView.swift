@@ -14,10 +14,12 @@ public struct InventoryFlowView: View {
     /// and its observation rather than starting over with a new one.
     @State private var model: InventoryDashboardViewModel
     @State private var path: [InventoryRoute] = []
+    private let store: any InventoryStore
     private let scanDiameter: CGFloat = 60
 
     /// Reads and writes through `dependencies.inventory`, and nothing else.
     public init(dependencies: AppDependencies) {
+        store = dependencies.inventory
         _model = State(wrappedValue: InventoryDashboardViewModel(store: dependencies.inventory))
     }
 
@@ -32,7 +34,7 @@ public struct InventoryFlowView: View {
                     }
                 }
                 .navigationDestination(for: InventoryRoute.self) { route in
-                    InventoryDestinationView(route: route)
+                    InventoryDestinationView(route: route, store: store)
                 }
         }
     }
