@@ -15,16 +15,38 @@ internal struct InventoryGroundedDashboardStateTests {
         #expect(state.containers.map(\.id) == ["kitchen-12", "garage-tools"])
     }
 
-    @Test("putting back and moving items remove only their selected rows")
+    @Test("the In hand rows are the In hand page's records, photos and all")
     @MainActor
-    func resolveInHandItems() {
+    func inHandRowsMatchThePage() {
+        let state = InventoryGroundedDashboardState(fixture: InventoryFixtures.packing)
+
+        #expect(state.inHand.items.map(\.item.name) == ["Passport", "Wi-Fi router"])
+        #expect(state.inHand.items.allSatisfy { $0.photo != nil })
+        #expect(state.inHand.items.map(\.fromLine) == ["From Documents drawer", "From Office 04"])
+    }
+
+    @Test("putting back and moving remove only their rows, and Undo returns them in place")
+    @MainActor
+    func resolveInHandItems() throws {
         var state = InventoryGroundedDashboardState(fixture: InventoryFixtures.packing)
+        let passport = try #require(state.inHand.items.first)
+        let router = try #require(state.inHand.items.last)
 
-        state.putBack(InventoryFixtures.items[0])
-        #expect(state.inHandItems.map(\.id) == ["router"])
+        let putBackOffer = state.inHand.putBack([passport.id])
+        let putBack = try #require(putBackOffer)
+        #expect(putBack.message == "Put back in Documents drawer")
+        #expect(state.inHand.items.map(\.id) == [router.id])
 
-        state.move(InventoryFixtures.items[1])
-        #expect(state.inHandItems.isEmpty)
+        let movedOffer = state.inHand.move(
+            [router.id], to: InventoryDestination(id: "hall", name: "Hall", kind: .location))
+        let moved = try #require(movedOffer)
+        #expect(moved.message == "Moved to Hall")
+        #expect(state.inHand.isEmpty)
+
+        state.inHand.undo(moved)
+        #expect(state.inHand.items.map(\.id) == [router.id])
+        state.inHand.undo(putBack)
+        #expect(state.inHand.items.map(\.id) == [passport.id, router.id])
     }
 
     @Test("undo removes only the selected work entry")
@@ -47,16 +69,5 @@ internal struct InventoryGroundedDashboardStateTests {
         #expect(noOpenContainers.containers.isEmpty)
         #expect(
             firstRun.catalogue == InventoryCatalogueCounts(items: 0, containers: 0, locations: 0))
-    }
-
-    @Test("search matches names and inventory context without duplicating items")
-    @MainActor
-    func searchResults() {
-        let results = InventorySearchResults(
-            fixture: InventoryFixtures.packing,
-            query: "office"
-        ).matchingResults
-
-        #expect(results.map(\.title) == ["Wi-Fi router", "Office 04"])
     }
 }

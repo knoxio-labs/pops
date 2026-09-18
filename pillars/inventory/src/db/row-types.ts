@@ -6,23 +6,25 @@
  * underlying tables live in `./schema/*.ts`.
  */
 import type {
-  containers,
+  events,
   fixtures,
-  homeInventory,
   itemConnections,
   itemDocuments,
   itemFixtureConnections,
   itemPhotos,
+  items,
   itemUploadedFiles,
   locations,
+  media,
+  mutations,
 } from './schema.js';
 
-export type ContainerRow = typeof containers.$inferSelect;
-export type ContainerInsert = typeof containers.$inferInsert;
+export type EventRow = typeof events.$inferSelect;
+export type EventInsert = typeof events.$inferInsert;
 export type FixtureRow = typeof fixtures.$inferSelect;
 export type FixtureInsert = typeof fixtures.$inferInsert;
-export type InventoryRow = typeof homeInventory.$inferSelect;
-export type InventoryInsert = typeof homeInventory.$inferInsert;
+export type ItemRow = typeof items.$inferSelect;
+export type ItemInsert = typeof items.$inferInsert;
 export type ItemConnectionRow = typeof itemConnections.$inferSelect;
 export type ItemConnectionInsert = typeof itemConnections.$inferInsert;
 export type ItemDocumentRow = typeof itemDocuments.$inferSelect;
@@ -35,9 +37,13 @@ export type ItemUploadedFileRow = typeof itemUploadedFiles.$inferSelect;
 export type ItemUploadedFileInsert = typeof itemUploadedFiles.$inferInsert;
 export type LocationRow = typeof locations.$inferSelect;
 export type LocationInsert = typeof locations.$inferInsert;
+export type MediaRow = typeof media.$inferSelect;
+export type MediaInsert = typeof media.$inferInsert;
+export type MutationRow = typeof mutations.$inferSelect;
+export type MutationInsert = typeof mutations.$inferInsert;
 
 /**
- * Allowed values for `home_inventory.condition`. Stored title-case in the DB
+ * Allowed values for `items.condition`. Stored title-case in the DB
  * but matched case-insensitively in the items list filter, so the values can
  * be used directly in both the edit form and the filter dropdown without
  * casing transforms.

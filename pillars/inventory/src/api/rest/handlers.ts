@@ -11,7 +11,6 @@ import { inventoryContract } from '../../contract/rest.js';
 import { type OpenedInventoryDb } from '../../db/index.js';
 import { createDocumentsClient, type DocumentsClient } from '../documents/client.js';
 import { makeConnectionsHandlers } from './connections-handlers.js';
-import { makeContainersHandlers } from './containers-handlers.js';
 import { makeDocumentFilesHandlers } from './document-files-handlers.js';
 import { makeDocumentsHandlers } from './documents-handlers.js';
 import { makeFixturesHandlers } from './fixtures-handlers.js';
@@ -39,7 +38,6 @@ export function makeInventoryRestHandlers(deps: {
   return server.router(inventoryContract, {
     items: makeItemsHandlers(db),
     locations: makeLocationsHandlers(db),
-    containers: makeContainersHandlers(db),
     connections: makeConnectionsHandlers(db),
     fixtures: makeFixturesHandlers(db),
     photos: makePhotosHandlers(db),

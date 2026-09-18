@@ -97,26 +97,6 @@ internal enum InventoryPropertyFixtures {
         ]
     )
 
-    /// Being created: nothing entered yet, and inference has proposed a
-    /// template and four fields off the name and the photo.
-    internal static let arriving = InventoryThing(
-        id: "charger-65w",
-        name: "GaN charger, 65 W",
-        symbol: "powerplug.portrait",
-        location: "In hand",
-        category: "Charger",
-        template: InventoryPropertyTemplates.charger,
-        properties: [],
-        tags: [],
-        notes: "",
-        suggestions: [
-            InventoryProperty("Power", .measure(65, unit: "W"), origin: .suggested(.certain)),
-            InventoryProperty("Ports", .text("2 × USB-C, 1 × USB-A"), origin: .suggested(.likely)),
-            InventoryProperty("Plug", .choice("Type I"), origin: .suggested(.likely)),
-            InventoryProperty("Folding pins", .flag(true), origin: .suggested(.guess)),
-        ]
-    )
-
     /// Mid-edit: two suggestions accepted, two still pending, one custom key
     /// added, and one value carrying a unit the catalogue does not know.
     internal static let editing = InventoryThing(
@@ -139,26 +119,14 @@ internal enum InventoryPropertyFixtures {
         ]
     )
 
-    /// The cables live next door — there are four of them and they carry the
+    /// The cables live next door, there are four of them and they carry the
     /// drift, which is more than a fixtures file can hold alongside everything
     /// else. The ones named through here are the ones something outside the
     /// cable set asks for by name; the rest arrive via `all`.
     internal static let cable = InventoryCableFixtures.cable
-    internal static let shortCable = InventoryCableFixtures.shortCable
-    internal static let lightningCable = InventoryCableFixtures.lightningCable
 
     internal static let all: [InventoryThing] =
         InventoryCableFixtures.all + [bulb, tape, box, sideboard, adapter]
-
-    /// The two the comparison step puts side by side.
-    internal static let cables: [InventoryThing] = InventoryCableFixtures.cables
-
-    /// What somebody typed into the editor, and has not committed. Collides
-    /// with `editing`'s "Cable length" under the normalisation rule, which is
-    /// the whole reason it is spelled differently.
-    internal static let draftKey = "cable-length"
-    internal static let draftValue = "1.5"
-    internal static let draftUnit = "m"
 
     /// The search the search step is showing the result of.
     internal static let query: [InventoryPropertyClause] = [

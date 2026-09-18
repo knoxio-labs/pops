@@ -83,6 +83,19 @@ information and next action still come first. Persistent product UI is not a
 landing page; decorative microcopy becomes content noise when it does not
 increase information scent.
 
+## Compact by default
+
+Nothing scrolls except a list. A screen composed of fixed parts, a detail, an
+action sheet, a form, fits the viewport at the default text size on a 393pt
+phone; the accessibility sizes may scroll, Large must not. Two things that
+would stack past the fold become a segmented control, a disclosure or a second
+screen, never a longer one.
+
+A list scrolls because its length is the data's. Three fixed sections in a
+`List` are not a list, and a footer explaining a section is height spent on
+words the reader already had. When a surface here scrolls at Large, that is a
+finding about the surface, not about the phone.
+
 ## It cannot reach a network, by construction
 
 The package depends on `AppCore` and `DesignSystem`. Both declare no

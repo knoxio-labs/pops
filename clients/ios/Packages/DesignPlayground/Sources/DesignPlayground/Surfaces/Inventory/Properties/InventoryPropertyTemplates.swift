@@ -9,11 +9,12 @@ internal enum InventoryPropertyTemplates {
         id: "cable",
         name: "Cable",
         fields: [
-            InventoryTemplateField("End A", "Choice", hint: "The connector at one end"),
-            InventoryTemplateField("End B", "Choice"),
+            InventoryTemplateField(
+                "End A", "Choice", hint: "The connector at one end", highlighted: true),
+            InventoryTemplateField("End B", "Choice", highlighted: true),
             InventoryTemplateField("Data rate", "Measurement", unit: "Gbps"),
             InventoryTemplateField("Power", "Measurement", unit: "W", hint: "What it can carry"),
-            InventoryTemplateField("Length", "Measurement", unit: "m"),
+            InventoryTemplateField("Length", "Measurement", unit: "m", highlighted: true),
             InventoryTemplateField("Braided", "Yes or no"),
         ]
     )
@@ -22,8 +23,9 @@ internal enum InventoryPropertyTemplates {
         id: "charger",
         name: "Charger",
         fields: [
-            InventoryTemplateField("Ports", "Text", hint: "Each port and what it does"),
-            InventoryTemplateField("Power", "Measurement", unit: "W"),
+            InventoryTemplateField(
+                "Ports", "Text", hint: "Each port and what it does", highlighted: true),
+            InventoryTemplateField("Power", "Measurement", unit: "W", highlighted: true),
             InventoryTemplateField("Folding pins", "Yes or no"),
             InventoryTemplateField("Plug", "Choice"),
         ]
@@ -33,8 +35,10 @@ internal enum InventoryPropertyTemplates {
         id: "bulb",
         name: "Light bulb",
         fields: [
-            InventoryTemplateField("Fitting", "Choice", hint: "E27, GU10, B22"),
-            InventoryTemplateField("Protocol", "Choice"),
+            InventoryTemplateField(
+                "Fitting", "Choice", hint: "E27, GU10, B22",
+                choices: ["E27", "GU10", "B22"], highlighted: true),
+            InventoryTemplateField("Protocol", "Choice", highlighted: true),
             InventoryTemplateField("Brightness", "Measurement", unit: "lm"),
             InventoryTemplateField("Colour temperature", "Range", unit: "K"),
             InventoryTemplateField("Dimmable", "Yes or no"),
@@ -46,8 +50,8 @@ internal enum InventoryPropertyTemplates {
         name: "Tape",
         fields: [
             InventoryTemplateField("Use", "Choice", hint: "What it is for, not what it is made of"),
-            InventoryTemplateField("Width", "Measurement", unit: "mm"),
-            InventoryTemplateField("Length", "Measurement", unit: "m"),
+            InventoryTemplateField("Width", "Measurement", unit: "mm", highlighted: true),
+            InventoryTemplateField("Length", "Measurement", unit: "m", highlighted: true),
             InventoryTemplateField("Leaves residue", "Yes or no"),
         ]
     )
@@ -56,8 +60,8 @@ internal enum InventoryPropertyTemplates {
         id: "container",
         name: "Storage box",
         fields: [
-            InventoryTemplateField("Capacity", "Measurement", unit: "L"),
-            InventoryTemplateField("Load limit", "Measurement", unit: "kg"),
+            InventoryTemplateField("Capacity", "Measurement", unit: "L", highlighted: true),
+            InventoryTemplateField("Load limit", "Measurement", unit: "kg", highlighted: true),
             InventoryTemplateField("Footprint", "Text", hint: "Outside, in millimetres"),
             InventoryTemplateField("Stackable", "Yes or no"),
         ]
@@ -71,8 +75,14 @@ internal enum InventoryPropertyTemplates {
         id: "furniture",
         name: "Furniture",
         fields: [
-            InventoryTemplateField("Footprint", "Text", hint: "Width × depth × height"),
-            InventoryTemplateField("Material", "Choice"),
+            InventoryTemplateField(
+                "Footprint", "Text", hint: "Width × depth × height", highlighted: true),
+            InventoryTemplateField(
+                "Material", "Choice",
+                choices: [
+                    "Oak", "Pine", "Walnut", "Ash", "Beech", "MDF", "Plywood", "Veneer",
+                    "Rattan", "Metal", "Glass", "Painted wood",
+                ], highlighted: true),
             InventoryTemplateField("Needs two people", "Yes or no"),
         ]
     )

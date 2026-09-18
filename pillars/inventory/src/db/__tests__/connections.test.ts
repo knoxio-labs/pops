@@ -1,18 +1,7 @@
 /**
  * Invariant tests for the connections service against an in-memory SQLite
- * seeded with the canonical `home_inventory` + `item_connections` tables.
- * Pure DB + service layer.
- *
- * The `home_inventory` and `item_connections` DDL is inlined here because
- * the canonical baseline migration bundles unrelated FK tables. The
- * locations migration is read from the package's migrations dir so the FK
- * target exists.
+ * brought up by the real migration journal. Pure DB + service layer.
  */
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-
-import Database from 'better-sqlite3';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { connectionsService } from '../index.js';
@@ -23,79 +12,19 @@ import {
   SelfConnectionError,
 } from '../services/connections-errors.js';
 import { seedInventoryItem } from './item-fixture.js';
+import { openMigratedTestDb } from './migrated-db.js';
 
 import type { TraceNode } from '../services/connections-types.js';
 import type { InventoryDb } from '../services/internal.js';
 
-const LOCATIONS_MIGRATION = join(__dirname, '../../../migrations/0005_fancy_crystal.sql');
-
-const HOME_INVENTORY_DDL = `
-CREATE TABLE home_inventory (
-  id text PRIMARY KEY NOT NULL,
-  notion_id text UNIQUE,
-  item_name text NOT NULL,
-  brand text,
-  model text,
-  item_id text,
-  room text,
-  location text,
-  type text,
-  condition text DEFAULT 'good',
-  in_use integer,
-  deductible integer,
-  purchase_date text,
-  warranty_expires text,
-  replacement_value real,
-  resale_value real,
-  purchase_transaction_id text,
-  purchase_transaction_uri text,
-  purchase_transaction_stale_at text,
-  purchased_from_id text,
-  purchased_from_name text,
-  purchase_price real,
-  owner_uri text,
-  owner_stale_at text,
-  asset_id text UNIQUE,
-  source_ref text UNIQUE,
-  notes text,
-  location_id text REFERENCES locations(id) ON DELETE set null,
-  container_id text,
-  created_at text NOT NULL DEFAULT (datetime('now')),
-  updated_at text NOT NULL DEFAULT (datetime('now')),
-  last_edited_time text NOT NULL
-);
-`;
-
-const ITEM_CONNECTIONS_DDL = `
-CREATE TABLE item_connections (
-  id integer PRIMARY KEY AUTOINCREMENT NOT NULL,
-  item_a_id text NOT NULL REFERENCES home_inventory(id) ON DELETE CASCADE,
-  item_b_id text NOT NULL REFERENCES home_inventory(id) ON DELETE CASCADE,
-  created_at text NOT NULL DEFAULT (datetime('now')),
-  CONSTRAINT chk_item_connections_order CHECK (item_a_id < item_b_id)
-);
-CREATE UNIQUE INDEX uq_item_connections_pair ON item_connections (item_a_id, item_b_id);
-CREATE INDEX idx_item_connections_a ON item_connections (item_a_id);
-CREATE INDEX idx_item_connections_b ON item_connections (item_b_id);
-`;
-
 function freshDb(): InventoryDb {
-  const raw = new Database(':memory:');
-  raw.pragma('foreign_keys = ON');
-  const sql = readFileSync(LOCATIONS_MIGRATION, 'utf8');
-  for (const stmt of sql.split('--> statement-breakpoint')) {
-    const trimmed = stmt.trim();
-    if (trimmed.length > 0) raw.exec(trimmed);
-  }
-  raw.exec(HOME_INVENTORY_DDL);
-  raw.exec(ITEM_CONNECTIONS_DDL);
-  return drizzle(raw);
+  return openMigratedTestDb().db;
 }
 
 /** Seed two items and return their IDs in sorted (A<B) order. */
 function seedPair(db: InventoryDb, nameA = 'Item A', nameB = 'Item B'): [string, string] {
-  const a = seedInventoryItem(db, { itemName: nameA });
-  const b = seedInventoryItem(db, { itemName: nameB });
+  const a = seedInventoryItem(db, { name: nameA });
+  const b = seedInventoryItem(db, { name: nameB });
   return [a.id, b.id].toSorted() as [string, string];
 }
 
@@ -122,7 +51,7 @@ describe('connectionsService.create', () => {
   });
 
   it('rejects connecting an item to itself with SelfConnectionError', () => {
-    const item = seedInventoryItem(db, { itemName: 'Solo' });
+    const item = seedInventoryItem(db, { name: 'Solo' });
     expect(() =>
       connectionsService.create(db, { itemAId: item.id, itemBId: item.id })
     ).toThrowError(SelfConnectionError);
@@ -145,14 +74,14 @@ describe('connectionsService.create', () => {
   });
 
   it('throws ConnectionItemNotFoundError when itemA is missing', () => {
-    const b = seedInventoryItem(db, { itemName: 'B' });
+    const b = seedInventoryItem(db, { name: 'B' });
     expect(() => connectionsService.create(db, { itemAId: 'nope', itemBId: b.id })).toThrowError(
       ConnectionItemNotFoundError
     );
   });
 
   it('throws ConnectionItemNotFoundError when itemB is missing', () => {
-    const a = seedInventoryItem(db, { itemName: 'A' });
+    const a = seedInventoryItem(db, { name: 'A' });
     expect(() => connectionsService.create(db, { itemAId: a.id, itemBId: 'nope' })).toThrowError(
       ConnectionItemNotFoundError
     );
@@ -186,7 +115,7 @@ describe('connectionsService.list', () => {
   });
 
   it('returns empty rows + zero total when the item has no connections', () => {
-    const item = seedInventoryItem(db, { itemName: 'Lonely' });
+    const item = seedInventoryItem(db, { name: 'Lonely' });
     const result = connectionsService.list(db, item.id, 50, 0);
     expect(result).toEqual({ rows: [], total: 0 });
   });
@@ -210,9 +139,9 @@ describe('connectionsService.list', () => {
   });
 
   it('paginates rows but reports the full total for the filter', () => {
-    const hub = seedInventoryItem(db, { itemName: 'Hub' });
+    const hub = seedInventoryItem(db, { name: 'Hub' });
     for (let i = 0; i < 3; i++) {
-      const peer = seedInventoryItem(db, { itemName: `Peer ${i}` });
+      const peer = seedInventoryItem(db, { name: `Peer ${i}` });
       connectionsService.create(db, { itemAId: hub.id, itemBId: peer.id });
     }
 
@@ -252,9 +181,9 @@ describe('connectionsService.delete', () => {
   });
 
   it('leaves unrelated connections untouched', () => {
-    const a = seedInventoryItem(db, { itemName: 'A' });
-    const b = seedInventoryItem(db, { itemName: 'B' });
-    const c = seedInventoryItem(db, { itemName: 'C' });
+    const a = seedInventoryItem(db, { name: 'A' });
+    const b = seedInventoryItem(db, { name: 'B' });
+    const c = seedInventoryItem(db, { name: 'C' });
 
     const pairAB = [a.id, b.id].toSorted() as [string, string];
     const pairAC = [a.id, c.id].toSorted() as [string, string];
@@ -274,7 +203,7 @@ describe('connectionsService.trace', () => {
   });
 
   it('returns root with no children when the item has no connections', () => {
-    const item = seedInventoryItem(db, { itemName: 'Lonely' });
+    const item = seedInventoryItem(db, { name: 'Lonely' });
     const tree = connectionsService.trace(db, item.id, 10);
     expect(tree.id).toBe(item.id);
     expect(tree.itemName).toBe('Lonely');
@@ -282,9 +211,9 @@ describe('connectionsService.trace', () => {
   });
 
   it('returns immediate neighbours as direct children', () => {
-    const hub = seedInventoryItem(db, { itemName: 'Hub' });
-    const peer1 = seedInventoryItem(db, { itemName: 'Peer 1' });
-    const peer2 = seedInventoryItem(db, { itemName: 'Peer 2' });
+    const hub = seedInventoryItem(db, { name: 'Hub' });
+    const peer1 = seedInventoryItem(db, { name: 'Peer 1' });
+    const peer2 = seedInventoryItem(db, { name: 'Peer 2' });
     connectionsService.create(db, { itemAId: hub.id, itemBId: peer1.id });
     connectionsService.create(db, { itemAId: hub.id, itemBId: peer2.id });
 
@@ -294,10 +223,10 @@ describe('connectionsService.trace', () => {
   });
 
   it('traverses multi-hop chains recursively', () => {
-    const a = seedInventoryItem(db, { itemName: 'A' });
-    const b = seedInventoryItem(db, { itemName: 'B' });
-    const c = seedInventoryItem(db, { itemName: 'C' });
-    const d = seedInventoryItem(db, { itemName: 'D' });
+    const a = seedInventoryItem(db, { name: 'A' });
+    const b = seedInventoryItem(db, { name: 'B' });
+    const c = seedInventoryItem(db, { name: 'C' });
+    const d = seedInventoryItem(db, { name: 'D' });
 
     const pairs = [
       [a.id, b.id],
@@ -321,9 +250,9 @@ describe('connectionsService.trace', () => {
   });
 
   it('caps depth at maxDepth', () => {
-    const a = seedInventoryItem(db, { itemName: 'A' });
-    const b = seedInventoryItem(db, { itemName: 'B' });
-    const c = seedInventoryItem(db, { itemName: 'C' });
+    const a = seedInventoryItem(db, { name: 'A' });
+    const b = seedInventoryItem(db, { name: 'B' });
+    const c = seedInventoryItem(db, { name: 'C' });
 
     const pairAB = [a.id, b.id].toSorted() as [string, string];
     const pairBC = [b.id, c.id].toSorted() as [string, string];
@@ -337,9 +266,9 @@ describe('connectionsService.trace', () => {
   });
 
   it('breaks cycles in a triangle so each node appears at most once', () => {
-    const a = seedInventoryItem(db, { itemName: 'A' });
-    const b = seedInventoryItem(db, { itemName: 'B' });
-    const c = seedInventoryItem(db, { itemName: 'C' });
+    const a = seedInventoryItem(db, { name: 'A' });
+    const b = seedInventoryItem(db, { name: 'B' });
+    const c = seedInventoryItem(db, { name: 'C' });
 
     for (const [x, y] of [
       [a.id, b.id],
@@ -372,7 +301,7 @@ describe('connectionsService.graph', () => {
   });
 
   it('returns a single-node subgraph when the item has no connections', () => {
-    const item = seedInventoryItem(db, { itemName: 'Lonely' });
+    const item = seedInventoryItem(db, { name: 'Lonely' });
     const result = connectionsService.graph(db, item.id, 10);
     expect(result.nodes).toHaveLength(1);
     expect(result.nodes[0]!.id).toBe(item.id);
@@ -380,9 +309,9 @@ describe('connectionsService.graph', () => {
   });
 
   it('includes cross-links between visited nodes (triangle)', () => {
-    const a = seedInventoryItem(db, { itemName: 'A' });
-    const b = seedInventoryItem(db, { itemName: 'B' });
-    const c = seedInventoryItem(db, { itemName: 'C' });
+    const a = seedInventoryItem(db, { name: 'A' });
+    const b = seedInventoryItem(db, { name: 'B' });
+    const c = seedInventoryItem(db, { name: 'C' });
 
     for (const [x, y] of [
       [a.id, b.id],
@@ -399,9 +328,9 @@ describe('connectionsService.graph', () => {
   });
 
   it('respects maxDepth', () => {
-    const a = seedInventoryItem(db, { itemName: 'A' });
-    const b = seedInventoryItem(db, { itemName: 'B' });
-    const c = seedInventoryItem(db, { itemName: 'C' });
+    const a = seedInventoryItem(db, { name: 'A' });
+    const b = seedInventoryItem(db, { name: 'B' });
+    const c = seedInventoryItem(db, { name: 'C' });
 
     const pairAB = [a.id, b.id].toSorted() as [string, string];
     const pairBC = [b.id, c.id].toSorted() as [string, string];
@@ -424,9 +353,9 @@ describe('connectionsService.graph', () => {
 
   it('includes node metadata (itemName, assetId, type)', () => {
     const item = seedInventoryItem(db, {
-      itemName: 'MacBook Pro',
-      assetId: 'ASSET-001',
-      type: 'electronics',
+      name: 'MacBook Pro',
+      code: 'ASSET-001',
+      legacyType: 'electronics',
     });
 
     const result = connectionsService.graph(db, item.id, 10);

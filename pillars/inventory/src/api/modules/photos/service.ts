@@ -4,16 +4,17 @@
 import { existsSync, mkdirSync, readdirSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
-import { asc, count, eq } from 'drizzle-orm';
+import { and, asc, count, eq, isNotNull, type SQL } from 'drizzle-orm';
 import sharp from 'sharp';
 
-import { homeInventory, type InventoryDb, itemPhotos } from '../../../db/index.js';
+import { items, type InventoryDb, itemPhotos } from '../../../db/index.js';
 import { NotFoundError, ValidationError } from '../../shared/errors.js';
 import { getInventoryImagesDir } from './paths.js';
+import { hasFilePath } from './types.js';
 
 import type {
   AttachPhotoInput,
-  ItemPhotoRow,
+  FilePhotoRow,
   UpdatePhotoInput,
   UploadPhotoInput,
 } from './types.js';
@@ -27,25 +28,29 @@ function assertSafeFilePath(filePath: string): void {
 
 /** Count + rows for a paginated list. */
 export interface PhotoListResult {
-  rows: ItemPhotoRow[];
+  rows: FilePhotoRow[];
   total: number;
 }
 
 /** Validate that an inventory item exists. */
 function assertItemExists(db: InventoryDb, itemId: string): void {
-  const [item] = db
-    .select({ id: homeInventory.id })
-    .from(homeInventory)
-    .where(eq(homeInventory.id, itemId))
-    .all();
+  const [item] = db.select({ id: items.id }).from(items).where(eq(items.id, itemId)).all();
   if (!item) throw new NotFoundError('Inventory item', itemId);
 }
 
-/** Get a single photo by ID. Throws NotFoundError if missing. */
-function getPhoto(db: InventoryDb, id: number): ItemPhotoRow {
+/**
+ * Get a single file-backed photo by ID. Throws NotFoundError if missing, or if
+ * it is a hash-only photo this legacy API cannot serve.
+ */
+function getPhoto(db: InventoryDb, id: number): FilePhotoRow {
   const [row] = db.select().from(itemPhotos).where(eq(itemPhotos.id, id)).all();
-  if (!row) throw new NotFoundError('Item photo', String(id));
+  if (!row || !hasFilePath(row)) throw new NotFoundError('Item photo', String(id));
   return row;
+}
+
+/** An item's file-backed photos, in position order. */
+function filePhotosOf(itemId: string): SQL | undefined {
+  return and(eq(itemPhotos.itemId, itemId), isNotNull(itemPhotos.filePath));
 }
 
 /**
@@ -81,7 +86,7 @@ function nextPhotoFilename(baseDir: string, itemId: string): string {
 }
 
 /** Upload, compress, and attach a photo to an inventory item. */
-export async function uploadPhoto(db: InventoryDb, input: UploadPhotoInput): Promise<ItemPhotoRow> {
+export async function uploadPhoto(db: InventoryDb, input: UploadPhotoInput): Promise<FilePhotoRow> {
   assertItemExists(db, input.itemId);
 
   const baseDir = getInventoryImagesDir();
@@ -98,7 +103,7 @@ export async function uploadPhoto(db: InventoryDb, input: UploadPhotoInput): Pro
       itemId: input.itemId,
       filePath: relPath,
       caption: input.caption ?? null,
-      sortOrder: input.sortOrder,
+      position: input.sortOrder,
     })
     .run();
 
@@ -107,7 +112,7 @@ export async function uploadPhoto(db: InventoryDb, input: UploadPhotoInput): Pro
 }
 
 /** Attach a photo to an inventory item. */
-export function attachPhoto(db: InventoryDb, input: AttachPhotoInput): ItemPhotoRow {
+export function attachPhoto(db: InventoryDb, input: AttachPhotoInput): FilePhotoRow {
   assertItemExists(db, input.itemId);
   assertSafeFilePath(input.filePath);
 
@@ -117,7 +122,7 @@ export function attachPhoto(db: InventoryDb, input: AttachPhotoInput): ItemPhoto
       itemId: input.itemId,
       filePath: input.filePath,
       caption: input.caption ?? null,
-      sortOrder: input.sortOrder,
+      position: input.sortOrder,
     })
     .run();
 
@@ -139,7 +144,7 @@ export function removePhoto(db: InventoryDb, id: number): void {
 }
 
 /** Update a photo's caption or sort order. */
-export function updatePhoto(db: InventoryDb, id: number, input: UpdatePhotoInput): ItemPhotoRow {
+export function updatePhoto(db: InventoryDb, id: number, input: UpdatePhotoInput): FilePhotoRow {
   getPhoto(db, id);
 
   const updates: Partial<typeof itemPhotos.$inferInsert> = {};
@@ -150,7 +155,7 @@ export function updatePhoto(db: InventoryDb, id: number, input: UpdatePhotoInput
     hasUpdates = true;
   }
   if (input.sortOrder !== undefined) {
-    updates.sortOrder = input.sortOrder;
+    updates.position = input.sortOrder;
     hasUpdates = true;
   }
 
@@ -171,16 +176,17 @@ export function listPhotosForItem(
   const rows = db
     .select()
     .from(itemPhotos)
-    .where(eq(itemPhotos.itemId, itemId))
-    .orderBy(asc(itemPhotos.sortOrder))
+    .where(filePhotosOf(itemId))
+    .orderBy(asc(itemPhotos.position))
     .limit(limit)
     .offset(offset)
-    .all();
+    .all()
+    .filter(hasFilePath);
 
   const [countResult] = db
     .select({ total: count() })
     .from(itemPhotos)
-    .where(eq(itemPhotos.itemId, itemId))
+    .where(filePhotosOf(itemId))
     .all();
 
   return { rows, total: countResult?.total ?? 0 };
@@ -194,7 +200,7 @@ export function reorderPhotos(
   db: InventoryDb,
   itemId: string,
   orderedIds: number[]
-): ItemPhotoRow[] {
+): FilePhotoRow[] {
   assertItemExists(db, itemId);
 
   for (const photoId of orderedIds) {
@@ -208,14 +214,15 @@ export function reorderPhotos(
     for (let i = 0; i < orderedIds.length; i++) {
       const photoId = orderedIds[i];
       if (photoId === undefined) continue;
-      tx.update(itemPhotos).set({ sortOrder: i }).where(eq(itemPhotos.id, photoId)).run();
+      tx.update(itemPhotos).set({ position: i }).where(eq(itemPhotos.id, photoId)).run();
     }
   });
 
   return db
     .select()
     .from(itemPhotos)
-    .where(eq(itemPhotos.itemId, itemId))
-    .orderBy(asc(itemPhotos.sortOrder))
-    .all();
+    .where(filePhotosOf(itemId))
+    .orderBy(asc(itemPhotos.position))
+    .all()
+    .filter(hasFilePath);
 }
