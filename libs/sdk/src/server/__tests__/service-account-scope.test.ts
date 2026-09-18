@@ -103,4 +103,47 @@ describe('resolveContractScope', () => {
   it('returns undefined for a path outside the contract', () => {
     expect(resolveContractScope(map, 'GET', '/health')).toBeUndefined();
   });
+
+  it('ignores case on a literal path, because Express routes `/TRANSACTIONS` to `/transactions`', () => {
+    expect(resolveContractScope(map, 'GET', '/TRANSACTIONS')).toBe('finance.transactions.list');
+    expect(resolveContractScope(map, 'GET', '/Budgets/')).toBe('finance.budgets.list');
+  });
+
+  it('ignores case on a parameterised path', () => {
+    expect(resolveContractScope(map, 'PATCH', '/Transactions/abc')).toBe(
+      'finance.transactions.update'
+    );
+  });
+
+  it('keeps literal-over-pattern precedence when the case differs', () => {
+    expect(resolveContractScope(map, 'GET', '/transactions/SEARCH')).toBe(
+      'finance.transactions.search'
+    );
+  });
+
+  it('resolves a HEAD as the GET it shares a path with, because Express runs the GET handler', () => {
+    expect(resolveContractScope(map, 'HEAD', '/transactions')).toBe('finance.transactions.list');
+    expect(resolveContractScope(map, 'head', '/transactions/abc')).toBe('finance.transactions.get');
+  });
+
+  it('does not stretch HEAD onto a path only a non-GET route declares', () => {
+    const writeOnly = buildContractScopeMap(
+      { sync: { push: { method: 'POST', path: '/sync' } } },
+      'finance'
+    );
+    expect(resolveContractScope(writeOnly, 'HEAD', '/sync')).toBeUndefined();
+  });
+
+  it('prefers a declared HEAD route over the GET beside it', () => {
+    const withHead = buildContractScopeMap(
+      {
+        blobs: {
+          probe: { method: 'HEAD', path: '/blobs/:id' },
+          get: { method: 'GET', path: '/blobs/:id' },
+        },
+      },
+      'finance'
+    );
+    expect(resolveContractScope(withHead, 'HEAD', '/blobs/x')).toBe('finance.blobs.probe');
+  });
 });
