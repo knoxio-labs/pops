@@ -39,6 +39,7 @@
     "generate:api-types": "tsx scripts/generate-api-types.ts"
   },
   "dependencies": {
+    "@pops/pillar-express": "workspace:*",
     "@pops/pillar-sdk": "workspace:*",
     "@pops/pillar-settings": "workspace:*",
     "@pops/types": "workspace:*",
