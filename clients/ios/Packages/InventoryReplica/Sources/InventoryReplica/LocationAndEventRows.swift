@@ -1,5 +1,4 @@
 import AppCore
-import Foundation
 import GRDB
 
 /// How one `InventoryLocation` maps onto a row of either location layer.
