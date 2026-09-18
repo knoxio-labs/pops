@@ -85,7 +85,11 @@ and sync change sequence; triggers refuse updates and deletes. `mutations`,
 Migration `0012_items_single_identity` built this from `home_inventory` and
 `containers` and dropped both. It aborts, writing nothing, when an id or a
 case-insensitive code is held twice across the two old tables; the operator
-resolves the clash by hand and restarts. After boot, legacy photos that only have
+resolves the clash by hand and restarts. A row pointing at a record that does
+not exist never aborts it: the row is kept whole, as JSON, in
+`migration_0012_orphans` with the reference it lacks and is not copied; an
+item or box whose location is gone is migrated in hand, and an item whose box
+is gone keeps its own location if that exists. After boot, legacy photos that only have
 a `file_path` are hashed into `media` in the background.
 
 The legacy `/items` and `/locations` routes keep their request and response

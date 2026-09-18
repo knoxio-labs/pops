@@ -21,12 +21,16 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { readMigrationJournal, stageMigrationsThrough } from '@pops/pillar-sdk/db';
 
+import { createTestTransport } from '../../api/__tests__/test-http.js';
+import { createInventoryApiApp } from '../../api/app.js';
 import { openInventoryDb } from '../open-inventory-db.js';
 import { MIGRATIONS_DIR } from './migrated-db.js';
 
 import type { OpenedInventoryDb } from '../open-inventory-db.js';
 
 const BASELINE_TAG = '0011_inventory_source_ref';
+
+const { requestOn } = createTestTransport();
 const MIGRATION_ACTOR = '0012_items_single_identity';
 
 let dir: string;
@@ -462,11 +466,35 @@ describe('0012_items_single_identity on a populated database', () => {
     });
   });
 
-  it('starts every item and location at revision 1, quantity 1, active', () => {
-    expect(all(`SELECT DISTINCT revision, quantity, lifecycle FROM items`)).toEqual([
-      { revision: 1, quantity: 1, lifecycle: 'active' },
+  it('starts every item and location at revision 1, quantity 1, active, except a box with history at 2', () => {
+    expect(
+      all(`SELECT id, revision, quantity, lifecycle FROM items WHERE revision <> 1 ORDER BY id`)
+    ).toEqual([
+      { id: 'c-moved', revision: 2, quantity: 1, lifecycle: 'active' },
+      { id: 'c-sealed', revision: 2, quantity: 1, lifecycle: 'active' },
+      { id: 'c-unpacked', revision: 2, quantity: 1, lifecycle: 'active' },
+    ]);
+    expect(all(`SELECT DISTINCT quantity, lifecycle FROM items`)).toEqual([
+      { quantity: 1, lifecycle: 'active' },
     ]);
     expect(all(`SELECT DISTINCT revision FROM locations`)).toEqual([{ revision: 1 }]);
+  });
+
+  it('writes a created event at revision 1 and a history event at revision 2, the row being at 2', () => {
+    expect(
+      all(
+        `SELECT e.entity_id, e.kind, e.entity_revision, i.revision AS row_revision
+         FROM events e JOIN items i ON i.id = e.entity_id
+         WHERE e.entity_id IN ('c-moved', 'c-sealed', 'c-unpacked') ORDER BY e.entity_id, e.seq`
+      )
+    ).toEqual([
+      { entity_id: 'c-moved', kind: 'created', entity_revision: 1, row_revision: 2 },
+      { entity_id: 'c-moved', kind: 'moved', entity_revision: 2, row_revision: 2 },
+      { entity_id: 'c-sealed', kind: 'created', entity_revision: 1, row_revision: 2 },
+      { entity_id: 'c-sealed', kind: 'sealed', entity_revision: 2, row_revision: 2 },
+      { entity_id: 'c-unpacked', kind: 'created', entity_revision: 1, row_revision: 2 },
+      { entity_id: 'c-unpacked', kind: 'unpacked', entity_revision: 2, row_revision: 2 },
+    ]);
   });
 
   it('writes one created event per item and location, from the migration actor', () => {
@@ -478,9 +506,11 @@ describe('0012_items_single_identity on a populated database', () => {
       { entity_kind: 'item', n: 9 },
       { entity_kind: 'location', n: 3 },
     ]);
-    expect(all(`SELECT DISTINCT actor_kind, actor_id, entity_revision FROM events`)).toEqual([
-      { actor_kind: 'migration', actor_id: MIGRATION_ACTOR, entity_revision: 1 },
-    ]);
+    expect(
+      all(
+        `SELECT DISTINCT actor_kind, actor_id, entity_revision FROM events WHERE kind = 'created'`
+      )
+    ).toEqual([{ actor_kind: 'migration', actor_id: MIGRATION_ACTOR, entity_revision: 1 }]);
     const drill = one<{ fields: string; after: string; server_time: string }>(
       `SELECT fields, after, server_time FROM events WHERE entity_id = 'i-drill'`
     );
@@ -619,6 +649,297 @@ describe('0012_items_single_identity on an empty database', () => {
     } finally {
       opened.raw.close();
     }
+  });
+});
+
+describe('0012_items_single_identity on a moved box that went nowhere', () => {
+  it('records only the access change, at revision 2, and no placement event', () => {
+    stageBaseline((raw) => {
+      insertLocation(raw, 'l-garage', 'Garage');
+      insertContainer(raw, { id: 'c-stayed', label: 'Stayed', state: 'moved', origin: 'l-garage' });
+      insertContainer(raw, {
+        id: 'c-same',
+        label: 'Same place',
+        state: 'moved',
+        origin: 'l-garage',
+        destination: 'l-garage',
+      });
+      insertContainer(raw, { id: 'c-limbo', label: 'Nowhere', state: 'moved' });
+    });
+    const opened = openInventoryDb(dbPath);
+    try {
+      const history = (
+        opened.raw
+          .prepare(
+            `SELECT entity_id, kind, fields, before, after, entity_revision FROM events
+             WHERE entity_kind = 'item' AND kind <> 'created' ORDER BY entity_id`
+          )
+          .all() as {
+          entity_id: string;
+          kind: string;
+          fields: string;
+          before: string;
+          after: string;
+          entity_revision: number;
+        }[]
+      ).map((row) => ({
+        ...row,
+        fields: JSON.parse(row.fields) as unknown,
+        before: JSON.parse(row.before) as unknown,
+        after: JSON.parse(row.after) as unknown,
+      }));
+      const accessOnly = {
+        kind: 'sealed',
+        fields: ['access'],
+        before: { access: 'open' },
+        after: { access: 'closed' },
+        entity_revision: 2,
+      };
+      expect(history).toEqual([
+        { entity_id: 'c-limbo', ...accessOnly },
+        { entity_id: 'c-same', ...accessOnly },
+        { entity_id: 'c-stayed', ...accessOnly },
+      ]);
+      expect(
+        opened.raw
+          .prepare(
+            `SELECT id, placement_kind, location_id, access, revision FROM items ORDER BY id`
+          )
+          .all()
+      ).toEqual([
+        { id: 'c-limbo', placement_kind: 'hand', location_id: null, access: 'closed', revision: 2 },
+        {
+          id: 'c-same',
+          placement_kind: 'location',
+          location_id: 'l-garage',
+          access: 'closed',
+          revision: 2,
+        },
+        {
+          id: 'c-stayed',
+          placement_kind: 'location',
+          location_id: 'l-garage',
+          access: 'closed',
+          revision: 2,
+        },
+      ]);
+    } finally {
+      opened.raw.close();
+    }
+  });
+});
+
+describe('0012_items_single_identity on rows pointing at records that do not exist', () => {
+  function seedOrphans(raw: Database.Database): void {
+    raw.pragma('foreign_keys = OFF');
+    insertLocation(raw, 'l-garage', 'Garage');
+    insertItem(raw, { id: 'i-ok', name: 'Drill', locationId: 'l-garage' });
+    insertItem(raw, { id: 'i-lost', name: 'Kettle', locationId: 'l-gone' });
+    insertItem(raw, { id: 'i-boxless', name: 'Saw', containerId: 'c-gone' });
+    insertContainer(raw, { id: 'c-lost', label: 'Lost box', state: 'sealed', origin: 'l-gone' });
+    insertContainer(raw, {
+      id: 'c-half',
+      label: 'Half box',
+      state: 'moved',
+      origin: 'l-gone',
+      destination: 'l-garage',
+    });
+    raw
+      .prepare(
+        `INSERT INTO fixtures (id, name, type, location_id, last_edited_time)
+         VALUES ('f-socket', 'Socket', 'power', 'l-garage', '2026-01-01T00:00:00Z')`
+      )
+      .run();
+    raw
+      .prepare(
+        `INSERT INTO item_photos (id, item_id, file_path, caption, sort_order, created_at)
+         VALUES (11, 'i-ok', 'items/i-ok/p.jpg', NULL, 0, '2026-01-01 00:00:00'),
+                (12, 'i-gone', 'items/i-gone/p.jpg', 'Front', 3, '2026-01-02 00:00:00')`
+      )
+      .run();
+    raw
+      .prepare(
+        `INSERT INTO item_uploaded_files (id, item_id, file_name, file_path, mime_type, file_size)
+         VALUES (21, 'i-ok', 'a.pdf', 'items/i-ok/a.pdf', 'application/pdf', 1),
+                (22, 'i-gone', 'b.pdf', 'items/i-gone/b.pdf', 'application/pdf', 2)`
+      )
+      .run();
+    raw
+      .prepare(
+        `INSERT INTO item_documents (id, item_id, paperless_document_id, document_type, title)
+         VALUES (31, 'i-ok', 900, 'receipt', NULL), (32, 'i-gone', 901, 'warranty', 'W')`
+      )
+      .run();
+    raw
+      .prepare(
+        `INSERT INTO item_connections (id, item_a_id, item_b_id)
+         VALUES (41, 'i-lost', 'i-ok'), (42, 'i-gone', 'i-ok')`
+      )
+      .run();
+    raw
+      .prepare(
+        `INSERT INTO item_fixture_connections (id, item_id, fixture_id)
+         VALUES (51, 'i-ok', 'f-socket'), (52, 'i-gone', 'f-socket'), (53, 'i-ok', 'f-gone'),
+                (54, 'i-gone', 'f-gone')`
+      )
+      .run();
+    raw.pragma('foreign_keys = ON');
+  }
+
+  let opened: OpenedInventoryDb;
+
+  beforeEach(() => {
+    stageBaseline(seedOrphans);
+    opened = openInventoryDb(dbPath);
+  });
+
+  afterEach(() => {
+    opened.raw.close();
+  });
+
+  function all<T>(sql: string): T[] {
+    return opened.raw.prepare(sql).all() as T[];
+  }
+
+  interface OrphanRow {
+    table_name: string;
+    row_json: string;
+    reason: string;
+    captured_at: string;
+  }
+
+  function orphans(): {
+    table: string;
+    id: unknown;
+    reason: string;
+    row: Record<string, unknown>;
+  }[] {
+    return all<OrphanRow>(`SELECT * FROM migration_0012_orphans`)
+      .map((o) => {
+        const row = JSON.parse(o.row_json) as Record<string, unknown>;
+        return { table: o.table_name, id: row['id'], reason: o.reason, row };
+      })
+      .toSorted((a, b) => `${a.table}/${String(a.id)}`.localeCompare(`${b.table}/${String(b.id)}`));
+  }
+
+  it('migrates, leaving no dangling reference behind', () => {
+    expect(all(`PRAGMA foreign_key_check`)).toEqual([]);
+    expect(
+      all(`SELECT name FROM sqlite_master WHERE name IN ('home_inventory', 'containers')`)
+    ).toEqual([]);
+  });
+
+  it('captures every dangling row with the reference it lacks', () => {
+    expect(orphans().map(({ table, id, reason }) => ({ table, id, reason }))).toEqual([
+      { table: 'containers', id: 'c-half', reason: 'missing location' },
+      { table: 'containers', id: 'c-lost', reason: 'missing location' },
+      { table: 'home_inventory', id: 'i-boxless', reason: 'missing container' },
+      { table: 'home_inventory', id: 'i-lost', reason: 'missing location' },
+      { table: 'item_connections', id: 42, reason: 'missing item' },
+      { table: 'item_documents', id: 32, reason: 'missing item' },
+      { table: 'item_fixture_connections', id: 52, reason: 'missing item' },
+      { table: 'item_fixture_connections', id: 53, reason: 'missing fixture' },
+      { table: 'item_fixture_connections', id: 54, reason: 'missing item and fixture' },
+      { table: 'item_photos', id: 12, reason: 'missing item' },
+      { table: 'item_uploaded_files', id: 22, reason: 'missing item' },
+    ]);
+    for (const o of all<OrphanRow>(`SELECT * FROM migration_0012_orphans`)) {
+      expect(new Date(o.captured_at).toISOString()).toBe(o.captured_at);
+    }
+  });
+
+  it('keeps each captured row whole, original references included', () => {
+    const byKey = new Map(orphans().map((o) => [`${o.table}/${String(o.id)}`, o.row]));
+    expect(byKey.get('item_photos/12')).toEqual({
+      id: 12,
+      item_id: 'i-gone',
+      file_path: 'items/i-gone/p.jpg',
+      caption: 'Front',
+      sort_order: 3,
+      created_at: '2026-01-02 00:00:00',
+    });
+    expect(byKey.get('containers/c-half')).toEqual({
+      id: 'c-half',
+      label: 'Half box',
+      code: null,
+      state: 'moved',
+      origin_location_id: 'l-gone',
+      destination_location_id: 'l-garage',
+      notes: null,
+      created_at: '2026-02-01 10:00:00',
+      updated_at: '2026-02-03 10:00:00',
+    });
+    expect(byKey.get('home_inventory/i-lost')).toMatchObject({
+      id: 'i-lost',
+      item_name: 'Kettle',
+      location_id: 'l-gone',
+      container_id: null,
+      last_edited_time: '2026-01-05T00:00:00Z',
+    });
+    expect(Object.keys(byKey.get('home_inventory/i-lost') ?? {})).toHaveLength(32);
+    expect(byKey.get('home_inventory/i-boxless')).toMatchObject({ container_id: 'c-gone' });
+  });
+
+  it('copies every row whose references exist', () => {
+    expect(all(`SELECT id FROM item_photos`)).toEqual([{ id: 11 }]);
+    expect(all(`SELECT id FROM item_uploaded_files`)).toEqual([{ id: 21 }]);
+    expect(all(`SELECT id FROM item_documents`)).toEqual([{ id: 31 }]);
+    expect(all(`SELECT id FROM item_connections`)).toEqual([{ id: 41 }]);
+    expect(all(`SELECT id FROM item_fixture_connections`)).toEqual([{ id: 51 }]);
+  });
+
+  it('keeps an item or box whose location is gone, in hand with nothing remembered', () => {
+    expect(
+      all(
+        `SELECT id, placement_kind, location_id, containing_item_id, previous_placement_kind,
+                previous_location_id, previous_containing_item_id
+         FROM items ORDER BY id`
+      )
+    ).toEqual([
+      {
+        id: 'c-half',
+        placement_kind: 'location',
+        location_id: 'l-garage',
+        containing_item_id: null,
+        previous_placement_kind: null,
+        previous_location_id: null,
+        previous_containing_item_id: null,
+      },
+      ...['c-lost', 'i-boxless', 'i-lost'].map((id) => ({
+        id,
+        placement_kind: 'hand',
+        location_id: null,
+        containing_item_id: null,
+        previous_placement_kind: null,
+        previous_location_id: null,
+        previous_containing_item_id: null,
+      })),
+      {
+        id: 'i-ok',
+        placement_kind: 'location',
+        location_id: 'l-garage',
+        containing_item_id: null,
+        previous_placement_kind: null,
+        previous_location_id: null,
+        previous_containing_item_id: null,
+      },
+    ]);
+  });
+
+  it('names no missing location in any event', () => {
+    expect(
+      all(`SELECT seq FROM events WHERE before LIKE '%l-gone%' OR after LIKE '%l-gone%'`)
+    ).toEqual([]);
+  });
+
+  it('boots: the pillar serves /health from the migrated database', async () => {
+    const app = createInventoryApiApp({
+      inventoryDb: opened,
+      version: '0.0.1-test',
+      selfBaseUrl: 'http://localhost:3002',
+    });
+    const res = await requestOn(app).get('/health');
+    expect(res.status).toBe(200);
   });
 });
 

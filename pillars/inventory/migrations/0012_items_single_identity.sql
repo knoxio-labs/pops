@@ -41,6 +41,88 @@ WHERE EXISTS (
 --> statement-breakpoint
 DROP TABLE `preflight_0012`;
 --> statement-breakpoint
+-- A row pointing at a record that does not exist would fail its copy below
+-- with `FOREIGN KEY constraint failed`, roll the whole migration back, and
+-- keep the pillar from booting on every restart. So nothing dangling is
+-- copied and nothing dangling aborts: each such row is captured whole, as
+-- JSON, in `migration_0012_orphans` with the reference it lacks, and the
+-- migration carries on without it. An item or box whose location is gone is
+-- kept, in hand; one whose box is gone keeps its own location, if that exists.
+CREATE TABLE `migration_0012_orphans` (
+    `table_name` text NOT NULL,
+    `row_json` text NOT NULL,
+    `reason` text NOT NULL,
+    `captured_at` text NOT NULL
+);
+--> statement-breakpoint
+INSERT INTO `migration_0012_orphans` (`table_name`, `row_json`, `reason`, `captured_at`)
+SELECT
+    'containers',
+    json_object(
+        'id', `id`, 'label', `label`, 'code', `code`,
+        'state', `state`, 'origin_location_id', `origin_location_id`, 'destination_location_id', `destination_location_id`,
+        'notes', `notes`, 'created_at', `created_at`, 'updated_at', `updated_at`
+    ),
+    'missing location',
+    strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+FROM `containers`
+WHERE (`origin_location_id` IS NOT NULL AND `origin_location_id` NOT IN (SELECT `id` FROM `locations`)) OR (`destination_location_id` IS NOT NULL AND `destination_location_id` NOT IN (SELECT `id` FROM `locations`));
+--> statement-breakpoint
+UPDATE `containers`
+SET `origin_location_id` = NULL, `destination_location_id` = NULL
+WHERE coalesce(`destination_location_id`, `origin_location_id`) NOT IN (SELECT `id` FROM `locations`);
+--> statement-breakpoint
+UPDATE `containers`
+SET `origin_location_id` = NULL
+WHERE (`origin_location_id` IS NOT NULL AND `origin_location_id` NOT IN (SELECT `id` FROM `locations`));
+--> statement-breakpoint
+INSERT INTO `migration_0012_orphans` (`table_name`, `row_json`, `reason`, `captured_at`)
+SELECT
+    'home_inventory',
+    json_object(
+        'id', `id`, 'notion_id', `notion_id`, 'item_name', `item_name`,
+        'brand', `brand`, 'model', `model`, 'item_id', `item_id`,
+        'room', `room`, 'location', `location`, 'type', `type`,
+        'condition', `condition`, 'in_use', `in_use`, 'deductible', `deductible`,
+        'purchase_date', `purchase_date`, 'warranty_expires', `warranty_expires`, 'replacement_value', `replacement_value`,
+        'resale_value', `resale_value`, 'purchase_transaction_id', `purchase_transaction_id`, 'purchased_from_id', `purchased_from_id`,
+        'purchased_from_name', `purchased_from_name`, 'purchase_price', `purchase_price`, 'asset_id', `asset_id`,
+        'notes', `notes`, 'location_id', `location_id`, 'created_at', `created_at`,
+        'updated_at', `updated_at`, 'last_edited_time', `last_edited_time`, 'purchase_transaction_uri', `purchase_transaction_uri`,
+        'purchase_transaction_stale_at', `purchase_transaction_stale_at`, 'owner_uri', `owner_uri`, 'owner_stale_at', `owner_stale_at`,
+        'container_id', `container_id`, 'source_ref', `source_ref`
+    ),
+    'missing location',
+    strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+FROM `home_inventory`
+WHERE (`location_id` IS NOT NULL AND `location_id` NOT IN (SELECT `id` FROM `locations`));
+--> statement-breakpoint
+UPDATE `home_inventory` SET `location_id` = NULL WHERE (`location_id` IS NOT NULL AND `location_id` NOT IN (SELECT `id` FROM `locations`));
+--> statement-breakpoint
+INSERT INTO `migration_0012_orphans` (`table_name`, `row_json`, `reason`, `captured_at`)
+SELECT
+    'home_inventory',
+    json_object(
+        'id', `id`, 'notion_id', `notion_id`, 'item_name', `item_name`,
+        'brand', `brand`, 'model', `model`, 'item_id', `item_id`,
+        'room', `room`, 'location', `location`, 'type', `type`,
+        'condition', `condition`, 'in_use', `in_use`, 'deductible', `deductible`,
+        'purchase_date', `purchase_date`, 'warranty_expires', `warranty_expires`, 'replacement_value', `replacement_value`,
+        'resale_value', `resale_value`, 'purchase_transaction_id', `purchase_transaction_id`, 'purchased_from_id', `purchased_from_id`,
+        'purchased_from_name', `purchased_from_name`, 'purchase_price', `purchase_price`, 'asset_id', `asset_id`,
+        'notes', `notes`, 'location_id', `location_id`, 'created_at', `created_at`,
+        'updated_at', `updated_at`, 'last_edited_time', `last_edited_time`, 'purchase_transaction_uri', `purchase_transaction_uri`,
+        'purchase_transaction_stale_at', `purchase_transaction_stale_at`, 'owner_uri', `owner_uri`, 'owner_stale_at', `owner_stale_at`,
+        'container_id', `container_id`, 'source_ref', `source_ref`
+    ),
+    'missing container',
+    strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+FROM `home_inventory`
+WHERE `container_id` IS NOT NULL AND `container_id` NOT IN (SELECT `id` FROM `containers`);
+--> statement-breakpoint
+UPDATE `home_inventory` SET `container_id` = NULL
+WHERE `container_id` IS NOT NULL AND `container_id` NOT IN (SELECT `id` FROM `containers`);
+--> statement-breakpoint
 CREATE TABLE `media` (
 	`sha256` text PRIMARY KEY NOT NULL,
 	`mime` text NOT NULL,
@@ -243,7 +325,7 @@ BEGIN
 	SELECT RAISE(ABORT, 'events is append-only');
 END;
 --> statement-breakpoint
--- Every migrated item gets revision 1 and one `created` event from the
+-- Every migrated item gets one `created` event, at revision 1, from the
 -- `migration` actor. Event field names are the wire's camelCase names, and a
 -- placement is the wire's Placement object. A box's `created` event records
 -- the access it was created with, so its history event below reads as a
@@ -294,37 +376,53 @@ LEFT JOIN `home_inventory` h ON h.`id` = i.`id`
 ORDER BY i.`created_at`, i.`id`;
 --> statement-breakpoint
 -- `sealed`, `moved` and `unpacked` are no longer states (ADR-002 D1); each
--- becomes one history event, stamped with the box's last update.
+-- becomes one history event, stamped with the box's last update. The box's
+-- `created` event is revision 1 and its history event revision 2, which is
+-- the row's revision (ADR-002 D4: `entity_revision` is the revision after the
+-- event). A `moved` box with no destination, or one moved to where it was
+-- packed, changed only its access, so it gets a `sealed` event rather than a
+-- move whose before and after are the same place.
 INSERT INTO `events` (
-	`entity_kind`, `entity_id`, `kind`, `fields`, `before`, `after`,
-	`entity_revision`, `actor_kind`, `actor_id`, `actor_label`, `server_time`
+    `entity_kind`, `entity_id`, `kind`, `fields`, `before`, `after`,
+    `entity_revision`, `actor_kind`, `actor_id`, `actor_label`, `server_time`
 )
 SELECT
-	'item', c.`id`, c.`state`,
-	CASE WHEN c.`state` = 'moved' THEN json_array('placement', 'access') ELSE json_array('access') END,
-	CASE c.`state`
-		WHEN 'sealed' THEN json_object('access', 'open')
-		WHEN 'unpacked' THEN json_object('access', 'closed')
-		ELSE json_object(
-			'placement', CASE WHEN c.`origin_location_id` IS NULL THEN json_object('kind', 'hand')
-				ELSE json_object('kind', 'location', 'locationId', c.`origin_location_id`) END,
-			'access', 'open'
-		)
-	END,
-	CASE c.`state`
-		WHEN 'sealed' THEN json_object('access', 'closed')
-		WHEN 'unpacked' THEN json_object('access', 'open')
-		ELSE json_object(
-			'placement', CASE WHEN i.`location_id` IS NULL THEN json_object('kind', 'hand')
-				ELSE json_object('kind', 'location', 'locationId', i.`location_id`) END,
-			'access', 'closed'
-		)
-	END,
-	1, 'migration', '0012_items_single_identity', 'Migration', c.`updated_at`
+    'item', c.`id`,
+    CASE WHEN c.`state` = 'moved' AND NOT h.`relocated` THEN 'sealed' ELSE c.`state` END,
+    CASE WHEN h.`relocated` THEN json_array('placement', 'access') ELSE json_array('access') END,
+    CASE
+        WHEN c.`state` = 'unpacked' THEN json_object('access', 'closed')
+        WHEN h.`relocated` THEN json_object(
+            'placement', CASE WHEN c.`origin_location_id` IS NULL THEN json_object('kind', 'hand')
+                ELSE json_object('kind', 'location', 'locationId', c.`origin_location_id`) END,
+            'access', 'open'
+        )
+        ELSE json_object('access', 'open')
+    END,
+    CASE
+        WHEN c.`state` = 'unpacked' THEN json_object('access', 'open')
+        WHEN h.`relocated` THEN json_object(
+            'placement', json_object('kind', 'location', 'locationId', i.`location_id`),
+            'access', 'closed'
+        )
+        ELSE json_object('access', 'closed')
+    END,
+    2, 'migration', '0012_items_single_identity', 'Migration', c.`updated_at`
 FROM `containers` c
 JOIN `items` i ON i.`id` = c.`id`
+JOIN (
+    SELECT
+        `id`,
+        `state` = 'moved'
+            AND `destination_location_id` IS NOT NULL
+            AND `destination_location_id` IS NOT `origin_location_id` AS `relocated`
+    FROM `containers`
+) h ON h.`id` = c.`id`
 WHERE c.`state` <> 'open'
 ORDER BY c.`updated_at`, c.`id`;
+--> statement-breakpoint
+UPDATE `items` SET `revision` = 2
+WHERE `id` IN (SELECT `id` FROM `containers` WHERE `state` <> 'open');
 --> statement-breakpoint
 CREATE TABLE `item_photos_new` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
@@ -337,8 +435,21 @@ CREATE TABLE `item_photos_new` (
 	CONSTRAINT `ck_item_photos_source` CHECK(`media_sha256` IS NOT NULL OR `file_path` IS NOT NULL)
 );
 --> statement-breakpoint
+INSERT INTO `migration_0012_orphans` (`table_name`, `row_json`, `reason`, `captured_at`)
+SELECT
+    'item_photos',
+    json_object(
+        'id', `id`, 'item_id', `item_id`, 'file_path', `file_path`,
+        'caption', `caption`, 'sort_order', `sort_order`, 'created_at', `created_at`
+    ),
+    'missing item',
+    strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+FROM `item_photos`
+WHERE `item_id` NOT IN (SELECT `id` FROM `items`);
+--> statement-breakpoint
 INSERT INTO `item_photos_new` (`id`, `item_id`, `file_path`, `caption`, `position`, `created_at`)
-SELECT `id`, `item_id`, `file_path`, `caption`, `sort_order`, `created_at` FROM `item_photos`;
+SELECT `id`, `item_id`, `file_path`, `caption`, `sort_order`, `created_at` FROM `item_photos`
+WHERE `item_id` IN (SELECT `id` FROM `items`);
 --> statement-breakpoint
 DROP TABLE `item_photos`;
 --> statement-breakpoint
@@ -357,10 +468,24 @@ CREATE TABLE `item_uploaded_files_new` (
 	`created_at` text DEFAULT (datetime('now')) NOT NULL
 );
 --> statement-breakpoint
+INSERT INTO `migration_0012_orphans` (`table_name`, `row_json`, `reason`, `captured_at`)
+SELECT
+    'item_uploaded_files',
+    json_object(
+        'id', `id`, 'item_id', `item_id`, 'file_name', `file_name`,
+        'file_path', `file_path`, 'mime_type', `mime_type`, 'file_size', `file_size`,
+        'uploaded_at', `uploaded_at`, 'created_at', `created_at`
+    ),
+    'missing item',
+    strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+FROM `item_uploaded_files`
+WHERE `item_id` NOT IN (SELECT `id` FROM `items`);
+--> statement-breakpoint
 INSERT INTO `item_uploaded_files_new`
 	(`id`, `item_id`, `file_name`, `file_path`, `mime_type`, `file_size`, `uploaded_at`, `created_at`)
 SELECT `id`, `item_id`, `file_name`, `file_path`, `mime_type`, `file_size`, `uploaded_at`, `created_at`
-FROM `item_uploaded_files`;
+FROM `item_uploaded_files`
+WHERE `item_id` IN (SELECT `id` FROM `items`);
 --> statement-breakpoint
 DROP TABLE `item_uploaded_files`;
 --> statement-breakpoint
@@ -377,8 +502,21 @@ CREATE TABLE `item_documents_new` (
 	`created_at` text DEFAULT (datetime('now')) NOT NULL
 );
 --> statement-breakpoint
+INSERT INTO `migration_0012_orphans` (`table_name`, `row_json`, `reason`, `captured_at`)
+SELECT
+    'item_documents',
+    json_object(
+        'id', `id`, 'item_id', `item_id`, 'paperless_document_id', `paperless_document_id`,
+        'document_type', `document_type`, 'title', `title`, 'created_at', `created_at`
+    ),
+    'missing item',
+    strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+FROM `item_documents`
+WHERE `item_id` NOT IN (SELECT `id` FROM `items`);
+--> statement-breakpoint
 INSERT INTO `item_documents_new` (`id`, `item_id`, `paperless_document_id`, `document_type`, `title`, `created_at`)
-SELECT `id`, `item_id`, `paperless_document_id`, `document_type`, `title`, `created_at` FROM `item_documents`;
+SELECT `id`, `item_id`, `paperless_document_id`, `document_type`, `title`, `created_at` FROM `item_documents`
+WHERE `item_id` IN (SELECT `id` FROM `items`);
 --> statement-breakpoint
 DROP TABLE `item_documents`;
 --> statement-breakpoint
@@ -398,8 +536,21 @@ CREATE TABLE `item_connections_new` (
 	CONSTRAINT `chk_item_connections_order` CHECK(`item_a_id` < `item_b_id`)
 );
 --> statement-breakpoint
+INSERT INTO `migration_0012_orphans` (`table_name`, `row_json`, `reason`, `captured_at`)
+SELECT
+    'item_connections',
+    json_object(
+        'id', `id`, 'item_a_id', `item_a_id`, 'item_b_id', `item_b_id`,
+        'created_at', `created_at`
+    ),
+    'missing item',
+    strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+FROM `item_connections`
+WHERE `item_a_id` NOT IN (SELECT `id` FROM `items`) OR `item_b_id` NOT IN (SELECT `id` FROM `items`);
+--> statement-breakpoint
 INSERT INTO `item_connections_new` (`id`, `item_a_id`, `item_b_id`, `created_at`)
-SELECT `id`, `item_a_id`, `item_b_id`, `created_at` FROM `item_connections`;
+SELECT `id`, `item_a_id`, `item_b_id`, `created_at` FROM `item_connections`
+WHERE `item_a_id` IN (SELECT `id` FROM `items`) AND `item_b_id` IN (SELECT `id` FROM `items`);
 --> statement-breakpoint
 DROP TABLE `item_connections`;
 --> statement-breakpoint
@@ -418,8 +569,25 @@ CREATE TABLE `item_fixture_connections_new` (
 	`created_at` text DEFAULT (datetime('now')) NOT NULL
 );
 --> statement-breakpoint
+INSERT INTO `migration_0012_orphans` (`table_name`, `row_json`, `reason`, `captured_at`)
+SELECT
+    'item_fixture_connections',
+    json_object(
+        'id', `id`, 'item_id', `item_id`, 'fixture_id', `fixture_id`,
+        'created_at', `created_at`
+    ),
+    CASE
+        WHEN `item_id` NOT IN (SELECT `id` FROM `items`) AND `fixture_id` NOT IN (SELECT `id` FROM `fixtures`) THEN 'missing item and fixture'
+        WHEN `item_id` NOT IN (SELECT `id` FROM `items`) THEN 'missing item'
+        ELSE 'missing fixture'
+    END,
+    strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+FROM `item_fixture_connections`
+WHERE `item_id` NOT IN (SELECT `id` FROM `items`) OR `fixture_id` NOT IN (SELECT `id` FROM `fixtures`);
+--> statement-breakpoint
 INSERT INTO `item_fixture_connections_new` (`id`, `item_id`, `fixture_id`, `created_at`)
-SELECT `id`, `item_id`, `fixture_id`, `created_at` FROM `item_fixture_connections`;
+SELECT `id`, `item_id`, `fixture_id`, `created_at` FROM `item_fixture_connections`
+WHERE `item_id` IN (SELECT `id` FROM `items`) AND `fixture_id` IN (SELECT `id` FROM `fixtures`);
 --> statement-breakpoint
 DROP TABLE `item_fixture_connections`;
 --> statement-breakpoint
