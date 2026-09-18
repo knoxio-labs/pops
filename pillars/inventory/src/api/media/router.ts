@@ -27,6 +27,12 @@ import { isMediaVariant, mediaVariantETag, mediaVariantPath } from './variants.j
 
 import type { InventoryDb } from '../../db/index.js';
 
+/**
+ * The one path both media routes serve. Exported so the service-account gate
+ * scopes exactly the path this router registers (`inventory.media`).
+ */
+export const MEDIA_ROUTE_PATH = '/media/:sha256';
+
 /** Matches D9's mobile media cap so a route can't accept locally what bfm's proxy would reject upstream. */
 export const MEDIA_UPLOAD_LIMIT_BYTES = 8 * 1024 * 1024;
 
@@ -143,11 +149,11 @@ function handleGet(deps: CreateInventoryMediaRouterDeps, req: Request, res: Resp
 export function createInventoryMediaRouter(deps: CreateInventoryMediaRouterDeps): Router {
   const router = Router();
 
-  router.put('/media/:sha256', (req, res, next) => {
+  router.put(MEDIA_ROUTE_PATH, (req, res, next) => {
     handlePut(deps, req, res).catch(next);
   });
 
-  router.get('/media/:sha256', (req, res) => {
+  router.get(MEDIA_ROUTE_PATH, (req, res) => {
     handleGet(deps, req, res);
   });
 

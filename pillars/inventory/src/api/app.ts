@@ -81,8 +81,8 @@ export function createInventoryApiApp(deps: InventoryApiDeps): Express {
   });
 
   // Inbound service-account gate. Mounted after the raw probes (which carry no
-  // scope) and before the contract surface, so every contract route is covered
-  // without enumerating them here.
+  // scope) and before the contract surface and the raw byte routers, so every
+  // contract route and every declared raw route is covered.
   app.use(
     createServiceAccountScopeMiddleware(
       deps.serviceAccountVerifier ?? createRegistryServiceAccountVerifier()
