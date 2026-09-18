@@ -1,7 +1,7 @@
 import { sql } from 'drizzle-orm';
 import { index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
-import { homeInventory } from './inventory.js';
+import { items } from './items.js';
 
 /**
  * Per-item directly-uploaded files (PDFs, images, plain-text receipts, etc.).
@@ -19,7 +19,7 @@ export const itemUploadedFiles = sqliteTable(
     id: integer('id').primaryKey({ autoIncrement: true }),
     itemId: text('item_id')
       .notNull()
-      .references(() => homeInventory.id, { onDelete: 'cascade' }),
+      .references(() => items.id, { onDelete: 'cascade' }),
     fileName: text('file_name').notNull(),
     filePath: text('file_path').notNull(),
     mimeType: text('mime_type').notNull(),

@@ -15,8 +15,9 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { INVENTORY_CONDITIONS } from '../../contract/types/condition.js';
+import { seedInventoryItem } from '../../db/__tests__/item-fixture.js';
 import { crossPillarUrisService, openInventoryDb, type OpenedInventoryDb } from '../../db/index.js';
-import { homeInventory } from '../../db/schema.js';
+import { items } from '../../db/schema.js';
 import { createInventoryApiApp } from '../app.js';
 import { createTestTransport } from './test-http.js';
 import { HttpError, makeClient } from './test-utils.js';
@@ -100,9 +101,9 @@ describe('items REST — CRUD happy paths', () => {
     const created = await client().items.create({ itemName: 'Fanned-out asset' });
 
     const row = inventoryDb.db
-      .select({ inUse: homeInventory.inUse })
-      .from(homeInventory)
-      .where(eq(homeInventory.id, created.data.id))
+      .select({ inUse: items.inUse })
+      .from(items)
+      .where(eq(items.id, created.data.id))
       .get();
 
     expect(row?.inUse).toBeNull();
@@ -112,9 +113,9 @@ describe('items REST — CRUD happy paths', () => {
     const created = await client().items.create({ itemName: 'Reviewed asset', inUse: false });
 
     const row = inventoryDb.db
-      .select({ inUse: homeInventory.inUse })
-      .from(homeInventory)
-      .where(eq(homeInventory.id, created.data.id))
+      .select({ inUse: items.inUse })
+      .from(items)
+      .where(eq(items.id, created.data.id))
       .get();
 
     expect(row?.inUse).toBe(0);
@@ -147,9 +148,9 @@ describe('items REST — CRUD happy paths', () => {
     const created = await api.items.create({ itemName: 'Toaster' });
 
     const [row] = inventoryDb.db
-      .select({ condition: homeInventory.condition })
-      .from(homeInventory)
-      .where(eq(homeInventory.id, created.data.id))
+      .select({ condition: items.condition })
+      .from(items)
+      .where(eq(items.id, created.data.id))
       .all();
     expect(row?.condition).toBe('Good');
   });
@@ -159,9 +160,9 @@ describe('items REST — CRUD happy paths', () => {
     const created = await api.items.create({ itemName: 'Kettle' });
 
     const [row] = inventoryDb.db
-      .select({ condition: homeInventory.condition })
-      .from(homeInventory)
-      .where(eq(homeInventory.id, created.data.id))
+      .select({ condition: items.condition })
+      .from(items)
+      .where(eq(items.id, created.data.id))
       .all();
     expect(INVENTORY_CONDITIONS).toContain(row?.condition);
   });
@@ -271,8 +272,8 @@ describe('items REST — cross-pillar soft URI derivation', () => {
       'pops://finance/transaction/tx-new',
     ]);
     const [row] = inventoryDb.db
-      .select({ staleAt: homeInventory.purchaseTransactionStaleAt })
-      .from(homeInventory)
+      .select({ staleAt: items.purchaseTransactionStaleAt })
+      .from(items)
       .all();
     expect(row?.staleAt).toBeNull();
   });
@@ -397,5 +398,127 @@ describe('items REST — raw HTTP wire smoke', () => {
     expect(res.status).toBe(200);
     expect(res.body.data).toHaveLength(1);
     expect(res.body.data[0].itemName).toBe('Wire smoke item');
+  });
+});
+
+describe('items REST — placing items in a container item (ADR-002 D1)', () => {
+  function seedBox(name = 'Box B412'): string {
+    return seedInventoryItem(inventoryDb.db, { name, isContainer: true }).id;
+  }
+
+  function placementOf(id: string) {
+    return inventoryDb.db
+      .select({
+        placementKind: items.placementKind,
+        locationId: items.locationId,
+        containingItemId: items.containingItemId,
+        previousPlacementKind: items.previousPlacementKind,
+        previousLocationId: items.previousLocationId,
+        previousContainingItemId: items.previousContainingItemId,
+      })
+      .from(items)
+      .where(eq(items.id, id))
+      .get();
+  }
+
+  it('places a created item in the container alone, even when a location is sent too', async () => {
+    const api = client();
+    const box = seedBox();
+    const shelf = await api.locations.create({ name: 'Shelf' });
+
+    const created = await api.items.create({
+      itemName: 'Drill',
+      containerId: box,
+      locationId: shelf.data.id,
+    });
+
+    expect(created.data).toMatchObject({ containerId: box, locationId: null });
+    expect(placementOf(created.data.id)).toMatchObject({
+      placementKind: 'container',
+      containingItemId: box,
+      locationId: null,
+    });
+    const listed = await api.items.list({ containerId: box });
+    expect(listed.data.map((item) => item.id)).toEqual([created.data.id]);
+  });
+
+  it('answers 404 for a containerId naming no item, or an item that is not a container', async () => {
+    const api = client();
+    const plain = await api.items.create({ itemName: 'Kettle' });
+
+    await expect(api.items.create({ itemName: 'X', containerId: 'nope' })).rejects.toMatchObject({
+      status: 404,
+    });
+    await expect(
+      api.items.create({ itemName: 'Y', containerId: plain.data.id })
+    ).rejects.toMatchObject({ status: 404 });
+  });
+
+  it('refuses to put a container inside itself or inside its own contents', async () => {
+    const api = client();
+    const outer = seedBox('Outer');
+    const inner = seedBox('Inner');
+    await api.items.update(inner, { containerId: outer });
+
+    await expect(api.items.update(outer, { containerId: outer })).rejects.toMatchObject({
+      status: 400,
+    });
+    await expect(api.items.update(outer, { containerId: inner })).rejects.toMatchObject({
+      status: 400,
+    });
+    expect(placementOf(outer)).toMatchObject({ placementKind: 'hand' });
+  });
+
+  it('takes an item out of its container into hand, remembering the container', async () => {
+    const api = client();
+    const box = seedBox();
+    const created = await api.items.create({ itemName: 'Tape', containerId: box });
+
+    await api.items.update(created.data.id, { containerId: null });
+
+    expect(placementOf(created.data.id)).toEqual({
+      placementKind: 'hand',
+      locationId: null,
+      containingItemId: null,
+      previousPlacementKind: 'container',
+      previousLocationId: null,
+      previousContainingItemId: box,
+    });
+  });
+
+  it('deleting a container empties it: its contents survive in hand, remembering it', async () => {
+    const api = client();
+    const box = seedBox();
+    const created = await api.items.create({ itemName: 'Cable', containerId: box });
+
+    await api.items.delete(box);
+
+    const survivor = await api.items.get(created.data.id);
+    expect(survivor.data).toMatchObject({ containerId: null, locationId: null });
+    expect(placementOf(created.data.id)).toMatchObject({
+      placementKind: 'hand',
+      previousPlacementKind: 'container',
+      previousContainingItemId: box,
+    });
+  });
+
+  it('maps the renamed columns back to the legacy field names', async () => {
+    const created = await client().items.create({
+      itemName: 'Router',
+      assetId: 'NET01',
+      type: 'Networking',
+    });
+
+    expect(created.data).toMatchObject({
+      itemName: 'Router',
+      assetId: 'NET01',
+      type: 'Networking',
+    });
+    const stored = inventoryDb.db
+      .select({ name: items.name, code: items.code, legacyType: items.legacyType })
+      .from(items)
+      .where(eq(items.id, created.data.id))
+      .get();
+    expect(stored).toEqual({ name: 'Router', code: 'NET01', legacyType: 'Networking' });
   });
 });

@@ -50,22 +50,36 @@ internal struct CatalogTests {
         }
     }
 
-    @Test("An experiment offers at least two answers")
+    /// While it is open. A decided experiment keeps the answer that won and
+    /// drops the screens that lost, because a losing variant kept alive is a
+    /// second design somebody builds from by mistake.
+    @Test("An open experiment offers at least two answers")
     func experimentsHaveCompetingVariants() {
-        for experiment in Catalog.experiments {
+        for experiment in Catalog.experiments where experiment.isOpen {
             #expect(
                 experiment.variants.count >= 2,
-                "\(experiment.id) has \(experiment.variants.count) variant(s) — an experiment with one answer is a screen"
+                "\(experiment.id) has \(experiment.variants.count) variant(s); an open experiment with one answer is a screen"
             )
         }
     }
 
-    @Test("At most one open experiment sits on a surface")
-    func oneOpenExperimentPerSubject() {
-        let subjects = Catalog.experiments.filter(\.isOpen).map(\.subject)
+    @Test("Every experiment has at least one variant")
+    func experimentsHaveAVariant() {
+        for experiment in Catalog.experiments {
+            #expect(!experiment.variants.isEmpty, "\(experiment.id) stages nothing")
+        }
+    }
+
+    /// Several open experiments on one surface are allowed on purpose; see
+    /// ``DesignExperiment`` for what the author owes a reviewer in exchange.
+    /// Their ids still have to be distinct, because an id is what a comment and
+    /// a recorded decision are anchored to.
+    @Test("Experiment ids are unique")
+    func experimentIDsAreUnique() {
+        let ids = Catalog.experiments.map(\.id)
         #expect(
-            Set(subjects).count == subjects.count,
-            "two open experiments share a subject, so which one a reviewer is answering is ambiguous"
+            Set(ids).count == ids.count,
+            "two experiments share an id, so a decision recorded against it names both"
         )
     }
 

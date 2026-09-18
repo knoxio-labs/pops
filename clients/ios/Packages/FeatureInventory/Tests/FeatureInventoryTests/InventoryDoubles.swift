@@ -1,5 +1,6 @@
 import AppCore
 import Foundation
+import Observation
 
 @testable import FeatureInventory
 
@@ -65,25 +66,21 @@ internal enum InventoryFixture {
 
 extension InventoryDashboardViewModel {
     /// Starts observing and waits for the first answer, or gives up after a
-    /// bounded number of scheduler turns so a store that never answers fails
-    /// the test instead of hanging it.
+    /// deadline so a store that never answers fails the test instead of
+    /// hanging it.
     @discardableResult
     func startAndAwaitFirstAnswer() async -> (Task<Void, Never>, InventoryDashboard?) {
         let task = Task { await observe() }
-        for _ in 0..<1_000 where phase == .loading {
-            await Task.yield()
-        }
+        await awaitObservedCondition { [self] in phase != .loading }
         return (task, dashboard)
     }
 
     /// Waits until `condition` holds against the latest answer, within the
-    /// same bound.
-    func awaitDashboard(where condition: (InventoryDashboard) -> Bool) async -> InventoryDashboard?
+    /// same deadline.
+    func awaitDashboard(where condition: @escaping @Sendable (InventoryDashboard) -> Bool) async
+        -> InventoryDashboard?
     {
-        for _ in 0..<1_000 {
-            if let dashboard, condition(dashboard) { return dashboard }
-            await Task.yield()
-        }
-        return nil
+        await awaitObservedCondition { [self] in dashboard.map(condition) ?? false }
+        return dashboard
     }
 }

@@ -1,7 +1,7 @@
 import { sql } from 'drizzle-orm';
 import { index, integer, sqliteTable, text, unique } from 'drizzle-orm/sqlite-core';
 
-import { homeInventory } from './inventory.js';
+import { items } from './items.js';
 
 export const itemDocuments = sqliteTable(
   'item_documents',
@@ -9,7 +9,7 @@ export const itemDocuments = sqliteTable(
     id: integer('id').primaryKey({ autoIncrement: true }),
     itemId: text('item_id')
       .notNull()
-      .references(() => homeInventory.id, { onDelete: 'cascade' }),
+      .references(() => items.id, { onDelete: 'cascade' }),
     paperlessDocumentId: integer('paperless_document_id').notNull(),
     documentType: text('document_type').notNull(),
     title: text('title'),

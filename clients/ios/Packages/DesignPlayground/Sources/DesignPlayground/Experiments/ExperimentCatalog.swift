@@ -2,7 +2,7 @@
 /// them.
 ///
 /// Split out of ``Catalog`` rather than listed there because a catalogue of
-/// three kinds in one type outgrows what a reader can hold — the same reason
+/// three kinds in one type outgrows what a reader can hold, the same reason
 /// ``ComponentCatalog`` is its own file. ``Catalog`` still names all three, so
 /// there is one place to look for what the playground contains.
 ///
@@ -16,6 +16,19 @@ internal enum ExperimentCatalog {
     /// and what the length limits allow, and the areas are where it wanted to
     /// come apart.
     internal static let all: [DesignExperiment] =
-        InventoryExperiments.all + InventoryPropertyExperiment.all + PurchasesExperiments.all
+        InventoryExperiments.all
+        + InventoryPropertyExperiment.all
+        + InventoryFoundationExperiments.all
+        + InventoryContainerExperiments.all
+        + InventoryCreationExperiments.all
+        + InventoryFieldExperiments.all
+        + InventoryItemDetailExperiments.all
+        + InventoryLifecycleExperiments.all
+        + InventoryLocationExperiments.all
+        + InventoryRetrievalExperiments.all
+        + InventorySearchExperiments.all
+        + InventorySyncExperiments.all
+        + InventoryUntypedExperiments.all
+        + PurchasesExperiments.all
         + AccountsExperiments.all
 }

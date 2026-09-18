@@ -8,24 +8,20 @@
  */
 import crypto from 'crypto';
 
-import { and, count, eq, inArray, isNotNull, like, sql, sum, type SQL } from 'drizzle-orm';
+import { and, count, eq, inArray, isNotNull, isNull, like, sql, sum, type SQL } from 'drizzle-orm';
 
-import {
-  containersService,
-  homeInventory,
-  type InventoryDb,
-  locationsService,
-} from '../../../db/index.js';
+import { items, type InventoryDb, locationsService } from '../../../db/index.js';
 import { isSourceRefConflict } from '../../../db/services/source-ref-conflict.js';
-import { NotFoundError } from '../../shared/errors.js';
+import { NotFoundError, ValidationError } from '../../shared/errors.js';
 import { buildCreateValues } from './create-builder.js';
+import { placementForCreate, placementForUpdate } from './legacy-placement.js';
 import { buildInventoryUpdate } from './update-builder.js';
 
-import type { CreateInventoryItemInput, InventoryRow, UpdateInventoryItemInput } from './types.js';
+import type { CreateInventoryItemInput, ItemRow, UpdateInventoryItemInput } from './types.js';
 
 /** Count + rows + value aggregates for a paginated list. */
 export interface InventoryListResult {
-  rows: InventoryRow[];
+  rows: ItemRow[];
   total: number;
   totalReplacementValue: number;
   totalResaleValue: number;
@@ -49,20 +45,20 @@ export interface ListInventoryItemsOptions {
 
 function buildInventoryConditions(db: InventoryDb, opts: ListInventoryItemsOptions): SQL[] {
   const conditions: SQL[] = [];
-  if (opts.search) conditions.push(like(homeInventory.itemName, `%${opts.search}%`));
-  if (opts.room) conditions.push(eq(homeInventory.room, opts.room));
-  if (opts.type) conditions.push(eq(homeInventory.type, opts.type));
+  if (opts.search) conditions.push(like(items.name, `%${opts.search}%`));
+  if (opts.room) conditions.push(eq(items.room, opts.room));
+  if (opts.type) conditions.push(eq(items.legacyType, opts.type));
   if (opts.condition) {
-    conditions.push(sql`lower(${homeInventory.condition}) = lower(${opts.condition})`);
+    conditions.push(sql`lower(${items.condition}) = lower(${opts.condition})`);
   }
-  if (opts.inUse !== undefined) conditions.push(eq(homeInventory.inUse, opts.inUse ? 1 : 0));
+  if (opts.inUse !== undefined) conditions.push(eq(items.inUse, opts.inUse ? 1 : 0));
   if (opts.deductible !== undefined) {
-    conditions.push(eq(homeInventory.deductible, opts.deductible ? 1 : 0));
+    conditions.push(eq(items.deductible, opts.deductible ? 1 : 0));
   }
   if (opts.locationId)
     conditions.push(buildLocationCondition(db, opts.locationId, opts.includeChildren));
-  if (opts.containerId) conditions.push(eq(homeInventory.containerId, opts.containerId));
-  if (opts.assetId) conditions.push(eq(homeInventory.assetId, opts.assetId));
+  if (opts.containerId) conditions.push(eq(items.containingItemId, opts.containerId));
+  if (opts.assetId) conditions.push(eq(items.code, opts.assetId));
   return conditions;
 }
 
@@ -71,9 +67,9 @@ function buildLocationCondition(
   locationId: string,
   includeChildren: boolean | undefined
 ): SQL {
-  if (!includeChildren) return eq(homeInventory.locationId, locationId);
+  if (!includeChildren) return eq(items.locationId, locationId);
   const descendants = locationsService.getDescendantLocationIds(db, locationId);
-  return inArray(homeInventory.locationId, [locationId, ...descendants]);
+  return inArray(items.locationId, [locationId, ...descendants]);
 }
 
 function combineConditions(conditions: SQL[]): SQL | undefined {
@@ -87,14 +83,14 @@ export function listInventoryItems(
   db: InventoryDb,
   opts: ListInventoryItemsOptions
 ): InventoryListResult {
-  let query = db.select().from(homeInventory).$dynamic();
-  let countQuery = db.select({ total: count() }).from(homeInventory).$dynamic();
+  let query = db.select().from(items).$dynamic();
+  let countQuery = db.select({ total: count() }).from(items).$dynamic();
   let sumQuery = db
     .select({
-      replacementSum: sum(homeInventory.replacementValue),
-      resaleSum: sum(homeInventory.resaleValue),
+      replacementSum: sum(items.replacementValue),
+      resaleSum: sum(items.resaleValue),
     })
-    .from(homeInventory)
+    .from(items)
     .$dynamic();
 
   const where = combineConditions(buildInventoryConditions(db, opts));
@@ -104,7 +100,7 @@ export function listInventoryItems(
     sumQuery = sumQuery.where(where);
   }
 
-  const rows = query.orderBy(homeInventory.itemName).limit(opts.limit).offset(opts.offset).all();
+  const rows = query.orderBy(items.name).limit(opts.limit).offset(opts.offset).all();
   const [countResult] = countQuery.all();
   const [sumResult] = sumQuery.all();
 
@@ -120,11 +116,11 @@ export function listInventoryItems(
  * Search for an inventory item by exact asset ID (case-insensitive).
  * Returns the item or null if not found.
  */
-export function searchByAssetId(db: InventoryDb, assetId: string): InventoryRow | null {
+export function searchByAssetId(db: InventoryDb, assetId: string): ItemRow | null {
   const [row] = db
     .select()
-    .from(homeInventory)
-    .where(sql`LOWER(${homeInventory.assetId}) = LOWER(${assetId})`)
+    .from(items)
+    .where(sql`LOWER(${items.code}) = LOWER(${assetId})`)
     .all();
   return row ?? null;
 }
@@ -135,8 +131,8 @@ export function searchByAssetId(db: InventoryDb, assetId: string): InventoryRow 
 export function countByAssetPrefix(db: InventoryDb, prefix: string): number {
   const [result] = db
     .select({ count: sql<number>`COUNT(*)` })
-    .from(homeInventory)
-    .where(sql`LOWER(${homeInventory.assetId}) LIKE LOWER(${prefix + '%'})`)
+    .from(items)
+    .where(sql`LOWER(${items.code}) LIKE LOWER(${prefix + '%'})`)
     .all();
   return result?.count ?? 0;
 }
@@ -144,38 +140,57 @@ export function countByAssetPrefix(db: InventoryDb, prefix: string): number {
 /** Return distinct item types that exist in the database. */
 export function getDistinctTypes(db: InventoryDb): string[] {
   const rows = db
-    .selectDistinct({ type: homeInventory.type })
-    .from(homeInventory)
-    .where(isNotNull(homeInventory.type))
-    .orderBy(homeInventory.type)
+    .selectDistinct({ type: items.legacyType })
+    .from(items)
+    .where(isNotNull(items.legacyType))
+    .orderBy(items.legacyType)
     .all();
   return rows.map((r) => r.type).filter((t): t is string => t !== null);
 }
 
 /** Get a single inventory item by id. Throws NotFoundError if missing. */
-export function getInventoryItem(db: InventoryDb, id: string): InventoryRow {
-  const [row] = db.select().from(homeInventory).where(eq(homeInventory.id, id)).all();
+export function getInventoryItem(db: InventoryDb, id: string): ItemRow {
+  const [row] = db.select().from(items).where(eq(items.id, id)).all();
 
   if (!row) throw new NotFoundError('Inventory item', id);
   return row;
 }
 
 /** The row a given `source_ref` already names, if any. */
-function getBySourceRef(db: InventoryDb, sourceRef: string): InventoryRow | undefined {
-  return db.select().from(homeInventory).where(eq(homeInventory.sourceRef, sourceRef)).get();
+function getBySourceRef(db: InventoryDb, sourceRef: string): ItemRow | undefined {
+  return db.select().from(items).where(eq(items.sourceRef, sourceRef)).get();
 }
 
+/** Longest containment chain the legacy writer walks (ADR-002 D2's cap). */
+const MAX_CONTAINMENT_DEPTH = 32;
+
 /**
- * Where an item assigned to a container currently sits — the container is
- * authoritative over the item's own `locationId` while it holds it, per
- * POPS-3581: "a container sits somewhere, and its contents inherit that".
- * Throws `NotFoundError` rather than letting a bad id fall through to the
- * `container_id` foreign key and surface as an unmapped constraint error.
+ * Refuse a legacy `containerId` that names no live container, or that would
+ * put the item inside itself or its own contents. Throws rather than letting
+ * a bad id reach the `containing_item_id` foreign key or the placement CHECK
+ * as an unmapped constraint error.
  */
-function resolveContainerLocationId(db: InventoryDb, containerId: string): string | null {
-  const container = containersService.findContainer(db, containerId);
+function assertContainerTarget(db: InventoryDb, itemId: string | null, containerId: string): void {
+  const container = db
+    .select({ id: items.id })
+    .from(items)
+    .where(and(eq(items.id, containerId), eq(items.isContainer, 1), isNull(items.deletedAt)))
+    .get();
   if (!container) throw new NotFoundError('Container', containerId);
-  return containersService.getContainerCurrentLocationId(container);
+  if (itemId === null) return;
+
+  let ancestor: string | null = container.id;
+  for (let depth = 0; ancestor !== null; depth += 1) {
+    if (ancestor === itemId || depth >= MAX_CONTAINMENT_DEPTH) {
+      throw new ValidationError('An item cannot be placed inside itself or its own contents');
+    }
+    const next = db
+      .select({ containingItemId: items.containingItemId })
+      .from(items)
+      .where(eq(items.id, ancestor))
+      .get();
+    ancestor = next?.containingItemId ?? null;
+  }
 }
 
 /**
@@ -184,25 +199,20 @@ function resolveContainerLocationId(db: InventoryDb, containerId: string): strin
  *
  * Idempotent when `input.sourceRef` is supplied (POPS-2433): two concurrent
  * calls naming the same reference race to the insert, the loser's write
- * raises the `idx_inventory_source_ref` UNIQUE violation, and that loser
- * returns the winner's row rather than surfacing the error or minting a
- * second one. A caller with no `sourceRef` gets the old, non-idempotent
- * behaviour — a plain insert.
+ * raises the `items_source_ref` UNIQUE violation, and that loser returns the
+ * winner's row rather than surfacing the error or minting a second one. A
+ * caller with no `sourceRef` gets the old, non-idempotent behaviour — a plain
+ * insert.
  */
-export function createInventoryItem(
-  db: InventoryDb,
-  input: CreateInventoryItemInput
-): InventoryRow {
+export function createInventoryItem(db: InventoryDb, input: CreateInventoryItemInput): ItemRow {
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
 
-  const values = buildCreateValues(id, now, input);
-  if (input.containerId) {
-    values.locationId = resolveContainerLocationId(db, input.containerId);
-  }
+  if (typeof input.containerId === 'string') assertContainerTarget(db, null, input.containerId);
+  const values = buildCreateValues(id, now, input, placementForCreate(input));
 
   try {
-    db.insert(homeInventory).values(values).run();
+    db.insert(items).values(values).run();
   } catch (err) {
     if (typeof input.sourceRef === 'string' && input.sourceRef.length > 0) {
       const existing = isSourceRefConflict(err) ? getBySourceRef(db, input.sourceRef) : undefined;
@@ -221,15 +231,13 @@ export function updateInventoryItem(
   db: InventoryDb,
   id: string,
   input: UpdateInventoryItemInput
-): InventoryRow {
-  getInventoryItem(db, id);
+): ItemRow {
+  const current = getInventoryItem(db, id);
 
-  const updates = buildInventoryUpdate(input);
+  if (typeof input.containerId === 'string') assertContainerTarget(db, id, input.containerId);
+  const updates = buildInventoryUpdate(input, placementForUpdate(current, input));
   if (updates) {
-    if (input.containerId !== undefined && input.containerId !== null) {
-      updates.locationId = resolveContainerLocationId(db, input.containerId);
-    }
-    db.update(homeInventory).set(updates).where(eq(homeInventory.id, id)).run();
+    db.update(items).set(updates).where(eq(items.id, id)).run();
   }
 
   return getInventoryItem(db, id);
@@ -237,10 +245,28 @@ export function updateInventoryItem(
 
 /**
  * Delete an inventory item by ID. Throws NotFoundError if missing.
+ *
+ * Deleting a container empties it rather than deleting what was inside, as
+ * before Inventory ADR-002: its contents go in hand, remembering the
+ * container. `containing_item_id` has no `ON DELETE` action, so they have to
+ * move before the row goes.
  */
 export function deleteInventoryItem(db: InventoryDb, id: string): void {
   getInventoryItem(db, id);
 
-  const result = db.delete(homeInventory).where(eq(homeInventory.id, id)).run();
-  if (result.changes === 0) throw new NotFoundError('Inventory item', id);
+  db.transaction((tx) => {
+    tx.update(items)
+      .set({
+        placementKind: 'hand',
+        containingItemId: null,
+        previousPlacementKind: 'container',
+        previousLocationId: null,
+        previousContainingItemId: id,
+        lastEditedTime: new Date().toISOString(),
+      })
+      .where(eq(items.containingItemId, id))
+      .run();
+    const result = tx.delete(items).where(eq(items.id, id)).run();
+    if (result.changes === 0) throw new NotFoundError('Inventory item', id);
+  });
 }
