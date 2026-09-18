@@ -1,0 +1,130 @@
+import { z } from 'zod';
+
+import { ACCESS_STATES, LIFECYCLES, type ItemInsert, type ItemRow } from '../../db/index.js';
+import { CommandRejected } from './errors.js';
+
+import type { JsonValue } from './outcome.js';
+
+/** Where an item is, as the wire and the event log spell it. */
+export const placementSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('location'), locationId: z.string().min(1) }),
+  z.object({ kind: z.literal('container'), itemId: z.string().min(1) }),
+  z.object({ kind: z.literal('hand') }),
+]);
+/** A value of {@link placementSchema}. */
+export type Placement = z.infer<typeof placementSchema>;
+
+/** The place an in-hand item was taken from; never itself `hand`. */
+export const previousPlacementSchema = z
+  .discriminatedUnion('kind', [
+    z.object({ kind: z.literal('location'), locationId: z.string().min(1) }),
+    z.object({ kind: z.literal('container'), itemId: z.string().min(1) }),
+  ])
+  .nullable();
+/** A value of {@link previousPlacementSchema}. */
+export type PreviousPlacement = z.infer<typeof previousPlacementSchema>;
+
+/** How one wire field of an item is read from, and written to, its row. */
+export interface FieldCodec<Row, Insert> {
+  read(row: Row): JsonValue;
+  /** Columns that store `value`. Throws `CommandRejected('invalid')` for a malformed value. */
+  columns(value: JsonValue, now: string): Partial<Insert>;
+}
+
+/** Parse a field value with `schema`, refusing it as `invalid` when it does not fit. */
+export function parseFieldValue<T>(schema: z.ZodType<T>, field: string, value: JsonValue): T {
+  const parsed = schema.safeParse(value);
+  if (!parsed.success) throw new CommandRejected('invalid', `invalid value for ${field}`);
+  return parsed.data;
+}
+
+/** The wire placement of an item row. */
+export function readPlacement(row: ItemRow): Placement {
+  if (row.placementKind === 'location' && row.locationId !== null) {
+    return { kind: 'location', locationId: row.locationId };
+  }
+  if (row.placementKind === 'container' && row.containingItemId !== null) {
+    return { kind: 'container', itemId: row.containingItemId };
+  }
+  return { kind: 'hand' };
+}
+
+/** The wire previous placement of an item row. */
+export function readPreviousPlacement(row: ItemRow): PreviousPlacement {
+  if (row.previousPlacementKind === 'location' && row.previousLocationId !== null) {
+    return { kind: 'location', locationId: row.previousLocationId };
+  }
+  if (row.previousPlacementKind === 'container' && row.previousContainingItemId !== null) {
+    return { kind: 'container', itemId: row.previousContainingItemId };
+  }
+  return null;
+}
+
+type ItemCodec = FieldCodec<ItemRow, ItemInsert>;
+
+const placementCodec: ItemCodec = {
+  read: readPlacement,
+  columns(value) {
+    const placement = parseFieldValue(placementSchema, 'placement', value);
+    return {
+      placementKind: placement.kind,
+      locationId: placement.kind === 'location' ? placement.locationId : null,
+      containingItemId: placement.kind === 'container' ? placement.itemId : null,
+    };
+  },
+};
+
+const previousPlacementCodec: ItemCodec = {
+  read: readPreviousPlacement,
+  columns(value) {
+    const previous = parseFieldValue(previousPlacementSchema, 'previousPlacement', value);
+    return {
+      previousPlacementKind: previous?.kind ?? null,
+      previousLocationId: previous?.kind === 'location' ? previous.locationId : null,
+      previousContainingItemId: previous?.kind === 'container' ? previous.itemId : null,
+    };
+  },
+};
+
+const accessCodec: ItemCodec = {
+  read: (row) => row.access,
+  columns: (value) => ({
+    access: parseFieldValue(z.enum(ACCESS_STATES).nullable(), 'access', value),
+  }),
+};
+
+const isFullCodec: ItemCodec = {
+  read: (row) => (row.isFull === null ? null : row.isFull === 1),
+  columns(value) {
+    const full = parseFieldValue(z.boolean().nullable(), 'isFull', value);
+    return { isFull: full === null ? null : Number(full) };
+  },
+};
+
+const lifecycleCodec: ItemCodec = {
+  read: (row) => row.lifecycle,
+  columns: (value, now) => ({
+    lifecycle: parseFieldValue(z.enum(LIFECYCLES), 'lifecycle', value),
+    lifecycleChangedAt: now,
+  }),
+};
+
+const deletedAtCodec: ItemCodec = {
+  read: (row) => row.deletedAt,
+  columns: (value) => ({ deletedAt: parseFieldValue(z.string().nullable(), 'deletedAt', value) }),
+};
+
+/**
+ * Every item field the command layer can write, keyed by its wire name (the
+ * name events record). `placement` is one field, so a move is compared as a
+ * whole; `previousPlacement` moves with it whenever an item enters or leaves
+ * the hand.
+ */
+export const ITEM_FIELD_CODECS: Readonly<Record<string, ItemCodec>> = {
+  placement: placementCodec,
+  previousPlacement: previousPlacementCodec,
+  access: accessCodec,
+  isFull: isFullCodec,
+  lifecycle: lifecycleCodec,
+  deletedAt: deletedAtCodec,
+};
