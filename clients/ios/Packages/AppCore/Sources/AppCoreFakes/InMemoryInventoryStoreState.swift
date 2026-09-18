@@ -56,6 +56,10 @@ extension InMemoryInventoryStore {
                 .sorted { $0.name < $1.name }
         }
 
+        func inventoryContainers() -> [InventoryItem] {
+            items.values.filter { $0.isContainer && !$0.isDeleted }.sorted { $0.name < $1.name }
+        }
+
         func inventoryRecents(limit: Int) -> [InventoryItem] {
             Array(items.values.sorted { $0.updatedAt > $1.updatedAt }.prefix(limit))
         }
@@ -70,6 +74,12 @@ extension InMemoryInventoryStore {
                 items: active.count,
                 containers: active.filter(\.isContainer).count,
                 locations: locations.values.filter { !$0.isDeleted }.count)
+        }
+
+        func inventoryItems(includeInactive: Bool) -> [InventoryItem] {
+            items.values.filter { item in
+                !item.isDeleted && (includeInactive || item.lifecycle == .active)
+            }.sorted { $0.name < $1.name }
         }
 
         func inventorySearch(text: String, includeInactive: Bool) -> [InventoryItem] {

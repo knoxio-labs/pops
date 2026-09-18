@@ -61,7 +61,7 @@ extension InventoryDashboardView {
                 title: "In hand", status: "\(items.count) awaiting placement",
                 destination: .inHand, quiet: true)
             InventoryInHandRows(
-                items: items, onPutBack: putBack, onMove: move,
+                items: items, selection: $inHandSelection, onPutBack: putBack, onMove: move,
                 loadPhoto: { await model.thumbnail($0) })
         }
     }

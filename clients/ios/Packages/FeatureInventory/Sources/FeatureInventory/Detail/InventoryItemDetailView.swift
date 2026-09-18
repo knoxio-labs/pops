@@ -22,6 +22,7 @@ internal struct InventoryItemDetailView<Capability: View>: View {
     @State private var destroying = false
     @State private var quantitySheet: InventoryLifecycleSheet?
     @State private var pending: InventoryItemDetailPending?
+    @Environment(\.inventoryItemForm) private var itemForm
 
     internal init(
         detail: InventoryItemDetail,
@@ -105,7 +106,13 @@ internal struct InventoryItemDetailView<Capability: View>: View {
 
     private func act(_ action: InventoryAction) {
         Task {
-            if let screen = await model.act(action) { pending = screen }
+            guard let screen = await model.act(action) else { return }
+            switch screen {
+            case .edit:
+                itemForm?(.edit(detail.record.id))
+            default:
+                pending = screen
+            }
         }
     }
 

@@ -20,6 +20,12 @@ internal struct FormFixtureSource: InventoryQuerySource {
     func inventoryContents(ofContainer containerId: String) -> [InventoryItem] { [] }
     func inventoryInHand() -> [InventoryItem] { [] }
     func inventoryOpenContainers() -> [InventoryItem] { [] }
+    func inventoryContainers() -> [InventoryItem] {
+        items.filter { $0.isContainer && !$0.isDeleted }
+    }
+    func inventoryItems(includeInactive: Bool) -> [InventoryItem] {
+        items.filter { !$0.isDeleted && (includeInactive || $0.lifecycle == .active) }
+    }
     func inventoryRecents(limit: Int) -> [InventoryItem] { [] }
     func inventoryRecentEvents(limit: Int) -> [InventoryEvent] { [] }
     func inventoryCounts() -> InventoryCounts {

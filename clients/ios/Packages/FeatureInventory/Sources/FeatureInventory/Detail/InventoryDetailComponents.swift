@@ -35,18 +35,34 @@ internal struct InventoryStateMark: Identifiable, Equatable {
     /// is, because it is the one state that is work still in progress.
     internal let isHighlighted: Bool
 
+    /// The manual Full switch, drawn as a mark rather than read from access
+    /// or lifecycle.
+    internal static let full = InventoryStateMark(id: "full", label: "Full", isHighlighted: false)
+
     internal static func marks(for record: InventoryDetailRecord) -> [InventoryStateMark] {
+        marks(access: record.access, lifecycle: record.lifecycle)
+    }
+
+    /// The same marks read straight off an item, for a screen with no
+    /// `InventoryDetailRecord` of its own (a container's page, a place's
+    /// rows).
+    internal static func marks(for item: InventoryItem) -> [InventoryStateMark] {
+        marks(access: item.containment?.access, lifecycle: item.lifecycle)
+    }
+
+    private static func marks(
+        access: InventoryAccess?, lifecycle: InventoryLifecycle
+    ) -> [InventoryStateMark] {
         var marks: [InventoryStateMark] = []
-        if let access = record.access {
+        if let access {
             marks.append(
                 InventoryStateMark(
                     id: "access", label: access == .open ? "Open" : "Closed",
                     isHighlighted: access == .open))
         }
-        if record.lifecycle != .active {
+        if lifecycle != .active {
             marks.append(
-                InventoryStateMark(
-                    id: "lifecycle", label: record.lifecycle.label, isHighlighted: false))
+                InventoryStateMark(id: "lifecycle", label: lifecycle.label, isHighlighted: false))
         }
         return marks
     }
@@ -107,6 +123,17 @@ internal struct InventoryPropertyLine: View {
 /// container when it does not fit rather than truncating mid-word.
 internal struct InventoryPlacementPath: View {
     internal let trail: InventoryDetailTrail
+
+    /// A path with nothing to hold on tap: a container's own page, a
+    /// place's rows, and anywhere else that has crumbs but no
+    /// `InventoryDetailTrail` of its own.
+    internal init(crumbs: [String], isInHand: Bool) {
+        trail = InventoryDetailTrail(crumbs: crumbs, isInHand: isInHand, holder: nil)
+    }
+
+    internal init(trail: InventoryDetailTrail) {
+        self.trail = trail
+    }
 
     internal var body: some View {
         if trail.isInHand {
