@@ -149,8 +149,6 @@ internal struct InventoryItemDetailPendingSheet: View {
     private var title: String {
         switch pending {
         case .edit: "Edit"
-        case .move: "Move"
-        case .storeHere: "Store here"
         case .label: "Label it"
         case .printLabel: "Print label"
         }
@@ -159,8 +157,6 @@ internal struct InventoryItemDetailPendingSheet: View {
     private var detail: String {
         switch pending {
         case .edit: "The edit form opens here."
-        case .move: "The destination picker opens here."
-        case .storeHere: "Store here opens here."
         case .label: "Choosing a code for this item opens here."
         case .printLabel: "Label printing opens here."
         }
@@ -169,8 +165,6 @@ internal struct InventoryItemDetailPendingSheet: View {
     private var symbol: InventorySymbol {
         switch pending {
         case .edit: .edit
-        case .move: .move
-        case .storeHere: .openContainer
         case .label: .label
         case .printLabel: .printLabel
         }
