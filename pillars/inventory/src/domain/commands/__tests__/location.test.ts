@@ -121,3 +121,34 @@ describe('location.delete', () => {
     expect(outcome).toMatchObject({ status: 'conflict', kind: 'deleted' });
   });
 });
+
+describe('location.create and location.rename with sortOrder (POPS-4053)', () => {
+  it('creates at an explicit sort position', () => {
+    const id = randomUUID();
+    h.run(
+      mutation(
+        'location.create',
+        id,
+        { location: { name: 'Shelf', sortOrder: 3 } },
+        { baseRevision: null }
+      )
+    );
+    expect(h.db.select().from(locations).where(eq(locations.id, id)).get()).toMatchObject({
+      sortOrder: 3,
+    });
+  });
+
+  it('renames and reorders in one mutation', () => {
+    const outcome = h.run(mutation('location.rename', 'garage', { name: 'Garage', sortOrder: 5 }));
+    expect(outcome).toMatchObject({ status: 'applied' });
+    expect(h.db.select().from(locations).where(eq(locations.id, 'garage')).get()).toMatchObject({
+      name: 'Garage',
+      sortOrder: 5,
+    });
+  });
+
+  it('rejects a rename with neither name nor sortOrder', () => {
+    const outcome = h.run(mutation('location.rename', 'garage', {}));
+    expect(outcome).toMatchObject({ status: 'rejected', reason: 'invalid' });
+  });
+});

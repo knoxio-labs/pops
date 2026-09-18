@@ -14,6 +14,8 @@ const createLocationArgs = z.object({
   location: z.object({
     name: z.string().trim().min(1),
     parentId: z.string().min(1).nullish(),
+    /** Legacy `/locations` sort position (POPS-4053); the new model has no client for this yet, so it defaults to 0. */
+    sortOrder: z.number().int().nonnegative().default(0),
   }),
 });
 
@@ -37,14 +39,14 @@ export const locationCreate = defineOp({
     assertParentAllowed(ctx.db, ctx.mutation.entityId, parentId);
     return {
       eventKind: 'created',
-      changes: { name: location.name, parentId },
+      changes: { name: location.name, parentId, sortOrder: location.sortOrder },
       insert(db, stamp) {
         db.insert(locations)
           .values({
             id: ctx.mutation.entityId,
             name: location.name,
             parentId,
-            sortOrder: 0,
+            sortOrder: location.sortOrder,
             lastEditedTime: stamp.now,
             revision: stamp.revision,
             seq: stamp.seq,
@@ -57,9 +59,17 @@ export const locationCreate = defineOp({
   },
 });
 
-const renameArgs = z.object({ name: z.string().trim().min(1) });
+const renameArgs = z
+  .object({
+    name: z.string().trim().min(1).optional(),
+    /** Legacy `/locations` sort position (POPS-4053); no client sets it yet besides that route. */
+    sortOrder: z.number().int().nonnegative().optional(),
+  })
+  .refine((args) => args.name !== undefined || args.sortOrder !== undefined, {
+    message: 'location.rename needs at least one of name or sortOrder',
+  });
 
-/** `location.rename { name }`: change a place's display name. */
+/** `location.rename { name?, sortOrder? }`: change a place's display name, its sort position, or both. */
 export const locationRename = defineOp({
   op: 'location.rename',
   mode: 'update',
@@ -67,7 +77,10 @@ export const locationRename = defineOp({
   revisionCheck: 'base',
   args: renameArgs,
   plan(_ctx, _target, args) {
-    return { eventKind: 'edited', changes: { name: args.name } };
+    const changes: FieldValues = {};
+    if (args.name !== undefined) changes['name'] = args.name;
+    if (args.sortOrder !== undefined) changes['sortOrder'] = args.sortOrder;
+    return { eventKind: 'edited', changes };
   },
 });
 
