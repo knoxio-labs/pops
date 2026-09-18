@@ -6,14 +6,20 @@
 
     /// Owns the capture session for as long as the scanner is on screen.
     ///
+    /// Lives in `AppCore` rather than a feature because more than one feature
+    /// scans a QR code — `FeaturePairing`'s device pairing and the Inventory
+    /// scan screen both read one — and "no feature imports another feature" is
+    /// a `ModuleBoundaryTests` rule, not a suggestion. `CameraAuthorizing` moved
+    /// here for the same reason; see `AppCore`'s README.
+    ///
     /// `@MainActor` because everything it touches afterwards — the preview
     /// layer, the view model — is, and because the metadata delegate is
     /// deliberately given the main queue. The one thing that must *not* happen
     /// on the main queue is `startRunning`, which Apple documents as blocking;
     /// on a cold camera that is a visible stall the moment the sheet appears.
     @MainActor
-    internal final class QRScannerCoordinator: NSObject {
-        internal var onScan: (String) -> Bool
+    public final class QRScannerCoordinator: NSObject {
+        public var onScan: (String) -> Bool
 
         private let capture = CaptureSessionHolder()
         /// Stops the second and later reads of the same code being acted on
@@ -21,18 +27,18 @@
         /// continuously, not once.
         private var hasScanned = false
 
-        internal init(onScan: @escaping (String) -> Bool) {
+        public init(onScan: @escaping (String) -> Bool) {
             self.onScan = onScan
         }
 
-        internal func start(previewing view: QRScannerPreviewView) {
+        public func start(previewing view: QRScannerPreviewView) {
             configure()
             view.previewLayer.session = capture.session
             view.previewLayer.videoGravity = .resizeAspectFill
             capture.startRunning()
         }
 
-        internal func stop() {
+        public func stop() {
             capture.stopRunning()
         }
 
@@ -97,7 +103,7 @@
         /// makes the hop below an assumption rather than a hope. The two have to
         /// move together; `assumeIsolated` traps loudly rather than corrupting
         /// state if they ever do not.
-        internal nonisolated func metadataOutput(
+        public nonisolated func metadataOutput(
             _ output: AVCaptureMetadataOutput,
             didOutput metadataObjects: [AVMetadataObject],
             from connection: AVCaptureConnection
