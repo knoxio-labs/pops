@@ -1,18 +1,35 @@
 /**
  * Inventory pillar table barrel.
  *
- * Canonical definitions for inventory-owned tables (home_inventory,
- * locations, containers, fixtures, item_connections,
- * item_fixture_connections, item_documents, item_photos,
- * item_uploaded_files, settings).
+ * Canonical definitions for inventory-owned tables (items, events, mutations,
+ * media, sync_meta, locations, fixtures, item_connections,
+ * item_fixture_connections, item_documents, item_photos, item_uploaded_files,
+ * settings).
  */
-export { containers } from './schema/containers.js';
+export {
+  EVENT_ACTOR_KINDS,
+  EVENT_ENTITY_KINDS,
+  events,
+  type EventActorKind,
+  type EventEntityKind,
+} from './schema/events.js';
 export { fixtures } from './schema/fixtures.js';
-export { homeInventory } from './schema/inventory.js';
 export { itemConnections } from './schema/item-connections.js';
 export { itemDocuments } from './schema/item-documents.js';
 export { itemFixtureConnections } from './schema/item-fixture-connections.js';
 export { itemPhotos } from './schema/item-photos.js';
 export { itemUploadedFiles } from './schema/item-uploaded-files.js';
+export {
+  ACCESS_STATES,
+  items,
+  LIFECYCLES,
+  PLACEMENT_KINDS,
+  type AccessState,
+  type Lifecycle,
+  type PlacementKind,
+} from './schema/items.js';
 export { locations } from './schema/locations.js';
+export { media } from './schema/media.js';
+export { MUTATION_STATUSES, mutations, type MutationStatus } from './schema/mutations.js';
 export { settings } from './schema/settings.js';
+export { SYNC_META_KEYS, syncMeta, type SyncMetaKey } from './schema/sync-meta.js';

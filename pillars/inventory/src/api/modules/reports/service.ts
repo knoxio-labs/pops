@@ -3,9 +3,9 @@ import { and, count, desc, eq, gte, isNotNull, lte, sql } from 'drizzle-orm';
 /**
  * Inventory reports service — warranty tracking and insurance report queries.
  */
-import { homeInventory, type InventoryDb, itemDocuments, locations } from '../../../db/index.js';
+import { items, type InventoryDb, itemDocuments, locations } from '../../../db/index.js';
 
-import type { InventoryRow } from '../items/types.js';
+import type { ItemRow } from '../items/types.js';
 import type { DashboardSummary, RecentItem, ValueBreakdownEntry } from './types.js';
 
 export {
@@ -27,10 +27,10 @@ export function getDashboard(db: InventoryDb): DashboardSummary {
   const [summary] = db
     .select({
       itemCount: count(),
-      totalReplacementValue: sql<number>`COALESCE(SUM(${homeInventory.replacementValue}), 0)`,
-      totalResaleValue: sql<number>`COALESCE(SUM(${homeInventory.resaleValue}), 0)`,
+      totalReplacementValue: sql<number>`COALESCE(SUM(${items.replacementValue}), 0)`,
+      totalResaleValue: sql<number>`COALESCE(SUM(${items.resaleValue}), 0)`,
     })
-    .from(homeInventory)
+    .from(items)
     .all();
 
   const now = new Date();
@@ -40,26 +40,26 @@ export function getDashboard(db: InventoryDb): DashboardSummary {
 
   const [warrantyResult] = db
     .select({ cnt: count() })
-    .from(homeInventory)
+    .from(items)
     .where(
       and(
-        isNotNull(homeInventory.warrantyExpires),
-        gte(homeInventory.warrantyExpires, nowIso),
-        lte(homeInventory.warrantyExpires, cutoffIso)
+        isNotNull(items.warrantyExpires),
+        gte(items.warrantyExpires, nowIso),
+        lte(items.warrantyExpires, cutoffIso)
       )
     )
     .all();
 
   const recentRows = db
     .select({
-      id: homeInventory.id,
-      itemName: homeInventory.itemName,
-      type: homeInventory.type,
-      assetId: homeInventory.assetId,
-      lastEditedTime: homeInventory.lastEditedTime,
+      id: items.id,
+      itemName: items.name,
+      type: items.legacyType,
+      assetId: items.code,
+      lastEditedTime: items.lastEditedTime,
     })
-    .from(homeInventory)
-    .orderBy(desc(homeInventory.lastEditedTime))
+    .from(items)
+    .orderBy(desc(items.lastEditedTime))
     .limit(5)
     .all();
 
@@ -72,7 +72,7 @@ export function getDashboard(db: InventoryDb): DashboardSummary {
   };
 }
 
-export interface WarrantyListItem extends InventoryRow {
+export interface WarrantyListItem extends ItemRow {
   warrantyDocumentId: number | null;
 }
 
@@ -80,16 +80,16 @@ export interface WarrantyListItem extends InventoryRow {
 export function listWarrantyItems(db: InventoryDb): WarrantyListItem[] {
   const rows = db
     .select({
-      item: homeInventory,
+      item: items,
       warrantyDocumentId: itemDocuments.paperlessDocumentId,
     })
-    .from(homeInventory)
+    .from(items)
     .leftJoin(
       itemDocuments,
-      and(eq(itemDocuments.itemId, homeInventory.id), eq(itemDocuments.documentType, 'warranty'))
+      and(eq(itemDocuments.itemId, items.id), eq(itemDocuments.documentType, 'warranty'))
     )
-    .where(isNotNull(homeInventory.warrantyExpires))
-    .orderBy(homeInventory.warrantyExpires)
+    .where(isNotNull(items.warrantyExpires))
+    .orderBy(items.warrantyExpires)
     .all();
   return rows.map((r) => ({ ...r.item, warrantyDocumentId: r.warrantyDocumentId ?? null }));
 }
@@ -101,14 +101,14 @@ export function getValueByLocation(db: InventoryDb): ValueBreakdownEntry[] {
   return db
     .select({
       name: sql<string>`COALESCE(${locations.name}, 'Unassigned')`,
-      totalValue: sql<number>`COALESCE(SUM(${homeInventory.replacementValue}), 0)`,
+      totalValue: sql<number>`COALESCE(SUM(${items.replacementValue}), 0)`,
       itemCount: count(),
       key: sql<string | null>`${locations.id}`,
     })
-    .from(homeInventory)
-    .leftJoin(locations, eq(homeInventory.locationId, locations.id))
+    .from(items)
+    .leftJoin(locations, eq(items.locationId, locations.id))
     .groupBy(sql`COALESCE(${locations.name}, 'Unassigned')`, locations.id)
-    .orderBy(desc(sql`COALESCE(SUM(${homeInventory.replacementValue}), 0)`))
+    .orderBy(desc(sql`COALESCE(SUM(${items.replacementValue}), 0)`))
     .all() as ValueBreakdownEntry[];
 }
 
@@ -118,12 +118,12 @@ export function getValueByLocation(db: InventoryDb): ValueBreakdownEntry[] {
 export function getValueByType(db: InventoryDb): ValueBreakdownEntry[] {
   return db
     .select({
-      name: sql<string>`COALESCE(${homeInventory.type}, 'Uncategorized')`,
-      totalValue: sql<number>`COALESCE(SUM(${homeInventory.replacementValue}), 0)`,
+      name: sql<string>`COALESCE(${items.legacyType}, 'Uncategorized')`,
+      totalValue: sql<number>`COALESCE(SUM(${items.replacementValue}), 0)`,
       itemCount: count(),
     })
-    .from(homeInventory)
-    .groupBy(sql`COALESCE(${homeInventory.type}, 'Uncategorized')`)
-    .orderBy(desc(sql`COALESCE(SUM(${homeInventory.replacementValue}), 0)`))
+    .from(items)
+    .groupBy(sql`COALESCE(${items.legacyType}, 'Uncategorized')`)
+    .orderBy(desc(sql`COALESCE(SUM(${items.replacementValue}), 0)`))
     .all() as ValueBreakdownEntry[];
 }

@@ -1,14 +1,17 @@
 import { assignNullableKeys } from '@pops/pillar-sdk/db';
 
-import { crossPillarUrisService, type homeInventory } from '../../../db/index.js';
+import { crossPillarUrisService, type ItemInsert } from '../../../db/index.js';
+import { assignRenamedColumns } from './renamed-columns.js';
 
+import type { PlacementColumns } from './legacy-placement.js';
 import type { NullableColumnKeys } from './nullable-column-keys.js';
 import type { UpdateInventoryItemInput } from './types.js';
 
-type InventoryUpdate = Partial<typeof homeInventory.$inferInsert>;
+type InventoryUpdate = Partial<ItemInsert>;
 
 /**
- * Keys where we pass through string|null.
+ * Keys where we pass through string|null, whose request name is also the
+ * column's name.
  *
  * - `undefined` means "leave unchanged" (the key is not written to the update payload)
  * - `null` means "clear the field" (the key is written with a null value)
@@ -18,18 +21,12 @@ const NULLABLE_STRING_KEYS = [
   'model',
   'itemId',
   'room',
-  'location',
-  'type',
   'condition',
   'purchaseDate',
   'warrantyExpires',
   'purchaseTransactionId',
   'purchasedFromId',
   'purchasedFromName',
-  'assetId',
-  'notes',
-  'locationId',
-  'containerId',
 ] as const satisfies ReadonlyArray<NullableColumnKeys<UpdateInventoryItemInput, string>>;
 
 const NULLABLE_NUMBER_KEYS = [
@@ -39,17 +36,26 @@ const NULLABLE_NUMBER_KEYS = [
 ] as const satisfies ReadonlyArray<NullableColumnKeys<UpdateInventoryItemInput, number>>;
 
 /**
- * Build the partial update payload for an inventory item from the input.
- * Returns `null` when the caller supplied no fields — so callers can skip the DB write.
+ * Build the partial update payload for an item from the legacy update request
+ * and the placement it resolves to (`null` when placement is unchanged).
+ * Returns `null` when nothing changes, so callers can skip the DB write.
  */
-export function buildInventoryUpdate(input: UpdateInventoryItemInput): InventoryUpdate | null {
+export function buildInventoryUpdate(
+  input: UpdateInventoryItemInput,
+  placement: PlacementColumns | null
+): InventoryUpdate | null {
   const updates: InventoryUpdate = {};
   let touched = false;
 
   if (assignItemName(updates, input)) touched = true;
   if (assignNullableKeys(updates, input, NULLABLE_STRING_KEYS)) touched = true;
   if (assignNullableKeys(updates, input, NULLABLE_NUMBER_KEYS)) touched = true;
+  if (assignRenamedColumns(updates, input)) touched = true;
   if (assignBooleanFlags(updates, input)) touched = true;
+  if (placement !== null) {
+    Object.assign(updates, placement);
+    touched = true;
+  }
   assignDerivedPurchaseTransactionUri(updates, input);
 
   if (!touched) return null;
@@ -75,7 +81,7 @@ function assignDerivedPurchaseTransactionUri(
 
 function assignItemName(updates: InventoryUpdate, input: UpdateInventoryItemInput): boolean {
   if (input.itemName === undefined) return false;
-  updates.itemName = input.itemName;
+  updates.name = input.itemName;
   return true;
 }
 

@@ -1,9 +1,9 @@
 /**
  * Backend-safe barrel for the inventory pillar's persistence layer.
  *
- * Hosts inventory pillar tables (locations, home_inventory, fixtures,
- * item_connections, item_documents, item_photos, item_uploaded_files,
- * item_fixture_connections) per ADR-026.
+ * Hosts inventory pillar tables (items, events, mutations, media, sync_meta,
+ * locations, fixtures, item_connections, item_documents, item_photos,
+ * item_uploaded_files, item_fixture_connections) per ADR-026.
  */
 export * from './errors.js';
 export * from './row-types.js';
@@ -13,7 +13,6 @@ export type { InventoryDb } from './services/internal.js';
 
 export { openInventoryDb, type OpenedInventoryDb } from './open-inventory-db.js';
 
-export * as containersService from './services/containers.js';
 export * as locationsService from './services/locations.js';
 export * as connectionsService from './services/connections.js';
 export * as documentsService from './services/documents.js';
@@ -30,18 +29,6 @@ export type {
 } from './services/locations.js';
 
 export { toLocation } from './services/locations.js';
-
-export type {
-  Container,
-  ContainerItemsResult,
-  ContainerListResult,
-  ContainerState,
-  CreateContainerInput,
-  ListContainersOptions,
-  UpdateContainerInput,
-} from './services/containers.js';
-
-export { getContainerCurrentLocationId, toContainer } from './services/containers.js';
 
 export type {
   Connection,

@@ -17,7 +17,7 @@ import {
   LocationSelfParentError,
   ParentLocationNotFoundError,
 } from '../errors.js';
-import { locations } from '../schema.js';
+import { items, locations } from '../schema.js';
 import {
   getDeleteStats,
   getDescendantLocationIds,
@@ -200,8 +200,27 @@ export function updateLocation(
   return getLocation(db, id);
 }
 
+/**
+ * Delete a location. Items placed directly at it go in hand remembering it
+ * (the "Previous place deleted" state of Inventory ADR-002 D2), because
+ * `items.location_id` has no `ON DELETE` action and a placement cannot
+ * simply lose its reference. Child locations are left as they were.
+ */
 export function deleteLocation(db: InventoryDb, id: string): void {
   getLocation(db, id);
-  const result = db.delete(locations).where(eq(locations.id, id)).run();
-  if (result.changes === 0) throw new LocationNotFoundError(id);
+  db.transaction((tx) => {
+    tx.update(items)
+      .set({
+        placementKind: 'hand',
+        locationId: null,
+        previousPlacementKind: 'location',
+        previousLocationId: id,
+        previousContainingItemId: null,
+        lastEditedTime: new Date().toISOString(),
+      })
+      .where(eq(items.locationId, id))
+      .run();
+    const result = tx.delete(locations).where(eq(locations.id, id)).run();
+    if (result.changes === 0) throw new LocationNotFoundError(id);
+  });
 }
