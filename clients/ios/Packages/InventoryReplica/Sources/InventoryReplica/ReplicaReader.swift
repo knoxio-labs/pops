@@ -39,6 +39,10 @@ internal final class ReplicaReader: InventoryQuerySource {
         attempt([]) { try ReplicaPlacement.contents(ofLocation: locationId, in: $0) }
     }
 
+    func inventoryContents(ofContainer containerId: String) -> [InventoryItem] {
+        attempt([]) { try ReplicaQueries.contents(ofContainer: containerId, in: $0) }
+    }
+
     func inventoryInHand() -> [InventoryItem] {
         attempt([]) { try ReplicaQueries.inHand(in: $0) }
     }
@@ -49,6 +53,16 @@ internal final class ReplicaReader: InventoryQuerySource {
 
     func inventoryRecents(limit: Int) -> [InventoryItem] {
         attempt([]) { try ReplicaQueries.recents(limit: limit, in: $0) }
+    }
+
+    func inventoryRecentEvents(limit: Int) -> [InventoryEvent] {
+        attempt([]) { try ReplicaQueries.recentEvents(limit: limit, in: $0) }
+    }
+
+    func inventoryCounts() -> InventoryCounts {
+        attempt(InventoryCounts(items: 0, containers: 0, locations: 0)) {
+            try ReplicaQueries.counts(in: $0)
+        }
     }
 
     func inventorySearch(text: String, includeInactive: Bool) -> [InventoryItem] {
