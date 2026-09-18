@@ -81,8 +81,8 @@ extension InventoryItemDetail {
     }
 
     /// When the item stopped counting, and the reason the latest
-    /// lifecycle-changed event recorded (D3: the reason lives only on the
-    /// event).
+    /// lifecycle-changed event recorded. The item itself carries no reason
+    /// field, so that detail only ever comes from the event history.
     private static func lifecycleChange(
         of item: InventoryItem, events: [InventoryEvent]
     ) -> InventoryLifecycleChange? {

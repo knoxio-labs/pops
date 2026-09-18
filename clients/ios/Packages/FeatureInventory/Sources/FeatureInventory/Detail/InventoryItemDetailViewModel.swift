@@ -137,7 +137,8 @@ internal final class InventoryItemDetailViewModel {
         }
     }
 
-    /// Reverts a history event with a compensating one (D4).
+    /// Reverts a history event with a compensating one rather than editing or
+    /// deleting it, so the event log stays append-only.
     internal func revert(_ entry: InventoryActivityEntry) async {
         guard entry.isUndoable else { return }
         _ = await send(.revertEvent(seq: entry.seq))
