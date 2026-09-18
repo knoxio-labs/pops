@@ -1,5 +1,4 @@
 import AppCore
-import Foundation
 
 extension InventoryDashboard {
     /// The query the dashboard observes: every section, read against one
