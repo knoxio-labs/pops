@@ -19,6 +19,8 @@ import express, { type Express, type Request, type Response } from 'express';
 import { inventoryContract } from '../contract/rest.js';
 import { createInventoryFilesRouter } from './files/router.js';
 import { type InventoryApiDeps, makeRequestHandler } from './handlers.js';
+import { createInventoryMediaRouter } from './media/router.js';
+import { getInventoryImagesDir } from './modules/photos/paths.js';
 import { makeInventoryRestHandlers } from './rest/handlers.js';
 
 /**
@@ -79,6 +81,12 @@ export function createInventoryApiApp(deps: InventoryApiDeps): Express {
   // their `/api/inventory/...` + `/inventory/documents/:id/thumbnail` paths
   // don't collide with any contract path, so they add no OpenAPI surface.
   app.use(createInventoryFilesRouter());
+
+  // Raw content-addressed media routes (Inventory ADR-002 D9): `PUT`/`GET
+  // /media/:sha256`. Also deliberately NOT ts-rest — see `media/router.ts`.
+  app.use(
+    createInventoryMediaRouter({ db: deps.inventoryDb.db, imagesDir: getInventoryImagesDir })
+  );
 
   return app;
 }
