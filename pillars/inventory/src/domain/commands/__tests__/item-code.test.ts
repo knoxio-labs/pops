@@ -56,6 +56,38 @@ describe('item.setCode', () => {
     const outcome = h.run(mutation('item.setCode', 'toaster', { code: 'LAMP' }));
     expect(outcome).toMatchObject({ status: 'conflict', suggestedCode: null });
   });
+
+  it('is still a conflict when the code is held by a tombstoned item', () => {
+    seedItem(h, { id: 'deleted-lamp', code: 'B412', deletedAt: '2026-09-18T01:00:00.000Z' });
+    const outcome = h.run(mutation('item.setCode', 'toaster', { code: 'B412' }));
+    expect(outcome).toMatchObject({
+      status: 'conflict',
+      kind: 'code_collision',
+      heldBy: { id: 'deleted-lamp', name: 'deleted-lamp' },
+    });
+    expect(h.item('toaster').code).toBeNull();
+  });
+
+  it('suggests around a code held by a tombstoned item', () => {
+    seedItem(h, { id: 'deleted-lamp', code: 'B412', deletedAt: '2026-09-18T01:00:00.000Z' });
+    const outcome = h.run(mutation('item.setCode', 'toaster', { code: 'B412' }));
+    expect(outcome).toMatchObject({ status: 'conflict', suggestedCode: 'B413' });
+  });
+
+  it('restoring a deleted item keeps its code reserved against everyone else', () => {
+    h.run(mutation('item.setCode', 'lamp', { code: 'B412' }));
+    seedItem(h, { id: 'deleted-toaster' });
+    h.raw
+      .prepare('UPDATE items SET deleted_at = ? WHERE id = ?')
+      .run('2026-09-18T01:00:00.000Z', 'lamp');
+    const collision = h.run(mutation('item.setCode', 'toaster', { code: 'B412' }));
+    expect(collision).toMatchObject({ status: 'conflict', kind: 'code_collision' });
+
+    const restored = h.run(mutation('item.restoreDeleted', 'lamp', {}, { baseRevision: 1 }));
+    expect(restored).toMatchObject({ status: 'applied' });
+    expect(h.item('lamp').code).toBe('B412');
+    expect(h.item('lamp').deletedAt).toBeNull();
+  });
 });
 
 describe('suggestNextCode', () => {
