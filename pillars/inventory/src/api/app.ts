@@ -6,8 +6,11 @@
  * factory so the test suite can spin up an in-process `supertest`
  * instance without binding a real port.
  *
- * The pillar trusts the docker network — the dispatcher/gateway in front
- * authenticates; there is no per-request auth here (parity with lists).
+ * Auth is split by who is calling. An uncredentialled caller is still
+ * admitted — browser traffic arrives through the shell's nginx with no key,
+ * and callers on the docker network that present none must keep working. A
+ * caller that presents an `X-API-Key` is a machine, and is held to the
+ * service account behind that key: see `middleware/service-account-scope.ts`.
  */
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -16,9 +19,12 @@ import { fileURLToPath } from 'node:url';
 import { createExpressEndpoints } from '@ts-rest/express';
 import express, { type Express, type Request, type Response } from 'express';
 
+import { createRegistryServiceAccountVerifier } from '@pops/pillar-sdk/server';
+
 import { inventoryContract } from '../contract/rest.js';
 import { createInventoryFilesRouter } from './files/router.js';
 import { type InventoryApiDeps, makeRequestHandler } from './handlers.js';
+import { createServiceAccountScopeMiddleware } from './middleware/service-account-scope.js';
 import { makeInventoryRestHandlers } from './rest/handlers.js';
 
 /**
@@ -71,6 +77,15 @@ export function createInventoryApiApp(deps: InventoryApiDeps): Express {
   app.get('/openapi', (_req: Request, res: Response) => {
     res.json(openapiDocument);
   });
+
+  // Inbound service-account gate. Mounted after the raw probes (which carry no
+  // scope) and before the contract surface, so every contract route is covered
+  // without enumerating them here.
+  app.use(
+    createServiceAccountScopeMiddleware(
+      deps.serviceAccountVerifier ?? createRegistryServiceAccountVerifier()
+    )
+  );
 
   createExpressEndpoints(inventoryContract, makeInventoryRestHandlers(deps), app);
 
