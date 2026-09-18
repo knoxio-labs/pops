@@ -6,7 +6,7 @@ import SwiftUI
 /// `ChipStrip` is the inspector's switcher and scrolls horizontally, which is
 /// right for a fixed set of states and wrong for tags: a tag pushed off the
 /// end of a scrolling row is a capability the reader does not know the object
-/// has. This wraps instead, so the whole set is always on screen — and grows
+/// has. This wraps instead, so the whole set is always on screen, and grows
 /// taller rather than clipping when Dynamic Type makes each chip wider.
 internal struct InventoryChipFlow: Layout {
     internal let spacing: CGFloat

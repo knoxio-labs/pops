@@ -10,6 +10,7 @@ extension InventoryGroundedDashboardView {
 
                 ForEach(state.containers) { container in
                     containerRow(container)
+                        .transition(InventoryMotion.row)
                     if container.id != state.containers.last?.id {
                         PopsDivider()
                             .padding(.leading, PopsSize.touchTarget + PopsSpacing.md)
@@ -56,18 +57,15 @@ extension InventoryGroundedDashboardView {
     internal var inHand: some View {
         VStack(alignment: .leading, spacing: PopsSpacing.sm) {
             InventoryGroundedSectionHeader(
-                title: "In hand", status: "\(state.inHandItems.count) awaiting placement")
-            InventoryGroundedListPanel {
-                VStack(spacing: PopsSpacing.zero) {
-                    ForEach(state.inHandItems) { item in
-                        inHandRow(item)
-                        if item.id != state.inHandItems.last?.id {
-                            PopsDivider()
-                                .padding(.leading, PopsSize.touchTarget + PopsSpacing.md)
-                        }
-                    }
-                }
-            }
+                title: "In hand", status: "\(state.inHand.items.count) awaiting placement",
+                destination: .inHand, quiet: true)
+            InventoryInHandRows(
+                items: state.inHand.items,
+                selection: $inHandSelection,
+                onPutBack: { ids in
+                    if let next = state.inHand.putBack(ids) { offer = next }
+                },
+                onMove: { moving = InventoryInHandMoveRequest($0) })
         }
     }
 
@@ -79,6 +77,7 @@ extension InventoryGroundedDashboardView {
                 VStack(spacing: PopsSpacing.zero) {
                     ForEach(state.activities) { activity in
                         activityRow(activity)
+                            .transition(InventoryMotion.row)
                         if activity.id != state.activities.last?.id {
                             PopsDivider()
                                 .padding(.leading, PopsSize.touchTarget + PopsSpacing.md)
@@ -105,9 +104,11 @@ extension InventoryGroundedDashboardView {
                 Text(openContainerTitle)
                     .font(.popsHeadline)
                     .foregroundStyle(Color.popsForeground)
+                    .contentTransition(.numericText(value: Double(state.containers.count)))
                 Text("\(openItemCount) items in open containers")
                     .font(.popsCaption)
                     .foregroundStyle(Color.popsMutedForeground)
+                    .contentTransition(.numericText(value: Double(openItemCount)))
             }
         } icon: {
             Image(systemName: "shippingbox.fill")
@@ -150,41 +151,6 @@ extension InventoryGroundedDashboardView {
             })
     }
 
-    private func inHandRow(_ item: InventoryItem) -> some View {
-        NavigationLink(value: InventoryRoute.item(item.id)) {
-            InventoryGroundedRowLabel(title: item.name, detail: item.detail, symbol: item.symbol)
-        }
-        .buttonStyle(.plain)
-        .inventoryGroundedSwipeRow(isActive: activeSwipeRow == .inHand(item.id))
-        .inventoryGroundedSwipeActions(
-            edge: .leading,
-            onPresentationChanged: {
-                updateSwipePresentation(.inHand(item.id), isPresented: $0)
-            },
-            actions: {
-                Button {
-                    moveRequest = item
-                } label: {
-                    Label("Move to…", systemImage: "folder.fill")
-                }
-                .tint(.popsAccent)
-            }
-        )
-        .inventoryGroundedSwipeActions(
-            edge: .trailing,
-            onPresentationChanged: {
-                updateSwipePresentation(.inHand(item.id), isPresented: $0)
-            },
-            actions: {
-                Button {
-                    putBack(item)
-                } label: {
-                    Label("Put back", systemImage: "arrow.uturn.backward.circle.fill")
-                }
-                .tint(.popsSuccess)
-            })
-    }
-
     private func activityRow(_ activity: InventoryActivity) -> some View {
         NavigationLink(value: InventoryRoute.activity) {
             InventoryGroundedRowLabel(
@@ -213,15 +179,6 @@ extension InventoryGroundedDashboardView {
 extension InventoryGroundedDashboardView {
     internal func close(_ container: InventoryContainer) {
         state.close(container)
-    }
-
-    internal func putBack(_ item: InventoryItem) {
-        state.putBack(item)
-    }
-
-    internal func move(_ item: InventoryItem) {
-        state.move(item)
-        moveRequest = nil
     }
 
     internal func undo(_ activity: InventoryActivity) {

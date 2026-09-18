@@ -44,6 +44,11 @@ let package = Package(
                 "FeatureReceiptCapture",
                 "FeatureTransactions",
             ],
+            exclude: ["Resources/SamplePhotos/README.md"],
+            resources: [
+                .process("Resources/SamplePhotos"),
+                .process("Resources/Symbols.xcassets"),
+            ],
             swiftSettings: strictSwiftSettings
         ),
         .testTarget(
