@@ -61,6 +61,12 @@ extension InMemoryInventoryStore {
                 locations: locations.values.filter { !$0.isDeleted }.count)
         }
 
+        func inventoryItems(includeInactive: Bool) -> [InventoryItem] {
+            items.values.filter { item in
+                !item.isDeleted && (includeInactive || item.lifecycle == .active)
+            }.sorted { $0.name < $1.name }
+        }
+
         func inventorySearch(text: String, includeInactive: Bool) -> [InventoryItem] {
             items.values.filter { item in
                 (includeInactive || item.lifecycle == .active)

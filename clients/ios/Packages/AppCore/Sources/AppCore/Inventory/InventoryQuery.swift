@@ -23,6 +23,10 @@ public protocol InventoryQuerySource: Sendable {
     /// How many active items, active containers and live locations the
     /// replica holds. Inactive items are excluded, per D3.
     func inventoryCounts() -> InventoryCounts
+    /// Every item the replica holds, tombstones excluded, in no promised
+    /// order: the Items browser's catalogue before any query narrows it.
+    /// Inactive items are included only when asked for, per D3.
+    func inventoryItems(includeInactive: Bool) -> [InventoryItem]
     func inventorySearch(text: String, includeInactive: Bool) -> [InventoryItem]
     func inventoryItemHistory(itemId: String) -> [InventoryEvent]
     func inventoryLocationHistory(locationId: String) -> [InventoryEvent]
@@ -85,6 +89,10 @@ public struct InventoryQuery<Value: Sendable>: Sendable {
 
     public static var counts: InventoryQuery<InventoryCounts> {
         .init { $0.inventoryCounts() }
+    }
+
+    public static func items(includeInactive: Bool = false) -> InventoryQuery<[InventoryItem]> {
+        .init { $0.inventoryItems(includeInactive: includeInactive) }
     }
 
     public static func search(
