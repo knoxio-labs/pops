@@ -82,12 +82,12 @@ function itemColumns(changes: FieldValues, now: string): Partial<ItemInsert> {
   return columns;
 }
 
-function locationColumns(changes: FieldValues): Partial<LocationInsert> {
+function locationColumns(changes: FieldValues, now: string): Partial<LocationInsert> {
   const columns: Partial<LocationInsert> = {};
   for (const [field, value] of Object.entries(changes)) {
     const codec = LOCATION_FIELD_CODECS[field];
     if (!codec) throw new CommandRejected('invalid', `location has no writable field ${field}`);
-    Object.assign(columns, codec.columns(value, ''));
+    Object.assign(columns, codec.columns(value, now));
   }
   return columns;
 }
@@ -111,7 +111,7 @@ export function writeEntity(
     return;
   }
   db.update(locations)
-    .set({ ...locationColumns(changes), ...common, lastEditedTime: stamp.now })
+    .set({ ...locationColumns(changes, stamp.now), ...common, lastEditedTime: stamp.now })
     .where(eq(locations.id, entity.row.id))
     .run();
 }
