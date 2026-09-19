@@ -48,7 +48,7 @@ internal final class InventoryItemFormModel {
     /// field before anybody has typed opens accusing.
     internal private(set) var showsValidation = false
     internal private(set) var isSubmitting = false
-    internal var failure: RepositoryError?
+    internal var failure: InventoryWriteFailure?
 
     private let store: any InventoryStore
     private let suggester: InventoryCodeSuggester
@@ -223,7 +223,7 @@ internal final class InventoryItemFormModel {
     }
 
     private func record(_ error: Error) {
-        guard !(Task.isCancelled || error is CancellationError) else { return }
-        failure = error as? RepositoryError ?? .transport(String(describing: error))
+        guard let reported = InventoryWriteFailure.reporting(error) else { return }
+        failure = reported
     }
 }

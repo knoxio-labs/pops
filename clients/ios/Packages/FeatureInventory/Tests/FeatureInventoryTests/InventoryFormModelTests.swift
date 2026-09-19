@@ -107,7 +107,7 @@ internal struct InventoryFormModelTests {
         form.codeChanged(to: "B412")
 
         #expect(await form.submit() == false)
-        #expect(form.failure == .unavailable)
+        #expect(form.failure == .repository(.unavailable))
         let creates = store.performed.filter { if case .createItem = $0 { true } else { false } }
         #expect(creates.count == 1)
 

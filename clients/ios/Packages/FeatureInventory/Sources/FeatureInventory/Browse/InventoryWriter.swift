@@ -10,7 +10,7 @@ import Observation
 @MainActor @Observable
 internal final class InventoryWriter {
     internal var undoOffer: InventoryUndoOffer?
-    internal var failure: RepositoryError?
+    internal var failure: InventoryWriteFailure?
 
     private let store: any InventoryStore
     private var receipts: [InventoryUndoOffer.ID: [InventoryReceipt]] = [:]
@@ -62,7 +62,7 @@ internal final class InventoryWriter {
     /// Records a refusal for the alert. Cancellation is not a refusal: a
     /// screen that went away mid-write has nobody to tell.
     internal func report(_ error: Error) {
-        guard !(Task.isCancelled || error is CancellationError) else { return }
-        failure = error as? RepositoryError ?? .transport(String(describing: error))
+        guard let reported = InventoryWriteFailure.reporting(error) else { return }
+        failure = reported
     }
 }

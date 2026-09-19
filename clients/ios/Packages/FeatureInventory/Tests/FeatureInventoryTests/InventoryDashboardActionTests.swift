@@ -90,7 +90,7 @@ internal struct InventoryDashboardActionTests {
 
         await model.undo(activity)
 
-        #expect(model.writer.failure == .contractMismatch)
+        #expect(model.writer.failure == .repository(.contractMismatch))
     }
 
     @Test("Undo on a place's event reverts it under that place, not under an item")
@@ -132,6 +132,6 @@ internal struct InventoryDashboardActionTests {
 
         await model.close(container)
 
-        #expect(model.writer.failure == .unavailable)
+        #expect(model.writer.failure == .repository(.unavailable))
     }
 }
