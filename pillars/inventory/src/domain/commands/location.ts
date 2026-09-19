@@ -122,10 +122,12 @@ function directItems(db: CommandDb, locationId: string): ItemRow[] {
 
 /**
  * Reparent everything that pointed at a deleted location: child places move
- * up to its own parent (becoming roots if it was one), and direct items
- * follow the same rule except at a root, where there is no "up" for an item
- * to move to, so they go in hand remembering the deleted place (ADR-002 D2's
- * "Previous place deleted").
+ * up to its own parent, becoming roots if it was one (ADR-002 D2). Direct
+ * items do NOT follow to the parent: a deleted place leaves its own items
+ * unlocated, in hand, remembering it as their previous placement ("Previous
+ * place deleted"), whether or not the deleted place had a parent to move
+ * them to. Only a sub-location's own children move up; the items it held
+ * directly always go to hand.
  */
 function reparentChildren(effectCtx: EffectContext, deleted: LocationRow): void {
   const changeCtx = changeContextFrom(effectCtx);
@@ -140,16 +142,10 @@ function reparentChildren(effectCtx: EffectContext, deleted: LocationRow): void 
   }
 
   for (const item of directItems(effectCtx.db, deleted.id)) {
-    const changes: FieldValues =
-      grandparentId !== null
-        ? {
-            placement: { kind: 'location', locationId: grandparentId },
-            previousPlacement: null,
-          }
-        : {
-            placement: { kind: 'hand' },
-            previousPlacement: { kind: 'location', locationId: deleted.id },
-          };
+    const changes: FieldValues = {
+      placement: { kind: 'hand' },
+      previousPlacement: { kind: 'location', locationId: deleted.id },
+    };
     recordUpdate(changeCtx, { kind: 'item', row: item }, { eventKind: 'moved', changes });
   }
 }
@@ -157,9 +153,13 @@ function reparentChildren(effectCtx: EffectContext, deleted: LocationRow): void 
 const deleteArgs = z.object({});
 
 /**
- * `location.delete {}`: tombstone a place, reparenting whatever pointed at
- * it (ADR-002 D2). Deleting an already-deleted place changes nothing, since
- * `deletedAt` is already what the op wants.
+ * `location.delete {}`: tombstone a place. Its child places reparent up to
+ * its own parent (ADR-002 D2). Its direct items do not: they go unlocated,
+ * in hand, remembering the deleted place as their previous placement,
+ * rather than moving up to the parent (POPS-4053 supersedes ADR-002 D2's
+ * "reparenting" for items specifically; the location reparenting stands).
+ * Deleting an already-deleted place changes nothing, since `deletedAt` is
+ * already what the op wants.
  */
 export const locationDelete = defineOp({
   op: 'location.delete',

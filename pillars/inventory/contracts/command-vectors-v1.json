@@ -769,6 +769,57 @@
         "seq": 1,
         "converged": false
       }
+    },
+    {
+      "name": "location.delete-with-parent",
+      "op": "location.delete",
+      "seedLocations": [
+        {
+          "id": "10000000-0000-4000-8000-000000000001",
+          "name": "House"
+        },
+        {
+          "id": "10000000-0000-4000-8000-000000000002",
+          "name": "Garage",
+          "parentId": "10000000-0000-4000-8000-000000000001"
+        },
+        {
+          "id": "10000000-0000-4000-8000-000000000003",
+          "name": "Shelf",
+          "parentId": "10000000-0000-4000-8000-000000000002"
+        }
+      ],
+      "seedItems": [
+        {
+          "id": "20000000-0000-4000-8000-000000000002",
+          "name": "Lamp",
+          "placement": {
+            "kind": "location",
+            "locationId": "10000000-0000-4000-8000-000000000002"
+          }
+        }
+      ],
+      "mutation": {
+        "mutationId": "30000000-0000-4000-8000-000000000015",
+        "op": "location.delete",
+        "entityId": "10000000-0000-4000-8000-000000000002",
+        "baseRevision": 1,
+        "dependsOn": [],
+        "args": {},
+        "clientTime": "2026-09-19T00:00:00.000Z"
+      },
+      "actor": {
+        "kind": "device",
+        "id": "device-fixture",
+        "label": "Fixture"
+      },
+      "outcome": {
+        "mutationId": "30000000-0000-4000-8000-000000000015",
+        "status": "applied",
+        "revision": 2,
+        "seq": 1,
+        "converged": false
+      }
     }
   ]
 }
