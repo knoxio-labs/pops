@@ -117,7 +117,13 @@ describe('GET /openapi', () => {
   it('declares no route the contract does not, so the document cannot over-promise', async () => {
     const body = await fetchDocument();
 
-    const contractPaths = contractRoutes.map((route) => openApiPath(route.path));
+    // A `Set`, not a plain map: `putMedia`/`getMedia` are the first two
+    // routes on this contract that share a literal path (different methods,
+    // same resource) — OpenAPI's `paths` object has one key per path with
+    // every method nested under it, so two routes sharing a path must
+    // collapse to one entry here too, or this assertion would demand a
+    // duplicate key no JSON object can have.
+    const contractPaths = [...new Set(contractRoutes.map((route) => openApiPath(route.path)))];
     expect(Object.keys(body.paths ?? {}).toSorted()).toEqual(contractPaths.toSorted());
   });
 
@@ -135,6 +141,7 @@ describe('GET /openapi', () => {
       '/mobile/finance/transactions/{id}',
       '/mobile/inventory/codes/suggest',
       '/mobile/inventory/items/{id}/history',
+      '/mobile/inventory/media/{sha256}',
       '/mobile/inventory/mutations',
       '/mobile/inventory/sync/changes',
       '/mobile/inventory/sync/snapshot',

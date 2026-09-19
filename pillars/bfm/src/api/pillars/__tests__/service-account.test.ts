@@ -126,6 +126,7 @@ describe('the granted scopes', () => {
       'inventory.sync',
       'inventory.types',
       'inventory.codes',
+      'inventory.media',
     ]);
   });
 
