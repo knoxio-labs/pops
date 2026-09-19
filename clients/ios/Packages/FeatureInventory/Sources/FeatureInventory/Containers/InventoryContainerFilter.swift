@@ -1,6 +1,5 @@
 import AppCore
 import DesignSystem
-import SwiftUI
 
 /// What the containers browser can narrow to.
 internal enum InventoryContainerFilter: String, CaseIterable, Identifiable {

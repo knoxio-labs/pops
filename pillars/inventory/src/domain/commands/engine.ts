@@ -52,7 +52,7 @@ function dispatchCreate(d: Dispatch, op: BoundCreateOp, ctx: PlanContext): Store
   }
   const plan = op.plan(ctx);
   const written = recordCreate(changeContext(d), op.entity, d.mutation.entityId, plan);
-  plan.effects?.(d.db, written);
+  plan.effects?.(ctx, written);
   return applied(d.mutation, written, false);
 }
 
@@ -79,11 +79,9 @@ function dispatchUpdate(d: Dispatch, op: BoundUpdateOp, ctx: PlanContext): Store
   }
 
   const written = recordUpdate(changeContext(d), target, plan);
-  if (!written) {
-    return applied(d.mutation, { revision: target.row.revision, seq: target.row.seq }, converged);
-  }
-  plan.effects?.(d.db, written);
-  return applied(d.mutation, written, converged);
+  const settled = written ?? { revision: target.row.revision, seq: target.row.seq };
+  const afterEffects = plan.effects?.(ctx, settled);
+  return applied(d.mutation, afterEffects ?? settled, converged);
 }
 
 function dispatch(d: Dispatch, registry: OpRegistry): StoredOutcome {

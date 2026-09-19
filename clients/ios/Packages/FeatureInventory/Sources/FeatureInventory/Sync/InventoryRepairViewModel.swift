@@ -1,5 +1,4 @@
 import AppCore
-import Foundation
 import Observation
 
 /// One repair's state and the two commits it offers, over `InventoryStore`.
