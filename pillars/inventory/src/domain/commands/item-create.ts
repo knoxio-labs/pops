@@ -205,7 +205,7 @@ export const itemCreate = defineOp({
         upsertSearchIndex(effectCtx.db, {
           id: ctx.mutation.entityId,
           name: item.name,
-          code: null,
+          code: args.code ?? null,
           note: item.note ?? null,
           typeKey: item.typeKey ?? null,
           fields: JSON.stringify(item.fields),
