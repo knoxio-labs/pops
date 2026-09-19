@@ -68,8 +68,8 @@ name: iOS Quality
 # production having passed `unit-quality.yml`, that trade is worth reopening —
 # the `pnpm list` command above still shows what to point the filter at.
 #
-# THIS JOB RUNS THE ONLY TEST IN THE REPO THAT TOUCHES AN iOS SCREEN on pushes
-# to main. The last steps boot a real `@pops/bfm` and drive the built app
+# THIS JOB RUNS THE ONLY TEST IN THE REPO THAT TOUCHES AN iOS SCREEN, in the
+# merge queue. The last steps boot a real `@pops/bfm` and drive the built app
 # against it with Maestro; `clients/ios/.maestro/README.md` says why Maestro and
 # not XCUITest, and `scripts/ios-e2e/run.mjs` says what the pillar is talking
 # to. It lives here rather than in a workflow of its own because it needs what
@@ -94,16 +94,14 @@ name: iOS Quality
 # stopped being compiled — the app-does-not-compile signal now comes from the
 # step below, about a minute later than it used to.
 
+# NO `push` TRIGGER, and that is a decision (POPS-4152). The merge queue's
+# head commit IS the commit that lands on `main`, and the queue lane below runs
+# the whole job on it — suite, analyzer, Release check, UI flow. A push run
+# built that same commit a second time on the five-runner macOS pool, after
+# the fact, where a red result could no longer stop anything. TestFlight reads
+# the queue lane's verdict instead (`ios-testflight.yml`), and CI Gate reads an
+# absent run on a push as filtered out.
 on:
-  push:
-    branches: [main]
-    paths:
-      - "clients/ios/**"
-      - "pillars/bfm/**"
-      - "scripts/ios-e2e/**"
-      - "pnpm-lock.yaml"
-      - ".github/workflows/ios-quality.yml"
-      - ".github/actions/**"
   pull_request:
     paths:
       - "clients/ios/**"
@@ -205,7 +203,7 @@ jobs:
   quality:
     name: build + test + lint + UI flow
     needs: [scope]
-    # On a pull request or a push to `main` the event's `paths:` filter already
+    # On a pull request the event's `paths:` filter already
     # decided and `scope` is skipped, so this must not inherit that skip. On a
     # merge group it runs only on an explicit `selected=true`: a `scope` job that
     # FAILED leaves the output empty, so this stays skipped and the workflow goes
@@ -229,8 +227,9 @@ jobs:
     runs-on: macos-latest
     # A wedged simulator is the classic macOS-CI failure and it does not fail —
     # it hangs. Without a ceiling that burns the job's full 6h default. The
-    # ceiling sits well above a healthy run, which already takes 40-50 minutes
-    # (package tests, the shared compile, the Release check and the UI flow).
+    # ceiling sits well above a healthy queue-lane run, which takes ~50 minutes
+    # (package tests, the shared compile, suite + analyzer, the Release check
+    # and the UI flow); a pull request's run is ~16.
     timeout-minutes: 75
     defaults:
       run:
@@ -363,32 +362,28 @@ jobs:
 
       # WHERE EACH LANE SPENDS ITS MINUTES. The shared compile is ~2 minutes and
       # the simulator suite ~3; `swiftlint analyze` over the whole tree is ~19.5
-      # (run 35408330810, 693 files, 2026-09-19). The analyzer is therefore run
-      # in exactly one lane, the merge queue, which is also the only lane that
-      # sees the combined tree it is judging. Pull requests and pushes to main
-      # run the simulator suite and nothing else here.
+      # (run 35408330810, 693 files, 2026-09-19). A pull request therefore runs
+      # the suite and not the analyzer (POPS-4149): every macOS job shares
+      # GitHub's five-runner pool, and runs were waiting 20-40 minutes for a
+      # runner. An unused declaration or unused import is reported as a queue
+      # ejection instead of a red PR; `mise run lint:analyze` locally still
+      # answers it before a push.
       #
-      # The trade is where an unused declaration or unused import is reported:
-      # as a queue ejection instead of a red PR. `mise run lint:analyze` locally
-      # still answers it before a push. What it buys is the ~19.5 minutes, on a
-      # lane that shares GitHub's five-runner macOS pool with every other PR and
-      # every queue entry — runs were waiting 20-40 minutes for a runner before
-      # this (POPS-4149).
-      #
-      # If both tasks are ever run in one invocation again, it is
-      # `mise run -j 1 test ::: lint:analyze` and the `-j 1` is mandatory: mise
-      # runs the two concurrently by default, `swiftlint analyze` then saturates
-      # the runner's three cores while the simulator suite is running, and the
-      # Auth concurrency tests poll for a condition with a timeout.
-      # `twentyConcurrentRejectionsRefreshOnce` failed with "a request never
-      # reached the refresher" on one run in three that way.
+      # The merge queue runs both, off one compile, because its commit is the
+      # one that lands and ships (`ios-testflight.yml` ships only what this lane
+      # passed). `-j 1` is mandatory: mise runs the two concurrently by default,
+      # `swiftlint analyze` then saturates the runner's three cores while the
+      # simulator suite is running, and the Auth concurrency tests poll for a
+      # condition with a timeout. `twentyConcurrentRejectionsRefreshOnce` failed
+      # with "a request never reached the refresher" on one run in three that
+      # way.
       - name: Test (iOS Simulator)
         if: github.event_name != 'merge_group'
         run: mise run test
 
-      - name: Compile + SwiftLint analyzer rules
+      - name: Test + SwiftLint analyzer rules (one shared compile)
         if: github.event_name == 'merge_group'
-        run: mise run lint:analyze
+        run: "mise run -j 1 test ::: lint:analyze"
 
       # THE ONE INVARIANT HERE THAT BUILDING, TESTING AND LINTING DO NOT COVER:
       # a shipped binary names no BFM host, and is re-pointed by re-pairing
@@ -407,7 +402,6 @@ jobs:
       # up with `lint`: everything cheaper, and everything more likely to fail,
       # has already reported by this point.
       - name: Release carries no BFM host
-        if: github.event_name != 'merge_group'
         run: mise run verify:release-carries-no-host
 
       # Everything below drives the built app on the simulator the step above
@@ -421,7 +415,7 @@ jobs:
       # it so. The pillar is a Node process: install its subgraph, build it,
       # run it. `scripts/ios-e2e/run.mjs` does the last two.
       - name: Expose bundled node-gyp on PATH
-        if: github.event_name == 'push'
+        if: github.event_name == 'merge_group'
         # mise-installed node bundles node-gyp under npm but does not put it on
         # PATH, so better-sqlite3 — which the BFM opens its database with —
         # fails its pnpm lifecycle build with `node-gyp: not found` on any
@@ -435,7 +429,7 @@ jobs:
           echo "$gyp_bin" >> "$GITHUB_PATH"
 
       - name: Install the BFM's subgraph
-        if: github.event_name == 'push'
+        if: github.event_name == 'merge_group'
         # Not the whole workspace: this job needs one pillar to run, and
         # `@pops/bfm...` pulls exactly it and what it imports.
         working-directory: .
@@ -446,7 +440,7 @@ jobs:
       # simulator `test` booted. Its own task rebuilds when those are missing,
       # so a reordering degrades into a second compile rather than into a lie.
       - name: UI flow (Maestro, against a real BFM)
-        if: github.event_name == 'push'
+        if: github.event_name == 'merge_group'
         working-directory: .
         run: mise run e2e:ios
 

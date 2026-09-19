@@ -137,18 +137,24 @@ describe('reading a workflow’s own pull_request.paths', () => {
   });
 
   it.each(SCOPED_WORKFLOWS.map((w) => w.file))(
-    '%s scopes push and pull_request identically',
+    '%s scopes push and pull_request identically, where it has a push trigger',
     (file) => {
       // The helper mirrors `pull_request.paths`. If the `push` filter said
       // something else, `main` and the queue would disagree about what a change
       // is relevant to, and only one of them would be the one this scopes.
-      const on = triggersOf(file);
-      const push = on.push;
+      const push = triggersOf(file).push;
+      if (push === undefined) return;
       expect(isMapping(push)).toBe(true);
       const pushPaths = isMapping(push) ? push.paths : undefined;
       expect(pushPaths).toEqual(pullRequestPaths(workflowSource(file), file));
     }
   );
+
+  it('ios-quality.yml does not rebuild on push to main (POPS-4152)', () => {
+    // The queue lane already ran the whole job on the commit that lands;
+    // `ios-testflight.yml` reads that verdict rather than a push run's.
+    expect(Object.keys(triggersOf('ios-quality.yml'))).not.toContain('push');
+  });
 
   it.each(SCOPED_WORKFLOWS.map((w) => w.file))('%s still triggers on merge_group', (file) => {
     // Dropping the trigger does not turn the check off, it makes the check
@@ -222,28 +228,29 @@ describe('the scope job is wired to the workflow it scopes', () => {
     );
   });
 
-  it('runs the analyzer only in the queue, and Maestro only after an iOS change reaches main', () => {
+  it('runs the analyzer and Maestro only in the queue, the suite and Release check everywhere', () => {
     const steps = stepsOf(jobsOf('ios-quality.yml').get('quality'));
     const namedStep = (name: string) => steps.find((step) => step.name === name);
 
     expect(namedStep('Test (iOS Simulator)')?.if).toBe("github.event_name != 'merge_group'");
     expect(namedStep('Test (iOS Simulator)')?.run).toBe('mise run test');
-    expect(namedStep('Compile + SwiftLint analyzer rules')?.if).toBe(
-      "github.event_name == 'merge_group'"
-    );
-    expect(namedStep('Compile + SwiftLint analyzer rules')?.run).toBe('mise run lint:analyze');
+    const queueSuite = namedStep('Test + SwiftLint analyzer rules (one shared compile)');
+    expect(queueSuite?.if).toBe("github.event_name == 'merge_group'");
+    expect(queueSuite?.run).toBe('mise run -j 1 test ::: lint:analyze');
     const analyzerSteps = steps.filter((step) => String(step.run ?? '').includes('lint:analyze'));
-    expect(analyzerSteps.map((step) => step.name)).toEqual(['Compile + SwiftLint analyzer rules']);
+    expect(analyzerSteps.map((step) => step.name)).toEqual([
+      'Test + SwiftLint analyzer rules (one shared compile)',
+    ]);
 
     for (const name of [
       'Expose bundled node-gyp on PATH',
       "Install the BFM's subgraph",
       'UI flow (Maestro, against a real BFM)',
     ]) {
-      expect(namedStep(name)?.if).toBe("github.event_name == 'push'");
+      expect(namedStep(name)?.if).toBe("github.event_name == 'merge_group'");
     }
 
-    expect(namedStep('Release carries no BFM host')?.if).toBe("github.event_name != 'merge_group'");
+    expect(namedStep('Release carries no BFM host')?.if).toBeUndefined();
   });
 });
 
@@ -289,7 +296,6 @@ describe("ios-quality.yml's macOS job condition", () => {
       false,
       { eventName: 'pull_request', baseRef: 'pops-1-lower' },
     ],
-    ['a push to main', true, { eventName: 'push' }],
     ['a merge group the scope job selected', true, { eventName: 'merge_group', selected: 'true' }],
     [
       'a merge group the scope job deselected',
