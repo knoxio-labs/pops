@@ -1649,6 +1649,7 @@ export type MobileInventoryChangesResponses = {
       id: string;
       isContainer: boolean;
       isFull: boolean | null;
+      legacyType: string | null;
       lifecycle: string;
       lifecycleChangedAt: string | null;
       name: string;
@@ -1832,6 +1833,7 @@ export type MobileInventorySnapshotResponses = {
       id: string;
       isContainer: boolean;
       isFull: boolean | null;
+      legacyType: string | null;
       lifecycle: string;
       lifecycleChangedAt: string | null;
       name: string;

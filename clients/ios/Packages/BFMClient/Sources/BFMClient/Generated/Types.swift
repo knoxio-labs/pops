@@ -15562,6 +15562,8 @@ internal enum Operations {
                             internal var isContainer: Swift.Bool
                             /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/isFull`.
                             internal var isFull: Swift.Bool?
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/legacyType`.
+                            internal var legacyType: Swift.String?
                             /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/lifecycle`.
                             internal var lifecycle: Swift.String
                             /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/lifecycleChangedAt`.
@@ -15990,6 +15992,7 @@ internal enum Operations {
                             ///   - id:
                             ///   - isContainer:
                             ///   - isFull:
+                            ///   - legacyType:
                             ///   - lifecycle:
                             ///   - lifecycleChangedAt:
                             ///   - name:
@@ -16015,6 +16018,7 @@ internal enum Operations {
                                 id: Swift.String,
                                 isContainer: Swift.Bool,
                                 isFull: Swift.Bool? = nil,
+                                legacyType: Swift.String? = nil,
                                 lifecycle: Swift.String,
                                 lifecycleChangedAt: Swift.String? = nil,
                                 name: Swift.String,
@@ -16040,6 +16044,7 @@ internal enum Operations {
                                 self.id = id
                                 self.isContainer = isContainer
                                 self.isFull = isFull
+                                self.legacyType = legacyType
                                 self.lifecycle = lifecycle
                                 self.lifecycleChangedAt = lifecycleChangedAt
                                 self.name = name
@@ -16066,6 +16071,7 @@ internal enum Operations {
                                 case id
                                 case isContainer
                                 case isFull
+                                case legacyType
                                 case lifecycle
                                 case lifecycleChangedAt
                                 case name
@@ -16125,6 +16131,10 @@ internal enum Operations {
                                 self.isFull = try container.decodeIfPresent(
                                     Swift.Bool.self,
                                     forKey: .isFull
+                                )
+                                self.legacyType = try container.decodeIfPresent(
+                                    Swift.String.self,
+                                    forKey: .legacyType
                                 )
                                 self.lifecycle = try container.decode(
                                     Swift.String.self,
@@ -16190,6 +16200,7 @@ internal enum Operations {
                                     "id",
                                     "isContainer",
                                     "isFull",
+                                    "legacyType",
                                     "lifecycle",
                                     "lifecycleChangedAt",
                                     "name",
@@ -17525,6 +17536,8 @@ internal enum Operations {
                             internal var isContainer: Swift.Bool
                             /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/isFull`.
                             internal var isFull: Swift.Bool?
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/legacyType`.
+                            internal var legacyType: Swift.String?
                             /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/lifecycle`.
                             internal var lifecycle: Swift.String
                             /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/lifecycleChangedAt`.
@@ -17953,6 +17966,7 @@ internal enum Operations {
                             ///   - id:
                             ///   - isContainer:
                             ///   - isFull:
+                            ///   - legacyType:
                             ///   - lifecycle:
                             ///   - lifecycleChangedAt:
                             ///   - name:
@@ -17978,6 +17992,7 @@ internal enum Operations {
                                 id: Swift.String,
                                 isContainer: Swift.Bool,
                                 isFull: Swift.Bool? = nil,
+                                legacyType: Swift.String? = nil,
                                 lifecycle: Swift.String,
                                 lifecycleChangedAt: Swift.String? = nil,
                                 name: Swift.String,
@@ -18003,6 +18018,7 @@ internal enum Operations {
                                 self.id = id
                                 self.isContainer = isContainer
                                 self.isFull = isFull
+                                self.legacyType = legacyType
                                 self.lifecycle = lifecycle
                                 self.lifecycleChangedAt = lifecycleChangedAt
                                 self.name = name
@@ -18029,6 +18045,7 @@ internal enum Operations {
                                 case id
                                 case isContainer
                                 case isFull
+                                case legacyType
                                 case lifecycle
                                 case lifecycleChangedAt
                                 case name
@@ -18088,6 +18105,10 @@ internal enum Operations {
                                 self.isFull = try container.decodeIfPresent(
                                     Swift.Bool.self,
                                     forKey: .isFull
+                                )
+                                self.legacyType = try container.decodeIfPresent(
+                                    Swift.String.self,
+                                    forKey: .legacyType
                                 )
                                 self.lifecycle = try container.decode(
                                     Swift.String.self,
@@ -18153,6 +18174,7 @@ internal enum Operations {
                                     "id",
                                     "isContainer",
                                     "isFull",
+                                    "legacyType",
                                     "lifecycle",
                                     "lifecycleChangedAt",
                                     "name",

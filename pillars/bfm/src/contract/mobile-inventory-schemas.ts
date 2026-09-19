@@ -74,6 +74,8 @@ export const MobileInventoryItemSchema = z.object({
   seq: z.number().int(),
   name: z.string(),
   typeKey: z.string().nullable(),
+  /** The free-text type an item had before types existed; read-only, matched against a type's `legacyLabels`. */
+  legacyType: z.string().nullable(),
   fields: z.record(z.string(), AnyJson),
   note: z.string().nullable(),
   code: z.string().nullable(),
