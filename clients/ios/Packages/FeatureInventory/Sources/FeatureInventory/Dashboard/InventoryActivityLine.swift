@@ -13,6 +13,8 @@ internal enum InventoryActivityLine {
         let name = item?.name ?? location?.name ?? "Something"
         return InventoryDashboard.Activity(
             id: event.seq,
+            entityKind: event.entityKind,
+            entityId: event.entityId,
             title: "\(name) \(verb(for: event, current: item))",
             place: item.flatMap { places.immediate($0.placement) },
             at: event.serverTime,

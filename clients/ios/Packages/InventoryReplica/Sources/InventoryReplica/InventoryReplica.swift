@@ -1,6 +1,7 @@
 import AppCore
 import Foundation
 import GRDB
+import Synchronization
 
 /// The phone's copy of the inventory (ADR-002 D11): the rows the server's
 /// snapshot and change feed deliver, the served type catalogue, and every
@@ -22,6 +23,7 @@ public final class InventoryReplica: Sendable {
     private let now: @Sendable () -> Date
     private let staleAfter: TimeInterval
     private let observers = ReplicaObservers()
+    private let activity = Mutex(ReplicaActivity())
 
     /// - Parameters:
     ///   - now: The clock `last_refresh_at` is stamped with and staleness is
@@ -72,7 +74,9 @@ public final class InventoryReplica: Sendable {
     ///
     /// - Throws: The first database error any read inside the query hit.
     public func read<Value: Sendable>(_ query: InventoryQuery<Value>) throws -> Value {
-        let reader = ReplicaReader(database: database, now: now(), staleAfter: staleAfter)
+        let reader = ReplicaReader(
+            database: database, now: now(), staleAfter: staleAfter,
+            activity: activity.withLock { $0 })
         let value = query.read(reader)
         if let failure = reader.failure { throw failure }
         return value
@@ -87,14 +91,42 @@ public final class InventoryReplica: Sendable {
         AsyncThrowingStream(bufferingPolicy: .bufferingNewest(1)) { continuation in
             let id = UUID()
             continuation.onTermination = { [observers] _ in observers.remove(id) }
-            observers.add(id) { [self] in
-                do {
-                    continuation.yield(try read(query))
-                } catch {
-                    continuation.finish(throwing: error)
-                }
-            }
+            register(
+                id, query, yield: { continuation.yield($0) },
+                finish: { continuation.finish(throwing: $0) })
         }
+    }
+
+    /// `observe(_:)` for `InventoryStore`'s non-throwing stream: a failed
+    /// read ends the stream rather than yielding an empty value that would
+    /// read as an empty inventory.
+    internal func observeUntilFailure<Value: Sendable>(
+        _ query: InventoryQuery<Value>
+    ) -> AsyncStream<Value> {
+        AsyncStream(bufferingPolicy: .bufferingNewest(1)) { continuation in
+            let id = UUID()
+            continuation.onTermination = { [observers] _ in observers.remove(id) }
+            register(
+                id, query, yield: { continuation.yield($0) }, finish: { _ in continuation.finish() }
+            )
+        }
+    }
+
+    /// Changes what the replica reports about its own activity, and tells
+    /// every observer, since a status read depends on it.
+    internal func updateActivity(_ change: (inout ReplicaActivity) -> Void) {
+        let changed = activity.withLock { current in
+            let before = current
+            change(&current)
+            return current != before
+        }
+        if changed { observers.notify() }
+    }
+
+    /// Discards every server row and the feed position ahead of a fresh
+    /// snapshot, keeping the catalogue (`ReplicaApply.resetForResync`).
+    internal func resetForResync() throws {
+        try write { try ReplicaApply.resetForResync(in: $0) }
     }
 
     /// Where an item is, walked outward through its containers to the
@@ -102,6 +134,19 @@ public final class InventoryReplica: Sendable {
     /// replica does not hold or holds only as a tombstone.
     public func placementTrail(ofItem id: String) throws -> InventoryPlacementTrail? {
         try database.read { try ReplicaPlacement.trail(ofItem: id, in: $0) }
+    }
+
+    private func register<Value: Sendable>(
+        _ id: UUID, _ query: InventoryQuery<Value>, yield: @escaping @Sendable (Value) -> Void,
+        finish: @escaping @Sendable (any Error) -> Void
+    ) {
+        observers.add(id) { [self] in
+            do {
+                yield(try read(query))
+            } catch {
+                finish(error)
+            }
+        }
     }
 
     private func write(_ body: (Database) throws -> Void) throws {

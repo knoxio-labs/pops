@@ -20,9 +20,8 @@ internal struct InventoryDetailFields: Equatable {
     ) {
         let declared = type?.fields ?? []
         let line = { (key: String, label: String) -> InventoryDetailField? in
-            values[key].map {
-                InventoryDetailField(
-                    key: key, label: label, value: Self.display($0, locale: locale))
+            values[key].flatMap { Self.display($0, locale: locale) }.map {
+                InventoryDetailField(key: key, label: label, value: $0)
             }
         }
         let declaredKeys = Set(declared.map(\.key))
@@ -34,10 +33,12 @@ internal struct InventoryDetailFields: Equatable {
     }
 
     /// One value as a line reads it. A measurement keeps the unit it was
-    /// recorded in (POPS-4015); nothing here converts.
+    /// recorded in (POPS-4015); nothing here converts. Nil for a placement,
+    /// which only an event's before and after carry: the page's placement line
+    /// is where an item's whereabouts are drawn, never a field row.
     internal static func display(
         _ value: InventoryFieldValue, locale: Locale = .autoupdatingCurrent
-    ) -> String {
+    ) -> String? {
         switch value {
         case .text(let text), .choice(let text), .link(let text):
             text
@@ -47,6 +48,8 @@ internal struct InventoryDetailFields: Equatable {
             "\(number(measurement.value, locale: locale)) \(measurement.unit)"
         case .range(let range):
             "\(number(range.low, locale: locale))\u{2013}\(number(range.high, locale: locale)) \(range.unit)"
+        case .placement, .previousPlacement:
+            nil
         }
     }
 

@@ -34,7 +34,9 @@ internal enum InventoryFieldEntry: Hashable, Sendable {
     }
 
     /// An existing value, opened for editing, in the unit it was stored in.
-    internal init(_ value: InventoryFieldValue) {
+    /// Nil for a placement: only an event's before and after carry one, and
+    /// the form edits where a thing is through its placement row instead.
+    internal init?(_ value: InventoryFieldValue) {
         switch value {
         case .text(let text): self = .text(text)
         case .choice(let choice): self = .choice(choice)
@@ -47,6 +49,7 @@ internal enum InventoryFieldEntry: Hashable, Sendable {
                 low: InventoryFormAmount.text(range.low),
                 high: InventoryFormAmount.text(range.high), unit: range.unit)
         case .link(let link): self = .link(link)
+        case .placement, .previousPlacement: return nil
         }
     }
 

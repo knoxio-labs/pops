@@ -63,11 +63,17 @@ public enum InventoryEventKind: Hashable, Sendable {
 
 /// Who made a change, per ADR-002 D4 and D12. A device carries the label bfm
 /// forwards in `Pops-Actor`; `service` carries the calling account's name.
+///
+/// Sent on the wire as an open string, like `InventoryLifecycle` (D10): a new
+/// actor kind can ship without a protocol bump, so this decodes an unknown
+/// one to `.unrecognised` rather than refusing the whole event.
 public enum InventoryEventActor: Hashable, Sendable {
     case device(id: String, label: String)
     case web
     case service(account: String)
     case migration
+    /// An actor kind this build has never heard of, kept verbatim.
+    case unrecognised(kind: String, label: String)
 }
 
 /// One line of an item's or location's history, per ADR-002 D4. `before` and

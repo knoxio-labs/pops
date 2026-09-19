@@ -16,6 +16,7 @@ import { makeAiBudgetsHandlers } from './ai-budgets-handlers.js';
 import { makeAiObservabilityHandlers } from './ai-observability-handlers.js';
 import { makeAiProvidersHandlers } from './ai-providers-handlers.js';
 import { makeAiUsageHandlers } from './ai-usage-handlers.js';
+import { makeAiCodesHandlers } from './codes-handlers.js';
 import { makeIngestHandler } from './ingest-handlers.js';
 import { makeAiJobsHandlers } from './jobs-handlers.js';
 import { makePricingHandler } from './pricing-handlers.js';
@@ -35,6 +36,7 @@ export function makeAiRestHandlers(deps: {
     aiUsage: makeAiUsageHandlers(db),
     aiIngest: makeIngestHandler(db),
     aiPricing: makePricingHandler(db),
+    codes: makeAiCodesHandlers(),
     jobs: makeAiJobsHandlers(),
     settings: makeAiSettingsHandlers(db),
   });

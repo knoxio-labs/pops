@@ -31,6 +31,8 @@ export interface InventorySearchScope {
   readonly deductible?: boolean;
   readonly locationId?: string;
   readonly assetId?: string;
+  /** Default false: only active items match. See {@link SEARCH_FILTER_FIELDS}. */
+  readonly includeInactive?: boolean;
 }
 
 /**
@@ -51,6 +53,7 @@ interface ScopeUnderConstruction {
   deductible: boolean | undefined;
   locationId: string | undefined;
   assetId: string | undefined;
+  includeInactive: boolean | undefined;
 }
 
 /** The reason a filter could not be applied, or null when it was. */
@@ -77,7 +80,7 @@ function readString(
 
 function readBool(
   scope: ScopeUnderConstruction,
-  field: 'inUse' | 'deductible',
+  field: 'inUse' | 'deductible' | 'includeInactive',
   value: string
 ): Refusal {
   if (value !== 'true' && value !== 'false') {
@@ -102,6 +105,7 @@ function readFilter(scope: ScopeUnderConstruction, filter: SearchFilter): Refusa
       return readString(scope, filter.field, filter.value);
     case 'inUse':
     case 'deductible':
+    case 'includeInactive':
       return readBool(scope, filter.field, filter.value);
   }
 }
@@ -122,6 +126,7 @@ export function searchFilterScope(filters: readonly SearchFilter[]): SearchScope
     deductible: undefined,
     locationId: undefined,
     assetId: undefined,
+    includeInactive: undefined,
   };
 
   for (const filter of filters) {
@@ -139,6 +144,7 @@ export function searchFilterScope(filters: readonly SearchFilter[]): SearchScope
       ...(scope.deductible === undefined ? {} : { deductible: scope.deductible }),
       ...(scope.locationId === undefined ? {} : { locationId: scope.locationId }),
       ...(scope.assetId === undefined ? {} : { assetId: scope.assetId }),
+      ...(scope.includeInactive === undefined ? {} : { includeInactive: scope.includeInactive }),
     },
   };
 }

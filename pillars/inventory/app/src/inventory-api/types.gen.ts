@@ -2512,7 +2512,15 @@ export type SearchSearchData = {
     };
     query: {
       filters?: Array<{
-        field: 'room' | 'type' | 'condition' | 'inUse' | 'deductible' | 'locationId' | 'assetId';
+        field:
+          | 'room'
+          | 'type'
+          | 'condition'
+          | 'inUse'
+          | 'deductible'
+          | 'locationId'
+          | 'assetId'
+          | 'includeInactive';
         operator: 'eq';
         value: string;
       }>;

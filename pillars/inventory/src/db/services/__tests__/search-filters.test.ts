@@ -27,6 +27,7 @@ const SUPPORTED_FILTERS: readonly SearchFilter[] = [
   { field: 'deductible', operator: 'eq', value: 'false' },
   { field: 'locationId', operator: 'eq', value: 'loc-1' },
   { field: 'assetId', operator: 'eq', value: 'AST-1' },
+  { field: 'includeInactive', operator: 'eq', value: 'true' },
 ];
 
 const EMPTY_SCOPE: InventorySearchScope = {};
@@ -98,6 +99,11 @@ describe('what each field reads into', () => {
     expect(scopeOf(result)).toEqual({ assetId: 'AST-1' });
   });
 
+  it('scopes by includeInactive, parsed to a boolean', () => {
+    const result = searchFilterScope([{ field: 'includeInactive', operator: 'eq', value: 'true' }]);
+    expect(scopeOf(result)).toEqual({ includeInactive: true });
+  });
+
   it('combines fields from different columns into one scope', () => {
     const result = searchFilterScope([
       { field: 'room', operator: 'eq', value: 'Garage' },
@@ -150,6 +156,13 @@ describe('a value the field cannot hold', () => {
       searchFilterScope([{ field: 'deductible', operator: 'eq', value: 'maybe' }])
     );
     expect(message).toContain('maybe');
+  });
+
+  it("refuses an 'includeInactive' value that is not true/false", () => {
+    const message = refusalOf(
+      searchFilterScope([{ field: 'includeInactive', operator: 'eq', value: 'sure' }])
+    );
+    expect(message).toContain('sure');
   });
 
   it('refuses the whole list, not just the bad filter, so no scope is half-applied', () => {
