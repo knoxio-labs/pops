@@ -4,7 +4,7 @@ The phone's copy of the inventory. The Inventory screens read from here, not fro
 
 It is one of the packages `ModuleBoundaryTests` allows to hold a concrete implementation of an `AppCore` seam, and the only one allowed to depend on [GRDB](https://github.com/groue/GRDB.swift), pinned `exact:` for the reason [`../BFMClient/Package.swift`](../BFMClient/Package.swift) gives. It performs no HTTP: `OnlineInventoryStore` fetches pages through `AppCore`'s `InventorySyncTransport` and hands them to `InventoryReplica.apply(_:)`.
 
-The database is in memory, so a relaunch downloads again; the on-disk replica is POPS-4069.
+`InventoryReplica()` is in memory, for tests and previews, so a relaunch downloads again. `InventoryReplica(onDiskAt:)` (POPS-4069) is the durable one: WAL with `synchronous = FULL`, `completeUntilFirstUserAuthentication` on the database and media cache, the media cache excluded from backup, a free-space floor and `SQLITE_FULL` both raised as `InventoryStorageError.full`, and a migration that cannot run falling back to a fresh snapshot while keeping the mutation-log table by name (the log itself is POPS-4071).
 
 ## How a page lands
 
