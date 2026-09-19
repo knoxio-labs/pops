@@ -24,7 +24,20 @@ Items and locations each have two tables of the same shape: `*_base` is what the
 - An applied change keeps showing, at the server's revision, until the feed reaches the batch's high-water `seq`. A conflicted or rejected one stops showing; its row shows the server's state until repairs exist (POPS-4073).
 - `undo(_:undoMutationId:clientTime:)` cancels a change still on the device, along with what depends on it, and otherwise logs an Undo that goes out as `event.revert` once the change's outcome names its event. Undoing a create, a split or a destroy is refused, as the server refuses it.
 
-Sending is the drain's (POPS-4072): it takes `outboundMutations(limit:)`, marks them with `markSending(_:at:)`, submits them, and hands the result to `recordOutcomes(_:)`, or to `returnToQueue(_:)` when the batch never arrived. `LocalFirstInventoryStore` is the `InventoryStore` over this: `perform` and `undo` are local, everything else is `OnlineInventoryStore`'s.
+`LocalFirstInventoryStore` is the `InventoryStore` over this: `perform` and `undo` are local, everything else is `OnlineInventoryStore`'s, and given an `InventoryReachability` it runs the drain.
+
+## The drain
+
+`InventoryDrain` (POPS-4072) sends the log. It takes `outboundMutations(limit:excluding:)`, marks them with `markSending(_:at:)`, submits them, and hands the result to `recordOutcomes(_:)`, or to `returnToQueue(_:)` when the batch never arrived.
+
+- Batches are up to 50, in stable topological order: enqueue order, corrected so nothing precedes what it depends on (`DrainOrder`, the design playground's `InventoryQueue.ordered`). A dependency not in the log holds nothing back, and a cycle goes last rather than being lost.
+- Held back, with everything depending on them: what is in flight, conflicted or rejected, and an Undo whose change has no applied outcome yet. What the server deferred is not offered again in the same pass.
+- A batch that never arrived is resent under the same mutation ids; a pass that did not empty the log, or where the server deferred something, retries after 2 s, doubling, at most 5 min. A pass that applied anything reads the feed so the changes settle. Rows a crashed pass left in flight are requeued at the start of the next.
+- `409 resync_required` takes a fresh snapshot, keeping the log, and carries on. `401` and `426` block the replica as `.sessionExpired` and `.appTooOld` and schedule no retry.
+- An Undo whose change ended conflicted or rejected is dropped unsent, and what was logged on top of it inherits its dependencies, so it stays held.
+- It runs after each change and Undo, on every `refresh()`, when the backoff elapses, and when the `InventoryReachability` path becomes satisfied (`NetworkPathReachability`, over `NWPathMonitor`). Nothing is sent while the path is down.
+
+Conflicted and rejected rows stay in the log in that state, with the server's outcome stored whole in `outcome`, and anything depending on them stays queued behind them. That is where repairs (POPS-4073) start: nothing here settles them.
 
 ## The online store
 
