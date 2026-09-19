@@ -4,7 +4,7 @@ import BFMClient
 import FeatureInventory
 import Foundation
 import InventoryReplica
-import OSLog
+import os
 
 /// The composition root: the one place a protocol is bound to a concrete type,
 /// and the only module that knows every other module exists.

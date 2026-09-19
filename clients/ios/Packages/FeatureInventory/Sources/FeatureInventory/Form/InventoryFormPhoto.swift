@@ -69,10 +69,6 @@ internal enum InventoryPhotoReorderDirection: Hashable, Sendable {
 }
 
 extension Array where Element == InventoryFormPhoto {
-    internal func removing(sha256: String) -> [InventoryFormPhoto] {
-        filter { $0.sha256 != sha256 }
-    }
-
     /// The hashes of every attached photo, in strip order, with `sha256`
     /// swapped one step `direction`. Nil when `sha256` names no attached
     /// photo, or is already at that end.
