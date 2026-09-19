@@ -361,6 +361,68 @@ export const EXPECTATIONS = [
     usedBy: 'pillars/bfm/src/api/purchases/client.ts',
   },
   {
+    consumer: 'bfm',
+    producer: 'inventory',
+    operationId: 'sync.snapshot',
+    path: '/sync/snapshot',
+    method: 'get',
+    // The pinned mark against a rotated-epoch or paged-past-drift cursor.
+    // Losing either leaves the phone's replica pinned to nothing, or drops
+    // the page size back to inventory's own default.
+    query: ['cursor', 'limit'],
+    usedBy: 'pillars/bfm/src/api/inventory/client.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'inventory',
+    operationId: 'sync.changes',
+    path: '/sync/changes',
+    method: 'get',
+    // `since`/`epoch` are the feed's own resume point; losing either silently
+    // restarts the feed from zero or forgets which epoch it is walking.
+    query: ['since', 'epoch', 'limit'],
+    usedBy: 'pillars/bfm/src/api/inventory/client.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'inventory',
+    operationId: 'sync.itemEvents',
+    path: '/sync/items/{id}/events',
+    method: 'get',
+    query: ['cursor', 'limit'],
+    pathParams: ['id'],
+    usedBy: 'pillars/bfm/src/api/inventory/client.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'inventory',
+    operationId: 'types.catalogue',
+    path: '/types',
+    method: 'get',
+    // No query params on this route; the catalogue is served whole.
+    query: [],
+    usedBy: 'pillars/bfm/src/api/inventory/client.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'inventory',
+    operationId: 'sync.mutations',
+    path: '/sync/mutations',
+    method: 'post',
+    // POST body, not query params; nothing here to lose to a rename.
+    query: [],
+    usedBy: 'pillars/bfm/src/api/inventory/client.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'inventory',
+    operationId: 'codes.suggest',
+    path: '/codes/suggest',
+    method: 'post',
+    query: [],
+    usedBy: 'pillars/bfm/src/api/inventory/client.ts',
+  },
+  {
     consumer: 'finance',
     producer: 'contacts',
     operationId: 'entities.list',
@@ -627,6 +689,15 @@ export const UNPINNABLE_CALL_SITES = [
       'declared by a runtime manifest and invoked via `callDynamic`, so both the ' +
       'pillar and the procedure are data.',
   },
+  {
+    file: 'pillars/bfm/src/api/inventory/handle-factory.ts',
+    reason:
+      'Builds a `PillarHandle<TRouter>` for the extra outbound header inventory ' +
+      'sync needs but calls no operation on it — the bare `TRouter` this guard ' +
+      "cannot resolve belongs to whichever caller supplies it, same as the SDK's " +
+      'own `pillar()`. The operations actually called through the resulting ' +
+      'handle are pinned where they are called, in `client.ts`.',
+  },
 ];
 
 /**
@@ -668,6 +739,21 @@ export const KNOWN_BROKEN_OPERATIONS = [
       'pillars/registry/src/contract/__tests__/openapi.test.ts). Repointing or retiring that ' +
       'script is a change to one-shot migration business logic, not to this guard, so it is ' +
       'tracked as its own piece of work rather than folded into a coverage-granularity fix.',
+  },
+  {
+    consumer: 'inventory',
+    producer: 'ai',
+    operationId: 'codes.rank',
+    reason:
+      "pillars/inventory/src/api/ai/client.ts's createAiClient() resolves to this operation " +
+      "through its local AiRouter type, but this is the OPPOSITE of this list's usual shape: " +
+      'the ai pillar has never published `codes.rank` — inventory ADR-002 D7 names "an AI ' +
+      'ranking behind the same [codes/suggest] route in Phase C" without specifying the ai ' +
+      "pillar's contract, and POPS-4081's slice is inventory-only (delivery-plan.md). Ranking " +
+      'always falls back to the deterministic order in this process; the client, the ' +
+      'credential plumbing and the fallback/permutation-validation contract are all real and ' +
+      'tested. Adding the route is its own ai-pillar-side ticket (auth mechanism, whether to ' +
+      'call a model at all) — not a change to this guard, and not decided unilaterally here.',
   },
 ];
 

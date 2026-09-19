@@ -132,4 +132,33 @@ describe('item.restoreDeleted', () => {
     expect(h.item('old').deletedAt).toBeNull();
     expect(h.eventsFor('old').map((event) => event.kind)).toEqual(['restored']);
   });
+
+  it('re-attaches a sourceRef no live item holds now (POPS-4053)', () => {
+    seedItem(h, {
+      id: 'old',
+      deletedAt: '2026-01-01T00:00:00.000Z',
+      sourceRef: 'pops://purchases/order/p-1/item/i-1',
+    });
+    const outcome = h.run(mutation('item.restoreDeleted', 'old', {}, { baseRevision: 1 }));
+    expect(outcome).toMatchObject({ status: 'applied' });
+    expect(h.item('old').sourceRef).toBe('pops://purchases/order/p-1/item/i-1');
+  });
+
+  it('drops a sourceRef a live item has since claimed, rather than colliding (POPS-4053)', () => {
+    seedItem(h, {
+      id: 'old',
+      deletedAt: '2026-01-01T00:00:00.000Z',
+      sourceRef: 'pops://purchases/order/p-1/item/i-1',
+    });
+    seedItem(h, { id: 'new', sourceRef: 'pops://purchases/order/p-1/item/i-1' });
+
+    const outcome = h.run(mutation('item.restoreDeleted', 'old', {}, { baseRevision: 1 }));
+
+    expect(outcome).toMatchObject({ status: 'applied' });
+    expect(h.item('old').deletedAt).toBeNull();
+    expect(h.item('old').sourceRef).toBeNull();
+    expect(h.item('new').sourceRef).toBe('pops://purchases/order/p-1/item/i-1');
+    const restored = h.eventsFor('old').find((event) => event.kind === 'restored');
+    expect(JSON.parse(restored?.after ?? '{}')).toMatchObject({ sourceRef: null });
+  });
 });

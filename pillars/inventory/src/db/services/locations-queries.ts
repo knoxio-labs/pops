@@ -8,7 +8,7 @@
  * downstream slices (delete-stats walks the location tree and counts
  * items, which the items slice will eventually need too).
  */
-import { asc, count, eq, inArray } from 'drizzle-orm';
+import { and, asc, count, eq, inArray, isNull } from 'drizzle-orm';
 
 import { LocationNotFoundError } from '../errors.js';
 import { items, locations } from '../schema.js';
@@ -51,6 +51,7 @@ export function getDescendantLocationIds(db: InventoryDb, id: string): string[] 
   const allRows = db
     .select({ id: locations.id, parentId: locations.parentId })
     .from(locations)
+    .where(isNull(locations.deletedAt))
     .all();
   const childrenByParent = new Map<string, string[]>();
   for (const row of allRows) {
@@ -75,7 +76,11 @@ export function getDescendantLocationIds(db: InventoryDb, id: string): string[] 
 }
 
 function fetchOne(db: InventoryDb, id: string): LocationRow | undefined {
-  return db.select().from(locations).where(eq(locations.id, id)).get();
+  return db
+    .select()
+    .from(locations)
+    .where(and(eq(locations.id, id), isNull(locations.deletedAt)))
+    .get();
 }
 
 export function getLocationOrThrow(db: InventoryDb, id: string): LocationRow {
@@ -107,7 +112,7 @@ export function getLocationItems(
   const rows = db
     .select()
     .from(items)
-    .where(inArray(items.locationId, locationIds))
+    .where(and(inArray(items.locationId, locationIds), isNull(items.deletedAt)))
     .orderBy(items.name)
     .limit(limit)
     .offset(offset)
@@ -116,7 +121,7 @@ export function getLocationItems(
   const [countResult] = db
     .select({ total: count() })
     .from(items)
-    .where(inArray(items.locationId, locationIds))
+    .where(and(inArray(items.locationId, locationIds), isNull(items.deletedAt)))
     .all();
 
   return { rows, total: countResult?.total ?? 0 };
@@ -125,13 +130,17 @@ export function getLocationItems(
 export function getDeleteStats(db: InventoryDb, id: string): DeleteLocationStats {
   getLocationOrThrow(db, id);
 
-  const directChildren = db.select().from(locations).where(eq(locations.parentId, id)).all();
+  const directChildren = db
+    .select()
+    .from(locations)
+    .where(and(eq(locations.parentId, id), isNull(locations.deletedAt)))
+    .all();
   const descendantIds = getDescendantLocationIds(db, id);
 
   const [directItems] = db
     .select({ total: count() })
     .from(items)
-    .where(eq(items.locationId, id))
+    .where(and(eq(items.locationId, id), isNull(items.deletedAt)))
     .all();
   const itemCount = directItems?.total ?? 0;
 
@@ -140,7 +149,7 @@ export function getDeleteStats(db: InventoryDb, id: string): DeleteLocationStats
     const [descAgg] = db
       .select({ total: count() })
       .from(items)
-      .where(inArray(items.locationId, descendantIds))
+      .where(and(inArray(items.locationId, descendantIds), isNull(items.deletedAt)))
       .all();
     totalItemCount += descAgg?.total ?? 0;
   }
@@ -154,5 +163,10 @@ export function getDeleteStats(db: InventoryDb, id: string): DeleteLocationStats
 }
 
 export function getLocationsList(db: InventoryDb): LocationRow[] {
-  return db.select().from(locations).orderBy(asc(locations.sortOrder), asc(locations.name)).all();
+  return db
+    .select()
+    .from(locations)
+    .where(isNull(locations.deletedAt))
+    .orderBy(asc(locations.sortOrder), asc(locations.name))
+    .all();
 }

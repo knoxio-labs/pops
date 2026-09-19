@@ -419,17 +419,17 @@ export const CEREBRUM_ALLOWLIST = [];
 export const BFM_OPENAPI_REL_PATH = 'pillars/bfm/openapi/bfm.openapi.json';
 
 /**
- * Only 2 routes carry query fields today — below every other pillar's floor,
+ * Only 5 routes carry query fields today — below every other pillar's floor,
  * but bfm's mobile surface is deliberately thin (POPS-1369): a device-gated
- * passthrough onto finance/purchases, not a domain of its own. The floor
- * still catches a collapse to 0.
+ * passthrough onto finance/purchases/inventory, not a domain of its own. The
+ * floor still catches a collapse to 0.
  */
-const BFM_MIN_ROUTES_WITH_FIELDS = 2;
+const BFM_MIN_ROUTES_WITH_FIELDS = 5;
 
 /**
- * bfm's two mobile handler files each hold one `make*Handlers` factory
- * returning a flat, literal-keyed object — matches purchases' shape exactly,
- * fields read directly off `query`. Confirmed clean today.
+ * bfm's mobile handler files each hold one `make*Handlers` factory returning
+ * a flat, literal-keyed object — matches purchases' shape exactly, fields
+ * read directly off `query`. Confirmed clean today.
  *
  * @type {RouteSpec[]}
  */
@@ -445,6 +445,24 @@ export const BFM_ROUTES = [
     path: '/mobile/purchases',
     handlerFile: 'pillars/bfm/src/api/rest/mobile-purchases-handlers.ts',
     handlerKey: 'listPurchases',
+  },
+  {
+    method: 'get',
+    path: '/mobile/inventory/sync/snapshot',
+    handlerFile: 'pillars/bfm/src/api/rest/mobile-inventory-handlers.ts',
+    handlerKey: 'snapshot',
+  },
+  {
+    method: 'get',
+    path: '/mobile/inventory/sync/changes',
+    handlerFile: 'pillars/bfm/src/api/rest/mobile-inventory-handlers.ts',
+    handlerKey: 'changes',
+  },
+  {
+    method: 'get',
+    path: '/mobile/inventory/items/{id}/history',
+    handlerFile: 'pillars/bfm/src/api/rest/mobile-inventory-handlers.ts',
+    handlerKey: 'itemHistory',
   },
 ];
 
@@ -844,8 +862,8 @@ export const LISTS_ALLOWLIST = [];
 /** Repo-relative, posix. The committed OpenAPI projection of the inventory contract. */
 export const INVENTORY_OPENAPI_REL_PATH = 'pillars/inventory/openapi/inventory.openapi.json';
 
-/** Today's real count of inventory routes carrying query fields is 19. See {@link MIN_ROUTES_WITH_FIELDS}. */
-const INVENTORY_MIN_ROUTES_WITH_FIELDS = 14;
+/** Today's real count of inventory routes carrying query fields is 21. See {@link MIN_ROUTES_WITH_FIELDS}. */
+const INVENTORY_MIN_ROUTES_WITH_FIELDS = 16;
 
 /**
  * Inventory's handler layout matches purchases' shape exactly — every field
@@ -969,6 +987,18 @@ export const INVENTORY_ROUTES = [
     path: '/sync/snapshot',
     handlerFile: 'pillars/inventory/src/api/rest/sync-handlers.ts',
     handlerKey: 'snapshot',
+  },
+  {
+    method: 'get',
+    path: '/web/items',
+    handlerFile: 'pillars/inventory/src/api/rest/web-handlers.ts',
+    handlerKey: 'list',
+  },
+  {
+    method: 'get',
+    path: '/web/items/{id}',
+    handlerFile: 'pillars/inventory/src/api/rest/web-handlers.ts',
+    handlerKey: 'get',
   },
 ];
 

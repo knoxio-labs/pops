@@ -84,6 +84,7 @@ describe('a federation that is entirely healthy', () => {
       { id: 'accounts', reachability: 'healthy' },
       { id: 'purchases', reachability: 'unavailable' },
       { id: 'receipt-capture', reachability: 'unavailable' },
+      { id: 'inventory', reachability: 'unavailable' },
     ]);
   });
 
@@ -150,6 +151,7 @@ describe('a federation that is half-broken', () => {
       { id: 'accounts', reachability: 'healthy' },
       { id: 'purchases', reachability: 'unavailable' },
       { id: 'receipt-capture', reachability: 'unavailable' },
+      { id: 'inventory', reachability: 'unavailable' },
     ]);
   });
 
@@ -169,6 +171,7 @@ describe('a federation that is half-broken', () => {
       { id: 'accounts', reachability: 'unavailable' },
       { id: 'purchases', reachability: 'unavailable' },
       { id: 'receipt-capture', reachability: 'unavailable' },
+      { id: 'inventory', reachability: 'unavailable' },
     ]);
   });
 
@@ -193,6 +196,7 @@ describe('a federation that is half-broken', () => {
       { id: 'accounts', reachability: 'healthy' },
       { id: 'purchases', reachability: 'unavailable' },
       { id: 'receipt-capture', reachability: 'unavailable' },
+      { id: 'inventory', reachability: 'unavailable' },
     ]);
   });
 
@@ -209,6 +213,7 @@ describe('a federation that is half-broken', () => {
       { id: 'accounts', reachability: 'healthy' },
       { id: 'purchases', reachability: 'healthy' },
       { id: 'receipt-capture', reachability: 'healthy' },
+      { id: 'inventory', reachability: 'unavailable' },
     ]);
   });
 
@@ -228,6 +233,7 @@ describe('a federation that is half-broken', () => {
       { id: 'accounts', reachability: 'contract-mismatch' },
       { id: 'purchases', reachability: 'unavailable' },
       { id: 'receipt-capture', reachability: 'unavailable' },
+      { id: 'inventory', reachability: 'unavailable' },
     ]);
   });
 });
@@ -250,6 +256,7 @@ describe('a registry serving something less than the truth', () => {
       { id: 'accounts', reachability: 'healthy' },
       { id: 'purchases', reachability: 'unavailable' },
       { id: 'receipt-capture', reachability: 'unavailable' },
+      { id: 'inventory', reachability: 'unavailable' },
     ]);
   });
 
@@ -272,6 +279,7 @@ describe('a registry serving something less than the truth', () => {
       { id: 'accounts', reachability: 'unavailable' },
       { id: 'purchases', reachability: 'unavailable' },
       { id: 'receipt-capture', reachability: 'unavailable' },
+      { id: 'inventory', reachability: 'unavailable' },
     ]);
   });
 

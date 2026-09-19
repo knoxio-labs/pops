@@ -81,7 +81,18 @@ export type GatewayFailure =
    * never exist rather than drawing a placeholder once.
    */
   | (GatewayFailureBase & { readonly kind: 'unsupported-media'; readonly status: 415 })
-  | (GatewayFailureBase & { readonly kind: 'gateway-misconfigured'; readonly status: 502 });
+  | (GatewayFailureBase & { readonly kind: 'gateway-misconfigured'; readonly status: 502 })
+  /**
+   * This pillar's own `Pops-Inventory-Protocol` is below the inventory
+   * pillar's current minimum — a real HTTP status, `426`, that sits outside
+   * `@ts-rest/core`'s `HTTPStatusCode` union (`response-error.ts`), so it can
+   * never be a ts-rest handler's typed return value. Its `status` field
+   * exists for symmetry with every other member; the route that actually
+   * answers 426 throws `InventoryProtocolTooOldError` instead of switching on
+   * this kind through the normal `upstream-error.ts` path — see
+   * `api/inventory/protocol-error.ts`.
+   */
+  | (GatewayFailureBase & { readonly kind: 'protocol-too-old'; readonly status: 426 });
 
 export type GatewaySuccess<TValue> = { readonly kind: 'ok'; readonly value: TValue };
 
@@ -150,14 +161,25 @@ export function toGatewayFailure(failure: CallFailure): GatewayFailure {
     case 'bad-request':
       return { kind: 'invalid-request', pillar: target, status: 400, detail: failure.message };
     case 'refused':
-      // 415 is pulled out of the fold below because it is the one member of
-      // this bucket that says something about the resource rather than about
-      // the request — see the `unsupported-media` member's own note.
+      // 415 and 426 are pulled out of the fold below because each says
+      // something the generic `invalid-request` bucket cannot: 415 is about
+      // the resource, not the request (see `unsupported-media`'s own note);
+      // 426 is a fact about THIS PILLAR'S BUILD, not about anything the
+      // request asked for, and the phone's recovery for it (bfm needs
+      // deploying) is nothing like "the app sent a bad query".
       if (failure.status === 415) {
         return {
           kind: 'unsupported-media',
           pillar: target,
           status: 415,
+          detail: withUpstreamStatus(failure.status, failure.message),
+        };
+      }
+      if (failure.status === 426) {
+        return {
+          kind: 'protocol-too-old',
+          pillar: target,
+          status: 426,
           detail: withUpstreamStatus(failure.status, failure.message),
         };
       }

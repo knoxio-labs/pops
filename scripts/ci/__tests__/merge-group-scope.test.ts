@@ -222,16 +222,18 @@ describe('the scope job is wired to the workflow it scopes', () => {
     );
   });
 
-  it('runs Maestro only after an iOS change reaches main', () => {
+  it('runs the analyzer only in the queue, and Maestro only after an iOS change reaches main', () => {
     const steps = stepsOf(jobsOf('ios-quality.yml').get('quality'));
     const namedStep = (name: string) => steps.find((step) => step.name === name);
 
-    expect(namedStep('Test + SwiftLint analyzer rules (one shared compile)')?.if).toBe(
-      "github.event_name != 'merge_group'"
-    );
+    expect(namedStep('Test (iOS Simulator)')?.if).toBe("github.event_name != 'merge_group'");
+    expect(namedStep('Test (iOS Simulator)')?.run).toBe('mise run test');
     expect(namedStep('Compile + SwiftLint analyzer rules')?.if).toBe(
       "github.event_name == 'merge_group'"
     );
+    expect(namedStep('Compile + SwiftLint analyzer rules')?.run).toBe('mise run lint:analyze');
+    const analyzerSteps = steps.filter((step) => String(step.run ?? '').includes('lint:analyze'));
+    expect(analyzerSteps.map((step) => step.name)).toEqual(['Compile + SwiftLint analyzer rules']);
 
     for (const name of [
       'Expose bundled node-gyp on PATH',
@@ -242,6 +244,62 @@ describe('the scope job is wired to the workflow it scopes', () => {
     }
 
     expect(namedStep('Release carries no BFM host')?.if).toBe("github.event_name != 'merge_group'");
+  });
+});
+
+describe("ios-quality.yml's macOS job condition", () => {
+  // Evaluated rather than pattern-matched: the condition is the whole of the
+  // stacked-PR policy (POPS-4150), and a regex over it would still pass with
+  // an operator flipped. GitHub's expression grammar as this condition uses it
+  // — quoted literals, `==`, `!=`, `&&`, `||`, `!`, property access and
+  // `cancelled()` — is also valid JavaScript once `==`/`!=` are made strict.
+  type Event = {
+    eventName: string;
+    selected?: string;
+    baseRef?: string;
+    cancelled?: boolean;
+  };
+
+  function runsFor(event: Event): boolean {
+    const raw = jobsOf('ios-quality.yml').get('quality')?.if;
+    if (typeof raw !== 'string') throw new Error('quality job has no string `if:`');
+    const body = /^\$\{\{([\s\S]*)\}\}$/u.exec(raw.trim())?.[1];
+    if (body === undefined) throw new Error(`quality job's \`if:\` is not one expression: ${raw}`);
+    const js = body.replace(/==/gu, '===').replace(/!=/gu, '!==');
+    const github = {
+      event_name: event.eventName,
+      event: {
+        pull_request: event.baseRef === undefined ? null : { base: { ref: event.baseRef } },
+        repository: { default_branch: 'main' },
+      },
+    };
+    const needs = { scope: { outputs: { selected: event.selected ?? '' } } };
+    const evaluate = new Function('github', 'needs', 'cancelled', `return (${js});`) as (
+      g: typeof github,
+      n: typeof needs,
+      c: () => boolean
+    ) => unknown;
+    return evaluate(github, needs, () => event.cancelled === true) === true;
+  }
+
+  it.each([
+    ['a PR based on main', true, { eventName: 'pull_request', baseRef: 'main' }],
+    [
+      'a PR stacked on another branch',
+      false,
+      { eventName: 'pull_request', baseRef: 'pops-1-lower' },
+    ],
+    ['a push to main', true, { eventName: 'push' }],
+    ['a merge group the scope job selected', true, { eventName: 'merge_group', selected: 'true' }],
+    [
+      'a merge group the scope job deselected',
+      false,
+      { eventName: 'merge_group', selected: 'false' },
+    ],
+    ['a merge group whose scope job failed', false, { eventName: 'merge_group', selected: '' }],
+    ['a cancelled PR run', false, { eventName: 'pull_request', baseRef: 'main', cancelled: true }],
+  ] as const)('%s → runs=%s', (_label, expected, event) => {
+    expect(runsFor(event)).toBe(expected);
   });
 });
 

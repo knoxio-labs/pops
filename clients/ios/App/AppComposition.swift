@@ -33,6 +33,17 @@ internal final class AppComposition {
     internal let session: SessionStore
     internal let shell: AppShellModel
 
+    /// Where a scanned or opened ``PopsURI`` resolves to a screen.
+    ///
+    /// One instance for the life of the process, held here rather than built
+    /// where it is used, for the same reason ``router(for:)`` is: a fresh
+    /// registry on every body evaluation would forget every feature's
+    /// registration between renders. Nothing is registered on it yet — no
+    /// feature resolves an Inventory reference on `main` — so today every
+    /// route through it is the approved hand-off, which is correct: a code
+    /// this build cannot show should say so, not silently do nothing.
+    internal let entityRouter: EntityRouter = EntityRouterRegistry()
+
     /// The pairing screen's dependencies. Everything that speaks to a BFM is
     /// left unbound rather than pointed at a client: the base URL arrives with
     /// the pairing code, so there is nothing to point one at yet, and a screen

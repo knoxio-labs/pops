@@ -3682,3 +3682,274 @@ export type DocumentFilesRemoveUploadResponses = {
 
 export type DocumentFilesRemoveUploadResponse =
   DocumentFilesRemoveUploadResponses[keyof DocumentFilesRemoveUploadResponses];
+
+export type WebListData = {
+  body?: never;
+  path?: never;
+  query: {
+    cursor?: string;
+    limit: number;
+    typeKey?: string;
+    placementKind?: 'location' | 'container' | 'hand';
+    locationId?: string;
+    containingItemId?: string;
+    includeInactive?: boolean;
+  };
+  url: '/web/items';
+};
+
+export type WebListErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type WebListError = WebListErrors[keyof WebListErrors];
+
+export type WebListResponses = {
+  /**
+   * 200
+   */
+  200: {
+    items: Array<{
+      access: 'open' | 'closed' | null;
+      code: string | null;
+      createdAt: string;
+      deletedAt: string | null;
+      documentTitles: Array<string>;
+      documentsStatus: 'linked' | 'none' | 'unavailable';
+      externalIds: Array<{
+        kind: string;
+        value: string;
+      }>;
+      fields: {
+        [key: string]: unknown;
+      };
+      id: string;
+      isContainer: boolean;
+      isFull: boolean | null;
+      lifecycle: string;
+      lifecycleChangedAt: string | null;
+      name: string;
+      note: string | null;
+      photos: Array<{
+        caption: string | null;
+        sha256: string;
+      }>;
+      placement:
+        | {
+            kind: 'location';
+            locationId: string;
+          }
+        | {
+            itemId: string;
+            kind: 'container';
+          }
+        | {
+            kind: 'hand';
+          };
+      previousPlacement:
+        | {
+            kind: 'location';
+            locationId: string;
+          }
+        | {
+            itemId: string;
+            kind: 'container';
+          }
+        | null;
+      provenance: {
+        merchant: string | null;
+        price: number | null;
+        purchasedOn: string | null;
+        transactionUri: string | null;
+        warrantyExpires: string | null;
+      } | null;
+      quantity: number;
+      revision: number;
+      seq: number;
+      typeKey: string | null;
+      updatedAt: string;
+    }>;
+    nextCursor: string | null;
+  };
+};
+
+export type WebListResponse = WebListResponses[keyof WebListResponses];
+
+export type WebGetData = {
+  body?: never;
+  path: {
+    id: string;
+  };
+  query: {
+    historyCursor?: string;
+    historyLimit: number;
+  };
+  url: '/web/items/{id}';
+};
+
+export type WebGetErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type WebGetError = WebGetErrors[keyof WebGetErrors];
+
+export type WebGetResponses = {
+  /**
+   * 200
+   */
+  200: {
+    history: {
+      events: Array<{
+        actor: {
+          kind: string;
+          label: string;
+        };
+        after: {
+          placement?:
+            | {
+                kind: 'location';
+                locationId: string;
+              }
+            | {
+                itemId: string;
+                kind: 'container';
+              }
+            | {
+                kind: 'hand';
+              };
+          previousPlacement?:
+            | {
+                kind: 'location';
+                locationId: string;
+              }
+            | {
+                itemId: string;
+                kind: 'container';
+              }
+            | null;
+          [key: string]: unknown;
+        };
+        before: {
+          placement?:
+            | {
+                kind: 'location';
+                locationId: string;
+              }
+            | {
+                itemId: string;
+                kind: 'container';
+              }
+            | {
+                kind: 'hand';
+              };
+          previousPlacement?:
+            | {
+                kind: 'location';
+                locationId: string;
+              }
+            | {
+                itemId: string;
+                kind: 'container';
+              }
+            | null;
+          [key: string]: unknown;
+        };
+        clientTime: string | null;
+        compensatesSeq: number | null;
+        entityId: string;
+        entityKind: 'item' | 'location';
+        fields: Array<string>;
+        kind: string;
+        reason: string | null;
+        seq: number;
+        serverTime: string;
+        undoable: boolean;
+      }>;
+      nextCursor: string | null;
+    };
+    item: {
+      access: 'open' | 'closed' | null;
+      code: string | null;
+      createdAt: string;
+      deletedAt: string | null;
+      documentTitles: Array<string>;
+      documentsStatus: 'linked' | 'none' | 'unavailable';
+      externalIds: Array<{
+        kind: string;
+        value: string;
+      }>;
+      fields: {
+        [key: string]: unknown;
+      };
+      id: string;
+      isContainer: boolean;
+      isFull: boolean | null;
+      lifecycle: string;
+      lifecycleChangedAt: string | null;
+      name: string;
+      note: string | null;
+      photos: Array<{
+        caption: string | null;
+        sha256: string;
+      }>;
+      placement:
+        | {
+            kind: 'location';
+            locationId: string;
+          }
+        | {
+            itemId: string;
+            kind: 'container';
+          }
+        | {
+            kind: 'hand';
+          };
+      previousPlacement:
+        | {
+            kind: 'location';
+            locationId: string;
+          }
+        | {
+            itemId: string;
+            kind: 'container';
+          }
+        | null;
+      provenance: {
+        merchant: string | null;
+        price: number | null;
+        purchasedOn: string | null;
+        transactionUri: string | null;
+        warrantyExpires: string | null;
+      } | null;
+      quantity: number;
+      revision: number;
+      seq: number;
+      typeKey: string | null;
+      updatedAt: string;
+    };
+  };
+};
+
+export type WebGetResponse = WebGetResponses[keyof WebGetResponses];
