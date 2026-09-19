@@ -33,7 +33,13 @@ export interface PhotoMediaBackfillResult {
   readonly unreadable: readonly number[];
 }
 
-const MIME_BY_FORMAT: Readonly<Record<string, string>> = {
+/**
+ * sharp's detected format name to the MIME stored on a `media` row. Shared
+ * with `api/media/store.ts` (Inventory ADR-002 D9), which detects the same
+ * facts for a freshly-uploaded content-addressed blob — one lookup table
+ * rather than two that could drift on which formats are accepted.
+ */
+export const MIME_BY_FORMAT: Readonly<Record<string, string>> = {
   jpeg: 'image/jpeg',
   png: 'image/png',
   webp: 'image/webp',
@@ -48,13 +54,15 @@ function insideVolume(imagesDir: string, path: string): boolean {
   return rel !== '' && !rel.startsWith('..') && !isAbsolute(rel);
 }
 
-interface ImageFacts {
+/** The facts about an image `sharp` can read, projected to what `media` stores. */
+export interface ImageFacts {
   readonly mime: string;
   readonly width: number | null;
   readonly height: number | null;
 }
 
-async function readImageFacts(bytes: Buffer): Promise<ImageFacts | null> {
+/** Read {@link ImageFacts} from raw bytes, or `null` if `sharp` can't decode them or the format isn't in {@link MIME_BY_FORMAT}. */
+export async function readImageFacts(bytes: Buffer): Promise<ImageFacts | null> {
   try {
     const meta = await sharp(bytes).metadata();
     const mime = MIME_BY_FORMAT[meta.format];

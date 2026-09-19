@@ -14,6 +14,7 @@ import { createInventoryApiApp } from '../app.js';
 
 import type { ServiceAccountVerification, ServiceAccountVerifier } from '@pops/pillar-sdk/server';
 
+import type { AiClient } from '../ai/client.js';
 import type { DocumentsClient, PaperlessStatus } from '../documents/client.js';
 import type { BoundAgent, Test, TestTransport } from './test-http.js';
 
@@ -50,7 +51,7 @@ export interface SyncHarness {
 /** Open a fresh database and app. Call `close()` in `afterEach`. */
 export function openSyncHarness(
   transport: TestTransport,
-  options: { verify?: ServiceAccountVerifier; documents?: DocumentsClient } = {}
+  options: { verify?: ServiceAccountVerifier; documents?: DocumentsClient; ai?: AiClient } = {}
 ): SyncHarness {
   const dir = mkdtempSync(join(tmpdir(), 'inventory-sync-test-'));
   const db = openInventoryDb(join(dir, 'inventory.db'));
@@ -60,6 +61,7 @@ export function openSyncHarness(
     selfBaseUrl: 'http://localhost:3002',
     serviceAccountVerifier: options.verify ?? granting([]),
     documents: options.documents ?? paperless(),
+    ...(options.ai === undefined ? {} : { ai: options.ai }),
   });
   return {
     db,

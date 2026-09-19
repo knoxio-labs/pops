@@ -11,9 +11,18 @@ public protocol InventoryQuerySource: Sendable {
     /// Items resolving directly to this location or contained within
     /// something that does, walked as ADR-002 D2 describes.
     func inventoryContents(ofLocation locationId: String) -> [InventoryItem]
+    /// Active items placed directly inside this container, not those inside
+    /// a container within it.
+    func inventoryContents(ofContainer containerId: String) -> [InventoryItem]
     func inventoryInHand() -> [InventoryItem]
     func inventoryOpenContainers() -> [InventoryItem]
     func inventoryRecents(limit: Int) -> [InventoryItem]
+    /// The newest events across every item and location, newest first: the
+    /// dashboard's Recent work (ADR-002, "Active packing, Settled home").
+    func inventoryRecentEvents(limit: Int) -> [InventoryEvent]
+    /// How many active items, active containers and live locations the
+    /// replica holds. Inactive items are excluded, per D3.
+    func inventoryCounts() -> InventoryCounts
     func inventorySearch(text: String, includeInactive: Bool) -> [InventoryItem]
     func inventoryItemHistory(itemId: String) -> [InventoryEvent]
     func inventoryLocationHistory(locationId: String) -> [InventoryEvent]
@@ -29,7 +38,11 @@ public protocol InventoryQuerySource: Sendable {
 public struct InventoryQuery<Value: Sendable>: Sendable {
     public let read: @Sendable (any InventoryQuerySource) -> Value
 
-    private init(_ read: @escaping @Sendable (any InventoryQuerySource) -> Value) {
+    /// A query over any combination of the source's reads, evaluated against
+    /// one state, so a screen that needs several of them gets a consistent
+    /// view in one stream rather than several streams it would have to line
+    /// up itself.
+    public init(_ read: @escaping @Sendable (any InventoryQuerySource) -> Value) {
         self.read = read
     }
 
@@ -49,6 +62,11 @@ public struct InventoryQuery<Value: Sendable>: Sendable {
         .init { $0.inventoryContents(ofLocation: locationId) }
     }
 
+    public static func contents(ofContainer containerId: String) -> InventoryQuery<[InventoryItem]>
+    {
+        .init { $0.inventoryContents(ofContainer: containerId) }
+    }
+
     public static var inHand: InventoryQuery<[InventoryItem]> {
         .init { $0.inventoryInHand() }
     }
@@ -59,6 +77,14 @@ public struct InventoryQuery<Value: Sendable>: Sendable {
 
     public static func recents(limit: Int) -> InventoryQuery<[InventoryItem]> {
         .init { $0.inventoryRecents(limit: limit) }
+    }
+
+    public static func recentEvents(limit: Int) -> InventoryQuery<[InventoryEvent]> {
+        .init { $0.inventoryRecentEvents(limit: limit) }
+    }
+
+    public static var counts: InventoryQuery<InventoryCounts> {
+        .init { $0.inventoryCounts() }
     }
 
     public static func search(
@@ -85,5 +111,18 @@ public struct InventoryQuery<Value: Sendable>: Sendable {
 
     public static var replicaStatus: InventoryQuery<InventoryReplicaStatus> {
         .init { $0.inventoryReplicaStatus() }
+    }
+}
+
+/// The catalogue's size, as the dashboard's Browse tiles show it.
+public struct InventoryCounts: Hashable, Sendable {
+    public let items: Int
+    public let containers: Int
+    public let locations: Int
+
+    public init(items: Int, containers: Int, locations: Int) {
+        self.items = items
+        self.containers = containers
+        self.locations = locations
     }
 }

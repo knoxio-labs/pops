@@ -213,8 +213,10 @@ jobs:
     if: ${{ !cancelled() && (github.event_name != 'merge_group' || needs.scope.outputs.selected == 'true') }}
     runs-on: macos-latest
     # A wedged simulator is the classic macOS-CI failure and it does not fail —
-    # it hangs. Without a ceiling that burns the job's full 6h default.
-    timeout-minutes: 45
+    # it hangs. Without a ceiling that burns the job's full 6h default. The
+    # ceiling sits well above a healthy run, which already takes 40-50 minutes
+    # (package tests, the shared compile, the Release check and the UI flow).
+    timeout-minutes: 75
     defaults:
       run:
         working-directory: clients/ios

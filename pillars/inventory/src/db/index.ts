@@ -24,13 +24,11 @@ export * as documentsService from './services/documents.js';
 export * as crossPillarUrisService from './services/cross-pillar-uris.js';
 
 export type {
-  CreateLocationInput,
   DeleteLocationStats,
   Location,
   LocationItemsResult,
   LocationListResult,
   LocationTreeNode,
-  UpdateLocationInput,
 } from './services/locations.js';
 
 export { toLocation } from './services/locations.js';

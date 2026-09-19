@@ -3,7 +3,8 @@ import { z } from 'zod';
 import { findType, typeFieldsSchema } from '../../types/index.js';
 import { requireItem, type FieldValues } from './entities.js';
 import { CommandRejected } from './errors.js';
-import { externalIdsSchema } from './item-fields.js';
+import { externalIdsSchema, normalizeNote } from './item-fields.js';
+import { legacyItemPatchSchema } from './legacy-item-fields.js';
 import { defineOp } from './op.js';
 import { upsertSearchIndex } from './search-index.js';
 
@@ -14,9 +15,25 @@ const fieldsPatchSchema = z.record(z.string(), z.json().nullable());
 
 const editArgs = z.object({
   name: z.string().trim().min(1).optional(),
-  note: z.string().trim().min(1).nullable().optional(),
+  /**
+   * `undefined` leaves the note untouched; empty or whitespace-only becomes
+   * `null` rather than a 400, and anything else is kept exactly as sent
+   * (POPS-4053).
+   */
+  note: z
+    .string()
+    .nullable()
+    .optional()
+    .transform((value) => (value === undefined ? undefined : normalizeNote(value))),
   fields: fieldsPatchSchema.optional(),
   externalIds: externalIdsSchema.optional(),
+  /**
+   * A patch over the legacy provenance and value columns (POPS-4053): the
+   * new model has no field for these, so the legacy `/items` routes send
+   * them here rather than through `fields`, which is validated against a
+   * type's catalogue.
+   */
+  legacy: legacyItemPatchSchema.optional(),
 });
 
 /**
@@ -60,11 +77,15 @@ function resolveNextFields(
 }
 
 /**
- * `item.edit { name?, note?, fields?, externalIds? }`: change the fields a
- * type does not own. `fields` is a per-key patch over the stored blob, not a
- * replacement, so an edit never has to resend every value a form did not
- * touch; the merged result is still validated against the item's type (or
- * required empty, untyped). Omitted arguments are left as they are.
+ * `item.edit { name?, note?, fields?, externalIds?, legacy? }`: change the
+ * fields a type does not own. `fields` is a per-key patch over the stored
+ * blob, not a replacement, so an edit never has to resend every value a form
+ * did not touch; the merged result is still validated against the item's
+ * type (or required empty, untyped). `legacy` is a flat patch over the
+ * provenance and value columns the legacy `/items` routes still expose
+ * (POPS-4053) — every key it carries is applied field-by-field through the
+ * engine's own conflict check, exactly like `name` or `note`. Omitted
+ * arguments are left as they are.
  */
 export const itemEdit = defineOp({
   op: 'item.edit',
@@ -84,6 +105,11 @@ export const itemEdit = defineOp({
     if (args.note !== undefined) changes['note'] = args.note;
     if (args.externalIds !== undefined) changes['externalIds'] = args.externalIds;
     if (args.fields !== undefined) changes['fields'] = nextFields;
+    if (args.legacy !== undefined) {
+      for (const [field, value] of Object.entries(args.legacy)) {
+        if (value !== undefined) changes[field] = value as JsonValue;
+      }
+    }
 
     return {
       eventKind: 'edited',

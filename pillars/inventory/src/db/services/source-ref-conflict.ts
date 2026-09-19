@@ -5,7 +5,10 @@
  * in-process check their caller runs and race to the insert; the loser's
  * write raises `SQLITE_CONSTRAINT_UNIQUE` on `items_source_ref`,
  * which `createInventoryItem` uses to fetch and return the winner's row
- * instead of minting a second one.
+ * instead of minting a second one. `items_source_ref` is scoped to live rows
+ * (POPS-4053), so this can only fire when a LIVE item already holds the ref:
+ * a ref held only by a deleted item never conflicts, and the insert mints a
+ * fresh item instead.
  *
  * Message-matched against the index name, not just the code: `items`
  * carries two other unique indexes (`code`, `notion_id`) that must NOT be

@@ -86,7 +86,7 @@ describe('location.move', () => {
 });
 
 describe('location.delete', () => {
-  it('tombstones the place and reparents child places and direct items to its parent', () => {
+  it('tombstones the place, reparents child places to its parent, and sends direct items to hand remembering it (POPS-4053: items do NOT follow to the parent)', () => {
     seedLocation(h, 'shelf', { parentId: 'garage' });
     seedItem(h, { id: 'drill', locationId: 'garage' });
     const outcome = h.run(mutation('location.delete', 'garage', {}));
@@ -97,7 +97,12 @@ describe('location.delete', () => {
     expect(h.db.select().from(locations).where(eq(locations.id, 'shelf')).get()).toMatchObject({
       parentId: 'house',
     });
-    expect(h.item('drill')).toMatchObject({ placementKind: 'location', locationId: 'house' });
+    expect(h.item('drill')).toMatchObject({
+      placementKind: 'hand',
+      locationId: null,
+      previousPlacementKind: 'location',
+      previousLocationId: 'garage',
+    });
   });
 
   it('at a root, sends child places to the root and direct items to hand remembering the tombstoned place', () => {
@@ -119,5 +124,36 @@ describe('location.delete', () => {
     h.run(mutation('location.delete', 'garage', {}));
     const outcome = h.run(mutation('location.delete', 'garage', {}, { baseRevision: 2 }));
     expect(outcome).toMatchObject({ status: 'conflict', kind: 'deleted' });
+  });
+});
+
+describe('location.create and location.rename with sortOrder (POPS-4053)', () => {
+  it('creates at an explicit sort position', () => {
+    const id = randomUUID();
+    h.run(
+      mutation(
+        'location.create',
+        id,
+        { location: { name: 'Shelf', sortOrder: 3 } },
+        { baseRevision: null }
+      )
+    );
+    expect(h.db.select().from(locations).where(eq(locations.id, id)).get()).toMatchObject({
+      sortOrder: 3,
+    });
+  });
+
+  it('renames and reorders in one mutation', () => {
+    const outcome = h.run(mutation('location.rename', 'garage', { name: 'Garage', sortOrder: 5 }));
+    expect(outcome).toMatchObject({ status: 'applied' });
+    expect(h.db.select().from(locations).where(eq(locations.id, 'garage')).get()).toMatchObject({
+      name: 'Garage',
+      sortOrder: 5,
+    });
+  });
+
+  it('rejects a rename with neither name nor sortOrder', () => {
+    const outcome = h.run(mutation('location.rename', 'garage', {}));
+    expect(outcome).toMatchObject({ status: 'rejected', reason: 'invalid' });
   });
 });
