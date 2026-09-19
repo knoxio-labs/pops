@@ -295,6 +295,7 @@ describe('the federation half-broken, seen from the phone', () => {
       { id: 'accounts', reachability: 'unavailable' },
       { id: 'purchases', reachability: 'unavailable' },
       { id: 'receipt-capture', reachability: 'unavailable' },
+      { id: 'inventory', reachability: 'unavailable' },
     ]);
   });
 

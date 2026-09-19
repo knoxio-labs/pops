@@ -419,17 +419,17 @@ export const CEREBRUM_ALLOWLIST = [];
 export const BFM_OPENAPI_REL_PATH = 'pillars/bfm/openapi/bfm.openapi.json';
 
 /**
- * Only 2 routes carry query fields today — below every other pillar's floor,
+ * Only 5 routes carry query fields today — below every other pillar's floor,
  * but bfm's mobile surface is deliberately thin (POPS-1369): a device-gated
- * passthrough onto finance/purchases, not a domain of its own. The floor
- * still catches a collapse to 0.
+ * passthrough onto finance/purchases/inventory, not a domain of its own. The
+ * floor still catches a collapse to 0.
  */
-const BFM_MIN_ROUTES_WITH_FIELDS = 2;
+const BFM_MIN_ROUTES_WITH_FIELDS = 5;
 
 /**
- * bfm's two mobile handler files each hold one `make*Handlers` factory
- * returning a flat, literal-keyed object — matches purchases' shape exactly,
- * fields read directly off `query`. Confirmed clean today.
+ * bfm's mobile handler files each hold one `make*Handlers` factory returning
+ * a flat, literal-keyed object — matches purchases' shape exactly, fields
+ * read directly off `query`. Confirmed clean today.
  *
  * @type {RouteSpec[]}
  */
@@ -445,6 +445,24 @@ export const BFM_ROUTES = [
     path: '/mobile/purchases',
     handlerFile: 'pillars/bfm/src/api/rest/mobile-purchases-handlers.ts',
     handlerKey: 'listPurchases',
+  },
+  {
+    method: 'get',
+    path: '/mobile/inventory/sync/snapshot',
+    handlerFile: 'pillars/bfm/src/api/rest/mobile-inventory-handlers.ts',
+    handlerKey: 'snapshot',
+  },
+  {
+    method: 'get',
+    path: '/mobile/inventory/sync/changes',
+    handlerFile: 'pillars/bfm/src/api/rest/mobile-inventory-handlers.ts',
+    handlerKey: 'changes',
+  },
+  {
+    method: 'get',
+    path: '/mobile/inventory/items/{id}/history',
+    handlerFile: 'pillars/bfm/src/api/rest/mobile-inventory-handlers.ts',
+    handlerKey: 'itemHistory',
   },
 ];
 

@@ -6,8 +6,8 @@
 # `xcrun swift-format --version` cannot answer this question — on a beta
 # toolchain it reports the single word "main", not something comparable to
 # anything (checked against Xcode 27 Beta 2). `xcodebuild -version` is what
-# CI itself parses to select the pinned Xcode (see the "Select the pinned
-# Xcode" step in .github/workflows/ios-quality.yml), so this reads the same
+# CI itself parses to select the pinned Xcode (see
+# .github/actions/select-xcode/action.yml), so this reads the same
 # line the same way and is the only thing `mise run lint`'s `verify:xcode-
 # version` task calls.
 #

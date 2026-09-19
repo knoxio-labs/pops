@@ -21,6 +21,10 @@ import {
   type MobileFinanceHandlerDeps,
 } from './mobile-finance-handlers.js';
 import {
+  makeMobileInventoryHandlers,
+  type MobileInventoryHandlerDeps,
+} from './mobile-inventory-handlers.js';
+import {
   makeMobilePurchasesHandlers,
   type MobilePurchasesHandlerDeps,
 } from './mobile-purchases-handlers.js';
@@ -36,7 +40,8 @@ import type { MobileBootstrapDeps } from '../mobile/bootstrap.js';
 
 const server: ReturnType<typeof initServer> = initServer();
 
-export interface BfmRestHandlerDeps extends MobileFinanceHandlerDeps, MobilePurchasesHandlerDeps {
+export interface BfmRestHandlerDeps
+  extends MobileFinanceHandlerDeps, MobileInventoryHandlerDeps, MobilePurchasesHandlerDeps {
   /** Build version, surfaced on the health response. */
   version: string;
   /** Open handle to `bfm.db`. */
@@ -144,6 +149,7 @@ export function makeBfmRestHandlers(
       }),
     },
     mobileFinance: makeMobileFinanceHandlers(deps),
+    mobileInventory: makeMobileInventoryHandlers(deps),
     mobilePurchases: makeMobilePurchasesHandlers(deps),
   });
 }

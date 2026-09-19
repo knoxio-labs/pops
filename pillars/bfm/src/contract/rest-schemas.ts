@@ -24,6 +24,12 @@ export {
   type MobileTransactionsPage,
 } from './transaction.js';
 
+// `/mobile/inventory/*`'s wire schemas are NOT re-exported here: unlike
+// finance/purchases/receipt, nothing outside `rest-mobile-inventory.ts` and
+// `api/inventory/*` needs them, and this file is already at the line budget
+// `check-line-budget-headroom` enforces. Import `mobile-inventory-schemas.js`
+// directly instead.
+
 export {
   MOBILE_RECEIPT_MEDIA_TYPES,
   MOBILE_UPLOAD_MAX_BYTES,
@@ -491,6 +497,7 @@ export const MOBILE_FEATURE_IDS = [
   'accounts',
   'purchases',
   'receipt-capture',
+  'inventory',
 ] as const;
 
 export type KnownMobileFeatureId = (typeof MOBILE_FEATURE_IDS)[number];
