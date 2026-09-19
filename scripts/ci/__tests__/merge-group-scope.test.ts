@@ -237,7 +237,7 @@ describe('the scope job is wired to the workflow it scopes', () => {
 
     for (const name of [
       'Expose bundled node-gyp on PATH',
-      "Install the BFM's subgraph",
+      "Install the BFM's and inventory's subgraphs",
       'UI flow (Maestro, against a real BFM)',
     ]) {
       expect(namedStep(name)?.if).toBe("github.event_name == 'push'");
