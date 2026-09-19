@@ -26,7 +26,7 @@
  */
 import { configureServerSdk, pillar } from '@pops/pillar-sdk/server';
 
-import type { PillarHandle } from '@pops/pillar-sdk/server';
+import type { PillarHandle, ServerPillarOptions } from '@pops/pillar-sdk/server';
 
 const PILLAR_API_URL_ENV_VARS: Readonly<Record<string, string>> = {
   inventory: 'POPS_INVENTORY_API_URL',
@@ -118,10 +118,17 @@ function ensureConfigured(): void {
  * Get a typed pillar handle for the given pillar ID. Idempotent — the
  * underlying SDK memoises per-pillar handles, so repeated calls are
  * cheap and share their discovery cache.
+ *
+ * `options` is the escape hatch a caller needing a per-pillar outbound
+ * header uses (e.g. inventory's `Pops-Inventory-Protocol`, required on its
+ * sync routes) — see `inventory-sync-client.ts`. Most tool files never pass it.
  */
-export function getPillar<TRouter>(pillarId: string): PillarHandle<TRouter> {
+export function getPillar<TRouter>(
+  pillarId: string,
+  options?: ServerPillarOptions
+): PillarHandle<TRouter> {
   ensureConfigured();
-  return pillar<TRouter>(pillarId);
+  return pillar<TRouter>(pillarId, options);
 }
 
 /**
