@@ -125,6 +125,7 @@ describe('the granted scopes', () => {
       'purchases.receipt',
       'inventory.sync',
       'inventory.types',
+      'inventory.codes',
     ]);
   });
 

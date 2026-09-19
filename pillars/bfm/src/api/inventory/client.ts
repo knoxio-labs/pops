@@ -16,13 +16,23 @@
  * bfm's own OpenAPI and Swift codegen.
  */
 import {
+  MobileCodeSuggestResponseSchema,
+  MobileMutationsResponseSchema,
+} from '../../contract/mobile-inventory-mutation-schemas.js';
+import {
   MobileInventoryCatalogueSchema,
   MobileInventoryChangesSchema,
   MobileInventoryItemHistorySchema,
   MobileInventorySnapshotSchema,
 } from '../../contract/mobile-inventory-schemas.js';
 import { parseOrMismatch } from '../pillars/parse-response.js';
+import { withInventoryActor } from './handle-factory.js';
 
+import type {
+  MobileCodeSuggestResponse,
+  MobileMutation,
+  MobileMutationsResponse,
+} from '../../contract/mobile-inventory-mutation-schemas.js';
 import type {
   MobileInventoryCatalogue,
   MobileInventoryChanges,
@@ -40,9 +50,13 @@ export type InventorySyncRouter = {
     snapshot: (input: { cursor?: string; limit?: number }) => Promise<unknown>;
     changes: (input: { since: number; epoch: string; limit?: number }) => Promise<unknown>;
     itemEvents: (input: { id: string; cursor?: string; limit?: number }) => Promise<unknown>;
+    mutations: (input: { mutations: readonly MobileMutation[] }) => Promise<unknown>;
   };
   types: {
     catalogue: (input: Record<string, never>) => Promise<unknown>;
+  };
+  codes: {
+    suggest: (input: { name: string; typeKey?: string; stem?: string }) => Promise<unknown>;
   };
 };
 
@@ -63,11 +77,30 @@ export interface ItemHistoryRequest {
   readonly limit: number;
 }
 
+export interface MutationsRequest {
+  readonly mutations: readonly MobileMutation[];
+  /**
+   * `device:<deviceId>;label=<percent-encoded label>`, built by
+   * `api/inventory/actor-header.ts` from the device `requireDevice` resolved.
+   * Sent as `Pops-Actor` for the duration of this call only
+   * (`handle-factory.ts`'s `withInventoryActor`).
+   */
+  readonly actorHeader: string;
+}
+
+export interface SuggestCodesRequest {
+  readonly name: string;
+  readonly typeKey: string | null;
+  readonly stem: string | null;
+}
+
 export interface MobileInventoryClient {
   snapshot(request: SnapshotRequest): Promise<GatewayOutcome<MobileInventorySnapshot>>;
   changes(request: ChangesRequest): Promise<GatewayOutcome<MobileInventoryChanges>>;
   itemHistory(request: ItemHistoryRequest): Promise<GatewayOutcome<MobileInventoryItemHistory>>;
   catalogue(): Promise<GatewayOutcome<MobileInventoryCatalogue>>;
+  mutations(request: MutationsRequest): Promise<GatewayOutcome<MobileMutationsResponse>>;
+  suggestCodes(request: SuggestCodesRequest): Promise<GatewayOutcome<MobileCodeSuggestResponse>>;
 }
 
 async function callSnapshot(
@@ -136,11 +169,49 @@ async function callCatalogue(
   );
 }
 
+async function callMutations(
+  gateway: PillarGateway,
+  request: MutationsRequest
+): Promise<GatewayOutcome<MobileMutationsResponse>> {
+  const outcome = await withInventoryActor(request.actorHeader, () =>
+    gateway.call<InventorySyncRouter, unknown>(INVENTORY_PILLAR_ID, (handle) =>
+      handle.sync.mutations({ mutations: request.mutations })
+    )
+  );
+  return parseOrMismatch(
+    INVENTORY_PILLAR_ID,
+    outcome,
+    MobileMutationsResponseSchema,
+    'sync.mutations'
+  );
+}
+
+async function callSuggestCodes(
+  gateway: PillarGateway,
+  request: SuggestCodesRequest
+): Promise<GatewayOutcome<MobileCodeSuggestResponse>> {
+  const outcome = await gateway.call<InventorySyncRouter, unknown>(INVENTORY_PILLAR_ID, (handle) =>
+    handle.codes.suggest({
+      name: request.name,
+      ...(request.typeKey === null ? {} : { typeKey: request.typeKey }),
+      ...(request.stem === null ? {} : { stem: request.stem }),
+    })
+  );
+  return parseOrMismatch(
+    INVENTORY_PILLAR_ID,
+    outcome,
+    MobileCodeSuggestResponseSchema,
+    'codes.suggest'
+  );
+}
+
 export function createMobileInventoryClient(gateway: PillarGateway): MobileInventoryClient {
   return {
     snapshot: (request) => callSnapshot(gateway, request),
     changes: (request) => callChanges(gateway, request),
     itemHistory: (request) => callItemHistory(gateway, request),
     catalogue: () => callCatalogue(gateway),
+    mutations: (request) => callMutations(gateway, request),
+    suggestCodes: (request) => callSuggestCodes(gateway, request),
   };
 }

@@ -85,6 +85,14 @@ export const MOBILE_CAPABILITIES = [
    * implied by `purchases.read`.
    */
   'inventory.read',
+  /**
+   * Apply a batch of mutations, and ask for a free code for a new item.
+   * Buys `POST /mobile/inventory/mutations` and
+   * `POST /mobile/inventory/codes/suggest` (A12) — writing is its own
+   * authority, on the same reasoning `purchases.write` is not implied by
+   * `purchases.read`.
+   */
+  'inventory.write',
 ] as const;
 
 export type MobileCapability = (typeof MOBILE_CAPABILITIES)[number];
@@ -140,6 +148,16 @@ export const MOBILE_CAPABILITY_SCOPES: Readonly<Record<MobileCapability, readonl
    * third) is not here: nothing this capability reaches calls it.
    */
   'inventory.read': ['inventory.sync', 'inventory.types'],
+  /**
+   * Two prefixes for the same reason `inventory.read`'s are: the sync
+   * contract's scope gate derives one grant per sub-router, and this
+   * capability reaches two of them — `inventory.sync` for
+   * `POST /sync/mutations`, `inventory.codes` for `POST /codes/suggest`
+   * (`pillars/inventory/src/contract/rest-sync.ts`). `inventory.sync` is
+   * already granted for `inventory.read`, so only `inventory.codes` widens
+   * the account.
+   */
+  'inventory.write': ['inventory.sync', 'inventory.codes'],
 };
 
 /**
