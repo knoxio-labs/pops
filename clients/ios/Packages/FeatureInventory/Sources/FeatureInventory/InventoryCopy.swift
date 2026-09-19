@@ -29,4 +29,24 @@ internal enum InventoryCopy {
         guard let place else { return when }
         return "\(place) · \(when)"
     }
+
+    /// A `pops://` reference for a pillar this build has no screen for
+    /// (POPS-4078). Mirrors the wording `App/RootCopy.swift`'s `opensIn(_:)`
+    /// uses for the same case reached through the `pops` URL scheme, which
+    /// this package cannot import: the app is the only thing above every
+    /// feature.
+    internal static func opensIn(_ pillar: String) -> String {
+        "Opens in \(pillar.capitalized)"
+    }
+
+    /// A scanned code that looked like a `pops://` reference but did not
+    /// parse as one.
+    internal static let notAPopsCode = "Not a POPS code"
+
+    /// A well-formed reference, or a real code, that no longer resolves to
+    /// anything in this replica — including a tombstoned holder's code
+    /// (POPS-4108), which stays reserved but is never found again.
+    internal static let noLongerInInventory = "No longer in Inventory"
+
+    internal static let cameraAccessOff = "Camera access is off"
 }

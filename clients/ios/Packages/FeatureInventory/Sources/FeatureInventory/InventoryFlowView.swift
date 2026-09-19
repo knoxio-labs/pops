@@ -15,11 +15,17 @@ public struct InventoryFlowView: View {
     @State private var model: InventoryDashboardViewModel
     @State private var path: [InventoryRoute] = []
     private let store: any InventoryStore
+    private let entityRouter: any EntityRouter
     private let scanDiameter: CGFloat = 60
 
     /// Reads and writes through `dependencies.inventory`, and nothing else.
-    public init(dependencies: AppDependencies) {
+    /// `entityRouter` is the composition root's one instance, the same the
+    /// `pops` URL scheme resolves through — passed in rather than read from
+    /// `dependencies` because it is not bound per paired device, unlike
+    /// everything else there.
+    public init(dependencies: AppDependencies, entityRouter: any EntityRouter) {
         store = dependencies.inventory
+        self.entityRouter = entityRouter
         _model = State(wrappedValue: InventoryDashboardViewModel(store: dependencies.inventory))
     }
 
@@ -34,7 +40,7 @@ public struct InventoryFlowView: View {
                     }
                 }
                 .navigationDestination(for: InventoryRoute.self) { route in
-                    InventoryDestinationView(route: route, store: store)
+                    InventoryDestinationView(route: route, store: store, entityRouter: entityRouter)
                 }
         }
         .inventoryItemFormPresentation(store: store)

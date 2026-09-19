@@ -36,7 +36,9 @@ internal struct ContentView: View {
         features
             .safeAreaInset(edge: .top) { degradedBanner }
             .sheet(item: $presentation.inventory) { entity in
-                InventoryEntityView(entity: entity, dependencies: dependencies)
+                InventoryEntityView(
+                    entity: entity, dependencies: dependencies,
+                    entityRouter: composition.entityRouter)
             }
     }
 
@@ -114,7 +116,7 @@ internal struct ContentView: View {
         case FeatureReceiptCapture.feature:
             ReceiptCaptureView(model: ReceiptCaptureViewModel(dependencies: dependencies))
         case FeatureInventory.feature:
-            InventoryFlowView(dependencies: dependencies)
+            InventoryFlowView(dependencies: dependencies, entityRouter: composition.entityRouter)
         default:
             // Unreachable: `RootFeature.renderable` is what the shell filters
             // against, so a feature with no screen is never offered. Drawn as

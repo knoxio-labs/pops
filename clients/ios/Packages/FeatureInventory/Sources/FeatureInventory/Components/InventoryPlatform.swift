@@ -104,6 +104,19 @@ extension View {
             self
         #endif
     }
+
+    /// Hides the navigation bar and its back button, for a screen that draws
+    /// its own close control — the scanner's full-bleed camera. `toolbar(for:
+    /// .navigationBar)` and `navigationBarBackButtonHidden` are both iOS-only.
+    @ViewBuilder
+    internal func inventoryHidesNavigationBar() -> some View {
+        #if os(iOS)
+            toolbar(.hidden, for: .navigationBar)
+                .navigationBarBackButtonHidden(true)
+        #else
+            self
+        #endif
+    }
 }
 
 /// Several pieces of glass that belong to one control. iOS renders glass
