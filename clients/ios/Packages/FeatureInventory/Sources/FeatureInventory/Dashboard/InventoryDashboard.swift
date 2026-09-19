@@ -40,6 +40,9 @@ internal struct InventoryDashboard: Equatable, Sendable {
     /// One line of Recent work, built from an event.
     internal struct Activity: Identifiable, Equatable, Sendable {
         internal let id: Int
+        /// The record the event is about, which a revert has to name.
+        internal let entityKind: InventoryEntityKind
+        internal let entityId: String
         internal let title: String
         /// Where the thing the event is about is now.
         internal let place: String?

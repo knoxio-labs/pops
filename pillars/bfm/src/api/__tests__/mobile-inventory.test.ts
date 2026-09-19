@@ -24,11 +24,13 @@ import { createMobileInventoryClient } from '../inventory/client.js';
 import { createPillarGateway } from '../pillars/gateway.js';
 import { createTestApp, type TestApp } from './harness.js';
 import { createInventoryFake } from './inventory-fake.js';
+import { createInventoryMediaFake } from './inventory-media-fake.js';
 import { requestOn } from './test-http.js';
 
 import type { Express } from 'express';
 
 import type { MobileCapability } from '../../contract/capabilities.js';
+import type { MobileInventoryMediaClient } from '../inventory/media-client.js';
 import type { PillarHandleFactory } from '../pillars/gateway.js';
 
 const apps: TestApp[] = [];
@@ -39,10 +41,12 @@ afterEach(() => {
 
 function openWith(
   factory: PillarHandleFactory,
-  capabilities: readonly MobileCapability[] = DEFAULT_DEVICE_CAPABILITIES
+  capabilities: readonly MobileCapability[] = DEFAULT_DEVICE_CAPABILITIES,
+  inventoryMedia?: MobileInventoryMediaClient
 ): { app: Express; token: string } {
   const created = createTestApp({
     inventory: createMobileInventoryClient(createPillarGateway(factory)),
+    inventoryMedia,
   });
   apps.push(created);
 
@@ -66,6 +70,13 @@ function get(app: Express, token: string | null, path: string) {
 function post(app: Express, token: string | null, path: string, body: object) {
   return requestOn(app, (r) => {
     const request = r.post(path).send(body);
+    return token === null ? request : request.set('Authorization', `Bearer ${token}`);
+  });
+}
+
+function put(app: Express, token: string | null, path: string, body: object) {
+  return requestOn(app, (r) => {
+    const request = r.put(path).send(body);
     return token === null ? request : request.set('Authorization', `Bearer ${token}`);
   });
 }
@@ -482,5 +493,175 @@ describe('code suggestions', () => {
 
     expect(res.status).toBe(400);
     expect(fake.suggestCalls).toEqual([]);
+  });
+});
+
+describe('media', () => {
+  const SHA256 = 'a'.repeat(64);
+
+  it('stores a new blob and answers 201', async () => {
+    const inventory = createInventoryFake();
+    const media = createInventoryMediaFake({
+      uploadResult: { kind: 'ok', value: { sha256: SHA256, alreadyStored: false } },
+    });
+    const { app, token } = openWith(inventory.factory, ['inventory.write'], media.client);
+
+    const res = await put(app, token, `/mobile/inventory/media/${SHA256}`, {
+      mediaType: 'image/jpeg',
+      dataBase64: Buffer.from('a real photo').toString('base64'),
+    });
+
+    expect(res.status).toBe(201);
+    expect(res.body).toEqual({ sha256: SHA256, alreadyStored: false });
+    expect(media.uploadCalls).toHaveLength(1);
+    expect(media.uploadCalls[0]?.mediaType).toBe('image/jpeg');
+  });
+
+  it('passes an already-stored answer through unchanged, as a 200', async () => {
+    const inventory = createInventoryFake();
+    const media = createInventoryMediaFake({
+      uploadResult: { kind: 'ok', value: { sha256: SHA256, alreadyStored: true } },
+    });
+    const { app, token } = openWith(inventory.factory, ['inventory.write'], media.client);
+
+    const res = await put(app, token, `/mobile/inventory/media/${SHA256}`, {
+      mediaType: 'image/jpeg',
+      dataBase64: Buffer.from('the same bytes again').toString('base64'),
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ sha256: SHA256, alreadyStored: true });
+  });
+
+  it('answers 413 for bytes over the cap, and never calls inventory at all', async () => {
+    const inventory = createInventoryFake();
+    const media = createInventoryMediaFake();
+    const { app, token } = openWith(inventory.factory, ['inventory.write'], media.client);
+
+    const oversized = Buffer.alloc(9 * 1024 * 1024, 1).toString('base64');
+    const res = await put(app, token, `/mobile/inventory/media/${SHA256}`, {
+      mediaType: 'image/jpeg',
+      dataBase64: oversized,
+    });
+
+    expect(res.status).toBe(413);
+    expect(res.body.code).toBe('payload_too_large');
+    expect(media.uploadCalls).toEqual([]);
+  });
+
+  it('forwards a 415 from inventory when the bytes are not an image it can decode', async () => {
+    const inventory = createInventoryFake();
+    const media = createInventoryMediaFake({
+      uploadResult: {
+        kind: 'unsupported-media',
+        pillar: 'inventory',
+        status: 415,
+        detail: 'not a supported image format',
+      },
+    });
+    const { app, token } = openWith(inventory.factory, ['inventory.write'], media.client);
+
+    const res = await put(app, token, `/mobile/inventory/media/${SHA256}`, {
+      mediaType: 'image/jpeg',
+      dataBase64: Buffer.from('not actually a jpeg').toString('base64'),
+    });
+
+    expect(res.status).toBe(415);
+    expect(res.body.code).toBe('upstream_unsupported_media');
+  });
+
+  it('answers 400 when the claimed hash does not match the bytes, without reaching 502', async () => {
+    const inventory = createInventoryFake();
+    const media = createInventoryMediaFake({
+      uploadResult: {
+        kind: 'invalid-request',
+        pillar: 'inventory',
+        status: 400,
+        detail: 'hash_mismatch',
+      },
+    });
+    const { app, token } = openWith(inventory.factory, ['inventory.write'], media.client);
+
+    const res = await put(app, token, `/mobile/inventory/media/${SHA256}`, {
+      mediaType: 'image/jpeg',
+      dataBase64: Buffer.from('wrong bytes').toString('base64'),
+    });
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('invalid_request');
+  });
+
+  it('refuses a device without inventory.write', async () => {
+    const inventory = createInventoryFake();
+    const media = createInventoryMediaFake();
+    const { app, token } = openWith(inventory.factory, ['inventory.read'], media.client);
+
+    const res = await put(app, token, `/mobile/inventory/media/${SHA256}`, {
+      mediaType: 'image/jpeg',
+      dataBase64: Buffer.from('x').toString('base64'),
+    });
+
+    expect(res.status).toBe(403);
+    expect(res.body.code).toBe('capability_not_granted');
+    expect(media.uploadCalls).toEqual([]);
+  });
+
+  it('reads a stored blob back as base64', async () => {
+    const inventory = createInventoryFake();
+    const bytes = Buffer.from('a real photo');
+    const media = createInventoryMediaFake({
+      readResult: { kind: 'ok', value: { sha256: SHA256, mediaType: 'image/jpeg', bytes } },
+    });
+    const { app, token } = openWith(inventory.factory, ['inventory.read'], media.client);
+
+    const res = await get(app, token, `/mobile/inventory/media/${SHA256}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      sha256: SHA256,
+      mediaType: 'image/jpeg',
+      byteLength: bytes.length,
+      dataBase64: bytes.toString('base64'),
+    });
+    expect(media.readCalls).toEqual([{ sha256: SHA256, variant: 'full' }]);
+  });
+
+  it('answers 404 when inventory has no such hash', async () => {
+    const inventory = createInventoryFake();
+    const media = createInventoryMediaFake({
+      readResult: { kind: 'not-found', pillar: 'inventory', status: 404 },
+    });
+    const { app, token } = openWith(inventory.factory, ['inventory.read'], media.client);
+
+    const res = await get(app, token, `/mobile/inventory/media/${SHA256}`);
+
+    expect(res.status).toBe(404);
+    expect(res.body.code).toBe('not_found');
+  });
+
+  it('refuses a device without inventory.read', async () => {
+    const inventory = createInventoryFake();
+    const media = createInventoryMediaFake();
+    const { app, token } = openWith(inventory.factory, ['inventory.write'], media.client);
+
+    const res = await get(app, token, `/mobile/inventory/media/${SHA256}`);
+
+    expect(res.status).toBe(403);
+    expect(res.body.code).toBe('capability_not_granted');
+    expect(media.readCalls).toEqual([]);
+  });
+
+  it('forwards a requested variant to the media client', async () => {
+    const inventory = createInventoryFake();
+    const bytes = Buffer.from('thumb bytes');
+    const media = createInventoryMediaFake({
+      readResult: { kind: 'ok', value: { sha256: SHA256, mediaType: 'image/jpeg', bytes } },
+    });
+    const { app, token } = openWith(inventory.factory, ['inventory.read'], media.client);
+
+    const res = await get(app, token, `/mobile/inventory/media/${SHA256}?variant=thumb`);
+
+    expect(res.status).toBe(200);
+    expect(media.readCalls).toEqual([{ sha256: SHA256, variant: 'thumb' }]);
   });
 });

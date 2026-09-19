@@ -1,6 +1,7 @@
 import AppCore
 import DesignSystem
 import FeatureAccounts
+import FeatureInventory
 import FeaturePurchases
 import FeatureReceiptCapture
 import FeatureTransactions
@@ -26,9 +27,17 @@ internal struct ContentView: View {
     internal let shell: AppShellModel
     internal let composition: AppComposition
 
+    /// The tab the person chose, if they chose one. See ``features`` for why
+    /// this is held here rather than left to `TabView`.
+    @State private var chosenFeature: MobileFeature?
+
     internal var body: some View {
+        @Bindable var presentation = composition.entityPresentation
         features
             .safeAreaInset(edge: .top) { degradedBanner }
+            .sheet(item: $presentation.inventory) { entity in
+                InventoryEntityView(entity: entity, dependencies: dependencies)
+            }
     }
 
     /// Every available feature, in the BFM's order.
@@ -36,10 +45,15 @@ internal struct ContentView: View {
     /// Zero gets the explanation below. Exactly one fills the screen outright —
     /// the shipped single-feature look, unchanged, because a tab bar with one
     /// tab is chrome nobody asked for. Two or more get a `TabView`, one tab per
-    /// feature: `TabView` with no explicit `selection` binding manages which
-    /// tab is showing on its own, including what happens when a reload changes
-    /// the list out from under it, which is one thing fewer this file has to
-    /// get right.
+    /// feature.
+    ///
+    /// The `TabView` is given its selection rather than left to track one on
+    /// its own. Left alone, it dropped back to the first tab whenever a tab's
+    /// root view changed type: on the Receipts tab, "Add a purchase" swaps the
+    /// prompt for the draft form, and the app landed on Transactions instead
+    /// of the form. Nothing above this view was rebuilt when it happened; the
+    /// implicit selection was simply lost. `receipt-manual-entry.yaml` is the
+    /// flow that catches it.
     @ViewBuilder private var features: some View {
         switch surface.available.count {
         case 0:
@@ -47,7 +61,7 @@ internal struct ContentView: View {
         case 1:
             screen(for: surface.available[0])
         default:
-            TabView {
+            TabView(selection: selection) {
                 ForEach(surface.available, id: \.self) { feature in
                     screen(for: feature)
                         .tabItem {
@@ -60,6 +74,26 @@ internal struct ContentView: View {
                 }
             }
         }
+    }
+
+    private var selection: Binding<MobileFeature> {
+        Binding(
+            get: { Self.shownFeature(chosen: chosenFeature, available: surface.available) },
+            set: { chosenFeature = $0 }
+        )
+    }
+
+    /// Which tab shows: the one chosen, while the BFM still offers it, and
+    /// otherwise the first — so a reload that drops the chosen feature lands
+    /// somewhere real instead of on a tab that no longer exists. Only asked
+    /// with two or more features available, which is when there are tabs.
+    /// `nonisolated` because it is pure: a `View` puts its members on the main
+    /// actor, which this rule has no need of.
+    nonisolated internal static func shownFeature(
+        chosen: MobileFeature?, available: [MobileFeature]
+    ) -> MobileFeature {
+        if let chosen, available.contains(chosen) { return chosen }
+        return available[0]
     }
 
     /// A feature is asked for its whole flow, not for one of its screens. What
@@ -79,6 +113,8 @@ internal struct ContentView: View {
             PurchasesListView(dependencies: dependencies)
         case FeatureReceiptCapture.feature:
             ReceiptCaptureView(model: ReceiptCaptureViewModel(dependencies: dependencies))
+        case FeatureInventory.feature:
+            InventoryFlowView(dependencies: dependencies)
         default:
             // Unreachable: `RootFeature.renderable` is what the shell filters
             // against, so a feature with no screen is never offered. Drawn as

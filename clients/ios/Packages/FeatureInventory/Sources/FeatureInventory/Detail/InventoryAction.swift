@@ -130,21 +130,37 @@ internal enum InventoryItemDetailPrimaryAction {
     }
 }
 
+/// What Move and Store here, from the item page, hand the shared placement
+/// picker and `InventoryStoreHereSheet`: the item itself, the same way
+/// `InventoryRecordActions.moveRequest` and `InventoryInHand.moveRequest`
+/// build one for a browser row or an in-hand one.
+internal enum InventoryItemDetailPlacement {
+    /// A Move request for this one item, named rather than counted.
+    internal static func moveRequest(for record: InventoryDetailRecord) -> InventoryPlacementRequest
+    {
+        InventoryPlacementRequest(subject: .items([record.id]), title: record.name)
+    }
+
+    /// Where Store here puts things when it is opened on this item: the item
+    /// is the container, because Store here only ever reaches the row for an
+    /// open one.
+    internal static func storeTarget(for record: InventoryDetailRecord) -> InventoryStoreTarget {
+        .container(id: record.id, name: record.name)
+    }
+}
+
 /// A screen an Item detail control opens that belongs to another part of
-/// Inventory: the edit form, the destination picker, Store here, and label
-/// printing. Each resolves to a pending screen until that part lands.
+/// Inventory and has not landed yet: label choice and label printing. Move
+/// and Store here open through the shared placement picker and
+/// `InventoryStoreHereSheet` directly, so they resolve to no pending screen.
 internal enum InventoryItemDetailPending: String, Identifiable {
     case edit
-    case move
-    case storeHere
     case label
     case printLabel
 
     internal init?(actionId: String) {
         switch actionId {
         case "edit": self = .edit
-        case "move": self = .move
-        case "put-in": self = .storeHere
         case "label": self = .label
         case "print": self = .printLabel
         default: return nil
@@ -152,4 +168,28 @@ internal enum InventoryItemDetailPending: String, Identifiable {
     }
 
     internal var id: String { rawValue }
+}
+
+/// Where a pending screen from Item detail's action row or toolbar should go:
+/// the real item form when there is one, `InventoryItemDetailPendingSheet`'s
+/// placeholder otherwise.
+///
+/// A free function rather than inline logic at each call site, because Item
+/// detail used to decide this twice — once in `act(_:)`, which reached the
+/// form, and once in the toolbar's own Edit button, which did not, so Edit
+/// kept opening the placeholder from the one place people actually tap it.
+internal enum InventoryItemDetailRouting {
+    @MainActor
+    internal static func present(
+        _ screen: InventoryItemDetailPending,
+        itemId: InventoryItem.ID,
+        itemForm: InventoryItemFormPresenter?,
+        pending setPending: (InventoryItemDetailPending) -> Void
+    ) {
+        if screen == .edit {
+            itemForm?(.edit(itemId))
+        } else {
+            setPending(screen)
+        }
+    }
 }

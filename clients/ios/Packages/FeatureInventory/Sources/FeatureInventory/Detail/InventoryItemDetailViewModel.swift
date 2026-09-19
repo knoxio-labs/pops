@@ -23,7 +23,10 @@ internal final class InventoryItemDetailViewModel {
     internal let itemId: InventoryItem.ID
     internal private(set) var phase: Phase = .loading
     internal var undoOffer: InventoryUndoOffer?
-    internal var failure: RepositoryError?
+    internal var failure: InventoryWriteFailure?
+    /// Move's and Store here's writes: the one runner every placement picker
+    /// in this package shares.
+    internal let runner: InventoryCommandRunner
 
     private let store: any InventoryStore
     private let now: @Sendable () -> Date
@@ -36,6 +39,7 @@ internal final class InventoryItemDetailViewModel {
         self.itemId = itemId
         self.store = store
         self.now = now
+        runner = InventoryCommandRunner(store: store)
     }
 
     internal var detail: InventoryItemDetail? {
@@ -141,7 +145,7 @@ internal final class InventoryItemDetailViewModel {
     /// deleting it, so the event log stays append-only.
     internal func revert(_ entry: InventoryActivityEntry) async {
         guard entry.isUndoable else { return }
-        _ = await send(.revertEvent(seq: entry.seq))
+        _ = await send(.revertEvent(seq: entry.seq, entityKind: .item, entityId: itemId))
     }
 
     /// Takes the conflict notice's one choice.
@@ -176,8 +180,8 @@ internal final class InventoryItemDetailViewModel {
     }
 
     private func record(_ error: Error) {
-        guard !(Task.isCancelled || error is CancellationError) else { return }
-        failure = error as? RepositoryError ?? .transport(String(describing: error))
+        guard let reported = InventoryWriteFailure.reporting(error) else { return }
+        failure = reported
     }
 }
 

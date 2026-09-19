@@ -16,6 +16,16 @@ public enum InventoryMoveVerb: Hashable, Sendable {
     case pickUp
     case putBack
     case store
+
+    /// The wire spelling `item.move`'s `verb` argument takes.
+    public var wireValue: String {
+        switch self {
+        case .move: "move"
+        case .pickUp: "pick_up"
+        case .putBack: "put_back"
+        case .store: "store"
+        }
+    }
 }
 
 /// What a newly created item needs. `id` is minted by the caller (a UUIDv4,
@@ -28,6 +38,10 @@ public struct InventoryNewItem: Hashable, Sendable {
     public let typeKey: String?
     public let fields: [String: InventoryFieldValue]
     public let note: String?
+    /// Identifiers someone else assigned (a serial, a model number), carried
+    /// by `item.create`'s `Item` on the wire. Never the inventory code, which
+    /// is set by its own dependent `setItemCode`.
+    public let externalIds: [InventoryExternalIdentifier]
     public let quantity: Int
     public let placement: InventoryPlacement
 
@@ -37,6 +51,7 @@ public struct InventoryNewItem: Hashable, Sendable {
         typeKey: String?,
         fields: [String: InventoryFieldValue] = [:],
         note: String? = nil,
+        externalIds: [InventoryExternalIdentifier] = [],
         quantity: Int = 1,
         placement: InventoryPlacement
     ) {
@@ -45,6 +60,7 @@ public struct InventoryNewItem: Hashable, Sendable {
         self.typeKey = typeKey
         self.fields = fields
         self.note = note
+        self.externalIds = externalIds
         self.quantity = quantity
         self.placement = placement
     }
@@ -73,10 +89,12 @@ public struct InventoryNewLocation: Hashable, Sendable {
 public enum InventoryCommand: Hashable, Sendable {
     case createItem(InventoryNewItem)
     /// `fields` patches by key: a key mapped to a value sets it, a key mapped
-    /// to `nil` clears it, and an absent key is untouched.
+    /// to `nil` clears it, and an absent key is untouched. `externalIds`
+    /// replaces the whole list when present and leaves it alone when `nil`,
+    /// as `item.edit`'s optional `externalIds` does on the wire.
     case editItem(
         id: InventoryItem.ID, name: String?, note: InventoryFieldUpdate<String>,
-        fields: [String: InventoryFieldValue?])
+        fields: [String: InventoryFieldValue?], externalIds: [InventoryExternalIdentifier]? = nil)
     case changeItemType(
         id: InventoryItem.ID, typeKey: String, fields: [String: InventoryFieldValue])
     case setItemCode(id: InventoryItem.ID, code: String?)
@@ -95,15 +113,17 @@ public enum InventoryCommand: Hashable, Sendable {
     case renameLocation(id: InventoryLocation.ID, name: String)
     case moveLocation(id: InventoryLocation.ID, parentId: InventoryLocation.ID?)
     case deleteLocation(id: InventoryLocation.ID)
-    case revertEvent(seq: Int)
+    /// Undoes one event (`event.revert`). The server requires the mutation's
+    /// entity to be the one the event is about, so the command names it:
+    /// `entityKind` and `entityId` are the reverted event's own.
+    case revertEvent(seq: Int, entityKind: InventoryEntityKind, entityId: String)
 
     /// The entity the command's outcome, receipt and any repair are filed
-    /// under. `revertEvent` names none of its own: it is filed under whatever
-    /// entity the reverted event touched, which only the store's log knows.
-    public var entityId: String? {
+    /// under. A revert is filed under the entity of the event it undoes.
+    public var entityId: String {
         switch self {
         case .createItem(let item): item.id
-        case .editItem(let id, _, _, _): id
+        case .editItem(let id, _, _, _, _): id
         case .changeItemType(let id, _, _): id
         case .setItemCode(let id, _): id
         case .moveItem(let id, _, _): id
@@ -120,7 +140,16 @@ public enum InventoryCommand: Hashable, Sendable {
         case .renameLocation(let id, _): id
         case .moveLocation(let id, _): id
         case .deleteLocation(let id): id
-        case .revertEvent: nil
+        case .revertEvent(_, _, let entityId): entityId
+        }
+    }
+
+    /// Which table ``entityId`` names.
+    public var entityKind: InventoryEntityKind {
+        switch self {
+        case .createLocation, .renameLocation, .moveLocation, .deleteLocation: .location
+        case .revertEvent(_, let entityKind, _): entityKind
+        default: .item
         }
     }
 }

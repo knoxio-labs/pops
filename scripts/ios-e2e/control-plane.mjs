@@ -190,6 +190,10 @@ function agedAuthorization(header, secret) {
  *     setReachable: (active: boolean) => void,
  *     isReachable: () => boolean,
  *   },
+ *   inventory: {
+ *     setReachable: (active: boolean) => void,
+ *     isReachable: () => boolean,
+ *   },
  *   host?: string,
  * }} options
  * @returns {Promise<{ url: string, port: number, state: () => Record<string, unknown>, close: () => Promise<void> }>}
@@ -199,6 +203,7 @@ export async function startControlPlane({
   accessTokenSecret,
   upstream,
   purchases,
+  inventory,
   host = '127.0.0.1',
 }) {
   /**
@@ -211,6 +216,7 @@ export async function startControlPlane({
     financeOpenApiUnreachable: upstream.isFinanceOpenApiUnreachable(),
     financeContractMismatch: upstream.isFinanceContractMismatch(),
     purchasesReachable: purchases.isReachable(),
+    inventoryReachable: inventory.isReachable(),
   });
 
   /**
@@ -235,6 +241,7 @@ export async function startControlPlane({
       // `receipt-capture` existed was written against. A flow that wants the
       // second tab arms it for itself.
       purchases.setReachable(false);
+      inventory.setReachable(false);
       return { status: 200, body: state() };
     }
     if (method === 'POST' && pathname === '/__e2e/finance/down') {
@@ -273,6 +280,17 @@ export async function startControlPlane({
       purchases.setReachable(false);
       return { status: 200, body: state() };
     }
+    // The `inventory` feature, on and off, the same way and for the same
+    // reason; `inventory-pillar.mjs` says why it is a gate in front of the
+    // real pillar rather than a stub.
+    if (method === 'POST' && pathname === '/__e2e/inventory/up') {
+      inventory.setReachable(true);
+      return { status: 200, body: state() };
+    }
+    if (method === 'POST' && pathname === '/__e2e/inventory/down') {
+      inventory.setReachable(false);
+      return { status: 200, body: state() };
+    }
     if (method === 'GET' && pathname === '/__e2e/state') return { status: 200, body: state() };
     // Named rather than forwarded. A typo in a flow would otherwise reach the
     // BFM, 404 there, and read as the pillar having lost a route.
@@ -290,6 +308,8 @@ export async function startControlPlane({
           'POST /__e2e/finance/contract-ok',
           'POST /__e2e/purchases/up',
           'POST /__e2e/purchases/down',
+          'POST /__e2e/inventory/up',
+          'POST /__e2e/inventory/down',
           'POST /__e2e/reset',
           'GET /__e2e/state',
         ],

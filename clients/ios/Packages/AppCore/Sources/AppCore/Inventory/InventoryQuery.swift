@@ -16,6 +16,9 @@ public protocol InventoryQuerySource: Sendable {
     func inventoryContents(ofContainer containerId: String) -> [InventoryItem]
     func inventoryInHand() -> [InventoryItem]
     func inventoryOpenContainers() -> [InventoryItem]
+    /// Every container not deleted, open or closed, active or not, wherever
+    /// it is: the containers browser narrows these by state itself.
+    func inventoryContainers() -> [InventoryItem]
     func inventoryRecents(limit: Int) -> [InventoryItem]
     /// The newest events across every item and location, newest first: the
     /// dashboard's Recent work (ADR-002, "Active packing, Settled home").
@@ -23,6 +26,10 @@ public protocol InventoryQuerySource: Sendable {
     /// How many active items, active containers and live locations the
     /// replica holds. Inactive items are excluded, per D3.
     func inventoryCounts() -> InventoryCounts
+    /// Every item the replica holds, tombstones excluded, in no promised
+    /// order: the Items browser's catalogue before any query narrows it.
+    /// Inactive items are included only when asked for, per D3.
+    func inventoryItems(includeInactive: Bool) -> [InventoryItem]
     func inventorySearch(text: String, includeInactive: Bool) -> [InventoryItem]
     func inventoryItemHistory(itemId: String) -> [InventoryEvent]
     func inventoryLocationHistory(locationId: String) -> [InventoryEvent]
@@ -75,6 +82,10 @@ public struct InventoryQuery<Value: Sendable>: Sendable {
         .init { $0.inventoryOpenContainers() }
     }
 
+    public static var containers: InventoryQuery<[InventoryItem]> {
+        .init { $0.inventoryContainers() }
+    }
+
     public static func recents(limit: Int) -> InventoryQuery<[InventoryItem]> {
         .init { $0.inventoryRecents(limit: limit) }
     }
@@ -85,6 +96,10 @@ public struct InventoryQuery<Value: Sendable>: Sendable {
 
     public static var counts: InventoryQuery<InventoryCounts> {
         .init { $0.inventoryCounts() }
+    }
+
+    public static func items(includeInactive: Bool = false) -> InventoryQuery<[InventoryItem]> {
+        .init { $0.inventoryItems(includeInactive: includeInactive) }
     }
 
     public static func search(

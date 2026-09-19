@@ -8,6 +8,12 @@
  * the same reasoning `purchases.write` is declared apart from
  * `purchases.read` — writing is its own authority.
  *
+ * `putMedia`/`getMedia` (A13, ADR-002 D9) relay inventory's content-addressed
+ * media store — a photo's bytes ahead of the `item.attachPhoto` mutation that
+ * references them. Unlike every other route here, the leg behind bfm is not
+ * inventory's sync protocol: see `api/inventory/media-client.ts` for why it
+ * cannot be.
+ *
  * `409` and `426` are declared on every READ route, because the producer can
  * answer either on any of them:
  *
@@ -29,6 +35,12 @@ import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
 
 import { requires } from './capabilities.js';
+import {
+  MobileInventoryMediaBytesSchema,
+  MobileInventoryMediaStoredSchema,
+  MobileInventoryMediaUploadBodySchema,
+  MobileInventoryMediaVariantSchema,
+} from './mobile-inventory-media-schemas.js';
 import {
   MobileCodeSuggestBodySchema,
   MobileCodeSuggestResponseSchema,
@@ -64,6 +76,24 @@ const InventoryPageLimit = z.coerce.number().int().min(1).max(500).optional();
  * of Express's 100kb default.
  */
 export const MOBILE_INVENTORY_MUTATIONS_MAX_BYTES = 256 * 1024;
+
+/**
+ * The largest JSON body `PUT /mobile/inventory/media/:sha256` is mounted
+ * with in `app.ts` (`express.json({ limit })`, the same pattern the receipt
+ * upload uses).
+ *
+ * Sized around inventory's own 8 MB cap on the decoded bytes (its media
+ * store's `MEDIA_UPLOAD_LIMIT_BYTES`): base64 inflates by a third, so 8 MB
+ * of bytes is roughly 10.9 MB of
+ * `dataBase64`, plus the small JSON envelope around it. The AUTHORITATIVE
+ * cap is enforced in the handler against the decoded length before any
+ * upstream call — this mount only has to be wide enough that a legitimate
+ * upload is never truncated by Express's own body-size refusal first.
+ */
+export const MOBILE_INVENTORY_MEDIA_MAX_BYTES = 12 * 1024 * 1024;
+
+/** Matches inventory's own `MEDIA_UPLOAD_LIMIT_BYTES` — see the constant above. */
+export const MOBILE_INVENTORY_MEDIA_UPLOAD_LIMIT_BYTES = 8 * 1024 * 1024;
 
 const SYNC_RESYNC_RESPONSES = {
   409: MobileResyncRequiredErrorSchema,
@@ -161,6 +191,50 @@ export const mobileInventoryContract = c.router({
     },
     summary: 'Free codes for a new item: a stem followed by the next unused numbers',
     metadata: requires('inventory.write'),
+  },
+  /**
+   * Store a photo's bytes ahead of `item.attachPhoto` (A13). Capability
+   * `inventory.write` on the same reasoning `mutations` carries it: this
+   * writes into inventory's media store, even though nothing here touches
+   * `item_photos` — that reference is a later mutation, once the phone knows
+   * this call answered `alreadyStored` or created.
+   *
+   * No `409`/`426`: this route never reads the replica, so neither the
+   * resync nor the protocol-version question inventory's sync surface
+   * answers applies to it.
+   */
+  putMedia: {
+    method: 'PUT',
+    path: '/mobile/inventory/media/:sha256',
+    pathParams: z.object({ sha256: z.string().min(1) }),
+    body: MobileInventoryMediaUploadBodySchema,
+    responses: {
+      200: MobileInventoryMediaStoredSchema,
+      201: MobileInventoryMediaStoredSchema,
+      413: MobilePayloadTooLargeErrorSchema,
+      415: MobileUpstreamErrorSchema,
+      ...MOBILE_REQUEST_RESPONSES,
+      ...MOBILE_PERIMETER_RESPONSES,
+      ...MOBILE_UPSTREAM_RESPONSES,
+    },
+    summary: "Store a photo's bytes, content-addressed by their own sha256",
+    metadata: requires('inventory.write'),
+  },
+  /** The read half of {@link putMedia}. Capability `inventory.read`, matching every other GET here. */
+  getMedia: {
+    method: 'GET',
+    path: '/mobile/inventory/media/:sha256',
+    pathParams: z.object({ sha256: z.string().min(1) }),
+    query: z.object({ variant: MobileInventoryMediaVariantSchema.optional() }),
+    responses: {
+      200: MobileInventoryMediaBytesSchema,
+      404: MobileUpstreamErrorSchema,
+      ...MOBILE_REQUEST_RESPONSES,
+      ...MOBILE_PERIMETER_RESPONSES,
+      ...MOBILE_UPSTREAM_RESPONSES,
+    },
+    summary: "A photo's bytes, base64, for a detail screen or a thumbnail row",
+    metadata: requires('inventory.read'),
   },
 });
 

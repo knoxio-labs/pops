@@ -1,3 +1,4 @@
+import AppCore
 import Foundation
 
 /// What kind of place a location is, which only decides its glyph and its
@@ -128,8 +129,6 @@ internal struct InventoryPlaceTally: Equatable {
 
     internal var isEmpty: Bool { places + containers + items == 0 }
 
-    internal var isSingular: Bool { places + containers + items == 1 }
-
     internal var summary: String {
         parts.joined(separator: " · ")
     }
@@ -226,18 +225,14 @@ internal struct InventoryLocationTree {
         Set(nodes.map(\.id)).subtracting([id] + descendants(of: id).map(\.id))
     }
 
-    internal func deletionEffect(of id: String) -> String {
-        guard let target = node(id) else { return "" }
-        let moving = InventoryPlaceTally(
-            places: children(of: id).count,
-            containers: target.directContainerCount,
-            items: target.directItemCount + target.containedItemCount)
-        guard !moving.isEmpty else { return "Only \(target.name) is removed." }
-        let destination = target.parentID.flatMap { node($0)?.name }
-        guard let destination else {
-            return "\(moving.phrase) \(moving.isSingular ? "loses its" : "lose their") place."
-        }
-        return "\(moving.phrase) \(moving.isSingular ? "moves" : "move") to \(destination)."
+    /// What deleting `id` does to what is in it, by `AppCore`'s one rule;
+    /// nil for a place this tree does not hold.
+    internal func deletion(of id: String) -> InventoryLocationDeletion? {
+        guard let target = node(id) else { return nil }
+        return InventoryLocationDeletion(
+            name: target.name, parentName: target.parentID.flatMap { node($0)?.name },
+            childPlaces: children(of: id).count, directContainers: target.directContainerCount,
+            directItems: target.directItemCount)
     }
 
     internal func moveEffect(of id: String, to destinationID: String) -> String {

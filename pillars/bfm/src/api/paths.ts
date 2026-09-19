@@ -40,6 +40,14 @@ export const MOBILE_RECEIPT_EXTRACT_PATH = bfmContract.mobilePurchases.extractRe
  */
 export const MOBILE_INVENTORY_MUTATIONS_PATH = bfmContract.mobileInventory.mutations.path;
 
+/**
+ * Where a photo's bytes arrive, and therefore the mount for
+ * `MOBILE_INVENTORY_MEDIA_MAX_BYTES` — the wide envelope limit; the
+ * authoritative 8 MB cap on the decoded bytes is enforced in the handler,
+ * before any upstream call.
+ */
+export const MOBILE_INVENTORY_MEDIA_UPLOAD_PATH = bfmContract.mobileInventory.putMedia.path;
+
 /*
  * `app.use` matches a PREFIX, and `extractReceipt` sits under this path at
  * `/extract` — so the budget and the rate limit mounted here cover the call

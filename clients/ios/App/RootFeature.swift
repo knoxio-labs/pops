@@ -1,5 +1,6 @@
 import AppCore
 import FeatureAccounts
+import FeatureInventory
 import FeaturePurchases
 import FeatureReceiptCapture
 import FeatureTransactions
@@ -30,6 +31,7 @@ internal enum RootFeature {
         FeatureAccounts.feature,
         FeaturePurchases.feature,
         FeatureReceiptCapture.feature,
+        FeatureInventory.feature,
     ]
 
     /// What each renderable feature calls itself: its tab label and icon, as
@@ -53,6 +55,9 @@ internal enum RootFeature {
         FeatureReceiptCapture.feature: FeaturePresentation(
             displayName: FeatureReceiptCapture.displayName,
             symbolName: FeatureReceiptCapture.symbolName),
+        FeatureInventory.feature: FeaturePresentation(
+            displayName: FeatureInventory.displayName,
+            symbolName: FeatureInventory.symbolName),
     ]
 }
 

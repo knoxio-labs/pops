@@ -1,6 +1,6 @@
 # FeatureInventory
 
-Inventory on the phone. `InventoryFlowView` is the whole public surface: it owns the Inventory tab's `NavigationStack`, puts the dashboard at its root, and resolves every `InventoryRoute` itself. The app does not show it yet; the tab is wired in POPS-4066.
+Inventory on the phone. `InventoryFlowView` is the Inventory tab: it owns the tab's `NavigationStack`, puts the dashboard at its root, and resolves every `InventoryRoute` itself. `InventoryEntity` and `InventoryEntityView` are the other public surface: the app registers `InventoryEntity.types` under `InventoryEntity.pillar` with its `EntityRouter`, and presents the referenced item, container or place on a stack of its own when a label or a `pops://inventory/...` link names one.
 
 The package depends on `AppCore` and `DesignSystem` only, and reads and writes through `AppCore`'s `InventoryStore`. `ModuleBoundaryTests` in `AppCore` holds that line.
 
@@ -14,4 +14,36 @@ Until that query answers once, the dashboard shows a skeleton. A store that ends
 
 The dashboard, its panels, tiles, rows and sync pill are the design playground's grounded dashboard (POPS-3978), moved here and fed from `InventoryDashboard` instead of fixtures. The `InventoryGrounded*` names are kept so the screens still to move can be carried over with their references intact.
 
-Most of what the dashboard links to has not moved yet, and resolves to a pending screen until it does: item detail (POPS-4062), containers, locations and the destination picker behind Move (POPS-4064), the items browser, In hand and selection mode (POPS-4065), Sync and repair (POPS-4074), and the scanner (POPS-4078).
+Most of what the dashboard links to has moved: item detail (POPS-4062), containers and locations (POPS-4064), the item form (POPS-4063), the items browser, In hand and selection mode (POPS-4065). Sync and repair (POPS-4074) and the scanner (POPS-4078) still resolve to a pending screen.
+
+## One placement picker
+
+`Containers`, `Locations`, `Detail` and the dashboard never build their own destination chooser. Every Move, Put back, Store here and new-place-inline flow goes through `InventoryDestinationPickerSheet` (`Picker/InventoryDestinationPicker.swift`), which only chooses, and one of two callers that turn a choice into commands:
+
+- `inventoryPlacementPicker(_:runner:onPlaced:)` (`Picker/InventoryPlacementPicker.swift`) is what a screen attaches for Move and Put back. It binds an `InventoryPlacementRequest` (an id or a set of item ids, plus the verb and titles to show), reads `InventoryPlacementChoices` from the replica — the put-back destination, recent places, open containers, and the location tree with any container the subject cannot move into filtered out — and on commit turns the choice into an `InventoryPlacementPlan`: a new place is created first when one was named inline, then the move (or, for a place, `location.move`) is issued through the runner, which offers Undo the same way the calling screen's own writes do.
+- `InventoryStoreHereSheet` (`Picker/InventoryStoreHereSheet.swift`) is Store here's own sheet: a new item or an existing one, chosen from `InventoryStoreCandidate.candidates(reading:for:query:)`, stored with the `store` verb.
+
+`InventoryLocationTree` (`Picker/InventoryLocationTree.swift`, read in `InventoryLocationTree+Reading.swift`) is the one flattened read of the place hierarchy every one of these draws from — the browser, a place's own page, and the picker's location level all read the same tree rather than each walking `InventoryLocation` rows themselves. A location has no kind of its own (ADR-002): the browser, the row label and the create sheet draw one place glyph and ask only for a name and a parent, where the design's playground fixtures carried a room-shelf-drawer kind that nothing in the replica records.
+
+## The item form
+
+New item and Edit item are one sheet (`Form/`), installed once over the whole stack by `InventoryFlowView`. A screen opens it through the `inventoryItemForm` environment value with an `InventoryItemFormRequest`; nothing pushes it as a route. Its fields are drawn from the catalogue descriptor the store serves, so a type the server adds renders without an app release.
+
+Two things it reaches for belong to other screens, and it asks for them rather than owning them:
+
+- **Where it goes.** The destination row opens the same `inventoryPlacementPicker` the containers and locations screens install (POPS-4064).
+- **A suggested code.** Suggestions are the server's alone (`POST /codes/suggest`), and `InventoryStore` carries no call for them, so the form takes an `InventoryCodeSuggester`. Until the app binds one it answers as a server that cannot suggest, which the form shows as the approved unavailable state. A typed code is always checked against the replica, online or not.
+
+## Search, the items browser and In hand
+
+`Search/`, `Browse/` and `InHand/` are the three ways to end up looking at one item outside its own page, each over one query built the same way the dashboard's is:
+
+- `InventorySearchViewModel` ranks the replica's own search in tiers — name prefix, name contains, then everything else, records before places — through `InventorySearchRanking.swift`, narrowed by the missing-type and include-inactive filters (`InventorySearchFilter.swift`) and remembering recent queries (`InventorySearchRecents.swift`) in `AppStorage`, not the replica.
+- `InventoryItemsBrowserViewModel` reads every non-container item in one query (`inventoryItems(includeInactive:)`), sectioned by initial when sorted by name and otherwise left in the replica's own order, with the same missing-type and include-inactive filters Search uses.
+- `InventoryInHandViewModel` reads the dashboard's own In-hand rows as a page of their own, with Put back and Put all back (`InHand/InventoryInHand.swift`): Put back does nothing for a row whose previous place was deleted, and Put all back only appears once there is more than one thing in hand.
+
+Move, from any of the three, and from the dashboard's own In hand section, goes through the same `inventoryPlacementPicker` and `InventoryCommandRunner` Containers and Locations use (POPS-4064): each view model carries its own runner, built from the same store as its `InventoryWriter`.
+
+## Deduplication
+
+Search, Browse and In hand share the row, list-panel, motion, symbol and platform-glass components the containers and locations screens already draw from (`Components/`), rather than each carrying its own copy: a screen that needs a new one of these adds it there, not beside itself.

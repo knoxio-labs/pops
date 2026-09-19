@@ -1,4 +1,4 @@
-appId: com.knoxiolabs.pops
+appId: com.knoxiolabs.pops.local
 name: Transactions that cannot be fetched say so, and are not an empty list
 ---
 - clearState

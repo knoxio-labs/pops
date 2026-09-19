@@ -26,6 +26,21 @@ public enum InventoryLifecycle: Hashable, Sendable {
         }
     }
 
+    /// The inverse of `init(wire:)`. An `.unrecognised` value round-trips its
+    /// own string rather than being unrepresentable on the way back out —
+    /// this build cannot have chosen it (nothing offers it as an option), so
+    /// the only way here is replaying a value this app already received.
+    public var wireValue: String {
+        switch self {
+        case .active: "active"
+        case .retired: "retired"
+        case .discarded: "discarded"
+        case .lost: "lost"
+        case .destroyed: "destroyed"
+        case .unrecognised(let raw): raw
+        }
+    }
+
     /// Whether the item is part of "what I have". Only active items are; an
     /// unrecognised value is treated the same as an inactive one, because
     /// counting it towards totals would be a guess this type cannot make.
@@ -63,6 +78,19 @@ public enum InventoryDiscardReason: Hashable, Sendable {
         case "broken": self = .broken
         case "gave_away": self = .gaveAway
         default: self = .unrecognised(wire)
+        }
+    }
+
+    /// The inverse of `init(wire:)`, for the same reason `InventoryLifecycle`
+    /// carries one.
+    public var wireValue: String {
+        switch self {
+        case .donated: "donated"
+        case .sold: "sold"
+        case .usedUp: "used_up"
+        case .broken: "broken"
+        case .gaveAway: "gave_away"
+        case .unrecognised(let raw): raw
         }
     }
 }

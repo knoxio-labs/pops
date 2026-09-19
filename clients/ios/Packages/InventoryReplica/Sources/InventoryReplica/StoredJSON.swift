@@ -31,6 +31,8 @@ internal enum StoredFieldValue: Codable {
     case measurement(value: Double, unit: String)
     case range(low: Double, high: Double, unit: String)
     case link(String)
+    case placement(StoredPlacement)
+    case previousPlacement(StoredPreviousPlacement)
 
     init(_ value: InventoryFieldValue) {
         switch value {
@@ -41,6 +43,9 @@ internal enum StoredFieldValue: Codable {
             self = .measurement(value: measurement.value, unit: measurement.unit)
         case .range(let range): self = .range(low: range.low, high: range.high, unit: range.unit)
         case .link(let text): self = .link(text)
+        case .placement(let placement): self = .placement(StoredPlacement(placement))
+        case .previousPlacement(let previous):
+            self = .previousPlacement(StoredPreviousPlacement(previous))
         }
     }
 
@@ -54,6 +59,8 @@ internal enum StoredFieldValue: Codable {
         case .range(let low, let high, let unit):
             .range(InventoryRange(low: low, high: high, unit: unit))
         case .link(let text): .link(text)
+        case .placement(let placement): .placement(placement.domainValue)
+        case .previousPlacement(let previous): .previousPlacement(previous.domainValue)
         }
     }
 

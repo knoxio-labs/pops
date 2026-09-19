@@ -1,11 +1,19 @@
 import Foundation
 
 /// Where one side of a disagreement came from, per ADR-002 D8's event actor.
+///
+/// Never decoded as `.thisDevice`: the wire's conflict source carries only a
+/// `kind` and a `label` (ADR-002's wire contract), never the id this app's
+/// own device holds, so nothing at the decoding edge can tell "another
+/// phone" apart from "this one" by label alone. A caller that wants that
+/// distinction has to compare the label itself against its own.
 public enum InventorySyncSource: Hashable, Sendable {
     case thisDevice
     case otherDevice(label: String)
     case web
     case service(account: String)
+    /// An actor kind this build has never heard of, kept verbatim.
+    case unrecognised(kind: String, label: String)
 }
 
 /// What kind of repair a change needs, and so which two ways out it offers.
@@ -65,6 +73,9 @@ public struct InventoryRepair: Identifiable, Hashable, Sendable {
     public let options: [InventoryRepairOption]
     /// The code a collision proposes instead.
     public let suggestedCode: String?
+    /// Who already holds the colliding code, for `codeCollision`'s "B412 is
+    /// on Kitchen 09" line. Mirrors the wire outcome's `heldBy.name`.
+    public let heldByName: String?
     public let openedAt: Date
 
     public init(
@@ -75,6 +86,7 @@ public struct InventoryRepair: Identifiable, Hashable, Sendable {
         field: String? = nil,
         options: [InventoryRepairOption] = [],
         suggestedCode: String? = nil,
+        heldByName: String? = nil,
         openedAt: Date
     ) {
         self.id = id
@@ -84,6 +96,7 @@ public struct InventoryRepair: Identifiable, Hashable, Sendable {
         self.field = field
         self.options = options
         self.suggestedCode = suggestedCode
+        self.heldByName = heldByName
         self.openedAt = openedAt
     }
 }

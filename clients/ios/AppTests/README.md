@@ -15,7 +15,7 @@ Measured on the same simulator, same Xcode, one probe run in each:
 |                                | `Bundle.main.bundleIdentifier` | `SecItemAdd` with `kSecUseDataProtectionKeychain` |
 | ------------------------------ | ------------------------------ | ------------------------------------------------- |
 | a package target (`AuthTests`) | `com.apple.dt.xctest.tool`     | `-34018` `errSecMissingEntitlement`               |
-| this target, hosted by `Pops`  | `com.knoxiolabs.pops`          | `errSecSuccess`                                   |
+| this target, hosted by `Pops`  | `com.knoxiolabs.pops.local`    | `errSecSuccess`                                   |
 
 Two questions decide it:
 
@@ -40,6 +40,7 @@ The difference is what is being asserted on. `TabView` is bridged to a real `UIT
 ## What is here
 
 - **`AppBundleTests`** — everything between a build setting in `project.yml` and the value the running app reads back. The per-configuration BFM base URL, whether the key survived into the built `Info.plist` at all, and the camera purpose string whose absence is a crash rather than a build failure. [`Packages/BFMClient`](../Packages/BFMClient) can only test the pure resolver underneath.
+- **`InventoryCompositionTests`** — that a paired device reads and writes Inventory through the online store and the pairing screen through the unbound one, and that a `pops://inventory/item/<id>` or `/location/<id>` URL routed through the composition root's `EntityRouter` asks `ContentView` to present that record. Which screen a record opens is `FeatureInventory`'s own suite.
 - **`DataProtectionKeychainTests`** — that the data-protection keychain is reachable from this target. It asserts the _environment_, not `KeychainTokenStore`, and it is what keeps a red `KeychainTokenStoreTests` pointing at the code rather than at the harness.
 - **`KeychainTokenStoreTests`** — `KeychainTokenStore` against a real Keychain: the accessibility class the item is actually written with, whether anything it writes is synchronizable, the `SecItemUpdate`-then-`SecItemAdd` branch in `save(_:)`, and whether `wipe()` removes what its documentation says it removes. Attributes are read back out of the Keychain rather than off the source, because a downgrade there has no symptom — an item written `AfterFirstUnlock`, or written synchronizable, stores and loads exactly as well as a correct one and is only wrong on a locked phone and on somebody else's hardware.
 - **`SecureEnclaveKeyStoreTests`** — `SecureEnclaveKeyStore` against a real Secure Enclave. See below, because this one used to be impossible.

@@ -67,6 +67,23 @@ internal struct InventoryStoreDashboardReadsTests {
         #expect(counts == InventoryCounts(items: 2, containers: 1, locations: 1))
     }
 
+    @Test(
+        "the catalogue read leaves out tombstones always and inactive items unless asked",
+        arguments: [(false, ["box", "plate"]), (true, ["box", "lost", "plate"])])
+    func itemsRead(includeInactive: Bool, expected: [String]) async throws {
+        let store = InMemoryInventoryStore(items: [
+            Self.item("box", seq: 1, placement: .location("loc"), isContainer: true),
+            Self.item("plate", seq: 2, placement: .container("box")),
+            Self.item("lost", seq: 3, placement: .hand, lifecycle: .lost),
+            Self.item("gone", seq: 4, placement: .hand, deletedAt: .now),
+        ])
+
+        var values = store.observe(.items(includeInactive: includeInactive)).makeAsyncIterator()
+        let items = try #require(await values.next())
+
+        #expect(items.map(\.id).sorted() == expected)
+    }
+
     @Test("recent events come newest first and stop at the limit", arguments: [0, 2, 10])
     func recentEventsAreNewestFirst(limit: Int) async throws {
         let store = InMemoryInventoryStore(events: [

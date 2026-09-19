@@ -164,6 +164,10 @@ public struct ReceiptDraftView: View {
             content
                 .padding(PopsSpacing.lg)
         }
+        // On the scroll view, before the action bar is inset: attached after
+        // it, the identifier covered the bar too and replaced the Save
+        // button's own, so nothing outside the process could find Save.
+        .accessibilityIdentifier(ReceiptDraftAccessibility.form)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.popsBackground)
         .safeAreaInset(edge: .bottom) { if save != nil { actions } }
@@ -171,7 +175,6 @@ public struct ReceiptDraftView: View {
         // before: a form this long is mostly scrolling, and a keyboard that
         // only closes on Return is a keyboard covering half the receipt.
         .scrollDismissesKeyboard(.interactively)
-        .accessibilityIdentifier(ReceiptDraftAccessibility.form)
     }
 
     /// `internal` rather than `private` so the layout can be exercised

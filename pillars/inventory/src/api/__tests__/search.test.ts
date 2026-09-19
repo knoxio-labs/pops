@@ -275,4 +275,47 @@ describe('search — query.filters', () => {
     const { hits } = await client().search.run({ query: { text: 'widget', filters: [] } });
     expect(hits).toHaveLength(1);
   });
+
+  it('narrows by includeInactive, parsed to a boolean, defaulting to active-only', async () => {
+    const active = await client().items.create({ itemName: 'Kettle standard' });
+    const retired = await client().items.create({ itemName: 'Kettle retired' });
+    inventoryDb.raw
+      .prepare(`UPDATE items SET lifecycle = 'retired' WHERE id = ?`)
+      .run(retired.data.id);
+
+    const defaultResult = await client().search.run({ query: { text: 'kettle' } });
+    expect(defaultResult.hits.map((h) => h.uri)).toEqual([`/inventory/items/${active.data.id}`]);
+
+    const explicitFalse = await client().search.run({
+      query: {
+        text: 'kettle',
+        filters: [{ field: 'includeInactive', operator: 'eq', value: 'false' }],
+      },
+    });
+    expect(explicitFalse.hits.map((h) => h.uri)).toEqual([`/inventory/items/${active.data.id}`]);
+
+    const included = await client().search.run({
+      query: {
+        text: 'kettle',
+        filters: [{ field: 'includeInactive', operator: 'eq', value: 'true' }],
+      },
+    });
+    expect(included.hits.map((h) => h.uri).sort()).toEqual(
+      [`/inventory/items/${active.data.id}`, `/inventory/items/${retired.data.id}`].sort()
+    );
+  });
+
+  it('never returns a tombstoned (deleted) item, even with includeInactive', async () => {
+    const kept = await client().items.create({ itemName: 'Toaster kept' });
+    const deleted = await client().items.create({ itemName: 'Toaster deleted' });
+    await client().items.delete(deleted.data.id);
+
+    const { hits } = await client().search.run({
+      query: {
+        text: 'toaster',
+        filters: [{ field: 'includeInactive', operator: 'eq', value: 'true' }],
+      },
+    });
+    expect(hits.map((h) => h.uri)).toEqual([`/inventory/items/${kept.data.id}`]);
+  });
 });

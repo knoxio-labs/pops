@@ -27,7 +27,8 @@ die() {
 
 scheme="${1-}"
 case "$scheme" in
-    Pops | PopsPlayground) ;;
+    Pops) shipped_bundle_id=com.knoxiolabs.pops ;;
+    PopsPlayground) shipped_bundle_id=com.knoxiolabs.pops.playground ;;
     *) die "expected 'Pops' or 'PopsPlayground', got '${scheme}'." ;;
 esac
 
@@ -62,6 +63,7 @@ xcodebuild archive \
     -archivePath "$archive" \
     "${auth[@]}" \
     DEVELOPMENT_TEAM="$DEVELOPMENT_TEAM" \
+    POPS_FLAVOR=testflight \
     MARKETING_VERSION="$marketing_version" \
     CURRENT_PROJECT_VERSION="$build_number"
 
@@ -76,6 +78,17 @@ built_marketing="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString
 built_build="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$built_plist")"
 [ "$built_marketing" = "$marketing_version" ] && [ "$built_build" = "$build_number" ] ||
     die "archive carries $built_marketing ($built_build), expected $marketing_version ($build_number)."
+
+# Every build is the `local` flavour unless told otherwise (project.yml), and
+# an unrecognised flavour resolves to no suffix at all — so the identifier is
+# read back too, and only the exact shipped one is uploaded.
+built_bundle_id="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$built_plist")"
+[ "$built_bundle_id" = "$shipped_bundle_id" ] ||
+    die "archive is $built_bundle_id, expected $shipped_bundle_id; only the testflight flavour is uploaded."
+
+# App Store Connect accepts the upload and only rejects a missing purpose
+# string after processing, by email; refusing here keeps it a red run.
+scripts/check-camera-purpose.sh check "$(dirname "$built_plist")"
 
 # manageAppVersionAndBuildNumber is off because App Store Connect would
 # otherwise be free to renumber the build, and the number is how a build on a

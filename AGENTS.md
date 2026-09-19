@@ -549,6 +549,8 @@ This is sanctioned, not incidental — but every leg is **mandatory-gated**: CI 
 
 The **iOS client** (`clients/ios`, [ADR-043](docs/architecture/adr-043-clients-as-a-unit-kind.md)) is a third leg under the same discipline in a different language: it vendors the BFM's snapshot to `clients/ios/Contracts/bfm.openapi.json` (ADR-033 again — it is in neither workspace and cannot depend on `@pops/bfm`) and generates Swift from the copy with Apple's `swift-openapi-generator`. `mise run generate:bfm-client` does both halves; the `iOS Quality` workflow re-runs it and fails on any diff, which is why `pillars/bfm/openapi/**` is in that workflow's path filter. It matters more there than anywhere else: the app is **distributed, not deployed**, so a contract change the client hasn't followed lands as a broken install on hardware nobody controls. See [clients/ios/Packages/BFMClient/README.md](clients/ios/Packages/BFMClient/README.md).
 
+**Installing on the phone means the local flavour.** `mise run -C clients/ios install:phone` (skill: `.claude/skills/install-on-phone`) builds `com.knoxiolabs.pops.local`, which installs beside the TestFlight app instead of over it. Never pass `POPS_FLAVOR` to a local build; only `clients/ios/scripts/testflight.sh` builds the shipped flavour.
+
 ---
 
 ## Design Context

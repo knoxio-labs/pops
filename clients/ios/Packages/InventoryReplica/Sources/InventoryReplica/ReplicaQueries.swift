@@ -5,7 +5,8 @@ import GRDB
 /// tombstoned row is absent from all of them, including a lookup by id: a
 /// scanned label for a deleted item is "target missing", the same as one
 /// this replica has never heard of. Inactive items are left out of lists
-/// (ADR-002 D3) but still found by id and by an inclusive search.
+/// (ADR-002 D3), except the containers browser's, and are still found by id
+/// and by an inclusive search.
 internal enum ReplicaQueries {
     static func item(id: String, in db: Database) throws -> InventoryItem? {
         try Row.fetchOne(
@@ -39,6 +40,31 @@ internal enum ReplicaQueries {
         try activeItems(
             where: "is_container = 1 AND access = 'open'", orderBy: "name COLLATE NOCASE, id",
             in: db)
+    }
+
+    /// Every live container, open or closed, active or not: the containers
+    /// browser narrows by state itself.
+    static func containers(in db: Database) throws -> [InventoryItem] {
+        try Row.fetchAll(
+            db,
+            sql: """
+                SELECT * FROM item WHERE deleted_at IS NULL AND is_container = 1
+                ORDER BY name COLLATE NOCASE, id
+                """
+        ).map { try ItemRow.decode($0, in: db) }
+    }
+
+    /// Every live item, the Items browser's catalogue; inactive ones only
+    /// when asked for.
+    static func items(includeInactive: Bool, in db: Database) throws -> [InventoryItem] {
+        let lifecycle = includeInactive ? "" : " AND lifecycle = 'active'"
+        return try Row.fetchAll(
+            db,
+            sql: """
+                SELECT * FROM item WHERE deleted_at IS NULL\(lifecycle)
+                ORDER BY name COLLATE NOCASE, id
+                """
+        ).map { try ItemRow.decode($0, in: db) }
     }
 
     /// Only what sits directly inside: an item in a tin in this crate is the

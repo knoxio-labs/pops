@@ -121,7 +121,15 @@ The indirection through a generated local file is not decoration. A project-refe
 
 No certificate, profile or key is in the tree, and none should be: automatic signing fetches them, and the first device build needs `-allowProvisioningUpdates` — which `build:device` passes — so it can register the App ID and pull down a profile.
 
+### Local and TestFlight flavours
+
+Every build is the **local** flavour unless it says otherwise: `com.knoxiolabs.pops.local` (and `com.knoxiolabs.pops.playground.local`), an icon with an amber LOCAL band, and "Pops Local" / "Design Local" on the home screen. So a build from a laptop installs beside the TestFlight app instead of replacing it, pairs separately, and keeps its own keychain. One build setting decides it, `POPS_FLAVOR` in `project.yml`; only `scripts/testflight.sh` passes `POPS_FLAVOR=testflight`, and it reads the archived identifier back and refuses to upload anything but the exact shipped one. Tests and the Maestro flows run the local flavour, which is why they name `com.knoxiolabs.pops.local`.
+
+Both apps register the `pops://` URL scheme, so with both installed iOS picks one of them to open such a link (POPS-4183).
+
 ### On the phone
+
+**`mise run install:phone`** (or `install:phone PopsPlayground`) builds the local flavour for Release, installs it on the one paired iPhone with `xcrun devicectl` and launches it; `POPS_DEVICE` names a phone when several are paired. It refuses to install a build whose identifier is not `.local`. The steps below are the Xcode route, and the one-time phone setup either route needs.
 
 1. **Enable Developer Mode** — Settings → Privacy & Security → Developer Mode. The phone restarts.
 2. **Pick the destination in Xcode** — open `Pops.xcodeproj`, choose the `Pops` scheme and the phone in the destination menu, then Run. For a Release build, Product → Scheme → Edit Scheme → Run → Build Configuration → Release first; the Run action defaults to Debug, and the two configurations differ in a way that matters here.
@@ -220,6 +228,8 @@ It is not quite the only job that touches this directory. Two jobs in [`quality.
 **Versions are CalVer and never committed.** `scripts/release-version.sh <sha>` derives both from the commit: `MARKETING_VERSION` is the committer date in UTC as `YYYY.M.D`, `CURRENT_PROJECT_VERSION` is `git rev-list --count`. They reach `xcodebuild` as command-line build settings, and the archive's `Info.plist` is read back to confirm they landed. A build on a phone reading `2026.9.19 (4821)` is commit 4821 on `main`; one reading `0.0.0 (0)` came from a laptop, because those are `project.yml`'s placeholders. The script refuses a shallow clone, whose count would be wrong while looking valid. Its `self-test` runs in `mise run lint`, since its only other caller runs after merge.
 
 **`mise run release:testflight <Pops|PopsPlayground>`** is the whole upload and runs by hand as well as in CI. Signing is automatic with an App Store Connect API key in place of a signed-in Xcode (`-allowProvisioningUpdates` plus `-authenticationKey*`), so the distribution certificate is cloud-managed and no certificate or profile is stored anywhere. It reads `DEVELOPMENT_TEAM`, `ASC_KEY_ID`, `ASC_ISSUER_ID` and `ASC_KEY_PATH`; in CI they come from the GitHub environment named `main`, which only the `main` branch can deploy to. The workflow skips entirely until the repository variable `TESTFLIGHT_ENABLED` is `true`.
+
+App Store Connect also rejects, after processing and by email, an app whose binary links a camera framework without an `NSCameraUsageDescription`, whether or not the app ever opens the camera. The playground links AVFoundation and VisionKit through the real screens it stages, so it carries a purpose string too, and `scripts/check-camera-purpose.sh` refuses such an archive before it is uploaded.
 
 App Store Connect rejects a binary built with a beta Xcode, so the day `POPS_XCODE_VERSION` points at a beta is a day nothing uploads.
 

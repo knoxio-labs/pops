@@ -23,6 +23,12 @@ internal struct InventoryPageTitle<Trailing: View>: View {
     }
 }
 
+extension InventoryPageTitle where Trailing == EmptyView {
+    internal init(title: String) {
+        self.init(title: title) { EmptyView() }
+    }
+}
+
 extension View {
     /// The inline title for a page that draws its own large one: hidden until
     /// the drawn title has scrolled under the bar, as a large title collapses.

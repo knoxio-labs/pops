@@ -31,14 +31,14 @@ internal struct InventoryDashboardActionTests {
 
         await model.putBack(router)
         let afterPutBack = await model.awaitDashboard { !$0.inHand.contains { $0.id == "router" } }
-        let offer = try #require(model.undoOffer)
+        let offer = try #require(model.writer.undoOffer)
         #expect(afterPutBack != nil)
         #expect(offer.message == "Put back in Office 04")
 
-        await model.undo(offer)
+        await model.writer.undo(offer)
         let afterUndo = await model.awaitDashboard { $0.inHand.contains { $0.id == "router" } }
         #expect(afterUndo != nil)
-        #expect(model.failure == nil)
+        #expect(model.writer.failure == nil)
     }
 
     @Test("Put back does nothing for a row whose previous place is gone")
@@ -50,8 +50,8 @@ internal struct InventoryDashboardActionTests {
 
         await model.putBack(rake)
 
-        #expect(model.undoOffer == nil)
-        #expect(model.failure == nil)
+        #expect(model.writer.undoOffer == nil)
+        #expect(model.writer.failure == nil)
         #expect(model.dashboard?.inHand.map(\.id).contains("rake") == true)
     }
 
@@ -61,12 +61,12 @@ internal struct InventoryDashboardActionTests {
         let (task, loaded) = await model.startAndAwaitFirstAnswer()
         defer { task.cancel() }
         await model.putBack(try #require(loaded?.inHand.first { $0.id == "router" }))
-        let offer = try #require(model.undoOffer)
+        let offer = try #require(model.writer.undoOffer)
 
-        await model.undo(offer)
-        await model.undo(offer)
+        await model.writer.undo(offer)
+        await model.writer.undo(offer)
 
-        #expect(model.failure == nil)
+        #expect(model.writer.failure == nil)
     }
 
     @Test("closing a container takes it out of the open containers panel")
@@ -90,20 +90,38 @@ internal struct InventoryDashboardActionTests {
 
         await model.undo(activity)
 
-        #expect(model.failure == .contractMismatch)
+        #expect(model.writer.failure == .repository(.contractMismatch))
+    }
+
+    @Test("Undo on a place's event reverts it under that place, not under an item")
+    func undoNamesTheEventsOwnEntity() async throws {
+        let store = RecordingInventoryStore(
+            InMemoryInventoryStore(
+                locations: [Fixture.location("kitchen", "Kitchen")],
+                events: [Fixture.event(4, .locationRenamed, on: "kitchen", entityKind: .location)]))
+        let model = InventoryDashboardViewModel(store: store)
+        let (task, loaded) = await model.startAndAwaitFirstAnswer()
+        defer { task.cancel() }
+        let activity = try #require(loaded?.recentWork.first)
+
+        await model.undo(activity)
+
+        #expect(
+            store.commands == [.revertEvent(seq: 4, entityKind: .location, entityId: "kitchen")])
     }
 
     @Test("Undo on an event that is no longer undoable sends nothing")
     func nonUndoableActivityIsInert() async {
         let model = InventoryDashboardViewModel(store: Self.store())
         let activity = InventoryDashboard.Activity(
-            id: 9, title: "Wi-Fi router moved", place: nil, at: Fixture.epoch,
+            id: 9, entityKind: .item, entityId: "router", title: "Wi-Fi router moved", place: nil,
+            at: Fixture.epoch,
             symbol: "arrow.right",
             isUndoable: false)
 
         await model.undo(activity)
 
-        #expect(model.failure == nil)
+        #expect(model.writer.failure == nil)
     }
 
     @Test("a failed write against a store that is down reads as unavailable")
@@ -114,6 +132,6 @@ internal struct InventoryDashboardActionTests {
 
         await model.close(container)
 
-        #expect(model.failure == .unavailable)
+        #expect(model.writer.failure == .repository(.unavailable))
     }
 }

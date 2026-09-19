@@ -3896,7 +3896,8 @@ export interface operations {
                 | 'inUse'
                 | 'deductible'
                 | 'locationId'
-                | 'assetId';
+                | 'assetId'
+                | 'includeInactive';
               /** @enum {string} */
               operator: 'eq';
               value: string;

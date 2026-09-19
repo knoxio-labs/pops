@@ -74,6 +74,8 @@ internal enum EventRow {
         case .web: ActorColumns(kind: "web")
         case .service(let account): ActorColumns(kind: "service", id: account)
         case .migration: ActorColumns(kind: "migration")
+        case .unrecognised(let kind, let label):
+            ActorColumns(kind: "unrecognised", id: kind, label: label)
         }
     }
 
@@ -86,6 +88,7 @@ internal enum EventRow {
         case ("web", _, _): return .web
         case ("service", let account?, _): return .service(account: account)
         case ("migration", _, _): return .migration
+        case ("unrecognised", let kind?, let label?): return .unrecognised(kind: kind, label: label)
         default: throw InventoryReplicaError.corruptValue("actor \(kind)")
         }
     }

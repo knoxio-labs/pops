@@ -80,7 +80,7 @@ internal struct InventoryItemDetailViewModelTests {
 
         await model.revert(entry)
 
-        #expect(store.commands == [.revertEvent(seq: 7)])
+        #expect(store.commands == [.revertEvent(seq: 7, entityKind: .item, entityId: "tv")])
     }
 
     @Test("an event that is no longer undoable sends nothing")
@@ -200,6 +200,6 @@ internal struct InventoryItemDetailViewModelTests {
                 symbol: .move, month: "", from: nil, to: nil, reason: nil, device: nil,
                 isUndoable: true))
 
-        #expect(model.failure == .contractMismatch)
+        #expect(model.failure == .repository(.contractMismatch))
     }
 }

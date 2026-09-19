@@ -18,6 +18,36 @@
     "max-params": ["error", 4],
     "max-depth": ["error", 3],
     "no-console": ["error", { "allow": ["warn", "error"] }],
+    "no-underscore-dangle": [
+      "warn",
+      {
+        "allow": [
+          "__ciGateTestHook",
+          "__resetBuildToolListInternals",
+          "__resetInboundAuthWarningForTests",
+          "__resetInstalledModulesCache",
+          "__resetInvokeToolInternals",
+          "__resetOutboundCredentialReports",
+          "__resetPillarClientForTests",
+          "__resetPillarRegistryCache",
+          "__resetServerPillarCache",
+          "__resetServerSdkConfig",
+          "__resetSharedOpenApiCache",
+          "__resetSharedPillarClient",
+          "__resetWebhookSecretCacheForTests",
+          "__setAnthropicClientForTests",
+          "__setBuildToolListInternals",
+          "__setCerebrumTelemetryDepsForTests",
+          "__setClaudeCompleterForTests",
+          "__setFeedbackStoreForTests",
+          "__setFinanceTelemetryDepsForTests",
+          "__setFoodTelemetryDepsForTests",
+          "__setInvokeToolInternals",
+          "__setPurchasesTelemetryDepsForTests",
+          "__setTextIngestClientForTests"
+        ]
+      }
+    ],
     "no-restricted-imports": [
       "error",
       {

@@ -10,9 +10,10 @@ public struct InventoryLocation: Identifiable, Hashable, Sendable {
     public let name: String
     public let parentId: InventoryLocation.ID?
     public let sortOrder: Int
-    /// Set when this location was deleted. Its children and direct items were
-    /// reparented at the same moment (D2), so a tombstoned location is never
-    /// found holding anything by the time this is read.
+    /// Set when this location was deleted. At the same moment its child
+    /// places moved to its parent and its direct items went in hand,
+    /// remembering it (D2), so a tombstoned location is never found holding
+    /// anything by the time this is read.
     public let deletedAt: Date?
 
     public init(

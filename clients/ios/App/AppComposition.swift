@@ -1,7 +1,9 @@
 import AppCore
 import Auth
 import BFMClient
+import FeatureInventory
 import Foundation
+import InventoryReplica
 
 /// The composition root: the one place a protocol is bound to a concrete type,
 /// and the only module that knows every other module exists.
@@ -38,11 +40,14 @@ internal final class AppComposition {
     /// One instance for the life of the process, held here rather than built
     /// where it is used, for the same reason ``router(for:)`` is: a fresh
     /// registry on every body evaluation would forget every feature's
-    /// registration between renders. Nothing is registered on it yet — no
-    /// feature resolves an Inventory reference on `main` — so today every
-    /// route through it is the approved hand-off, which is correct: a code
-    /// this build cannot show should say so, not silently do nothing.
+    /// registration between renders. Inventory's items and places are
+    /// registered in `init`; every other reference is the approved hand-off,
+    /// which is correct: a code this build cannot show should say so, not
+    /// silently do nothing.
     internal let entityRouter: EntityRouter = EntityRouterRegistry()
+
+    /// What a routed reference asked to open, for `ContentView` to present.
+    internal let entityPresentation = EntityPresentation()
 
     /// The pairing screen's dependencies. Everything that speaks to a BFM is
     /// left unbound rather than pointed at a client: the base URL arrives with
@@ -114,6 +119,16 @@ internal final class AppComposition {
             bootstrapService: { BFMBootstrapService(client: authenticated($0)) },
             renderableFeatures: RootFeature.renderable
         )
+        registerEntityRoutes()
+    }
+
+    private func registerEntityRoutes() {
+        let presentation = entityPresentation
+        for type in InventoryEntity.types {
+            entityRouter.register(pillar: InventoryEntity.pillar, type: type) { uri in
+                presentation.inventory = InventoryEntity(uri)
+            }
+        }
     }
 
     /// Everything a paired device's screens may reach. Built per device rather
@@ -128,10 +143,24 @@ internal final class AppComposition {
             reachability: shell,
             receiptCapture: BFMReceiptCaptureRepository(client: authenticated(device)),
             purchases: BFMPurchasesRepository(client: authenticated(device)),
-            accounts: BFMAccountsRepository(client: authenticated(device))
+            accounts: BFMAccountsRepository(client: authenticated(device)),
+            inventory: Self.inventoryStore(client: authenticated(device))
         )
         bound = (device, dependencies)
         return dependencies
+    }
+
+    /// The paired device's Inventory: a replica of its own, kept current
+    /// through the BFM's relay, with every write waiting for the server.
+    ///
+    /// The replica is an in-memory database, so opening it fails only when
+    /// SQLite itself cannot allocate one. That leaves nothing to read from, so
+    /// the screens get the unbound store, which says Inventory is not
+    /// available rather than showing an empty catalogue as if it were real.
+    private static func inventoryStore(client: BFMHTTPClient) -> any InventoryStore {
+        guard let replica = try? InventoryReplica() else { return UnboundInventoryStore() }
+        return OnlineInventoryStore(
+            replica: replica, transport: BFMInventoryTransport(client: client))
     }
 
     /// What to prefill the pairing form's server field with.

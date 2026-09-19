@@ -55,7 +55,7 @@ internal struct InventoryLocationHierarchyTests {
     func unknownPlaceHasNothing() {
         #expect(Self.shelf.tally(of: "attic").isEmpty)
         #expect(Self.shelf.breadcrumbs(for: "attic").isEmpty)
-        #expect(Self.shelf.deletionEffect(of: "attic").isEmpty)
+        #expect(Self.shelf.deletion(of: "attic") == nil)
     }
 
     @Test("direct counts leave out what is inside containers")
@@ -103,24 +103,26 @@ internal struct InventoryLocationHierarchyTests {
         #expect(Self.shelf.matching("attic").isEmpty)
     }
 
-    @Test("deleting says what moves and where, counting a container's contents with it")
-    func deletionEffectNamesTheParent() {
+    @Test("deleting moves child places to the parent and leaves direct things unlocated")
+    func deletionLeavesThingsUnlocated() {
         #expect(
-            Self.shelf.deletionEffect(of: "garage")
-                == "1 place, 1 container and 3 items move to Home.")
-        #expect(Self.shelf.deletionEffect(of: "tools") == "1 item moves to Garage.")
+            Self.shelf.deletion(of: "garage")?.confirmation
+                == "1 place moves to Home. 1 container and 1 item become unlocated.")
+        #expect(Self.shelf.deletion(of: "tools")?.confirmation == "1 item becomes unlocated.")
     }
 
-    @Test("deleting an empty place says only it goes; deleting a root says things lose a place")
-    func deletionEffectEdgeCases() {
-        #expect(Self.shelf.deletionEffect(of: "loft") == "Only Loft is removed.")
-        #expect(Self.shelf.deletionEffect(of: "home") == "2 places lose their place.")
+    @Test("deleting an empty place says only it goes; deleting a root moves places to the top")
+    func deletionEdgeCases() {
+        #expect(Self.shelf.deletion(of: "loft")?.confirmation == "Only Loft is removed.")
+        #expect(
+            Self.shelf.deletion(of: "home")?.confirmation == "2 places move to the top level.")
     }
 
     @Test("the fixture's pantry shelf reads as the ticket's example")
     func pantryShelfEffect() {
         #expect(
-            Fixtures.home.deletionEffect(of: "pantry-shelf") == "12 items move to Kitchen.")
+            Fixtures.home.deletion(of: "pantry-shelf")?.confirmation
+                == "12 items become unlocated.")
     }
 
     @Test("a move says what goes with the place")
