@@ -42,24 +42,10 @@ internal struct InventorySelection: Equatable {
     }
 }
 
-/// What a selectable row tells the mark drawn inside it.
-@MainActor
-internal struct InventorySelectableRowContext {
-    internal let isSelecting: Bool
-    internal let isSelected: Bool
-    internal let toggle: () -> Void
-}
-
-extension EnvironmentValues {
-    /// Set by ``SwiftUICore/View/inventorySelectable(_:in:)`` on one row, so
-    /// the row's leading mark becomes the control that selects it.
-    @Entry internal var inventorySelectableRow: InventorySelectableRowContext?
-}
-
 extension View {
-    /// Makes this row selectable in `selection`: its leading mark selects
-    /// it, a selected row takes an amber tint, and while the list is
-    /// selecting a tap anywhere on the row toggles it instead of opening it.
+    /// Makes this row selectable in `selection`: a selected row takes an
+    /// amber tint, and while the list is selecting a tap anywhere on the row
+    /// toggles it instead of opening it.
     /// A nil `id` leaves the row as it is.
     internal func inventorySelectable(
         _ id: String?, in selection: Binding<InventorySelection>
@@ -76,12 +62,6 @@ private struct InventorySelectableRowModifier: ViewModifier {
         if let id {
             let isSelected = selection.contains(id)
             content
-                .environment(
-                    \.inventorySelectableRow,
-                    InventorySelectableRowContext(
-                        isSelecting: selection.isSelecting, isSelected: isSelected,
-                        toggle: { selection.toggle(id) })
-                )
                 .anchorPreference(key: InventorySelectedRowsKey.self, value: .bounds) {
                     isSelected ? [$0] : []
                 }
