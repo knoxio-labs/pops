@@ -38,6 +38,7 @@ import {
   REFRESH_PATH,
 } from './paths.js';
 import { type BfmRestHandlerDeps, makeBfmRestHandlers } from './rest/handlers.js';
+import { createInventoryProtocolErrorHandler } from './rest/inventory-protocol-error.js';
 import { createJsonBodyErrorHandler } from './rest/json-body-error.js';
 import { createPayloadTooLargeErrorHandler } from './rest/payload-too-large.js';
 import { createRequestValidationErrorHandler } from './rest/request-validation.js';
@@ -201,6 +202,12 @@ export function createBfmApiApp(deps: BfmApiDeps, options: CreateBfmApiAppOption
   // reaches an error handler rather than a handler — and left to Express's
   // default it would be an HTML page the generated client cannot decode.
   app.use(createPayloadTooLargeErrorHandler());
+
+  // Also last, and order-independent of the one above (they match disjoint
+  // error types). `426` sits outside ts-rest's status type, so the
+  // `/mobile/inventory/*` handlers throw rather than return it — see
+  // `inventory-protocol-error.ts`.
+  app.use(createInventoryProtocolErrorHandler());
 
   return app;
 }

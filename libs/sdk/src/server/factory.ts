@@ -19,12 +19,21 @@ import { InternalBaseUrlTransport } from './transport.js';
  * - `transport`, `fetchImpl`, `cacheTtlMs`: escape hatches for tests.
  *   Production callers should configure these via {@link configureServerSdk}
  *   and let the per-call handle reuse them.
+ * - `extraHeaders`: headers a specific caller needs on every request to this
+ *   one pillar, beyond the service-account key — e.g. bfm's inventory client
+ *   sending `Pops-Inventory-Protocol`, a header that names the WIRE SHAPE
+ *   this build understands rather than anything a request carries, so it is
+ *   fixed per handle rather than threaded through from a call site. Merged
+ *   alongside the API key, never replacing it. Read fresh on every call, the
+ *   same as the key, so it can depend on state that changes after the handle
+ *   is built.
  */
 export type ServerPillarOptions = {
   contractVersion?: string;
   transport?: DiscoveryTransport;
   fetchImpl?: typeof fetch;
   cacheTtlMs?: number;
+  extraHeaders?: () => Record<string, string> | Promise<Record<string, string>>;
 };
 
 type CacheKey = string;
@@ -89,14 +98,15 @@ function buildClientOptions(
   const transport = resolveTransport(config, options);
   const clientOptions: PillarClientOptions = {
     transport,
-    authHeaders: () => {
+    authHeaders: async () => {
       const current = resolveApiKey();
       if (current === undefined) {
         throw new PillarServerSdkError(
           `service-account auth required for server-side SDK call: set ${SERVER_SDK_API_KEY_ENV} or call configureServerSdk({ apiKey }).`
         );
       }
-      return { [SERVICE_ACCOUNT_HEADER]: current };
+      const extra = options.extraHeaders === undefined ? {} : await options.extraHeaders();
+      return { ...extra, [SERVICE_ACCOUNT_HEADER]: current };
     },
   };
   const fetchImpl = options.fetchImpl ?? config.fetchImpl;
@@ -129,7 +139,7 @@ function wrapWithOverrides(
 }
 
 function buildCacheKey(pillarId: string, options: ServerPillarOptions): CacheKey {
-  return `${pillarId}::${options.contractVersion ?? ''}::${options.transport ? 'custom-transport' : 'default-transport'}::${options.fetchImpl ? 'custom-fetch' : 'default-fetch'}::${options.cacheTtlMs ?? ''}`;
+  return `${pillarId}::${options.contractVersion ?? ''}::${options.transport ? 'custom-transport' : 'default-transport'}::${options.fetchImpl ? 'custom-fetch' : 'default-fetch'}::${options.cacheTtlMs ?? ''}::${options.extraHeaders ? 'extra-headers' : 'no-extra-headers'}`;
 }
 
 function snapshotConfig(
