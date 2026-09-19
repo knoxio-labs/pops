@@ -121,6 +121,14 @@ depends = ["generate"]
 # the first build on a machine fails with "No profiles for … were found".
 run = "xcodebuild -project Pops.xcodeproj -scheme Pops -destination 'generic/platform=iOS' -configuration Release -allowProvisioningUpdates build"
 
+# The upload `.github/workflows/ios-testflight.yml` runs for each app after a
+# green iOS Quality run on `main`. Runnable by hand with the same four
+# variables the script's header lists, which is how the first upload after the
+# App Store Connect setup gets proved without waiting for a merge.
+[tasks."release:testflight"]
+description = "Archive Pops or PopsPlayground at HEAD and upload it to TestFlight (needs an App Store Connect API key)"
+run = "scripts/testflight.sh"
+
 [tasks."build:packages"]
 description = "Type-check every package on the host toolchain, without Xcode"
 run = '''
@@ -149,8 +157,11 @@ done
 # build-for-testing` to get a compiler log. Two full compiles of the same
 # sources, ~7 minutes each on the runner, for a test action whose assertions
 # take 1.5 seconds. Both now depend on this instead, and because mise resolves
-# one dependency graph per invocation, `mise run -j 1 test ::: lint:analyze` —
-# what `ios-quality.yml` runs — compiles once and both read what it produced.
+# one dependency graph per invocation, `mise run -j 1 test ::: lint:analyze`
+# compiles once and both read what it produced. `ios-quality.yml` no longer
+# runs the pair together: pull requests run `test`, the merge queue runs
+# `lint:analyze`, because the analyzer is ~19.5 of the job's minutes and the
+# compile ~2 (POPS-4149).
 #
 # The `:::` is mise's TASK separator and is not decoration: without it,
 # `mise run test lint:analyze` runs `test` alone and appends `lint:analyze` to
@@ -611,6 +622,15 @@ scripts/check-xcode-version.sh check "$POPS_XCODE_VERSION" || status=1
 exit $status
 '''
 
+# The CalVer a TestFlight build carries (see the script's header). Its only
+# caller is `.github/workflows/ios-testflight.yml`, which runs after merge, so
+# a self-test left to that workflow would first fail on `main`; `lint` runs it
+# on every PR instead.
+[tasks."verify:release-version"]
+description = "The CalVer derivation for TestFlight builds still holds against fixtures"
+hide = true
+run = "scripts/release-version.sh self-test"
+
 # The one entry point. `.github/workflows/ios-quality.yml` invokes this task
 # rather than restating the commands, because the moment the two are written
 # out separately they drift and a green local run means nothing.
@@ -652,6 +672,7 @@ authoritative=1
 # so it is the one that must not be behind a guard.
 swiftlint lint --strict --quiet || status=1
 mise run generated-boundary || status=1
+mise run verify:release-version || status=1
 
 if mise run verify:xcode-version; then
   mise run swift-format lint || status=1

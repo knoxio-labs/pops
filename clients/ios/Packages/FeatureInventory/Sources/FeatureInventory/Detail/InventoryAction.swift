@@ -1,0 +1,155 @@
+import AppCore
+
+/// The verbs a person can apply to an item, and how much each one costs.
+///
+/// Weight decides presentation, and the rule it encodes is: red is for what
+/// cannot be undone. Discarding is reversible, Restore exists, so it is drawn
+/// as an ordinary action with a note saying so. Only destroying, which is a
+/// fact about the world rather than a choice about the record, gets
+/// destructive styling and a confirmation.
+internal struct InventoryAction: Identifiable, Equatable {
+    internal enum Weight: Equatable {
+        case standard
+        /// Takes the item out of "what I have", and can be walked back.
+        case reversibleRemoval
+        /// Cannot be walked back from the phone. Confirmed before it happens.
+        case irreversible
+    }
+
+    internal let id: String
+    internal let title: String
+    internal let symbol: InventorySymbol
+    internal let weight: Weight
+    /// What the reader should know before tapping.
+    internal let note: String?
+
+    internal init(
+        _ id: String, _ title: String, symbol: InventorySymbol, weight: Weight = .standard,
+        note: String? = nil
+    ) {
+        self.id = id
+        self.title = title
+        self.symbol = symbol
+        self.weight = weight
+        self.note = note
+    }
+
+    /// Everything a person can do to this item, in the order a sheet lists it.
+    ///
+    /// An item that no longer counts is offered only the way back; a
+    /// destroyed one is offered nothing, because there is no way back to
+    /// offer.
+    internal static func available(for record: InventoryDetailRecord) -> [InventoryAction] {
+        guard record.lifecycle == .active else {
+            return record.lifecycle.isRestorable ? [restore] : []
+        }
+        return placementActions(record) + containerActions(record) + recordActions(record)
+            + [discard, destroy]
+    }
+
+    private static func placementActions(_ record: InventoryDetailRecord) -> [InventoryAction] {
+        var actions: [InventoryAction] = []
+        if record.trail.isInHand {
+            if case .place(let name, _) = record.previous {
+                actions.append(
+                    InventoryAction("put-back", "Put back", symbol: .restore, note: "Into \(name)"))
+            }
+        } else {
+            actions.append(InventoryAction("pick-up", "Pick up", symbol: .inHand))
+        }
+        actions.append(InventoryAction("move", "Move", symbol: .move))
+        return actions
+    }
+
+    private static func containerActions(_ record: InventoryDetailRecord) -> [InventoryAction] {
+        switch record.access {
+        case nil:
+            []
+        case .closed:
+            [InventoryAction("reopen", "Reopen", symbol: .reopen)]
+        case .open:
+            [
+                InventoryAction("put-in", "Put something in", symbol: .openContainer),
+                InventoryAction("close", "Close", symbol: .close),
+            ]
+        }
+    }
+
+    private static func recordActions(_ record: InventoryDetailRecord) -> [InventoryAction] {
+        var actions = [InventoryAction("edit", "Edit details", symbol: .edit)]
+        if record.quantity.count > 1 {
+            actions.append(
+                InventoryAction(
+                    "split", "Split", symbol: .split,
+                    note: "Move some of the \(record.quantity.count) into a separate group"))
+        }
+        if let code = record.code {
+            actions.append(
+                InventoryAction(
+                    "print", "Print label", symbol: .printLabel, note: "Reprints \(code)"))
+        } else {
+            actions.append(InventoryAction("label", "Label", symbol: .label))
+        }
+        return actions
+    }
+
+    private static let restore = InventoryAction(
+        "restore", "Restore", symbol: .restore, note: "Counts again from now")
+
+    private static let discard = InventoryAction(
+        "discard", "Discard", symbol: .discard, weight: .reversibleRemoval,
+        note: "Stops counting. Can be restored.")
+
+    private static let destroy = InventoryAction(
+        "destroy", "Mark as destroyed", symbol: .destroyed, weight: .irreversible,
+        note: "Cannot be undone.")
+}
+
+/// The first action a placement makes obvious, and then whatever the item's
+/// capabilities add: the action row under the facts. Built from
+/// `InventoryAction.available(for:)` rather than re-deriving when each
+/// applies, so the row cannot disagree with the menu.
+internal enum InventoryItemDetailPrimaryAction {
+    /// Restore first, because it is the only thing an inactive item can do;
+    /// then the placement verbs, in the order a person would reach for them.
+    private static let priority = ["restore", "put-back", "pick-up", "move"]
+
+    /// The ids a capability contributes to the row. Everything else an item
+    /// can do is in the More menu.
+    private static let capabilityRow = ["reopen", "close", "put-in"]
+
+    /// The whole row, primary first.
+    internal static func row(for record: InventoryDetailRecord) -> [InventoryAction] {
+        let actions = InventoryAction.available(for: record)
+        let first =
+            priority.lazy.compactMap { id in actions.first { $0.id == id } }.first ?? actions.first
+        guard let first else { return [] }
+        let placement = actions.filter { priority.contains($0.id) && $0.id != first.id }
+        let capability = capabilityRow.compactMap { id in actions.first { $0.id == id } }
+        return [first] + placement + capability
+    }
+}
+
+/// A screen an Item detail control opens that belongs to another part of
+/// Inventory: the edit form, the destination picker, Store here, and label
+/// printing. Each resolves to a pending screen until that part lands.
+internal enum InventoryItemDetailPending: String, Identifiable {
+    case edit
+    case move
+    case storeHere
+    case label
+    case printLabel
+
+    internal init?(actionId: String) {
+        switch actionId {
+        case "edit": self = .edit
+        case "move": self = .move
+        case "put-in": self = .storeHere
+        case "label": self = .label
+        case "print": self = .printLabel
+        default: return nil
+        }
+    }
+
+    internal var id: String { rawValue }
+}
