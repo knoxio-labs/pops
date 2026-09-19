@@ -1,5 +1,4 @@
 import AppCore
-import Foundation
 
 /// Test seams for the Sync page and its row marks (ADR-002's iOS replica
 /// design): setting the replica status, and staging repairs and waiting
