@@ -72,7 +72,9 @@ internal struct InventorySyncInterruptionsModifier: ViewModifier {
     /// What a status reports blocking on, if anything. A pure function of
     /// the status rather than inline in the loop, so a test can drive every
     /// `InventoryReplicaStatus` case without a running store.
-    internal static func reason(for status: InventoryReplicaStatus) -> InventoryBlockReason? {
+    nonisolated internal static func reason(
+        for status: InventoryReplicaStatus
+    ) -> InventoryBlockReason? {
         guard case .blocked(let reason) = status else { return nil }
         return reason
     }
