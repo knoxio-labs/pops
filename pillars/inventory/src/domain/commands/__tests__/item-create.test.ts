@@ -122,3 +122,37 @@ describe('item.create', () => {
     expect(h.item(id).name).toBe('Kettle');
   });
 });
+
+describe('item.create with legacy fields (POPS-4053)', () => {
+  it('writes the legacy provenance columns and a code, none of which the new model itself has a field for', () => {
+    const id = randomUUID();
+    const outcome = h.run(
+      mutation(
+        'item.create',
+        id,
+        {
+          ...createArgs(),
+          legacy: { brand: 'Bosch', room: 'Kitchen', inUse: true },
+          code: 'B412',
+        },
+        { baseRevision: null }
+      )
+    );
+    expect(outcome).toMatchObject({ status: 'applied' });
+    expect(h.item(id)).toMatchObject({ brand: 'Bosch', room: 'Kitchen', inUse: 1, code: 'B412' });
+  });
+
+  it('indexes a code given at creation, so the item is findable by code without a later edit', () => {
+    const id = randomUUID();
+    h.run(mutation('item.create', id, { ...createArgs(), code: 'B412' }, { baseRevision: null }));
+
+    const row = h.raw.prepare('select id from items_fts where code = ?').get('B412');
+    expect(row).toEqual({ id });
+  });
+
+  it('leaves an omitted legacy field at its column default rather than writing null', () => {
+    const id = randomUUID();
+    h.run(mutation('item.create', id, createArgs(), { baseRevision: null }));
+    expect(h.item(id).condition).toBe('Good');
+  });
+});

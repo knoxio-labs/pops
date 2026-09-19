@@ -3,6 +3,7 @@ import * as service from '../modules/items/service.js';
 import { toInventoryItem } from '../modules/items/types.js';
 import { paginationMeta } from '../shared/pagination.js';
 import { runHttp } from './error-mapping.js';
+import { makeItemsWriteHandlers } from './items-write-handlers.js';
 
 import type { ServerInferRequest } from '@ts-rest/core';
 
@@ -20,8 +21,11 @@ function parseTriBool(value: 'true' | 'false' | undefined): boolean | undefined 
 }
 
 /**
- * Handlers for the `items.*` ts-rest sub-router. Thin pass-throughs to
- * the items service; ts-rest validates input, `runHttp` maps service
+ * Handlers for the `items.*` ts-rest sub-router. The reads here are thin
+ * pass-throughs to the items service; the mutating handlers
+ * (`items-write-handlers.ts`) go through the command engine (POPS-4053),
+ * recorded against actor `web`, with the legacy response shape unchanged
+ * for purchases' fan-out and the MCP tools. `runHttp` maps service
  * `HttpError`s (NotFound → 404) to response envelopes.
  */
 export function makeItemsHandlers(db: InventoryDb) {
@@ -78,28 +82,6 @@ export function makeItemsHandlers(db: InventoryDb) {
         body: { data: toInventoryItem(service.getInventoryItem(db, params.id)) },
       })),
 
-    create: ({ body }: Req['create']) =>
-      runHttp(() => ({
-        status: 201 as const,
-        body: {
-          data: toInventoryItem(service.createInventoryItem(db, body)),
-          message: 'Inventory item created',
-        },
-      })),
-
-    update: ({ params, body }: Req['update']) =>
-      runHttp(() => ({
-        status: 200 as const,
-        body: {
-          data: toInventoryItem(service.updateInventoryItem(db, params.id, body)),
-          message: 'Inventory item updated',
-        },
-      })),
-
-    delete: ({ params }: Req['delete']) =>
-      runHttp(() => {
-        service.deleteInventoryItem(db, params.id);
-        return { status: 200 as const, body: { message: 'Inventory item deleted' } };
-      }),
+    ...makeItemsWriteHandlers(db),
   };
 }

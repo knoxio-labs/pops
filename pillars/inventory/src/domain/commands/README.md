@@ -4,21 +4,32 @@ The write path for `items` and `locations`: every change made here gets a
 revision, a `seq` and a history event, and is checked for conflicts
 ([ADR-002](../../../docs/architecture/adr-002-inventory-technical-design.md),
 D6 and D8). `runMutation` in `engine.ts` is the entry point.
-`POST /sync/mutations` (`src/api/rest/sync-handlers.ts`) calls it; the legacy
-`/items` and `/locations` handlers still write the tables directly until
-POPS-4053 moves them onto it.
+`POST /sync/mutations` (`src/api/rest/sync-handlers.ts`, POPS-4052) calls it,
+and so do the legacy `/items` and `/locations` routes
+(`../../api/rest/items-handlers.ts`, `items-write-handlers.ts`,
+`locations-handlers.ts`), recorded against actor `web` (POPS-4053).
 
 Every op the pillar defines is registered here: `item.move`, `item.setAccess`,
 `item.setFull`, `item.setLifecycle`, `item.restoreDeleted`, `event.revert`
-(the engine, POPS-4050), plus `item.create`, `item.edit`, `item.changeType`,
+(the engine, POPS-4050), `item.create`, `item.edit`, `item.changeType`,
 `item.setCode`, `item.setQuantity`, `item.split`, `item.attachPhoto`,
 `item.removePhoto`, `item.reorderPhotos`, `location.create`,
-`location.rename`, `location.move` and `location.delete` (POPS-4051).
-`search-index.ts` keeps `items_fts` (migration `0013_items_fts`) current as
-those ops change a searchable field; `command-vectors.ts` runs one fixture per
-op against the real engine and `scripts/generate-command-vectors.ts` writes
-the result to `contracts/command-vectors-v1.json`, which a test regenerates
-and diffs on every run.
+`location.rename`, `location.move`, `location.delete` (POPS-4051), and
+`item.delete` (POPS-4053, added for the legacy `DELETE /items/:id` route,
+which the new model had not needed until then). `search-index.ts` keeps
+`items_fts` (migration `0013_items_fts`) current as those ops change a
+searchable field; `command-vectors.ts` runs one fixture per op against the
+real engine and `scripts/generate-command-vectors.ts` writes the result to
+`contracts/command-vectors-v1.json`, which a test regenerates and diffs on
+every run.
+
+`legacy-item-fields.ts` holds the provenance and value columns the new model
+has no field for (`brand`, `purchaseDate`, `replacementValue`, and the rest
+`db/schema/items.ts` calls out as carried unchanged from `home_inventory`).
+`item.create`'s `legacy` argument and `item.edit`'s `legacy` patch are the
+only callers; `entities.ts` merges its codecs into the ones `item.edit`
+writes through, so the same conflict checking and event recording as every
+other field applies to them.
 
 Every op the pillar defines is registered here: `item.move`, `item.setAccess`,
 `item.setFull`, `item.setLifecycle`, `item.restoreDeleted`, `event.revert`

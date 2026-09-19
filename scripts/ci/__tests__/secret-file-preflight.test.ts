@@ -110,7 +110,14 @@ describe('every pillar that reads a secret file proves at boot that it can', () 
   });
 
   it('lists exactly the pillars that read one', () => {
-    expect(reading.map((p) => p.id)).toEqual(['bfm', 'cerebrum', 'finance', 'mcp', 'purchases']);
+    expect(reading.map((p) => p.id)).toEqual([
+      'bfm',
+      'cerebrum',
+      'finance',
+      'inventory',
+      'mcp',
+      'purchases',
+    ]);
   });
 
   it('finds an entry point that is not src/api/server.ts', () => {
@@ -120,12 +127,13 @@ describe('every pillar that reads a secret file proves at boot that it can', () 
   });
 
   it('reads whole variable names, not substrings of unrelated constants', () => {
-    // `MAX_FILE_SIZE` and `DEFAULT_MAX_FILE_BYTES` are constants these three
+    // `MAX_FILE_SIZE` and `DEFAULT_MAX_FILE_BYTES` are constants these two
     // carry. A substring match would demand a preflight from pillars with no
-    // secret to check.
+    // secret to check. `inventory` DOES belong in `reading` now (POPS-4081
+    // added its own `POPS_INTERNAL_API_KEY_FILE` reader) — asserted in the
+    // list above rather than excluded here.
     const ids = reading.map((p) => p.id);
     expect(ids).not.toContain('food');
-    expect(ids).not.toContain('inventory');
     expect(ids).not.toContain('media');
   });
 

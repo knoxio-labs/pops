@@ -19,7 +19,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { INVENTORY_CONDITIONS } from '../../contract/types/condition.js';
 import { seedInventoryItem } from '../../db/__tests__/item-fixture.js';
 import { crossPillarUrisService, openInventoryDb, type OpenedInventoryDb } from '../../db/index.js';
-import { items } from '../../db/schema.js';
+import { events, items } from '../../db/schema.js';
 import { createInventoryApiApp } from '../app.js';
 import { createTestTransport } from './test-http.js';
 import { HttpError, makeClient } from './test-utils.js';
@@ -203,6 +203,37 @@ describe('items REST — CRUD happy paths', () => {
   });
 });
 
+describe('items REST — notes normalization (POPS-4053)', () => {
+  it('stores an all-whitespace note on create as null rather than 400', async () => {
+    const api = client();
+    const created = await api.items.create({ itemName: 'Lamp', notes: '   \n\t  ' });
+    expect(created.data.notes).toBeNull();
+  });
+
+  it('stores an all-whitespace note on update as null rather than 400', async () => {
+    const api = client();
+    const created = await api.items.create({ itemName: 'Lamp', notes: 'Fragile' });
+    const updated = await api.items.update(created.data.id, { notes: '   ' });
+    expect(updated.data.notes).toBeNull();
+  });
+
+  it('keeps a real note exactly as sent, indentation and trailing newlines included', async () => {
+    const api = client();
+    const note = '  Handle with care\n    - top shelf only\n\n';
+    const created = await api.items.create({ itemName: 'Vase', notes: note });
+    expect(created.data.notes).toBe(note);
+
+    const other = await api.items.create({ itemName: 'Vase 2' });
+    const updated = await api.items.update(other.data.id, { notes: note });
+    expect(updated.data.notes).toBe(note);
+  });
+
+  it('still rejects a whitespace-only item name with 400', async () => {
+    const api = client();
+    await expect(api.items.create({ itemName: '   ' })).rejects.toMatchObject({ status: 400 });
+  });
+});
+
 describe('items REST — idempotent create via sourceRef (POPS-2433)', () => {
   it('returns the first row rather than minting a second one for a repeated sourceRef', async () => {
     const api = client();
@@ -239,6 +270,59 @@ describe('items REST — idempotent create via sourceRef (POPS-2433)', () => {
     const second = await api.items.create({ itemName: 'Hand-typed item' });
 
     expect(second.data.id).not.toBe(first.data.id);
+  });
+
+  it('mints a NEW item for a sourceRef whose only holder was deleted, rather than resurrecting it (POPS-4053)', async () => {
+    const api = client();
+    const sourceRef = 'pops://purchases/order/p-1/item/i-1';
+
+    const first = await api.items.create({ itemName: 'Cordless Drill', sourceRef });
+    await api.items.delete(first.data.id);
+
+    const second = await api.items.create({ itemName: 'Cordless Drill (replacement)', sourceRef });
+
+    expect(second.data.id).not.toBe(first.data.id);
+    expect(second.data.itemName).toBe('Cordless Drill (replacement)');
+
+    const list = await api.items.list();
+    expect(list.data.map((row) => row.id)).toEqual([second.data.id]);
+  });
+});
+
+describe('items REST — code held by a deleted item (POPS-4053/POPS-4124)', () => {
+  it('a create naming a code held by a deleted item is a clean 409, not a 500', async () => {
+    const api = client();
+    const held = await api.items.create({ itemName: 'Old drill', assetId: 'POPS-100' });
+    await api.items.delete(held.data.id);
+
+    await expect(
+      api.items.create({ itemName: 'New drill', assetId: 'POPS-100' })
+    ).rejects.toMatchObject({ status: 409, message: expect.stringContaining('deleted') });
+
+    // The failed create minted no row: the deleted holder is the only item ever created.
+    const list = await api.items.list();
+    expect(list.data).toHaveLength(0);
+  });
+
+  it('a create naming a code still held by a live item is a clean 409', async () => {
+    const api = client();
+    await api.items.create({ itemName: 'Drill', assetId: 'POPS-200' });
+
+    await expect(
+      api.items.create({ itemName: 'Sander', assetId: 'POPS-200' })
+    ).rejects.toMatchObject({ status: 409 });
+  });
+
+  it('an update naming a code held by a deleted item says so in the 409 message', async () => {
+    const api = client();
+    const held = await api.items.create({ itemName: 'Old drill', assetId: 'POPS-300' });
+    await api.items.delete(held.data.id);
+    const other = await api.items.create({ itemName: 'Sander' });
+
+    await expect(api.items.update(other.data.id, { assetId: 'POPS-300' })).rejects.toMatchObject({
+      status: 409,
+      message: expect.stringContaining('deleted'),
+    });
   });
 });
 
@@ -326,6 +410,16 @@ describe('items REST — filters + projections', () => {
     await api.items.create({ itemName: 'A', assetId: 'POPS-001' });
     await api.items.create({ itemName: 'B', assetId: 'POPS-002' });
     await api.items.create({ itemName: 'C', assetId: 'OTHER-001' });
+
+    const count = await api.items.countByAssetPrefix('pops-');
+    expect(count.data).toBe(2);
+  });
+
+  it('countByAssetPrefix still counts a deleted holder, so the web counter never suggests an id it still holds (POPS-4053/4124)', async () => {
+    const api = client();
+    const held = await api.items.create({ itemName: 'A', assetId: 'POPS-001' });
+    await api.items.create({ itemName: 'B', assetId: 'POPS-002' });
+    await api.items.delete(held.data.id);
 
     const count = await api.items.countByAssetPrefix('pops-');
     expect(count.data).toBe(2);
@@ -522,5 +616,110 @@ describe('items REST — placing items in a container item (ADR-002 D1)', () => 
       .where(eq(items.id, created.data.id))
       .get();
     expect(stored).toEqual({ name: 'Router', code: 'NET01', legacyType: 'Networking' });
+  });
+});
+
+describe('items REST — writes go through the command engine (POPS-4053)', () => {
+  function eventsFor(id: string) {
+    return inventoryDb.db.select().from(events).where(eq(events.entityId, id)).all();
+  }
+
+  it('a legacy PATCH writes an edited event with actor web', async () => {
+    const api = client();
+    const created = await api.items.create({ itemName: 'Drill' });
+
+    await api.items.update(created.data.id, { itemName: 'Cordless Drill', brand: 'Bosch' });
+
+    const written = eventsFor(created.data.id).find((event) => event.kind === 'edited');
+    expect(written).toMatchObject({ actorKind: 'web', actorId: null, actorLabel: null });
+    expect(JSON.parse(written?.after ?? '{}')).toMatchObject({
+      name: 'Cordless Drill',
+      brand: 'Bosch',
+    });
+  });
+
+  it('a legacy create writes a created event with actor web', async () => {
+    const created = await client().items.create({ itemName: 'Kettle' });
+
+    const written = eventsFor(created.data.id).find((event) => event.kind === 'created');
+    expect(written).toMatchObject({ actorKind: 'web', entityRevision: 1 });
+  });
+
+  it('DELETE tombstones the row rather than removing it, with a deleted event from actor web', async () => {
+    const api = client();
+    const created = await api.items.create({ itemName: 'Fan' });
+
+    await api.items.delete(created.data.id);
+
+    const row = inventoryDb.db
+      .select({ deletedAt: items.deletedAt })
+      .from(items)
+      .where(eq(items.id, created.data.id))
+      .get();
+    expect(row?.deletedAt).not.toBeNull();
+
+    const written = eventsFor(created.data.id).find((event) => event.kind === 'deleted');
+    expect(written).toMatchObject({ actorKind: 'web' });
+  });
+
+  it('treats a tombstoned item as gone from every legacy read', async () => {
+    const api = client();
+    const created = await api.items.create({ itemName: 'Speaker' });
+    await api.items.delete(created.data.id);
+
+    await expect(api.items.get(created.data.id)).rejects.toMatchObject({ status: 404 });
+    await expect(api.items.update(created.data.id, { itemName: 'x' })).rejects.toMatchObject({
+      status: 404,
+    });
+    await expect(api.items.delete(created.data.id)).rejects.toMatchObject({ status: 404 });
+    const list = await api.items.list();
+    expect(list.data.find((row) => row.id === created.data.id)).toBeUndefined();
+  });
+
+  it('a PATCH that both moves and edits an item issues two mutations, not one', async () => {
+    const api = client();
+    const shelf = await api.locations.create({ name: 'Shelf' });
+    const created = await api.items.create({ itemName: 'Radio' });
+
+    await api.items.update(created.data.id, { itemName: 'AM Radio', locationId: shelf.data.id });
+
+    const kinds = eventsFor(created.data.id).map((event) => event.kind);
+    expect(kinds).toContain('moved');
+    expect(kinds).toContain('edited');
+  });
+
+  it('a PATCH whose later mutation is refused rolls back the move it already applied', async () => {
+    const api = client();
+    const shelf = await api.locations.create({ name: 'Shelf' });
+    const desk = await api.locations.create({ name: 'Desk' });
+    await api.items.create({ itemName: 'Router', assetId: 'NET01' });
+    const created = await api.items.create({ itemName: 'Radio', locationId: shelf.data.id });
+
+    await expect(
+      api.items.update(created.data.id, {
+        itemName: 'AM Radio',
+        locationId: desk.data.id,
+        assetId: 'NET01',
+      })
+    ).rejects.toMatchObject({ status: 409 });
+
+    const after = await api.items.get(created.data.id);
+    expect(after.data).toMatchObject({
+      itemName: 'Radio',
+      locationId: shelf.data.id,
+      assetId: null,
+    });
+    expect(eventsFor(created.data.id).map((event) => event.kind)).toEqual(['created']);
+  });
+
+  it('a container delete empties it through a picked_up event on its contents, actor web', async () => {
+    const api = client();
+    const box = seedInventoryItem(inventoryDb.db, { name: 'Box', isContainer: true }).id;
+    const created = await api.items.create({ itemName: 'Cable', containerId: box });
+
+    await api.items.delete(box);
+
+    const written = eventsFor(created.data.id).find((event) => event.kind === 'picked_up');
+    expect(written).toMatchObject({ actorKind: 'web' });
   });
 });
