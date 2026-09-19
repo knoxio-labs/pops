@@ -35,6 +35,11 @@ internal enum InventoryDrainPass: Equatable, Sendable {
 ///   doubling, at most 5 minutes.
 /// - After a pass that applied anything, the change feed is read so the
 ///   applied changes settle.
+/// - Before each batch, photos staged on this phone are uploaded, oldest
+///   first; an attach of one waits until it is on the server. `413` and
+///   `415` fail the photo, and every attach waiting on it opens the failed
+///   photo repair; any other failure ends the pass like a batch that never
+///   arrived. A photo the server answers `alreadyStored` for is uploaded.
 ///
 /// Once started it runs a pass on ``request()`` (after each logged change,
 /// and on foreground), when the backoff elapses, and when the network path
@@ -58,6 +63,7 @@ internal final class InventoryDrain: Sendable {
     private let clock: any InventoryDrainClock
     private let batchSize: Int
     private let now: @Sendable () -> Date
+    private let mintMutationId: @Sendable () -> String
     private let triggers: AsyncStream<Void>
     private let trigger: AsyncStream<Void>.Continuation
     private let tasks = Mutex(Tasks())
@@ -67,13 +73,16 @@ internal final class InventoryDrain: Sendable {
     ///     whose refresh and resync keep the replica current around them.
     ///   - batchSize: Mutations per request; the wire allows 1 to 50.
     ///   - now: The time a send attempt is recorded at.
+    ///   - mintMutationId: The new id for an attach logged again after the
+    ///     server answered `media_missing`.
     init(
         replica: InventoryReplica,
         online: OnlineInventoryStore,
         reachability: any InventoryReachability,
         clock: any InventoryDrainClock,
         batchSize: Int = 50,
-        now: @escaping @Sendable () -> Date
+        now: @escaping @Sendable () -> Date,
+        mintMutationId: @escaping @Sendable () -> String = { UUID().uuidString.lowercased() }
     ) {
         self.replica = replica
         self.online = online
@@ -81,6 +90,7 @@ internal final class InventoryDrain: Sendable {
         self.clock = clock
         self.batchSize = batchSize
         self.now = now
+        self.mintMutationId = mintMutationId
         (triggers, trigger) = AsyncStream.makeStream(bufferingPolicy: .bufferingNewest(1))
     }
 
@@ -153,6 +163,7 @@ internal final class InventoryDrain: Sendable {
         do {
             try replica.requeueInFlight()
             while true {
+                if let stopped = try await uploadStagedPhotos() { return stopped }
                 let batch = try replica.outboundMutations(limit: batchSize, excluding: deferred)
                 guard !batch.isEmpty else { break }
                 switch await send(batch) {
@@ -199,7 +210,7 @@ internal final class InventoryDrain: Sendable {
         }
         online.noteReached()
         do {
-            try replica.recordOutcomes(result)
+            try replica.recordOutcomes(result, mintMutationId: mintMutationId)
             let unanswered = ids.filter { result.outcomes[$0] == nil }
             guard unanswered.isEmpty else {
                 return failed(unanswered, RepositoryError.contractMismatch)
@@ -217,6 +228,38 @@ internal final class InventoryDrain: Sendable {
             }
         }
         return .settled(SettledBatch(deferred: deferred, appliedAny: appliedAny))
+    }
+
+    /// Uploads every staged photo waiting to go.
+    ///
+    /// - Returns: How the pass ends when an upload did not arrive; nil when
+    ///   the pass can go on to its batch.
+    private func uploadStagedPhotos() async throws -> InventoryDrainPass? {
+        for upload in try replica.uploadsToSend() {
+            guard let data = try replica.stagedPhoto(upload.sha256) else {
+                try replica.failUpload(upload.sha256, .bytesMissing)
+                continue
+            }
+            try replica.markUploading(upload.sha256)
+            do {
+                _ = try await online.transport.uploadMedia(
+                    sha256: upload.sha256, data: data, contentType: upload.contentType)
+            } catch let refusal as InventorySyncTransportError
+                where refusal == .mediaTooLarge || refusal == .mediaUnsupported
+            {
+                online.noteReached()
+                try replica.failUpload(
+                    upload.sha256, refusal == .mediaTooLarge ? .tooLarge : .unsupported)
+                continue
+            } catch {
+                try replica.returnUpload(upload.sha256)
+                online.noteFailure(error)
+                return OnlineInventoryStore.blockReason(for: error) == nil ? .retryLater : .blocked
+            }
+            online.noteReached()
+            try replica.markUploaded(upload.sha256)
+        }
+        return nil
     }
 
     /// Puts what was in flight back in the queue, so the next attempt

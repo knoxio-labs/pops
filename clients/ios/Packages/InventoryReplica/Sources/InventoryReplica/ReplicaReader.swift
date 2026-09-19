@@ -121,6 +121,10 @@ internal final class ReplicaReader: InventoryQuerySource {
         }
     }
 
+    func inventoryPhotoUploads() -> [String: InventoryPhotoUpload] {
+        attempt([:]) { try MediaRows.uploads(in: $0) }
+    }
+
     private func attempt<Value>(_ fallback: Value, _ read: (Database) throws -> Value) -> Value {
         do {
             return try database.read(read)

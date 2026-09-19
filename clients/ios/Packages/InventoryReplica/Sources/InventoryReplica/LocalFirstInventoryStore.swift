@@ -7,8 +7,13 @@ import Foundation
 /// change that has not left the device or logs a revert of one that has,
 /// and `resolve(_:with:)` settles a repair the server's outcome opened.
 ///
-/// Reads, download, refresh and photos are `OnlineInventoryStore`'s, over
-/// the same replica. Given a reachability, it also drains the log to the
+/// `uploadPhoto` is local too: it stages the bytes in the replica, pinned,
+/// and the drain uploads them ahead of the attach that needs them. `photo`
+/// answers a staged photo from the phone, so a photo taken offline shows
+/// before the server has it.
+///
+/// Reads, download and refresh are `OnlineInventoryStore`'s, over the same
+/// replica. Given a reachability, it also drains the log to the
 /// server: once at start, after each change and Undo, on every `refresh()`
 /// (which the app calls on foreground), when a backoff elapses, and when the
 /// network path becomes satisfied. Without one, every change stays queued.
@@ -44,7 +49,7 @@ public final class LocalFirstInventoryStore: InventoryStore, Sendable {
         self.drain = reachability.map { reachability in
             InventoryDrain(
                 replica: replica, online: online, reachability: reachability, clock: drainClock,
-                now: now)
+                now: now, mintMutationId: mintMutationId)
         }
         self.mintMutationId = mintMutationId
         self.now = now
@@ -89,12 +94,17 @@ public final class LocalFirstInventoryStore: InventoryStore, Sendable {
     }
 
     public func photo(_ sha256: String, variant: InventoryPhotoVariant) async throws -> Data {
-        try await online.photo(sha256, variant: variant)
+        if let staged = try replica.stagedPhoto(sha256) { return staged }
+        return try await online.photo(sha256, variant: variant)
     }
 
+    /// Stages the bytes on the phone (``InventoryReplica/stagePhoto(sha256:data:contentType:)``)
+    /// and asks the drain to upload them.
     public func uploadPhoto(
         sha256: String, data: Data, contentType: InventoryMediaContentType
     ) async throws -> InventoryMediaUploadResult {
-        try await online.uploadPhoto(sha256: sha256, data: data, contentType: contentType)
+        let result = try replica.stagePhoto(sha256: sha256, data: data, contentType: contentType)
+        drain?.request()
+        return result
     }
 }

@@ -125,11 +125,16 @@ public protocol InventoryStore: Sendable {
 
     func photo(_ sha256: String, variant: InventoryPhotoVariant) async throws -> Data
 
-    /// `PUT /media/:sha256` ahead of `item.attachPhoto` (A22, ADR-002 D9):
-    /// stores a photo's bytes, content-addressed by their own hash.
-    /// Re-sending bytes already stored answers success
-    /// (`alreadyStored: true`) rather than an error, so a caller that lost
-    /// the answer to a previous attempt can retry without checking first.
+    /// Hands a photo's bytes, content-addressed by their own hash, to the
+    /// store ahead of the `item.attachPhoto` that references them (ADR-002
+    /// D9). Once this returns, an attach of the hash may be performed.
+    ///
+    /// A store that waits for the server sends `PUT /media/:sha256` and
+    /// returns its answer. A local-first store stages the bytes on the phone
+    /// and returns at once; its drain uploads them ahead of any attach, and
+    /// `InventoryQuery.photoUploads` reports how far each got. Handing over
+    /// bytes already held answers success (`alreadyStored: true`) rather
+    /// than an error, so a caller can retry without checking first.
     func uploadPhoto(sha256: String, data: Data, contentType: InventoryMediaContentType)
         async throws -> InventoryMediaUploadResult
 

@@ -29,6 +29,7 @@ private struct EmptyInventorySource: InventoryQuerySource {
     }
     func inventorySyncLedger() -> InventoryReplicaSyncLedger { InventoryReplicaSyncLedger() }
     func inventoryReplicaStatus() -> InventoryReplicaStatus { .current }
+    func inventoryPhotoUploads() -> [String: InventoryPhotoUpload] { [:] }
 }
 
 /// A store whose every write fails with `.unavailable`, for a test of the

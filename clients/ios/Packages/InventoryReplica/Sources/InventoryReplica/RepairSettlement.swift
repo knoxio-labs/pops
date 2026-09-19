@@ -47,6 +47,9 @@ internal enum RepairSettlement {
         if case .keepMine(let code) = choice, repair.canKeepMine {
             let reissue = try plan(repair, entry, code: code)
             let newId = try send(reissue, of: entry, as: mint, at: time, in: db)
+            if repair.kind == .photoFailed, let sha256 = entry.command.attachedPhoto {
+                try MediaRows.restage(sha256, in: db)
+            }
             try RepairRows.close(
                 id, resolution: reissue.resolution, reissuedAs: newId,
                 baseRevisionFloor: reissue.baseRevisionFloor, at: storedDate(time), in: db)
@@ -54,6 +57,9 @@ internal enum RepairSettlement {
         } else {
             let resolution = RepairResolution.lettingGo(repair.kind)
             try MutationLogWrites.remove([entry], in: db)
+            if let sha256 = entry.command.attachedPhoto {
+                try MediaRows.releaseUnlessAwaited(sha256, in: db)
+            }
             try RepairRows.close(id, resolution: resolution, at: storedDate(time), in: db)
             line = resolution.line()
         }

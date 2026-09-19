@@ -111,6 +111,9 @@ internal struct InventoryHistoryOverlay: InventoryQuerySource {
     func inventoryCatalogue() -> InventoryCatalogue { base.inventoryCatalogue() }
     func inventorySyncLedger() -> InventoryReplicaSyncLedger { base.inventorySyncLedger() }
     func inventoryReplicaStatus() -> InventoryReplicaStatus { base.inventoryReplicaStatus() }
+    func inventoryPhotoUploads() -> [String: InventoryPhotoUpload] {
+        base.inventoryPhotoUploads()
+    }
 }
 
 extension InventoryItemDetailViewModel {

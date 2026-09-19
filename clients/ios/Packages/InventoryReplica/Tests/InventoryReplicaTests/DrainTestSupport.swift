@@ -79,6 +79,7 @@ internal struct DrainHarness {
     init(
         replica: InventoryReplica, batchSize: Int = 50,
         reachability: FakeReachability = FakeReachability(satisfied: true),
+        mintMutationId: @escaping @Sendable () -> String = { UUID().uuidString.lowercased() },
         submit: @escaping FakeSyncTransport.SubmitHandler
     ) {
         var script = FakeSyncTransport.Script()
@@ -90,7 +91,7 @@ internal struct DrainHarness {
         self.drain = InventoryDrain(
             replica: replica, online: OnlineInventoryStore(replica: replica, transport: transport),
             reachability: reachability, clock: clock, batchSize: batchSize,
-            now: { Fixture.created })
+            now: { Fixture.created }, mintMutationId: mintMutationId)
         self.replica = replica
         self.transport = transport
         self.reachability = reachability

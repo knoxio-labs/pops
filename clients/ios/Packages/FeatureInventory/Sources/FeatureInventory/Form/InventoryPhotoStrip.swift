@@ -101,6 +101,14 @@ private struct InventoryPhotoTile: View {
         case .uploading:
             ProgressView()
                 .padding(PopsSpacing.xs)
+        case .waiting:
+            InventorySymbol.queued.image
+                .font(.popsCaption.weight(.semibold))
+                .foregroundStyle(Color.popsMutedForeground)
+                .padding(PopsSpacing.xs)
+                .background(Color.popsSurface, in: .circle)
+                .padding(PopsSpacing.xs)
+                .accessibilityLabel("Waiting to upload")
         case .failed:
             Image(systemName: InventorySymbol.attention.system)
                 .font(.popsCaption.weight(.semibold))

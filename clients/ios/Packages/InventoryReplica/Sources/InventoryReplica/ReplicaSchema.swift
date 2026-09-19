@@ -17,11 +17,12 @@ internal enum ReplicaSchema {
     /// knows what to keep (`registerMutationLog(in:)` creates it).
     static let mutationLogTableName = "mutation_log"
 
-    /// What the on-disk fallback keeps: this phone's unsent changes, and the
+    /// What the on-disk fallback keeps: this phone's unsent changes, the
     /// repairs opened on the ones the server would not take, with what was
-    /// already resolved (`registerRepairs(in:)` creates the last two).
+    /// already resolved (`registerRepairs(in:)` creates those two), and the
+    /// record of the photos it staged, whose bytes the unsent attaches need.
     static let preservedTableNames = [
-        mutationLogTableName, repairTableName, resolvedEntryTableName,
+        mutationLogTableName, repairTableName, resolvedEntryTableName, mediaTableName,
     ]
 
     /// Opens (or creates) the on-disk replica at `path` and brings it to the
@@ -113,6 +114,7 @@ internal enum ReplicaSchema {
         }
         registerMutationLog(in: &migrator)
         registerRepairs(in: &migrator)
+        registerMedia(in: &migrator)
         return migrator
     }
 

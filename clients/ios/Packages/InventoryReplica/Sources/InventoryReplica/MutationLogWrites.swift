@@ -70,8 +70,9 @@ internal enum MutationLogWrites {
     /// What the drain may send, addressed for the wire, in stable
     /// topological order (``DrainOrder``). A mutation is held back, along
     /// with everything depending on it, when it is in `skipped`, in flight,
-    /// conflicted or rejected, or an Undo whose change has no applied outcome
-    /// naming its event yet.
+    /// conflicted or rejected, an Undo whose change has no applied outcome
+    /// naming its event yet, or an attach of a photo this phone staged and
+    /// has not uploaded.
     static func outbound(excluding skipped: Set<String>, in db: Database) throws
         -> [OutboundEntry]
     {
@@ -82,9 +83,11 @@ internal enum MutationLogWrites {
         let sendable = DrainOrder.ordered(
             log.filter { !held.contains($0.mutationId) }, id: \.mutationId,
             dependsOn: \.dependsOn)
+        let unsentPhotos = try MediaRows.unsent(in: db)
         var outbound: [OutboundEntry] = []
         for entry in sendable {
             guard !entry.dependsOn.contains(where: held.contains),
+                !(entry.command.attachedPhoto.map(unsentPhotos.contains) ?? false),
                 let command = try command(sending: entry, in: db)
             else {
                 held.insert(entry.mutationId)

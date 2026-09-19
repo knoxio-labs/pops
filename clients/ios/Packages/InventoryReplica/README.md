@@ -39,6 +39,17 @@ Items and locations each have two tables of the same shape: `*_base` is what the
 
 Conflicted and rejected rows stay in the log in that state, with the server's outcome stored whole in `outcome`, and anything depending on them stays queued behind them until their repair is settled.
 
+## Photos
+
+A photo is staged on the phone before anything attaches it (POPS-4075). `LocalFirstInventoryStore.uploadPhoto` calls `stagePhoto(sha256:data:contentType:)`, which checks the bytes hash to their name, checks for 200 MB free (else `InventoryStorageError.full`), writes them to the media store (the `MediaCache` directory on disk, excluded from backup) and records them in the `media` table as waiting, pinned. The `item.attachPhoto` the form then performs is logged at once, like any change; `photo(_:variant:)` answers a staged photo from the phone, so it shows before the server has it.
+
+- The drain uploads every waiting photo, oldest first, before each batch, and holds an attach of one until it is on the server. `alreadyStored` counts as uploaded.
+- A `413` or `415`, or staged bytes gone from the phone, fails the photo; every attach waiting on it is refused on the phone and opens the failed photo repair. Any other upload failure ends the pass like a batch that never arrived.
+- An attach the server refuses as `media_missing` whose bytes this phone staged uploads them again and is logged again under a new id, once; after that, or without the bytes, it opens the failed photo repair. Retry stages the bytes again before the attach is re-sent; Remove drops the attach.
+- Staged bytes stay pinned until the server has them and no change in the log still attaches them.
+
+`InventoryQuery.photoUploads` reports each staged photo as waiting, uploading, uploaded or failed, which is what the form's photo tiles show. The `media` table survives the on-disk fallback with the log, because the log's attaches need it.
+
 ## Repairs
 
 `recordOutcomes(_:)` opens one repair per mutation the server answered `conflict` or `rejected`, in the `repair` table (POPS-4073), in the same transaction that records the outcome. The mutation stays in the log in that state, held with everything depending on it, and its entity reads as needing attention for as long as the repair is open. An `applied` outcome with `converged: true` opens nothing and is listed as resolved ("Same count on both").

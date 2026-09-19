@@ -19,11 +19,13 @@ extension InventoryReplica {
     ///   it is nil;
     /// - a record deleted elsewhere is re-sent behind a new
     ///   `item.restoreDeleted`;
-    /// - a failed photo's attach is sent again.
+    /// - a failed photo's attach is sent again, behind a fresh upload of
+    ///   the bytes when this phone staged them.
     ///
     /// Letting go (`discardMine`, and either choice on a refusal the design
     /// has no repair for) drops the change, releases what depended on it,
-    /// and rebases its row on the server's state.
+    /// and rebases its row on the server's state. A failed photo's staged
+    /// bytes are unpinned then, unless another change still attaches them.
     ///
     /// - Parameter mintMutationId: Called for the re-sent change, and first
     ///   for its Restore when there is one.

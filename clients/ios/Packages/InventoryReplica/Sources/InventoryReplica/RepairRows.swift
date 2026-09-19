@@ -20,17 +20,18 @@ internal enum StoredRepairKind: String {
     case photoFailed = "photo_failed"
     case rejected
 
-    /// Nil for an outcome that opens no repair. A photo attach the server
-    /// refused because it does not have the bytes is a failed photo, which
-    /// Retry and Remove settle; every other refusal is let go.
+    /// Nil for an outcome that opens no repair. A photo attach refused
+    /// because the server does not have the bytes (`media_missing`, or the
+    /// phone's own refusal of a photo whose upload failed) is a failed
+    /// photo, which Retry and Remove settle; every other refusal is let go.
     init?(_ outcome: StoredOutcome, command: LoggedCommand) {
         switch outcome {
         case .conflictField: self = .field
         case .conflictCodeCollision: self = .codeCollision
         case .conflictDeleted: self = .deleted
         case .rejected(let reason, _):
-            if case .command(.attachPhoto) = command,
-                reason == InventoryRejectedReason.mediaMissing.storageValue
+            if command.attachedPhoto != nil,
+                StagedUploadFailure.photoRejectionReasons.contains(reason)
             {
                 self = .photoFailed
             } else {

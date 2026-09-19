@@ -122,11 +122,28 @@ extension InventoryReplica {
     /// so its rows show the server's state, opens a repair, and an Undo of
     /// it waiting to be sent is dropped: there is no applied change left to
     /// revert. A converged one is listed as resolved.
-    public func recordOutcomes(_ result: InventoryMutationBatchResult) throws {
+    ///
+    /// Photos: an applied attach settles its staged bytes, which are
+    /// unpinned once no other change waits to attach them. An attach the
+    /// server refused as `media_missing` whose bytes this phone staged is
+    /// staged again and logged again under a new id from `mintMutationId`,
+    /// once; after that, or without the bytes, it opens a failed photo
+    /// repair.
+    public func recordOutcomes(
+        _ result: InventoryMutationBatchResult,
+        mintMutationId: () -> String = { UUID().uuidString.lowercased() }
+    ) throws {
         let time = storedDate(now())
         try write { db in
+            var restaged: Set<EntityRef> = []
             for (id, outcome) in result.outcomes {
                 guard var entry = try MutationLogRows.entry(mutationId: id, in: db) else {
+                    continue
+                }
+                if try MediaOutcomes.restagedAfterMissing(
+                    outcome, of: entry, mint: mintMutationId, in: db)
+                {
+                    restaged.formUnion(entry.touched.union([entry.entity]))
                     continue
                 }
                 let stored = StoredOutcome(outcome)
@@ -135,9 +152,12 @@ extension InventoryReplica {
                 entry.settlesAtSeq = stored.appliedRevision == nil ? nil : result.highWaterSeq
                 try MutationLogRows.update(entry, in: db)
                 try RepairSettlement.record(stored, for: entry, at: time, in: db)
+                if stored.appliedRevision != nil, let sha256 = entry.command.attachedPhoto {
+                    try MediaRows.settleAttach(sha256, in: db)
+                }
             }
             let dropped = try MutationLogWrites.dropUndosOfUnappliedChanges(in: db)
-            try MutationLogReplay.rebase(resetting: dropped, in: db)
+            try MutationLogReplay.rebase(resetting: dropped.union(restaged), in: db)
         }
     }
 
