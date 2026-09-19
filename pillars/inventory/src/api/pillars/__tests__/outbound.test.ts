@@ -8,27 +8,26 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { PillarServerSdkError, type PillarHandle } from '@pops/pillar-sdk/server';
 
+import { ok, stubAiHandle } from '../../ai/__tests__/stub-handle.js';
 import {
   credentialled,
   credentialRejectedMessage,
   __resetOutboundCredentialReports,
 } from '../outbound.js';
 
+import type { AiRouter } from '../../ai/client.js';
+
 afterEach(() => {
   __resetOutboundCredentialReports();
 });
 
-interface StubRouter {
-  ping: () => Promise<{ data: string }>;
-}
-
-function stubHandle(): PillarHandle<StubRouter> {
-  return { ping: () => Promise.resolve({ data: 'pong' }) } as unknown as PillarHandle<StubRouter>;
+function throwMissingKey(): PillarHandle<AiRouter> {
+  throw new PillarServerSdkError('no key configured');
 }
 
 describe('credentialled', () => {
   it('returns the connected handle when connect() succeeds', () => {
-    const handle = stubHandle();
+    const handle = stubAiHandle(() => Promise.resolve(ok({ data: { ranked: [] } })));
 
     expect(credentialled('ai', () => handle)).toBe(handle);
   });
@@ -36,9 +35,7 @@ describe('credentialled', () => {
   it('returns null and logs once when connect() throws a missing-key error', () => {
     const errorLog = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
-    const result = credentialled<StubRouter>('ai', () => {
-      throw new PillarServerSdkError('no key configured');
-    });
+    const result = credentialled<AiRouter>('ai', throwMissingKey);
 
     expect(result).toBeNull();
     expect(errorLog).toHaveBeenCalledTimes(1);
@@ -48,9 +45,6 @@ describe('credentialled', () => {
 
   it('logs a missing-key pillar only once, on the first call', () => {
     const errorLog = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    const throwMissingKey = (): PillarHandle<StubRouter> => {
-      throw new PillarServerSdkError('no key configured');
-    };
 
     credentialled('ai', throwMissingKey);
     credentialled('ai', throwMissingKey);
@@ -62,9 +56,6 @@ describe('credentialled', () => {
 
   it('reports a distinct pillar id again, independently of one already reported', () => {
     const errorLog = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    const throwMissingKey = (): PillarHandle<StubRouter> => {
-      throw new PillarServerSdkError('no key configured');
-    };
 
     credentialled('ai', throwMissingKey);
     credentialled('another-pillar', throwMissingKey);
@@ -77,7 +68,7 @@ describe('credentialled', () => {
     const boom = new Error('the connection reset mid-handshake');
 
     expect(() =>
-      credentialled<StubRouter>('ai', () => {
+      credentialled<AiRouter>('ai', () => {
         throw boom;
       })
     ).toThrow(boom);
@@ -85,9 +76,6 @@ describe('credentialled', () => {
 
   it('resets the once-per-pillar report so a later boot can log again', () => {
     const errorLog = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    const throwMissingKey = (): PillarHandle<StubRouter> => {
-      throw new PillarServerSdkError('no key configured');
-    };
 
     credentialled('ai', throwMissingKey);
     __resetOutboundCredentialReports();
