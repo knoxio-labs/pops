@@ -1,5 +1,4 @@
 import AppCore
-import DesignSystem
 import SwiftUI
 
 /// The in-hand list's rules, kept out of the views so they can be tested

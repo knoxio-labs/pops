@@ -1,5 +1,4 @@
 import AppCore
-import Foundation
 import Observation
 
 /// Issues a screen's writes and keeps what the store cannot: which receipts
