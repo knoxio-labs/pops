@@ -86,7 +86,9 @@ internal final class InventoryDashboardViewModel {
     /// Reverts a Recent work event with a compensating one (D4).
     internal func undo(_ activity: InventoryDashboard.Activity) async {
         guard activity.isUndoable else { return }
-        _ = await run(.revertEvent(seq: activity.id))
+        _ = await run(
+            .revertEvent(
+                seq: activity.id, entityKind: activity.entityKind, entityId: activity.entityId))
     }
 
     /// The row's thumbnail, or nil when it cannot be had; the row then shows
