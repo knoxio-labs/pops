@@ -196,7 +196,7 @@ The formatter treats the OpenAPI snapshot **oppositely** to the two vectors, and
 
 ## What CI does with this
 
-`.github/workflows/ios-quality.yml` — one job, `runs-on: macos-latest`, the only workflow in the repo that is not on Ubuntu. It selects the pinned Xcode, then runs `mise run generate:bfm-client`, `mise run lint` and `mise run -j 1 test ::: lint:analyze`, because a command written out a second time in a workflow file is a command that drifts. The one thing it spells out itself is the diff check after the codegen command.
+`.github/workflows/ios-quality.yml` — one job, `runs-on: macos-latest`. It selects the pinned Xcode (`.github/actions/select-xcode`, shared with the TestFlight upload below), then runs `mise run generate:bfm-client`, `mise run lint` and `mise run -j 1 test ::: lint:analyze`, because a command written out a second time in a workflow file is a command that drifts. The one thing it spells out itself is the diff check after the codegen command.
 
 The order is deliberate: `lint` needs no build and answers in seconds, so a formatting or SwiftLint violation fails before the compile rather than after it, and the compile is then paid once for the test run and the analyzer rules together.
 
@@ -210,6 +210,16 @@ Two things about it are worth knowing before you touch either side:
 `mise install` is run with `MISE_DISABLE_TOOLS=rust,node,pnpm` there. mise merges config up the tree, so without it the job would download a full Rust toolchain to compile Swift.
 
 It is not quite the only job that touches this directory. Two jobs in [`quality.yml`](../../.github/workflows/quality.yml) — `Device signature encoding (iOS ↔ BFM)` and `Refresh signed-message format (BFM ↔ iOS)` — assert the committed vectors in `Contracts/` from the Node side. They check the contracts, not the code, and would stay green through a Swift tree that does not compile. Both run on every PR rather than under this directory's path filter, because the BFM can break either contract without touching a line of Swift.
+
+## Shipping to TestFlight
+
+`.github/workflows/ios-testflight.yml` archives `Pops` and `PopsPlayground` and uploads both to App Store Connect, where each app's internal testing group gets the build automatically. It runs on a `workflow_run` of iOS Quality and acts only on a successful **push** run on `main`, so a commit ships only after the full lane passed on that exact commit; iOS Quality's path filter is what decides whether a merge ships at all. It can also be dispatched with a `sha` on `main`.
+
+**Versions are CalVer and never committed.** `scripts/release-version.sh <sha>` derives both from the commit: `MARKETING_VERSION` is the committer date in UTC as `YYYY.M.D`, `CURRENT_PROJECT_VERSION` is `git rev-list --count`. They reach `xcodebuild` as command-line build settings, and the archive's `Info.plist` is read back to confirm they landed. A build on a phone reading `2026.9.19 (4821)` is commit 4821 on `main`; one reading `0.0.0 (0)` came from a laptop, because those are `project.yml`'s placeholders. The script refuses a shallow clone, whose count would be wrong while looking valid. Its `self-test` runs in `mise run lint`, since its only other caller runs after merge.
+
+**`mise run release:testflight <Pops|PopsPlayground>`** is the whole upload and runs by hand as well as in CI. Signing is automatic with an App Store Connect API key in place of a signed-in Xcode (`-allowProvisioningUpdates` plus `-authenticationKey*`), so the distribution certificate is cloud-managed and no certificate or profile is stored anywhere. It reads `DEVELOPMENT_TEAM`, `ASC_KEY_ID`, `ASC_ISSUER_ID` and `ASC_KEY_PATH`; in CI they come from the GitHub environment named `main`, which only the `main` branch can deploy to. The workflow skips entirely until the repository variable `TESTFLIGHT_ENABLED` is `true`.
+
+App Store Connect rejects a binary built with a beta Xcode, so the day `POPS_XCODE_VERSION` points at a beta is a day nothing uploads.
 
 ## Known gaps
 

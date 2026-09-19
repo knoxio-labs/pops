@@ -30,6 +30,18 @@ import type {
   MobileFinanceListTransactionsData,
   MobileFinanceListTransactionsErrors,
   MobileFinanceListTransactionsResponses,
+  MobileInventoryCatalogueData,
+  MobileInventoryCatalogueErrors,
+  MobileInventoryCatalogueResponses,
+  MobileInventoryChangesData,
+  MobileInventoryChangesErrors,
+  MobileInventoryChangesResponses,
+  MobileInventoryItemHistoryData,
+  MobileInventoryItemHistoryErrors,
+  MobileInventoryItemHistoryResponses,
+  MobileInventorySnapshotData,
+  MobileInventorySnapshotErrors,
+  MobileInventorySnapshotResponses,
   MobilePurchasesCreateManualPurchaseData,
   MobilePurchasesCreateManualPurchaseErrors,
   MobilePurchasesCreateManualPurchaseResponses,
@@ -206,6 +218,58 @@ export const mobileFinanceGetTransaction = <ThrowOnError extends boolean = false
     MobileFinanceGetTransactionErrors,
     ThrowOnError
   >({ url: '/mobile/finance/transactions/{id}', ...options });
+
+/**
+ * One item's history, newest first
+ */
+export const mobileInventoryItemHistory = <ThrowOnError extends boolean = false>(
+  options: Options<MobileInventoryItemHistoryData, ThrowOnError>
+): RequestResult<
+  MobileInventoryItemHistoryResponses,
+  MobileInventoryItemHistoryErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    MobileInventoryItemHistoryResponses,
+    MobileInventoryItemHistoryErrors,
+    ThrowOnError
+  >({ url: '/mobile/inventory/items/{id}/history', ...options });
+
+/**
+ * Rows and events changed after `since`, tombstones included, in seq order
+ */
+export const mobileInventoryChanges = <ThrowOnError extends boolean = false>(
+  options: Options<MobileInventoryChangesData, ThrowOnError>
+): RequestResult<MobileInventoryChangesResponses, MobileInventoryChangesErrors, ThrowOnError> =>
+  (options.client ?? client).get<
+    MobileInventoryChangesResponses,
+    MobileInventoryChangesErrors,
+    ThrowOnError
+  >({ url: '/mobile/inventory/sync/changes', ...options });
+
+/**
+ * One page of live items and locations; the first page fixes the high-water seq the feed resumes from
+ */
+export const mobileInventorySnapshot = <ThrowOnError extends boolean = false>(
+  options?: Options<MobileInventorySnapshotData, ThrowOnError>
+): RequestResult<MobileInventorySnapshotResponses, MobileInventorySnapshotErrors, ThrowOnError> =>
+  (options?.client ?? client).get<
+    MobileInventorySnapshotResponses,
+    MobileInventorySnapshotErrors,
+    ThrowOnError
+  >({ url: '/mobile/inventory/sync/snapshot', ...options });
+
+/**
+ * The type catalogue: every type, field and unit the app needs to render an item
+ */
+export const mobileInventoryCatalogue = <ThrowOnError extends boolean = false>(
+  options?: Options<MobileInventoryCatalogueData, ThrowOnError>
+): RequestResult<MobileInventoryCatalogueResponses, MobileInventoryCatalogueErrors, ThrowOnError> =>
+  (options?.client ?? client).get<
+    MobileInventoryCatalogueResponses,
+    MobileInventoryCatalogueErrors,
+    ThrowOnError
+  >({ url: '/mobile/inventory/types', ...options });
 
 /**
  * One cursor-paginated page of purchase list rows

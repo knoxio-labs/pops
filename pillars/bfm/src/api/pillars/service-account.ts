@@ -58,6 +58,8 @@ export const BFM_SERVICE_ACCOUNT_SCOPES: readonly string[] = [
   'finance.checkpoints',
   'purchases.purchase',
   'purchases.receipt',
+  'inventory.sync',
+  'inventory.types',
 ];
 
 /** Local-dev source: the key inline in the environment. */
