@@ -37,9 +37,6 @@ public final class OnlineInventoryStore: InventoryStore, Sendable {
     /// The seq of the event each applied change wrote, by mutation id: what
     /// `undo(_:)` reverts. Held for this process only, as the Undo offer is.
     private let revertibleEvents = Mutex<[String: Int]>([:])
-    /// Fronts `fetchMedia`; not the disk-backed, size-bounded cache ADR-002
-    /// gives the real media cache (a later slice) — see its own header.
-    private let mediaCache = InventoryMediaCache()
 
     /// - Parameters:
     ///   - pageSize: How many rows each snapshot and feed request asks for
@@ -119,10 +116,14 @@ public final class OnlineInventoryStore: InventoryStore, Sendable {
         try await sequencer.run { try await self.resyncNow() }
     }
 
+    /// Answers from the replica's media cache when it holds the variant (or
+    /// staged the photo), and otherwise fetches it and keeps a copy.
     public func photo(_ sha256: String, variant: InventoryPhotoVariant) async throws -> Data {
-        if let cached = mediaCache.value(sha256: sha256, variant: variant) { return cached }
+        if let held = try replica.cachedPhoto(sha256, variant: variant) { return held }
         let data = try await transport.fetchMedia(sha256: sha256, variant: variant)
-        mediaCache.set(data, sha256: sha256, variant: variant)
+        // The photo was fetched; failing to keep a copy (a full disk) only
+        // costs fetching it again, so the caller still gets it.
+        try? replica.cachePhoto(data, sha256: sha256, variant: variant)
         return data
     }
 

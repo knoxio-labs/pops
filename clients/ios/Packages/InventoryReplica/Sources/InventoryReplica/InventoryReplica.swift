@@ -20,6 +20,9 @@ public final class InventoryReplica: Sendable {
     /// catalogue carries.
     public static let emptyCatalogue = InventoryCatalogue(version: "", units: [], types: [])
 
+    /// ADR-002's budget for medium and full-size photo variants: 500 MB.
+    public static let defaultMediaBudgetBytes: Int64 = 500 * 1024 * 1024
+
     let database: DatabaseQueue
     let now: @Sendable () -> Date
     private let staleAfter: TimeInterval
@@ -39,6 +42,10 @@ public final class InventoryReplica: Sendable {
     /// when there is no volume to measure (in memory).
     let freeBytes: (@Sendable () throws -> Int64)?
 
+    /// How many bytes of medium and full-size photo variants the media cache
+    /// keeps before it evicts the least recently used.
+    let mediaBudgetBytes: Int64
+
     /// An in-memory replica, for tests and previews: rows live as long as
     /// this instance, and a relaunch downloads again.
     ///
@@ -52,11 +59,14 @@ public final class InventoryReplica: Sendable {
     ///     default.
     ///   - freeBytes: The free space checked before a photo is staged, if
     ///     any.
+    ///   - mediaBudgetBytes: The media cache's budget for medium and
+    ///     full-size variants; 500 MB by default.
     public init(
         now: @escaping @Sendable () -> Date = { Date() },
         staleAfter: TimeInterval = 24 * 60 * 60,
         mediaFiles: any InventoryMediaFiles = InMemoryMediaFiles(),
-        freeBytes: (@Sendable () throws -> Int64)? = nil
+        freeBytes: (@Sendable () throws -> Int64)? = nil,
+        mediaBudgetBytes: Int64 = InventoryReplica.defaultMediaBudgetBytes
     ) throws {
         database = try DatabaseQueue()
         try ReplicaSchema.migrator().migrate(database)
@@ -65,6 +75,7 @@ public final class InventoryReplica: Sendable {
         self.mediaCacheDirectory = nil
         self.mediaFiles = mediaFiles
         self.freeBytes = freeBytes
+        self.mediaBudgetBytes = mediaBudgetBytes
     }
 
     /// The durable, on-disk replica (POPS-4069, ADR-002 D11): WAL journalling
@@ -81,6 +92,8 @@ public final class InventoryReplica: Sendable {
     ///   - freeBytes: The free space to check before opening, and before
     ///     staging a photo, in bytes, given `directory`. `nil` (the default)
     ///     reads the real volume; tests inject a fixed value.
+    ///   - mediaBudgetBytes: The media cache's budget for medium and
+    ///     full-size variants; 500 MB by default.
     /// - Throws: ``AppCore/InventoryStorageError/full`` if `freeBytes`
     ///   answers under 200 MB, or if opening or migrating the database itself
     ///   hits `SQLITE_FULL`. A migration that fails for any other reason
@@ -89,7 +102,8 @@ public final class InventoryReplica: Sendable {
         onDiskAt directory: URL,
         now: @escaping @Sendable () -> Date = { Date() },
         staleAfter: TimeInterval = 24 * 60 * 60,
-        freeBytes: (@Sendable (URL) throws -> Int64)? = nil
+        freeBytes: (@Sendable (URL) throws -> Int64)? = nil,
+        mediaBudgetBytes: Int64 = InventoryReplica.defaultMediaBudgetBytes
     ) throws {
         let freeBytes = freeBytes ?? ReplicaStorage.systemFreeBytes(at:)
         try ReplicaStorage.ensureFreeSpace { try freeBytes(directory) }
@@ -110,6 +124,7 @@ public final class InventoryReplica: Sendable {
         self.mediaCacheDirectory = mediaCacheDirectory
         self.mediaFiles = DirectoryMediaFiles(directory: mediaCacheDirectory)
         self.freeBytes = { try freeBytes(directory) }
+        self.mediaBudgetBytes = mediaBudgetBytes
     }
 
     /// Where the next snapshot or feed request should start.

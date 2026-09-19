@@ -8,12 +8,11 @@ import Foundation
 /// and `resolve(_:with:)` settles a repair the server's outcome opened.
 ///
 /// `uploadPhoto` is local too: it stages the bytes in the replica, pinned,
-/// and the drain uploads them ahead of the attach that needs them. `photo`
-/// answers a staged photo from the phone, so a photo taken offline shows
-/// before the server has it.
+/// and the drain uploads them ahead of the attach that needs them.
 ///
-/// Reads, download and refresh are `OnlineInventoryStore`'s, over the same
-/// replica. Given a reachability, it also drains the log to the
+/// Reads, download, refresh and photos are `OnlineInventoryStore`'s, over the
+/// same replica, whose media cache answers a staged photo from the phone, so
+/// a photo taken offline shows before the server has it. Given a reachability, it also drains the log to the
 /// server: once at start, after each change and Undo, on every `refresh()`
 /// (which the app calls on foreground), when a backoff elapses, and when the
 /// network path becomes satisfied. Without one, every change stays queued.
@@ -94,8 +93,7 @@ public final class LocalFirstInventoryStore: InventoryStore, Sendable {
     }
 
     public func photo(_ sha256: String, variant: InventoryPhotoVariant) async throws -> Data {
-        if let staged = try replica.stagedPhoto(sha256) { return staged }
-        return try await online.photo(sha256, variant: variant)
+        try await online.photo(sha256, variant: variant)
     }
 
     /// Stages the bytes on the phone (``InventoryReplica/stagePhoto(sha256:data:contentType:)``)

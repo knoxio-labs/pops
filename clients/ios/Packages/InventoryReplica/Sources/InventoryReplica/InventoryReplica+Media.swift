@@ -36,6 +36,7 @@ extension InventoryReplica {
             try MediaRows.stage(
                 sha256: digest, contentType: contentType, bytes: data.count, at: time, in: db)
         }
+        try evictOverBudget()
         return InventoryMediaUploadResult(sha256: digest, alreadyStored: held)
     }
 

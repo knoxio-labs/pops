@@ -48,6 +48,8 @@ A photo is staged on the phone before anything attaches it (POPS-4075). `LocalFi
 - An attach the server refuses as `media_missing` whose bytes this phone staged uploads them again and is logged again under a new id, once; after that, or without the bytes, it opens the failed photo repair. Retry stages the bytes again before the attach is re-sent; Remove drops the attach.
 - Staged bytes stay pinned until the server has them and no change in the log still attaches them.
 
+Every variant `photo(_:variant:)` fetches is kept in the same store and table (POPS-4080), so it is not fetched again, even after a relaunch. Thumbnails are kept for good; medium and full-size variants are evicted least recently used first once they add up to more than 500 MB (`defaultMediaBudgetBytes`). Pinned bytes count towards that but are never evicted. A photo this phone staged answers every variant with its own bytes until that variant is cached, and a row whose file has gone is forgotten and fetched again.
+
 `InventoryQuery.photoUploads` reports each staged photo as waiting, uploading, uploaded or failed, which is what the form's photo tiles show. The `media` table survives the on-disk fallback with the log, because the log's attaches need it.
 
 ## Repairs
