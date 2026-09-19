@@ -1,6 +1,5 @@
 import AppCore
 import Foundation
-import Observation
 
 @testable import FeatureInventory
 
@@ -71,7 +70,7 @@ extension InventoryDashboardViewModel {
     @discardableResult
     func startAndAwaitFirstAnswer() async -> (Task<Void, Never>, InventoryDashboard?) {
         let task = Task { await observe() }
-        await waitUntilObserved { [self] in phase != .loading }
+        await awaitObservedCondition { [self] in phase != .loading }
         return (task, dashboard)
     }
 
@@ -80,70 +79,7 @@ extension InventoryDashboardViewModel {
     func awaitDashboard(where condition: @escaping @Sendable (InventoryDashboard) -> Bool) async
         -> InventoryDashboard?
     {
-        await waitUntilObserved { [self] in dashboard.map(condition) ?? false }
+        await awaitObservedCondition { [self] in dashboard.map(condition) ?? false }
         return dashboard
-    }
-
-    /// Suspends until `predicate` holds, resumed by Observation the moment a
-    /// tracked property changes rather than by polling, and bounded by a
-    /// deadline rather than a scheduling-turn budget — the same shape
-    /// `withDeadline` gives the Auth package's own concurrency probes, for
-    /// the same reason: a scheduling-turn count is a proxy for progress that
-    /// CPU starvation can make unsound, and a store that never answers must
-    /// still let the test fail promptly instead of hanging the suite.
-    @MainActor
-    private func waitUntilObserved(
-        deadline: Duration = .seconds(2), _ predicate: @escaping @Sendable @MainActor () -> Bool
-    ) async {
-        if predicate() { return }
-        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
-            let resumeOnce = ResumeOnce(continuation)
-            trackUntilTrue(predicate, resuming: resumeOnce)
-            Task {
-                try? await Task.sleep(for: deadline)
-                await resumeOnce.resume()
-            }
-        }
-    }
-
-    /// Re-registers Observation tracking each time it fires, until
-    /// `predicate` holds, then resumes `resumeOnce`. A method rather than a
-    /// nested closure: Swift refuses `@Sendable` on a main-actor-isolated
-    /// local function, which a closure recursing into itself needs in order
-    /// to be captured by the `Task { @MainActor in }` hop
-    /// `withObservationTracking`'s `onChange` requires.
-    @MainActor
-    private func trackUntilTrue(
-        _ predicate: @escaping @Sendable @MainActor () -> Bool,
-        resuming resumeOnce: ResumeOnce
-    ) {
-        withObservationTracking {
-            _ = predicate()
-        } onChange: {
-            Task { @MainActor in
-                if predicate() {
-                    await resumeOnce.resume()
-                } else {
-                    self.trackUntilTrue(predicate, resuming: resumeOnce)
-                }
-            }
-        }
-    }
-}
-
-/// Resumes a continuation exactly once, whichever of two independent
-/// races — the awaited event firing, or the deadline elapsing — gets there
-/// first. An actor rather than a lock: both races call in from `Task`s that
-/// may run concurrently with each other.
-private actor ResumeOnce {
-    private var continuation: CheckedContinuation<Void, Never>?
-
-    init(_ continuation: CheckedContinuation<Void, Never>) {
-        self.continuation = continuation
-    }
-
-    func resume() {
-        continuation?.resume()
-        continuation = nil
     }
 }
