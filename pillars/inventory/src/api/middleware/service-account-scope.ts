@@ -30,9 +30,11 @@
  *
  * The required scope is derived from the contract itself, so a route added to
  * `inventoryContract` — including the sync surface `rest-sync.ts` adds — is
- * gated the moment it exists; there is no second list to forget. Paths
- * outside the contract — `/health`, `/pillars`, `/openapi` — resolve to no
- * scope and are untouched.
+ * gated the moment it exists; there is no second list to forget. The raw
+ * byte routes cannot be contract routes, so they are declared to the gate in
+ * {@link INVENTORY_RAW_ROUTE_SCOPES} from the paths their routers register,
+ * and held to the same semantics. Every other path outside the contract —
+ * `/health`, `/pillars`, `/openapi` — resolves to no scope and is untouched.
  *
  * **This gate must not deploy before the registry grants are widened.**
  * bfm's service account needs `inventory.sync`, `inventory.types`,
@@ -45,9 +47,16 @@
 import { createServiceAccountScopeGate } from '@pops/pillar-express';
 
 import { inventoryContract } from '../../contract/rest.js';
+import {
+  DOCUMENT_THUMBNAIL_ROUTE_PATH,
+  ITEM_DOCUMENT_FILE_ROUTE_PATH,
+  ITEM_PHOTO_FILE_ROUTE_PATH,
+} from '../files/router.js';
+import { MEDIA_ROUTE_PATH } from '../media/router.js';
 
 import type { RequestHandler } from 'express';
 
+import type { RawRouteTree } from '@pops/pillar-express';
 import type { ContractScopeMap, ServiceAccountVerifier } from '@pops/pillar-sdk/server';
 
 /**
@@ -80,11 +89,34 @@ export function resolveRequireCredential(env: NodeJS.ProcessEnv = process.env): 
   return env[REQUIRE_CREDENTIAL_ENV] === 'true' && env['NODE_ENV'] !== 'production';
 }
 
+/**
+ * The raw (non-contract) byte routes and the scope each requires. Media is
+ * bfm's `inventory.media` grant; the file routes sit under the contract
+ * namespace whose records they serve the bytes of, so a grant that can list
+ * an item's photos can also fetch them.
+ */
+export const INVENTORY_RAW_ROUTE_SCOPES = {
+  media: {
+    upload: { method: 'PUT', path: MEDIA_ROUTE_PATH },
+    read: { method: 'GET', path: MEDIA_ROUTE_PATH },
+  },
+  photos: {
+    file: { method: 'GET', path: ITEM_PHOTO_FILE_ROUTE_PATH },
+  },
+  documentFiles: {
+    file: { method: 'GET', path: ITEM_DOCUMENT_FILE_ROUTE_PATH },
+  },
+  documents: {
+    thumbnail: { method: 'GET', path: DOCUMENT_THUMBNAIL_ROUTE_PATH },
+  },
+} as const satisfies RawRouteTree;
+
 const gate = createServiceAccountScopeGate({
   contract: inventoryContract,
   rootScope: INVENTORY_SCOPE_ROOT,
   logPrefix: 'inventory-api',
   requireCredential: resolveRequireCredential(),
+  rawRoutes: INVENTORY_RAW_ROUTE_SCOPES,
 });
 
 /**
@@ -94,9 +126,12 @@ const gate = createServiceAccountScopeGate({
  */
 export const inventoryScopeMap: ContractScopeMap = gate.scopeMap;
 
+/** {@link INVENTORY_RAW_ROUTE_SCOPES} projected onto its scopes, for the same kind of coverage test. */
+export const inventoryRawScopeMap: ContractScopeMap = gate.rawScopeMap;
+
 /**
- * Build the gate. Mount it BEFORE `createExpressEndpoints` so it runs ahead of
- * every contract handler.
+ * Build the gate. Mount it BEFORE `createExpressEndpoints` and the raw byte
+ * routers, so it runs ahead of every handler it scopes.
  *
  * @param verify Resolves a presented key to its principal. Production passes a
  *   registry-backed verifier; tests inject a fake.
