@@ -1,26 +1,14 @@
 import { asc, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
-import { itemPhotos, media } from '../../db/index.js';
+import { mediaExists } from '../../api/media/store.js';
+import { itemPhotos } from '../../db/index.js';
 import { requireItem, type CommandDb } from './entities.js';
 import { CommandRejected } from './errors.js';
 import { defineOp } from './op.js';
 import { recordSideEffect, changeContextFrom } from './write.js';
 
 const sha256Schema = z.string().regex(/^[0-9a-f]{64}$/, 'a sha256 is 64 lowercase hex characters');
-
-/**
- * Whether `sha256`'s bytes are already stored. Queries the `media` table
- * directly rather than importing the media pillar's own store (A8,
- * POPS-4903): that slice may land after this one, and this check only needs
- * the row's existence, which the table already guarantees once A8 writes it.
- * When A8 is on `main`, its `mediaExists` re-implements exactly this query
- * and this local copy can be replaced by an import of it.
- */
-export function mediaExists(db: CommandDb, sha256: string): boolean {
-  const row = db.select({ sha256: media.sha256 }).from(media).where(eq(media.sha256, sha256)).get();
-  return row !== undefined;
-}
 
 function currentPhotos(db: CommandDb, itemId: string): (typeof itemPhotos.$inferSelect)[] {
   return db

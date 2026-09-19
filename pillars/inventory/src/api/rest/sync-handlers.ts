@@ -8,6 +8,7 @@
 import { SERVICE_ACCOUNT_HEADER, type ServiceAccountVerifier } from '@pops/pillar-sdk/server';
 
 import { runMutations } from '../../domain/commands/index.js';
+import { createAiClient, isPermutation, type AiClient } from '../ai/client.js';
 import { resolveActor } from '../sync/actor.js';
 import { CATALOGUE } from '../sync/catalogue.js';
 import { readChanges } from '../sync/changes.js';
@@ -141,12 +142,46 @@ export function makeTypesHandlers() {
   };
 }
 
-/** Handlers for `codes.*`: deterministic suggestions. */
-export function makeCodesHandlers(db: InventoryDb) {
+/**
+ * Handlers for `codes.*`: the deterministic suggestions, ranked through the
+ * `ai` pillar when a service-account key is configured (Inventory ADR-002
+ * Phase C, POPS-4081).
+ *
+ * @param ai Defaults to the live `pillar('ai')` client; tests inject a stub
+ *   to exercise the ranked and fallback paths without a network round-trip.
+ */
+export function makeCodesHandlers(db: InventoryDb, ai: AiClient = createAiClient()) {
   return {
-    suggest: async ({ body }: CodesReq['suggest']) => ({
-      status: 200 as const,
-      body: { suggestions: suggestCodes(db, body) },
-    }),
+    suggest: async ({ body }: CodesReq['suggest']) => {
+      const deterministic = suggestCodes(db, body);
+      let ranked: string[] | undefined;
+      try {
+        ranked = await ai.rankCodeCandidates(deterministic, {
+          name: body.name,
+          ...(body.typeKey === undefined ? {} : { typeKey: body.typeKey }),
+        });
+      } catch (error) {
+        // `createAiClient` never throws (every failure degrades inside it),
+        // but ranking is an enhancement, not a requirement, for ANY `AiClient`
+        // this handler is given — a throwing implementation degrades exactly
+        // like an `undefined` one rather than turning `codes/suggest` into a
+        // 500 over a purely cosmetic ordering.
+        console.error(
+          '[inventory-api] ai.rankCodeCandidates threw; using deterministic order',
+          error
+        );
+        ranked = undefined;
+      }
+      // Re-checked here, not just trusted from the injected `ai` client: the
+      // "never a held code" guarantee must hold for whatever `AiClient` is
+      // wired in, since only the deterministic candidates are known to be
+      // free.
+      const suggestions =
+        ranked !== undefined && isPermutation(deterministic, ranked) ? ranked : deterministic;
+      return {
+        status: 200 as const,
+        body: { suggestions },
+      };
+    },
   };
 }

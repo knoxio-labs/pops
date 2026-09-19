@@ -412,6 +412,7 @@ describe('registry', () => {
       'item.attachPhoto',
       'item.changeType',
       'item.create',
+      'item.delete',
       'item.edit',
       'item.move',
       'item.removePhoto',

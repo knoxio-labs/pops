@@ -1,7 +1,8 @@
 /**
- * Item-op cases, part 2: `item.setCode`, `item.setQuantity`, `item.split`
- * and the photo ops (`item.attachPhoto`, `item.removePhoto`,
- * `item.reorderPhotos`). See `command-vector-cases-items.ts` for part 1.
+ * Item-op cases, part 2: `item.setCode`, `item.setQuantity`, `item.split`,
+ * the photo ops (`item.attachPhoto`, `item.removePhoto`,
+ * `item.reorderPhotos`) and `item.delete` (POPS-4053). See
+ * `command-vector-cases-items.ts` for part 1.
  */
 import { type CommandVectorCase } from './command-vector-fixture.js';
 import { HASH_A, ITEM_LAMP, ITEM_TOASTER } from './command-vector-ids.js';
@@ -107,6 +108,22 @@ export const ITEM_COMMAND_VECTOR_CASES_2: readonly CommandVectorCase[] = [
       baseRevision: null,
       dependsOn: [],
       args: { sha256s: [HASH_A] },
+    },
+  },
+  {
+    name: 'item.delete-with-contents',
+    op: 'item.delete',
+    seedItems: [
+      { id: ITEM_TOASTER, name: 'Crate', placement: { kind: 'hand' }, isContainer: true },
+      { id: ITEM_LAMP, name: 'Lamp', placement: { kind: 'container', itemId: ITEM_TOASTER } },
+    ],
+    mutation: {
+      mutationId: '30000000-0000-4000-8000-000000000014',
+      op: 'item.delete',
+      entityId: ITEM_TOASTER,
+      baseRevision: 1,
+      dependsOn: [],
+      args: {},
     },
   },
 ];

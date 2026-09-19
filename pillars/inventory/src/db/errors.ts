@@ -14,35 +14,3 @@ export class LocationNotFoundError extends Error {
     this.id = id;
   }
 }
-
-export class ParentLocationNotFoundError extends Error {
-  override readonly name = 'ParentLocationNotFoundError' as const;
-  readonly id: string;
-
-  constructor(id: string) {
-    super(`Parent location '${id}' not found`);
-    this.id = id;
-  }
-}
-
-export class LocationSelfParentError extends Error {
-  override readonly name = 'LocationSelfParentError' as const;
-  readonly id: string;
-
-  constructor(id: string) {
-    super('A location cannot be its own parent');
-    this.id = id;
-  }
-}
-
-export class LocationCycleError extends Error {
-  override readonly name = 'LocationCycleError' as const;
-  readonly id: string;
-  readonly newParentId: string;
-
-  constructor(id: string, newParentId: string) {
-    super('Moving this location would create a circular reference');
-    this.id = id;
-    this.newParentId = newParentId;
-  }
-}

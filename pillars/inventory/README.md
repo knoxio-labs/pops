@@ -111,9 +111,11 @@ adopting the shape purchases already carries. It is derived from
 `inventoryContract` rather than a hand-kept path list, so a new route —
 including the sync surface `rest-sync.ts` adds — is gated the moment it
 exists. `/health`, `/pillars` and `/openapi` are outside the contract and
-stay ungated, and so are the raw byte-serving photo/document/thumbnail routes
-in `files/router.ts`, matching prior behaviour: this slice adds a gate over
-the ts-rest surface, not a general perimeter.
+stay ungated. The raw byte-serving routes in `files/router.ts` and
+`media/router.ts` are not contract routes either, but they are declared to
+the gate explicitly (`photos.file`, `documentFiles.file`,
+`documents.thumbnail`, `inventory.media.upload`, `inventory.media.read`) and
+held to the same scope semantics as the contract surface.
 
 A caller presenting an `X-API-Key` is held to the service account behind it:
 an unknown or revoked key is `401`, a live key whose grant misses the
@@ -217,6 +219,39 @@ them could only ever walk an empty list and report success — indistinguishable
 from a healthy leg, and precisely the failure this worker exists to detect. The
 columns stay in place for whenever an owner concept arrives; the cron gains a
 leg at the same time as a writer, not before.
+
+## Outbound service-account credential (POPS-4081)
+
+Until POPS-4081, this pillar's only outbound leg (the reconciliation worker
+above) rode on the server SDK's bare `POPS_INTERNAL_API_KEY` env fallback,
+with no file-secret support of its own. `src/api/secret-source.ts` and
+`src/api/pillars/{service-account,outbound,sdk-config}.ts` now give it the
+same shape `finance` and `purchases` carry: `configureInventoryServerSdk()`
+runs once at boot (`src/api/server.ts`), before anything resolves a
+credential, and reads `POPS_INTERNAL_API_KEY_FILE` (a mounted Docker secret,
+production) ahead of `POPS_INTERNAL_API_KEY` (inline, local dev). Absence is
+a supported configuration, reported once at boot and never per request; a
+configured-but-unreadable file is a boot-time refusal via
+`assertSecretFilesReadable()`. This also means the reconciliation worker
+above authenticates against a real file secret for the first time, not just
+whatever happened to be in the process environment.
+
+`src/api/ai/client.ts` is the one leg this account exists for today:
+`POST /codes/suggest` (`src/api/rest/sync-handlers.ts`) ranks its
+deterministic candidates through the `ai` pillar when a key is configured,
+and always falls back to the deterministic order otherwise — no key, a
+rejected credential, a timeout, a non-2xx response, or a response that is
+not a same-set permutation of the candidates it was given (never a smaller,
+larger, or substituted set, which could otherwise surface a held code). The
+`ai` pillar does not publish the `codes.rank` route this client calls yet;
+see `scripts/ci/check-cross-pillar-expectations.mjs`'s `KNOWN_BROKEN_OPERATIONS`
+entry for `inventory -> ai (codes.rank)` and this slice's PR description for
+what an operator needs to provision before that call can succeed.
+
+`src/api/pillars/service-account.ts`'s `INVENTORY_SERVICE_ACCOUNT_SCOPES`
+lists only `ai.codes.rank` — the reconciliation worker's `finance` call is
+pre-existing, opaque (`callDynamic`, no operation to scope) and outside this
+slice, so it is deliberately not added here.
 
 ## Commands
 

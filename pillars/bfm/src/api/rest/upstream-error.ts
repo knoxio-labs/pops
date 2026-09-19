@@ -92,6 +92,18 @@ function classify(failure: GatewayFailure): Classification {
       // missing transaction — naming the wrong noun in a crash report sends
       // whoever reads it to the wrong pillar.
       return { status: 404, code: 'not_found', summary: `${target} has no such record` };
+    case 'protocol-too-old':
+      // Reached only if a route calls this generic classifier on a
+      // `protocol-too-old` failure instead of the inventory-specific handling
+      // in `api/inventory/protocol-error.ts` — a route that is not part of
+      // the sync relay has no business seeing this kind at all, so it folds
+      // to the same 502 a genuine contract fault gets rather than being given
+      // a status this switch's callers were never built to declare.
+      return {
+        status: 502,
+        code: 'upstream_contract_mismatch',
+        summary: `${target} answered with a protocol version this pillar does not carry`,
+      };
   }
 }
 
