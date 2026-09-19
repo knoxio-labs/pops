@@ -32,6 +32,7 @@ internal enum ReplicaApply {
         }
         try meta.write(db)
         try MutationLogReplay.rebase(resetting: changed, in: db)
+        try RepairSettlement.settleResolvedElsewhere(at: now, in: db)
     }
 
     static func changes(_ page: InventoryChangesPage, now: Date, in db: Database) throws {
@@ -53,6 +54,7 @@ internal enum ReplicaApply {
         if !page.hasMore { meta.lastRefreshAt = now }
         try meta.write(db)
         try MutationLogReplay.rebase(resetting: changed, in: db)
+        try RepairSettlement.settleResolvedElsewhere(at: now, in: db)
     }
 
     /// Forgets every server row and where the feed stood, keeping only the

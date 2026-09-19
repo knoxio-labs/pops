@@ -35,7 +35,9 @@ internal struct ReplicaOnDiskStorageTests {
         _ = try InventoryReplica(onDiskAt: directory, freeBytes: { _ in 200 * 1024 * 1024 })
     }
 
-    @Test("a failing migration re-snapshots the database and keeps the queued mutation-log rows")
+    @Test(
+        "a failing migration re-snapshots the database and keeps the queued mutation-log rows and their repairs"
+    )
     func failingMigrationResnapshotsAndKeepsQueuedRows() throws {
         let directory = try Self.temporaryDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -51,6 +53,9 @@ internal struct ReplicaOnDiskStorageTests {
                 try db.execute(
                     sql: "INSERT INTO mutation_log (id, payload) VALUES (?, ?)",
                     arguments: ["m2", "queued-2"])
+                try db.execute(
+                    sql: "INSERT INTO repair (id, payload) VALUES (?, ?)",
+                    arguments: ["m1", "conflict"])
                 // Stands in for whatever a real broken migration would find
                 // wrong with the file: a later migration below refuses to
                 // run while this is present.
@@ -70,6 +75,9 @@ internal struct ReplicaOnDiskStorageTests {
         }
         #expect(rows.map { $0["id"] as String } == ["m1", "m2"])
         #expect(rows.map { $0["payload"] as String } == ["queued-1", "queued-2"])
+        #expect(
+            try reopened.read { try String.fetchAll($0, sql: "SELECT payload FROM repair") }
+                == ["conflict"])
         #expect(try !reopened.read { try $0.tableExists("poison") })
     }
 
@@ -80,7 +88,8 @@ internal struct ReplicaOnDiskStorageTests {
                 sql: """
                     CREATE TABLE mutation_log (
                         id TEXT PRIMARY KEY NOT NULL, payload TEXT NOT NULL
-                    )
+                    );
+                    CREATE TABLE repair (id TEXT PRIMARY KEY NOT NULL, payload TEXT NOT NULL);
                     """)
         }
         return migrator

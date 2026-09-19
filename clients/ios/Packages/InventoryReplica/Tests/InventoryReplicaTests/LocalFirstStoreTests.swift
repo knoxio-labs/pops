@@ -31,8 +31,8 @@ internal struct LocalFirstStoreTests {
         #expect(try replica.outboundMutations().isEmpty)
     }
 
-    @Test("resolving a repair throws, since none is opened yet")
-    func resolveThrows() async throws {
+    @Test("resolving an id no open repair has throws repairNotFound")
+    func resolveUnknownThrows() async throws {
         let store = LocalFirstInventoryStore(
             replica: try InventoryReplica(),
             transport: FakeSyncTransport(FakeSyncTransport.Script()))

@@ -115,9 +115,11 @@ extension InventoryReplica {
     /// transaction. An applied change keeps showing, at the revision the
     /// server gave it, until the feed has caught up to the batch's
     /// high-water `seq`; a conflicted or rejected one stops being replayed,
-    /// so its rows show the server's state, and an Undo of it waiting to be
-    /// sent is dropped: there is no applied change left to revert.
+    /// so its rows show the server's state, opens a repair, and an Undo of
+    /// it waiting to be sent is dropped: there is no applied change left to
+    /// revert. A converged one is listed as resolved.
     public func recordOutcomes(_ result: InventoryMutationBatchResult) throws {
+        let time = storedDate(now())
         try write { db in
             for (id, outcome) in result.outcomes {
                 guard var entry = try MutationLogRows.entry(mutationId: id, in: db) else {
@@ -128,6 +130,7 @@ extension InventoryReplica {
                 entry.state = stored.state
                 entry.settlesAtSeq = stored.appliedRevision == nil ? nil : result.highWaterSeq
                 try MutationLogRows.update(entry, in: db)
+                try RepairSettlement.record(stored, for: entry, at: time, in: db)
             }
             let dropped = try MutationLogWrites.dropUndosOfUnappliedChanges(in: db)
             try MutationLogReplay.rebase(resetting: dropped, in: db)

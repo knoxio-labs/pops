@@ -115,9 +115,18 @@ internal enum MutationLogWrites {
             return unapplied.contains(target)
         }
         guard !dropped.isEmpty else { return [] }
+        try remove(dropped, in: db)
+        return dropped.reduce(into: Set<EntityRef>()) { $0.formUnion($1.touched) }
+    }
+
+    /// Deletes `removed` from the log. Whatever depended on one of them
+    /// depends on what it depended on instead, so it is released rather than
+    /// left waiting on a mutation the server will never see, while anything
+    /// further back still holds it.
+    static func remove(_ removed: [LogEntry], in db: Database) throws {
         let inherited = Dictionary(
-            uniqueKeysWithValues: dropped.map { ($0.mutationId, $0.dependsOn) })
-        for var entry in pending
+            uniqueKeysWithValues: removed.map { ($0.mutationId, $0.dependsOn) })
+        for var entry in try MutationLogRows.entries(in: MutationState.awaitingServer, db)
         where inherited[entry.mutationId] == nil
             && entry.dependsOn.contains(where: { inherited[$0] != nil })
         {
@@ -131,7 +140,6 @@ internal enum MutationLogWrites {
             try MutationLogRows.update(entry, in: db)
         }
         try MutationLogRows.delete(Array(inherited.keys), in: db)
-        return dropped.reduce(into: Set<EntityRef>()) { $0.formUnion($1.touched) }
     }
 
     static func command(sending entry: LogEntry, in db: Database) throws -> InventoryCommand? {

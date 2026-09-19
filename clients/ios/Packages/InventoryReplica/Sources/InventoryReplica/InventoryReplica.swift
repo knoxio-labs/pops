@@ -21,7 +21,7 @@ public final class InventoryReplica: Sendable {
     public static let emptyCatalogue = InventoryCatalogue(version: "", units: [], types: [])
 
     let database: DatabaseQueue
-    private let now: @Sendable () -> Date
+    let now: @Sendable () -> Date
     private let staleAfter: TimeInterval
     private let observers = ReplicaObservers()
     private let activity = Mutex(ReplicaActivity())

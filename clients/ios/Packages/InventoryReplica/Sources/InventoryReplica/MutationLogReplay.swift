@@ -5,7 +5,9 @@ import GRDB
 /// Rebuilds the optimistic layer (ADR-002 D11, "Two row layers"): every row
 /// a feed page changed, or any logged mutation wrote, is reset to its base,
 /// and every mutation still ahead of the base is replayed over it in log
-/// order. Rows nothing touched already equal their base and are left alone.
+/// order, corrected so nothing replays before what it depends on (a Restore
+/// logged after the change it brings back). Rows nothing touched already
+/// equal their base and are left alone.
 ///
 /// A replayed mutation the reducer now refuses (its target deleted
 /// elsewhere, say) is skipped and stays logged: the server has the final
@@ -20,7 +22,9 @@ import GRDB
 internal enum MutationLogReplay {
     static func rebase(resetting changed: Set<EntityRef>, in db: Database) throws {
         let since = try SyncMeta.read(db).since
-        let entries = try MutationLogRows.replayable(since: since, in: db)
+        let entries = DrainOrder.ordered(
+            try MutationLogRows.replayable(since: since, in: db), id: \.mutationId,
+            dependsOn: \.dependsOn)
         let replaying = Set(entries.map(\.mutationId))
         var stale = changed
         for var entry in try MutationLogRows.entriesWithTouchedRows(in: db) {
@@ -70,7 +74,9 @@ internal enum MutationLogReplay {
 
     /// Behind another of this phone's changes: the revision that one left.
     /// First in line: the stored one, unless a cancelled predecessor left it
-    /// ahead of anything the server has sent.
+    /// ahead of anything the server has sent. A change sent again from a
+    /// conflict never drops below the revision the conflict reported, which
+    /// the feed may not have delivered yet.
     private static func rebasedRevision(_ entry: LogEntry, isChained: Bool, in db: Database)
         throws -> Int?
     {
@@ -78,10 +84,11 @@ internal enum MutationLogReplay {
         if isChained { return view ?? entry.baseRevision }
         guard let stored = entry.baseRevision, let base = try baseRevision(of: entry.entity, in: db)
         else { return entry.baseRevision }
-        return min(stored, base)
+        let floor = try RepairRows.baseRevisionFloor(reissuedAs: entry.mutationId, in: db)
+        return max(min(stored, base), floor ?? 0)
     }
 
-    private static func resetView(
+    static func resetView(
         _ ref: EntityRef, catalogue: InventoryCatalogue?, in db: Database
     ) throws {
         let (layer, columns) = layer(of: ref)

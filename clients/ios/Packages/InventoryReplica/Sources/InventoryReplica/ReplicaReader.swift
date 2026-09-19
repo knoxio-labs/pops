@@ -101,11 +101,14 @@ internal final class ReplicaReader: InventoryQuerySource {
         }
     }
 
-    /// What waits for the server, in log order. Repairs and resolved
-    /// entries are not kept yet (POPS-4073).
+    /// What waits for the server, in log order; the open repairs, oldest
+    /// first; and what was resolved, newest first.
     func inventorySyncLedger() -> InventoryReplicaSyncLedger {
         attempt(InventoryReplicaSyncLedger()) { db in
-            InventoryReplicaSyncLedger(waiting: try MutationLogLedger.waiting(in: db))
+            InventoryReplicaSyncLedger(
+                waiting: try MutationLogLedger.waiting(in: db),
+                repairs: try RepairRows.openRepairs(in: db).compactMap(\.repair),
+                resolved: try RepairRows.resolvedEntries(in: db))
         }
     }
 

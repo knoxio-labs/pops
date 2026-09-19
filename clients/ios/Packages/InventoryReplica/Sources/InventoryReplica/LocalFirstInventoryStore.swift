@@ -3,9 +3,9 @@ import Foundation
 
 /// The `InventoryStore` whose writes land on the phone first (ADR-002 D14,
 /// Phase B): `perform(_:)` returns once the change and its log entry are
-/// committed to the replica, with no network involved, and `undo(_:)`
-/// cancels a change that has not left the device or logs a revert of one
-/// that has.
+/// committed to the replica, with no network involved, `undo(_:)` cancels a
+/// change that has not left the device or logs a revert of one that has,
+/// and `resolve(_:with:)` settles a repair the server's outcome opened.
 ///
 /// Reads, download, refresh and photos are `OnlineInventoryStore`'s, over
 /// the same replica. Given a reachability, it also drains the log to the
@@ -70,11 +70,13 @@ public final class LocalFirstInventoryStore: InventoryStore, Sendable {
         drain?.request()
     }
 
-    /// Always throws: repairs are not opened yet (POPS-4073).
+    /// Settles a repair on the phone (``InventoryReplica/resolve(_:with:mintMutationId:at:)``)
+    /// and asks the drain to send whatever that re-sends.
     public func resolve(
         _ repairId: InventoryRepair.ID, with choice: InventoryRepairChoice
     ) async throws {
-        throw InventoryCommandError.repairNotFound(repairId)
+        try replica.resolve(repairId, with: choice, mintMutationId: mintMutationId, at: now())
+        drain?.request()
     }
 
     public func download() async throws {

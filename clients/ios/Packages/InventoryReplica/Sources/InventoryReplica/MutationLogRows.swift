@@ -15,6 +15,10 @@ internal enum MutationState: String, Codable, Sendable {
     var isPending: Bool { self == .queued || self == .sending || self == .deferred }
     /// Not in flight and not applied, so an Undo can simply drop it.
     var isCancellable: Bool { self != .sending && self != .applied }
+
+    /// Not applied and not in flight: what may still depend on a mutation
+    /// the log drops or sends again under a new id.
+    static let awaitingServer: [Self] = [.queued, .deferred, .conflicted, .rejected]
 }
 
 /// One row of `mutation_log`.
@@ -67,6 +71,19 @@ internal enum MutationLogRows {
     static func delete(_ mutationIds: [String], in db: Database) throws {
         for id in mutationIds {
             try db.execute(sql: "DELETE FROM \(table) WHERE mutation_id = ?", arguments: [id])
+        }
+    }
+
+    /// Gives a logged mutation a new id in its place in the log, and points
+    /// whatever depended on it at the new id.
+    static func rename(_ mutationId: String, to newId: String, in db: Database) throws {
+        try db.execute(
+            sql: "UPDATE \(table) SET mutation_id = ? WHERE mutation_id = ?",
+            arguments: [newId, mutationId])
+        for var entry in try entries(in: MutationState.awaitingServer, db)
+        where entry.dependsOn.contains(mutationId) {
+            entry.dependsOn = entry.dependsOn.map { $0 == mutationId ? newId : $0 }.sorted()
+            try update(entry, in: db)
         }
     }
 

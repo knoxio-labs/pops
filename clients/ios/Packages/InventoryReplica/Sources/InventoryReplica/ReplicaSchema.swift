@@ -17,6 +17,13 @@ internal enum ReplicaSchema {
     /// knows what to keep (`registerMutationLog(in:)` creates it).
     static let mutationLogTableName = "mutation_log"
 
+    /// What the on-disk fallback keeps: this phone's unsent changes, and the
+    /// repairs opened on the ones the server would not take, with what was
+    /// already resolved (`registerRepairs(in:)` creates the last two).
+    static let preservedTableNames = [
+        mutationLogTableName, repairTableName, resolvedEntryTableName,
+    ]
+
     /// Opens (or creates) the on-disk replica at `path` and brings it to the
     /// current schema, in WAL journal mode with `synchronous = FULL` so a
     /// commit survives power loss (ADR-002 D11: "durability before
@@ -24,9 +31,10 @@ internal enum ReplicaSchema {
     ///
     /// A migration that cannot run -- a corrupt file, a schema this build
     /// does not recognise -- falls back to a fresh snapshot: every table is
-    /// dropped and recreated except ``mutationLogTableName``, whose rows
-    /// (this phone's queued, not-yet-sent changes) survive the reset so
-    /// nothing staged is lost, only replayed against a clean base.
+    /// dropped and recreated except ``preservedTableNames``, whose rows
+    /// (this phone's queued, not-yet-sent changes and their repairs) survive
+    /// the reset so nothing staged is lost, only replayed against a clean
+    /// base.
     static func openOnDisk(
         at path: String, migrator: DatabaseMigrator = Self.migrator()
     ) throws -> DatabaseQueue {
@@ -44,40 +52,38 @@ internal enum ReplicaSchema {
         return queue
     }
 
-    /// Copies ``mutationLogTableName`` out to a sibling file, erases the
-    /// database, migrates it from empty, then copies the table back in. The
-    /// copy goes through a second on-disk database (via `ATTACH`) rather
-    /// than reading rows into memory, so the preserved table's own columns
-    /// never have to be known here.
+    /// Copies every table in ``preservedTableNames`` that exists out to a
+    /// sibling file, erases the database, migrates it from empty, then copies
+    /// them back in. The copy goes through a second on-disk database (via
+    /// `ATTACH`) rather than reading rows into memory, so the preserved
+    /// tables' own columns never have to be known here.
     private static func fallBackToFreshSnapshot(
         _ queue: DatabaseQueue, at path: String, using migrator: DatabaseMigrator
     ) throws {
         let backupPath = path + ".fallback-\(UUID().uuidString)"
         defer { try? FileManager.default.removeItem(atPath: backupPath) }
-        let hadLog = try queue.read { try $0.tableExists(mutationLogTableName) }
-        if hadLog {
+        let kept = try queue.read { db in
+            try preservedTableNames.filter { try db.tableExists($0) }
+        }
+        if !kept.isEmpty {
             try queue.writeWithoutTransaction { db in
                 try db.execute(
                     sql: "ATTACH DATABASE ? AS fallback_backup", arguments: [backupPath])
-                try db.execute(
-                    sql: """
-                        CREATE TABLE fallback_backup.\(mutationLogTableName)
-                        AS SELECT * FROM main.\(mutationLogTableName)
-                        """)
+                for table in kept {
+                    try db.execute(
+                        sql: "CREATE TABLE fallback_backup.\(table) AS SELECT * FROM main.\(table)")
+                }
                 try db.execute(sql: "DETACH DATABASE fallback_backup")
             }
         }
         try queue.erase()
         try migrator.migrate(queue)
-        guard hadLog else { return }
+        guard !kept.isEmpty else { return }
         try queue.writeWithoutTransaction { db in
             try db.execute(sql: "ATTACH DATABASE ? AS fallback_backup", arguments: [backupPath])
-            if try db.tableExists(mutationLogTableName) {
+            for table in kept where try db.tableExists(table) {
                 try db.execute(
-                    sql: """
-                        INSERT INTO main.\(mutationLogTableName)
-                        SELECT * FROM fallback_backup.\(mutationLogTableName)
-                        """)
+                    sql: "INSERT INTO main.\(table) SELECT * FROM fallback_backup.\(table)")
             }
             try db.execute(sql: "DETACH DATABASE fallback_backup")
         }
@@ -106,6 +112,7 @@ internal enum ReplicaSchema {
             try db.execute(sql: eventIndex)
         }
         registerMutationLog(in: &migrator)
+        registerRepairs(in: &migrator)
         return migrator
     }
 
