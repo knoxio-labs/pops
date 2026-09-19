@@ -26,6 +26,7 @@ DerivedData/
 # the repo tree and skip dot-directories, so a gigabyte of build output here is
 # invisible to them without each one needing a new skip-list entry.
 clients/*/.derived-data/
+clients/*/.derived-data-device/
 *.xcuserstate
 .swiftpm/
 # Points the committed signing xcconfig at this machine's Apple team. Written by
