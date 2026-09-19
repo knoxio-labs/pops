@@ -101,5 +101,18 @@ export const mockPillarInventory = {
       disconnect: vi.fn().mockResolvedValue(callOk({ message: 'Item disconnected from fixture' })),
       listForItem: vi.fn().mockResolvedValue(callOk({ data: [MOCK_FIXTURE_CONN], ...PAGED1 })),
     },
+    web: {
+      get: vi.fn().mockResolvedValue(callOk({ item: { id: 'item_1', revision: 1 } })),
+    },
+    sync: {
+      mutations: vi.fn().mockResolvedValue(
+        callOk({
+          outcomes: [
+            { mutationId: 'mut_1', status: 'applied', revision: 2, seq: 10, converged: false },
+          ],
+          highWaterSeq: 10,
+        })
+      ),
+    },
   },
 };

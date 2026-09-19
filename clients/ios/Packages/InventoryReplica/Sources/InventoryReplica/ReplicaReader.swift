@@ -51,6 +51,10 @@ internal final class ReplicaReader: InventoryQuerySource {
         attempt([]) { try ReplicaQueries.openContainers(in: $0) }
     }
 
+    func inventoryContainers() -> [InventoryItem] {
+        attempt([]) { try ReplicaQueries.containers(in: $0) }
+    }
+
     func inventoryRecents(limit: Int) -> [InventoryItem] {
         attempt([]) { try ReplicaQueries.recents(limit: limit, in: $0) }
     }

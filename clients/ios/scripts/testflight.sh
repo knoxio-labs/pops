@@ -86,6 +86,10 @@ built_bundle_id="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$buil
 [ "$built_bundle_id" = "$shipped_bundle_id" ] ||
     die "archive is $built_bundle_id, expected $shipped_bundle_id; only the testflight flavour is uploaded."
 
+# App Store Connect accepts the upload and only rejects a missing purpose
+# string after processing, by email; refusing here keeps it a red run.
+scripts/check-camera-purpose.sh check "$(dirname "$built_plist")"
+
 # manageAppVersionAndBuildNumber is off because App Store Connect would
 # otherwise be free to renumber the build, and the number is how a build on a
 # phone is traced back to its commit.

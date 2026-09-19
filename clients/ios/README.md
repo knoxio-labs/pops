@@ -229,6 +229,8 @@ It is not quite the only job that touches this directory. Two jobs in [`quality.
 
 **`mise run release:testflight <Pops|PopsPlayground>`** is the whole upload and runs by hand as well as in CI. Signing is automatic with an App Store Connect API key in place of a signed-in Xcode (`-allowProvisioningUpdates` plus `-authenticationKey*`), so the distribution certificate is cloud-managed and no certificate or profile is stored anywhere. It reads `DEVELOPMENT_TEAM`, `ASC_KEY_ID`, `ASC_ISSUER_ID` and `ASC_KEY_PATH`; in CI they come from the GitHub environment named `main`, which only the `main` branch can deploy to. The workflow skips entirely until the repository variable `TESTFLIGHT_ENABLED` is `true`.
 
+App Store Connect also rejects, after processing and by email, an app whose binary links a camera framework without an `NSCameraUsageDescription`, whether or not the app ever opens the camera. The playground links AVFoundation and VisionKit through the real screens it stages, so it carries a purpose string too, and `scripts/check-camera-purpose.sh` refuses such an archive before it is uploaded.
+
 App Store Connect rejects a binary built with a beta Xcode, so the day `POPS_XCODE_VERSION` points at a beta is a day nothing uploads.
 
 ## Known gaps

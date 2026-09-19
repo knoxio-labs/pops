@@ -4,6 +4,7 @@ import SwiftUI
 /// person caused should settle before they look for the next thing to do.
 internal enum InventoryMotion {
     internal static let snappy = Animation.snappy(duration: 0.25)
+    internal static let smooth = Animation.smooth(duration: 0.3)
 
     /// A row leaving or joining a list.
     internal static var row: AnyTransition { .opacity.combined(with: .scale(scale: 0.96)) }
