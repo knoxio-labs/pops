@@ -72,6 +72,7 @@ import { join } from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 
+import { seededAccounts } from './accounts-fixture.mjs';
 import { startControlPlane } from './control-plane.mjs';
 import { startPurchasesStub } from './purchases-stub.mjs';
 import { boundAddress } from './server-address.mjs';
@@ -448,6 +449,7 @@ async function main() {
 
     const upstream = await startUpstreamStub({
       rows: seededTransactions,
+      accounts: seededAccounts,
       purchasesBaseUrl: purchases.url,
       host: HOST,
     });
