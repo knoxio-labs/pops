@@ -114,6 +114,11 @@ public final class OnlineInventoryStore: InventoryStore, Sendable {
         try? await sequencer.run { try await self.refreshNow() }
     }
 
+    /// ``download()``'s one-at-a-time rule, for a resync the drain asks for.
+    func resyncKeepingLog() async throws {
+        try await sequencer.run { try await self.resyncNow() }
+    }
+
     public func photo(_ sha256: String, variant: InventoryPhotoVariant) async throws -> Data {
         if let cached = mediaCache.value(sha256: sha256, variant: variant) { return cached }
         let data = try await transport.fetchMedia(sha256: sha256, variant: variant)

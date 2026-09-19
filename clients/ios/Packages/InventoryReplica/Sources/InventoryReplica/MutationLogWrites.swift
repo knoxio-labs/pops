@@ -67,18 +67,71 @@ internal enum MutationLogWrites {
         try MutationLogReplay.rebase(resetting: touched, in: db)
     }
 
-    /// Every queued or deferred mutation, oldest first, addressed for the
-    /// wire. An Undo is addressed as `event.revert` of the event its
-    /// change's applied outcome names, and is held back until there is one.
-    static func outbound(in db: Database) throws -> [OutboundEntry] {
-        try MutationLogRows.entries(in: [.queued, .deferred], db).compactMap { entry in
-            guard let command = try command(sending: entry, in: db) else { return nil }
+    /// What the drain may send, addressed for the wire, in stable
+    /// topological order (``DrainOrder``). A mutation is held back, along
+    /// with everything depending on it, when it is in `skipped`, in flight,
+    /// conflicted or rejected, or an Undo whose change has no applied outcome
+    /// naming its event yet.
+    static func outbound(excluding skipped: Set<String>, in db: Database) throws
+        -> [OutboundEntry]
+    {
+        let log = try MutationLogRows.entries(
+            in: [.queued, .deferred, .sending, .conflicted, .rejected], db)
+        var held = skipped.union(
+            log.filter { !($0.state == .queued || $0.state == .deferred) }.map(\.mutationId))
+        let sendable = DrainOrder.ordered(
+            log.filter { !held.contains($0.mutationId) }, id: \.mutationId,
+            dependsOn: \.dependsOn)
+        var outbound: [OutboundEntry] = []
+        for entry in sendable {
+            guard !entry.dependsOn.contains(where: held.contains),
+                let command = try command(sending: entry, in: db)
+            else {
+                held.insert(entry.mutationId)
+                continue
+            }
             let mutation = InventoryOutboundMutation(
                 mutationId: entry.mutationId, command: command, baseRevision: entry.baseRevision,
                 dependsOn: entry.dependsOn,
                 clientTime: Date(timeIntervalSinceReferenceDate: entry.createdAt))
-            return OutboundEntry(entry: entry, mutation: mutation)
+            outbound.append(OutboundEntry(entry: entry, mutation: mutation))
         }
+        return outbound
+    }
+
+    /// Deletes every unsent Undo whose change ended conflicted or rejected,
+    /// so it is never sent. What was logged on top of such an Undo depends
+    /// on what the Undo depended on instead, so it stays held behind the
+    /// unapplied change until a repair settles it.
+    ///
+    /// - Returns: The rows the dropped Undos wrote, for the rebase to reset.
+    static func dropUndosOfUnappliedChanges(in db: Database) throws -> Set<EntityRef> {
+        let unapplied = Set(
+            try MutationLogRows.entries(in: [.conflicted, .rejected], db).map(\.mutationId))
+        guard !unapplied.isEmpty else { return [] }
+        let pending = try MutationLogRows.entries(in: [.queued, .deferred], db)
+        let dropped = pending.filter { entry in
+            guard case .undo(let target) = entry.command else { return false }
+            return unapplied.contains(target)
+        }
+        guard !dropped.isEmpty else { return [] }
+        let inherited = Dictionary(
+            uniqueKeysWithValues: dropped.map { ($0.mutationId, $0.dependsOn) })
+        for var entry in pending
+        where inherited[entry.mutationId] == nil
+            && entry.dependsOn.contains(where: { inherited[$0] != nil })
+        {
+            var dependsOn: [String] = []
+            for id in entry.dependsOn {
+                for replacement in inherited[id] ?? [id] where !dependsOn.contains(replacement) {
+                    dependsOn.append(replacement)
+                }
+            }
+            entry.dependsOn = dependsOn.sorted()
+            try MutationLogRows.update(entry, in: db)
+        }
+        try MutationLogRows.delete(Array(inherited.keys), in: db)
+        return dropped.reduce(into: Set<EntityRef>()) { $0.formUnion($1.touched) }
     }
 
     static func command(sending entry: LogEntry, in db: Database) throws -> InventoryCommand? {

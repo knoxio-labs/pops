@@ -5,7 +5,7 @@ import GRDB
 /// The mutation log (ADR-002 D11): a change is applied to the optimistic
 /// layer and logged in one transaction, and the log is what the drain sends.
 ///
-/// Sending is not this file's job. A drain takes ``outboundMutations(limit:)``,
+/// Sending is not this file's job. A drain takes ``outboundMutations(limit:excluding:)``,
 /// marks them with ``markSending(_:at:)``, submits them through
 /// `InventorySyncTransport`, and hands the result to ``recordOutcomes(_:)``,
 /// or, when the batch never reached the server, to ``returnToQueue(_:)``.
@@ -54,13 +54,32 @@ extension InventoryReplica {
         }
     }
 
-    /// The mutations the drain may send next, oldest first: queued and
-    /// deferred ones, each as the server expects it. An Undo whose change has
-    /// not been applied yet is held back until it has.
-    public func outboundMutations(limit: Int = 50) throws -> [InventoryOutboundMutation] {
+    /// The mutations the drain may send next: queued and deferred ones, each
+    /// as the server expects it, in enqueue order corrected so none precedes
+    /// a mutation it depends on. Held back: an Undo whose change has not
+    /// been applied yet, anything depending on a mutation in flight,
+    /// conflicted or rejected (which waits for a repair, not a retry), and
+    /// anything depending on what is held.
+    ///
+    /// - Parameter skipped: Mutations to leave out, and hold what depends on
+    ///   them, such as what the server deferred earlier in the same pass.
+    public func outboundMutations(
+        limit: Int = 50, excluding skipped: Set<String> = []
+    ) throws -> [InventoryOutboundMutation] {
         try database.read { db in
-            try MutationLogWrites.outbound(in: db).prefix(limit).map(\.mutation)
+            try MutationLogWrites.outbound(excluding: skipped, in: db).prefix(limit).map(\.mutation)
         }
+    }
+
+    /// Returns every mutation still marked in flight to the queue: at the
+    /// start of a pass nothing is in flight, so these were left by a pass the
+    /// app did not live to finish.
+    func requeueInFlight() throws {
+        let inFlight = try database.read { db in
+            try MutationLogRows.entries(in: [.sending], db).map(\.mutationId)
+        }
+        guard !inFlight.isEmpty else { return }
+        try returnToQueue(inFlight)
     }
 
     /// Marks mutations as in flight, counting the attempt.
@@ -96,7 +115,8 @@ extension InventoryReplica {
     /// transaction. An applied change keeps showing, at the revision the
     /// server gave it, until the feed has caught up to the batch's
     /// high-water `seq`; a conflicted or rejected one stops being replayed,
-    /// so its rows show the server's state.
+    /// so its rows show the server's state, and an Undo of it waiting to be
+    /// sent is dropped: there is no applied change left to revert.
     public func recordOutcomes(_ result: InventoryMutationBatchResult) throws {
         try write { db in
             for (id, outcome) in result.outcomes {
@@ -109,7 +129,8 @@ extension InventoryReplica {
                 entry.settlesAtSeq = stored.appliedRevision == nil ? nil : result.highWaterSeq
                 try MutationLogRows.update(entry, in: db)
             }
-            try MutationLogReplay.rebase(resetting: [], in: db)
+            let dropped = try MutationLogWrites.dropUndosOfUnappliedChanges(in: db)
+            try MutationLogReplay.rebase(resetting: dropped, in: db)
         }
     }
 
