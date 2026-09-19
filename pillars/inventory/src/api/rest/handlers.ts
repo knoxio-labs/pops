@@ -21,6 +21,9 @@ import { makePhotosHandlers } from './photos-handlers.js';
 import { makeReportsHandlers } from './reports-handlers.js';
 import { makeSearchHandlers } from './search-handlers.js';
 import { makeSettingsHandlers } from './settings-handlers.js';
+import { makeCodesHandlers, makeSyncHandlers, makeTypesHandlers } from './sync-handlers.js';
+
+import type { ServiceAccountVerifier } from '@pops/pillar-sdk/server';
 
 const server: ReturnType<typeof initServer> = initServer();
 
@@ -33,8 +36,15 @@ export function makeInventoryRestHandlers(deps: {
    * without a network round-trip.
    */
   documents?: DocumentsClient;
+  /**
+   * The verifier the scope gate uses, shared so the sync handlers' own
+   * re-verification of a key (to decide whose `Pops-Actor` to believe) is a
+   * cache hit rather than a second registry round-trip.
+   */
+  serviceAccountVerifier: ServiceAccountVerifier;
 }): ReturnType<typeof server.router<typeof inventoryContract>> {
   const db = deps.inventoryDb.db;
+  const documents = deps.documents ?? createDocumentsClient();
   return server.router(inventoryContract, {
     items: makeItemsHandlers(db),
     locations: makeLocationsHandlers(db),
@@ -44,8 +54,11 @@ export function makeInventoryRestHandlers(deps: {
     documents: makeDocumentsHandlers(db),
     documentFiles: makeDocumentFilesHandlers(db),
     reports: makeReportsHandlers(db),
-    paperless: makePaperlessHandlers(deps.documents ?? createDocumentsClient()),
+    paperless: makePaperlessHandlers(documents),
     search: makeSearchHandlers(db),
     settings: makeSettingsHandlers(db),
+    sync: makeSyncHandlers({ db, documents, verify: deps.serviceAccountVerifier }),
+    types: makeTypesHandlers(),
+    codes: makeCodesHandlers(db),
   });
 }

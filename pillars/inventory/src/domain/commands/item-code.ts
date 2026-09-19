@@ -14,18 +14,17 @@ interface CodeHolder {
   readonly name: string;
 }
 
-/** The other, non-tombstoned item already holding `code` (case-insensitive), if any. */
+/**
+ * The other item already holding `code` (case-insensitive), if any. A
+ * tombstoned item still counts: `items_code` is a plain unique index, not a
+ * partial one over live rows, so the sticker stays reserved to whichever
+ * item last wore it until an operator purges tombstones (ADR-002 D7).
+ */
 function findCodeHolder(db: CommandDb, code: string, excludeId: string): CodeHolder | undefined {
   return db
     .select({ id: items.id, name: items.name })
     .from(items)
-    .where(
-      and(
-        sql`${items.code} = ${code} COLLATE NOCASE`,
-        ne(items.id, excludeId),
-        sql`${items.deletedAt} IS NULL`
-      )
-    )
+    .where(and(sql`${items.code} = ${code} COLLATE NOCASE`, ne(items.id, excludeId)))
     .get();
 }
 

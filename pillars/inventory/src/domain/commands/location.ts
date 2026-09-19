@@ -11,15 +11,17 @@ import { changeContextFrom, recordUpdate } from './write.js';
 import type { EffectContext } from './op.js';
 
 const createLocationArgs = z.object({
-  name: z.string().trim().min(1),
-  parentId: z.string().min(1).nullish(),
+  location: z.object({
+    name: z.string().trim().min(1),
+    parentId: z.string().min(1).nullish(),
+  }),
 });
 
 /**
- * `location.create { name, parentId? }`: add a place at the id the client
- * already minted (`entityId`, a UUID per ADR-002 D6). A parent that is
- * missing or tombstoned is `target_missing`; a cycle cannot occur for a
- * brand-new id, so only the target is checked.
+ * `location.create { location }`: add a place at the id the client already
+ * minted (`entityId`, a UUID per ADR-002 D6), mirroring `item.create { item }`.
+ * A parent that is missing or tombstoned is `target_missing`; a cycle cannot
+ * occur for a brand-new id, so only the target is checked.
  */
 export const locationCreate = defineOp({
   op: 'location.create',
@@ -30,16 +32,17 @@ export const locationCreate = defineOp({
     if (!z.uuid().safeParse(ctx.mutation.entityId).success) {
       throw new CommandRejected('invalid', 'location.create needs a UUID entityId');
     }
-    const parentId = args.parentId ?? null;
+    const { location } = args;
+    const parentId = location.parentId ?? null;
     assertParentAllowed(ctx.db, ctx.mutation.entityId, parentId);
     return {
       eventKind: 'created',
-      changes: { name: args.name, parentId },
+      changes: { name: location.name, parentId },
       insert(db, stamp) {
         db.insert(locations)
           .values({
             id: ctx.mutation.entityId,
-            name: args.name,
+            name: location.name,
             parentId,
             sortOrder: 0,
             lastEditedTime: stamp.now,

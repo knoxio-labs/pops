@@ -19,7 +19,7 @@ export const LOCATION_COMMAND_VECTOR_CASES: readonly CommandVectorCase[] = [
       entityId: LOC_GARAGE,
       baseRevision: null,
       dependsOn: [],
-      args: { name: 'Garage', parentId: LOC_HOUSE },
+      args: { location: { name: 'Garage', parentId: LOC_HOUSE } },
     },
   },
   {

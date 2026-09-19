@@ -18,7 +18,7 @@ describe('location.create', () => {
   it('creates a root location', () => {
     const id = randomUUID();
     const outcome = h.run(
-      mutation('location.create', id, { name: 'Attic' }, { baseRevision: null })
+      mutation('location.create', id, { location: { name: 'Attic' } }, { baseRevision: null })
     );
     expect(outcome).toMatchObject({ status: 'applied', revision: 1 });
     const row = h.db.select().from(locations).where(eq(locations.id, id)).get();
@@ -28,7 +28,12 @@ describe('location.create', () => {
   it('creates a location under a parent', () => {
     const id = randomUUID();
     h.run(
-      mutation('location.create', id, { name: 'Shelf', parentId: 'garage' }, { baseRevision: null })
+      mutation(
+        'location.create',
+        id,
+        { location: { name: 'Shelf', parentId: 'garage' } },
+        { baseRevision: null }
+      )
     );
     const row = h.db.select().from(locations).where(eq(locations.id, id)).get();
     expect(row).toMatchObject({ parentId: 'garage' });
@@ -40,7 +45,7 @@ describe('location.create', () => {
       mutation(
         'location.create',
         id,
-        { name: 'Shelf', parentId: 'nowhere' },
+        { location: { name: 'Shelf', parentId: 'nowhere' } },
         { baseRevision: null }
       )
     );
