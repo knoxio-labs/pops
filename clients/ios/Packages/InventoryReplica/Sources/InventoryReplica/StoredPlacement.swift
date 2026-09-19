@@ -2,7 +2,7 @@ import AppCore
 
 /// `InventoryPlacement`'s storage twin, for a move event's `before` and
 /// `after`, which carry placements alongside catalogue-typed fields.
-internal enum StoredPlacement: Codable {
+internal enum StoredPlacement: Codable, Equatable {
     case location(String)
     case container(String)
     case hand
@@ -25,7 +25,7 @@ internal enum StoredPlacement: Codable {
 }
 
 /// `InventoryPreviousPlacement`'s storage twin, for the same reason.
-internal enum StoredPreviousPlacement: Codable {
+internal enum StoredPreviousPlacement: Codable, Equatable {
     case location(String)
     case container(String)
     case tombstoned

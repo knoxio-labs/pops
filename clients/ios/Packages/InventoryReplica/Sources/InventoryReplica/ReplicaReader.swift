@@ -101,10 +101,12 @@ internal final class ReplicaReader: InventoryQuerySource {
         }
     }
 
-    /// Empty: nothing on this phone waits for the server or needs repair
-    /// while every write is answered by the server before it lands here.
+    /// What waits for the server, in log order. Repairs and resolved
+    /// entries are not kept yet (POPS-4073).
     func inventorySyncLedger() -> InventoryReplicaSyncLedger {
-        InventoryReplicaSyncLedger()
+        attempt(InventoryReplicaSyncLedger()) { db in
+            InventoryReplicaSyncLedger(waiting: try MutationLogLedger.waiting(in: db))
+        }
     }
 
     func inventoryReplicaStatus() -> InventoryReplicaStatus {

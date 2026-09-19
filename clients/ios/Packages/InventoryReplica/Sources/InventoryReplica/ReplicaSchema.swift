@@ -14,9 +14,7 @@ internal enum ReplicaSchema {
     static let locationLayers = ["location_base", "location"]
 
     /// The mutation log's table name, fixed here so the on-disk fallback
-    /// knows what to keep even though the table itself does not exist until
-    /// the log lands (POPS-4071): a migration registered after that will
-    /// create it under this same name.
+    /// knows what to keep (`registerMutationLog(in:)` creates it).
     static let mutationLogTableName = "mutation_log"
 
     /// Opens (or creates) the on-disk replica at `path` and brings it to the
@@ -107,6 +105,7 @@ internal enum ReplicaSchema {
             try db.execute(sql: "ALTER TABLE event_v2 RENAME TO event")
             try db.execute(sql: eventIndex)
         }
+        registerMutationLog(in: &migrator)
         return migrator
     }
 

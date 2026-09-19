@@ -20,7 +20,7 @@ public final class InventoryReplica: Sendable {
     /// catalogue carries.
     public static let emptyCatalogue = InventoryCatalogue(version: "", units: [], types: [])
 
-    private let database: DatabaseQueue
+    let database: DatabaseQueue
     private let now: @Sendable () -> Date
     private let staleAfter: TimeInterval
     private let observers = ReplicaObservers()
@@ -202,9 +202,12 @@ public final class InventoryReplica: Sendable {
         }
     }
 
-    private func write(_ body: (Database) throws -> Void) throws {
-        try ReplicaStorage.mappingFull { try database.write(body) }
+    /// Runs `body` in one write transaction and tells every observer once
+    /// it commits.
+    func write<Value>(_ body: (Database) throws -> Value) throws -> Value {
+        let value = try ReplicaStorage.mappingFull { try database.write(body) }
         observers.notify()
+        return value
     }
 
     /// `.isExcludedFromBackup`: recreatable from the server, unlike the

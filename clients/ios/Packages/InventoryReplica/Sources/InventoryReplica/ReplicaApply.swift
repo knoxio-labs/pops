@@ -18,7 +18,7 @@ internal enum ReplicaApply {
             try discardServerState(db)
             meta = SyncMeta(catalogue: meta.catalogue, snapshotTotal: 0, snapshotRows: 0)
         }
-        try upsert(items: page.items, locations: page.locations, meta: meta, in: db)
+        let changed = try upsert(items: page.items, locations: page.locations, in: db)
         meta.epoch = page.epoch
         meta.catalogueVersion = page.catalogueVersion
         meta.snapshotTotal = page.total
@@ -31,6 +31,7 @@ internal enum ReplicaApply {
             meta.snapshotRows = 0
         }
         try meta.write(db)
+        try MutationLogReplay.rebase(resetting: changed, in: db)
     }
 
     static func changes(_ page: InventoryChangesPage, now: Date, in db: Database) throws {
@@ -41,7 +42,7 @@ internal enum ReplicaApply {
         guard epoch == page.epoch else {
             throw InventoryReplicaError.epochMismatch(stored: epoch, received: page.epoch)
         }
-        try upsert(items: page.items, locations: page.locations, meta: meta, in: db)
+        let changed = try upsert(items: page.items, locations: page.locations, in: db)
         for event in page.events {
             try db.execute(
                 sql: insertSQL(EventRow.columns, into: "event", onConflict: "DO NOTHING"),
@@ -51,6 +52,7 @@ internal enum ReplicaApply {
         meta.catalogueVersion = page.catalogueVersion
         if !page.hasMore { meta.lastRefreshAt = now }
         try meta.write(db)
+        try MutationLogReplay.rebase(resetting: changed, in: db)
     }
 
     /// Forgets every server row and where the feed stood, keeping only the
@@ -62,6 +64,7 @@ internal enum ReplicaApply {
         let meta = try SyncMeta.read(db)
         try discardServerState(db)
         try SyncMeta(catalogue: meta.catalogue, snapshotTotal: 0, snapshotRows: 0).write(db)
+        try MutationLogReplay.rebase(resetting: [], in: db)
     }
 
     static func store(_ catalogue: InventoryCatalogue, in db: Database) throws {
@@ -71,40 +74,30 @@ internal enum ReplicaApply {
         try ReplicaSearchIndex.reindexAll(catalogue: catalogue, in: db)
     }
 
+    /// Stores the page's rows in the base layer by revision, and names every
+    /// row that changed so the rebase that follows resets it in the
+    /// optimistic layer and replays this phone's pending changes over it.
     private static func upsert(
-        items: [InventoryItem], locations: [InventoryLocation], meta: SyncMeta, in db: Database
-    ) throws {
-        let catalogue = try meta.storedCatalogue()
+        items: [InventoryItem], locations: [InventoryLocation], in db: Database
+    ) throws -> Set<EntityRef> {
+        var changed: Set<EntityRef> = []
         for item in items {
             guard try isNewer(item.revision, id: item.id, in: "item_base", db) else { continue }
-            let values = try ItemRow.values(of: item)
             try db.execute(
                 sql: upsertSQL(ItemRow.columns, into: "item_base"),
-                arguments: StatementArguments(values))
-            try rebase(item, values: values, catalogue: catalogue, in: db)
+                arguments: StatementArguments(try ItemRow.values(of: item)))
+            changed.insert(.item(item.id))
         }
         for location in locations {
             guard try isNewer(location.revision, id: location.id, in: "location_base", db) else {
                 continue
             }
-            let arguments = StatementArguments(LocationRow.values(of: location))
-            for table in ReplicaSchema.locationLayers {
-                try db.execute(
-                    sql: upsertSQL(LocationRow.columns, into: table), arguments: arguments)
-            }
+            try db.execute(
+                sql: upsertSQL(LocationRow.columns, into: "location_base"),
+                arguments: StatementArguments(LocationRow.values(of: location)))
+            changed.insert(.location(location.id))
         }
-    }
-
-    /// Brings the optimistic `item` row in line with a new base. With no
-    /// mutation log to replay over it, the base is the optimistic row.
-    private static func rebase(
-        _ item: InventoryItem, values: [(any DatabaseValueConvertible)?],
-        catalogue: InventoryCatalogue?,
-        in db: Database
-    ) throws {
-        try db.execute(
-            sql: upsertSQL(ItemRow.columns, into: "item"), arguments: StatementArguments(values))
-        try ReplicaSearchIndex.index(SearchDocument(item), catalogue: catalogue, in: db)
+        return changed
     }
 
     private static func isNewer(_ revision: Int, id: String, in table: String, _ db: Database)
@@ -126,7 +119,7 @@ internal enum ReplicaApply {
         }
     }
 
-    private static func upsertSQL(_ columns: [String], into table: String) -> String {
+    static func upsertSQL(_ columns: [String], into table: String) -> String {
         let assignments = columns.dropFirst().map { "\($0) = excluded.\($0)" }.joined(
             separator: ", ")
         return insertSQL(columns, into: table, onConflict: "DO UPDATE SET \(assignments)")
