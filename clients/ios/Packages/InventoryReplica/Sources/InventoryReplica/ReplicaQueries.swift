@@ -54,6 +54,19 @@ internal enum ReplicaQueries {
         ).map { try ItemRow.decode($0, in: db) }
     }
 
+    /// Every live item, the Items browser's catalogue; inactive ones only
+    /// when asked for.
+    static func items(includeInactive: Bool, in db: Database) throws -> [InventoryItem] {
+        let lifecycle = includeInactive ? "" : " AND lifecycle = 'active'"
+        return try Row.fetchAll(
+            db,
+            sql: """
+                SELECT * FROM item WHERE deleted_at IS NULL\(lifecycle)
+                ORDER BY name COLLATE NOCASE, id
+                """
+        ).map { try ItemRow.decode($0, in: db) }
+    }
+
     /// Only what sits directly inside: an item in a tin in this crate is the
     /// tin's, not the crate's.
     static func contents(ofContainer containerId: String, in db: Database) throws -> [InventoryItem]

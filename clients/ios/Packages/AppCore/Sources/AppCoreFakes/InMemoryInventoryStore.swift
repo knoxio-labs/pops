@@ -88,6 +88,10 @@ public final class InMemoryInventoryStore: InventoryStore, @unchecked Sendable {
     public func perform(_ command: InventoryCommand) async throws -> InventoryReceipt {
         let mutationId = UUID().uuidString
         let snapshot = try state.withLock { current -> State in
+            if current.forcedStorageFull {
+                current.forcedStorageFull = false
+                throw InventoryStorageError.full
+            }
             try Self.apply(command, mutationId: mutationId, into: &current)
             return current
         }
@@ -149,7 +153,11 @@ public final class InMemoryInventoryStore: InventoryStore, @unchecked Sendable {
     }
 
     public func download() async throws {
-        let snapshot = state.withLock { current -> State in
+        let snapshot = try state.withLock { current -> State in
+            if current.forcedStorageFull {
+                current.forcedStorageFull = false
+                throw InventoryStorageError.full
+            }
             current.replicaStatus = .current
             return current
         }
@@ -175,31 +183,9 @@ public final class InMemoryInventoryStore: InventoryStore, @unchecked Sendable {
         observe(.replicaStatus)
     }
 
-    // MARK: - Test seams
-
-    /// Sets the replica status directly, for a test driving the shell's
-    /// offline or blocked states without a real transport.
-    public func setReplicaStatus(_ status: InventoryReplicaStatus) {
-        let snapshot = state.withLock { current -> State in
-            current.replicaStatus = status
-            return current
-        }
-        notify(snapshot)
-    }
-
-    /// Adds a repair directly, for a test exercising the sync ledger without
-    /// driving a real conflict through `perform(_:)`.
-    public func addRepair(_ repair: InventoryRepair) {
-        let snapshot = state.withLock { current -> State in
-            current.repairs.append(repair)
-            return current
-        }
-        notify(snapshot)
-    }
-
     // MARK: - Private
 
-    private func notify(_ snapshot: State) {
+    func notify(_ snapshot: State) {
         for observer in snapshot.observers.values { observer.deliver(snapshot) }
     }
 

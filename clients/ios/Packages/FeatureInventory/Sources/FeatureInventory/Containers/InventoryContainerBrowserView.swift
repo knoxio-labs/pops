@@ -5,13 +5,14 @@ import SwiftUI
 /// the open ones in the dashboard's panel, then the rest, narrowed by
 /// whatever the search bar's filter and query say.
 ///
-/// The add circle opens the item form once it has moved into this package
-/// (POPS-4063); until then it opens a pending screen.
+/// The add circle opens the shared item form, the same one New item opens
+/// from the Items browser: a container is an item, and the form is where its
+/// type is chosen.
 internal struct InventoryContainerBrowserView: View {
     @State private var model: InventoryContainerBrowserModel
-    @State private var adding = false
     @State private var generation = 0
     @Namespace private var rowSpace
+    @Environment(\.inventoryItemForm) private var itemForm
 
     internal init(model: InventoryContainerBrowserModel) {
         _model = State(initialValue: model)
@@ -27,13 +28,6 @@ internal struct InventoryContainerBrowserView: View {
         }
         .task(id: generation) { await model.containers.observe() }
         .inventoryRunnerChrome(model.runner)
-        .sheet(isPresented: $adding) {
-            NavigationStack {
-                InventoryPendingScreen(
-                    title: "New container", detail: "The new item form opens here.",
-                    symbol: InventorySymbol.addNew.system)
-            }
-        }
     }
 
     private func content(_ profiles: [InventoryContainerProfile]) -> some View {
@@ -96,7 +90,9 @@ internal struct InventoryContainerBrowserView: View {
             prompt: "Search containers",
             isFiltered: model.filter != .all,
             filterSummary: model.filter == .all ? "" : model.filter.title,
-            add: InventorySearchBarAdd(label: "New container") { adding = true }
+            add: InventorySearchBarAdd(label: "New container") {
+                itemForm?(.create(placement: nil))
+            }
         ) {
             Picker("Filter", selection: $model.filter) {
                 ForEach(InventoryContainerFilter.allCases) { option in

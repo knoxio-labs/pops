@@ -8,6 +8,25 @@ internal enum InventoryMotion {
 
     /// A row leaving or joining a list.
     internal static var row: AnyTransition { .opacity.combined(with: .scale(scale: 0.96)) }
+
+    /// A mark turning over to show what replaces it, as a selection mark does.
+    internal static var flip: AnyTransition {
+        .asymmetric(
+            insertion: .modifier(
+                active: InventoryFlip(degrees: -90), identity: InventoryFlip(degrees: 0)),
+            removal: .modifier(
+                active: InventoryFlip(degrees: 90), identity: InventoryFlip(degrees: 0)))
+    }
+}
+
+private struct InventoryFlip: ViewModifier {
+    let degrees: Double
+
+    func body(content: Content) -> some View {
+        content
+            .rotation3DEffect(.degrees(degrees), axis: (x: 0, y: 1, z: 0))
+            .opacity(degrees == 0 ? 1 : 0)
+    }
 }
 
 extension View {
