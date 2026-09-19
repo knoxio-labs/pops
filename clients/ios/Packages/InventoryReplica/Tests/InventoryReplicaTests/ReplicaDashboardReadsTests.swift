@@ -32,6 +32,35 @@ internal struct ReplicaDashboardReadsTests {
         #expect(try replica.read(.contents(ofContainer: "nothing")).isEmpty)
     }
 
+    @Test("containers are every live container, open or closed, active or not, by name")
+    func containersIncludeClosedAndInactive() throws {
+        let replica = try Fixture.downloaded(items: [
+            Fixture.box("crate", placement: .location("garage")),
+            Fixture.box("Bin", placement: .hand, access: .closed),
+            Fixture.box("tin", placement: .container("crate")),
+            InventoryItem(
+                id: "retired", revision: 1, seq: 1, name: "attic trunk", typeKey: nil,
+                lifecycle: .retired, placement: .location("attic"),
+                containment: InventoryContainment(access: .closed, isFull: true),
+                createdAt: Fixture.created, updatedAt: Fixture.created),
+            Fixture.box("gone", placement: .hand),
+            Fixture.item("wrench", placement: .container("crate")),
+        ])
+        #expect(try replica.ids(.containers) == ["retired", "Bin", "crate", "gone", "tin"])
+
+        try replica.apply(
+            Fixture.changes(items: [
+                InventoryItem(
+                    id: "gone", revision: 2, seq: 2, name: "gone", typeKey: nil, placement: .hand,
+                    containment: InventoryContainment(access: .open, isFull: false),
+                    createdAt: Fixture.created, updatedAt: Fixture.created,
+                    deletedAt: Fixture.created)
+            ]))
+
+        #expect(try replica.ids(.containers) == ["retired", "Bin", "crate", "tin"])
+        #expect(try InventoryReplica().read(.containers).isEmpty)
+    }
+
     @Test("recent events are newest first by seq across every entity, and limited")
     func recentEventsNewestFirst() throws {
         let replica = try Fixture.downloaded()

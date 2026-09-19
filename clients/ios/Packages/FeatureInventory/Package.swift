@@ -26,6 +26,7 @@ let package = Package(
         .target(
             name: "FeatureInventory",
             dependencies: ["AppCore", "DesignSystem"],
+            resources: [.process("Resources/Symbols.xcassets")],
             swiftSettings: strictSwiftSettings
         ),
         .testTarget(

@@ -16,6 +16,9 @@ public protocol InventoryQuerySource: Sendable {
     func inventoryContents(ofContainer containerId: String) -> [InventoryItem]
     func inventoryInHand() -> [InventoryItem]
     func inventoryOpenContainers() -> [InventoryItem]
+    /// Every container not deleted, open or closed, active or not, wherever
+    /// it is: the containers browser narrows these by state itself.
+    func inventoryContainers() -> [InventoryItem]
     func inventoryRecents(limit: Int) -> [InventoryItem]
     /// The newest events across every item and location, newest first: the
     /// dashboard's Recent work (ADR-002, "Active packing, Settled home").
@@ -73,6 +76,10 @@ public struct InventoryQuery<Value: Sendable>: Sendable {
 
     public static var openContainers: InventoryQuery<[InventoryItem]> {
         .init { $0.inventoryOpenContainers() }
+    }
+
+    public static var containers: InventoryQuery<[InventoryItem]> {
+        .init { $0.inventoryContainers() }
     }
 
     public static func recents(limit: Int) -> InventoryQuery<[InventoryItem]> {
