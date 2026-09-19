@@ -7,7 +7,7 @@ import { sendItemMutation, withCurrentRevision } from './inventory-sync-client.j
  */
 import { mapCallResult, reqStr, toolError } from './utils.js';
 
-import type { ToolDef } from './index.js';
+import type { ToolDef } from './tool-def.js';
 
 const itemsMove: ToolDef = {
   name: 'inventory.items.move',

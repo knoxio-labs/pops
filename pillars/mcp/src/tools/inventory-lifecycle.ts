@@ -8,7 +8,7 @@ import { sendItemMutation, withCurrentRevision } from './inventory-sync-client.j
  */
 import { mapCallResult, optBool, optStr, reqStr, toolError } from './utils.js';
 
-import type { ToolDef } from './index.js';
+import type { ToolDef } from './tool-def.js';
 
 function setAccessTool(name: string, access: 'open' | 'closed'): ToolDef {
   return {
