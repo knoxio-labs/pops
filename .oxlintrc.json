@@ -18,6 +18,25 @@
     "max-params": ["error", 4],
     "max-depth": ["error", 3],
     "no-console": ["error", { "allow": ["warn", "error"] }],
+    "no-underscore-dangle": [
+      "warn",
+      {
+        "allow": [
+          "__resetBuildToolListInternals",
+          "__resetInboundAuthWarningForTests",
+          "__resetInstalledModulesCache",
+          "__resetInvokeToolInternals",
+          "__resetOutboundCredentialReports",
+          "__resetPillarClientForTests",
+          "__resetPillarRegistryCache",
+          "__resetServerPillarCache",
+          "__resetServerSdkConfig",
+          "__resetSharedOpenApiCache",
+          "__resetSharedPillarClient",
+          "__resetWebhookSecretCacheForTests"
+        ]
+      }
+    ],
     "no-restricted-imports": [
       "error",
       {
