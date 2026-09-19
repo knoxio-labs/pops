@@ -1,5 +1,4 @@
 import AppCore
-import Foundation
 import OpenAPIRuntime
 
 /// Encodes an ``InventoryCommand`` into `POST /mobile/inventory/mutations`'s

@@ -1,5 +1,4 @@
 import AppCore
-import OpenAPIRuntime
 
 /// A generated placement type that can name itself as a ``WirePlacement``.
 /// Every per-operation `PlacementPayload` below conforms, which is what lets

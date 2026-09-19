@@ -198,21 +198,11 @@ internal enum InventoryWire {
         """
     }
 
-    internal static func upstream(code: String) -> String {
-        """
-        {"code":"\(code)","pillar":"inventory","retryable":true,"message":"no"}
-        """
-    }
-
     internal static func payloadTooLarge(maxBytes: Int = 262_144) -> String {
         """
         {"code":"payload_too_large","maxBytes":\(maxBytes),"message":"too big"}
         """
     }
-
-    internal static let rateLimited = """
-        {"code":"rate_limited","message":"slow down","retryAfterSeconds":30}
-        """
 }
 
 extension BFMInventoryTransport {
