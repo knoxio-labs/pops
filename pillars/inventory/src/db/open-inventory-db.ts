@@ -13,7 +13,9 @@ import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 
-import { withPreMigrationBackup } from '@pops/pillar-sdk/db';
+import { pendingMigrations, withPreMigrationBackup } from '@pops/pillar-sdk/db';
+
+import { rebuildSearchIndexFromItems } from './backfill-search-index.js';
 
 import type { InventoryDb } from './services/internal.js';
 
@@ -39,6 +41,9 @@ export interface OpenedInventoryDb {
   raw: Database.Database;
 }
 
+/** The journal tag `0015_items_fts_trigram` recreates `items_fts` empty (POPS-4158). */
+const ITEMS_FTS_TRIGRAM_TAG = '0015_items_fts_trigram';
+
 /**
  * Open the inventory pillar's SQLite database at `path`, configure
  * it, apply the in-package migrations journal, and return both the
@@ -51,8 +56,12 @@ export interface OpenedInventoryDb {
  *   - Every migration in
  *     `pillars/inventory/migrations/meta/_journal.json` is applied
  *     via drizzle's built-in migrator (idempotent — re-running against
- *     the same DB short-circuits on the `__drizzle_migrations` hash
- *     check).
+ *     the same DB compares each entry's recorded timestamp, not its SQL,
+ *     so an already-applied entry is never re-run even if its file changes
+ *     afterwards).
+ *   - If `${ITEMS_FTS_TRIGRAM_TAG}` was still pending before the migrate
+ *     call above, `items_fts` was just dropped and recreated empty, so it is
+ *     rebuilt from every row in `items` right after (POPS-4158).
  *
  * If the migration apply throws (corrupt DB, malformed migration,
  * missing folder), the raw handle is closed before the error is
@@ -73,11 +82,15 @@ export function openInventoryDb(path: string): OpenedInventoryDb {
   raw.pragma('busy_timeout = 5000');
   const db = drizzle(raw) as InventoryDb;
   const migrations = migrationsDir();
+  const rebuildsSearchIndex = pendingMigrations(raw, migrations).some(
+    (entry) => entry.tag === ITEMS_FTS_TRIGRAM_TAG
+  );
   try {
     withPreMigrationBackup(
       { connection: raw, databasePath: path, migrationsFolder: migrations },
       () => migrate(db, { migrationsFolder: migrations })
     );
+    if (rebuildsSearchIndex) rebuildSearchIndexFromItems(db);
   } catch (err) {
     raw.close();
     throw err;
