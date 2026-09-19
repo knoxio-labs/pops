@@ -9,8 +9,8 @@ import SwiftUI
 /// browser, In hand, and Sync and repair have moved; the scanner (POPS-4078)
 /// has not. Until it lands its route shows a pending screen. Recent activity
 /// has no approved design at all; the playground draws the same pending
-/// screen for it. Nothing reaches this from the app until the Inventory tab
-/// is wired (POPS-4066).
+/// screen for it. The Inventory tab's stack and a routed `pops://` reference
+/// (`InventoryEntityView`) both resolve their routes here.
 internal struct InventoryDestinationView: View {
     internal let route: InventoryRoute
     internal let store: any InventoryStore
