@@ -186,7 +186,7 @@ internal struct InventoryLocationPage: View {
             Button("Delete", role: .destructive) {}
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text(tree.deletionEffect(of: place.id))
+            Text(tree.deletion(of: place.id)?.confirmation ?? "")
         }
     }
 

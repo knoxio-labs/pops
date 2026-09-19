@@ -206,6 +206,15 @@ internal struct InMemoryInventoryStoreTests {
             ])
 
         let receipt = try await store.perform(.deleteLocation(id: "loc-parent"))
+
+        var deletedIterator = store.observe(.item(id: "item-1")).makeAsyncIterator()
+        let unlocated = try #require(await deletedIterator.next())
+        #expect(unlocated?.placement == .hand)
+        #expect(unlocated?.previousPlacement == .location("loc-parent"))
+        var movedChildIterator = store.observe(.location(id: "loc-child")).makeAsyncIterator()
+        let movedChild = try #require(await movedChildIterator.next())
+        #expect(movedChild?.parentId == "loc-grandparent")
+
         try await store.undo(receipt)
 
         var locationIterator = store.observe(.location(id: "loc-parent")).makeAsyncIterator()

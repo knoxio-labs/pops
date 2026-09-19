@@ -36,7 +36,7 @@ internal struct InventoryLocationTests {
             ])
     }
 
-    @Test("a place's delete confirmation names what moves, from the replica's own counts")
+    @Test("a place's delete confirmation says its things become unlocated, from the replica")
     func deletionEffectReadsReplicaCounts() async throws {
         let base = InMemoryInventoryStore(
             items: [
@@ -51,9 +51,10 @@ internal struct InventoryLocationTests {
             .makeAsyncIterator()
         let tree = try #require(await iterator.next())
 
-        let effect = tree.deletionEffect(of: "kitchen")
+        let effect = tree.deletion(of: "kitchen")?.confirmation
 
-        #expect(effect == "1 container and 1 item move to Home.")
+        #expect(effect == "1 container and 1 item become unlocated.")
+        #expect(tree.deletion(of: "attic") == nil)
     }
 
     @Test("reparent targets exclude the place itself and everything under it")

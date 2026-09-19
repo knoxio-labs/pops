@@ -1,3 +1,4 @@
+import AppCore
 import Foundation
 
 /// How many places, containers and items something amounts to.
@@ -7,8 +8,6 @@ internal struct InventoryPlaceTally: Equatable {
     internal var items = 0
 
     internal var isEmpty: Bool { places + containers + items == 0 }
-
-    internal var isSingular: Bool { places + containers + items == 1 }
 
     internal var summary: String {
         parts.joined(separator: " · ")
@@ -117,21 +116,14 @@ internal struct InventoryLocationTree: Equatable {
         Set(nodes.map(\.id)).subtracting([id] + descendants(of: id).map(\.id))
     }
 
-    /// What deleting `id` does to what is in it, in the words its
-    /// confirmation uses: child places and everything directly in it move to
-    /// its parent, or lose their place at the top level (they go in hand).
-    internal func deletionEffect(of id: String) -> String {
-        guard let target = node(id) else { return "" }
-        let moving = InventoryPlaceTally(
-            places: children(of: id).count,
-            containers: target.directContainerCount,
-            items: target.directItemCount + target.containedItemCount)
-        guard !moving.isEmpty else { return "Only \(target.name) is removed." }
-        let destination = target.parentID.flatMap { node($0)?.name }
-        guard let destination else {
-            return "\(moving.phrase) \(moving.isSingular ? "loses its" : "lose their") place."
-        }
-        return "\(moving.phrase) \(moving.isSingular ? "moves" : "move") to \(destination)."
+    /// What deleting `id` does to what is in it, by `AppCore`'s one rule;
+    /// nil for a place this tree does not hold.
+    internal func deletion(of id: String) -> InventoryLocationDeletion? {
+        guard let target = node(id) else { return nil }
+        return InventoryLocationDeletion(
+            name: target.name, parentName: target.parentID.flatMap { node($0)?.name },
+            childPlaces: children(of: id).count, directContainers: target.directContainerCount,
+            directItems: target.directItemCount)
     }
 
     internal func moveEffect(of id: String, to destinationID: String) -> String {
