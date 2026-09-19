@@ -18,12 +18,26 @@ internal enum ReplicaSchema {
             for table in itemLayers { try db.execute(sql: itemTable(table)) }
             for table in locationLayers { try db.execute(sql: locationTable(table)) }
             try db.execute(sql: indexes)
-            try db.execute(sql: eventTable)
+            try db.execute(sql: eventTable("event", actorKinds: v1ActorKinds))
+            try db.execute(sql: eventIndex)
             try db.execute(sql: syncMetaTable)
             try db.execute(sql: searchTable)
         }
+        // An actor kind this build does not know is kept, not refused: the
+        // wire declares it an open string (D10), and one unknown actor must
+        // not fail the whole feed page it arrived on.
+        migrator.registerMigration("v2_unrecognised_actor") { db in
+            try db.execute(
+                sql: eventTable("event_v2", actorKinds: v1ActorKinds + ["unrecognised"]))
+            try db.execute(sql: "INSERT INTO event_v2 SELECT * FROM event")
+            try db.execute(sql: "DROP TABLE event")
+            try db.execute(sql: "ALTER TABLE event_v2 RENAME TO event")
+            try db.execute(sql: eventIndex)
+        }
         return migrator
     }
+
+    private static let v1ActorKinds = ["device", "web", "service", "migration"]
 
     private static func itemTable(_ name: String) -> String {
         """
@@ -90,26 +104,31 @@ internal enum ReplicaSchema {
         CREATE INDEX item_updated ON item(updated_at);
         """
 
-    private static let eventTable = """
-        CREATE TABLE event (
-            seq INTEGER PRIMARY KEY NOT NULL,
-            entity_kind TEXT NOT NULL CHECK (entity_kind IN ('item', 'location')),
-            entity_id TEXT NOT NULL,
-            kind TEXT NOT NULL,
-            fields TEXT NOT NULL,
-            before TEXT NOT NULL,
-            after TEXT NOT NULL,
-            reason TEXT,
-            actor_kind TEXT NOT NULL CHECK (actor_kind IN ('device', 'web', 'service', 'migration')),
-            actor_id TEXT,
-            actor_label TEXT,
-            client_time REAL,
-            server_time REAL NOT NULL,
-            compensates_seq INTEGER,
-            undoable INTEGER NOT NULL
-        );
-        CREATE INDEX event_entity ON event(entity_kind, entity_id, seq);
-        """
+    private static func eventTable(_ name: String, actorKinds: [String]) -> String {
+        let kinds = actorKinds.map { "'\($0)'" }.joined(separator: ", ")
+        return """
+            CREATE TABLE \(name) (
+                seq INTEGER PRIMARY KEY NOT NULL,
+                entity_kind TEXT NOT NULL CHECK (entity_kind IN ('item', 'location')),
+                entity_id TEXT NOT NULL,
+                kind TEXT NOT NULL,
+                fields TEXT NOT NULL,
+                before TEXT NOT NULL,
+                after TEXT NOT NULL,
+                reason TEXT,
+                actor_kind TEXT NOT NULL CHECK (actor_kind IN (\(kinds))),
+                actor_id TEXT,
+                actor_label TEXT,
+                client_time REAL,
+                server_time REAL NOT NULL,
+                compensates_seq INTEGER,
+                undoable INTEGER NOT NULL
+            )
+            """
+    }
+
+    private static let eventIndex =
+        "CREATE INDEX event_entity ON event(entity_kind, entity_id, seq)"
 
     /// One row, always present, so every write is an `UPDATE` and no read has
     /// to tell "never written" from "missing".
