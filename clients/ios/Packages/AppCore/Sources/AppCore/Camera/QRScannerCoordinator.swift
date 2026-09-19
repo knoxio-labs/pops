@@ -26,6 +26,12 @@
         /// while the sheet is still dismissing — a QR in view produces frames
         /// continuously, not once.
         private var hasScanned = false
+        /// The input device ``configure()`` opened, kept for the torch: a
+        /// fresh `AVCaptureDevice.default(for:)` lookup would name the same
+        /// physical device, but locking a second instance for configuration
+        /// while the session already holds the first is the kind of thing
+        /// that works on some phones and freezes others.
+        private var device: AVCaptureDevice?
 
         public init(onScan: @escaping (String) -> Bool) {
             self.onScan = onScan
@@ -40,6 +46,29 @@
 
         public func stop() {
             capture.stopRunning()
+        }
+
+        /// Whether this device has a torch to turn on at all — absent on
+        /// every simulator and on an iPad without a rear camera, so the
+        /// screen hides the control rather than offering one that silently
+        /// does nothing.
+        public var hasTorch: Bool {
+            device?.hasTorch ?? false
+        }
+
+        /// Turns the torch on or off. A silent no-op without a torch, and
+        /// while another client holds the device for configuration: the
+        /// screen still reflects whatever was asked, and the next toggle
+        /// tries again.
+        public func setTorch(on: Bool) {
+            guard let device, device.hasTorch else { return }
+            do {
+                try device.lockForConfiguration()
+            } catch {
+                return
+            }
+            defer { device.unlockForConfiguration() }
+            device.torchMode = on ? .on : .off
         }
 
         /// Configures for QR and nothing else.
@@ -58,6 +87,7 @@
                 session.canAddInput(input)
             else { return }
             session.addInput(input)
+            self.device = device
             configureFocus(device)
 
             let output = AVCaptureMetadataOutput()

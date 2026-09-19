@@ -9,6 +9,10 @@
     /// a QR code is Inventory-specific, only what a decoded payload means.
     internal struct InventoryScanCameraView: UIViewRepresentable {
         internal let onScan: (String) -> Bool
+        internal let torchOn: Bool
+        /// Told once the capture device is known, so the screen can hide the
+        /// torch control on a device (or the simulator) that has none.
+        internal let onTorchAvailabilityChange: (Bool) -> Void
 
         internal func makeCoordinator() -> QRScannerCoordinator {
             QRScannerCoordinator(onScan: onScan)
@@ -17,6 +21,7 @@
         internal func makeUIView(context: Context) -> QRScannerPreviewView {
             let view = QRScannerPreviewView()
             context.coordinator.start(previewing: view)
+            onTorchAvailabilityChange(context.coordinator.hasTorch)
             return view
         }
 
@@ -25,6 +30,7 @@
         /// evaluation, which reads as the preview strobing.
         internal func updateUIView(_ view: QRScannerPreviewView, context: Context) {
             context.coordinator.onScan = onScan
+            context.coordinator.setTorch(on: torchOn)
         }
 
         internal static func dismantleUIView(
