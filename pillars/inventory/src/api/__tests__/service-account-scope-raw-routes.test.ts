@@ -20,7 +20,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { openInventoryDb, type OpenedInventoryDb } from '../../db/index.js';
 import { createInventoryApiApp } from '../app.js';
 import { inventoryRawScopeMap, inventoryScopeMap } from '../middleware/service-account-scope.js';
-import { __resetPillarRegistryCache } from '../pillars/registry.js';
+import { resetPillarRegistryCache } from '../pillars/registry.js';
 import { createTestTransport } from './test-http.js';
 
 import type { Express } from 'express';
@@ -76,7 +76,7 @@ beforeEach(() => {
   inventoryDb = openInventoryDb(join(tmpDir, 'inventory.db'));
   previousImagesDir = process.env['INVENTORY_IMAGES_DIR'];
   process.env['INVENTORY_IMAGES_DIR'] = join(tmpDir, 'images');
-  __resetPillarRegistryCache();
+  resetPillarRegistryCache();
   delete process.env['POPS_PILLARS'];
   vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 });
@@ -87,7 +87,7 @@ afterEach(() => {
   else process.env['INVENTORY_IMAGES_DIR'] = previousImagesDir;
   inventoryDb.raw.close();
   rmSync(tmpDir, { recursive: true, force: true });
-  __resetPillarRegistryCache();
+  resetPillarRegistryCache();
 });
 
 describe('the raw route scope map', () => {

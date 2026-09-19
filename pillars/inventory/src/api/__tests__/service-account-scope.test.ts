@@ -30,7 +30,7 @@ import {
   REQUIRE_CREDENTIAL_ENV,
   resolveRequireCredential,
 } from '../middleware/service-account-scope.js';
-import { __resetPillarRegistryCache } from '../pillars/registry.js';
+import { resetPillarRegistryCache } from '../pillars/registry.js';
 import { createTestTransport } from './test-http.js';
 
 import type { Express } from 'express';
@@ -67,7 +67,7 @@ function app(verify: ServiceAccountVerifier): Express {
 beforeEach(() => {
   tmpDir = mkdtempSync(join(tmpdir(), 'inventory-api-scope-test-'));
   inventoryDb = openInventoryDb(join(tmpDir, 'inventory.db'));
-  __resetPillarRegistryCache();
+  resetPillarRegistryCache();
   delete process.env['POPS_PILLARS'];
   vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 });
@@ -76,7 +76,7 @@ afterEach(() => {
   vi.restoreAllMocks();
   inventoryDb.raw.close();
   rmSync(tmpDir, { recursive: true, force: true });
-  __resetPillarRegistryCache();
+  resetPillarRegistryCache();
 });
 
 describe('the inventory scope map', () => {
