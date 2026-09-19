@@ -45,9 +45,7 @@ jobs:
     #
     # And only once the repository variable TESTFLIGHT_ENABLED is `true`, set
     # as the last step of the App Store Connect setup (POPS-4136). Until then
-    # the job skips rather than failing on missing secrets after every merge —
-    # and rather than letting its first run auto-create the `testflight`
-    # environment with no branch restriction on it.
+    # the job skips rather than failing on missing secrets after every merge.
     if: >-
       vars.TESTFLIGHT_ENABLED == 'true' &&
       (github.event_name == 'workflow_dispatch' ||
@@ -56,21 +54,24 @@ jobs:
         github.event.workflow_run.head_repository.full_name == github.repository &&
         github.event.workflow_run.head_branch == 'main'))
     runs-on: macos-latest
-    # Restricted to `main` in the repository settings, and the only holder of
-    # the App Store Connect key and the team id. The repo is public: a job
-    # that does not name this environment cannot read either.
-    environment: testflight
+    # The environment named `main` — deployments restricted to the `main`
+    # branch in the repository settings — is the only holder of the App Store
+    # Connect key and the team id. The repo is public: a job that does not
+    # name this environment cannot read either.
+    environment: main
     timeout-minutes: 60
     strategy:
       # One app failing to upload is no reason to withhold the other.
       fail-fast: false
       matrix:
         scheme: [Pops, PopsPlayground]
-    # One upload lane per app. A newer commit supersedes an older one still
-    # waiting or building; each carries its own build number, so what is lost
-    # is only a build nobody would install over the newer one.
+    # One lane per app per commit, so only a re-run of the same commit
+    # replaces an in-flight one. Keyed on the commit because triggers do not
+    # arrive in commit order: a dispatch re-shipping an older commit must not
+    # cancel a newer commit's upload. (`env` is not available here, hence the
+    # expression spelled out rather than `env.SHA`.)
     concurrency:
-      group: ios-testflight-${{ matrix.scheme }}
+      group: ios-testflight-${{ matrix.scheme }}-${{ github.event.workflow_run.head_sha || inputs.sha }}
       cancel-in-progress: true
     defaults:
       run:
