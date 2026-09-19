@@ -160,6 +160,41 @@ describe('0015_items_fts_trigram on a database that already has items', () => {
   });
 });
 
+describe('a boot that committed 0015 but crashed before the backfill ran (POPS-4158)', () => {
+  it('rebuilds items_fts on the next boot instead of leaving it empty forever', () => {
+    seedItems([
+      { id: 'i-sledge', name: 'Sledgehammer', seq: 1 },
+      { id: 'i-lamp', name: 'Desk lamp', seq: 2 },
+    ]);
+
+    // First boot: applies 0015 (and everything before it) and backfills
+    // items_fts normally.
+    const first = openInventoryDb(dbPath);
+    first.raw.close();
+
+    // Simulate a boot that committed 0015's DROP+CREATE but was killed
+    // before `rebuildSearchIndexFromItems` ran: with 0015 already applied,
+    // wipe items_fts back to empty by hand, mirroring the state 0015 itself
+    // leaves it in.
+    const raw = new Database(dbPath);
+    raw.prepare('DELETE FROM items_fts').run();
+    raw.close();
+
+    // Reopen: 0015 is no longer pending, so a decision made only from
+    // pending migrations would skip the backfill forever. The row-count
+    // check must catch the gap regardless.
+    const second = openInventoryDb(dbPath);
+    try {
+      const rows = second.raw.prepare(`SELECT id FROM items_fts ORDER BY id`).all() as {
+        id: string;
+      }[];
+      expect(rows).toEqual([{ id: 'i-lamp' }, { id: 'i-sledge' }]);
+    } finally {
+      second.raw.close();
+    }
+  });
+});
+
 describe('0015_items_fts_trigram on a database with no items yet', () => {
   it('applies cleanly and leaves an empty, trigram-tokenized items_fts', () => {
     seedItems([]);

@@ -13,8 +13,10 @@
  */
 import { z } from 'zod';
 
-import { crossPillarUrisService, type ItemInsert, type ItemRow } from '../../db/index.js';
+import * as crossPillarUrisService from '../../db/services/cross-pillar-uris.js';
 import { parseFieldValue, type FieldCodec } from './item-fields.js';
+
+import type { ItemInsert, ItemRow } from '../../db/row-types.js';
 
 type LegacyItemCodec = FieldCodec<ItemRow, ItemInsert>;
 
