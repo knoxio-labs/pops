@@ -66,6 +66,8 @@ import {
   type PruneCredentialsWorkerHandle,
 } from './cron/prune-credentials.js';
 import { createMobileFinanceClient } from './finance/client.js';
+import { createMobileInventoryClient } from './inventory/client.js';
+import { createInventoryPillarHandleFactory } from './inventory/handle-factory.js';
 import { buildBfmManifest } from './manifest.js';
 import { resolveProbeTimeoutMs } from './pillars/env.js';
 import { createPillarGateway } from './pillars/gateway.js';
@@ -109,6 +111,14 @@ const gateway = createPillarGateway();
 const finance = createMobileFinanceClient(gateway);
 const purchases = createMobilePurchasesClient(gateway);
 
+// Its own gateway, not the shared one above: this is the one leg that must
+// send an extra header on every call, and `extraHeaders` is scoped per
+// `pillar()` handle rather than per call (see `INVENTORY_SYNC_PROTOCOL_VERSION`'s
+// doc comment for why the value itself is a constant, not anything read off
+// the request).
+const inventoryGateway = createPillarGateway(createInventoryPillarHandleFactory());
+const inventory = createMobileInventoryClient(inventoryGateway);
+
 // Unset in every real deployment, where this reconstructs the same limiter
 // `makeBfmRestHandlers` would have built on its own — see
 // `resolvePairingCodeIssuanceLimit`'s doc comment for the one caller that
@@ -135,6 +145,7 @@ const app = createBfmApiApp({
   internalBaseUrls: sdkConfig.internalBaseUrls,
   probeTimeoutMs,
   finance,
+  inventory,
   purchases,
   refreshTokenTtlMs,
   issuanceLimiter,

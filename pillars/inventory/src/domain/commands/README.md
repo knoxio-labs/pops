@@ -31,6 +31,18 @@ only callers; `entities.ts` merges its codecs into the ones `item.edit`
 writes through, so the same conflict checking and event recording as every
 other field applies to them.
 
+Every op the pillar defines is registered here: `item.move`, `item.setAccess`,
+`item.setFull`, `item.setLifecycle`, `item.restoreDeleted`, `event.revert`
+(the engine, POPS-4050), plus `item.create`, `item.edit`, `item.changeType`,
+`item.setCode`, `item.setQuantity`, `item.split`, `item.attachPhoto`,
+`item.removePhoto`, `item.reorderPhotos`, `location.create`,
+`location.rename`, `location.move` and `location.delete` (POPS-4051).
+`search-index.ts` keeps `items_fts` (migration `0013_items_fts`) current as
+those ops change a searchable field; `command-vectors.ts` runs one fixture per
+op against the real engine and `scripts/generate-command-vectors.ts` writes
+the result to `contracts/command-vectors-v1.json`, which a test regenerates
+and diffs on every run.
+
 ## One mutation
 
 Each mutation runs in its own immediate transaction:
