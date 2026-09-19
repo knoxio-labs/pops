@@ -39,7 +39,7 @@ function upstreamMessage(summary: string, failure: GatewayFailure): string {
   return failure.detail === undefined ? summary : `${summary}: ${failure.detail}`;
 }
 
-interface PutMediaFailureBody {
+export interface PutMediaFailureBody {
   readonly code:
     | 'upstream_unsupported_media'
     | 'upstream_unavailable'
