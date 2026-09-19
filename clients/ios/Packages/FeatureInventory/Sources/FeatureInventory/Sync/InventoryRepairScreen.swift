@@ -201,6 +201,7 @@ internal struct InventoryConflictChoiceRow: View {
         case .otherDevice(let label): label
         case .web: "Web"
         case .service(let account): account
+        case .unrecognised(_, let label): label
         }
     }
 
@@ -209,6 +210,7 @@ internal struct InventoryConflictChoiceRow: View {
         case .thisDevice: "iphone"
         case .otherDevice: "ipad"
         case .web, .service: "server.rack"
+        case .unrecognised: "questionmark.circle"
         }
     }
 }
