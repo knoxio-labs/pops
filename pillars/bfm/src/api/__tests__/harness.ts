@@ -15,6 +15,7 @@ import { openTempDb } from '../../db/__tests__/helpers.js';
 import { createBfmApiApp, type CreateBfmApiAppOptions } from '../app.js';
 import { createMobileFinanceClient } from '../finance/client.js';
 import { createMobileInventoryClient } from '../inventory/client.js';
+import { createMobileInventoryMediaClient } from '../inventory/media-client.js';
 import { createPillarGateway } from '../pillars/gateway.js';
 import { createMobilePurchasesClient } from '../purchases/client.js';
 import { createRateLimiter, type RateLimiter } from '../rate-limit.js';
@@ -30,6 +31,7 @@ import type { RefreshChallengeStore } from '../auth/refresh-challenge.js';
 import type { RefreshRateLimitOptions } from '../auth/refresh-rate-limit.js';
 import type { MobileFinanceClient } from '../finance/client.js';
 import type { MobileInventoryClient } from '../inventory/client.js';
+import type { MobileInventoryMediaClient } from '../inventory/media-client.js';
 import type { PillarHandleFactory } from '../pillars/gateway.js';
 import type { MobilePurchasesClient } from '../purchases/client.js';
 
@@ -111,6 +113,13 @@ export interface TestAppOptions {
    * `finance`, to a client over a gateway whose handle factory throws.
    */
   inventory?: MobileInventoryClient;
+  /**
+   * Where `putMedia`/`getMedia` send and fetch bytes. Defaults to a client
+   * whose discovery lookup always answers "not found" — a test that reaches
+   * it without saying how fails as `503`, loudly, instead of hitting a real
+   * network call.
+   */
+  inventoryMedia?: MobileInventoryMediaClient;
   /** Same, for the pairing exchange's budget. */
   pairingRateLimit?: PairingRateLimitOptions;
   /** Same, for the budget the challenge and refresh routes share. */
@@ -130,6 +139,16 @@ const unreachableHandleFactory: PillarHandleFactory = (pillarId: string) => {
   throw new Error(
     `[bfm-test] this test called ${pillarId} without supplying a fake — pass \`finance\` or \`purchases\` to createTestApp`
   );
+};
+
+/**
+ * Default discovery for `inventoryMedia`: every lookup answers "not found",
+ * which the media client turns into `unavailable` (`503`) rather than
+ * throwing — a test that reaches `putMedia`/`getMedia` without supplying a
+ * fake meets a loud, wrong-looking status instead of a real network call.
+ */
+const unreachableMediaDiscovery = {
+  lookup: () => Promise.resolve(undefined),
 };
 
 /**
@@ -184,6 +203,9 @@ export function createTestApp(options: TestAppOptions = {}): TestApp {
     inventory:
       options.inventory ??
       createMobileInventoryClient(createPillarGateway(unreachableHandleFactory)),
+    inventoryMedia:
+      options.inventoryMedia ??
+      createMobileInventoryMediaClient({ discovery: unreachableMediaDiscovery }),
     db: opened.db,
     accessTokenSigningKey,
     publicBaseUrl: options.publicBaseUrl ?? TEST_PUBLIC_BASE_URL,

@@ -88,7 +88,8 @@ export const MOBILE_CAPABILITIES = [
   /**
    * Apply a batch of mutations, and ask for a free code for a new item.
    * Buys `POST /mobile/inventory/mutations` and
-   * `POST /mobile/inventory/codes/suggest` (A12) — writing is its own
+   * `POST /mobile/inventory/codes/suggest` (A12), and
+   * `PUT /mobile/inventory/media/:sha256` (A13) — writing is its own
    * authority, on the same reasoning `purchases.write` is not implied by
    * `purchases.read`.
    */
@@ -141,23 +142,27 @@ export const MOBILE_CAPABILITY_SCOPES: Readonly<Record<MobileCapability, readonl
    */
   'purchases.write': ['purchases.purchase'],
   /**
-   * Two prefixes because the sync contract's own scope gate derives two
-   * grants from its two other sub-routers (`inventory.sync` for the
+   * Three prefixes: the sync contract's own scope gate derives two grants
+   * from its two other sub-routers (`inventory.sync` for the
    * snapshot/changes/history routes, `inventory.types` for the catalogue) —
-   * see `pillars/inventory/src/contract/rest-sync.ts`. `inventory.codes` (the
-   * third) is not here: nothing this capability reaches calls it.
+   * see `pillars/inventory/src/contract/rest-sync.ts` — and `inventory.media`
+   * is the raw media store's own scope (A13, inventory's service-account gate
+   * declares it on the `media.upload`/`media.read` raw routes its own media
+   * store registers), which `getMedia` reaches. `inventory.codes` is not
+   * here: nothing this capability reaches calls it.
    */
-  'inventory.read': ['inventory.sync', 'inventory.types'],
+  'inventory.read': ['inventory.sync', 'inventory.types', 'inventory.media'],
   /**
-   * Two prefixes for the same reason `inventory.read`'s are: the sync
-   * contract's scope gate derives one grant per sub-router, and this
-   * capability reaches two of them — `inventory.sync` for
-   * `POST /sync/mutations`, `inventory.codes` for `POST /codes/suggest`
-   * (`pillars/inventory/src/contract/rest-sync.ts`). `inventory.sync` is
-   * already granted for `inventory.read`, so only `inventory.codes` widens
-   * the account.
+   * Three prefixes for the same reason `inventory.read`'s are widened: the
+   * sync contract's own scope gate derives one grant per sub-router, and
+   * `inventory.media` is the raw media store's own scope — `inventory.sync`
+   * for `POST /sync/mutations`, `inventory.codes` for `POST /codes/suggest`
+   * (`pillars/inventory/src/contract/rest-sync.ts`), `inventory.media` for
+   * `putMedia` (A13). `inventory.sync` and `inventory.media` are already
+   * granted for `inventory.read`, so only `inventory.codes` widens the
+   * account beyond what reading already needed.
    */
-  'inventory.write': ['inventory.sync', 'inventory.codes'],
+  'inventory.write': ['inventory.sync', 'inventory.codes', 'inventory.media'],
 };
 
 /**
