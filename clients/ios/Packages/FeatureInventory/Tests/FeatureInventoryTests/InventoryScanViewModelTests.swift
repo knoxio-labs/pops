@@ -12,7 +12,8 @@ import Testing
 @Suite("Inventory scan view model")
 internal struct InventoryScanViewModelTests {
     private func model(
-        items: [InventoryItem] = [], camera: StubCameraAuthorization = StubCameraAuthorization(
+        items: [InventoryItem] = [],
+        camera: StubCameraAuthorization = StubCameraAuthorization(
             standing: .authorized),
         router: EntityRouterRegistry = EntityRouterRegistry()
     ) -> InventoryScanViewModel {
@@ -33,7 +34,8 @@ internal struct InventoryScanViewModelTests {
         "a refusal shows the denied screen instead of a camera preview",
         arguments: [CameraAccess.denied, .restricted, .unavailable])
     func startedRefusedIsDenied(refusal: CameraAccess) async {
-        let model = model(camera: StubCameraAuthorization(standing: .notDetermined, afterPrompt: refusal))
+        let model = model(
+            camera: StubCameraAuthorization(standing: .notDetermined, afterPrompt: refusal))
 
         await model.start()
 
@@ -109,7 +111,9 @@ internal struct InventoryScanViewModelTests {
 
     @Test("a plain code that matches an item is found")
     func plainCodeFound() async {
-        let model = model(items: [InventoryFixture.item("item-1", "Drill", at: .hand, code: "ABC-123")])
+        let model = model(items: [
+            InventoryFixture.item("item-1", "Drill", at: .hand, code: "ABC-123")
+        ])
         await model.start()
 
         model.didScan("ABC-123")
@@ -124,18 +128,24 @@ internal struct InventoryScanViewModelTests {
 
     @Test("the code lookup is case-insensitive, as the pillar's own index is")
     func plainCodeIsCaseInsensitive() async {
-        let model = model(items: [InventoryFixture.item("item-1", "Drill", at: .hand, code: "ABC-123")])
+        let model = model(items: [
+            InventoryFixture.item("item-1", "Drill", at: .hand, code: "ABC-123")
+        ])
         await model.start()
 
         model.didScan("abc-123")
         await awaitObservedCondition { model.phase != .loading }
 
-        #expect(model.phase == .found(InventoryRecordFixture.record("item-1", "Drill", code: "ABC-123")))
+        #expect(
+            model.phase == .found(InventoryRecordFixture.record("item-1", "Drill", code: "ABC-123"))
+        )
     }
 
     @Test("a code nothing carries is target missing")
     func unknownCodeIsTargetMissing() async {
-        let model = model(items: [InventoryFixture.item("item-1", "Drill", at: .hand, code: "ABC-123")])
+        let model = model(items: [
+            InventoryFixture.item("item-1", "Drill", at: .hand, code: "ABC-123")
+        ])
         await model.start()
 
         model.didScan("ZZZ-999")

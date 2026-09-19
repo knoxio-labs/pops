@@ -19,7 +19,9 @@ public struct InventoryEntityView: View {
     /// the same reason: nothing this stack can reach routes a `pops://`
     /// reference itself today, but `InventoryDestinationView` takes one
     /// router regardless of which stack presents it.
-    public init(entity: InventoryEntity, dependencies: AppDependencies, entityRouter: any EntityRouter) {
+    public init(
+        entity: InventoryEntity, dependencies: AppDependencies, entityRouter: any EntityRouter
+    ) {
         self.entity = entity
         store = dependencies.inventory
         self.entityRouter = entityRouter

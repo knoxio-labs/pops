@@ -170,7 +170,9 @@ private struct InventoryScanFoundCard: View {
     var body: some View {
         HStack(spacing: PopsSpacing.sm) {
             InventorySearchHitRow(hit: .record(record), loadPhoto: loadPhoto)
-            NavigationLink(value: InventoryRoute.record(id: record.id, isContainer: record.isContainer)) {
+            NavigationLink(
+                value: InventoryRoute.record(id: record.id, isContainer: record.isContainer)
+            ) {
                 Text("Open")
             }
             .inventoryProminentGlassButton()
