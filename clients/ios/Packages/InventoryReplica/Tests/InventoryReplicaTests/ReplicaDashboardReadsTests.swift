@@ -61,6 +61,36 @@ internal struct ReplicaDashboardReadsTests {
         #expect(try InventoryReplica().read(.containers).isEmpty)
     }
 
+    @Test("items are every live item by name, inactive ones only when asked for")
+    func itemsHonourIncludeInactive() throws {
+        let replica = try Fixture.downloaded(items: [
+            Fixture.item("wrench", placement: .container("crate")),
+            Fixture.box("crate", placement: .location("garage")),
+            Fixture.item("Anvil", placement: .hand),
+            InventoryItem(
+                id: "sold", revision: 1, seq: 1, name: "bicycle", typeKey: nil,
+                lifecycle: .discarded, placement: .hand, createdAt: Fixture.created,
+                updatedAt: Fixture.created),
+            Fixture.item("gone", placement: .hand),
+        ])
+        #expect(try replica.ids(.items()) == ["Anvil", "crate", "gone", "wrench"])
+        #expect(
+            try replica.ids(.items(includeInactive: true))
+                == ["Anvil", "sold", "crate", "gone", "wrench"])
+
+        try replica.apply(
+            Fixture.changes(items: [
+                InventoryItem(
+                    id: "gone", revision: 2, seq: 2, name: "gone", typeKey: nil, placement: .hand,
+                    createdAt: Fixture.created, updatedAt: Fixture.created,
+                    deletedAt: Fixture.created)
+            ]))
+
+        #expect(
+            try replica.ids(.items(includeInactive: true)) == ["Anvil", "sold", "crate", "wrench"])
+        #expect(try InventoryReplica().read(.items(includeInactive: true)).isEmpty)
+    }
+
     @Test("recent events are newest first by seq across every entity, and limited")
     func recentEventsNewestFirst() throws {
         let replica = try Fixture.downloaded()
