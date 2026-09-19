@@ -22,6 +22,7 @@
       "warn",
       {
         "allow": [
+          "__ciGateTestHook",
           "__resetBuildToolListInternals",
           "__resetInboundAuthWarningForTests",
           "__resetInstalledModulesCache",
@@ -33,7 +34,17 @@
           "__resetServerSdkConfig",
           "__resetSharedOpenApiCache",
           "__resetSharedPillarClient",
-          "__resetWebhookSecretCacheForTests"
+          "__resetWebhookSecretCacheForTests",
+          "__setAnthropicClientForTests",
+          "__setBuildToolListInternals",
+          "__setCerebrumTelemetryDepsForTests",
+          "__setClaudeCompleterForTests",
+          "__setFeedbackStoreForTests",
+          "__setFinanceTelemetryDepsForTests",
+          "__setFoodTelemetryDepsForTests",
+          "__setInvokeToolInternals",
+          "__setPurchasesTelemetryDepsForTests",
+          "__setTextIngestClientForTests"
         ]
       }
     ],
