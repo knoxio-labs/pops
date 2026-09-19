@@ -160,6 +160,22 @@ internal enum RepairRows {
             arguments: [mutationId])
     }
 
+    /// The id a change is logged under now: `mutationId` itself, or the id
+    /// Keep mine last sent it again as, following one re-issue after
+    /// another, so an Undo offered before a repair still reaches the change.
+    static func latestReissue(of mutationId: String, in db: Database) throws -> String {
+        var current = mutationId
+        var seen: Set<String> = [current]
+        while let next = try String.fetchOne(
+            db, sql: "SELECT reissued_as FROM \(table) WHERE mutation_id = ?",
+            arguments: [current]),
+            seen.insert(next).inserted
+        {
+            current = next
+        }
+        return current
+    }
+
     static func recordResolved(_ entry: InventoryResolvedEntry, in db: Database) throws {
         try db.execute(
             sql: """

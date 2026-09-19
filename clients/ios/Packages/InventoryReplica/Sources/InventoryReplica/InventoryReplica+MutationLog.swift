@@ -33,7 +33,8 @@ extension InventoryReplica {
     /// cancels it if it has not left the device (with anything logged after
     /// it that depends on it), and otherwise logs a revert of it, which the
     /// drain sends as `event.revert` once the change's own outcome names the
-    /// event.
+    /// event. A receipt whose change Keep mine sent again under a new id
+    /// undoes the change as it was re-sent.
     ///
     /// - Throws: ``AppCore/InventoryCommandError/nothingToUndo`` when the
     ///   log has no such change, or it altered nothing;
@@ -41,7 +42,10 @@ extension InventoryReplica {
     ///   revert (undoing a create or a destroy, or a field changed since).
     public func undo(_ receipt: InventoryReceipt, undoMutationId: String, clientTime: Date) throws {
         try write { db in
-            guard let target = try MutationLogRows.entry(mutationId: receipt.mutationId, in: db)
+            guard
+                let target = try MutationLogRows.entry(
+                    mutationId: try RepairRows.latestReissue(of: receipt.mutationId, in: db),
+                    in: db)
             else { throw InventoryCommandError.nothingToUndo }
             if target.state.isCancellable {
                 try MutationLogWrites.cancel(target, in: db)
