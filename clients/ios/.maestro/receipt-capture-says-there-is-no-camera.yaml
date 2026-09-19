@@ -1,4 +1,4 @@
-appId: com.knoxiolabs.pops
+appId: com.knoxiolabs.pops.local
 name: A second feature earns a tab, and receipt capture says why it cannot open the camera
 ---
 # An unpaired launch, every time — the credentials live in the keychain,

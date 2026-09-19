@@ -129,6 +129,15 @@ run = "xcodebuild -project Pops.xcodeproj -scheme Pops -destination 'generic/pla
 description = "Archive Pops or PopsPlayground at HEAD and upload it to TestFlight (needs an App Store Connect API key)"
 run = "scripts/testflight.sh"
 
+# What "install it on my phone" means: the LOCAL flavour (`.local` bundle id,
+# marked icon, "Pops Local"), beside the TestFlight install rather than over
+# it. `mise run install:phone PopsPlayground` for the playground; POPS_DEVICE
+# picks a phone when more than one is paired. See scripts/install-on-phone.sh.
+[tasks."install:phone"]
+description = "Build the local flavour and install + launch it on the paired iPhone, beside the TestFlight app"
+depends = ["generate"]
+run = "scripts/install-on-phone.sh"
+
 [tasks."build:packages"]
 description = "Type-check every package on the host toolchain, without Xcode"
 run = '''
@@ -631,6 +640,13 @@ description = "The CalVer derivation for TestFlight builds still holds against f
 hide = true
 run = "scripts/release-version.sh self-test"
 
+# Device selection for `install:phone`, which only ever runs by hand, so its
+# self-test would otherwise never run anywhere.
+[tasks."verify:install-on-phone"]
+description = "install:phone still picks exactly one paired iPhone, or says why it cannot"
+hide = true
+run = "scripts/install-on-phone.sh self-test"
+
 # The pre-upload purpose-string check `scripts/testflight.sh` runs on each
 # archive. Self-tested here for the same reason as `verify:release-version`:
 # its only real caller runs after merge.
@@ -681,6 +697,7 @@ authoritative=1
 swiftlint lint --strict --quiet || status=1
 mise run generated-boundary || status=1
 mise run verify:release-version || status=1
+mise run verify:install-on-phone || status=1
 mise run verify:camera-purpose || status=1
 
 if mise run verify:xcode-version; then
