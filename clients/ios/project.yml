@@ -21,6 +21,20 @@ settings:
     ENABLE_USER_SCRIPT_SANDBOXING: YES
     GCC_TREAT_WARNINGS_AS_ERRORS: YES
     SWIFT_TREAT_WARNINGS_AS_ERRORS: YES
+    # Which install a build is. Every build is `local` unless it says
+    # otherwise, and only `scripts/testflight.sh` does (POPS_FLAVOR=testflight
+    # on the xcodebuild command line). A local build carries `.local` on its
+    # bundle identifier, a marked icon and "Local" in its name, so installing
+    # one on a phone sits beside the TestFlight app instead of replacing it,
+    # and nothing built on a laptop can be mistaken for what shipped.
+    #
+    # Resolved by nested lookup, `$(NAME_$(POPS_FLAVOR))`, so the flavour is a
+    # single setting rather than three that could disagree.
+    POPS_FLAVOR: local
+    POPS_BUNDLE_ID_SUFFIX_local: .local
+    POPS_BUNDLE_ID_SUFFIX_testflight: ''
+    POPS_APPICON_SUFFIX_local: Local
+    POPS_APPICON_SUFFIX_testflight: ''
   configs:
     # Debug builds one architecture — the one the machine will actually run.
     # Without this the simulator ARCHS are `arm64 x86_64` and every Debug build
@@ -80,7 +94,11 @@ targets:
       - path: App
         excludes:
           - AppIcon.icon/**
+          - AppIconLocal.icon/**
       - path: App/AppIcon.icon
+        type: file
+        buildPhase: resources
+      - path: App/AppIconLocal.icon
         type: file
         buildPhase: resources
     dependencies:
@@ -147,7 +165,10 @@ targets:
         # Without the key every TestFlight build stops at Missing Compliance
         # and reaches no tester until someone answers by hand.
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
-        PRODUCT_BUNDLE_IDENTIFIER: com.knoxiolabs.pops
+        PRODUCT_BUNDLE_IDENTIFIER: com.knoxiolabs.pops$(POPS_BUNDLE_ID_SUFFIX_$(POPS_FLAVOR))
+        INFOPLIST_KEY_CFBundleDisplayName: $(POPS_DISPLAY_NAME_$(POPS_FLAVOR))
+        POPS_DISPLAY_NAME_local: Pops Local
+        POPS_DISPLAY_NAME_testflight: Pops
         # Placeholders. A TestFlight build's version is CalVer derived from its
         # commit by scripts/release-version.sh and passed to xcodebuild on the
         # command line, so these only ever label a local build: 0.0.0 (0) on a
@@ -155,7 +176,7 @@ targets:
         MARKETING_VERSION: '0.0.0'
         CURRENT_PROJECT_VERSION: '0'
         TARGETED_DEVICE_FAMILY: '1'
-        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon$(POPS_APPICON_SUFFIX_$(POPS_FLAVOR))
         CODE_SIGN_STYLE: Automatic
       configs:
         # Read through App/Info.plist, which is the only way to reach a key Xcode's
@@ -215,7 +236,7 @@ targets:
         # Under the app's identifier rather than beside it, so the pair reads as
         # host-and-tests wherever bundle IDs are listed. XcodeGen would
         # otherwise derive `com.knoxiolabs.PopsTests` from the target name.
-        PRODUCT_BUNDLE_IDENTIFIER: com.knoxiolabs.pops.tests
+        PRODUCT_BUNDLE_IDENTIFIER: com.knoxiolabs.pops$(POPS_BUNDLE_ID_SUFFIX_$(POPS_FLAVOR)).tests
         CODE_SIGN_STYLE: Automatic
 
   # The design playground: a second installable app, sharing the DesignSystem
@@ -237,7 +258,11 @@ targets:
       - path: Playground
         excludes:
           - PlaygroundIcon.icon/**
+          - PlaygroundIconLocal.icon/**
       - path: Playground/PlaygroundIcon.icon
+        type: file
+        buildPhase: resources
+      - path: Playground/PlaygroundIconLocal.icon
         type: file
         buildPhase: resources
     dependencies:
@@ -252,12 +277,15 @@ targets:
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         # So it is distinguishable from `Pops` on a home screen that has both.
-        INFOPLIST_KEY_CFBundleDisplayName: Pops Design
+        # "Design Local" rather than a suffix: "Pops Design Local" truncates.
+        INFOPLIST_KEY_CFBundleDisplayName: $(POPS_DISPLAY_NAME_$(POPS_FLAVOR))
+        POPS_DISPLAY_NAME_local: Design Local
+        POPS_DISPLAY_NAME_testflight: Pops Design
         # No network and no cryptography at all; see `Pops` for why the key
         # must be present rather than left to the questionnaire.
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
-        ASSETCATALOG_COMPILER_APPICON_NAME: PlaygroundIcon
-        PRODUCT_BUNDLE_IDENTIFIER: com.knoxiolabs.pops.playground
+        ASSETCATALOG_COMPILER_APPICON_NAME: PlaygroundIcon$(POPS_APPICON_SUFFIX_$(POPS_FLAVOR))
+        PRODUCT_BUNDLE_IDENTIFIER: com.knoxiolabs.pops.playground$(POPS_BUNDLE_ID_SUFFIX_$(POPS_FLAVOR))
         # Placeholders, for the reason given on `Pops` above.
         MARKETING_VERSION: '0.0.0'
         CURRENT_PROJECT_VERSION: '0'

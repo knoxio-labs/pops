@@ -1,4 +1,4 @@
-appId: com.knoxiolabs.pops
+appId: com.knoxiolabs.pops.local
 name: Fill in a blank receipt draft and submit it
 ---
 # The manual-entry half of `receipt-manual-entry.yaml`, pulled into its own
