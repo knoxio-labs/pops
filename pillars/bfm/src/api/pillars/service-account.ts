@@ -28,8 +28,11 @@ export const BFM_SERVICE_ACCOUNT_NAME = 'bfm';
  * One entry per sibling module bfm actually calls: the mobile transactions
  * screens read finance's `transactions.*`, the mobile accounts screen reads
  * finance's `accounts.*` and `checkpoints.*`, the receipt upload writes to
- * purchases' `receipt.*`, and the mobile purchases screens read purchases'
- * `purchase.*`. Every later mobile surface widens this list in its own ticket,
+ * purchases' `receipt.*`, the mobile purchases screens read purchases'
+ * `purchase.*`, the inventory replica's reads and its mutation batch lean on
+ * `inventory.sync`/`inventory.types`, and `inventory.codes` is the
+ * code-suggestion route's own sub-router grant (A12). Every later mobile
+ * surface widens this list in its own ticket,
  * so it stays a readable record of what bfm calls rather than a wildcard
  * nobody can audit. Scopes match by dot prefix, so `finance.transactions`
  * authorises `finance.transactions.list` but not `finance.budgets.list`, and
@@ -60,6 +63,7 @@ export const BFM_SERVICE_ACCOUNT_SCOPES: readonly string[] = [
   'purchases.receipt',
   'inventory.sync',
   'inventory.types',
+  'inventory.codes',
 ];
 
 /** Local-dev source: the key inline in the environment. */

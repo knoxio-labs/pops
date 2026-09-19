@@ -1854,6 +1854,267 @@
         "tags": ["mobileFinance"]
       }
     },
+    "/mobile/inventory/codes/suggest": {
+      "post": {
+        "operationId": "mobileInventory.suggestCodes",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "name": {
+                    "maxLength": 200,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "stem": {
+                    "pattern": "^[A-Za-z0-9-]{0,15}[A-Za-z-]$",
+                    "type": "string"
+                  },
+                  "typeKey": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": ["name"],
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "suggestions": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": ["suggestions"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": ["invalid_cursor", "invalid_request"],
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["code", "message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": ["invalid_token"],
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["code", "message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "401"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "code": {
+                          "enum": ["device_revoked"],
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code", "message"],
+                      "type": "object"
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "capability": {
+                          "type": "string"
+                        },
+                        "code": {
+                          "enum": ["capability_not_granted"],
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code", "message", "capability"],
+                      "type": "object"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "403"
+          },
+          "426": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": ["client_too_old"],
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["code", "message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "426"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": ["rate_limited"],
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    }
+                  },
+                  "required": ["code", "message", "retryAfterSeconds"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "429"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "upstream_unavailable",
+                        "upstream_degraded",
+                        "upstream_contract_mismatch",
+                        "upstream_misconfigured",
+                        "upstream_invalid_request",
+                        "upstream_conflict",
+                        "upstream_unsupported_media",
+                        "not_found"
+                      ],
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "pillar": {
+                      "type": "string"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["code", "pillar", "retryable", "message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "502"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "upstream_unavailable",
+                        "upstream_degraded",
+                        "upstream_contract_mismatch",
+                        "upstream_misconfigured",
+                        "upstream_invalid_request",
+                        "upstream_conflict",
+                        "upstream_unsupported_media",
+                        "not_found"
+                      ],
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "pillar": {
+                      "type": "string"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["code", "pillar", "retryable", "message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "503"
+          }
+        },
+        "summary": "Free codes for a new item: a stem followed by the next unused numbers",
+        "tags": ["mobileInventory"]
+      }
+    },
     "/mobile/inventory/items/{id}/history": {
       "get": {
         "operationId": "mobileInventory.itemHistory",
@@ -2387,6 +2648,540 @@
           }
         },
         "summary": "One item's history, newest first",
+        "tags": ["mobileInventory"]
+      }
+    },
+    "/mobile/inventory/mutations": {
+      "post": {
+        "operationId": "mobileInventory.mutations",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "mutations": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "args": {},
+                        "baseRevision": {
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "clientTime": {
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
+                          "type": "string"
+                        },
+                        "dependsOn": {
+                          "default": [],
+                          "items": {
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                            "type": "string"
+                          },
+                          "maxItems": 50,
+                          "type": "array"
+                        },
+                        "entityId": {
+                          "maxLength": 128,
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "mutationId": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
+                        "op": {
+                          "maxLength": 64,
+                          "minLength": 1,
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "mutationId",
+                        "op",
+                        "entityId",
+                        "dependsOn",
+                        "clientTime",
+                        "args"
+                      ],
+                      "type": "object"
+                    },
+                    "maxItems": 50,
+                    "minItems": 1,
+                    "type": "array"
+                  }
+                },
+                "required": ["mutations"],
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "highWaterSeq": {
+                      "maximum": 9007199254740991,
+                      "minimum": -9007199254740991,
+                      "type": "integer"
+                    },
+                    "outcomes": {
+                      "items": {
+                        "anyOf": [
+                          {
+                            "additionalProperties": false,
+                            "properties": {
+                              "converged": {
+                                "type": "boolean"
+                              },
+                              "mutationId": {
+                                "type": "string"
+                              },
+                              "revision": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "seq": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "status": {
+                                "enum": ["applied"],
+                                "type": "string"
+                              }
+                            },
+                            "required": ["mutationId", "status", "revision", "seq", "converged"],
+                            "type": "object"
+                          },
+                          {
+                            "oneOf": [
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "at": {
+                                    "type": "string"
+                                  },
+                                  "currentRevision": {
+                                    "maximum": 9007199254740991,
+                                    "minimum": -9007199254740991,
+                                    "type": "integer"
+                                  },
+                                  "field": {
+                                    "type": "string"
+                                  },
+                                  "kind": {
+                                    "enum": ["field"],
+                                    "type": "string"
+                                  },
+                                  "mine": {},
+                                  "mutationId": {
+                                    "type": "string"
+                                  },
+                                  "source": {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "kind": {
+                                        "type": "string"
+                                      },
+                                      "label": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": ["kind", "label"],
+                                    "type": "object"
+                                  },
+                                  "status": {
+                                    "enum": ["conflict"],
+                                    "type": "string"
+                                  },
+                                  "theirs": {}
+                                },
+                                "required": [
+                                  "mutationId",
+                                  "status",
+                                  "kind",
+                                  "field",
+                                  "source",
+                                  "at",
+                                  "currentRevision",
+                                  "mine",
+                                  "theirs"
+                                ],
+                                "type": "object"
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "heldBy": {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "id": {
+                                        "type": "string"
+                                      },
+                                      "name": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": ["id", "name"],
+                                    "type": "object"
+                                  },
+                                  "kind": {
+                                    "enum": ["code_collision"],
+                                    "type": "string"
+                                  },
+                                  "mutationId": {
+                                    "type": "string"
+                                  },
+                                  "status": {
+                                    "enum": ["conflict"],
+                                    "type": "string"
+                                  },
+                                  "suggestedCode": {
+                                    "nullable": true,
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "mutationId",
+                                  "status",
+                                  "kind",
+                                  "heldBy",
+                                  "suggestedCode"
+                                ],
+                                "type": "object"
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "at": {
+                                    "type": "string"
+                                  },
+                                  "kind": {
+                                    "enum": ["deleted"],
+                                    "type": "string"
+                                  },
+                                  "mutationId": {
+                                    "type": "string"
+                                  },
+                                  "source": {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "kind": {
+                                        "type": "string"
+                                      },
+                                      "label": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": ["kind", "label"],
+                                    "type": "object"
+                                  },
+                                  "status": {
+                                    "enum": ["conflict"],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["mutationId", "status", "kind", "source", "at"],
+                                "type": "object"
+                              }
+                            ]
+                          },
+                          {
+                            "additionalProperties": false,
+                            "properties": {
+                              "message": {
+                                "type": "string"
+                              },
+                              "mutationId": {
+                                "type": "string"
+                              },
+                              "reason": {
+                                "type": "string"
+                              },
+                              "status": {
+                                "enum": ["rejected"],
+                                "type": "string"
+                              }
+                            },
+                            "required": ["mutationId", "status", "reason", "message"],
+                            "type": "object"
+                          },
+                          {
+                            "additionalProperties": false,
+                            "properties": {
+                              "mutationId": {
+                                "type": "string"
+                              },
+                              "status": {
+                                "enum": ["deferred"],
+                                "type": "string"
+                              },
+                              "waitingOn": {
+                                "type": "string"
+                              }
+                            },
+                            "required": ["mutationId", "status", "waitingOn"],
+                            "type": "object"
+                          }
+                        ]
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": ["outcomes", "highWaterSeq"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": ["invalid_cursor", "invalid_request"],
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["code", "message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": ["invalid_token"],
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["code", "message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "401"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "code": {
+                          "enum": ["device_revoked"],
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code", "message"],
+                      "type": "object"
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "capability": {
+                          "type": "string"
+                        },
+                        "code": {
+                          "enum": ["capability_not_granted"],
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code", "message", "capability"],
+                      "type": "object"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "403"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": ["payload_too_large"],
+                      "type": "string"
+                    },
+                    "maxBytes": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["code", "maxBytes", "message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "413"
+          },
+          "426": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": ["client_too_old"],
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["code", "message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "426"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": ["rate_limited"],
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    }
+                  },
+                  "required": ["code", "message", "retryAfterSeconds"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "429"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "upstream_unavailable",
+                        "upstream_degraded",
+                        "upstream_contract_mismatch",
+                        "upstream_misconfigured",
+                        "upstream_invalid_request",
+                        "upstream_conflict",
+                        "upstream_unsupported_media",
+                        "not_found"
+                      ],
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "pillar": {
+                      "type": "string"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["code", "pillar", "retryable", "message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "502"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "upstream_unavailable",
+                        "upstream_degraded",
+                        "upstream_contract_mismatch",
+                        "upstream_misconfigured",
+                        "upstream_invalid_request",
+                        "upstream_conflict",
+                        "upstream_unsupported_media",
+                        "not_found"
+                      ],
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "pillar": {
+                      "type": "string"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["code", "pillar", "retryable", "message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "503"
+          }
+        },
+        "summary": "Apply up to 50 mutations in order, each in its own transaction, idempotently",
         "tags": ["mobileInventory"]
       }
     },
