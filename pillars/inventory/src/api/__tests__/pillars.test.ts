@@ -13,7 +13,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { openInventoryDb, type OpenedInventoryDb } from '../../db/index.js';
 import { createInventoryApiApp } from '../app.js';
-import { resetPillarRegistryCache } from '../pillars/registry.js';
+import { __resetPillarRegistryCache } from '../pillars/registry.js';
 import { createTestTransport } from './test-http.js';
 
 const { requestOn } = createTestTransport();
@@ -26,7 +26,7 @@ beforeEach(() => {
   tmpDir = mkdtempSync(join(tmpdir(), 'inventory-api-pillars-test-'));
   inventoryDb = openInventoryDb(join(tmpDir, 'inventory.db'));
   delete process.env['POPS_PILLARS'];
-  resetPillarRegistryCache();
+  __resetPillarRegistryCache();
 });
 
 afterEach(() => {
@@ -34,7 +34,7 @@ afterEach(() => {
   rmSync(tmpDir, { recursive: true, force: true });
   if (originalPillars === undefined) delete process.env['POPS_PILLARS'];
   else process.env['POPS_PILLARS'] = originalPillars;
-  resetPillarRegistryCache();
+  __resetPillarRegistryCache();
 });
 
 function makeApp(): ReturnType<typeof createInventoryApiApp> {

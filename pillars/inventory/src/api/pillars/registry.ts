@@ -32,6 +32,6 @@ export function getPillarRegistry(options: PillarRegistryOptions): readonly Pill
 }
 
 /** Test-only: forget the cached registry so a new `POPS_PILLARS` is re-read. */
-export function resetPillarRegistryCache(): void {
+export function __resetPillarRegistryCache(): void {
   cached = undefined;
 }
