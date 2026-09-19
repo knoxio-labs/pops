@@ -12,6 +12,7 @@ internal final class InventoryLocationPageModel {
     internal let id: InventoryLocation.ID
     internal let runner: InventoryCommandRunner
     internal let tree: InventoryObservation<InventoryLocationTree>
+    internal let notice: InventoryObservation<InventoryLocationNotice?>
     internal var selection = InventorySelection()
     internal var moving: InventoryPlacementRequest?
     internal var storing = false
@@ -23,6 +24,7 @@ internal final class InventoryLocationPageModel {
         self.id = id
         runner = InventoryCommandRunner(store: store)
         tree = InventoryObservation(store: store, query: Self.query)
+        notice = InventoryObservation(store: store, query: InventoryLocationNotice.query(id: id))
     }
 
     internal static var query: InventoryQuery<InventoryLocationTree> {
@@ -31,7 +33,23 @@ internal final class InventoryLocationPageModel {
 
     /// Follows the replica until the calling task is cancelled.
     internal func observe() async {
-        await tree.observe()
+        async let tree: Void = tree.observe()
+        async let notice: Void = notice.observe()
+        _ = await (tree, notice)
+    }
+
+    /// The notice to draw, once the ledger has answered.
+    internal var shownNotice: InventoryLocationNotice? {
+        guard case .loaded(let notice) = notice.phase else { return nil }
+        return notice
+    }
+
+    /// Settles the place's move conflict: Keep mine re-sends this phone's
+    /// move, Keep theirs lets the other device's stand. The notice leaves
+    /// because the repair leaves the ledger, not because this hides it.
+    internal func resolveMove(keepingMine: Bool) async {
+        guard case .conflictingMove(let repairId, _, _, _)? = shownNotice else { return }
+        await runner.resolve(repairId, with: keepingMine ? .keepMine() : .discardMine)
     }
 
     /// Drops whatever left the place while it was open, so a stale id never

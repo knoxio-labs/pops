@@ -103,6 +103,21 @@ internal final class InventoryCommandRunner {
         }
     }
 
+    /// Settles an open repair with `choice`. Returns whether the store took
+    /// it; when it did not, `failure` says why. A resolution offers no Undo.
+    @discardableResult
+    internal func resolve(_ repairId: InventoryRepair.ID, with choice: InventoryRepairChoice)
+        async -> Bool
+    {
+        do {
+            try await store.resolve(repairId, with: choice)
+            return true
+        } catch {
+            record(error)
+            return false
+        }
+    }
+
     private func record(_ error: Error) {
         guard let reported = InventoryWriteFailure.reporting(error) else { return }
         failure = reported

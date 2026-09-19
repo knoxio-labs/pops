@@ -88,3 +88,37 @@ internal struct InventoryPlacementBreadcrumbs: View {
         }
     }
 }
+
+/// A move somebody else made to the same place, and the two ways out of it.
+internal struct InventoryLocationConflict: View {
+    internal let mine: String
+    internal let theirs: String
+    internal let device: String
+    internal let onResolve: (_ keepingMine: Bool) -> Void
+
+    internal var body: some View {
+        VStack(alignment: .leading, spacing: PopsSpacing.sm) {
+            InventoryLocationNoticeLine(
+                symbol: InventorySymbol.attention.system, tint: .popsWarning,
+                text: "Moved to \(theirs) on \(device)")
+            InventoryGlassGroup(spacing: PopsSpacing.sm) {
+                HStack(spacing: PopsSpacing.sm) {
+                    choice("Keep \(mine)", keepingMine: true)
+                    choice("Keep \(theirs)", keepingMine: false)
+                }
+            }
+        }
+        .transition(.opacity)
+    }
+
+    private func choice(_ title: String, keepingMine: Bool) -> some View {
+        Button {
+            onResolve(keepingMine)
+        } label: {
+            Text(title)
+                .font(.popsSubheadline.weight(.semibold))
+                .frame(maxWidth: .infinity)
+        }
+        .inventoryGlassButton()
+    }
+}
