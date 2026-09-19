@@ -140,8 +140,12 @@ targets:
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_NSCameraUsageDescription: Pops uses the camera to scan pairing QR codes and photograph receipts.
         PRODUCT_BUNDLE_IDENTIFIER: com.knoxiolabs.pops
-        MARKETING_VERSION: '0.1.0'
-        CURRENT_PROJECT_VERSION: '1'
+        # Placeholders. A TestFlight build's version is CalVer derived from its
+        # commit by scripts/release-version.sh and passed to xcodebuild on the
+        # command line, so these only ever label a local build: 0.0.0 (0) on a
+        # phone means it did not come from CI.
+        MARKETING_VERSION: '0.0.0'
+        CURRENT_PROJECT_VERSION: '0'
         TARGETED_DEVICE_FAMILY: '1'
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         CODE_SIGN_STYLE: Automatic
@@ -243,7 +247,8 @@ targets:
         INFOPLIST_KEY_CFBundleDisplayName: Pops Design
         ASSETCATALOG_COMPILER_APPICON_NAME: PlaygroundIcon
         PRODUCT_BUNDLE_IDENTIFIER: com.knoxiolabs.pops.playground
-        MARKETING_VERSION: '0.1.0'
-        CURRENT_PROJECT_VERSION: '1'
+        # Placeholders, for the reason given on `Pops` above.
+        MARKETING_VERSION: '0.0.0'
+        CURRENT_PROJECT_VERSION: '0'
         TARGETED_DEVICE_FAMILY: '1'
         CODE_SIGN_STYLE: Automatic
