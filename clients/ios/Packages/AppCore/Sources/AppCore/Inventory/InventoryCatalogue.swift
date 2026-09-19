@@ -155,6 +155,15 @@ public struct InventoryRange: Hashable, Sendable {
 
 /// One field's value, shaped by the `InventoryFieldValueKind` its type
 /// declares.
+///
+/// `placement` and `previousPlacement` are not catalogue kinds — no type ever
+/// declares a field of either shape, so they are absent from
+/// `InventoryFieldValueKind`. They exist here because `InventoryEvent.before`
+/// and `.after` are keyed dictionaries of this same type (ADR-002 D4), and a
+/// move's history entry carries exactly these two row-shaped values rather
+/// than a catalogue-typed one (`pillars/inventory/src/contract/rest-sync-schemas.ts`'s
+/// `SyncEventValuesSchema`). A second dictionary type for two keys would only
+/// be a second thing for a reader of `InventoryEvent` to know about.
 public enum InventoryFieldValue: Hashable, Sendable {
     case text(String)
     case choice(String)
@@ -162,4 +171,6 @@ public enum InventoryFieldValue: Hashable, Sendable {
     case measurement(InventoryMeasurement)
     case range(InventoryRange)
     case link(String)
+    case placement(InventoryPlacement)
+    case previousPlacement(InventoryPreviousPlacement)
 }
