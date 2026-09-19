@@ -167,10 +167,9 @@ done
 # sources, ~7 minutes each on the runner, for a test action whose assertions
 # take 1.5 seconds. Both now depend on this instead, and because mise resolves
 # one dependency graph per invocation, `mise run -j 1 test ::: lint:analyze`
-# compiles once and both read what it produced. `ios-quality.yml` no longer
-# runs the pair together: pull requests run `test`, the merge queue runs
-# `lint:analyze`, because the analyzer is ~19.5 of the job's minutes and the
-# compile ~2 (POPS-4149).
+# compiles once and both read what it produced — what the merge queue runs in
+# `ios-quality.yml`. Pull requests run `test` alone, because the analyzer is
+# ~19.5 of the job's minutes and the compile ~2 (POPS-4149).
 #
 # The `:::` is mise's TASK separator and is not decoration: without it,
 # `mise run test lint:analyze` runs `test` alone and appends `lint:analyze` to
