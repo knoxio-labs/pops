@@ -16,6 +16,16 @@ public enum InventoryMoveVerb: Hashable, Sendable {
     case pickUp
     case putBack
     case store
+
+    /// The wire spelling `item.move`'s `verb` argument takes.
+    public var wireValue: String {
+        switch self {
+        case .move: "move"
+        case .pickUp: "pick_up"
+        case .putBack: "put_back"
+        case .store: "store"
+        }
+    }
 }
 
 /// What a newly created item needs. `id` is minted by the caller (a UUIDv4,
