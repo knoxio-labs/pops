@@ -66,16 +66,24 @@ internal final class InventorySyncViewModel {
     }
 
     /// Resolves a repair with its one inline fix (`InventoryRepairKind.fix`),
-    /// from the Sync list rather than the repair's own screen.
+    /// from the Sync list rather than the repair's own screen: Keep mine,
+    /// except for an `unrecognised` repair, whose only fix is Let go.
     internal func resolveInline(_ repair: InventoryRepair) async {
-        await resolve(repair, with: .keepMine())
+        await resolve(repair, with: Self.inlineChoice(for: repair.kind))
+    }
+
+    nonisolated internal static func inlineChoice(for kind: InventoryRepairKind)
+        -> InventoryRepairChoice
+    {
+        if case .unrecognised = kind { return .discardMine }
+        return .keepMine()
     }
 
     internal func resolve(_ repair: InventoryRepair, with choice: InventoryRepairChoice) async {
         do {
             try await store.resolve(repair.id, with: choice)
-            let offer = InventoryUndoOffer(
-                message: outcomeMessage(repair, choice), symbol: .resolved)
+            let message = await ledgerOutcome(of: repair.id) ?? outcomeMessage(repair, choice)
+            let offer = InventoryUndoOffer(message: message, symbol: .resolved)
             receipts[offer.id] = (repairId: repair.id, entityId: repair.entityId)
             undoOffer = offer
         } catch {
@@ -88,6 +96,15 @@ internal final class InventorySyncViewModel {
     /// claim an effect it cannot have.
     internal func undo(_ offer: InventoryUndoOffer) async {
         receipts.removeValue(forKey: offer.id)
+    }
+
+    /// What the store recorded the resolution as, so the capsule says what
+    /// the resolved row will; nil from a store that keeps no ledger.
+    private func ledgerOutcome(of repairId: InventoryRepair.ID) async -> String? {
+        for await ledger in store.observe(.syncLedger) {
+            return ledger.resolved.first { $0.id == repairId }?.outcome
+        }
+        return nil
     }
 
     private func outcomeMessage(_ repair: InventoryRepair, _ choice: InventoryRepairChoice)

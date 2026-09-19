@@ -5,8 +5,8 @@ import Synchronization
 
 @testable import FeatureInventory
 
-/// An in-memory store that also records every command and every undo it was
-/// asked for, so a test can assert what a view model sent rather than only
+/// An in-memory store that also records every command, every undo and every
+/// repair choice it was asked for, so a test can assert what a view model sent rather than only
 /// what the fake did with it.
 ///
 /// `history` answers item history, which `InMemoryInventoryStore` does not:
@@ -14,7 +14,13 @@ import Synchronization
 internal final class RecordingInventoryStore: InventoryStore {
     private let inner: InMemoryInventoryStore
     private let history: [InventoryEvent]
-    private let log = Mutex<(commands: [InventoryCommand], undone: [InventoryReceipt])>(([], []))
+    private struct Log {
+        var commands: [InventoryCommand] = []
+        var undone: [InventoryReceipt] = []
+        var resolutions: [InventoryRepairChoice] = []
+    }
+
+    private let log = Mutex(Log())
 
     internal init(_ inner: InMemoryInventoryStore, history: [InventoryEvent] = []) {
         self.inner = inner
@@ -23,6 +29,7 @@ internal final class RecordingInventoryStore: InventoryStore {
 
     internal var commands: [InventoryCommand] { log.withLock { $0.commands } }
     internal var undone: [InventoryReceipt] { log.withLock { $0.undone } }
+    internal var resolutions: [InventoryRepairChoice] { log.withLock { $0.resolutions } }
 
     func observe<Value: Sendable>(_ query: InventoryQuery<Value>) -> AsyncStream<Value> {
         let history = history
@@ -41,6 +48,7 @@ internal final class RecordingInventoryStore: InventoryStore {
     }
 
     func resolve(_ repairId: InventoryRepair.ID, with choice: InventoryRepairChoice) async throws {
+        log.withLock { $0.resolutions.append(choice) }
         try await inner.resolve(repairId, with: choice)
     }
 

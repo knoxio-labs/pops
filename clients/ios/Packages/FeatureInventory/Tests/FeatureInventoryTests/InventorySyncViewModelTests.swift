@@ -85,6 +85,49 @@ internal struct InventorySyncViewModelTests {
         #expect(model.undoOffer?.message == "Restored")
     }
 
+    @Test("inline Let go on a refused change sends the let-go choice and says Let go")
+    func inlineLetGoOnUnrecognised() async throws {
+        let inner = InMemoryInventoryStore()
+        let repair = Fixture.repair("m1", on: "box", kind: .unrecognised("rejected"))
+        inner.addRepair(repair)
+        let store = RecordingInventoryStore(inner)
+        let model = InventorySyncViewModel(store: store)
+        let (task, _) = await model.startAndAwaitFirstAnswer()
+        defer { task.cancel() }
+        _ = await model.awaitPage { !$0.repairRows.isEmpty }
+
+        await model.resolveInline(repair)
+
+        #expect(store.resolutions == [.discardMine])
+        let after = await model.awaitPage { !$0.resolvedRows.isEmpty }
+        #expect(after?.resolvedRows.map(\.entry.outcome) == ["Let go"])
+        #expect(model.undoOffer?.message == "Let go")
+    }
+
+    @Test("inline fix on every other repair keeps this phone's side")
+    func inlineFixKeepsMine() {
+        for kind: InventoryRepairKind in [
+            .conflict, .codeCollision, .deletedElsewhere, .photoFailed,
+        ] {
+            #expect(InventorySyncViewModel.inlineChoice(for: kind) == .keepMine())
+        }
+    }
+
+    @Test("the Undo capsule repeats the ledger's own line for the resolution")
+    func capsuleReadsTheLedger() async throws {
+        let inner = InMemoryInventoryStore()
+        let repair = Fixture.repair("m1", on: "box", kind: .photoFailed)
+        inner.addRepair(repair)
+        let model = InventorySyncViewModel(store: inner)
+        let (task, _) = await model.startAndAwaitFirstAnswer()
+        defer { task.cancel() }
+        _ = await model.awaitPage { !$0.repairRows.isEmpty }
+
+        await model.resolveInline(repair)
+
+        #expect(model.undoOffer?.message == "Photo retried")
+    }
+
     @Test("a waiting mutation with no progress marks queued; sending marks synchronizing")
     func waitingRowProgressMarksState() async throws {
         let store = InMemoryInventoryStore(
