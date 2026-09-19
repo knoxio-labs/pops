@@ -80,7 +80,8 @@ internal struct SyncMeta {
     /// say: a snapshot in progress is downloading, one never started is
     /// empty, and a completed one is current until its last complete refresh
     /// is older than `staleAfter`. Offline, refreshing and blocked depend on
-    /// the network and the session, which the replica does not see.
+    /// the network and the session, which only the store driving the
+    /// replica sees; `ReplicaActivity` layers them on top.
     func status(now: Date, staleAfter: TimeInterval) -> InventoryReplicaStatus {
         if snapshotCursor != nil {
             let progress = snapshotTotal > 0 ? Double(snapshotRows) / Double(snapshotTotal) : 0

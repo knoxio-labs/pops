@@ -13,12 +13,16 @@ internal final class ReplicaReader: InventoryQuerySource {
     private let database: DatabaseQueue
     private let now: Date
     private let staleAfter: TimeInterval
+    private let activity: ReplicaActivity
     private let firstFailure = Mutex<(any Error)?>(nil)
 
-    init(database: DatabaseQueue, now: Date, staleAfter: TimeInterval) {
+    init(
+        database: DatabaseQueue, now: Date, staleAfter: TimeInterval, activity: ReplicaActivity
+    ) {
         self.database = database
         self.now = now
         self.staleAfter = staleAfter
+        self.activity = activity
     }
 
     var failure: (any Error)? { firstFailure.withLock { $0 } }
@@ -96,7 +100,12 @@ internal final class ReplicaReader: InventoryQuerySource {
     }
 
     func inventoryReplicaStatus() -> InventoryReplicaStatus {
-        attempt(.empty) { try SyncMeta.read($0).status(now: now, staleAfter: staleAfter) }
+        attempt(.empty) { db in
+            let meta = try SyncMeta.read(db)
+            return activity.overlay(
+                on: meta.status(now: now, staleAfter: staleAfter), lastRefreshAt: meta.lastRefreshAt
+            )
+        }
     }
 
     private func attempt<Value>(_ fallback: Value, _ read: (Database) throws -> Value) -> Value {

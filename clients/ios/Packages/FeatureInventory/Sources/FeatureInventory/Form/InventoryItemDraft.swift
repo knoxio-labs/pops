@@ -54,7 +54,7 @@ internal struct InventoryItemDraft: Hashable, Sendable {
         self.init(id: item.id, placement: item.placement, placementName: placementName)
         name = item.name
         typeKey = item.typeKey
-        fields = item.fields.mapValues(InventoryFieldEntry.init)
+        fields = item.fields.compactMapValues(InventoryFieldEntry.init)
         note = item.note ?? ""
         code = InventoryCodeEntry(value: item.code ?? "")
         identifiers = item.externalIds.map(InventoryIdentifierDraft.init)

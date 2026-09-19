@@ -40,6 +40,7 @@ internal enum InventoryDetailConflicts {
         case .otherDevice(let label): label
         case .web, .service: "the server"
         case .thisDevice: "this phone"
+        case .unrecognised(_, let label): label
         case nil: "another device"
         }
     }

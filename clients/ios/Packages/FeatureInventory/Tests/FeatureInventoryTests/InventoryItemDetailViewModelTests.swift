@@ -80,7 +80,7 @@ internal struct InventoryItemDetailViewModelTests {
 
         await model.revert(entry)
 
-        #expect(store.commands == [.revertEvent(seq: 7)])
+        #expect(store.commands == [.revertEvent(seq: 7, entityKind: .item, entityId: "tv")])
     }
 
     @Test("an event that is no longer undoable sends nothing")
