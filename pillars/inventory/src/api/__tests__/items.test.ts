@@ -203,6 +203,37 @@ describe('items REST — CRUD happy paths', () => {
   });
 });
 
+describe('items REST — notes normalization (POPS-4053)', () => {
+  it('stores an all-whitespace note on create as null rather than 400', async () => {
+    const api = client();
+    const created = await api.items.create({ itemName: 'Lamp', notes: '   \n\t  ' });
+    expect(created.data.notes).toBeNull();
+  });
+
+  it('stores an all-whitespace note on update as null rather than 400', async () => {
+    const api = client();
+    const created = await api.items.create({ itemName: 'Lamp', notes: 'Fragile' });
+    const updated = await api.items.update(created.data.id, { notes: '   ' });
+    expect(updated.data.notes).toBeNull();
+  });
+
+  it('keeps a real note exactly as sent, indentation and trailing newlines included', async () => {
+    const api = client();
+    const note = '  Handle with care\n    - top shelf only\n\n';
+    const created = await api.items.create({ itemName: 'Vase', notes: note });
+    expect(created.data.notes).toBe(note);
+
+    const other = await api.items.create({ itemName: 'Vase 2' });
+    const updated = await api.items.update(other.data.id, { notes: note });
+    expect(updated.data.notes).toBe(note);
+  });
+
+  it('still rejects a whitespace-only item name with 400', async () => {
+    const api = client();
+    await expect(api.items.create({ itemName: '   ' })).rejects.toMatchObject({ status: 400 });
+  });
+});
+
 describe('items REST — idempotent create via sourceRef (POPS-2433)', () => {
   it('returns the first row rather than minting a second one for a repeated sourceRef', async () => {
     const api = client();
@@ -239,6 +270,59 @@ describe('items REST — idempotent create via sourceRef (POPS-2433)', () => {
     const second = await api.items.create({ itemName: 'Hand-typed item' });
 
     expect(second.data.id).not.toBe(first.data.id);
+  });
+
+  it('mints a NEW item for a sourceRef whose only holder was deleted, rather than resurrecting it (POPS-4053)', async () => {
+    const api = client();
+    const sourceRef = 'pops://purchases/order/p-1/item/i-1';
+
+    const first = await api.items.create({ itemName: 'Cordless Drill', sourceRef });
+    await api.items.delete(first.data.id);
+
+    const second = await api.items.create({ itemName: 'Cordless Drill (replacement)', sourceRef });
+
+    expect(second.data.id).not.toBe(first.data.id);
+    expect(second.data.itemName).toBe('Cordless Drill (replacement)');
+
+    const list = await api.items.list();
+    expect(list.data.map((row) => row.id)).toEqual([second.data.id]);
+  });
+});
+
+describe('items REST — code held by a deleted item (POPS-4053/POPS-4124)', () => {
+  it('a create naming a code held by a deleted item is a clean 409, not a 500', async () => {
+    const api = client();
+    const held = await api.items.create({ itemName: 'Old drill', assetId: 'POPS-100' });
+    await api.items.delete(held.data.id);
+
+    await expect(
+      api.items.create({ itemName: 'New drill', assetId: 'POPS-100' })
+    ).rejects.toMatchObject({ status: 409, message: expect.stringContaining('deleted') });
+
+    // The failed create minted no row: the deleted holder is the only item ever created.
+    const list = await api.items.list();
+    expect(list.data).toHaveLength(0);
+  });
+
+  it('a create naming a code still held by a live item is a clean 409', async () => {
+    const api = client();
+    await api.items.create({ itemName: 'Drill', assetId: 'POPS-200' });
+
+    await expect(
+      api.items.create({ itemName: 'Sander', assetId: 'POPS-200' })
+    ).rejects.toMatchObject({ status: 409 });
+  });
+
+  it('an update naming a code held by a deleted item says so in the 409 message', async () => {
+    const api = client();
+    const held = await api.items.create({ itemName: 'Old drill', assetId: 'POPS-300' });
+    await api.items.delete(held.data.id);
+    const other = await api.items.create({ itemName: 'Sander' });
+
+    await expect(api.items.update(other.data.id, { assetId: 'POPS-300' })).rejects.toMatchObject({
+      status: 409,
+      message: expect.stringContaining('deleted'),
+    });
   });
 });
 
@@ -326,6 +410,16 @@ describe('items REST — filters + projections', () => {
     await api.items.create({ itemName: 'A', assetId: 'POPS-001' });
     await api.items.create({ itemName: 'B', assetId: 'POPS-002' });
     await api.items.create({ itemName: 'C', assetId: 'OTHER-001' });
+
+    const count = await api.items.countByAssetPrefix('pops-');
+    expect(count.data).toBe(2);
+  });
+
+  it('countByAssetPrefix still counts a deleted holder, so the web counter never suggests an id it still holds (POPS-4053/4124)', async () => {
+    const api = client();
+    const held = await api.items.create({ itemName: 'A', assetId: 'POPS-001' });
+    await api.items.create({ itemName: 'B', assetId: 'POPS-002' });
+    await api.items.delete(held.data.id);
 
     const count = await api.items.countByAssetPrefix('pops-');
     expect(count.data).toBe(2);

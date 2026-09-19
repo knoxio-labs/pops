@@ -108,8 +108,12 @@ export const items = sqliteTable(
     ownerStaleAt: text('owner_stale_at'),
     /**
      * Idempotency key for a create driven by another pillar's fan-out, e.g.
-     * `pops://purchases/order/<id>/item/<id>`; unique so two concurrent
-     * accepts of the same slot mint one item (POPS-2433).
+     * `pops://purchases/order/<id>/item/<id>`; unique among live rows so two
+     * concurrent accepts of the same slot mint one item (POPS-2433). Freed
+     * when the item is deleted (POPS-4053): the value stays on the
+     * tombstoned row for provenance, but a later create naming the same ref
+     * mints a new item rather than colliding with, or resurrecting, the
+     * deleted one.
      */
     sourceRef: text('source_ref'),
     notionId: text('notion_id'),
@@ -126,7 +130,9 @@ export const items = sqliteTable(
   },
   (table) => [
     uniqueIndex('items_code').on(sql`${table.code} COLLATE NOCASE`),
-    uniqueIndex('items_source_ref').on(table.sourceRef),
+    uniqueIndex('items_source_ref')
+      .on(table.sourceRef)
+      .where(sql`${table.deletedAt} IS NULL`),
     uniqueIndex('items_notion_id').on(table.notionId),
     index('items_seq').on(table.seq),
     index('items_location').on(table.locationId),

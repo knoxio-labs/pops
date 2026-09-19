@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { findType, typeFieldsSchema } from '../../types/index.js';
 import { requireItem, type FieldValues } from './entities.js';
 import { CommandRejected } from './errors.js';
-import { externalIdsSchema } from './item-fields.js';
+import { externalIdsSchema, normalizeNote } from './item-fields.js';
 import { legacyItemPatchSchema } from './legacy-item-fields.js';
 import { defineOp } from './op.js';
 import { upsertSearchIndex } from './search-index.js';
@@ -15,7 +15,16 @@ const fieldsPatchSchema = z.record(z.string(), z.json().nullable());
 
 const editArgs = z.object({
   name: z.string().trim().min(1).optional(),
-  note: z.string().trim().min(1).nullable().optional(),
+  /**
+   * `undefined` leaves the note untouched; empty or whitespace-only becomes
+   * `null` rather than a 400, and anything else is kept exactly as sent
+   * (POPS-4053).
+   */
+  note: z
+    .string()
+    .nullable()
+    .optional()
+    .transform((value) => (value === undefined ? undefined : normalizeNote(value))),
   fields: fieldsPatchSchema.optional(),
   externalIds: externalIdsSchema.optional(),
   /**

@@ -3,7 +3,12 @@ import { z } from 'zod';
 import { items } from '../../db/index.js';
 import { findType, typeFieldsSchema } from '../../types/index.js';
 import { CommandRejected } from './errors.js';
-import { externalIdsSchema, itemFieldsBlobSchema, placementSchema } from './item-fields.js';
+import {
+  externalIdsSchema,
+  itemFieldsBlobSchema,
+  normalizeNote,
+  placementSchema,
+} from './item-fields.js';
 import { LEGACY_ITEM_FIELD_CODECS, legacyItemPatchSchema } from './legacy-item-fields.js';
 import { defineOp } from './op.js';
 import { assertPlacementAllowed } from './placement.js';
@@ -19,7 +24,8 @@ const createArgs = z.object({
     name: z.string().trim().min(1),
     typeKey: z.string().min(1).nullish(),
     fields: itemFieldsBlobSchema.default({}),
-    note: z.string().trim().min(1).nullish(),
+    /** Empty or whitespace-only becomes `null`; otherwise kept exactly as sent (POPS-4053). */
+    note: z.string().nullish().transform(normalizeNote),
     externalIds: externalIdsSchema.default([]),
     quantity: z.number().int().min(1).default(1),
     placement: placementSchema.default({ kind: 'hand' }),

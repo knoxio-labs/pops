@@ -122,14 +122,50 @@ export function searchByAssetId(db: InventoryDb, assetId: string): ItemRow | nul
   return row ?? null;
 }
 
+/** Who a `code` is held by, case-insensitively, tombstoned or not (POPS-4053/4124). */
+export interface CodeHolder {
+  readonly id: string;
+  readonly name: string;
+  readonly deletedAt: string | null;
+}
+
 /**
- * Count inventory items whose assetId starts with the given prefix (case-insensitive).
+ * The item already holding `code` (case-insensitive), if any, so a legacy
+ * create/update route that hits `items.code`'s unique index can report a
+ * clean 409 naming whether the holder is a deleted item rather than letting
+ * the raw constraint violation surface as a 500 (POPS-4053).
+ */
+export function findCodeHolder(db: InventoryDb, code: string): CodeHolder | undefined {
+  return db
+    .select({ id: items.id, name: items.name, deletedAt: items.deletedAt })
+    .from(items)
+    .where(sql`LOWER(${items.code}) = LOWER(${code})`)
+    .get();
+}
+
+/**
+ * Whether `id` names a tombstoned item, `undefined` when it names no item at
+ * all. Used to word a `code_collision`'s 409 message: the holder an
+ * `item.setCode` conflict names is only an id and a name, not whether it is
+ * live (POPS-4053).
+ */
+export function isItemDeleted(db: InventoryDb, id: string): boolean | undefined {
+  const row = db.select({ deletedAt: items.deletedAt }).from(items).where(eq(items.id, id)).get();
+  return row ? row.deletedAt != null : undefined;
+}
+
+/**
+ * Count inventory items whose assetId starts with the given prefix
+ * (case-insensitive), deleted items included (POPS-4053): `items.code`
+ * stays held by a deleted item (POPS-4124), so an id the web app's counter
+ * skipped counting could still collide with one. Undercounting here is what
+ * used to make the counter suggest an id already held by a tombstoned item.
  */
 export function countByAssetPrefix(db: InventoryDb, prefix: string): number {
   const [result] = db
     .select({ count: sql<number>`COUNT(*)` })
     .from(items)
-    .where(and(sql`LOWER(${items.code}) LIKE LOWER(${prefix + '%'})`, isNull(items.deletedAt)))
+    .where(sql`LOWER(${items.code}) LIKE LOWER(${prefix + '%'})`)
     .all();
   return result?.count ?? 0;
 }
@@ -162,7 +198,16 @@ export function getInventoryItem(db: InventoryDb, id: string): ItemRow {
   return row;
 }
 
-/** The row a given `source_ref` already names, if any, tombstoned or not. */
+/**
+ * The LIVE row a given `source_ref` already names, if any (POPS-4053):
+ * `items_source_ref` is unique only among live rows, so a ref held solely by
+ * a deleted item has no live holder here, and a fan-out caller (purchases)
+ * must never be handed a tombstoned row back from a create.
+ */
 export function getBySourceRef(db: InventoryDb, sourceRef: string): ItemRow | undefined {
-  return db.select().from(items).where(eq(items.sourceRef, sourceRef)).get();
+  return db
+    .select()
+    .from(items)
+    .where(and(eq(items.sourceRef, sourceRef), isNull(items.deletedAt)))
+    .get();
 }

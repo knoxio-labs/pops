@@ -8,7 +8,6 @@
 import { randomUUID } from 'node:crypto';
 
 import { type InventoryDb } from '../../db/index.js';
-import { isSourceRefConflict } from '../../db/services/source-ref-conflict.js';
 import {
   wirePlacementForCreate,
   wirePlacementForUpdate,
@@ -18,6 +17,7 @@ import { toInventoryItem } from '../modules/items/types.js';
 import { ConflictError, NotFoundError, ValidationError } from '../shared/errors.js';
 import { inOneLegacyWrite, runLegacyMutation } from './command-bridge.js';
 import { runHttp } from './error-mapping.js';
+import { formatCodeCollisionMessage, resolveCreateInsertError } from './items-write-conflicts.js';
 
 import type { ServerInferRequest } from '@ts-rest/core';
 
@@ -82,7 +82,7 @@ function placementTarget(body: {
  * `target_missing`/`not_container` rejection refused; omit it for a
  * rejection that names none (an item edit's own field checks).
  */
-function throwForItemOutcome(outcome: Outcome, target?: PlacementTarget): never {
+function throwForItemOutcome(db: InventoryDb, outcome: Outcome, target?: PlacementTarget): never {
   if (outcome.status === 'rejected') {
     if (outcome.reason === 'target_missing' || outcome.reason === 'not_container') {
       throw new NotFoundError(target?.resource ?? 'Container', target?.id ?? outcome.message);
@@ -94,7 +94,8 @@ function throwForItemOutcome(outcome: Outcome, target?: PlacementTarget): never 
   }
   if (outcome.status === 'conflict') {
     if (outcome.kind === 'code_collision') {
-      throw new ConflictError(`Asset id already used by ${outcome.heldBy.name}`);
+      const holderIsDeleted = service.isItemDeleted(db, outcome.heldBy.id) === true;
+      throw new ConflictError(formatCodeCollisionMessage(outcome.heldBy.name, holderIsDeleted));
     }
     throw new ConflictError(`conflict: ${outcome.kind}`);
   }
@@ -109,7 +110,7 @@ interface ItemMutationRequest extends LegacyMutationRequest {
 /** Run a legacy item mutation, throwing the mapped `HttpError` when it did not apply. */
 function applyItemMutation(db: InventoryDb, request: ItemMutationRequest): void {
   const outcome = runLegacyMutation(db, request);
-  if (outcome.status !== 'applied') throwForItemOutcome(outcome, request.target);
+  if (outcome.status !== 'applied') throwForItemOutcome(db, outcome, request.target);
 }
 
 function handleCreate(db: InventoryDb, body: Req['create']['body']) {
@@ -126,22 +127,17 @@ function handleCreate(db: InventoryDb, body: Req['create']['body']) {
   try {
     outcome = runLegacyMutation(db, { op: 'item.create', entityId: id, args, baseRevision: null });
   } catch (err) {
-    if (
-      typeof body.sourceRef === 'string' &&
-      body.sourceRef.length > 0 &&
-      isSourceRefConflict(err)
-    ) {
-      const existing = service.getBySourceRef(db, body.sourceRef);
-      if (existing) {
-        return {
-          status: 201 as const,
-          body: { data: toInventoryItem(existing), message: 'Inventory item created' },
-        };
-      }
+    const resolution = resolveCreateInsertError(db, body, err);
+    if (resolution.kind === 'existingRow') {
+      return {
+        status: 201 as const,
+        body: { data: toInventoryItem(resolution.row), message: 'Inventory item created' },
+      };
     }
+    if (resolution.kind === 'conflict') throw new ConflictError(resolution.message);
     throw err;
   }
-  if (outcome.status !== 'applied') throwForItemOutcome(outcome, placementTarget(body));
+  if (outcome.status !== 'applied') throwForItemOutcome(db, outcome, placementTarget(body));
 
   return {
     status: 201 as const,
