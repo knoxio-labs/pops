@@ -111,9 +111,11 @@ adopting the shape purchases already carries. It is derived from
 `inventoryContract` rather than a hand-kept path list, so a new route —
 including the sync surface `rest-sync.ts` adds — is gated the moment it
 exists. `/health`, `/pillars` and `/openapi` are outside the contract and
-stay ungated, and so are the raw byte-serving photo/document/thumbnail routes
-in `files/router.ts`, matching prior behaviour: this slice adds a gate over
-the ts-rest surface, not a general perimeter.
+stay ungated. The raw byte-serving routes in `files/router.ts` and
+`media/router.ts` are not contract routes either, but they are declared to
+the gate explicitly (`photos.file`, `documentFiles.file`,
+`documents.thumbnail`, `inventory.media.upload`, `inventory.media.read`) and
+held to the same scope semantics as the contract surface.
 
 A caller presenting an `X-API-Key` is held to the service account behind it:
 an unknown or revoked key is `401`, a live key whose grant misses the
