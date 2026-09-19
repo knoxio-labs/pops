@@ -42,12 +42,29 @@ internal struct ContentView: View {
             }
     }
 
-    /// Every available feature, in the BFM's order.
+    /// Identifies Inventory's search tab in the switcher below. Not a
+    /// `MobileFeature` the BFM ever sends — the search tab is a sibling this
+    /// file adds whenever Inventory itself is available, not a feature of
+    /// its own — but the same hashable type as `.tag(feature)` uses, so the
+    /// two coexist in one `TabView` without a second tag type to reconcile.
+    nonisolated internal static let inventorySearchTab = MobileFeature(rawValue: "inventory.search")
+
+    /// Whether Inventory is among the BFM's available features, and so
+    /// whether its search tab — mirroring the approved shell's tab bar,
+    /// which always shows Inventory's search alongside Inventory itself —
+    /// belongs in the switcher.
+    private var hasInventorySearch: Bool {
+        surface.available.contains(FeatureInventory.feature)
+    }
+
+    /// Every available feature, in the BFM's order, plus Inventory's search
+    /// sibling when Inventory is one of them.
     ///
-    /// Zero gets the explanation below. Exactly one fills the screen outright —
-    /// the shipped single-feature look, unchanged, because a tab bar with one
-    /// tab is chrome nobody asked for. Two or more get a `TabView`, one tab per
-    /// feature.
+    /// Zero gets the explanation below. Exactly one fills the screen outright
+    /// — the shipped single-feature look, unchanged, because a tab bar with
+    /// one tab is chrome nobody asked for — unless that one feature is
+    /// Inventory, whose search sibling makes it two. Two or more (with or
+    /// without that sibling) get a `TabView`, one tab per feature.
     ///
     /// The `TabView` is given its selection rather than left to track one on
     /// its own. Left alone, it dropped back to the first tab whenever a tab's
@@ -57,10 +74,10 @@ internal struct ContentView: View {
     /// implicit selection was simply lost. `receipt-manual-entry.yaml` is the
     /// flow that catches it.
     @ViewBuilder private var features: some View {
-        switch surface.available.count {
-        case 0:
+        switch (surface.available.count, hasInventorySearch) {
+        case (0, _):
             unavailableExplanation
-        case 1:
+        case (1, false):
             screen(for: surface.available[0])
         default:
             TabView(selection: selection) {
@@ -74,13 +91,28 @@ internal struct ContentView: View {
                         }
                         .tag(feature)
                 }
+                if hasInventorySearch {
+                    Tab(value: Self.inventorySearchTab, role: .search) {
+                        InventorySearchFlowView(
+                            dependencies: dependencies, entityRouter: composition.entityRouter)
+                    }
+                }
             }
         }
     }
 
+    /// Every tab the switcher shows, in order: the BFM's features, then
+    /// Inventory's search sibling when Inventory is one of them. The selection
+    /// is checked against this rather than the features alone, or choosing
+    /// the search tab would read as a feature the BFM no longer offers and
+    /// bounce back to the first tab.
+    nonisolated internal static func tabs(for available: [MobileFeature]) -> [MobileFeature] {
+        available.contains(FeatureInventory.feature) ? available + [inventorySearchTab] : available
+    }
+
     private var selection: Binding<MobileFeature> {
         Binding(
-            get: { Self.shownFeature(chosen: chosenFeature, available: surface.available) },
+            get: { Self.shownFeature(chosen: chosenFeature, available: Self.tabs(for: surface.available)) },
             set: { chosenFeature = $0 }
         )
     }
