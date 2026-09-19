@@ -28,4 +28,9 @@ internal enum ReceiptDraftAccessibility {
     internal static let reconciliation = "receipt-draft-reconciliation"
     internal static let saveButton = "receipt-draft-save"
     internal static let saveAndAddAnotherButton = "receipt-draft-save-add-another"
+    /// Inside the sheet a merchant or address field opens: the name to create
+    /// a new record under, and the button that creates it. Shared by both
+    /// fields, which is safe because only one sheet is ever presented.
+    internal static let newRecordName = "receipt-draft-record-new-name"
+    internal static let createRecord = "receipt-draft-record-create"
 }

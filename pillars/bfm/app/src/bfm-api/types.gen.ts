@@ -1890,7 +1890,7 @@ export type MobilePurchasesCreateManualPurchaseData = {
       lineTotalCents: number;
       name: string;
       notes: Array<string>;
-      quantity: number | null;
+      quantity?: number | null;
       unitPriceCents: number;
     }>;
     merchantName: string | null;
@@ -2038,7 +2038,7 @@ export type MobilePurchasesSaveReceiptDraftData = {
       lineTotalCents: number;
       name: string;
       notes: Array<string>;
-      quantity: number | null;
+      quantity?: number | null;
       unitPriceCents: number;
     }>;
     merchantName: string | null;
@@ -2299,7 +2299,7 @@ export type MobilePurchasesExtractReceiptResponses = {
             lineTotalCents: number;
             name: string;
             notes: Array<string>;
-            quantity: number | null;
+            quantity?: number | null;
             unitPriceCents: number;
           }>;
           merchantName: string | null;

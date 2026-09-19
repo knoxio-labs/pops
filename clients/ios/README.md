@@ -121,7 +121,15 @@ The indirection through a generated local file is not decoration. A project-refe
 
 No certificate, profile or key is in the tree, and none should be: automatic signing fetches them, and the first device build needs `-allowProvisioningUpdates` — which `build:device` passes — so it can register the App ID and pull down a profile.
 
+### Local and TestFlight flavours
+
+Every build is the **local** flavour unless it says otherwise: `com.knoxiolabs.pops.local` (and `com.knoxiolabs.pops.playground.local`), an icon with an amber LOCAL band, and "Pops Local" / "Design Local" on the home screen. So a build from a laptop installs beside the TestFlight app instead of replacing it, pairs separately, and keeps its own keychain. One build setting decides it, `POPS_FLAVOR` in `project.yml`; only `scripts/testflight.sh` passes `POPS_FLAVOR=testflight`, and it reads the archived identifier back and refuses to upload anything but the exact shipped one. Tests and the Maestro flows run the local flavour, which is why they name `com.knoxiolabs.pops.local`.
+
+Both apps register the `pops://` URL scheme, so with both installed iOS picks one of them to open such a link (POPS-4183).
+
 ### On the phone
+
+**`mise run install:phone`** (or `install:phone PopsPlayground`) builds the local flavour for Release, installs it on the one paired iPhone with `xcrun devicectl` and launches it; `POPS_DEVICE` names a phone when several are paired. It refuses to install a build whose identifier is not `.local`. The steps below are the Xcode route, and the one-time phone setup either route needs.
 
 1. **Enable Developer Mode** — Settings → Privacy & Security → Developer Mode. The phone restarts.
 2. **Pick the destination in Xcode** — open `Pops.xcodeproj`, choose the `Pops` scheme and the phone in the destination menu, then Run. For a Release build, Product → Scheme → Edit Scheme → Run → Build Configuration → Release first; the Run action defaults to Debug, and the two configurations differ in a way that matters here.

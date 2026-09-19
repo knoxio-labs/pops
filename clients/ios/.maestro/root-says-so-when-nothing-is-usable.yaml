@@ -1,4 +1,4 @@
-appId: com.knoxiolabs.pops
+appId: com.knoxiolabs.pops.local
 name: The root screen says why nothing is usable, and Try again leaves it
 ---
 # An unpaired launch, every time — the credentials live in the keychain,

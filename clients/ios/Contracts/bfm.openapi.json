@@ -5322,7 +5322,7 @@
                           "type": "integer"
                         }
                       },
-                      "required": ["name", "quantity", "unitPriceCents", "lineTotalCents", "notes"],
+                      "required": ["name", "unitPriceCents", "lineTotalCents", "notes"],
                       "type": "object"
                     },
                     "minItems": 1,
@@ -5804,7 +5804,7 @@
                           "type": "integer"
                         }
                       },
-                      "required": ["name", "quantity", "unitPriceCents", "lineTotalCents", "notes"],
+                      "required": ["name", "unitPriceCents", "lineTotalCents", "notes"],
                       "type": "object"
                     },
                     "minItems": 1,
@@ -6360,13 +6360,7 @@
                                     "type": "integer"
                                   }
                                 },
-                                "required": [
-                                  "name",
-                                  "quantity",
-                                  "unitPriceCents",
-                                  "lineTotalCents",
-                                  "notes"
-                                ],
+                                "required": ["name", "unitPriceCents", "lineTotalCents", "notes"],
                                 "type": "object"
                               },
                               "type": "array"

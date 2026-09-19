@@ -1,4 +1,4 @@
-appId: com.knoxiolabs.pops
+appId: com.knoxiolabs.pops.local
 name: A pillar answering something unreadable reads differently from unavailable
 ---
 - clearState

@@ -98,8 +98,19 @@ internal struct AppBundleTests {
     /// `Bundle.main` and means nothing if the tests are running unhosted — in
     /// that case `Bundle.main` is the runner, and a missing key would be
     /// reported against the wrong bundle.
+    ///
+    /// The `.local` identifier is the local flavour's, and tests only ever run
+    /// against a local build: only `scripts/testflight.sh` builds the shipped
+    /// flavour, and it runs no tests.
     @Test("the tests are running inside the app, not beside it")
     func areHostedByTheApp() {
-        #expect(Bundle.main.bundleIdentifier == "com.knoxiolabs.pops")
+        #expect(Bundle.main.bundleIdentifier == "com.knoxiolabs.pops.local")
+    }
+
+    /// The home-screen name is how a local install is told apart from the
+    /// TestFlight one at a glance, alongside its marked icon.
+    @Test("a local build says so on the home screen")
+    func namesItselfLocal() {
+        #expect(infoValue("CFBundleDisplayName") as? String == "Pops Local")
     }
 }

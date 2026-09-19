@@ -1,4 +1,4 @@
-appId: com.knoxiolabs.pops
+appId: com.knoxiolabs.pops.local
 name: An expired access token is renewed without the screen noticing
 ---
 # Unpaired every time, for the reason `pairing-to-transaction-detail.yaml`

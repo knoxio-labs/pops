@@ -1,4 +1,4 @@
-appId: com.knoxiolabs.pops
+appId: com.knoxiolabs.pops.local
 name: Enter the pairing details and submit them
 ---
 # The half of the pairing screen every flow drives identically, in one place so
