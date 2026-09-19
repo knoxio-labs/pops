@@ -1,3 +1,4 @@
+import Foundation
 import GRDB
 
 /// The replica's tables, per ADR-002's iOS replica design. Migrations are
@@ -11,6 +12,78 @@ import GRDB
 internal enum ReplicaSchema {
     static let itemLayers = ["item_base", "item"]
     static let locationLayers = ["location_base", "location"]
+
+    /// The mutation log's table name, fixed here so the on-disk fallback
+    /// knows what to keep even though the table itself does not exist until
+    /// the log lands (POPS-4071): a migration registered after that will
+    /// create it under this same name.
+    static let mutationLogTableName = "mutation_log"
+
+    /// Opens (or creates) the on-disk replica at `path` and brings it to the
+    /// current schema, in WAL journal mode with `synchronous = FULL` so a
+    /// commit survives power loss (ADR-002 D11: "durability before
+    /// success").
+    ///
+    /// A migration that cannot run -- a corrupt file, a schema this build
+    /// does not recognise -- falls back to a fresh snapshot: every table is
+    /// dropped and recreated except ``mutationLogTableName``, whose rows
+    /// (this phone's queued, not-yet-sent changes) survive the reset so
+    /// nothing staged is lost, only replayed against a clean base.
+    static func openOnDisk(
+        at path: String, migrator: DatabaseMigrator = Self.migrator()
+    ) throws -> DatabaseQueue {
+        var configuration = Configuration()
+        configuration.prepareDatabase { db in
+            try db.execute(sql: "PRAGMA journal_mode = WAL")
+            try db.execute(sql: "PRAGMA synchronous = FULL")
+        }
+        let queue = try DatabaseQueue(path: path, configuration: configuration)
+        do {
+            try migrator.migrate(queue)
+        } catch {
+            try fallBackToFreshSnapshot(queue, at: path, using: migrator)
+        }
+        return queue
+    }
+
+    /// Copies ``mutationLogTableName`` out to a sibling file, erases the
+    /// database, migrates it from empty, then copies the table back in. The
+    /// copy goes through a second on-disk database (via `ATTACH`) rather
+    /// than reading rows into memory, so the preserved table's own columns
+    /// never have to be known here.
+    private static func fallBackToFreshSnapshot(
+        _ queue: DatabaseQueue, at path: String, using migrator: DatabaseMigrator
+    ) throws {
+        let backupPath = path + ".fallback-\(UUID().uuidString)"
+        defer { try? FileManager.default.removeItem(atPath: backupPath) }
+        let hadLog = try queue.read { try $0.tableExists(mutationLogTableName) }
+        if hadLog {
+            try queue.writeWithoutTransaction { db in
+                try db.execute(
+                    sql: "ATTACH DATABASE ? AS fallback_backup", arguments: [backupPath])
+                try db.execute(
+                    sql: """
+                        CREATE TABLE fallback_backup.\(mutationLogTableName)
+                        AS SELECT * FROM main.\(mutationLogTableName)
+                        """)
+                try db.execute(sql: "DETACH DATABASE fallback_backup")
+            }
+        }
+        try queue.erase()
+        try migrator.migrate(queue)
+        guard hadLog else { return }
+        try queue.writeWithoutTransaction { db in
+            try db.execute(sql: "ATTACH DATABASE ? AS fallback_backup", arguments: [backupPath])
+            if try db.tableExists(mutationLogTableName) {
+                try db.execute(
+                    sql: """
+                        INSERT INTO main.\(mutationLogTableName)
+                        SELECT * FROM fallback_backup.\(mutationLogTableName)
+                        """)
+            }
+            try db.execute(sql: "DETACH DATABASE fallback_backup")
+        }
+    }
 
     static func migrator() -> DatabaseMigrator {
         var migrator = DatabaseMigrator()
