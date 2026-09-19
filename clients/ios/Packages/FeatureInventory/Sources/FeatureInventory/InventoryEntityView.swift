@@ -52,7 +52,7 @@ private struct InventoryEntityRoot: View {
             if let resolved {
                 InventoryDestinationView(route: resolved, store: store, entityRouter: entityRouter)
             } else {
-                ProgressView()
+                InventoryItemDetailSkeleton()
             }
         }
         .task(id: entity) { await resolve() }

@@ -32,4 +32,20 @@ internal struct InventoryEntityViewWiringTests {
             "InventoryEntityView no longer installs the sync interruption sheet"
         )
     }
+
+    /// POPS-4195: this build shows shimmer, never a spinner, while something
+    /// loads. `ProgressView` reappearing here would be exactly that
+    /// regression, on the one screen that waits on a read before it knows
+    /// which route to draw.
+    @Test("resolving which screen to draw shows the shimmer skeleton, not a spinner")
+    func resolvingShowsShimmerNotASpinner() {
+        #expect(
+            Self.source.contains("InventoryItemDetailSkeleton()"),
+            "the resolving state no longer shows the shimmer skeleton"
+        )
+        #expect(
+            !Self.source.contains("ProgressView()"),
+            "a spinner is back in a build that shows shimmer instead"
+        )
+    }
 }
