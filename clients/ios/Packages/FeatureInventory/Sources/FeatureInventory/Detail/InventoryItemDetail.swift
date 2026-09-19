@@ -1,5 +1,4 @@
 import AppCore
-import Foundation
 
 /// One item as Item detail's header, action row and menu need it: what a
 /// person reads, with every reference already resolved to a name.
