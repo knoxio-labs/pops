@@ -644,6 +644,20 @@ export const EXPECTATIONS = [
     query: ['limit', 'offset'],
     usedBy: 'pillars/cerebrum/src/api/modules/retrieval/peer-clients.ts',
   },
+  {
+    consumer: 'inventory',
+    producer: 'ai',
+    operationId: 'codes.rank',
+    path: '/codes/rank',
+    method: 'post',
+    // The whole payload is a body (`name`, optional `typeKey`, and the
+    // deterministic candidates to reorder) — this guard does not model
+    // bodies. What it can pin is that the operation still exists as a POST,
+    // so a rename or drop breaks loudly here rather than as a silent
+    // permanent fallback to the deterministic order in production.
+    query: [],
+    usedBy: 'pillars/inventory/src/api/ai/client.ts',
+  },
 ];
 
 /**
@@ -739,21 +753,6 @@ export const KNOWN_BROKEN_OPERATIONS = [
       'pillars/registry/src/contract/__tests__/openapi.test.ts). Repointing or retiring that ' +
       'script is a change to one-shot migration business logic, not to this guard, so it is ' +
       'tracked as its own piece of work rather than folded into a coverage-granularity fix.',
-  },
-  {
-    consumer: 'inventory',
-    producer: 'ai',
-    operationId: 'codes.rank',
-    reason:
-      "pillars/inventory/src/api/ai/client.ts's createAiClient() resolves to this operation " +
-      "through its local AiRouter type, but this is the OPPOSITE of this list's usual shape: " +
-      'the ai pillar has never published `codes.rank` — inventory ADR-002 D7 names "an AI ' +
-      'ranking behind the same [codes/suggest] route in Phase C" without specifying the ai ' +
-      "pillar's contract, and POPS-4081's slice is inventory-only (delivery-plan.md). Ranking " +
-      'always falls back to the deterministic order in this process; the client, the ' +
-      'credential plumbing and the fallback/permutation-validation contract are all real and ' +
-      'tested. Adding the route is its own ai-pillar-side ticket (auth mechanism, whether to ' +
-      'call a model at all) — not a change to this guard, and not decided unilaterally here.',
   },
 ];
 

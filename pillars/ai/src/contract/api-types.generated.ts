@@ -348,6 +348,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/codes/rank': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Rank candidate inventory codes most-likely-first (deterministic, no model call) */
+    post: operations['codes.rank'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/jobs': {
     parameters: {
       query?: never;
@@ -1926,6 +1943,60 @@ export interface operations {
             totalCost: number;
             totalInputTokens: number;
             totalOutputTokens: number;
+          };
+        };
+      };
+    };
+  };
+  'codes.rank': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          candidates: string[];
+          name: string;
+          typeKey?: string;
+        };
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            ranked: string[];
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+          };
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            message: string;
           };
         };
       };
