@@ -279,3 +279,168 @@ describe('paths the contract does not describe', () => {
     expect(verify).not.toHaveBeenCalled();
   });
 });
+
+describe('declared raw routes', () => {
+  const rawRoutes = {
+    blobs: {
+      upload: { method: 'PUT', path: '/blobs/:sha256' },
+      read: { method: 'GET', path: '/blobs/:sha256' },
+    },
+  };
+
+  function rawApp(verify: ServiceAccountVerifier, requireCredential?: boolean): Express {
+    const gate = createServiceAccountScopeGate({
+      contract,
+      rootScope: 'widgets',
+      logPrefix: 'widgets-api',
+      requireCredential,
+      rawRoutes,
+    });
+    const app = express();
+    app.get('/health', (_req, res) => {
+      res.json({ ok: true });
+    });
+    app.use(gate.createMiddleware(verify));
+    app.get('/orders', (_req, res) => {
+      res.json({ orders: [] });
+    });
+    app.put('/blobs/:sha256', (_req, res) => {
+      res.status(201).json({ stored: true });
+    });
+    app.get('/blobs/:sha256', (_req, res) => {
+      res.json({ bytes: 'secret' });
+    });
+    app.get('/undeclared/:id', (_req, res) => {
+      res.json({ open: true });
+    });
+    return app;
+  }
+
+  it('projects them under the root beside the contract, not into it', () => {
+    const gate = createServiceAccountScopeGate({
+      contract,
+      rootScope: 'widgets',
+      logPrefix: 'widgets-api',
+      rawRoutes,
+    });
+
+    expect(gate.rawScopeMap.routes.map((route) => route.scope).toSorted()).toEqual([
+      'widgets.blobs.read',
+      'widgets.blobs.upload',
+    ]);
+    expect(gate.scopeMap.routes).toHaveLength(4);
+  });
+
+  it('project to nothing when none are declared, leaving every non-contract path untouched', () => {
+    const gate = createServiceAccountScopeGate({
+      contract,
+      rootScope: 'widgets',
+      logPrefix: 'widgets-api',
+    });
+
+    expect(gate.rawScopeMap.routes).toHaveLength(0);
+  });
+
+  it.each([
+    ['PUT', 'widgets.blobs'],
+    ['GET', 'widgets.blobs'],
+    ['PUT', 'widgets'],
+    ['GET', 'widgets.blobs.read'],
+  ] as const)('admit %s under a grant of %s where it covers the route', async (method, scope) => {
+    const agent = request(rawApp(verifierReturning(grantedScopes([scope]))));
+    const response = await (method === 'PUT' ? agent.put('/blobs/abc') : agent.get('/blobs/abc'))
+      .set('x-api-key', KEY)
+      .send();
+
+    expect(response.status).toBe(method === 'PUT' ? 201 : 200);
+  });
+
+  it.each(['PUT', 'GET'] as const)(
+    '403 a %s from a key whose grant covers only the contract',
+    async (method) => {
+      const agent = request(rawApp(verifierReturning(grantedScopes(['widgets.orders']))));
+      const response = await (method === 'PUT' ? agent.put('/blobs/abc') : agent.get('/blobs/abc'))
+        .set('x-api-key', KEY)
+        .send();
+
+      expect(response.status).toBe(403);
+    }
+  );
+
+  it('403 an upload from a key granted only the read leaf', async () => {
+    const response = await request(rawApp(verifierReturning(grantedScopes(['widgets.blobs.read']))))
+      .put('/blobs/abc')
+      .set('x-api-key', KEY);
+
+    expect(response.status).toBe(403);
+  });
+
+  it('name the raw scope in the rejection log', async () => {
+    const warn = vi.spyOn(console, 'warn');
+    await request(rawApp(verifierReturning(grantedScopes(['widgets.orders']))))
+      .put('/blobs/abc')
+      .set('x-api-key', KEY);
+
+    expect(warn.mock.calls.flat().join(' ')).toContain('widgets.blobs.upload');
+  });
+
+  it('401 a key the registry rejects, and 503 when it cannot be asked', async () => {
+    const rejected = await request(rawApp(verifierReturning({ outcome: 'rejected' })))
+      .get('/blobs/abc')
+      .set('x-api-key', KEY);
+    const unavailable = await request(
+      rawApp(verifierReturning({ outcome: 'unavailable', detail: 'ECONNREFUSED' }))
+    )
+      .get('/blobs/abc')
+      .set('x-api-key', KEY);
+
+    expect(rejected.status).toBe(401);
+    expect(unavailable.status).toBe(503);
+  });
+
+  it('admit a request with no key under the default posture, as a contract route would', async () => {
+    const verify = vi.fn(verifierReturning({ outcome: 'rejected' }));
+    const response = await request(rawApp(verify)).put('/blobs/abc');
+
+    expect(response.status).toBe(201);
+    expect(verify).not.toHaveBeenCalled();
+  });
+
+  it('401 a request with no key when the pillar requires a credential, as a contract route would', async () => {
+    const response = await request(rawApp(verifierReturning({ outcome: 'rejected' }), true)).get(
+      '/blobs/abc'
+    );
+
+    expect(response.status).toBe(401);
+  });
+
+  it('leave a raw path nobody declared untouched, even under a rejected key', async () => {
+    const response = await request(rawApp(verifierReturning({ outcome: 'rejected' })))
+      .get('/undeclared/abc')
+      .set('x-api-key', KEY);
+
+    expect(response.status).toBe(200);
+  });
+
+  it('refuse a declaration the contract already covers, whose scope could never apply', () => {
+    expect(() =>
+      createServiceAccountScopeGate({
+        contract,
+        rootScope: 'widgets',
+        logPrefix: 'widgets-api',
+        rawRoutes: { shadow: { get: { method: 'get', path: '/orders/:orderId' } } },
+      })
+    ).toThrow(/widgets\.orders\.get/);
+  });
+
+  it('refuse a declaration that projects to no route at all', () => {
+    expect(() =>
+      createServiceAccountScopeGate({
+        contract,
+        rootScope: 'widgets',
+        logPrefix: 'widgets-api',
+        rawRoutes: {},
+      })
+    ).toThrow(/widgets-api/);
+  });
+});

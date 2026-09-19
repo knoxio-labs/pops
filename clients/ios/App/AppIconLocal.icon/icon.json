@@ -1,0 +1,66 @@
+{
+  "fill": {
+    "linear-gradient": [
+      "display-p3:0.12059,0.13284,0.19482,1.00000",
+      "display-p3:0.03671,0.04289,0.06837,1.00000"
+    ]
+  },
+  "groups": [
+    {
+      "layers": [
+        {
+          "blend-mode": "normal",
+          "image-name": "local-badge.png",
+          "name": "Local badge",
+          "opacity": 1,
+          "position": {
+            "scale": 1,
+            "translation-in-points": [
+              0,
+              0
+            ]
+          }
+        }
+      ],
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.35
+      },
+      "translucency": {
+        "enabled": false,
+        "value": 0
+      }
+    },
+    {
+      "layers": [
+        {
+          "blend-mode": "normal",
+          "image-name": "layer-weave.png",
+          "name": "Weave",
+          "opacity": 1,
+          "position": {
+            "scale": 0.5,
+            "translation-in-points": [
+              0,
+              0
+            ]
+          }
+        }
+      ],
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.35
+      },
+      "translucency": {
+        "enabled": false,
+        "value": 0
+      }
+    }
+  ],
+  "supported-platforms": {
+    "circles": [
+      "watchOS"
+    ],
+    "squares": "shared"
+  }
+}

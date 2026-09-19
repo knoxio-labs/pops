@@ -63,6 +63,9 @@ import type {
   AiUsageGetHistoryResponses,
   AiUsageGetStatsData,
   AiUsageGetStatsResponses,
+  CodesRankData,
+  CodesRankErrors,
+  CodesRankResponses,
   JobsCancelData,
   JobsCancelErrors,
   JobsCancelResponses,
@@ -474,6 +477,21 @@ export const aiUsageGetStats = <ThrowOnError extends boolean = false>(
   (options?.client ?? client).get<AiUsageGetStatsResponses, unknown, ThrowOnError>({
     url: '/ai-usage/stats',
     ...options,
+  });
+
+/**
+ * Rank candidate inventory codes most-likely-first (deterministic, no model call)
+ */
+export const codesRank = <ThrowOnError extends boolean = false>(
+  options?: Options<CodesRankData, ThrowOnError>
+): RequestResult<CodesRankResponses, CodesRankErrors, ThrowOnError> =>
+  (options?.client ?? client).post<CodesRankResponses, CodesRankErrors, ThrowOnError>({
+    url: '/codes/rank',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
   });
 
 /**

@@ -1,6 +1,7 @@
 import { itemSetAccess, itemSetFull } from './access.js';
 import { itemSetCode } from './item-code.js';
 import { itemCreate } from './item-create.js';
+import { itemDelete } from './item-delete.js';
 import { itemEdit } from './item-edit.js';
 import { itemAttachPhoto, itemRemovePhoto, itemReorderPhotos } from './item-photos.js';
 import { itemSetQuantity } from './item-quantity.js';
@@ -36,6 +37,7 @@ export const COMMAND_REGISTRY: OpRegistry = buildRegistry([
   eventRevert,
   itemCreate,
   itemEdit,
+  itemDelete,
   itemChangeType,
   itemSetCode,
   itemSetQuantity,

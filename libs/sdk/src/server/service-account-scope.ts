@@ -67,17 +67,19 @@ const REGEX_SPECIALS = /[.*+?^${}()|[\]\\]/g;
 
 /**
  * Compile a ts-rest path into an anchored matcher. `:param` segments match a
- * single non-empty path segment; a trailing slash is tolerated because Express
- * routes non-strictly by default.
+ * single non-empty path segment; a trailing slash is tolerated and case is
+ * ignored, because Express routes both non-strictly by default. A matcher
+ * stricter than the router is a bypass: `POST /ITEMS` reaches the
+ * `/items` handler, so it must resolve to that handler's scope.
  */
 function compilePath(path: string): RegExp {
   const escaped = path.replace(REGEX_SPECIALS, '\\$&');
   const withParams = escaped.replace(/\/:[A-Za-z0-9_]+/g, '/([^/]+)');
-  return new RegExp(`^${withParams}/?$`);
+  return new RegExp(`^${withParams}/?$`, 'i');
 }
 
 function literalKey(method: string, path: string): string {
-  return `${method} ${path}`;
+  return `${method} ${path.toLowerCase()}`;
 }
 
 function collectRoutes(
@@ -112,10 +114,28 @@ export function buildContractScopeMap(router: unknown, rootScope: string): Contr
     if (route.path.includes('/:')) {
       patterns.push({ method: route.method, regex: compilePath(route.path), scope: route.scope });
     } else {
-      literal.set(literalKey(route.method, route.path), route.scope);
+      const key = literalKey(route.method, route.path);
+      const existingScope = literal.get(key);
+      if (existingScope !== undefined) {
+        throw new Error(
+          `buildContractScopeMap: ${route.method} ${route.path} is already registered ` +
+            `(as scope ${existingScope}) — two contract routes differ only by path case, ` +
+            `which the case-insensitive scope gate cannot tell apart`
+        );
+      }
+      literal.set(key, route.scope);
     }
   }
   return { routes, literal, patterns };
+}
+
+function resolveForMethod(map: ContractScopeMap, method: string, path: string): string | undefined {
+  const exact = map.literal.get(literalKey(method, path));
+  if (exact !== undefined) return exact;
+  for (const candidate of map.patterns) {
+    if (candidate.method === method && candidate.regex.test(path)) return candidate.scope;
+  }
+  return undefined;
 }
 
 /**
@@ -124,7 +144,11 @@ export function buildContractScopeMap(router: unknown, rootScope: string): Contr
  * routes) and this table therefore has nothing to say about it.
  *
  * A literal route wins over a parameterised one, so `GET /transactions/search`
- * resolves to its own scope rather than `transactions.get`'s.
+ * resolves to its own scope rather than `transactions.get`'s. Paths match
+ * case-insensitively, and a `HEAD` with no route of its own resolves as the
+ * `GET` it shares a path with — both because that is how Express routes, and
+ * anything Express would hand to a handler must resolve to that handler's
+ * scope.
  */
 export function resolveContractScope(
   map: ContractScopeMap,
@@ -133,10 +157,7 @@ export function resolveContractScope(
 ): string | undefined {
   const upper = method.toUpperCase();
   const normalised = path.length > 1 && path.endsWith('/') ? path.slice(0, -1) : path;
-  const exact = map.literal.get(literalKey(upper, normalised));
-  if (exact !== undefined) return exact;
-  for (const candidate of map.patterns) {
-    if (candidate.method === upper && candidate.regex.test(normalised)) return candidate.scope;
-  }
-  return undefined;
+  const scope = resolveForMethod(map, upper, normalised);
+  if (scope !== undefined || upper !== 'HEAD') return scope;
+  return resolveForMethod(map, 'GET', normalised);
 }

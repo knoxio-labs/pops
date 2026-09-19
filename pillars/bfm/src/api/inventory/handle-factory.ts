@@ -15,8 +15,6 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 
 import { pillar } from '@pops/pillar-sdk/server';
 
-import { INVENTORY_PILLAR_ID } from './client.js';
-
 import type { PillarHandleFactory } from '../pillars/gateway.js';
 
 /**
@@ -70,21 +68,28 @@ export function withInventoryActor<T>(actorHeader: string, send: () => Promise<T
 }
 
 /**
- * A {@link PillarHandleFactory} that always resolves to inventory and always
- * sends this build's sync protocol version, plus `Pops-Actor` when
- * {@link withInventoryActor} is on the stack.
+ * A {@link PillarHandleFactory} that forwards whatever pillar id the gateway
+ * call supplies — always `inventory`, since `client.ts` is the only caller
+ * that constructs this gateway — and always sends this build's sync protocol
+ * version, plus `Pops-Actor` when {@link withInventoryActor} is on the stack.
+ *
+ * `pillar()` takes the `pillarId` parameter rather than a literal constant
+ * of its own so this file has no reference to `client.ts` at all: importing
+ * `client.ts`'s `INVENTORY_PILLAR_ID` back here, or redeclaring it as a
+ * module-level const, both recreate problems `dependency-cruiser`'s
+ * `no-circular` rule and `check-cross-pillar-expectations.mjs` already catch
+ * (a two-file import cycle, and a call site whose producer resolves but
+ * whose bare `TRouter` still cannot — see `UNPINNABLE_CALL_SITES`'s entry
+ * for this file).
  *
  * `Pops-Inventory-Protocol` is not the caller's business: it names the wire
  * shape THIS BUILD understands, not anything the phone sent — the phone
  * never sees this header, since `/mobile/inventory/*` has its own contract,
  * versioned independently through bfm's own OpenAPI and Swift codegen.
- * `pillar()` is called with the literal {@link INVENTORY_PILLAR_ID} rather
- * than the `pillarId` a generic factory is handed, because that literal is
- * the one thing worth being able to grep for.
  */
 export function createInventoryPillarHandleFactory(): PillarHandleFactory {
-  return <TRouter>() =>
-    pillar<TRouter>(INVENTORY_PILLAR_ID, {
+  return <TRouter>(pillarId: string) =>
+    pillar<TRouter>(pillarId, {
       extraHeaders: () => {
         const headers: Record<string, string> = {
           [INVENTORY_PROTOCOL_HEADER]: String(INVENTORY_SYNC_PROTOCOL_VERSION),

@@ -11,7 +11,9 @@ import Synchronization
 /// command applies as given, which is correct for a fake driving a feature
 /// test and would be a lie in production. `InventoryReplica`'s Swift command
 /// reducer is pinned to the server's own behaviour by shared test vectors;
-/// this type answers to neither. Command application itself lives in
+/// this type answers to neither. It keeps no event log either: `events` is
+/// what a test seeds for the history and recent-work reads, and `perform(_:)`
+/// never appends to it. Command application itself lives in
 /// `InMemoryInventoryStore+ItemCommands.swift` and
 /// `InMemoryInventoryStore+LocationCommands.swift`; this file is the seam
 /// (`InventoryStore` conformance) and the shared state those two read and
@@ -46,7 +48,8 @@ public final class InMemoryInventoryStore: InventoryStore, @unchecked Sendable {
         locations: [InventoryLocation] = [],
         catalogue: InventoryCatalogue = InventoryCatalogue(version: "fake", units: [], types: []),
         repairs: [InventoryRepair] = [],
-        media: [String: Data] = [:]
+        media: [String: Data] = [:],
+        events: [InventoryEvent] = []
     ) {
         state = Mutex(
             State(
@@ -56,8 +59,10 @@ public final class InMemoryInventoryStore: InventoryStore, @unchecked Sendable {
                 repairs: repairs,
                 resolved: [],
                 media: media,
+                events: events,
                 replicaStatus: .current,
-                nextSeq: (items.map(\.seq) + locations.map(\.seq)).max().map { $0 + 1 } ?? 1
+                nextSeq: (items.map(\.seq) + locations.map(\.seq) + events.map(\.seq)).max()
+                    .map { $0 + 1 } ?? 1
             ))
     }
 
@@ -89,8 +94,8 @@ public final class InMemoryInventoryStore: InventoryStore, @unchecked Sendable {
         notify(snapshot)
         return InventoryReceipt(
             mutationId: mutationId,
-            entityKind: Self.entityKind(of: command),
-            entityId: command.entityId ?? mutationId)
+            entityKind: command.entityKind,
+            entityId: command.entityId)
     }
 
     public func undo(_ receipt: InventoryReceipt) async throws {
@@ -196,15 +201,6 @@ public final class InMemoryInventoryStore: InventoryStore, @unchecked Sendable {
 
     private func notify(_ snapshot: State) {
         for observer in snapshot.observers.values { observer.deliver(snapshot) }
-    }
-
-    private static func entityKind(of command: InventoryCommand) -> InventoryEntityKind {
-        switch command {
-        case .createLocation, .renameLocation, .moveLocation, .deleteLocation:
-            .location
-        default:
-            .item
-        }
     }
 
     /// Groups every command into the three files that actually apply it, so

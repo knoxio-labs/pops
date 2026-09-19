@@ -15,7 +15,7 @@ Measured on the same simulator, same Xcode, one probe run in each:
 |                                | `Bundle.main.bundleIdentifier` | `SecItemAdd` with `kSecUseDataProtectionKeychain` |
 | ------------------------------ | ------------------------------ | ------------------------------------------------- |
 | a package target (`AuthTests`) | `com.apple.dt.xctest.tool`     | `-34018` `errSecMissingEntitlement`               |
-| this target, hosted by `Pops`  | `com.knoxiolabs.pops`          | `errSecSuccess`                                   |
+| this target, hosted by `Pops`  | `com.knoxiolabs.pops.local`    | `errSecSuccess`                                   |
 
 Two questions decide it:
 

@@ -9,4 +9,9 @@ public enum InventoryAccess: Hashable, Sendable {
     public init(wire: String) {
         self = wire == "closed" ? .closed : .open
     }
+
+    /// The inverse of `init(wire:)`.
+    public var wireValue: String {
+        self == .closed ? "closed" : "open"
+    }
 }

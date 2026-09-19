@@ -27,6 +27,24 @@ import {
 
 import type { NextFunction, Request, RequestHandler, Response } from 'express';
 
+/** A route a pillar serves outside its ts-rest contract, by method and Express path. */
+export interface RawRouteDeclaration {
+  /** HTTP method, matched case-insensitively. */
+  readonly method: string;
+  /** The path exactly as the Express router registers it, `:param` placeholders intact. */
+  readonly path: string;
+}
+
+/**
+ * Raw routes nested the way a ts-rest router nests its leaves: each key is a
+ * scope segment under the root, so `{ media: { upload: … } }` under root
+ * `inventory` requires `inventory.media.upload`, and a grant of
+ * `inventory.media` covers every leaf beneath it.
+ */
+export interface RawRouteTree {
+  readonly [segment: string]: RawRouteDeclaration | RawRouteTree;
+}
+
 /** What a pillar has to say to get a gate. */
 export interface ServiceAccountScopeGateOptions {
   /**
@@ -52,6 +70,16 @@ export interface ServiceAccountScopeGateOptions {
    * affordable for a pillar all of whose callers carry keys.
    */
   readonly requireCredential?: boolean;
+  /**
+   * Routes served outside the contract that must still be scoped — raw byte
+   * routes that cannot be ts-rest routes but carry data a grant should
+   * govern. Omitted, every non-contract path passes untouched. Declared, each
+   * route is held to exactly the contract routes' semantics: same header,
+   * same dot-prefix matching, same no-key posture. A declaration the contract
+   * already covers throws at construction, because its scope could never
+   * apply.
+   */
+  readonly rawRoutes?: RawRouteTree;
 }
 
 /** A pillar's gate: the scope table it derived, and the middleware over it. */
@@ -63,9 +91,14 @@ export interface ServiceAccountScopeGate {
    */
   readonly scopeMap: ContractScopeMap;
   /**
-   * Build the middleware. Mount it BEFORE `createExpressEndpoints` so it runs
-   * ahead of every contract handler, and after any raw route that carries no
-   * scope.
+   * The declared raw routes projected the same way, consulted only for a path
+   * the contract does not describe. Empty when no raw routes were declared.
+   */
+  readonly rawScopeMap: ContractScopeMap;
+  /**
+   * Build the middleware. Mount it BEFORE `createExpressEndpoints` and before
+   * every declared raw route, so it runs ahead of each handler it scopes, and
+   * after any raw route that carries no scope.
    *
    * @param verify Resolves a presented key to its principal. Production passes
    *   `createRegistryServiceAccountVerifier()`; tests inject a fake.
@@ -110,11 +143,36 @@ function logRejection(logPrefix: string, result: ServiceAccountAuthResult): void
   console.warn(`[${logPrefix}] rejected ${subject} for '${result.requiredScope ?? 'unknown'}'`);
 }
 
+function projectRawRoutes(
+  options: ServiceAccountScopeGateOptions,
+  contractMap: ContractScopeMap
+): ContractScopeMap {
+  const { rawRoutes, rootScope, logPrefix } = options;
+  const rawMap = buildContractScopeMap(rawRoutes ?? {}, rootScope);
+  if (rawRoutes !== undefined && rawMap.routes.length === 0) {
+    throw new Error(
+      `[${logPrefix}] createServiceAccountScopeGate('${rootScope}') was given raw routes that ` +
+        `projected to none. Declare each as { method, path } or omit the option.`
+    );
+  }
+  for (const route of rawMap.routes) {
+    const contractScope = resolveContractScope(contractMap, route.method, route.path);
+    if (contractScope !== undefined) {
+      throw new Error(
+        `[${logPrefix}] raw route ${route.method} ${route.path} ('${route.scope}') is already ` +
+          `covered by contract route '${contractScope}', so its declared scope would never apply.`
+      );
+    }
+  }
+  return rawMap;
+}
+
 /**
  * Derive a pillar's scope table from its contract and bind ADR-044's decision
  * to Express.
  *
- * @param options The three things that vary per pillar, plus the posture.
+ * @param options The three things that vary per pillar, the posture, and any
+ *   raw routes the gate must scope beside the contract.
  * @returns The scope table and a middleware factory over it.
  */
 export function createServiceAccountScopeGate(
@@ -140,10 +198,14 @@ export function createServiceAccountScopeGate(
     );
   }
 
+  const rawScopeMap = projectRawRoutes(options, scopeMap);
+
   const createMiddleware = (verify: ServiceAccountVerifier): RequestHandler => {
     return (req: Request, res: Response, next: NextFunction): void => {
       void authorizeServiceAccountRequest({
-        requiredScope: resolveContractScope(scopeMap, req.method, req.path),
+        requiredScope:
+          resolveContractScope(scopeMap, req.method, req.path) ??
+          resolveContractScope(rawScopeMap, req.method, req.path),
         apiKey: readApiKey(req),
         verify,
         requireCredential,
@@ -160,5 +222,5 @@ export function createServiceAccountScopeGate(
     };
   };
 
-  return { scopeMap, createMiddleware };
+  return { scopeMap, rawScopeMap, createMiddleware };
 }

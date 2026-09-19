@@ -644,6 +644,20 @@ export const EXPECTATIONS = [
     query: ['limit', 'offset'],
     usedBy: 'pillars/cerebrum/src/api/modules/retrieval/peer-clients.ts',
   },
+  {
+    consumer: 'inventory',
+    producer: 'ai',
+    operationId: 'codes.rank',
+    path: '/codes/rank',
+    method: 'post',
+    // The whole payload is a body (`name`, optional `typeKey`, and the
+    // deterministic candidates to reorder) — this guard does not model
+    // bodies. What it can pin is that the operation still exists as a POST,
+    // so a rename or drop breaks loudly here rather than as a silent
+    // permanent fallback to the deterministic order in production.
+    query: [],
+    usedBy: 'pillars/inventory/src/api/ai/client.ts',
+  },
 ];
 
 /**

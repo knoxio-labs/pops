@@ -12,6 +12,7 @@ extension InMemoryInventoryStore {
         var repairs: [InventoryRepair]
         var resolved: [InventoryResolvedEntry]
         var media: [String: Data]
+        var events: [InventoryEvent]
         var replicaStatus: InventoryReplicaStatus
         var nextSeq: Int
         var undoLog: [String: UndoEntry] = [:]
@@ -30,6 +31,11 @@ extension InMemoryInventoryStore {
                 .sorted { $0.name < $1.name }
         }
 
+        func inventoryContents(ofContainer containerId: String) -> [InventoryItem] {
+            items.values.filter { $0.placement == .container(containerId) && $0.isActive }
+                .sorted { $0.name < $1.name }
+        }
+
         func inventoryInHand() -> [InventoryItem] {
             items.values.filter { $0.placement == .hand }.sorted { $0.name < $1.name }
         }
@@ -39,8 +45,24 @@ extension InMemoryInventoryStore {
                 .sorted { $0.name < $1.name }
         }
 
+        func inventoryContainers() -> [InventoryItem] {
+            items.values.filter { $0.isContainer && !$0.isDeleted }.sorted { $0.name < $1.name }
+        }
+
         func inventoryRecents(limit: Int) -> [InventoryItem] {
             Array(items.values.sorted { $0.updatedAt > $1.updatedAt }.prefix(limit))
+        }
+
+        func inventoryRecentEvents(limit: Int) -> [InventoryEvent] {
+            Array(events.sorted { $0.seq > $1.seq }.prefix(limit))
+        }
+
+        func inventoryCounts() -> InventoryCounts {
+            let active = items.values.filter(\.isActive)
+            return InventoryCounts(
+                items: active.count,
+                containers: active.filter(\.isContainer).count,
+                locations: locations.values.filter { !$0.isDeleted }.count)
         }
 
         func inventorySearch(text: String, includeInactive: Bool) -> [InventoryItem] {
@@ -62,4 +84,9 @@ extension InMemoryInventoryStore {
 
         func inventoryReplicaStatus() -> InventoryReplicaStatus { replicaStatus }
     }
+}
+
+extension InventoryItem {
+    /// Counts and contents lists leave out inactive and deleted items (D3).
+    fileprivate var isActive: Bool { lifecycle == .active && !isDeleted }
 }

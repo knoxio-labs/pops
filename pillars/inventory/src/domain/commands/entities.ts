@@ -1,20 +1,15 @@
 import { eq } from 'drizzle-orm';
 
-import {
-  items,
-  locations,
-  type ItemInsert,
-  type ItemRow,
-  type LocationInsert,
-  type LocationRow,
-} from '../../db/index.js';
+import { items, locations } from '../../db/schema.js';
 import { CommandRejected } from './errors.js';
 import { ITEM_FIELD_CODECS } from './item-fields.js';
+import { LEGACY_ITEM_FIELD_CODECS } from './legacy-item-fields.js';
 import { LOCATION_FIELD_CODECS } from './location-fields.js';
 
 import type { RunResult } from 'better-sqlite3';
 import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 
+import type { ItemInsert, ItemRow, LocationInsert, LocationRow } from '../../db/row-types.js';
 import type { JsonValue } from './outcome.js';
 
 /** A synchronous drizzle handle: the database or a transaction (or savepoint) on it. */
@@ -55,16 +50,23 @@ export function requireLocation(target: LoadedEntity): LocationRow {
   return target.row;
 }
 
+/**
+ * Every item field the command layer can write: the new model's own fields
+ * plus the legacy provenance and value columns the `/items` routes still
+ * expose (POPS-4053).
+ */
+const ALL_ITEM_FIELD_CODECS = { ...ITEM_FIELD_CODECS, ...LEGACY_ITEM_FIELD_CODECS };
+
 /** Whether `field` is a wire field the command layer can write on `kind`. */
 export function isWritableField(kind: EntityKind, field: string): boolean {
-  const codecs = kind === 'item' ? ITEM_FIELD_CODECS : LOCATION_FIELD_CODECS;
+  const codecs = kind === 'item' ? ALL_ITEM_FIELD_CODECS : LOCATION_FIELD_CODECS;
   return Object.hasOwn(codecs, field);
 }
 
 /** The current wire value of `field` on a loaded entity. */
 export function currentValue(entity: LoadedEntity, field: string): JsonValue {
   if (entity.kind === 'item') {
-    const codec = ITEM_FIELD_CODECS[field];
+    const codec = ALL_ITEM_FIELD_CODECS[field];
     if (!codec) throw new CommandRejected('invalid', `item has no writable field ${field}`);
     return codec.read(entity.row);
   }
@@ -83,7 +85,7 @@ export interface WriteStamp {
 function itemColumns(changes: FieldValues, now: string): Partial<ItemInsert> {
   const columns: Partial<ItemInsert> = {};
   for (const [field, value] of Object.entries(changes)) {
-    const codec = ITEM_FIELD_CODECS[field];
+    const codec = ALL_ITEM_FIELD_CODECS[field];
     if (!codec) throw new CommandRejected('invalid', `item has no writable field ${field}`);
     Object.assign(columns, codec.columns(value, now));
   }

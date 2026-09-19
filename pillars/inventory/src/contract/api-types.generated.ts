@@ -835,6 +835,40 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/web/items': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** A cursor-paged, filtered slice of the live item catalogue, on the new item model */
+    get: operations['web.list'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/web/items/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** An item, and one page of its history, newest first */
+    get: operations['web.get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -3862,7 +3896,8 @@ export interface operations {
                 | 'inUse'
                 | 'deductible'
                 | 'locationId'
-                | 'assetId';
+                | 'assetId'
+                | 'includeInactive';
               /** @enum {string} */
               operator: 'eq';
               value: string;
@@ -5301,6 +5336,325 @@ export interface operations {
       };
       /** @description 409 */
       409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'web.list': {
+    parameters: {
+      query: {
+        cursor?: string;
+        limit: number;
+        typeKey?: string;
+        placementKind?: 'location' | 'container' | 'hand';
+        locationId?: string;
+        containingItemId?: string;
+        includeInactive?: boolean;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            items: {
+              /** @enum {string|null} */
+              access: 'open' | 'closed' | null;
+              code: string | null;
+              createdAt: string;
+              deletedAt: string | null;
+              documentTitles: string[];
+              /** @enum {string} */
+              documentsStatus: 'linked' | 'none' | 'unavailable';
+              externalIds: {
+                kind: string;
+                value: string;
+              }[];
+              fields: {
+                [key: string]: unknown;
+              };
+              id: string;
+              isContainer: boolean;
+              isFull: boolean | null;
+              lifecycle: string;
+              lifecycleChangedAt: string | null;
+              name: string;
+              note: string | null;
+              photos: {
+                caption: string | null;
+                sha256: string;
+              }[];
+              placement:
+                | {
+                    /** @enum {string} */
+                    kind: 'location';
+                    locationId: string;
+                  }
+                | {
+                    itemId: string;
+                    /** @enum {string} */
+                    kind: 'container';
+                  }
+                | {
+                    /** @enum {string} */
+                    kind: 'hand';
+                  };
+              previousPlacement:
+                | (
+                    | {
+                        /** @enum {string} */
+                        kind: 'location';
+                        locationId: string;
+                      }
+                    | {
+                        itemId: string;
+                        /** @enum {string} */
+                        kind: 'container';
+                      }
+                  )
+                | null;
+              provenance: {
+                merchant: string | null;
+                price: number | null;
+                purchasedOn: string | null;
+                transactionUri: string | null;
+                warrantyExpires: string | null;
+              } | null;
+              quantity: number;
+              revision: number;
+              seq: number;
+              typeKey: string | null;
+              updatedAt: string;
+            }[];
+            nextCursor: string | null;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'web.get': {
+    parameters: {
+      query: {
+        historyCursor?: string;
+        historyLimit: number;
+      };
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            history: {
+              events: {
+                actor: {
+                  kind: string;
+                  label: string;
+                };
+                after: {
+                  placement?:
+                    | {
+                        /** @enum {string} */
+                        kind: 'location';
+                        locationId: string;
+                      }
+                    | {
+                        itemId: string;
+                        /** @enum {string} */
+                        kind: 'container';
+                      }
+                    | {
+                        /** @enum {string} */
+                        kind: 'hand';
+                      };
+                  previousPlacement?:
+                    | (
+                        | {
+                            /** @enum {string} */
+                            kind: 'location';
+                            locationId: string;
+                          }
+                        | {
+                            itemId: string;
+                            /** @enum {string} */
+                            kind: 'container';
+                          }
+                      )
+                    | null;
+                } & {
+                  [key: string]: unknown;
+                };
+                before: {
+                  placement?:
+                    | {
+                        /** @enum {string} */
+                        kind: 'location';
+                        locationId: string;
+                      }
+                    | {
+                        itemId: string;
+                        /** @enum {string} */
+                        kind: 'container';
+                      }
+                    | {
+                        /** @enum {string} */
+                        kind: 'hand';
+                      };
+                  previousPlacement?:
+                    | (
+                        | {
+                            /** @enum {string} */
+                            kind: 'location';
+                            locationId: string;
+                          }
+                        | {
+                            itemId: string;
+                            /** @enum {string} */
+                            kind: 'container';
+                          }
+                      )
+                    | null;
+                } & {
+                  [key: string]: unknown;
+                };
+                clientTime: string | null;
+                compensatesSeq: number | null;
+                entityId: string;
+                /** @enum {string} */
+                entityKind: 'item' | 'location';
+                fields: string[];
+                kind: string;
+                reason: string | null;
+                seq: number;
+                serverTime: string;
+                undoable: boolean;
+              }[];
+              nextCursor: string | null;
+            };
+            item: {
+              /** @enum {string|null} */
+              access: 'open' | 'closed' | null;
+              code: string | null;
+              createdAt: string;
+              deletedAt: string | null;
+              documentTitles: string[];
+              /** @enum {string} */
+              documentsStatus: 'linked' | 'none' | 'unavailable';
+              externalIds: {
+                kind: string;
+                value: string;
+              }[];
+              fields: {
+                [key: string]: unknown;
+              };
+              id: string;
+              isContainer: boolean;
+              isFull: boolean | null;
+              lifecycle: string;
+              lifecycleChangedAt: string | null;
+              name: string;
+              note: string | null;
+              photos: {
+                caption: string | null;
+                sha256: string;
+              }[];
+              placement:
+                | {
+                    /** @enum {string} */
+                    kind: 'location';
+                    locationId: string;
+                  }
+                | {
+                    itemId: string;
+                    /** @enum {string} */
+                    kind: 'container';
+                  }
+                | {
+                    /** @enum {string} */
+                    kind: 'hand';
+                  };
+              previousPlacement:
+                | (
+                    | {
+                        /** @enum {string} */
+                        kind: 'location';
+                        locationId: string;
+                      }
+                    | {
+                        itemId: string;
+                        /** @enum {string} */
+                        kind: 'container';
+                      }
+                  )
+                | null;
+              provenance: {
+                merchant: string | null;
+                price: number | null;
+                purchasedOn: string | null;
+                transactionUri: string | null;
+                warrantyExpires: string | null;
+              } | null;
+              quantity: number;
+              revision: number;
+              seq: number;
+              typeKey: string | null;
+              updatedAt: string;
+            };
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
         headers: {
           [name: string]: unknown;
         };

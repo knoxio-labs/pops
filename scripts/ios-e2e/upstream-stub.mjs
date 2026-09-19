@@ -4,18 +4,22 @@
  * The BFM owns no transaction rows. `GET /mobile/finance/transactions` reads
  * the registry for a `finance` entry, probes that entry's `/openapi`, and then
  * calls finance's own `transactions.list` / `transactions.get` operations
- * through `@pops/pillar-sdk`. All three legs have to answer or the app shows an
- * error state instead of a list, so this serves all three from one origin.
+ * through `@pops/pillar-sdk` — plus `accounts.get`, once per account a row
+ * names, to resolve that account's display name and currency. All these legs
+ * have to answer or the app shows an error state instead of a list, so this
+ * serves all of them from one origin.
  *
  * ## What is real here and what is not
  *
  * The OpenAPI document is the finance pillar's committed snapshot, served
  * verbatim, and the routes below are read out of it rather than written down —
  * so the paths, methods and query-parameter names the SDK resolves are
- * finance's real ones and cannot drift from them. What is invented is the data:
- * three rows from `transactions-fixture.mjs`. The BFM parses them with the same
- * zod schemas it parses production finance with, so a row that does not match
- * finance's contract fails the flow as a 502 rather than passing quietly.
+ * finance's real ones and cannot drift from them. What is invented is the
+ * data: three transaction rows from `transactions-fixture.mjs` and the one
+ * account they all belong to, from `accounts-fixture.mjs`. The BFM parses
+ * them with the same zod schemas it parses production finance with, so a row
+ * that does not match finance's contract fails the flow as a 502 rather than
+ * passing quietly.
  *
  * Booting the real finance pillar instead was considered and rejected: it would
  * add a second pillar, a second SQLite database and a seeding step to a macOS
@@ -80,6 +84,7 @@ import { readFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { fileURLToPath } from 'node:url';
 
+import { seededAccounts } from './accounts-fixture.mjs';
 import { purchasesRegistryEntry } from './purchases-stub.mjs';
 import { boundAddress } from './server-address.mjs';
 
@@ -91,6 +96,14 @@ const FINANCE_CONTRACT_PATH = fileURLToPath(
 export const LIST_OPERATION_ID = 'transactions.list';
 export const GET_OPERATION_ID = 'transactions.get';
 
+/**
+ * The operation `resolveAccount`/`resolveAccountCurrencies`
+ * (`pillars/bfm/src/api/finance/accounts-client.ts`) call for every account a
+ * seeded transaction names — both the transaction list and detail routes read
+ * it, to answer a row's currency and, on the detail screen, its account name.
+ */
+export const ACCOUNT_GET_OPERATION_ID = 'accounts.get';
+
 /** The pillar id the BFM looks up. */
 export const FINANCE_PILLAR_ID = 'finance';
 
@@ -101,6 +114,41 @@ export const FINANCE_PILLAR_ID = 'finance';
  */
 export function readFinanceContract() {
   return JSON.parse(readFileSync(FINANCE_CONTRACT_PATH, 'utf8'));
+}
+
+/**
+ * Scans an OpenAPI document's paths for the operations named in `wanted`,
+ * returning the first `{ method, path }` this stub finds for each key.
+ *
+ * Shared by `financeRoutes` and `accountGetRoute` so the one thing they both
+ * do — read a route out of the document rather than writing it down by hand —
+ * is not maintained in two places.
+ *
+ * @param {Record<string, unknown>} document an OpenAPI document
+ * @param {Map<string, string>} wanted operationId → caller's key for it
+ * @returns {Map<string, { method: string, path: string }>}
+ */
+function scanOperationRoutes(document, wanted) {
+  const paths = document?.paths;
+  if (paths === null || typeof paths !== 'object') {
+    throw new Error('finance OpenAPI document has no `paths` object');
+  }
+
+  /** @type {Map<string, { method: string, path: string }>} */
+  const found = new Map();
+  for (const [path, item] of Object.entries(paths)) {
+    if (item === null || typeof item !== 'object') continue;
+    for (const [method, operation] of Object.entries(item)) {
+      const operationId =
+        operation !== null && typeof operation === 'object' && 'operationId' in operation
+          ? operation.operationId
+          : undefined;
+      const key = typeof operationId === 'string' ? wanted.get(operationId) : undefined;
+      if (key === undefined || found.has(key)) continue;
+      found.set(key, { method: method.toUpperCase(), path });
+    }
+  }
+  return found;
 }
 
 /**
@@ -121,28 +169,9 @@ export function financeRoutes(document) {
     [LIST_OPERATION_ID, 'list'],
     [GET_OPERATION_ID, 'get'],
   ]);
-  /** @type {Record<'list' | 'get', { method: string, path: string } | undefined>} */
-  const found = { list: undefined, get: undefined };
+  const found = scanOperationRoutes(document, wanted);
 
-  const paths = document?.paths;
-  if (paths === null || typeof paths !== 'object') {
-    throw new Error('finance OpenAPI document has no `paths` object');
-  }
-
-  for (const [path, item] of Object.entries(paths)) {
-    if (item === null || typeof item !== 'object') continue;
-    for (const [method, operation] of Object.entries(item)) {
-      const operationId =
-        operation !== null && typeof operation === 'object' && 'operationId' in operation
-          ? operation.operationId
-          : undefined;
-      const key = typeof operationId === 'string' ? wanted.get(operationId) : undefined;
-      if (key === undefined || found[key] !== undefined) continue;
-      found[key] = { method: method.toUpperCase(), path };
-    }
-  }
-
-  const missing = [...wanted].filter(([, key]) => found[key] === undefined).map(([id]) => id);
+  const missing = [...wanted].filter(([, key]) => !found.has(key)).map(([id]) => id);
   if (missing.length > 0) {
     throw new Error(
       `finance OpenAPI document declares no ${missing.join(' and no ')}. ` +
@@ -150,13 +179,75 @@ export function financeRoutes(document) {
     );
   }
 
-  const { list, get } = found;
+  const list = found.get('list');
+  const get = found.get('get');
   if (list === undefined || get === undefined) {
     throw new Error(
       'finance-routes: unreachable — the missing-operation check above already threw'
     );
   }
   return { list, get };
+}
+
+/**
+ * Where `accounts.get` lives, for the same reason `financeRoutes` reads
+ * `transactions.list`/`transactions.get` out of the document instead of
+ * hard-coding a path: a rename on finance's side must fail here, not several
+ * minutes later as an account that never resolves.
+ *
+ * @param {Record<string, unknown>} document finance's OpenAPI snapshot
+ * @returns {{ method: string, path: string }}
+ */
+export function accountGetRoute(document) {
+  const found = scanOperationRoutes(document, new Map([[ACCOUNT_GET_OPERATION_ID, 'get']]));
+  const get = found.get('get');
+  if (get === undefined) {
+    throw new Error(
+      `finance OpenAPI document declares no ${ACCOUNT_GET_OPERATION_ID}. ` +
+        'The BFM calls that operationId by name; this stub cannot answer what it cannot find.'
+    );
+  }
+  return get;
+}
+
+/**
+ * The `required` array off an operation's 200 JSON response, by operationId —
+ * what finance's own contract obliges every caller to see on a row. A list
+ * operation's rows live under `data.items`; a get operation's under `data`
+ * directly, and both are handled here rather than by the caller, which is
+ * what lets the harness's fixture tests derive their expectations from this
+ * document instead of a hand-copied list — the drift that let `accountId` go
+ * missing from every seeded transaction row (POPS-4157).
+ *
+ * @param {Record<string, unknown>} document an OpenAPI document
+ * @param {string} operationId e.g. `'transactions.get'`
+ * @returns {string[]}
+ */
+export function requiredResponseFields(document, operationId) {
+  const paths = document?.paths;
+  if (paths === null || typeof paths !== 'object') {
+    throw new Error('finance OpenAPI document has no `paths` object');
+  }
+
+  for (const item of Object.values(paths)) {
+    if (item === null || typeof item !== 'object') continue;
+    for (const operation of Object.values(item)) {
+      if (operation === null || typeof operation !== 'object') continue;
+      if (operation.operationId !== operationId) continue;
+
+      const data =
+        operation.responses?.['200']?.content?.['application/json']?.schema?.properties?.data;
+      const required = data?.items?.required ?? data?.required;
+      if (!Array.isArray(required)) {
+        throw new Error(
+          `finance OpenAPI document's ${operationId} 200 response has no data.required array`
+        );
+      }
+      return required;
+    }
+  }
+
+  throw new Error(`finance OpenAPI document declares no ${operationId}`);
 }
 
 /**
@@ -407,7 +498,11 @@ export function buildRegistrySnapshot({
             tag: 'contract-finance@v1.0.0',
           },
           routes: {
-            queries: ['finance.transactions.list', 'finance.transactions.get'],
+            queries: [
+              'finance.transactions.list',
+              'finance.transactions.get',
+              'finance.accounts.get',
+            ],
             mutations: [],
             subscriptions: [],
           },
@@ -454,7 +549,13 @@ const CONTRACT_MISMATCH_BODY = '<html><body>404 Not Found</body></html>';
  * run has one — it is put on the roster this server publishes, and nothing
  * else here reads it. See `purchases-stub.mjs`.
  *
- * @param {{ rows: Array<Record<string, unknown>>, contract?: Record<string, unknown>, purchasesBaseUrl?: string, host?: string }} options
+ * `accounts` answers `accounts.get`, which the BFM calls for every account a
+ * transaction row names (`resolveAccount`/`resolveAccountCurrencies` in
+ * `pillars/bfm/src/api/finance/accounts-client.ts`) — an id missing from it
+ * 404s the same way an unseeded transaction id does, and the BFM reads that
+ * as a failed lookup rather than as this stub having nothing to say.
+ *
+ * @param {{ rows: Array<Record<string, unknown>>, accounts?: Array<Record<string, unknown>>, contract?: Record<string, unknown>, purchasesBaseUrl?: string, host?: string }} options
  * @returns {Promise<{
  *   url: string,
  *   port: number,
@@ -469,12 +570,15 @@ const CONTRACT_MISMATCH_BODY = '<html><body>404 Not Found</body></html>';
  */
 export async function startUpstreamStub({
   rows,
+  accounts = seededAccounts,
   contract = readFinanceContract(),
   purchasesBaseUrl,
   host = '127.0.0.1',
 }) {
   const routes = financeRoutes(contract);
   const matchesDetail = pathMatcher(routes.get.path);
+  const accountRoute = accountGetRoute(contract);
+  const matchesAccount = pathMatcher(accountRoute.path);
   let financeOutage = false;
   // Whether `/openapi` resets the connection instead of answering — the
   // `unavailable` half of the app's root screen.
@@ -568,6 +672,16 @@ export async function startUpstreamStub({
         if (financeOutage) return json(503, FINANCE_OUTAGE_BODY);
         const found = rows.find((row) => row.id === params.id);
         if (found === undefined) return json(404, { message: `no transaction ${params.id}` });
+        return json(200, { data: found });
+      }
+    }
+
+    if (request.method === accountRoute.method) {
+      const params = matchesAccount(url.pathname);
+      if (params !== null) {
+        if (financeOutage) return json(503, FINANCE_OUTAGE_BODY);
+        const found = accounts.find((account) => account.id === params.id);
+        if (found === undefined) return json(404, { message: `no account ${params.id}` });
         return json(200, { data: found });
       }
     }
