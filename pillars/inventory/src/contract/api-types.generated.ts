@@ -3,6 +3,23 @@
  * Do not edit by hand — regenerate via `pnpm -F @pops/inventory generate:api-types`.
  */
 export interface paths {
+  '/codes/suggest': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Free codes for a new item: a stem followed by the next unused numbers */
+    post: operations['codes.suggest'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/connections': {
     parameters: {
       query?: never;
@@ -716,6 +733,91 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/sync/changes': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Rows and events changed after `since`, tombstones included, in seq order */
+    get: operations['sync.changes'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/sync/items/{id}/events': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** An item's history, newest first */
+    get: operations['sync.itemEvents'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/sync/mutations': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Apply up to 50 mutations in order, each in its own transaction, idempotently */
+    post: operations['sync.mutations'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/sync/snapshot': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** One page of live items and locations; the first page fixes the high-water seq the feed resumes from */
+    get: operations['sync.snapshot'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/types': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** The type catalogue; `ETag` is its version, and a matching `If-None-Match` is 304 */
+    get: operations['types.catalogue'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/uploads/{id}': {
     parameters: {
       query?: never;
@@ -760,6 +862,65 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+  'codes.suggest': {
+    parameters: {
+      query?: never;
+      header?: {
+        'pops-inventory-protocol'?: string;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          name: string;
+          stem?: string;
+          typeKey?: string;
+        };
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            suggestions: string[];
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 426 */
+      426: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
   'connections.connect': {
     parameters: {
       query?: never;
@@ -4309,6 +4470,769 @@ export interface operations {
       };
       /** @description 409 */
       409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'sync.changes': {
+    parameters: {
+      query: {
+        since: number;
+        epoch: string;
+        limit: number;
+      };
+      header?: {
+        'pops-inventory-protocol'?: string;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            catalogueVersion: string;
+            epoch: string;
+            events: {
+              actor: {
+                kind: string;
+                label: string;
+              };
+              after: {
+                placement?:
+                  | {
+                      /** @enum {string} */
+                      kind: 'location';
+                      locationId: string;
+                    }
+                  | {
+                      itemId: string;
+                      /** @enum {string} */
+                      kind: 'container';
+                    }
+                  | {
+                      /** @enum {string} */
+                      kind: 'hand';
+                    };
+                previousPlacement?:
+                  | (
+                      | {
+                          /** @enum {string} */
+                          kind: 'location';
+                          locationId: string;
+                        }
+                      | {
+                          itemId: string;
+                          /** @enum {string} */
+                          kind: 'container';
+                        }
+                    )
+                  | null;
+              } & {
+                [key: string]: unknown;
+              };
+              before: {
+                placement?:
+                  | {
+                      /** @enum {string} */
+                      kind: 'location';
+                      locationId: string;
+                    }
+                  | {
+                      itemId: string;
+                      /** @enum {string} */
+                      kind: 'container';
+                    }
+                  | {
+                      /** @enum {string} */
+                      kind: 'hand';
+                    };
+                previousPlacement?:
+                  | (
+                      | {
+                          /** @enum {string} */
+                          kind: 'location';
+                          locationId: string;
+                        }
+                      | {
+                          itemId: string;
+                          /** @enum {string} */
+                          kind: 'container';
+                        }
+                    )
+                  | null;
+              } & {
+                [key: string]: unknown;
+              };
+              clientTime: string | null;
+              compensatesSeq: number | null;
+              entityId: string;
+              /** @enum {string} */
+              entityKind: 'item' | 'location';
+              fields: string[];
+              kind: string;
+              reason: string | null;
+              seq: number;
+              serverTime: string;
+              undoable: boolean;
+            }[];
+            hasMore: boolean;
+            items: {
+              /** @enum {string|null} */
+              access: 'open' | 'closed' | null;
+              code: string | null;
+              createdAt: string;
+              deletedAt: string | null;
+              documentTitles: string[];
+              /** @enum {string} */
+              documentsStatus: 'linked' | 'none' | 'unavailable';
+              externalIds: {
+                kind: string;
+                value: string;
+              }[];
+              fields: {
+                [key: string]: unknown;
+              };
+              id: string;
+              isContainer: boolean;
+              isFull: boolean | null;
+              lifecycle: string;
+              lifecycleChangedAt: string | null;
+              name: string;
+              note: string | null;
+              photos: {
+                caption: string | null;
+                sha256: string;
+              }[];
+              placement:
+                | {
+                    /** @enum {string} */
+                    kind: 'location';
+                    locationId: string;
+                  }
+                | {
+                    itemId: string;
+                    /** @enum {string} */
+                    kind: 'container';
+                  }
+                | {
+                    /** @enum {string} */
+                    kind: 'hand';
+                  };
+              previousPlacement:
+                | (
+                    | {
+                        /** @enum {string} */
+                        kind: 'location';
+                        locationId: string;
+                      }
+                    | {
+                        itemId: string;
+                        /** @enum {string} */
+                        kind: 'container';
+                      }
+                  )
+                | null;
+              provenance: {
+                merchant: string | null;
+                price: number | null;
+                purchasedOn: string | null;
+                transactionUri: string | null;
+                warrantyExpires: string | null;
+              } | null;
+              quantity: number;
+              revision: number;
+              seq: number;
+              typeKey: string | null;
+              updatedAt: string;
+            }[];
+            locations: {
+              deletedAt: string | null;
+              id: string;
+              name: string;
+              parentId: string | null;
+              revision: number;
+              seq: number;
+              sortOrder: number;
+            }[];
+            nextSince: number;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 426 */
+      426: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'sync.itemEvents': {
+    parameters: {
+      query: {
+        cursor?: string;
+        limit: number;
+      };
+      header?: {
+        'pops-inventory-protocol'?: string;
+      };
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            events: {
+              actor: {
+                kind: string;
+                label: string;
+              };
+              after: {
+                placement?:
+                  | {
+                      /** @enum {string} */
+                      kind: 'location';
+                      locationId: string;
+                    }
+                  | {
+                      itemId: string;
+                      /** @enum {string} */
+                      kind: 'container';
+                    }
+                  | {
+                      /** @enum {string} */
+                      kind: 'hand';
+                    };
+                previousPlacement?:
+                  | (
+                      | {
+                          /** @enum {string} */
+                          kind: 'location';
+                          locationId: string;
+                        }
+                      | {
+                          itemId: string;
+                          /** @enum {string} */
+                          kind: 'container';
+                        }
+                    )
+                  | null;
+              } & {
+                [key: string]: unknown;
+              };
+              before: {
+                placement?:
+                  | {
+                      /** @enum {string} */
+                      kind: 'location';
+                      locationId: string;
+                    }
+                  | {
+                      itemId: string;
+                      /** @enum {string} */
+                      kind: 'container';
+                    }
+                  | {
+                      /** @enum {string} */
+                      kind: 'hand';
+                    };
+                previousPlacement?:
+                  | (
+                      | {
+                          /** @enum {string} */
+                          kind: 'location';
+                          locationId: string;
+                        }
+                      | {
+                          itemId: string;
+                          /** @enum {string} */
+                          kind: 'container';
+                        }
+                    )
+                  | null;
+              } & {
+                [key: string]: unknown;
+              };
+              clientTime: string | null;
+              compensatesSeq: number | null;
+              entityId: string;
+              /** @enum {string} */
+              entityKind: 'item' | 'location';
+              fields: string[];
+              kind: string;
+              reason: string | null;
+              seq: number;
+              serverTime: string;
+              undoable: boolean;
+            }[];
+            nextCursor: string | null;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 426 */
+      426: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'sync.mutations': {
+    parameters: {
+      query?: never;
+      header?: {
+        'pops-inventory-protocol'?: string;
+        'pops-actor'?: string;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          mutations: {
+            args: unknown;
+            baseRevision?: number | null;
+            /** Format: date-time */
+            clientTime: string;
+            /** @default [] */
+            dependsOn: string[];
+            entityId: string;
+            /** Format: uuid */
+            mutationId: string;
+            op: string;
+          }[];
+        };
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            highWaterSeq: number;
+            outcomes: (
+              | {
+                  converged: boolean;
+                  mutationId: string;
+                  revision: number;
+                  seq: number;
+                  /** @enum {string} */
+                  status: 'applied';
+                }
+              | (
+                  | {
+                      at: string;
+                      currentRevision: number;
+                      field: string;
+                      /** @enum {string} */
+                      kind: 'field';
+                      mine: unknown;
+                      mutationId: string;
+                      source: {
+                        kind: string;
+                        label: string;
+                      };
+                      /** @enum {string} */
+                      status: 'conflict';
+                      theirs: unknown;
+                    }
+                  | {
+                      heldBy: {
+                        id: string;
+                        name: string;
+                      };
+                      /** @enum {string} */
+                      kind: 'code_collision';
+                      mutationId: string;
+                      /** @enum {string} */
+                      status: 'conflict';
+                      suggestedCode: string | null;
+                    }
+                  | {
+                      at: string;
+                      /** @enum {string} */
+                      kind: 'deleted';
+                      mutationId: string;
+                      source: {
+                        kind: string;
+                        label: string;
+                      };
+                      /** @enum {string} */
+                      status: 'conflict';
+                    }
+                )
+              | {
+                  message: string;
+                  mutationId: string;
+                  reason: string;
+                  /** @enum {string} */
+                  status: 'rejected';
+                }
+              | {
+                  mutationId: string;
+                  /** @enum {string} */
+                  status: 'deferred';
+                  waitingOn: string;
+                }
+            )[];
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 426 */
+      426: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'sync.snapshot': {
+    parameters: {
+      query: {
+        cursor?: string;
+        limit: number;
+      };
+      header?: {
+        'pops-inventory-protocol'?: string;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            catalogueVersion: string;
+            epoch: string;
+            highWaterSeq: number;
+            items: {
+              /** @enum {string|null} */
+              access: 'open' | 'closed' | null;
+              code: string | null;
+              createdAt: string;
+              deletedAt: string | null;
+              documentTitles: string[];
+              /** @enum {string} */
+              documentsStatus: 'linked' | 'none' | 'unavailable';
+              externalIds: {
+                kind: string;
+                value: string;
+              }[];
+              fields: {
+                [key: string]: unknown;
+              };
+              id: string;
+              isContainer: boolean;
+              isFull: boolean | null;
+              lifecycle: string;
+              lifecycleChangedAt: string | null;
+              name: string;
+              note: string | null;
+              photos: {
+                caption: string | null;
+                sha256: string;
+              }[];
+              placement:
+                | {
+                    /** @enum {string} */
+                    kind: 'location';
+                    locationId: string;
+                  }
+                | {
+                    itemId: string;
+                    /** @enum {string} */
+                    kind: 'container';
+                  }
+                | {
+                    /** @enum {string} */
+                    kind: 'hand';
+                  };
+              previousPlacement:
+                | (
+                    | {
+                        /** @enum {string} */
+                        kind: 'location';
+                        locationId: string;
+                      }
+                    | {
+                        itemId: string;
+                        /** @enum {string} */
+                        kind: 'container';
+                      }
+                  )
+                | null;
+              provenance: {
+                merchant: string | null;
+                price: number | null;
+                purchasedOn: string | null;
+                transactionUri: string | null;
+                warrantyExpires: string | null;
+              } | null;
+              quantity: number;
+              revision: number;
+              seq: number;
+              typeKey: string | null;
+              updatedAt: string;
+            }[];
+            locations: {
+              deletedAt: string | null;
+              id: string;
+              name: string;
+              parentId: string | null;
+              revision: number;
+              seq: number;
+              sortOrder: number;
+            }[];
+            nextCursor: string | null;
+            total: number;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 426 */
+      426: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'types.catalogue': {
+    parameters: {
+      query?: never;
+      header?: {
+        'pops-inventory-protocol'?: string;
+        'if-none-match'?: string;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            types: {
+              capabilities: 'containment'[];
+              fields: {
+                choices?: string[];
+                /** @enum {string} */
+                dimension?:
+                  | 'length'
+                  | 'mass'
+                  | 'volume'
+                  | 'power'
+                  | 'voltage'
+                  | 'data-rate'
+                  | 'brightness'
+                  | 'colour-temperature';
+                highlighted?: boolean;
+                hint?: string;
+                key: string;
+                /** @enum {string} */
+                kind: 'text' | 'choice' | 'flag' | 'measurement' | 'range' | 'link';
+                label: string;
+                required?: boolean;
+                unit?: string;
+              }[];
+              key: string;
+              legacyLabels: string[];
+              name: string;
+            }[];
+            units: {
+              /** @enum {string} */
+              dimension:
+                | 'length'
+                | 'mass'
+                | 'volume'
+                | 'power'
+                | 'voltage'
+                | 'data-rate'
+                | 'brightness'
+                | 'colour-temperature';
+              multiplier: number;
+              symbol: string;
+            }[];
+            version: string;
+          };
+        };
+      };
+      /** @description 304 */
+      304: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 426 */
+      426: {
         headers: {
           [name: string]: unknown;
         };
