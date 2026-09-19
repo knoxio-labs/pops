@@ -10,6 +10,7 @@ import type { ServiceAccountVerifier } from '@pops/pillar-sdk/server';
 import type { PillarRegistryEntry } from '@pops/types';
 
 import type { OpenedInventoryDb } from '../db/index.js';
+import type { AiClient } from './ai/client.js';
 import type { DocumentsClient } from './documents/client.js';
 
 export interface InventoryApiDeps {
@@ -30,6 +31,12 @@ export interface InventoryApiDeps {
    * `pillars/inventory/src/api/rest/handlers.ts`.
    */
   documents?: DocumentsClient;
+  /**
+   * The `ai` pillar client backing `codes/suggest`'s ranking. Optional —
+   * production omits it (defaults to the live `pillar('ai')` proxy); tests
+   * inject a stub. See `pillars/inventory/src/api/rest/handlers.ts`.
+   */
+  ai?: AiClient;
   /**
    * Resolves a presented `X-API-Key` to its service account. Defaults to a
    * registry-backed verifier; tests inject a fake so no test needs a live
