@@ -21,11 +21,14 @@ import express, { type Express, type Request, type Response } from 'express';
 
 import { createRegistryServiceAccountVerifier } from '@pops/pillar-sdk/server';
 
+import { inventorySyncProtocolRouters } from '../contract/rest-sync.js';
 import { inventoryContract } from '../contract/rest.js';
 import { createInventoryFilesRouter } from './files/router.js';
 import { type InventoryApiDeps, makeRequestHandler } from './handlers.js';
 import { createServiceAccountScopeMiddleware } from './middleware/service-account-scope.js';
 import { makeInventoryRestHandlers } from './rest/handlers.js';
+import { readMinProtocol } from './sync/meta.js';
+import { createProtocolGate } from './sync/protocol.js';
 
 /**
  * JSON body cap. Photo / document uploads arrive as base64 strings in the
@@ -81,13 +84,18 @@ export function createInventoryApiApp(deps: InventoryApiDeps): Express {
   // Inbound service-account gate. Mounted after the raw probes (which carry no
   // scope) and before the contract surface, so every contract route is covered
   // without enumerating them here.
+  const serviceAccountVerifier =
+    deps.serviceAccountVerifier ?? createRegistryServiceAccountVerifier();
+  app.use(createServiceAccountScopeMiddleware(serviceAccountVerifier));
   app.use(
-    createServiceAccountScopeMiddleware(
-      deps.serviceAccountVerifier ?? createRegistryServiceAccountVerifier()
-    )
+    createProtocolGate(inventorySyncProtocolRouters, () => readMinProtocol(deps.inventoryDb.db))
   );
 
-  createExpressEndpoints(inventoryContract, makeInventoryRestHandlers(deps), app);
+  createExpressEndpoints(
+    inventoryContract,
+    makeInventoryRestHandlers({ ...deps, serviceAccountVerifier }),
+    app
+  );
 
   // Raw (non-ts-rest) byte-serving routes for item photos, direct-upload docs,
   // and the Paperless thumbnail proxy. Mounted after the contract endpoints;

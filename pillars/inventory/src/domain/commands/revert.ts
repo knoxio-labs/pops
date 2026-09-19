@@ -31,6 +31,21 @@ function assertRevertible(event: DomainEvent): void {
 }
 
 /**
+ * Whether `event` is of a kind `event.revert` accepts at all: not a creation,
+ * not a destruction, and touching only writable fields. Whether a later change
+ * has superseded it is a separate question, answered against the log.
+ */
+export function isRevertible(event: DomainEvent): boolean {
+  try {
+    assertRevertible(event);
+    return true;
+  } catch (error) {
+    if (error instanceof CommandRejected) return false;
+    throw error;
+  }
+}
+
+/**
  * `event.revert { seq }`: undo one event by writing back its `before` values,
  * recorded as a `reverted` event that names it in `compensates_seq`. The
  * mutation's `entityId` must be the event's entity. It is judged against the

@@ -1,9 +1,10 @@
 /**
  * REST contract for the inventory pillar — ts-rest single source of truth.
  *
- * Composes the eleven module sub-routers (items, locations, connections,
- * fixtures, photos, documents, documentFiles, reports,
- * paperless, search, settings) into the public wire surface.
+ * Composes the module sub-routers (items, locations, connections,
+ * fixtures, photos, documents, documentFiles, reports, paperless, search,
+ * settings, and the sync protocol's sync, types and codes) into the public
+ * wire surface.
  * `generateOpenApi(inventoryContract, …)`
  * projects this to `openapi/inventory.openapi.json`; `openapi-typescript`
  * then projects the JSON to `src/contract/api-types.generated.ts`.
@@ -24,6 +25,11 @@ import { inventoryPhotosContract } from './rest-photos.js';
 import { inventoryReportsContract } from './rest-reports.js';
 import { inventorySearchContract } from './rest-search.js';
 import { inventorySettingsContract } from './rest-settings.js';
+import {
+  inventoryCodesContract,
+  inventorySyncContract,
+  inventoryTypesContract,
+} from './rest-sync.js';
 
 const c = initContract();
 
@@ -40,6 +46,9 @@ export const inventoryContract = c.router(
     paperless: inventoryPaperlessContract,
     search: inventorySearchContract,
     settings: inventorySettingsContract,
+    sync: inventorySyncContract,
+    types: inventoryTypesContract,
+    codes: inventoryCodesContract,
   },
   {
     pathPrefix: '',
