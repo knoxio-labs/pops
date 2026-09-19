@@ -18,6 +18,10 @@ internal enum BFMInventoryCommonFailure {
     case rateLimited
     case upstream(code: String)
     case payloadTooLarge
+    /// `415` on `putMedia`: the mobile OS never produces a JPEG or HEIC that
+    /// would reach this, so it is a fact about the caller's own encoding
+    /// rather than something to retry unchanged.
+    case unsupportedMediaType
     case undocumented(Int)
 }
 
@@ -31,6 +35,7 @@ internal enum BFMInventoryFailureMapping {
         case .rateLimited: .transport("\(operation): rate limited")
         case .upstream(let code): BFMRepositoryFailure.upstreamFailure(code, operation: operation)
         case .payloadTooLarge: .transport("\(operation): payload too large")
+        case .unsupportedMediaType: .transport("\(operation): unsupported media type")
         case .undocumented(let status): .transport("\(operation): undocumented status \(status)")
         }
     }
