@@ -14,14 +14,18 @@ export const conflictSourceSchema = z.object({ kind: z.string(), label: z.string
 /** A value of {@link conflictSourceSchema}. */
 export type ConflictSource = z.infer<typeof conflictSourceSchema>;
 
-const fieldConflictSchema = z.object({
+const fieldConflictShape = {
   kind: z.literal('field'),
   field: z.string(),
-  mine: jsonValueSchema,
-  theirs: jsonValueSchema,
   source: conflictSourceSchema,
   at: z.string(),
   currentRevision: z.number().int(),
+};
+
+const fieldConflictSchema = z.object({
+  ...fieldConflictShape,
+  mine: jsonValueSchema,
+  theirs: jsonValueSchema,
 });
 
 const codeCollisionSchema = z.object({
@@ -53,10 +57,9 @@ const appliedSchema = z.object({
   converged: z.boolean(),
 });
 
-const conflictSchema = z.intersection(
-  z.object({ mutationId: z.string(), status: z.literal('conflict') }),
-  conflictBodySchema
-);
+const conflictHeaderSchema = z.object({ mutationId: z.string(), status: z.literal('conflict') });
+
+const conflictSchema = z.intersection(conflictHeaderSchema, conflictBodySchema);
 
 const rejectedSchema = z.object({
   mutationId: z.string(),
@@ -83,3 +86,24 @@ export type StoredOutcome = z.infer<typeof storedOutcomeSchema>;
 export const outcomeSchema = z.union([storedOutcomeSchema, deferredSchema]);
 /** A value of {@link outcomeSchema}. */
 export type Outcome = z.infer<typeof outcomeSchema>;
+
+/**
+ * {@link outcomeSchema} as the sync contract declares it: identical, except
+ * that a field conflict's `mine` and `theirs` are unconstrained rather than
+ * the recursive JSON schema. The recursive one projects to an OpenAPI
+ * component that openapi-typescript renders as a type referring to itself,
+ * which TypeScript rejects; unconstrained is also what a client decodes it as.
+ */
+export const outcomeWireSchema = z.union([
+  appliedSchema,
+  z.intersection(
+    conflictHeaderSchema,
+    z.discriminatedUnion('kind', [
+      z.object({ ...fieldConflictShape, mine: z.unknown(), theirs: z.unknown() }),
+      codeCollisionSchema,
+      deletedConflictSchema,
+    ])
+  ),
+  rejectedSchema,
+  deferredSchema,
+]);

@@ -25,7 +25,8 @@ export interface DomainEvent {
   readonly serverTime: string;
 }
 
-function toDomainEvent(row: EventRow): DomainEvent {
+/** Parse an `events` row into a {@link DomainEvent}. */
+export function toDomainEvent(row: EventRow): DomainEvent {
   return {
     seq: row.seq,
     entityKind: row.entityKind,

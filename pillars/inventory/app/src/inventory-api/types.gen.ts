@@ -20,6 +20,55 @@ export type TraceNode = {
   type: string | null;
 };
 
+export type CodesSuggestData = {
+  /**
+   * Body
+   */
+  body?: {
+    name: string;
+    stem?: string;
+    typeKey?: string;
+  };
+  headers?: {
+    'pops-inventory-protocol'?: string;
+  };
+  path?: never;
+  query?: never;
+  url: '/codes/suggest';
+};
+
+export type CodesSuggestErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 426
+   */
+  426: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type CodesSuggestError = CodesSuggestErrors[keyof CodesSuggestErrors];
+
+export type CodesSuggestResponses = {
+  /**
+   * 200
+   */
+  200: {
+    suggestions: Array<string>;
+  };
+};
+
+export type CodesSuggestResponse = CodesSuggestResponses[keyof CodesSuggestResponses];
+
 export type ConnectionsDisconnectData = {
   /**
    * Body
@@ -2947,6 +2996,636 @@ export type SettingsResetKeyResponses = {
 };
 
 export type SettingsResetKeyResponse = SettingsResetKeyResponses[keyof SettingsResetKeyResponses];
+
+export type SyncChangesData = {
+  body?: never;
+  headers?: {
+    'pops-inventory-protocol'?: string;
+  };
+  path?: never;
+  query: {
+    since: number;
+    epoch: string;
+    limit: number;
+  };
+  url: '/sync/changes';
+};
+
+export type SyncChangesErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 426
+   */
+  426: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type SyncChangesError = SyncChangesErrors[keyof SyncChangesErrors];
+
+export type SyncChangesResponses = {
+  /**
+   * 200
+   */
+  200: {
+    catalogueVersion: string;
+    epoch: string;
+    events: Array<{
+      actor: {
+        kind: string;
+        label: string;
+      };
+      after: {
+        placement?:
+          | {
+              kind: 'location';
+              locationId: string;
+            }
+          | {
+              itemId: string;
+              kind: 'container';
+            }
+          | {
+              kind: 'hand';
+            };
+        previousPlacement?:
+          | {
+              kind: 'location';
+              locationId: string;
+            }
+          | {
+              itemId: string;
+              kind: 'container';
+            }
+          | null;
+        [key: string]: unknown;
+      };
+      before: {
+        placement?:
+          | {
+              kind: 'location';
+              locationId: string;
+            }
+          | {
+              itemId: string;
+              kind: 'container';
+            }
+          | {
+              kind: 'hand';
+            };
+        previousPlacement?:
+          | {
+              kind: 'location';
+              locationId: string;
+            }
+          | {
+              itemId: string;
+              kind: 'container';
+            }
+          | null;
+        [key: string]: unknown;
+      };
+      clientTime: string | null;
+      compensatesSeq: number | null;
+      entityId: string;
+      entityKind: 'item' | 'location';
+      fields: Array<string>;
+      kind: string;
+      reason: string | null;
+      seq: number;
+      serverTime: string;
+      undoable: boolean;
+    }>;
+    hasMore: boolean;
+    items: Array<{
+      access: 'open' | 'closed' | null;
+      code: string | null;
+      createdAt: string;
+      deletedAt: string | null;
+      documentTitles: Array<string>;
+      documentsStatus: 'linked' | 'none' | 'unavailable';
+      externalIds: Array<{
+        kind: string;
+        value: string;
+      }>;
+      fields: {
+        [key: string]: unknown;
+      };
+      id: string;
+      isContainer: boolean;
+      isFull: boolean | null;
+      lifecycle: string;
+      lifecycleChangedAt: string | null;
+      name: string;
+      note: string | null;
+      photos: Array<{
+        caption: string | null;
+        sha256: string;
+      }>;
+      placement:
+        | {
+            kind: 'location';
+            locationId: string;
+          }
+        | {
+            itemId: string;
+            kind: 'container';
+          }
+        | {
+            kind: 'hand';
+          };
+      previousPlacement:
+        | {
+            kind: 'location';
+            locationId: string;
+          }
+        | {
+            itemId: string;
+            kind: 'container';
+          }
+        | null;
+      provenance: {
+        merchant: string | null;
+        price: number | null;
+        purchasedOn: string | null;
+        transactionUri: string | null;
+        warrantyExpires: string | null;
+      } | null;
+      quantity: number;
+      revision: number;
+      seq: number;
+      typeKey: string | null;
+      updatedAt: string;
+    }>;
+    locations: Array<{
+      deletedAt: string | null;
+      id: string;
+      name: string;
+      parentId: string | null;
+      revision: number;
+      seq: number;
+      sortOrder: number;
+    }>;
+    nextSince: number;
+  };
+};
+
+export type SyncChangesResponse = SyncChangesResponses[keyof SyncChangesResponses];
+
+export type SyncItemEventsData = {
+  body?: never;
+  headers?: {
+    'pops-inventory-protocol'?: string;
+  };
+  path: {
+    id: string;
+  };
+  query: {
+    cursor?: string;
+    limit: number;
+  };
+  url: '/sync/items/{id}/events';
+};
+
+export type SyncItemEventsErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 426
+   */
+  426: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type SyncItemEventsError = SyncItemEventsErrors[keyof SyncItemEventsErrors];
+
+export type SyncItemEventsResponses = {
+  /**
+   * 200
+   */
+  200: {
+    events: Array<{
+      actor: {
+        kind: string;
+        label: string;
+      };
+      after: {
+        placement?:
+          | {
+              kind: 'location';
+              locationId: string;
+            }
+          | {
+              itemId: string;
+              kind: 'container';
+            }
+          | {
+              kind: 'hand';
+            };
+        previousPlacement?:
+          | {
+              kind: 'location';
+              locationId: string;
+            }
+          | {
+              itemId: string;
+              kind: 'container';
+            }
+          | null;
+        [key: string]: unknown;
+      };
+      before: {
+        placement?:
+          | {
+              kind: 'location';
+              locationId: string;
+            }
+          | {
+              itemId: string;
+              kind: 'container';
+            }
+          | {
+              kind: 'hand';
+            };
+        previousPlacement?:
+          | {
+              kind: 'location';
+              locationId: string;
+            }
+          | {
+              itemId: string;
+              kind: 'container';
+            }
+          | null;
+        [key: string]: unknown;
+      };
+      clientTime: string | null;
+      compensatesSeq: number | null;
+      entityId: string;
+      entityKind: 'item' | 'location';
+      fields: Array<string>;
+      kind: string;
+      reason: string | null;
+      seq: number;
+      serverTime: string;
+      undoable: boolean;
+    }>;
+    nextCursor: string | null;
+  };
+};
+
+export type SyncItemEventsResponse = SyncItemEventsResponses[keyof SyncItemEventsResponses];
+
+export type SyncMutationsData = {
+  /**
+   * Body
+   */
+  body?: {
+    mutations: Array<{
+      args: unknown;
+      baseRevision?: number | null;
+      clientTime: string;
+      dependsOn: Array<string>;
+      entityId: string;
+      mutationId: string;
+      op: string;
+    }>;
+  };
+  headers?: {
+    'pops-inventory-protocol'?: string;
+    'pops-actor'?: string;
+  };
+  path?: never;
+  query?: never;
+  url: '/sync/mutations';
+};
+
+export type SyncMutationsErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 426
+   */
+  426: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type SyncMutationsError = SyncMutationsErrors[keyof SyncMutationsErrors];
+
+export type SyncMutationsResponses = {
+  /**
+   * 200
+   */
+  200: {
+    highWaterSeq: number;
+    outcomes: Array<
+      | {
+          converged: boolean;
+          mutationId: string;
+          revision: number;
+          seq: number;
+          status: 'applied';
+        }
+      | {
+          at: string;
+          currentRevision: number;
+          field: string;
+          kind: 'field';
+          mine: unknown;
+          mutationId: string;
+          source: {
+            kind: string;
+            label: string;
+          };
+          status: 'conflict';
+          theirs: unknown;
+        }
+      | {
+          heldBy: {
+            id: string;
+            name: string;
+          };
+          kind: 'code_collision';
+          mutationId: string;
+          status: 'conflict';
+          suggestedCode: string | null;
+        }
+      | {
+          at: string;
+          kind: 'deleted';
+          mutationId: string;
+          source: {
+            kind: string;
+            label: string;
+          };
+          status: 'conflict';
+        }
+      | {
+          message: string;
+          mutationId: string;
+          reason: string;
+          status: 'rejected';
+        }
+      | {
+          mutationId: string;
+          status: 'deferred';
+          waitingOn: string;
+        }
+    >;
+  };
+};
+
+export type SyncMutationsResponse = SyncMutationsResponses[keyof SyncMutationsResponses];
+
+export type SyncSnapshotData = {
+  body?: never;
+  headers?: {
+    'pops-inventory-protocol'?: string;
+  };
+  path?: never;
+  query: {
+    cursor?: string;
+    limit: number;
+  };
+  url: '/sync/snapshot';
+};
+
+export type SyncSnapshotErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 426
+   */
+  426: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type SyncSnapshotError = SyncSnapshotErrors[keyof SyncSnapshotErrors];
+
+export type SyncSnapshotResponses = {
+  /**
+   * 200
+   */
+  200: {
+    catalogueVersion: string;
+    epoch: string;
+    highWaterSeq: number;
+    items: Array<{
+      access: 'open' | 'closed' | null;
+      code: string | null;
+      createdAt: string;
+      deletedAt: string | null;
+      documentTitles: Array<string>;
+      documentsStatus: 'linked' | 'none' | 'unavailable';
+      externalIds: Array<{
+        kind: string;
+        value: string;
+      }>;
+      fields: {
+        [key: string]: unknown;
+      };
+      id: string;
+      isContainer: boolean;
+      isFull: boolean | null;
+      lifecycle: string;
+      lifecycleChangedAt: string | null;
+      name: string;
+      note: string | null;
+      photos: Array<{
+        caption: string | null;
+        sha256: string;
+      }>;
+      placement:
+        | {
+            kind: 'location';
+            locationId: string;
+          }
+        | {
+            itemId: string;
+            kind: 'container';
+          }
+        | {
+            kind: 'hand';
+          };
+      previousPlacement:
+        | {
+            kind: 'location';
+            locationId: string;
+          }
+        | {
+            itemId: string;
+            kind: 'container';
+          }
+        | null;
+      provenance: {
+        merchant: string | null;
+        price: number | null;
+        purchasedOn: string | null;
+        transactionUri: string | null;
+        warrantyExpires: string | null;
+      } | null;
+      quantity: number;
+      revision: number;
+      seq: number;
+      typeKey: string | null;
+      updatedAt: string;
+    }>;
+    locations: Array<{
+      deletedAt: string | null;
+      id: string;
+      name: string;
+      parentId: string | null;
+      revision: number;
+      seq: number;
+      sortOrder: number;
+    }>;
+    nextCursor: string | null;
+    total: number;
+  };
+};
+
+export type SyncSnapshotResponse = SyncSnapshotResponses[keyof SyncSnapshotResponses];
+
+export type TypesCatalogueData = {
+  body?: never;
+  headers?: {
+    'pops-inventory-protocol'?: string;
+    'if-none-match'?: string;
+  };
+  path?: never;
+  query?: never;
+  url: '/types';
+};
+
+export type TypesCatalogueErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 426
+   */
+  426: {
+    code?: string;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type TypesCatalogueError = TypesCatalogueErrors[keyof TypesCatalogueErrors];
+
+export type TypesCatalogueResponses = {
+  /**
+   * 200
+   */
+  200: {
+    types: Array<{
+      capabilities: Array<'containment'>;
+      fields: Array<{
+        choices?: Array<string>;
+        dimension?:
+          | 'length'
+          | 'mass'
+          | 'volume'
+          | 'power'
+          | 'voltage'
+          | 'data-rate'
+          | 'brightness'
+          | 'colour-temperature';
+        highlighted?: boolean;
+        hint?: string;
+        key: string;
+        kind: 'text' | 'choice' | 'flag' | 'measurement' | 'range' | 'link';
+        label: string;
+        required?: boolean;
+        unit?: string;
+      }>;
+      key: string;
+      legacyLabels: Array<string>;
+      name: string;
+    }>;
+    units: Array<{
+      dimension:
+        | 'length'
+        | 'mass'
+        | 'volume'
+        | 'power'
+        | 'voltage'
+        | 'data-rate'
+        | 'brightness'
+        | 'colour-temperature';
+      multiplier: number;
+      symbol: string;
+    }>;
+    version: string;
+  };
+};
+
+export type TypesCatalogueResponse = TypesCatalogueResponses[keyof TypesCatalogueResponses];
 
 export type DocumentFilesRemoveUploadData = {
   /**

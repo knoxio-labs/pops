@@ -63,6 +63,8 @@ packages:
     path: Packages/FeatureAccounts
   FeatureInventory:
     path: Packages/FeatureInventory
+  InventoryReplica:
+    path: Packages/InventoryReplica
   DesignPlayground:
     path: Packages/DesignPlayground
 
@@ -125,6 +127,7 @@ targets:
         - package: FeatureTransactions/FeatureTransactionsTests
         - package: FeatureAccounts/FeatureAccountsTests
         - package: FeatureInventory/FeatureInventoryTests
+        - package: InventoryReplica/InventoryReplicaTests
         - package: DesignPlayground/DesignPlaygroundTests
     # The team lives outside the repo; see Config/Signing.xcconfig. Nothing here
     # may set DEVELOPMENT_TEAM — target build settings outrank a target xcconfig,

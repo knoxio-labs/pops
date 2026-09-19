@@ -47,6 +47,14 @@ export function requireItem(target: LoadedEntity): ItemRow {
   return target.row;
 }
 
+/** The location row of an op's target; an op declared on locations only ever receives one. */
+export function requireLocation(target: LoadedEntity): LocationRow {
+  if (target.kind !== 'location') {
+    throw new CommandRejected('invalid', 'this op applies to locations only');
+  }
+  return target.row;
+}
+
 /** Whether `field` is a wire field the command layer can write on `kind`. */
 export function isWritableField(kind: EntityKind, field: string): boolean {
   const codecs = kind === 'item' ? ITEM_FIELD_CODECS : LOCATION_FIELD_CODECS;
