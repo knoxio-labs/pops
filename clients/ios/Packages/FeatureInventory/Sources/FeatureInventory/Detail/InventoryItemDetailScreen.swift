@@ -17,16 +17,7 @@ internal struct InventoryItemDetailScreen: View {
     internal var body: some View {
         content
             .task { await model.observe() }
-            .alert(
-                InventoryCopy.failureTitle,
-                isPresented: Binding(
-                    get: { model.failure != nil }, set: { if !$0 { model.failure = nil } }),
-                presenting: model.failure
-            ) { _ in
-                Button("OK", role: .cancel) {}
-            } message: { failure in
-                Text(InventoryCopy.message(for: failure))
-            }
+            .inventoryDetailFailureAlert(model)
     }
 
     @ViewBuilder private var content: some View {
@@ -43,6 +34,23 @@ internal struct InventoryItemDetailScreen: View {
             InventoryPendingScreen(
                 title: "Item", detail: InventoryCopy.unavailable,
                 symbol: InventorySymbol.stale.system)
+        }
+    }
+}
+
+extension View {
+    /// The one-line alert Item detail shows when one of its own writes did
+    /// not land, on any screen that draws the item page over `model`.
+    internal func inventoryDetailFailureAlert(_ model: InventoryItemDetailViewModel) -> some View {
+        alert(
+            InventoryCopy.failureTitle,
+            isPresented: Binding(
+                get: { model.failure != nil }, set: { if !$0 { model.failure = nil } }),
+            presenting: model.failure
+        ) { _ in
+            Button("OK", role: .cancel) {}
+        } message: { failure in
+            Text(InventoryCopy.message(for: failure))
         }
     }
 }

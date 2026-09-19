@@ -26,7 +26,7 @@ internal struct InventoryContainerContentsSection: View {
     internal var body: some View {
         VStack(alignment: .leading, spacing: PopsSpacing.md) {
             if profile.isActive {
-                InventoryContainerGroup {
+                InventoryItemDetailGroup {
                     Toggle("Full", isOn: isFull)
                         .font(.popsBody)
                         .tint(.popsInventory)
@@ -40,7 +40,7 @@ internal struct InventoryContainerContentsSection: View {
                     )
                     .padding(.bottom, PopsSpacing.xs)
                 }
-                InventoryContainerGroup { rows }
+                InventoryItemDetailGroup { rows }
             }
         }
         .inventoryMotion(value: contents.entries.map(\.id))
@@ -142,38 +142,5 @@ internal struct InventoryContainerContentsSection: View {
 
     private func thumbnail(_ sha256: String) async -> Data? {
         try? await model.runner.store.photo(sha256, variant: .thumb)
-    }
-}
-
-/// The item page's grouped rows: one rounded surface, rows divided inside
-/// it, selected rows tinted across its width.
-private struct InventoryContainerGroup<Content: View>: View {
-    @ViewBuilder let content: Content
-
-    var body: some View {
-        Group(subviews: content) { rows in
-            VStack(alignment: .leading, spacing: PopsSpacing.zero) {
-                ForEach(rows) { row in
-                    if row.id != rows.first?.id {
-                        Divider().padding(.leading, PopsSpacing.lg)
-                    }
-                    row
-                        .frame(
-                            maxWidth: .infinity, minHeight: PopsSize.touchTarget,
-                            alignment: .leading
-                        )
-                        .padding(.horizontal, PopsSpacing.lg)
-                        .padding(.vertical, PopsSpacing.xs)
-                }
-            }
-            .inventorySelectionHighlights(
-                rowOutset: PopsSpacing.xs,
-                in: RoundedRectangle(cornerRadius: PopsRadius.card, style: .continuous)
-            )
-            .background(
-                Color.popsSurface,
-                in: RoundedRectangle(cornerRadius: PopsRadius.card, style: .continuous))
-        }
-        .padding(.horizontal, PopsSpacing.lg)
     }
 }

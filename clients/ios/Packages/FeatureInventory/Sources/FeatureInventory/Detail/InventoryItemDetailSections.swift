@@ -39,6 +39,10 @@ internal struct InventoryItemDetailGroup<Content: View>: View {
                             .padding(.vertical, PopsSpacing.xs)
                     }
                 }
+                .inventorySelectionHighlights(
+                    rowOutset: PopsSpacing.xs,
+                    in: RoundedRectangle(cornerRadius: PopsRadius.card, style: .continuous)
+                )
                 .background(
                     Color.popsSurface,
                     in: RoundedRectangle(cornerRadius: PopsRadius.card, style: .continuous))

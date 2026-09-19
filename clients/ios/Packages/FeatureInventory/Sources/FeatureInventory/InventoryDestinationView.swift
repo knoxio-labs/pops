@@ -28,7 +28,7 @@ internal struct InventoryDestinationView: View {
         case .repair(let id):
             InventoryRepairScreen(repairId: id, store: store)
         case .container(let id):
-            InventoryContainerPage(model: InventoryContainerPageModel(id: id, store: store))
+            InventoryContainerPage(id: id, store: store)
         case .locations:
             InventoryLocationBrowserView(model: InventoryLocationBrowserModel(store: store))
         case .place(let id):

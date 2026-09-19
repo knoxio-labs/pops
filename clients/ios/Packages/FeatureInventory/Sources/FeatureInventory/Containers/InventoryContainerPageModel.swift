@@ -29,10 +29,16 @@ internal final class InventoryContainerPageModel {
     private var sawContents = false
     private var emptiedResolved = false
 
-    internal init(id: InventoryItem.ID, store: any InventoryStore) {
+    internal convenience init(id: InventoryItem.ID, store: any InventoryStore) {
+        self.init(id: id, runner: InventoryCommandRunner(store: store))
+    }
+
+    /// Writes through `runner`, so the page's verbs and the item page it sits
+    /// on share one Undo capsule and one failure alert.
+    internal init(id: InventoryItem.ID, runner: InventoryCommandRunner) {
         self.id = id
-        runner = InventoryCommandRunner(store: store)
-        content = InventoryObservation(store: store, query: Self.query(id: id))
+        self.runner = runner
+        content = InventoryObservation(store: runner.store, query: Self.query(id: id))
     }
 
     internal static func query(id: InventoryItem.ID) -> InventoryQuery<InventoryContainerProfile?> {
