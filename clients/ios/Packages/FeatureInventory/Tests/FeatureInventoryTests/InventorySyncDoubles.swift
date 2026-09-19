@@ -7,6 +7,7 @@ import Foundation
 /// writes.
 private struct EmptyInventorySource: InventoryQuerySource {
     func inventoryItem(id: String) -> InventoryItem? { nil }
+    func inventoryItem(withCode code: String) -> InventoryItem? { nil }
     func inventoryLocation(id: String) -> InventoryLocation? { nil }
     func inventoryLocationTree() -> [InventoryLocation] { [] }
     func inventoryContents(ofLocation locationId: String) -> [InventoryItem] { [] }

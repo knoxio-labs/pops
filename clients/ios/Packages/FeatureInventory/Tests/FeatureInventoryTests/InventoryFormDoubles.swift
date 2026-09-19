@@ -14,6 +14,9 @@ internal struct FormFixtureSource: InventoryQuerySource {
     var status: InventoryReplicaStatus = .current
 
     func inventoryItem(id: String) -> InventoryItem? { items.first { $0.id == id } }
+    func inventoryItem(withCode code: String) -> InventoryItem? {
+        items.first { !$0.isDeleted && $0.code?.caseInsensitiveCompare(code) == .orderedSame }
+    }
     func inventoryLocation(id: String) -> InventoryLocation? { locations.first { $0.id == id } }
     func inventoryLocationTree() -> [InventoryLocation] { locations }
     func inventoryContents(ofLocation locationId: String) -> [InventoryItem] { [] }

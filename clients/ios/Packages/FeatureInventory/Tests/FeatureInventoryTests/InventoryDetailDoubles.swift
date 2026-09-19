@@ -66,6 +66,9 @@ internal struct InventoryHistoryOverlay: InventoryQuerySource {
     }
 
     func inventoryItem(id: String) -> InventoryItem? { base.inventoryItem(id: id) }
+    func inventoryItem(withCode code: String) -> InventoryItem? {
+        base.inventoryItem(withCode: code)
+    }
     func inventoryLocation(id: String) -> InventoryLocation? { base.inventoryLocation(id: id) }
     func inventoryLocationTree() -> [InventoryLocation] { base.inventoryLocationTree() }
     func inventoryContents(ofLocation locationId: String) -> [InventoryItem] {
