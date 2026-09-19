@@ -103,16 +103,20 @@ internal struct InventoryFormTextRow<Accessory: View>: View {
     private let placeholder: String
     @Binding private var text: String
     private let monospaced: Bool
+    private let identifier: String
     private let accessory: Accessory
 
+    /// `identifier` names the text field itself for a UI flow; a flow cannot
+    /// reach it by text, because its label and its placeholder read the same.
     internal init(
         _ label: String, placeholder: String, text: Binding<String>, monospaced: Bool = false,
-        @ViewBuilder accessory: () -> Accessory
+        identifier: String = "", @ViewBuilder accessory: () -> Accessory
     ) {
         self.label = label
         self.placeholder = placeholder
         _text = text
         self.monospaced = monospaced
+        self.identifier = identifier
         self.accessory = accessory()
     }
 
@@ -123,6 +127,7 @@ internal struct InventoryFormTextRow<Accessory: View>: View {
                     .font(monospaced && !text.isEmpty ? .popsMonospaced : .popsBody)
                     .multilineTextAlignment(.trailing)
                     .lineLimit(1)
+                    .accessibilityIdentifier(identifier)
                 accessory
             }
         } label: {
@@ -135,9 +140,13 @@ internal struct InventoryFormTextRow<Accessory: View>: View {
 
 extension InventoryFormTextRow where Accessory == EmptyView {
     internal init(
-        _ label: String, placeholder: String, text: Binding<String>, monospaced: Bool = false
+        _ label: String, placeholder: String, text: Binding<String>, monospaced: Bool = false,
+        identifier: String = ""
     ) {
-        self.init(label, placeholder: placeholder, text: text, monospaced: monospaced) {
+        self.init(
+            label, placeholder: placeholder, text: text, monospaced: monospaced,
+            identifier: identifier
+        ) {
             EmptyView()
         }
     }

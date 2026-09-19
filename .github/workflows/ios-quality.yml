@@ -434,12 +434,14 @@ jobs:
           [ -x "$gyp_bin/node-gyp" ] || { echo "::error::bundled node-gyp not found at $gyp_bin"; exit 1; }
           echo "$gyp_bin" >> "$GITHUB_PATH"
 
-      - name: Install the BFM's subgraph
+      - name: Install the BFM's and inventory's subgraphs
         if: github.event_name == 'push'
-        # Not the whole workspace: this job needs one pillar to run, and
-        # `@pops/bfm...` pulls exactly it and what it imports.
+        # Not the whole workspace: this job runs two pillars, the BFM and the
+        # inventory pillar the Inventory flow drives for real
+        # (`scripts/ios-e2e/inventory-pillar.mjs`), and each `...` filter pulls
+        # exactly that pillar and what it imports.
         working-directory: .
-        run: pnpm install --frozen-lockfile --filter "@pops/bfm..."
+        run: pnpm install --frozen-lockfile --filter "@pops/bfm..." --filter "@pops/inventory..."
 
       # Last, because it is the only step here that depends on every earlier
       # one: it installs the products `build:for-testing` wrote and drives the

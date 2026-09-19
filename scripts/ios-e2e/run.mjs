@@ -6,7 +6,9 @@
  * real ECDSA key parsing, real access tokens, real SQLite, real keyset paging —
  * against a temporary database that this script creates and deletes. What sits
  * behind the BFM (the registry snapshot and the finance pillar it proxies to)
- * is `upstream-stub.mjs`; that file argues for itself.
+ * is `upstream-stub.mjs`; that file argues for itself. The one exception is
+ * inventory, which is the real pillar on its own temporary database behind a
+ * gate (`inventory-pillar.mjs`, which says why).
  *
  * ## Why this lives at the repo root and not in `clients/ios`
  *
@@ -74,6 +76,7 @@ import { fileURLToPath } from 'node:url';
 
 import { seededAccounts } from './accounts-fixture.mjs';
 import { startControlPlane } from './control-plane.mjs';
+import { spawnInventoryPillar, startInventoryGate } from './inventory-pillar.mjs';
 import { startPurchasesStub } from './purchases-stub.mjs';
 import { boundAddress } from './server-address.mjs';
 import { seededTransactions } from './transactions-fixture.mjs';
@@ -92,6 +95,9 @@ const HOST = '127.0.0.1';
  * until its 45-minute timeout.
  */
 const BOOT_TIMEOUT_MS = 30_000;
+
+/** The key the BFM presents to other pillars, and the one the registry stub answers for. */
+const SERVICE_ACCOUNT_KEY = 'ios-e2e-service-account-key';
 const BOOT_POLL_MS = 100;
 
 /** How long the pillar gets to shut down cleanly before it is killed. */
@@ -256,8 +262,9 @@ function describeEnd(code, signal) {
  * @param {URL} baseURL
  * @param {string} expectedVersion
  * @param {import('node:child_process').ChildProcess} child
+ * @param {string} [who] Names the process in a failure, since two pillars boot here.
  */
-async function waitForHealth(baseURL, expectedVersion, child) {
+async function waitForHealth(baseURL, expectedVersion, child, who = 'the BFM') {
   const deadline = Date.now() + BOOT_TIMEOUT_MS;
   const health = new URL('/health', baseURL);
 
@@ -267,7 +274,7 @@ async function waitForHealth(baseURL, expectedVersion, child) {
     // would poll a dead port until the ceiling.
     if (child.exitCode !== null || child.signalCode !== null) {
       throw new HarnessError(
-        `the BFM ${describeEnd(child.exitCode, child.signalCode)} before answering ${health}. ` +
+        `${who} ${describeEnd(child.exitCode, child.signalCode)} before answering ${health}. ` +
           'Its output is above.'
       );
     }
@@ -281,14 +288,14 @@ async function waitForHealth(baseURL, expectedVersion, child) {
     }
     if (answer.kind === 'foreign') {
       throw new HarnessError(
-        `something is already serving ${baseURL.origin} and it is not a BFM — ` +
+        `something is already serving ${baseURL.origin} and it is not ${who} — ` +
           `${health} answered 2xx with ${answer.why}. Stop it and run this again.`
       );
     }
     await sleep(BOOT_POLL_MS);
   }
 
-  throw new HarnessError(`the BFM did not answer ${health} within ${BOOT_TIMEOUT_MS}ms`);
+  throw new HarnessError(`${who} did not answer ${health} within ${BOOT_TIMEOUT_MS}ms`);
 }
 
 /**
@@ -447,14 +454,43 @@ async function main() {
     teardown.unshift(purchases.close);
     process.stdout.write(`ios-e2e: purchases stub on ${purchases.url} (withheld until armed)\n`);
 
+    // The real inventory pillar sits behind a gate that withholds it until a
+    // flow arms it; `inventory-pillar.mjs` says why. The gate is up before the
+    // registry that advertises it, and the pillar after, because the pillar
+    // verifies the BFM's key against that registry.
+    await run('pnpm', ['--filter', '@pops/inventory...', 'build']);
+    const inventoryPort = await allocatePort();
+    const inventoryBaseURL = new URL(`http://${HOST}:${inventoryPort}`);
+    const inventory = await startInventoryGate({
+      pillarBaseUrl: inventoryBaseURL.origin,
+      host: HOST,
+    });
+    teardown.unshift(inventory.close);
+
     const upstream = await startUpstreamStub({
       rows: seededTransactions,
       accounts: seededAccounts,
       purchasesBaseUrl: purchases.url,
+      inventoryBaseUrl: inventory.url,
+      serviceAccountKey: SERVICE_ACCOUNT_KEY,
       host: HOST,
     });
     teardown.unshift(upstream.close);
     process.stdout.write(`ios-e2e: registry + finance stub on ${upstream.url}\n`);
+
+    const inventoryPillar = spawnInventoryPillar({
+      repoRoot: REPO_ROOT,
+      port: inventoryPort,
+      dataDir,
+      buildVersion,
+      selfBaseUrl: inventoryBaseURL.origin,
+      registryUrl: upstream.url,
+    });
+    teardown.unshift(() => stop(inventoryPillar));
+    await waitForHealth(inventoryBaseURL, buildVersion, inventoryPillar, 'the inventory pillar');
+    process.stdout.write(
+      `ios-e2e: inventory pillar on ${inventoryBaseURL.origin}, gated at ${inventory.url} (withheld until armed)\n`
+    );
 
     // `@pops/bfm...`, not `@pops/bfm`: the pillar's build script runs its
     // OpenAPI generator, which imports the compiled `@pops/contract-openapi`.
@@ -478,7 +514,7 @@ async function main() {
         BFM_PAIRING_CODE_TTL_MS: String(PAIRING_CODE_TTL_MS),
         // The BFM crashes at boot without one. The stub ignores the header it
         // ends up on.
-        POPS_INTERNAL_API_KEY: 'ios-e2e-service-account-key',
+        POPS_INTERNAL_API_KEY: SERVICE_ACCOUNT_KEY,
         POPS_REGISTRY_URL: upstream.url,
         POPS_DISCOVERY_FETCH_TIMEOUT_MS: String(DISCOVERY_FETCH_TIMEOUT_MS),
         POPS_PROBE_TIMEOUT_MS: String(PROBE_TIMEOUT_MS),
@@ -502,6 +538,7 @@ async function main() {
       accessTokenSecret: ACCESS_TOKEN_SECRET,
       upstream,
       purchases,
+      inventory,
     });
     teardown.unshift(control.close);
     // The same identity check, through the proxy this time. A control plane

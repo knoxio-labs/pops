@@ -83,7 +83,9 @@ internal struct InventoryItemFormView: View {
 
     private var identity: some View {
         Section {
-            InventoryFormTextRow("Name", placeholder: "Name", text: $model.draft.name)
+            InventoryFormTextRow(
+                "Name", placeholder: "Name", text: $model.draft.name,
+                identifier: InventoryAccessibility.itemNameField)
             InventoryFormDestinationRow(draft: $model.draft)
             InventoryFormTypeRow(
                 types: model.catalogue.types, offersNone: model.offersNoType,

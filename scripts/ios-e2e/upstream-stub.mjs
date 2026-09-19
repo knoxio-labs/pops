@@ -85,6 +85,7 @@ import { createServer } from 'node:http';
 import { fileURLToPath } from 'node:url';
 
 import { seededAccounts } from './accounts-fixture.mjs';
+import { inventoryRegistryEntry } from './inventory-pillar.mjs';
 import { purchasesRegistryEntry } from './purchases-stub.mjs';
 import { boundAddress } from './server-address.mjs';
 
@@ -448,6 +449,16 @@ export function selectPage(rows, query) {
   };
 }
 
+/** The registry route a pillar verifies a presented service-account key on (`libs/sdk/src/registry-paths.ts`). */
+export const SERVICE_ACCOUNT_SELF_PATH = '/service-accounts/self';
+
+/**
+ * Who the BFM's key belongs to, as the registry answers it: the grant the
+ * inventory relay needs (the registry's `bfm` account holds `inventory.sync`,
+ * `.types`, `.codes` and `.media`; the root scope covers all four here).
+ */
+export const BFM_SERVICE_ACCOUNT = { id: 'sa-bfm', name: 'bfm', scopes: ['inventory'] };
+
 /**
  * The registry snapshot the BFM reads, with finance pointed at this stub and
  * purchases pointed at its own.
@@ -472,12 +483,16 @@ export function selectPage(rows, query) {
  *   one that requires `status`, throwing on an entry without it, where the
  *   discovery parser treats it as optional. That is why `status` is stated.
  *
- * @param {{ financeBaseUrl: string, purchasesBaseUrl?: string, now?: string }} options
+ * `inventory` is listed the same way whenever an address for it was supplied,
+ * pointed at the gate `inventory-pillar.mjs` puts in front of the real pillar.
+ *
+ * @param {{ financeBaseUrl: string, purchasesBaseUrl?: string, inventoryBaseUrl?: string, now?: string }} options
  * @returns {{ fetchedAt: string, pillars: Array<import('./purchases-stub.mjs').RegistryEntry> }}
  */
 export function buildRegistrySnapshot({
   financeBaseUrl,
   purchasesBaseUrl,
+  inventoryBaseUrl,
   now = new Date().toISOString(),
 }) {
   return {
@@ -516,6 +531,9 @@ export function buildRegistrySnapshot({
       ...(purchasesBaseUrl === undefined
         ? []
         : [purchasesRegistryEntry({ baseUrl: purchasesBaseUrl, now })]),
+      ...(inventoryBaseUrl === undefined
+        ? []
+        : [inventoryRegistryEntry({ baseUrl: inventoryBaseUrl, now })]),
     ],
   };
 }
@@ -547,7 +565,8 @@ const CONTRACT_MISMATCH_BODY = '<html><body>404 Not Found</body></html>';
  *
  * `purchasesBaseUrl` is the address of the second pillar's own origin, if this
  * run has one — it is put on the roster this server publishes, and nothing
- * else here reads it. See `purchases-stub.mjs`.
+ * else here reads it. See `purchases-stub.mjs`. `inventoryBaseUrl` is the
+ * same for the inventory gate.
  *
  * `accounts` answers `accounts.get`, which the BFM calls for every account a
  * transaction row names (`resolveAccount`/`resolveAccountCurrencies` in
@@ -555,7 +574,12 @@ const CONTRACT_MISMATCH_BODY = '<html><body>404 Not Found</body></html>';
  * 404s the same way an unseeded transaction id does, and the BFM reads that
  * as a failed lookup rather than as this stub having nothing to say.
  *
- * @param {{ rows: Array<Record<string, unknown>>, accounts?: Array<Record<string, unknown>>, contract?: Record<string, unknown>, purchasesBaseUrl?: string, host?: string }} options
+ * `serviceAccountKey` is the key the BFM presents to other pillars. When it
+ * is given, `GET /service-accounts/self` answers it as the `bfm` account
+ * holding `inventory`, the grant the real inventory pillar checks the BFM's
+ * calls against; any other key is refused.
+ *
+ * @param {{ rows: Array<Record<string, unknown>>, accounts?: Array<Record<string, unknown>>, contract?: Record<string, unknown>, purchasesBaseUrl?: string, inventoryBaseUrl?: string, serviceAccountKey?: string, host?: string }} options
  * @returns {Promise<{
  *   url: string,
  *   port: number,
@@ -573,6 +597,8 @@ export async function startUpstreamStub({
   accounts = seededAccounts,
   contract = readFinanceContract(),
   purchasesBaseUrl,
+  inventoryBaseUrl,
+  serviceAccountKey,
   host = '127.0.0.1',
 }) {
   const routes = financeRoutes(contract);
@@ -611,6 +637,13 @@ export async function startUpstreamStub({
       response.end(JSON.stringify(body));
     };
 
+    if (serviceAccountKey !== undefined && url.pathname === SERVICE_ACCOUNT_SELF_PATH) {
+      if (request.headers['x-api-key'] !== serviceAccountKey) {
+        return json(401, { message: 'ios-e2e registry stub knows no such service account' });
+      }
+      return json(200, BFM_SERVICE_ACCOUNT);
+    }
+
     // The BFM resolves the base URL fresh on every call, so `baseUrl` has to
     // be this server's own address rather than a value captured before it had
     // one — the port is only known once it is listening.
@@ -633,6 +666,7 @@ export async function startUpstreamStub({
         buildRegistrySnapshot({
           financeBaseUrl: `http://${host}:${address.port}`,
           purchasesBaseUrl,
+          inventoryBaseUrl,
         })
       );
     }
