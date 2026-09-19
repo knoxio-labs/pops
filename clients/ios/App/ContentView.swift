@@ -44,6 +44,7 @@ internal struct ContentView: View {
                 \.startRePairing,
                 RePairingAction { composition.session.send(.revoked(.credentialsRejected)) }
             )
+            .environment(\.inventoryStorageFullOnEntry, composition.inventoryStorageFull)
     }
 
     /// Identifies Inventory's search tab in the switcher below. Not a
@@ -86,14 +87,12 @@ internal struct ContentView: View {
         default:
             TabView(selection: selection) {
                 ForEach(surface.available, id: \.self) { feature in
-                    screen(for: feature)
-                        .tabItem {
-                            Label(
-                                RootCopy.name(of: feature),
-                                systemImage: RootCopy.symbol(for: feature)
-                            )
-                        }
-                        .tag(feature)
+                    Tab(
+                        RootCopy.name(of: feature), systemImage: RootCopy.symbol(for: feature),
+                        value: feature
+                    ) {
+                        screen(for: feature)
+                    }
                 }
                 if hasInventorySearch {
                     Tab(value: Self.inventorySearchTab, role: .search) {

@@ -30,6 +30,16 @@ internal struct RootView: View {
             .background(Color.popsBackground)
             .task { await composition.shell.restoreSession() }
             .task(id: pairedDevice) { await composition.shell.loadBootstrap() }
+            // Off the main actor: `pruneStaleInventoryReplicas` does blocking
+            // disk I/O, and nothing on screen needs to wait on it — it is
+            // cleanup for a device this build is no longer paired to, not
+            // anything the one it is paired to now is missing without.
+            .task(id: pairedDevice) {
+                guard let pairedDevice else { return }
+                await Task.detached(priority: .utility) {
+                    AppComposition.pruneStaleInventoryReplicas(keeping: pairedDevice)
+                }.value
+            }
             // Coming back to the app is the one moment worth asking again: a
             // pillar that was down at launch may not be now, and nothing on
             // the screen the app is stuck on would ever find that out.

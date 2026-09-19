@@ -48,6 +48,15 @@ extension View {
         modifier(InventorySyncInterruptionsModifier(store: store))
     }
 
+    /// Announces Storage full the moment this view appears, when the
+    /// composition root says the bound device's replica never opened. Attach
+    /// once, at Inventory's own root: every write already goes to
+    /// `StorageFullInventoryStore` before this fires, so there is nothing
+    /// to wait for and nothing a screen underneath needs to gate on.
+    internal func inventoryAnnouncesStorageFullOnEntry() -> some View {
+        modifier(InventoryStorageFullOnEntryModifier())
+    }
+
     /// The alert Storage full shows: read still works, so this can be put
     /// off rather than blocking the screen underneath.
     ///
@@ -90,6 +99,20 @@ internal struct InventorySyncInterruptionsModifier: ViewModifier {
     ) -> InventoryBlockReason? {
         guard case .blocked(let reason) = status else { return nil }
         return reason
+    }
+}
+
+internal struct InventoryStorageFullOnEntryModifier: ViewModifier {
+    @Environment(\.inventoryStorageFullOnEntry) private var storageFullOnEntry
+    @State private var presented = false
+
+    func body(content: Content) -> some View {
+        content
+            .task {
+                guard storageFullOnEntry else { return }
+                presented = true
+            }
+            .inventoryStorageFullAlert(isPresented: $presented)
     }
 }
 
