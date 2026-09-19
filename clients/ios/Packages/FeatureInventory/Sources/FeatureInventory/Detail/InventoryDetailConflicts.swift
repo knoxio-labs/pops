@@ -36,13 +36,7 @@ internal enum InventoryDetailConflicts {
     /// The other side of the disagreement: the second option, since a
     /// repair lists this phone's first.
     private static func otherSide(of repair: InventoryRepair) -> String {
-        switch repair.options.dropFirst().first?.source {
-        case .otherDevice(let label): label
-        case .web, .service: "the server"
-        case .thisDevice: "this phone"
-        case .unrecognised(_, let label): label
-        case nil: "another device"
-        }
+        repair.options.dropFirst().first?.source.inSentence ?? "another device"
     }
 
     private static func words(for field: String?) -> (verb: String, noun: String) {

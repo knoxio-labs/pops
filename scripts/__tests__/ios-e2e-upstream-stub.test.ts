@@ -4,6 +4,7 @@ import { EVERYDAY_ACCOUNT_ID, seededAccounts } from '../ios-e2e/accounts-fixture
 import { seededTransactions } from '../ios-e2e/transactions-fixture.mjs';
 import {
   accountGetRoute,
+  BFM_SERVICE_ACCOUNT,
   buildRegistrySnapshot,
   compareRows,
   financeRoutes,
@@ -13,6 +14,7 @@ import {
   readFinanceContract,
   requiredResponseFields,
   selectPage,
+  SERVICE_ACCOUNT_SELF_PATH,
   startUpstreamStub,
 } from '../ios-e2e/upstream-stub.mjs';
 
@@ -597,5 +599,60 @@ describe('the seeded account', () => {
     } finally {
       await stub.close();
     }
+  });
+});
+
+describe('the inventory entry on the roster', () => {
+  it('is advertised at the gate address when one is handed over, and absent otherwise', () => {
+    const withInventory = buildRegistrySnapshot({
+      financeBaseUrl: 'http://127.0.0.1:4010',
+      inventoryBaseUrl: 'http://127.0.0.1:4020',
+      now: '2026-09-19T00:00:00.000Z',
+    });
+    const without = buildRegistrySnapshot({
+      financeBaseUrl: 'http://127.0.0.1:4010',
+      now: '2026-09-19T00:00:00.000Z',
+    });
+
+    expect(withInventory.pillars.map((pillar) => [pillar.pillarId, pillar.baseUrl])).toContainEqual(
+      ['inventory', 'http://127.0.0.1:4020']
+    );
+    expect(without.pillars.map((pillar) => pillar.pillarId)).not.toContain('inventory');
+  });
+});
+
+describe('the service-account verification route', () => {
+  let stub: Awaited<ReturnType<typeof startUpstreamStub>>;
+
+  afterEach(async () => {
+    await stub.close();
+  });
+
+  const self = (key?: string) =>
+    fetch(`${stub.url}${SERVICE_ACCOUNT_SELF_PATH}`, {
+      headers: key === undefined ? {} : { 'x-api-key': key },
+    });
+
+  it('answers the BFM key as the bfm account holding inventory', async () => {
+    stub = await startUpstreamStub({ rows: seededTransactions, serviceAccountKey: 'the-key' });
+
+    const answered = await self('the-key');
+
+    expect(answered.status).toBe(200);
+    expect(await answered.json()).toEqual(BFM_SERVICE_ACCOUNT);
+    expect(BFM_SERVICE_ACCOUNT.scopes).toContain('inventory');
+  });
+
+  it('refuses any other key, and a request with none', async () => {
+    stub = await startUpstreamStub({ rows: seededTransactions, serviceAccountKey: 'the-key' });
+
+    expect((await self('another-key')).status).toBe(401);
+    expect((await self()).status).toBe(401);
+  });
+
+  it('serves no such route when no key was configured', async () => {
+    stub = await startUpstreamStub({ rows: seededTransactions });
+
+    expect((await self('the-key')).status).not.toBe(200);
   });
 });

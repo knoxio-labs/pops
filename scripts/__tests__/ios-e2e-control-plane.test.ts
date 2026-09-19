@@ -129,6 +129,7 @@ describe('the control plane', () => {
   let openApiUnreachable: boolean;
   let contractMismatch: boolean;
   let purchasesReachable: boolean;
+  let inventoryReachable: boolean;
   let control: Awaited<ReturnType<typeof startControlPlane>>;
 
   beforeEach(async () => {
@@ -137,6 +138,7 @@ describe('the control plane', () => {
     openApiUnreachable = false;
     contractMismatch = false;
     purchasesReachable = false;
+    inventoryReachable = false;
 
     bfm = createServer((request: IncomingMessage, response) => {
       const chunks: Buffer[] = [];
@@ -180,6 +182,12 @@ describe('the control plane', () => {
         },
         isReachable: () => purchasesReachable,
       },
+      inventory: {
+        setReachable: (active: boolean) => {
+          inventoryReachable = active;
+        },
+        isReachable: () => inventoryReachable,
+      },
     });
   });
 
@@ -222,6 +230,7 @@ describe('the control plane', () => {
       financeOpenApiUnreachable: false,
       financeContractMismatch: false,
       purchasesReachable: false,
+      inventoryReachable: false,
     });
     expect(seen).toEqual([]);
   });
@@ -250,6 +259,7 @@ describe('the control plane', () => {
     await call('/__e2e/finance/openapi-unreachable', { method: 'POST' });
     await call('/__e2e/finance/contract-mismatch', { method: 'POST' });
     await call('/__e2e/purchases/up', { method: 'POST' });
+    await call('/__e2e/inventory/up', { method: 'POST' });
     await arm();
     await call('/mobile/bootstrap', { headers: { authorization: bearer('device-1') } });
     await call('/devices/refresh', { method: 'POST', body: '{}' });
@@ -263,6 +273,7 @@ describe('the control plane', () => {
       financeOpenApiUnreachable: false,
       financeContractMismatch: false,
       purchasesReachable: false,
+      inventoryReachable: false,
     });
     expect(outage).toBe(false);
     expect(openApiUnreachable).toBe(false);
@@ -270,6 +281,7 @@ describe('the control plane', () => {
     // Withheld again, so the next flow meets the single-feature root every
     // flow written before `receipt-capture` existed was written against.
     expect(purchasesReachable).toBe(false);
+    expect(inventoryReachable).toBe(false);
   });
 
   it('refuses a target that could resolve to another host', async () => {
@@ -405,6 +417,20 @@ describe('the control plane', () => {
       expect.objectContaining({ purchasesReachable: false })
     );
     expect(purchasesReachable).toBe(false);
+  });
+
+  it('throws the inventory switch both ways', async () => {
+    // Reachable is what makes the BFM name `inventory` usable, so only the
+    // Inventory flow meets an Inventory tab.
+    expect(await (await call('/__e2e/inventory/up', { method: 'POST' })).json()).toEqual(
+      expect.objectContaining({ inventoryReachable: true })
+    );
+    expect(inventoryReachable).toBe(true);
+
+    expect(await (await call('/__e2e/inventory/down', { method: 'POST' })).json()).toEqual(
+      expect.objectContaining({ inventoryReachable: false })
+    );
+    expect(inventoryReachable).toBe(false);
   });
 
   it('reports a BFM it cannot reach as its own failure', async () => {

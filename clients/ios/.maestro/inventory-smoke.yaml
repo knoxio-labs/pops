@@ -1,0 +1,92 @@
+appId: com.knoxiolabs.pops.local
+name: Inventory downloads, then creates, moves, discards and undoes against the real pillar
+---
+# An unpaired launch, every time — the credentials live in the keychain,
+# outside what `clearState` empties.
+- clearState
+- clearKeychain
+- launchApp
+
+- assertVisible:
+    id: 'pairing-code-field'
+
+# Armed before pairing, for the reason every switch here is: the bootstrap
+# fires the moment pairing lands, so the switch has to be thrown before that
+# request exists. Until it is, `inventory` is `unavailable` and every other
+# flow meets a root without it. Behind the switch is the REAL inventory
+# pillar on a fresh database, relayed by the real BFM —
+# `scripts/ios-e2e/inventory-pillar.mjs` says why it is not a stub.
+- runScript: scripts/inventory-becomes-available.js
+- assertTrue: ${output.inventory.status == 200}
+- assertTrue: ${output.inventory.state.inventoryReachable == true}
+
+- runFlow:
+    file: subflows/enter-the-pairing-details.yaml
+    env:
+      SERVER_URL: ${CONTROL_BASE_URL}
+
+# The tab exists only because the BFM named `inventory` reachable and this
+# build registered it (`RootFeature.renderable`).
+- tapOn: 'Inventory'
+
+# Download: a replica that has never been filled says so, and the Sync page's
+# Download pages the pillar's snapshot and change feed into it.
+- assertVisible: 'Set up inventory on this phone'
+- tapOn: 'Start synchronization'
+- tapOn: 'Download'
+- assertVisible: 'Synced'
+
+# Everything this flow creates carries the run's suffix, and the counts are
+# matched as any number, because the pillar's database outlives one attempt.
+#
+# A place to move into, created through the same server round trip every write
+# takes: the row appears only once the pillar has applied it and the feed has
+# delivered it back.
+- tapOn: 'Inventory'
+- tapOn: 'Locations, \d+'
+# An empty list offers its own button; a list with places offers the toolbar's.
+- tapOn: 'Add a place|New place'
+- tapOn: 'Name'
+- inputText: Garage ${output.inventory.run}
+- assertVisible: Garage ${output.inventory.run}
+- tapOn: 'Create'
+- assertVisible: Garage ${output.inventory.run}, Place
+
+# Create. The name field is found by identifier, because its label and its
+# placeholder both read "Name". A new item lands in hand.
+- tapOn: 'Inventory'
+- tapOn: 'Items, \d+'
+- tapOn: 'Add an item|New item'
+- tapOn:
+    id: 'inventory-item-name-field'
+- inputText: Drill ${output.inventory.run}
+- assertVisible: Drill ${output.inventory.run}
+- tapOn: 'Create'
+- assertVisible: Drill ${output.inventory.run}
+- tapOn: Drill ${output.inventory.run}
+- assertVisible: 'In hand'
+
+# Move. The picker's own confirm button is also "Move", and it is the first
+# match once the picker is up.
+- tapOn: 'Move'
+- tapOn: Garage ${output.inventory.run}
+- tapOn:
+    text: 'Move'
+    index: 0
+- assertVisible: 'Moved, Today'
+
+# Discard, with a reason, which the item's status line then states.
+- tapOn: 'More'
+- tapOn: 'Discard'
+- tapOn: 'Donated'
+- assertVisible: 'Discarded Today · Donated'
+
+# Undo, from the event's own account: a revert of that event, naming the item
+# it is about, which the pillar applies as a compensating event.
+- tapOn: 'Discarded · Donated, Today'
+- tapOn: 'Undo'
+- assertVisible: 'Undid a change, Today'
+- assertVisible: 'Pick up'
+# After the positive assertion above, which settles the screen: the status line
+# that said it was discarded is gone.
+- assertNotVisible: 'Discarded Today · Donated'

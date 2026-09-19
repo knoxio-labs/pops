@@ -1,6 +1,7 @@
 import AppCore
 import DesignSystem
 import FeatureAccounts
+import FeatureInventory
 import FeaturePurchases
 import FeatureReceiptCapture
 import FeatureTransactions
@@ -31,8 +32,12 @@ internal struct ContentView: View {
     @State private var chosenFeature: MobileFeature?
 
     internal var body: some View {
+        @Bindable var presentation = composition.entityPresentation
         features
             .safeAreaInset(edge: .top) { degradedBanner }
+            .sheet(item: $presentation.inventory) { entity in
+                InventoryEntityView(entity: entity, dependencies: dependencies)
+            }
     }
 
     /// Every available feature, in the BFM's order.
@@ -108,6 +113,8 @@ internal struct ContentView: View {
             PurchasesListView(dependencies: dependencies)
         case FeatureReceiptCapture.feature:
             ReceiptCaptureView(model: ReceiptCaptureViewModel(dependencies: dependencies))
+        case FeatureInventory.feature:
+            InventoryFlowView(dependencies: dependencies)
         default:
             // Unreachable: `RootFeature.renderable` is what the shell filters
             // against, so a feature with no screen is never offered. Drawn as

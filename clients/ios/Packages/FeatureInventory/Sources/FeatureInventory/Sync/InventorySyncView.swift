@@ -10,11 +10,20 @@ import SwiftUI
 /// use, so a first-launch "Download" here and the dashboard's own first-run
 /// panel can never disagree about what state the replica is in.
 internal struct InventorySyncView: View {
-    @Bindable internal var model: InventorySyncViewModel
+    /// Owned in `@State`, like the container and location pages: the
+    /// destination builds a new model on every re-render, and a view that only
+    /// borrowed it showed that new, never-observed model while `.task` kept
+    /// following the first one, so the page never left its skeleton.
+    @State private var model: InventorySyncViewModel
     @State private var generation = 0
 
+    internal init(model: InventorySyncViewModel) {
+        _model = State(initialValue: model)
+    }
+
     internal var body: some View {
-        Group {
+        @Bindable var model = model
+        return Group {
             switch model.phase {
             case .loading:
                 InventorySyncSkeleton()

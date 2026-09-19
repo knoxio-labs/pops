@@ -130,6 +130,7 @@ internal enum BFMInventoryCommandEncoding {
             "typeKey": item.typeKey,
             "fields": fieldsBlob(item.fields),
             "note": item.note,
+            "externalIds": externalIdArgs(item.externalIds),
             "quantity": item.quantity,
             "placement": placementArgs(item.placement),
         ]
@@ -139,7 +140,8 @@ internal enum BFMInventoryCommandEncoding {
     /// (`pillars/inventory/src/domain/commands/item-edit.ts`): an absent key
     /// leaves the field untouched, so ``InventoryFieldUpdate/unchanged`` and
     /// an empty `fields` patch omit the key entirely rather than sending it
-    /// as `null`.
+    /// as `null`. `externalIds` replaces the whole list when present, so `nil`
+    /// omits the key rather than clearing the list.
     private static func editArgs(
         name: String?, note: InventoryFieldUpdate<String>, fields: [String: InventoryFieldValue?],
         externalIds: [InventoryExternalIdentifier]?

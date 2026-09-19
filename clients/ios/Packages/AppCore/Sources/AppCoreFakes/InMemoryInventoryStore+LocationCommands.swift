@@ -50,10 +50,10 @@ extension InMemoryInventoryStore {
         state.locations[id] = bumped(location, seq: &state.nextSeq, parentId: .set(parentId))
     }
 
-    /// Reparents every direct child location and every item placed directly
-    /// here (ADR-002 D2): a child place moves to this one's parent, and a
-    /// direct item either follows it there or, at a root, goes in hand
-    /// remembering this place as its previous placement. Every row this
+    /// Reparents every direct child location to this one's parent (ADR-002
+    /// D2) and leaves every item placed directly here unlocated: in hand,
+    /// remembering this place as its previous placement, whether or not the
+    /// place had a parent (`location.delete` on the server). Every row this
     /// touches (the location itself, each reparented child location, each
     /// moved item) is recorded so undo can put all of them back, not just
     /// the deleted location.
@@ -69,14 +69,9 @@ extension InMemoryInventoryStore {
         }
         for (itemId, item) in state.items where item.placement == .location(id) {
             rows.append(.item(id: itemId, previous: item))
-            if let parentId = location.parentId {
-                state.items[itemId] = bumped(
-                    item, seq: &state.nextSeq, placement: .set(.location(parentId)))
-            } else {
-                state.items[itemId] = bumped(
-                    item, seq: &state.nextSeq, placement: .set(.hand),
-                    previousPlacement: .set(.location(id)))
-            }
+            state.items[itemId] = bumped(
+                item, seq: &state.nextSeq, placement: .set(.hand),
+                previousPlacement: .set(.location(id)))
         }
         state.undoLog[mutationId] = .batch(rows)
         state.locations[id] = bumped(location, seq: &state.nextSeq, deletedAt: .set(Date()))

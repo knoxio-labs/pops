@@ -155,7 +155,7 @@ private struct InventoryLocationPageChrome: ViewModifier {
                 Button("Delete", role: .destructive) { Task { await model.delete(place) } }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text(tree.deletionEffect(of: place.id))
+                Text(tree.deletion(of: place.id)?.confirmation ?? "")
             }
     }
 }
