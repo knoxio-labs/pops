@@ -1,4 +1,4 @@
-appId: com.knoxiolabs.pops
+appId: com.knoxiolabs.pops.local
 name: A hand-entered purchase reaches the editable form and comes back saved
 ---
 # The camera-free half of POPS-2454's reachability requirement:

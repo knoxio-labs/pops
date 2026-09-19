@@ -5,6 +5,7 @@
  */
 import { getPillarRegistry } from './pillars/registry.js';
 
+import type { ServiceAccountVerifier } from '@pops/pillar-sdk/server';
 import type { PillarRegistryEntry } from '@pops/types';
 
 import type { OpenedAiDb } from '../db/index.js';
@@ -19,6 +20,12 @@ export interface AiApiDeps {
    * `GET /pillars` so consumers don't have to special-case the host pillar.
    */
   selfBaseUrl: string;
+  /**
+   * Resolves a presented `X-API-Key` for the inbound service-account gate
+   * (`middleware/service-account-scope.ts`). Defaults to a registry-backed
+   * verifier in `app.ts`; tests inject a fake here instead.
+   */
+  serviceAccountVerifier?: ServiceAccountVerifier;
 }
 
 export interface HealthResponse {

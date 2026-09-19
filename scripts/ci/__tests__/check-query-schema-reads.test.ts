@@ -154,8 +154,8 @@ describe('the other real pillars', () => {
     expect(CEREBRUM_ROUTES.length).toBe(4);
   });
 
-  it('BFM_ROUTES names both bfm mobile routes known to carry query fields', () => {
-    expect(BFM_ROUTES.length).toBe(2);
+  it('BFM_ROUTES names all 5 bfm mobile routes known to carry query fields', () => {
+    expect(BFM_ROUTES.length).toBe(5);
   });
 
   it('MEDIA_ROUTES names all 32 media routes known to carry query fields', () => {
@@ -170,8 +170,8 @@ describe('the other real pillars', () => {
     expect(LISTS_ROUTES.length).toBe(2);
   });
 
-  it('INVENTORY_ROUTES names all 19 inventory routes known to carry query fields', () => {
-    expect(INVENTORY_ROUTES.length).toBe(19);
+  it('INVENTORY_ROUTES names all 21 inventory routes known to carry query fields', () => {
+    expect(INVENTORY_ROUTES.length).toBe(21);
   });
 });
 

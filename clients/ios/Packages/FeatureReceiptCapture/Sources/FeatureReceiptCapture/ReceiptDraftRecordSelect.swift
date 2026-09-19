@@ -263,12 +263,14 @@ internal struct ReceiptDraftRecordSheet: View {
                 placeholder: ReceiptDraftCopy.newRecordPlaceholder,
                 text: $newName
             )
+            .accessibilityIdentifier(ReceiptDraftAccessibility.newRecordName)
             Button {
                 onCreate(creatable)
             } label: {
                 Label(ReceiptDraftCopy.createRecord(creatable), systemImage: "plus.circle")
             }
             .disabled(creatable.isEmpty)
+            .accessibilityIdentifier(ReceiptDraftAccessibility.createRecord)
         }
     }
 }

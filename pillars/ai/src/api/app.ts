@@ -8,6 +8,12 @@
  * credential; nginx never proxies it either. `/ai-pricing/*` is NOT internal —
  * cross-pillar callers fetch it to shape pricing before `computeCostUsd`.
  *
+ * `middleware/service-account-scope.ts`'s gate is mounted separately, ahead of
+ * `createExpressEndpoints`, and governs a different credential
+ * (`X-API-Key`) on a different axis — a service account's scope grant, not
+ * per-caller internal trust. See that module's header for why the two
+ * coexist without conflict.
+ *
  * Kept as a factory so the test suite can spin up an in-process `supertest`
  * instance without binding a real port.
  */
@@ -19,6 +25,7 @@ import { createExpressEndpoints } from '@ts-rest/express';
 import express, { type Express, type NextFunction, type Request, type Response } from 'express';
 
 import {
+  createRegistryServiceAccountVerifier,
   INTERNAL_CREDENTIAL_HEADER,
   type InternalCallerSpec,
   authenticateInternal,
@@ -27,6 +34,7 @@ import {
 
 import { aiContract } from '../contract/rest.js';
 import { type AiApiDeps, makeRequestHandler } from './handlers.js';
+import { createServiceAccountScopeMiddleware } from './middleware/service-account-scope.js';
 import { makeAiRestHandlers } from './rest/handlers.js';
 
 /**
@@ -114,6 +122,10 @@ export function createAiApiApp(deps: AiApiDeps): Express {
   app.get('/openapi', (_req: Request, res: Response) => {
     res.json(openapiDocument);
   });
+
+  const serviceAccountVerifier =
+    deps.serviceAccountVerifier ?? createRegistryServiceAccountVerifier();
+  app.use(createServiceAccountScopeMiddleware(serviceAccountVerifier));
 
   createExpressEndpoints(aiContract, makeAiRestHandlers(deps), app);
 

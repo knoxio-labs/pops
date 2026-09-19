@@ -1,4 +1,4 @@
-appId: com.knoxiolabs.pops
+appId: com.knoxiolabs.pops.local
 name: A device revoked mid-use lands back on pairing, and says why
 ---
 - clearState

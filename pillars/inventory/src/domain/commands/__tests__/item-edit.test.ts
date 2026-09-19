@@ -74,3 +74,38 @@ describe('item.edit', () => {
     expect(h.eventCount()).toBe(0);
   });
 });
+
+describe('item.edit with a legacy patch (POPS-4053)', () => {
+  it('sets a legacy field the new model has no column for', () => {
+    const outcome = h.run(mutation('item.edit', 'lamp', { legacy: { brand: 'Bosch' } }));
+    expect(outcome).toMatchObject({ status: 'applied' });
+    expect(h.item('lamp').brand).toBe('Bosch');
+    expect(h.eventsFor('lamp')[0]).toMatchObject({
+      kind: 'edited',
+      after: JSON.stringify({ brand: 'Bosch' }),
+    });
+  });
+
+  it('repoints the derived purchase-transaction uri and drops its stale mark in the same write', () => {
+    h.run(mutation('item.edit', 'lamp', { legacy: { purchaseTransactionId: 'tx-1' } }));
+    const outcome = h.run(
+      mutation(
+        'item.edit',
+        'lamp',
+        { legacy: { purchaseTransactionId: 'tx-2' } },
+        { baseRevision: 2 }
+      )
+    );
+    expect(outcome).toMatchObject({ status: 'applied' });
+    const row = h.item('lamp');
+    expect(row.purchaseTransactionId).toBe('tx-2');
+    expect(row.purchaseTransactionUri).toBe('pops://finance/transaction/tx-2');
+    expect(row.purchaseTransactionStaleAt).toBeNull();
+  });
+
+  it('leaves a legacy field untouched when the patch omits it', () => {
+    h.run(mutation('item.edit', 'lamp', { legacy: { brand: 'Bosch' } }));
+    h.run(mutation('item.edit', 'lamp', { name: 'Reading lamp' }, { baseRevision: 2 }));
+    expect(h.item('lamp').brand).toBe('Bosch');
+  });
+});

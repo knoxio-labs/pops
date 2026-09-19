@@ -14,6 +14,7 @@ import { createSecretKey, type KeyObject } from 'node:crypto';
 import { openTempDb } from '../../db/__tests__/helpers.js';
 import { createBfmApiApp, type CreateBfmApiAppOptions } from '../app.js';
 import { createMobileFinanceClient } from '../finance/client.js';
+import { createMobileInventoryClient } from '../inventory/client.js';
 import { createPillarGateway } from '../pillars/gateway.js';
 import { createMobilePurchasesClient } from '../purchases/client.js';
 import { createRateLimiter, type RateLimiter } from '../rate-limit.js';
@@ -28,6 +29,7 @@ import type { ReceiptRateLimitOptions } from '../auth/receipt-rate-limit.js';
 import type { RefreshChallengeStore } from '../auth/refresh-challenge.js';
 import type { RefreshRateLimitOptions } from '../auth/refresh-rate-limit.js';
 import type { MobileFinanceClient } from '../finance/client.js';
+import type { MobileInventoryClient } from '../inventory/client.js';
 import type { PillarHandleFactory } from '../pillars/gateway.js';
 import type { MobilePurchasesClient } from '../purchases/client.js';
 
@@ -104,6 +106,11 @@ export interface TestAppOptions {
    * `finance`, to a client over a gateway whose handle factory throws.
    */
   purchases?: MobilePurchasesClient;
+  /**
+   * Where the `/mobile/inventory/*` routes get their data. Defaults, like
+   * `finance`, to a client over a gateway whose handle factory throws.
+   */
+  inventory?: MobileInventoryClient;
   /** Same, for the pairing exchange's budget. */
   pairingRateLimit?: PairingRateLimitOptions;
   /** Same, for the budget the challenge and refresh routes share. */
@@ -174,6 +181,9 @@ export function createTestApp(options: TestAppOptions = {}): TestApp {
     purchases:
       options.purchases ??
       createMobilePurchasesClient(createPillarGateway(unreachableHandleFactory)),
+    inventory:
+      options.inventory ??
+      createMobileInventoryClient(createPillarGateway(unreachableHandleFactory)),
     db: opened.db,
     accessTokenSigningKey,
     publicBaseUrl: options.publicBaseUrl ?? TEST_PUBLIC_BASE_URL,

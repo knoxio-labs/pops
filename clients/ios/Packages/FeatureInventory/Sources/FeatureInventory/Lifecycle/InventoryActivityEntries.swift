@@ -106,6 +106,7 @@ internal struct InventoryActivityEntries {
         case .web: "Web"
         case .service(let account): account
         case .migration: "Import"
+        case .unrecognised(_, let label): label
         }
     }
 

@@ -169,3 +169,27 @@ internal enum InventoryItemDetailPending: String, Identifiable {
 
     internal var id: String { rawValue }
 }
+
+/// Where a pending screen from Item detail's action row or toolbar should go:
+/// the real item form when there is one, `InventoryItemDetailPendingSheet`'s
+/// placeholder otherwise.
+///
+/// A free function rather than inline logic at each call site, because Item
+/// detail used to decide this twice — once in `act(_:)`, which reached the
+/// form, and once in the toolbar's own Edit button, which did not, so Edit
+/// kept opening the placeholder from the one place people actually tap it.
+internal enum InventoryItemDetailRouting {
+    @MainActor
+    internal static func present(
+        _ screen: InventoryItemDetailPending,
+        itemId: InventoryItem.ID,
+        itemForm: InventoryItemFormPresenter?,
+        pending setPending: (InventoryItemDetailPending) -> Void
+    ) {
+        if screen == .edit {
+            itemForm?(.edit(itemId))
+        } else {
+            setPending(screen)
+        }
+    }
+}

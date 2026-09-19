@@ -39,8 +39,7 @@ extension View {
         #endif
     }
 
-    /// The one call to action on a sheet or a screen, in the platform's
-    /// prominent glass button style.
+    /// The prominent glass button: the one call to action on a screen.
     @ViewBuilder
     internal func inventoryProminentGlassButton() -> some View {
         #if os(iOS)
@@ -73,7 +72,7 @@ extension View {
         #endif
     }
 
-    /// A leading item in the navigation bar; `topBarLeading` is iOS-only.
+    /// A leading navigation bar item; `topBarLeading` is iOS-only.
     @ViewBuilder
     internal func inventoryLeadingBarItem<Item: View>(@ViewBuilder item: () -> Item) -> some View {
         #if os(iOS)
@@ -83,9 +82,11 @@ extension View {
         #endif
     }
 
-    /// A trailing item in the navigation bar; `topBarTrailing` is iOS-only.
+    /// A trailing navigation bar item; `topBarTrailing` is iOS-only.
     @ViewBuilder
-    internal func inventoryTrailingBarItem<Item: View>(@ViewBuilder item: () -> Item) -> some View {
+    internal func inventoryTrailingBarItem<Item: View>(@ViewBuilder item: () -> Item)
+        -> some View
+    {
         #if os(iOS)
             toolbar { ToolbarItem(placement: .topBarTrailing, content: item) }
         #else
@@ -105,8 +106,9 @@ extension View {
     }
 }
 
-/// Several pieces of glass that belong to one control, merged as a family
-/// where the platform has glass.
+/// Several pieces of glass that belong to one control. iOS renders glass
+/// that sits close together as one family only inside a container; without
+/// one a row of buttons is a row of unrelated blobs.
 internal struct InventoryGlassGroup<Content: View>: View {
     internal let spacing: CGFloat
     @ViewBuilder internal let content: Content

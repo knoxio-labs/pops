@@ -2,32 +2,18 @@
  * Invariant tests for the locations service against an in-memory SQLite
  * brought up by the real migration journal. Pure DB + service layer.
  */
-import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import {
-  LocationCycleError,
-  LocationNotFoundError,
-  LocationSelfParentError,
-  ParentLocationNotFoundError,
-} from '../errors.js';
-import { items } from '../schema.js';
+import { LocationNotFoundError } from '../errors.js';
 import {
   getDeleteStats,
   getDescendantLocationIds,
   getLocationItems,
   getLocationPath,
 } from '../services/locations-queries.js';
-import {
-  createLocation,
-  deleteLocation,
-  getChildren,
-  getLocation,
-  getLocationTree,
-  listLocations,
-  updateLocation,
-} from '../services/locations.js';
+import { getChildren, getLocation, getLocationTree, listLocations } from '../services/locations.js';
 import { seedInventoryItem } from './item-fixture.js';
+import { seedLocation } from './location-fixture.js';
 import { openMigratedTestDb } from './migrated-db.js';
 
 import type { InventoryDb } from '../services/internal.js';
@@ -56,9 +42,9 @@ describe('listLocations', () => {
   });
 
   it('orders by sortOrder then name', () => {
-    createLocation(db, { name: 'Bedroom', sortOrder: 1 });
-    createLocation(db, { name: 'Kitchen', sortOrder: 0 });
-    createLocation(db, { name: 'Living Room', sortOrder: 0 });
+    seedLocation(db, { name: 'Bedroom', sortOrder: 1 });
+    seedLocation(db, { name: 'Kitchen', sortOrder: 0 });
+    seedLocation(db, { name: 'Living Room', sortOrder: 0 });
 
     const result = listLocations(db);
     expect(result.total).toBe(3);
@@ -73,7 +59,7 @@ describe('getLocation', () => {
   });
 
   it('returns the row when present', () => {
-    const created = createLocation(db, { name: 'Home' });
+    const created = seedLocation(db, { name: 'Home' });
     const row = getLocation(db, created.id);
     expect(row.id).toBe(created.id);
     expect(row.name).toBe('Home');
@@ -96,18 +82,18 @@ describe('getLocationTree', () => {
   });
 
   it('returns flat root list when no parent links', () => {
-    createLocation(db, { name: 'Home' });
-    createLocation(db, { name: 'Car' });
+    seedLocation(db, { name: 'Home' });
+    seedLocation(db, { name: 'Car' });
     const tree = getLocationTree(db);
     expect(tree).toHaveLength(2);
     expect(tree.every((n) => n.children.length === 0)).toBe(true);
   });
 
   it('nests children under parents', () => {
-    const home = createLocation(db, { name: 'Home' });
-    const kitchen = createLocation(db, { name: 'Kitchen', parentId: home.id });
-    createLocation(db, { name: 'Pantry', parentId: kitchen.id });
-    createLocation(db, { name: 'Bedroom', parentId: home.id });
+    const home = seedLocation(db, { name: 'Home' });
+    const kitchen = seedLocation(db, { name: 'Kitchen', parentId: home.id });
+    seedLocation(db, { name: 'Pantry', parentId: kitchen.id });
+    seedLocation(db, { name: 'Bedroom', parentId: home.id });
 
     const tree = getLocationTree(db);
     expect(tree).toHaveLength(1);
@@ -127,10 +113,10 @@ describe('getChildren', () => {
   });
 
   it('returns only direct children', () => {
-    const home = createLocation(db, { name: 'Home' });
-    createLocation(db, { name: 'Kitchen', parentId: home.id });
-    createLocation(db, { name: 'Bedroom', parentId: home.id });
-    createLocation(db, { name: 'Car' });
+    const home = seedLocation(db, { name: 'Home' });
+    seedLocation(db, { name: 'Kitchen', parentId: home.id });
+    seedLocation(db, { name: 'Bedroom', parentId: home.id });
+    seedLocation(db, { name: 'Car' });
 
     expect(getChildren(db, home.id)).toHaveLength(2);
   });
@@ -143,9 +129,9 @@ describe('getLocationPath', () => {
   });
 
   it('returns root-first breadcrumb', () => {
-    const home = createLocation(db, { name: 'Home' });
-    const kitchen = createLocation(db, { name: 'Kitchen', parentId: home.id });
-    const pantry = createLocation(db, { name: 'Pantry', parentId: kitchen.id });
+    const home = seedLocation(db, { name: 'Home' });
+    const kitchen = seedLocation(db, { name: 'Kitchen', parentId: home.id });
+    const pantry = seedLocation(db, { name: 'Pantry', parentId: kitchen.id });
 
     const path = getLocationPath(db, pantry.id);
     expect(path.map((r) => r.name)).toEqual(['Home', 'Kitchen', 'Pantry']);
@@ -156,137 +142,6 @@ describe('getLocationPath', () => {
   });
 });
 
-describe('createLocation', () => {
-  let db: InventoryDb;
-  beforeEach(() => {
-    db = freshDb();
-  });
-
-  it('creates a root location with defaults', () => {
-    const row = createLocation(db, { name: 'Home' });
-    expect(row.name).toBe('Home');
-    expect(row.parentId).toBeNull();
-    expect(row.sortOrder).toBe(0);
-  });
-
-  it('stamps created_at and updated_at with the same instant as last_edited_time', () => {
-    const row = createLocation(db, { name: 'Home' });
-    expect(row.createdAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
-    expect(row.createdAt).toBe(row.lastEditedTime);
-    expect(row.updatedAt).toBe(row.lastEditedTime);
-  });
-
-  it('creates a child location under an existing parent', () => {
-    const parent = createLocation(db, { name: 'Home' });
-    const child = createLocation(db, { name: 'Kitchen', parentId: parent.id });
-    expect(child.parentId).toBe(parent.id);
-  });
-
-  it('respects an explicit sortOrder', () => {
-    const row = createLocation(db, { name: 'Garage', sortOrder: 5 });
-    expect(row.sortOrder).toBe(5);
-  });
-
-  it('throws ParentLocationNotFoundError when parent is missing', () => {
-    expect(() => createLocation(db, { name: 'Orphan', parentId: 'nope' })).toThrowError(
-      ParentLocationNotFoundError
-    );
-  });
-});
-
-describe('updateLocation', () => {
-  let db: InventoryDb;
-  beforeEach(() => {
-    db = freshDb();
-  });
-
-  it('renames a location', () => {
-    const created = createLocation(db, { name: 'Bedoom' });
-    const renamed = updateLocation(db, created.id, { name: 'Bedroom' });
-    expect(renamed.name).toBe('Bedroom');
-  });
-
-  it('moves a location to a new parent', () => {
-    const home = createLocation(db, { name: 'Home' });
-    const garage = createLocation(db, { name: 'Garage' });
-    const shelf = createLocation(db, { name: 'Shelf', parentId: home.id });
-
-    const moved = updateLocation(db, shelf.id, { parentId: garage.id });
-    expect(moved.parentId).toBe(garage.id);
-  });
-
-  it('moves a location to root', () => {
-    const home = createLocation(db, { name: 'Home' });
-    const room = createLocation(db, { name: 'Room', parentId: home.id });
-
-    const moved = updateLocation(db, room.id, { parentId: null });
-    expect(moved.parentId).toBeNull();
-  });
-
-  it('rejects making a location its own parent', () => {
-    const home = createLocation(db, { name: 'Home' });
-    expect(() => updateLocation(db, home.id, { parentId: home.id })).toThrowError(
-      LocationSelfParentError
-    );
-  });
-
-  it('rejects circular reference', () => {
-    const parent = createLocation(db, { name: 'Parent' });
-    const child = createLocation(db, { name: 'Child', parentId: parent.id });
-    expect(() => updateLocation(db, parent.id, { parentId: child.id })).toThrowError(
-      LocationCycleError
-    );
-  });
-
-  it('throws LocationNotFoundError for missing id', () => {
-    expect(() => updateLocation(db, 'nope', { name: 'X' })).toThrowError(LocationNotFoundError);
-  });
-
-  it('throws ParentLocationNotFoundError for missing parent', () => {
-    const home = createLocation(db, { name: 'Home' });
-    expect(() => updateLocation(db, home.id, { parentId: 'nope' })).toThrowError(
-      ParentLocationNotFoundError
-    );
-  });
-});
-
-describe('deleteLocation', () => {
-  let db: InventoryDb;
-  beforeEach(() => {
-    db = freshDb();
-  });
-
-  it('deletes an existing row', () => {
-    const created = createLocation(db, { name: 'Temp' });
-    deleteLocation(db, created.id);
-    expect(() => getLocation(db, created.id)).toThrowError(LocationNotFoundError);
-  });
-
-  it('throws LocationNotFoundError when missing', () => {
-    expect(() => deleteLocation(db, 'nope')).toThrowError(LocationNotFoundError);
-  });
-
-  it('puts the items placed there in hand, remembering the deleted place', () => {
-    const shelf = createLocation(db, { name: 'Shelf' });
-    const other = createLocation(db, { name: 'Other' });
-    const onShelf = seedItem(db, 'Lamp', shelf.id);
-    const elsewhere = seedItem(db, 'Chair', other.id);
-
-    deleteLocation(db, shelf.id);
-
-    const moved = db.select().from(items).where(eq(items.id, onShelf.id)).get();
-    expect(moved).toMatchObject({
-      placementKind: 'hand',
-      locationId: null,
-      previousPlacementKind: 'location',
-      previousLocationId: shelf.id,
-      previousContainingItemId: null,
-    });
-    const untouched = db.select().from(items).where(eq(items.id, elsewhere.id)).get();
-    expect(untouched).toMatchObject({ placementKind: 'location', locationId: other.id });
-  });
-});
-
 describe('getDescendantLocationIds', () => {
   let db: InventoryDb;
   beforeEach(() => {
@@ -294,15 +149,15 @@ describe('getDescendantLocationIds', () => {
   });
 
   it('returns empty array for a leaf', () => {
-    const leaf = createLocation(db, { name: 'Leaf' });
+    const leaf = seedLocation(db, { name: 'Leaf' });
     expect(getDescendantLocationIds(db, leaf.id)).toEqual([]);
   });
 
   it('returns transitive descendants', () => {
-    const home = createLocation(db, { name: 'Home' });
-    const kitchen = createLocation(db, { name: 'Kitchen', parentId: home.id });
-    const pantry = createLocation(db, { name: 'Pantry', parentId: kitchen.id });
-    const bedroom = createLocation(db, { name: 'Bedroom', parentId: home.id });
+    const home = seedLocation(db, { name: 'Home' });
+    const kitchen = seedLocation(db, { name: 'Kitchen', parentId: home.id });
+    const pantry = seedLocation(db, { name: 'Pantry', parentId: kitchen.id });
+    const bedroom = seedLocation(db, { name: 'Bedroom', parentId: home.id });
 
     const ids = getDescendantLocationIds(db, home.id);
     expect(new Set(ids)).toEqual(new Set([kitchen.id, pantry.id, bedroom.id]));
@@ -316,7 +171,7 @@ describe('getDeleteStats', () => {
   });
 
   it('returns zeros for an empty leaf', () => {
-    const leaf = createLocation(db, { name: 'Empty' });
+    const leaf = seedLocation(db, { name: 'Empty' });
     expect(getDeleteStats(db, leaf.id)).toEqual({
       childCount: 0,
       descendantCount: 0,
@@ -326,10 +181,10 @@ describe('getDeleteStats', () => {
   });
 
   it('counts direct children and transitive descendants', () => {
-    const home = createLocation(db, { name: 'Home' });
-    const kitchen = createLocation(db, { name: 'Kitchen', parentId: home.id });
-    createLocation(db, { name: 'Pantry', parentId: kitchen.id });
-    createLocation(db, { name: 'Bedroom', parentId: home.id });
+    const home = seedLocation(db, { name: 'Home' });
+    const kitchen = seedLocation(db, { name: 'Kitchen', parentId: home.id });
+    seedLocation(db, { name: 'Pantry', parentId: kitchen.id });
+    seedLocation(db, { name: 'Bedroom', parentId: home.id });
 
     const stats = getDeleteStats(db, home.id);
     expect(stats.childCount).toBe(2);
@@ -337,8 +192,8 @@ describe('getDeleteStats', () => {
   });
 
   it('counts items in this location and descendants', () => {
-    const home = createLocation(db, { name: 'Home' });
-    const kitchen = createLocation(db, { name: 'Kitchen', parentId: home.id });
+    const home = seedLocation(db, { name: 'Home' });
+    const kitchen = seedLocation(db, { name: 'Kitchen', parentId: home.id });
 
     seedItem(db, 'Fridge', kitchen.id);
     seedItem(db, 'Oven', kitchen.id);
@@ -361,7 +216,7 @@ describe('getLocationItems', () => {
   });
 
   it('returns items directly in the location', () => {
-    const kitchen = createLocation(db, { name: 'Kitchen' });
+    const kitchen = seedLocation(db, { name: 'Kitchen' });
     seedItem(db, 'Fridge', kitchen.id);
     seedItem(db, 'Oven', kitchen.id);
     seedItem(db, 'Couch', null);
@@ -377,8 +232,8 @@ describe('getLocationItems', () => {
   });
 
   it('includes descendant items when includeChildren is true', () => {
-    const home = createLocation(db, { name: 'Home' });
-    const kitchen = createLocation(db, { name: 'Kitchen', parentId: home.id });
+    const home = seedLocation(db, { name: 'Home' });
+    const kitchen = seedLocation(db, { name: 'Kitchen', parentId: home.id });
     seedItem(db, 'Couch', home.id);
     seedItem(db, 'Fridge', kitchen.id);
 
@@ -392,7 +247,7 @@ describe('getLocationItems', () => {
   });
 
   it('respects limit + offset', () => {
-    const kitchen = createLocation(db, { name: 'Kitchen' });
+    const kitchen = seedLocation(db, { name: 'Kitchen' });
     for (let i = 0; i < 5; i++) seedItem(db, `Item ${i}`, kitchen.id);
 
     const page1 = getLocationItems(db, {

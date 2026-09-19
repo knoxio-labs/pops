@@ -19,7 +19,7 @@ mise run build:device  # signed Release, physical iPhone
 
 `mise run test` compiles **once** and runs **one** test action. Every package's test target is a testable of the `Pops` scheme alongside the app's own `PopsTests`, so the tree compiles once into one build directory and one simulator boots. The CI job invokes this one task rather than naming lanes separately, so a suite cannot exist locally and be missing from the gate.
 
-The compile is its own task, `build:for-testing`, which `mise run test` depends on and `mise run lint:analyze` depends on too. That is not decomposition for its own sake: mise resolves one dependency graph per invocation, so `mise run -j 1 test ::: lint:analyze` — what CI runs — compiles the tree once and both tasks read what it produced. The `:::` is mise's task separator and is load-bearing; without it the second name is passed to the first task as an argument rather than run. `-j 1` is load-bearing too, for a different reason given under [What CI does with this](#what-ci-does-with-this). Before that, `lint:analyze` did its own clean build and the job paid for the same seven-minute compile twice, for a test action whose assertions take 1.5 seconds. The compile is the cost on this lane; running the tests is not.
+The compile is its own task, `build:for-testing`, which `mise run test` depends on and `mise run lint:analyze` depends on too. That is not decomposition for its own sake: mise resolves one dependency graph per invocation, so `mise run -j 1 test ::: lint:analyze` compiles the tree once and both tasks read what it produced — the command to run locally before a push. CI splits the pair by lane; see [What CI does with this](#what-ci-does-with-this). The `:::` is mise's task separator and is load-bearing; without it the second name is passed to the first task as an argument rather than run. `-j 1` is load-bearing too, for a different reason given under [What CI does with this](#what-ci-does-with-this). Before that, `lint:analyze` did its own clean build and the job paid for the same seven-minute compile twice, for a test action whose assertions take 1.5 seconds. The compile is the cost on this lane; running the tests is not.
 
 That compile builds **one architecture**, not two. Debug sets `ONLY_ACTIVE_ARCH: YES` and `build:for-testing` names the simulator it is about to test on, because against `generic/platform=iOS Simulator` Xcode forces that setting back to `NO` and compiles the tree for `arm64` _and_ `x86_64` — 66 `-target` invocations each, measured. Nothing runs the x86_64 slice: the GitHub runner image is `macos-26-arm64` and so is every machine here. `mise run build` names the simulator for the same reason — it was the last task still taking the generic destination, and no CI step invokes it, so what that change moved is the local build rather than the job. Overriding the device means a gitignored `mise.local.toml`, not an `export`; mise's `[env]` beats the shell.
 
@@ -121,7 +121,15 @@ The indirection through a generated local file is not decoration. A project-refe
 
 No certificate, profile or key is in the tree, and none should be: automatic signing fetches them, and the first device build needs `-allowProvisioningUpdates` — which `build:device` passes — so it can register the App ID and pull down a profile.
 
+### Local and TestFlight flavours
+
+Every build is the **local** flavour unless it says otherwise: `com.knoxiolabs.pops.local` (and `com.knoxiolabs.pops.playground.local`), an icon with an amber LOCAL band, and "Pops Local" / "Design Local" on the home screen. So a build from a laptop installs beside the TestFlight app instead of replacing it, pairs separately, and keeps its own keychain. One build setting decides it, `POPS_FLAVOR` in `project.yml`; only `scripts/testflight.sh` passes `POPS_FLAVOR=testflight`, and it reads the archived identifier back and refuses to upload anything but the exact shipped one. Tests and the Maestro flows run the local flavour, which is why they name `com.knoxiolabs.pops.local`.
+
+Both apps register the `pops://` URL scheme, so with both installed iOS picks one of them to open such a link (POPS-4183).
+
 ### On the phone
+
+**`mise run install:phone`** (or `install:phone PopsPlayground`) builds the local flavour for Release, installs it on the one paired iPhone with `xcrun devicectl` and launches it; `POPS_DEVICE` names a phone when several are paired. It refuses to install a build whose identifier is not `.local`. The steps below are the Xcode route, and the one-time phone setup either route needs.
 
 1. **Enable Developer Mode** — Settings → Privacy & Security → Developer Mode. The phone restarts.
 2. **Pick the destination in Xcode** — open `Pops.xcodeproj`, choose the `Pops` scheme and the phone in the destination menu, then Run. For a Release build, Product → Scheme → Edit Scheme → Run → Build Configuration → Release first; the Run action defaults to Debug, and the two configurations differ in a way that matters here.
@@ -196,11 +204,13 @@ The formatter treats the OpenAPI snapshot **oppositely** to the two vectors, and
 
 ## What CI does with this
 
-`.github/workflows/ios-quality.yml` — one job, `runs-on: macos-latest`, the only workflow in the repo that is not on Ubuntu. It selects the pinned Xcode, then runs `mise run generate:bfm-client`, `mise run lint` and `mise run -j 1 test ::: lint:analyze`, because a command written out a second time in a workflow file is a command that drifts. The one thing it spells out itself is the diff check after the codegen command.
+`.github/workflows/ios-quality.yml` — one job, `runs-on: macos-latest`, It selects the pinned Xcode (`.github/actions/select-xcode`, shared with the TestFlight upload below), then runs `mise run generate:bfm-client`, `mise run lint`, and then `mise run test` on a pull request or push to main, or `mise run lint:analyze` in the merge queue — each a `mise run` of the task you run locally, because a command written out a second time in a workflow file is a command that drifts. The one thing it spells out itself is the diff check after the codegen command.
 
-The order is deliberate: `lint` needs no build and answers in seconds, so a formatting or SwiftLint violation fails before the compile rather than after it, and the compile is then paid once for the test run and the analyzer rules together.
+The order is deliberate: `lint` needs no build and answers in seconds, so a formatting or SwiftLint violation fails before the compile rather than after it.
 
-`-j 1` is load-bearing. mise runs those two tasks concurrently by default, which is faster and makes the job flaky: `swiftlint analyze` saturates the runner's three cores while the simulator suite is running, and the `Auth` concurrency suites poll for a condition with a timeout rather than being driven deterministically. `twentyConcurrentRejectionsRefreshOnce` waits for twenty tasks to reach a barrier and asserts they all arrived; starved of CPU they do not. It still compiles once — that is the dependency graph, not the scheduler.
+The analyzer runs only in the merge queue. It is ~19.5 minutes of the job on the runner against a ~2-minute compile and a ~3-minute simulator suite, and every macOS job in the repo shares GitHub's five-runner pool (POPS-4149). An unused declaration or unused import therefore shows up as a merge-queue ejection rather than a red PR, unless `mise run lint:analyze` caught it locally first. A pull request stacked on another branch skips the job entirely and gets it once rebased onto main; the merge queue always runs it (POPS-4150).
+
+When both tasks run in one invocation, `-j 1` is load-bearing. mise runs those two tasks concurrently by default, which is faster and makes the job flaky: `swiftlint analyze` saturates the runner's three cores while the simulator suite is running, and the `Auth` concurrency suites poll for a condition with a timeout rather than being driven deterministically. `twentyConcurrentRejectionsRefreshOnce` waits for twenty tasks to reach a barrier and asserts they all arrived; starved of CPU they do not. It still compiles once — that is the dependency graph, not the scheduler.
 
 Two things about it are worth knowing before you touch either side:
 
@@ -210,6 +220,18 @@ Two things about it are worth knowing before you touch either side:
 `mise install` is run with `MISE_DISABLE_TOOLS=rust,node,pnpm` there. mise merges config up the tree, so without it the job would download a full Rust toolchain to compile Swift.
 
 It is not quite the only job that touches this directory. Two jobs in [`quality.yml`](../../.github/workflows/quality.yml) — `Device signature encoding (iOS ↔ BFM)` and `Refresh signed-message format (BFM ↔ iOS)` — assert the committed vectors in `Contracts/` from the Node side. They check the contracts, not the code, and would stay green through a Swift tree that does not compile. Both run on every PR rather than under this directory's path filter, because the BFM can break either contract without touching a line of Swift.
+
+## Shipping to TestFlight
+
+`.github/workflows/ios-testflight.yml` archives `Pops` and `PopsPlayground` and uploads both to App Store Connect, where each app's internal testing group gets the build automatically. It runs on a `workflow_run` of iOS Quality and acts only on a successful **push** run on `main`, so a commit ships only after the full lane passed on that exact commit; iOS Quality's path filter is what decides whether a merge ships at all. It can also be dispatched with a `sha` on `main`.
+
+**Versions are CalVer and never committed.** `scripts/release-version.sh <sha>` derives both from the commit: `MARKETING_VERSION` is the committer date in UTC as `YYYY.M.D`, `CURRENT_PROJECT_VERSION` is `git rev-list --count`. They reach `xcodebuild` as command-line build settings, and the archive's `Info.plist` is read back to confirm they landed. A build on a phone reading `2026.9.19 (4821)` is commit 4821 on `main`; one reading `0.0.0 (0)` came from a laptop, because those are `project.yml`'s placeholders. The script refuses a shallow clone, whose count would be wrong while looking valid. Its `self-test` runs in `mise run lint`, since its only other caller runs after merge.
+
+**`mise run release:testflight <Pops|PopsPlayground>`** is the whole upload and runs by hand as well as in CI. Signing is automatic with an App Store Connect API key in place of a signed-in Xcode (`-allowProvisioningUpdates` plus `-authenticationKey*`), so the distribution certificate is cloud-managed and no certificate or profile is stored anywhere. It reads `DEVELOPMENT_TEAM`, `ASC_KEY_ID`, `ASC_ISSUER_ID` and `ASC_KEY_PATH`; in CI they come from the GitHub environment named `main`, which only the `main` branch can deploy to. The workflow skips entirely until the repository variable `TESTFLIGHT_ENABLED` is `true`.
+
+App Store Connect also rejects, after processing and by email, an app whose binary links a camera framework without an `NSCameraUsageDescription`, whether or not the app ever opens the camera. The playground links AVFoundation and VisionKit through the real screens it stages, so it carries a purpose string too, and `scripts/check-camera-purpose.sh` refuses such an archive before it is uploaded.
+
+App Store Connect rejects a binary built with a beta Xcode, so the day `POPS_XCODE_VERSION` points at a beta is a day nothing uploads.
 
 ## Known gaps
 

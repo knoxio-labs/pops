@@ -1,4 +1,4 @@
-appId: com.knoxiolabs.pops
+appId: com.knoxiolabs.pops.local
 name: Pair this device, then open a transaction
 ---
 # An unpaired launch, every time. `clearState` empties the app container, which

@@ -60,7 +60,7 @@ internal struct InventoryItemDetailView<Capability: View>: View {
         .inventoryTitleDisplay(large: false)
         .toolbar {
             InventoryItemDetailToolbar(
-                record: detail.record, destroying: $destroying, open: { pending = $0 },
+                record: detail.record, destroying: $destroying, open: openPending,
                 perform: perform, destroy: { Task { await model.destroy() } })
         }
         .navigationDestination(for: InventoryItemHistoryRoute.self) { _ in
@@ -121,13 +121,19 @@ internal struct InventoryItemDetailView<Capability: View>: View {
         default:
             Task {
                 guard let screen = await model.act(action) else { return }
-                switch screen {
-                case .edit:
-                    itemForm?(.edit(detail.record.id))
-                default:
-                    pending = screen
-                }
+                openPending(screen)
             }
+        }
+    }
+
+    /// Routes a pending screen to the real item form when there is one, and
+    /// to `InventoryItemDetailPendingSheet`'s placeholder otherwise. Shared
+    /// by the action row (`act`) and the toolbar's own Edit button, which
+    /// used to call `pending = $0` directly and so kept opening the
+    /// placeholder for Edit even after `act` started reaching the real form.
+    private func openPending(_ screen: InventoryItemDetailPending) {
+        InventoryItemDetailRouting.present(screen, itemId: detail.record.id, itemForm: itemForm) {
+            pending = $0
         }
     }
 

@@ -6493,7 +6493,8 @@
                                 "inUse",
                                 "deductible",
                                 "locationId",
-                                "assetId"
+                                "assetId",
+                                "includeInactive"
                               ],
                               "type": "string"
                             },
@@ -9839,6 +9840,984 @@
         },
         "summary": "Remove an uploaded file (db row + file)",
         "tags": ["documentFiles"]
+      }
+    },
+    "/web/items": {
+      "get": {
+        "operationId": "web.list",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "cursor",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": true,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "typeKey",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "placementKind",
+            "schema": {
+              "enum": ["location", "container", "hand"],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "locationId",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "containingItemId",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "includeInactive",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "access": {
+                            "enum": ["open", "closed", null],
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "code": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          },
+                          "deletedAt": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "documentTitles": {
+                            "items": {
+                              "type": "string"
+                            },
+                            "type": "array"
+                          },
+                          "documentsStatus": {
+                            "enum": ["linked", "none", "unavailable"],
+                            "type": "string"
+                          },
+                          "externalIds": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "kind": {
+                                  "type": "string"
+                                },
+                                "value": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["kind", "value"],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "fields": {
+                            "additionalProperties": {},
+                            "type": "object"
+                          },
+                          "id": {
+                            "type": "string"
+                          },
+                          "isContainer": {
+                            "type": "boolean"
+                          },
+                          "isFull": {
+                            "nullable": true,
+                            "type": "boolean"
+                          },
+                          "lifecycle": {
+                            "type": "string"
+                          },
+                          "lifecycleChangedAt": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "note": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "photos": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "caption": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "sha256": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["sha256", "caption"],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "placement": {
+                            "oneOf": [
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "kind": {
+                                    "enum": ["location"],
+                                    "type": "string"
+                                  },
+                                  "locationId": {
+                                    "minLength": 1,
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["kind", "locationId"],
+                                "type": "object"
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "itemId": {
+                                    "minLength": 1,
+                                    "type": "string"
+                                  },
+                                  "kind": {
+                                    "enum": ["container"],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["kind", "itemId"],
+                                "type": "object"
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "kind": {
+                                    "enum": ["hand"],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["kind"],
+                                "type": "object"
+                              }
+                            ]
+                          },
+                          "previousPlacement": {
+                            "nullable": true,
+                            "oneOf": [
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "kind": {
+                                    "enum": ["location"],
+                                    "type": "string"
+                                  },
+                                  "locationId": {
+                                    "minLength": 1,
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["kind", "locationId"],
+                                "type": "object"
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "itemId": {
+                                    "minLength": 1,
+                                    "type": "string"
+                                  },
+                                  "kind": {
+                                    "enum": ["container"],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["kind", "itemId"],
+                                "type": "object"
+                              }
+                            ]
+                          },
+                          "provenance": {
+                            "additionalProperties": false,
+                            "nullable": true,
+                            "properties": {
+                              "merchant": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "price": {
+                                "nullable": true,
+                                "type": "number"
+                              },
+                              "purchasedOn": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "transactionUri": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "warrantyExpires": {
+                                "nullable": true,
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "merchant",
+                              "price",
+                              "purchasedOn",
+                              "warrantyExpires",
+                              "transactionUri"
+                            ],
+                            "type": "object"
+                          },
+                          "quantity": {
+                            "maximum": 9007199254740991,
+                            "minimum": -9007199254740991,
+                            "type": "integer"
+                          },
+                          "revision": {
+                            "maximum": 9007199254740991,
+                            "minimum": -9007199254740991,
+                            "type": "integer"
+                          },
+                          "seq": {
+                            "maximum": 9007199254740991,
+                            "minimum": -9007199254740991,
+                            "type": "integer"
+                          },
+                          "typeKey": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "revision",
+                          "seq",
+                          "name",
+                          "typeKey",
+                          "fields",
+                          "note",
+                          "code",
+                          "externalIds",
+                          "quantity",
+                          "lifecycle",
+                          "lifecycleChangedAt",
+                          "placement",
+                          "previousPlacement",
+                          "isContainer",
+                          "access",
+                          "isFull",
+                          "photos",
+                          "provenance",
+                          "documentsStatus",
+                          "documentTitles",
+                          "createdAt",
+                          "updatedAt",
+                          "deletedAt"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "nextCursor": {
+                      "nullable": true,
+                      "type": "string"
+                    }
+                  },
+                  "required": ["items", "nextCursor"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          }
+        },
+        "summary": "A cursor-paged, filtered slice of the live item catalogue, on the new item model",
+        "tags": ["web"]
+      }
+    },
+    "/web/items/{id}": {
+      "get": {
+        "operationId": "web.get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "historyCursor",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "historyLimit",
+            "required": true,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "history": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "events": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "actor": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "kind": {
+                                    "type": "string"
+                                  },
+                                  "label": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["kind", "label"],
+                                "type": "object"
+                              },
+                              "after": {
+                                "additionalProperties": {},
+                                "properties": {
+                                  "placement": {
+                                    "oneOf": [
+                                      {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "kind": {
+                                            "enum": ["location"],
+                                            "type": "string"
+                                          },
+                                          "locationId": {
+                                            "minLength": 1,
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": ["kind", "locationId"],
+                                        "type": "object"
+                                      },
+                                      {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "itemId": {
+                                            "minLength": 1,
+                                            "type": "string"
+                                          },
+                                          "kind": {
+                                            "enum": ["container"],
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": ["kind", "itemId"],
+                                        "type": "object"
+                                      },
+                                      {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "kind": {
+                                            "enum": ["hand"],
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": ["kind"],
+                                        "type": "object"
+                                      }
+                                    ]
+                                  },
+                                  "previousPlacement": {
+                                    "nullable": true,
+                                    "oneOf": [
+                                      {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "kind": {
+                                            "enum": ["location"],
+                                            "type": "string"
+                                          },
+                                          "locationId": {
+                                            "minLength": 1,
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": ["kind", "locationId"],
+                                        "type": "object"
+                                      },
+                                      {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "itemId": {
+                                            "minLength": 1,
+                                            "type": "string"
+                                          },
+                                          "kind": {
+                                            "enum": ["container"],
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": ["kind", "itemId"],
+                                        "type": "object"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "type": "object"
+                              },
+                              "before": {
+                                "additionalProperties": {},
+                                "properties": {
+                                  "placement": {
+                                    "oneOf": [
+                                      {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "kind": {
+                                            "enum": ["location"],
+                                            "type": "string"
+                                          },
+                                          "locationId": {
+                                            "minLength": 1,
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": ["kind", "locationId"],
+                                        "type": "object"
+                                      },
+                                      {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "itemId": {
+                                            "minLength": 1,
+                                            "type": "string"
+                                          },
+                                          "kind": {
+                                            "enum": ["container"],
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": ["kind", "itemId"],
+                                        "type": "object"
+                                      },
+                                      {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "kind": {
+                                            "enum": ["hand"],
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": ["kind"],
+                                        "type": "object"
+                                      }
+                                    ]
+                                  },
+                                  "previousPlacement": {
+                                    "nullable": true,
+                                    "oneOf": [
+                                      {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "kind": {
+                                            "enum": ["location"],
+                                            "type": "string"
+                                          },
+                                          "locationId": {
+                                            "minLength": 1,
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": ["kind", "locationId"],
+                                        "type": "object"
+                                      },
+                                      {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "itemId": {
+                                            "minLength": 1,
+                                            "type": "string"
+                                          },
+                                          "kind": {
+                                            "enum": ["container"],
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": ["kind", "itemId"],
+                                        "type": "object"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "type": "object"
+                              },
+                              "clientTime": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "compensatesSeq": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "nullable": true,
+                                "type": "integer"
+                              },
+                              "entityId": {
+                                "type": "string"
+                              },
+                              "entityKind": {
+                                "enum": ["item", "location"],
+                                "type": "string"
+                              },
+                              "fields": {
+                                "items": {
+                                  "type": "string"
+                                },
+                                "type": "array"
+                              },
+                              "kind": {
+                                "type": "string"
+                              },
+                              "reason": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "seq": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
+                              },
+                              "serverTime": {
+                                "type": "string"
+                              },
+                              "undoable": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "seq",
+                              "entityKind",
+                              "entityId",
+                              "kind",
+                              "fields",
+                              "before",
+                              "after",
+                              "reason",
+                              "actor",
+                              "clientTime",
+                              "serverTime",
+                              "compensatesSeq",
+                              "undoable"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "nextCursor": {
+                          "nullable": true,
+                          "type": "string"
+                        }
+                      },
+                      "required": ["events", "nextCursor"],
+                      "type": "object"
+                    },
+                    "item": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "access": {
+                          "enum": ["open", "closed", null],
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "code": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "createdAt": {
+                          "type": "string"
+                        },
+                        "deletedAt": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "documentTitles": {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "documentsStatus": {
+                          "enum": ["linked", "none", "unavailable"],
+                          "type": "string"
+                        },
+                        "externalIds": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "kind": {
+                                "type": "string"
+                              },
+                              "value": {
+                                "type": "string"
+                              }
+                            },
+                            "required": ["kind", "value"],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "fields": {
+                          "additionalProperties": {},
+                          "type": "object"
+                        },
+                        "id": {
+                          "type": "string"
+                        },
+                        "isContainer": {
+                          "type": "boolean"
+                        },
+                        "isFull": {
+                          "nullable": true,
+                          "type": "boolean"
+                        },
+                        "lifecycle": {
+                          "type": "string"
+                        },
+                        "lifecycleChangedAt": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "note": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "photos": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "caption": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "sha256": {
+                                "type": "string"
+                              }
+                            },
+                            "required": ["sha256", "caption"],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "placement": {
+                          "oneOf": [
+                            {
+                              "additionalProperties": false,
+                              "properties": {
+                                "kind": {
+                                  "enum": ["location"],
+                                  "type": "string"
+                                },
+                                "locationId": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["kind", "locationId"],
+                              "type": "object"
+                            },
+                            {
+                              "additionalProperties": false,
+                              "properties": {
+                                "itemId": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "kind": {
+                                  "enum": ["container"],
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["kind", "itemId"],
+                              "type": "object"
+                            },
+                            {
+                              "additionalProperties": false,
+                              "properties": {
+                                "kind": {
+                                  "enum": ["hand"],
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["kind"],
+                              "type": "object"
+                            }
+                          ]
+                        },
+                        "previousPlacement": {
+                          "nullable": true,
+                          "oneOf": [
+                            {
+                              "additionalProperties": false,
+                              "properties": {
+                                "kind": {
+                                  "enum": ["location"],
+                                  "type": "string"
+                                },
+                                "locationId": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["kind", "locationId"],
+                              "type": "object"
+                            },
+                            {
+                              "additionalProperties": false,
+                              "properties": {
+                                "itemId": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "kind": {
+                                  "enum": ["container"],
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["kind", "itemId"],
+                              "type": "object"
+                            }
+                          ]
+                        },
+                        "provenance": {
+                          "additionalProperties": false,
+                          "nullable": true,
+                          "properties": {
+                            "merchant": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "price": {
+                              "nullable": true,
+                              "type": "number"
+                            },
+                            "purchasedOn": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "transactionUri": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "warrantyExpires": {
+                              "nullable": true,
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "merchant",
+                            "price",
+                            "purchasedOn",
+                            "warrantyExpires",
+                            "transactionUri"
+                          ],
+                          "type": "object"
+                        },
+                        "quantity": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "revision": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "seq": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "typeKey": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "updatedAt": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "revision",
+                        "seq",
+                        "name",
+                        "typeKey",
+                        "fields",
+                        "note",
+                        "code",
+                        "externalIds",
+                        "quantity",
+                        "lifecycle",
+                        "lifecycleChangedAt",
+                        "placement",
+                        "previousPlacement",
+                        "isContainer",
+                        "access",
+                        "isFull",
+                        "photos",
+                        "provenance",
+                        "documentsStatus",
+                        "documentTitles",
+                        "createdAt",
+                        "updatedAt",
+                        "deletedAt"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": ["item", "history"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "404"
+          }
+        },
+        "summary": "An item, and one page of its history, newest first",
+        "tags": ["web"]
       }
     }
   }

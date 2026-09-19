@@ -63,12 +63,54 @@ internal struct AppBundleTests {
         #expect(!purpose.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
     }
 
+    /// `CFBundleURLTypes` has no `INFOPLIST_KEY_` equivalent — there is no
+    /// build setting for an array of dictionaries — so it can only reach the
+    /// built product through `App/Info.plist` directly. Its absence would not
+    /// be a build failure either: the scheme would simply never open the app,
+    /// silently, the first time somebody scans a printed label.
+    @Test("the built product registers the pops URL scheme")
+    func declaresThePopsURLScheme() throws {
+        let types = try #require(
+            infoValue("CFBundleURLTypes") as? [[String: Any]],
+            "CFBundleURLTypes is missing from the built Info.plist"
+        )
+        let schemes = types.flatMap { $0["CFBundleURLSchemes"] as? [String] ?? [] }
+        #expect(schemes.contains("pops"))
+    }
+
+    /// Export compliance, declared in the binary. Without the key a TestFlight
+    /// build does not fail — it waits at "Missing Compliance" in App Store
+    /// Connect and reaches no tester until someone answers by hand, which
+    /// quietly defeats the automated upload (POPS-4137).
+    @Test("the built product declares it uses no non-exempt encryption")
+    func declaresExportCompliance() throws {
+        let declared = try #require(
+            infoValue("ITSAppUsesNonExemptEncryption") as? Bool,
+            """
+            ITSAppUsesNonExemptEncryption is missing; every TestFlight build \
+            would stall at Missing Compliance
+            """
+        )
+        #expect(declared == false)
+    }
+
     /// The host, identified. Every other assertion in this file reads
     /// `Bundle.main` and means nothing if the tests are running unhosted — in
     /// that case `Bundle.main` is the runner, and a missing key would be
     /// reported against the wrong bundle.
+    ///
+    /// The `.local` identifier is the local flavour's, and tests only ever run
+    /// against a local build: only `scripts/testflight.sh` builds the shipped
+    /// flavour, and it runs no tests.
     @Test("the tests are running inside the app, not beside it")
     func areHostedByTheApp() {
-        #expect(Bundle.main.bundleIdentifier == "com.knoxiolabs.pops")
+        #expect(Bundle.main.bundleIdentifier == "com.knoxiolabs.pops.local")
+    }
+
+    /// The home-screen name is how a local install is told apart from the
+    /// TestFlight one at a glance, alongside its marked icon.
+    @Test("a local build says so on the home screen")
+    func namesItselfLocal() {
+        #expect(infoValue("CFBundleDisplayName") as? String == "Pops Local")
     }
 }

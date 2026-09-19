@@ -732,6 +732,1036 @@ export type MobileFinanceGetTransactionResponses = {
 export type MobileFinanceGetTransactionResponse =
   MobileFinanceGetTransactionResponses[keyof MobileFinanceGetTransactionResponses];
 
+export type MobileInventorySuggestCodesData = {
+  /**
+   * Body
+   */
+  body?: {
+    name: string;
+    stem?: string;
+    typeKey?: string;
+  };
+  path?: never;
+  query?: never;
+  url: '/mobile/inventory/codes/suggest';
+};
+
+export type MobileInventorySuggestCodesErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code: 'invalid_cursor' | 'invalid_request';
+    message: string;
+  };
+  /**
+   * 401
+   */
+  401: {
+    code: 'invalid_token';
+    message: string;
+  };
+  /**
+   * 403
+   */
+  403:
+    | {
+        code: 'device_revoked';
+        message: string;
+      }
+    | {
+        capability: string;
+        code: 'capability_not_granted';
+        message: string;
+      };
+  /**
+   * 426
+   */
+  426: {
+    code: 'client_too_old';
+    message: string;
+  };
+  /**
+   * 429
+   */
+  429: {
+    code: 'rate_limited';
+    message: string;
+    retryAfterSeconds: number;
+  };
+  /**
+   * 502
+   */
+  502: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'upstream_unsupported_media'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'upstream_unsupported_media'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+};
+
+export type MobileInventorySuggestCodesError =
+  MobileInventorySuggestCodesErrors[keyof MobileInventorySuggestCodesErrors];
+
+export type MobileInventorySuggestCodesResponses = {
+  /**
+   * 200
+   */
+  200: {
+    suggestions: Array<string>;
+  };
+};
+
+export type MobileInventorySuggestCodesResponse =
+  MobileInventorySuggestCodesResponses[keyof MobileInventorySuggestCodesResponses];
+
+export type MobileInventoryItemHistoryData = {
+  body?: never;
+  path: {
+    id: string;
+  };
+  query?: {
+    cursor?: string;
+    limit?: number;
+  };
+  url: '/mobile/inventory/items/{id}/history';
+};
+
+export type MobileInventoryItemHistoryErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code: 'invalid_cursor' | 'invalid_request';
+    message: string;
+  };
+  /**
+   * 401
+   */
+  401: {
+    code: 'invalid_token';
+    message: string;
+  };
+  /**
+   * 403
+   */
+  403:
+    | {
+        code: 'device_revoked';
+        message: string;
+      }
+    | {
+        capability: string;
+        code: 'capability_not_granted';
+        message: string;
+      };
+  /**
+   * 404
+   */
+  404: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'upstream_unsupported_media'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+  /**
+   * 426
+   */
+  426: {
+    code: 'client_too_old';
+    message: string;
+  };
+  /**
+   * 429
+   */
+  429: {
+    code: 'rate_limited';
+    message: string;
+    retryAfterSeconds: number;
+  };
+  /**
+   * 502
+   */
+  502: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'upstream_unsupported_media'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'upstream_unsupported_media'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+};
+
+export type MobileInventoryItemHistoryError =
+  MobileInventoryItemHistoryErrors[keyof MobileInventoryItemHistoryErrors];
+
+export type MobileInventoryItemHistoryResponses = {
+  /**
+   * 200
+   */
+  200: {
+    events: Array<{
+      actor: {
+        kind: string;
+        label: string;
+      };
+      after: {
+        placement?:
+          | {
+              kind: 'location';
+              locationId: string;
+            }
+          | {
+              itemId: string;
+              kind: 'container';
+            }
+          | {
+              kind: 'hand';
+            };
+        previousPlacement?:
+          | {
+              kind: 'location';
+              locationId: string;
+            }
+          | {
+              itemId: string;
+              kind: 'container';
+            }
+          | null;
+        [key: string]: unknown;
+      };
+      before: {
+        placement?:
+          | {
+              kind: 'location';
+              locationId: string;
+            }
+          | {
+              itemId: string;
+              kind: 'container';
+            }
+          | {
+              kind: 'hand';
+            };
+        previousPlacement?:
+          | {
+              kind: 'location';
+              locationId: string;
+            }
+          | {
+              itemId: string;
+              kind: 'container';
+            }
+          | null;
+        [key: string]: unknown;
+      };
+      clientTime: string | null;
+      compensatesSeq: number | null;
+      entityId: string;
+      entityKind: 'item' | 'location';
+      fields: Array<string>;
+      kind: string;
+      reason: string | null;
+      seq: number;
+      serverTime: string;
+      undoable: boolean;
+    }>;
+    nextCursor: string | null;
+  };
+};
+
+export type MobileInventoryItemHistoryResponse =
+  MobileInventoryItemHistoryResponses[keyof MobileInventoryItemHistoryResponses];
+
+export type MobileInventoryMutationsData = {
+  /**
+   * Body
+   */
+  body?: {
+    mutations: Array<{
+      args: unknown;
+      baseRevision?: number | null;
+      clientTime: string;
+      dependsOn: Array<string>;
+      entityId: string;
+      mutationId: string;
+      op: string;
+    }>;
+  };
+  path?: never;
+  query?: never;
+  url: '/mobile/inventory/mutations';
+};
+
+export type MobileInventoryMutationsErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code: 'invalid_cursor' | 'invalid_request';
+    message: string;
+  };
+  /**
+   * 401
+   */
+  401: {
+    code: 'invalid_token';
+    message: string;
+  };
+  /**
+   * 403
+   */
+  403:
+    | {
+        code: 'device_revoked';
+        message: string;
+      }
+    | {
+        capability: string;
+        code: 'capability_not_granted';
+        message: string;
+      };
+  /**
+   * 413
+   */
+  413: {
+    code: 'payload_too_large';
+    maxBytes: number;
+    message: string;
+  };
+  /**
+   * 426
+   */
+  426: {
+    code: 'client_too_old';
+    message: string;
+  };
+  /**
+   * 429
+   */
+  429: {
+    code: 'rate_limited';
+    message: string;
+    retryAfterSeconds: number;
+  };
+  /**
+   * 502
+   */
+  502: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'upstream_unsupported_media'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'upstream_unsupported_media'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+};
+
+export type MobileInventoryMutationsError =
+  MobileInventoryMutationsErrors[keyof MobileInventoryMutationsErrors];
+
+export type MobileInventoryMutationsResponses = {
+  /**
+   * 200
+   */
+  200: {
+    highWaterSeq: number;
+    outcomes: Array<
+      | {
+          converged: boolean;
+          mutationId: string;
+          revision: number;
+          seq: number;
+          status: 'applied';
+        }
+      | {
+          at: string;
+          currentRevision: number;
+          field: string;
+          kind: 'field';
+          mine: unknown;
+          mutationId: string;
+          source: {
+            kind: string;
+            label: string;
+          };
+          status: 'conflict';
+          theirs: unknown;
+        }
+      | {
+          heldBy: {
+            id: string;
+            name: string;
+          };
+          kind: 'code_collision';
+          mutationId: string;
+          status: 'conflict';
+          suggestedCode: string | null;
+        }
+      | {
+          at: string;
+          kind: 'deleted';
+          mutationId: string;
+          source: {
+            kind: string;
+            label: string;
+          };
+          status: 'conflict';
+        }
+      | {
+          message: string;
+          mutationId: string;
+          reason: string;
+          status: 'rejected';
+        }
+      | {
+          mutationId: string;
+          status: 'deferred';
+          waitingOn: string;
+        }
+    >;
+  };
+};
+
+export type MobileInventoryMutationsResponse =
+  MobileInventoryMutationsResponses[keyof MobileInventoryMutationsResponses];
+
+export type MobileInventoryChangesData = {
+  body?: never;
+  path?: never;
+  query: {
+    since: number;
+    epoch: string;
+    limit?: number;
+  };
+  url: '/mobile/inventory/sync/changes';
+};
+
+export type MobileInventoryChangesErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code: 'invalid_cursor' | 'invalid_request';
+    message: string;
+  };
+  /**
+   * 401
+   */
+  401: {
+    code: 'invalid_token';
+    message: string;
+  };
+  /**
+   * 403
+   */
+  403:
+    | {
+        code: 'device_revoked';
+        message: string;
+      }
+    | {
+        capability: string;
+        code: 'capability_not_granted';
+        message: string;
+      };
+  /**
+   * 409
+   */
+  409: {
+    code: 'resync_required';
+    message: string;
+  };
+  /**
+   * 426
+   */
+  426: {
+    code: 'client_too_old';
+    message: string;
+  };
+  /**
+   * 429
+   */
+  429: {
+    code: 'rate_limited';
+    message: string;
+    retryAfterSeconds: number;
+  };
+  /**
+   * 502
+   */
+  502: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'upstream_unsupported_media'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'upstream_unsupported_media'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+};
+
+export type MobileInventoryChangesError =
+  MobileInventoryChangesErrors[keyof MobileInventoryChangesErrors];
+
+export type MobileInventoryChangesResponses = {
+  /**
+   * 200
+   */
+  200: {
+    catalogueVersion: string;
+    epoch: string;
+    events: Array<{
+      actor: {
+        kind: string;
+        label: string;
+      };
+      after: {
+        placement?:
+          | {
+              kind: 'location';
+              locationId: string;
+            }
+          | {
+              itemId: string;
+              kind: 'container';
+            }
+          | {
+              kind: 'hand';
+            };
+        previousPlacement?:
+          | {
+              kind: 'location';
+              locationId: string;
+            }
+          | {
+              itemId: string;
+              kind: 'container';
+            }
+          | null;
+        [key: string]: unknown;
+      };
+      before: {
+        placement?:
+          | {
+              kind: 'location';
+              locationId: string;
+            }
+          | {
+              itemId: string;
+              kind: 'container';
+            }
+          | {
+              kind: 'hand';
+            };
+        previousPlacement?:
+          | {
+              kind: 'location';
+              locationId: string;
+            }
+          | {
+              itemId: string;
+              kind: 'container';
+            }
+          | null;
+        [key: string]: unknown;
+      };
+      clientTime: string | null;
+      compensatesSeq: number | null;
+      entityId: string;
+      entityKind: 'item' | 'location';
+      fields: Array<string>;
+      kind: string;
+      reason: string | null;
+      seq: number;
+      serverTime: string;
+      undoable: boolean;
+    }>;
+    hasMore: boolean;
+    items: Array<{
+      access: 'open' | 'closed' | null;
+      code: string | null;
+      createdAt: string;
+      deletedAt: string | null;
+      documentTitles: Array<string>;
+      documentsStatus: 'linked' | 'none' | 'unavailable';
+      externalIds: Array<{
+        kind: string;
+        value: string;
+      }>;
+      fields: {
+        [key: string]: unknown;
+      };
+      id: string;
+      isContainer: boolean;
+      isFull: boolean | null;
+      lifecycle: string;
+      lifecycleChangedAt: string | null;
+      name: string;
+      note: string | null;
+      photos: Array<{
+        caption: string | null;
+        sha256: string;
+      }>;
+      placement:
+        | {
+            kind: 'location';
+            locationId: string;
+          }
+        | {
+            itemId: string;
+            kind: 'container';
+          }
+        | {
+            kind: 'hand';
+          };
+      previousPlacement:
+        | {
+            kind: 'location';
+            locationId: string;
+          }
+        | {
+            itemId: string;
+            kind: 'container';
+          }
+        | null;
+      provenance: {
+        merchant: string | null;
+        price: number | null;
+        purchasedOn: string | null;
+        transactionUri: string | null;
+        warrantyExpires: string | null;
+      } | null;
+      quantity: number;
+      revision: number;
+      seq: number;
+      typeKey: string | null;
+      updatedAt: string;
+    }>;
+    locations: Array<{
+      deletedAt: string | null;
+      id: string;
+      name: string;
+      parentId: string | null;
+      revision: number;
+      seq: number;
+      sortOrder: number;
+    }>;
+    nextSince: number;
+  };
+};
+
+export type MobileInventoryChangesResponse =
+  MobileInventoryChangesResponses[keyof MobileInventoryChangesResponses];
+
+export type MobileInventorySnapshotData = {
+  body?: never;
+  path?: never;
+  query?: {
+    cursor?: string;
+    limit?: number;
+  };
+  url: '/mobile/inventory/sync/snapshot';
+};
+
+export type MobileInventorySnapshotErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code: 'invalid_cursor' | 'invalid_request';
+    message: string;
+  };
+  /**
+   * 401
+   */
+  401: {
+    code: 'invalid_token';
+    message: string;
+  };
+  /**
+   * 403
+   */
+  403:
+    | {
+        code: 'device_revoked';
+        message: string;
+      }
+    | {
+        capability: string;
+        code: 'capability_not_granted';
+        message: string;
+      };
+  /**
+   * 409
+   */
+  409: {
+    code: 'resync_required';
+    message: string;
+  };
+  /**
+   * 426
+   */
+  426: {
+    code: 'client_too_old';
+    message: string;
+  };
+  /**
+   * 429
+   */
+  429: {
+    code: 'rate_limited';
+    message: string;
+    retryAfterSeconds: number;
+  };
+  /**
+   * 502
+   */
+  502: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'upstream_unsupported_media'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'upstream_unsupported_media'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+};
+
+export type MobileInventorySnapshotError =
+  MobileInventorySnapshotErrors[keyof MobileInventorySnapshotErrors];
+
+export type MobileInventorySnapshotResponses = {
+  /**
+   * 200
+   */
+  200: {
+    catalogueVersion: string;
+    epoch: string;
+    highWaterSeq: number;
+    items: Array<{
+      access: 'open' | 'closed' | null;
+      code: string | null;
+      createdAt: string;
+      deletedAt: string | null;
+      documentTitles: Array<string>;
+      documentsStatus: 'linked' | 'none' | 'unavailable';
+      externalIds: Array<{
+        kind: string;
+        value: string;
+      }>;
+      fields: {
+        [key: string]: unknown;
+      };
+      id: string;
+      isContainer: boolean;
+      isFull: boolean | null;
+      lifecycle: string;
+      lifecycleChangedAt: string | null;
+      name: string;
+      note: string | null;
+      photos: Array<{
+        caption: string | null;
+        sha256: string;
+      }>;
+      placement:
+        | {
+            kind: 'location';
+            locationId: string;
+          }
+        | {
+            itemId: string;
+            kind: 'container';
+          }
+        | {
+            kind: 'hand';
+          };
+      previousPlacement:
+        | {
+            kind: 'location';
+            locationId: string;
+          }
+        | {
+            itemId: string;
+            kind: 'container';
+          }
+        | null;
+      provenance: {
+        merchant: string | null;
+        price: number | null;
+        purchasedOn: string | null;
+        transactionUri: string | null;
+        warrantyExpires: string | null;
+      } | null;
+      quantity: number;
+      revision: number;
+      seq: number;
+      typeKey: string | null;
+      updatedAt: string;
+    }>;
+    locations: Array<{
+      deletedAt: string | null;
+      id: string;
+      name: string;
+      parentId: string | null;
+      revision: number;
+      seq: number;
+      sortOrder: number;
+    }>;
+    nextCursor: string | null;
+    total: number;
+  };
+};
+
+export type MobileInventorySnapshotResponse =
+  MobileInventorySnapshotResponses[keyof MobileInventorySnapshotResponses];
+
+export type MobileInventoryCatalogueData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/mobile/inventory/types';
+};
+
+export type MobileInventoryCatalogueErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code: 'invalid_cursor' | 'invalid_request';
+    message: string;
+  };
+  /**
+   * 401
+   */
+  401: {
+    code: 'invalid_token';
+    message: string;
+  };
+  /**
+   * 403
+   */
+  403:
+    | {
+        code: 'device_revoked';
+        message: string;
+      }
+    | {
+        capability: string;
+        code: 'capability_not_granted';
+        message: string;
+      };
+  /**
+   * 426
+   */
+  426: {
+    code: 'client_too_old';
+    message: string;
+  };
+  /**
+   * 429
+   */
+  429: {
+    code: 'rate_limited';
+    message: string;
+    retryAfterSeconds: number;
+  };
+  /**
+   * 502
+   */
+  502: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'upstream_unsupported_media'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'upstream_unsupported_media'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+};
+
+export type MobileInventoryCatalogueError =
+  MobileInventoryCatalogueErrors[keyof MobileInventoryCatalogueErrors];
+
+export type MobileInventoryCatalogueResponses = {
+  /**
+   * 200
+   */
+  200: {
+    types: Array<{
+      capabilities: Array<string>;
+      fields: Array<{
+        choices?: Array<string>;
+        dimension?: string;
+        highlighted?: boolean;
+        hint?: string;
+        key: string;
+        kind: string;
+        label: string;
+        required?: boolean;
+        unit?: string;
+      }>;
+      key: string;
+      legacyLabels: Array<string>;
+      name: string;
+    }>;
+    units: Array<{
+      dimension: string;
+      multiplier: number;
+      symbol: string;
+    }>;
+    version: string;
+  };
+};
+
+export type MobileInventoryCatalogueResponse =
+  MobileInventoryCatalogueResponses[keyof MobileInventoryCatalogueResponses];
+
 export type MobilePurchasesListPurchasesData = {
   body?: never;
   path?: never;
@@ -860,7 +1890,7 @@ export type MobilePurchasesCreateManualPurchaseData = {
       lineTotalCents: number;
       name: string;
       notes: Array<string>;
-      quantity: number | null;
+      quantity?: number | null;
       unitPriceCents: number;
     }>;
     merchantName: string | null;
@@ -1008,7 +2038,7 @@ export type MobilePurchasesSaveReceiptDraftData = {
       lineTotalCents: number;
       name: string;
       notes: Array<string>;
-      quantity: number | null;
+      quantity?: number | null;
       unitPriceCents: number;
     }>;
     merchantName: string | null;
@@ -1269,7 +2299,7 @@ export type MobilePurchasesExtractReceiptResponses = {
             lineTotalCents: number;
             name: string;
             notes: Array<string>;
-            quantity: number | null;
+            quantity?: number | null;
             unitPriceCents: number;
           }>;
           merchantName: string | null;

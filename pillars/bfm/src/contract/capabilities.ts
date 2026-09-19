@@ -77,6 +77,22 @@ export const MOBILE_CAPABILITIES = [
    * principle hold either alone.
    */
   'purchases.write',
+  /**
+   * Read the inventory replica: the type catalogue, the paged snapshot, the
+   * change feed and one item's history. Buys every GET on
+   * `/mobile/inventory/*` (A9) — writing a mutation or suggesting a code is
+   * its own later capability, on the same reasoning `purchases.write` is not
+   * implied by `purchases.read`.
+   */
+  'inventory.read',
+  /**
+   * Apply a batch of mutations, and ask for a free code for a new item.
+   * Buys `POST /mobile/inventory/mutations` and
+   * `POST /mobile/inventory/codes/suggest` (A12) — writing is its own
+   * authority, on the same reasoning `purchases.write` is not implied by
+   * `purchases.read`.
+   */
+  'inventory.write',
 ] as const;
 
 export type MobileCapability = (typeof MOBILE_CAPABILITIES)[number];
@@ -124,6 +140,24 @@ export const MOBILE_CAPABILITY_SCOPES: Readonly<Record<MobileCapability, readonl
    * covers.
    */
   'purchases.write': ['purchases.purchase'],
+  /**
+   * Two prefixes because the sync contract's own scope gate derives two
+   * grants from its two other sub-routers (`inventory.sync` for the
+   * snapshot/changes/history routes, `inventory.types` for the catalogue) —
+   * see `pillars/inventory/src/contract/rest-sync.ts`. `inventory.codes` (the
+   * third) is not here: nothing this capability reaches calls it.
+   */
+  'inventory.read': ['inventory.sync', 'inventory.types'],
+  /**
+   * Two prefixes for the same reason `inventory.read`'s are: the sync
+   * contract's scope gate derives one grant per sub-router, and this
+   * capability reaches two of them — `inventory.sync` for
+   * `POST /sync/mutations`, `inventory.codes` for `POST /codes/suggest`
+   * (`pillars/inventory/src/contract/rest-sync.ts`). `inventory.sync` is
+   * already granted for `inventory.read`, so only `inventory.codes` widens
+   * the account.
+   */
+  'inventory.write': ['inventory.sync', 'inventory.codes'],
 };
 
 /**
