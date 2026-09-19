@@ -35,6 +35,18 @@ internal struct ReplicaOnDiskStorageTests {
         _ = try InventoryReplica(onDiskAt: directory, freeBytes: { _ in 200 * 1024 * 1024 })
     }
 
+    /// A first launch probes a folder nobody has created yet, which on its
+    /// own answers no volume.
+    @Test("the real free-space probe answers for a folder that does not exist yet")
+    func probeAnswersBeforeTheFolderExists() throws {
+        let directory = try Self.temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let missing = directory.appendingPathComponent("Inventory/device-1", isDirectory: true)
+
+        #expect(try ReplicaStorage.systemFreeBytes(at: missing) > 0)
+        #expect(!FileManager.default.fileExists(atPath: missing.path))
+    }
+
     @Test(
         "a failing migration re-snapshots the database and keeps the queued mutation-log rows and their repairs"
     )

@@ -22,8 +22,18 @@ internal enum ReplicaStorage {
     /// The free space on the volume backing `directory`, for the production
     /// probe; tests inject a fixed value instead so the 200 MB line is
     /// exercised without needing an actually-full disk.
+    ///
+    /// Asked of the nearest folder that exists, because the probe runs
+    /// before `directory` is created (a first launch) and a missing path
+    /// answers no volume at all; a folder and its ancestors share one.
     internal static func systemFreeBytes(at directory: URL) throws -> Int64 {
-        let values = try directory.resourceValues(forKeys: [
+        var existing = directory.standardizedFileURL
+        while !FileManager.default.fileExists(atPath: existing.path),
+            existing.pathComponents.count > 1
+        {
+            existing.deleteLastPathComponent()
+        }
+        let values = try existing.resourceValues(forKeys: [
             .volumeAvailableCapacityForImportantUsageKey
         ])
         guard let capacity = values.volumeAvailableCapacityForImportantUsage else {
