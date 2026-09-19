@@ -66,6 +66,8 @@ export {
   syncMutations,
   syncSnapshot,
   typesCatalogue,
+  webGet,
+  webList,
 } from './sdk.gen';
 export type {
   ClientOptions,
@@ -353,4 +355,14 @@ export type {
   TypesCatalogueErrors,
   TypesCatalogueResponse,
   TypesCatalogueResponses,
+  WebGetData,
+  WebGetError,
+  WebGetErrors,
+  WebGetResponse,
+  WebGetResponses,
+  WebListData,
+  WebListError,
+  WebListErrors,
+  WebListResponse,
+  WebListResponses,
 } from './types.gen';

@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 import { parseFieldValue as parse } from './item-fields.js';
 
-import type { LocationInsert, LocationRow } from '../../db/index.js';
+import type { LocationInsert, LocationRow } from '../../db/row-types.js';
 import type { FieldCodec } from './item-fields.js';
 
 type LocationCodec = FieldCodec<LocationRow, LocationInsert>;

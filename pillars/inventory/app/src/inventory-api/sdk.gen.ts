@@ -177,6 +177,12 @@ import type {
   TypesCatalogueData,
   TypesCatalogueErrors,
   TypesCatalogueResponses,
+  WebGetData,
+  WebGetErrors,
+  WebGetResponses,
+  WebListData,
+  WebListErrors,
+  WebListResponses,
 } from './types.gen';
 
 export type Options<
@@ -1048,4 +1054,26 @@ export const documentFilesRemoveUpload = <ThrowOnError extends boolean = false>(
       'Content-Type': 'application/json',
       ...options.headers,
     },
+  });
+
+/**
+ * A cursor-paged, filtered slice of the live item catalogue, on the new item model
+ */
+export const webList = <ThrowOnError extends boolean = false>(
+  options: Options<WebListData, ThrowOnError>
+): RequestResult<WebListResponses, WebListErrors, ThrowOnError> =>
+  (options.client ?? client).get<WebListResponses, WebListErrors, ThrowOnError>({
+    url: '/web/items',
+    ...options,
+  });
+
+/**
+ * An item, and one page of its history, newest first
+ */
+export const webGet = <ThrowOnError extends boolean = false>(
+  options: Options<WebGetData, ThrowOnError>
+): RequestResult<WebGetResponses, WebGetErrors, ThrowOnError> =>
+  (options.client ?? client).get<WebGetResponses, WebGetErrors, ThrowOnError>({
+    url: '/web/items/{id}',
+    ...options,
   });
