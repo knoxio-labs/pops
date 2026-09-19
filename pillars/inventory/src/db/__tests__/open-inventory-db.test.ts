@@ -12,7 +12,8 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { openInventoryDb } from '../open-inventory-db.js';
-import { createLocation, listLocations } from '../services/locations.js';
+import { listLocations } from '../services/locations.js';
+import { seedLocation } from './location-fixture.js';
 
 let tmpDir: string;
 
@@ -45,7 +46,7 @@ describe('openInventoryDb', () => {
     const { db, raw } = openInventoryDb(path);
     try {
       expect(listLocations(db).total).toBe(0);
-      createLocation(db, { name: 'Home' });
+      seedLocation(db, { name: 'Home' });
       expect(listLocations(db).total).toBe(1);
     } finally {
       raw.close();
@@ -56,7 +57,7 @@ describe('openInventoryDb', () => {
     const path = join(tmpDir, 'inventory.db');
     const first = openInventoryDb(path);
     try {
-      createLocation(first.db, { name: 'persists' });
+      seedLocation(first.db, { name: 'persists' });
       expect(listLocations(first.db).total).toBe(1);
     } finally {
       first.raw.close();
