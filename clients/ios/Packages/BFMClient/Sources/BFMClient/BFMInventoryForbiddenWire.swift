@@ -47,3 +47,15 @@ extension Operations.MobileInventory_suggestCodes.Output.Forbidden.Body.JsonPayl
         if case .case2(let denied) = self { denied.capability } else { nil }
     }
 }
+
+extension Operations.MobileInventory_putMedia.Output.Forbidden.Body.JsonPayload: WireForbiddenBody {
+    internal var capabilityNotGranted: String? {
+        if case .case2(let denied) = self { denied.capability } else { nil }
+    }
+}
+
+extension Operations.MobileInventory_getMedia.Output.Forbidden.Body.JsonPayload: WireForbiddenBody {
+    internal var capabilityNotGranted: String? {
+        if case .case2(let denied) = self { denied.capability } else { nil }
+    }
+}

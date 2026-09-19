@@ -179,6 +179,19 @@ public final class InMemoryInventoryStore: InventoryStore, @unchecked Sendable {
         }
     }
 
+    /// Fakes the server's content-addressed store: the same bytes under the
+    /// same hash answer `alreadyStored: true` the second time, exactly as
+    /// the real media route does.
+    public func uploadPhoto(
+        sha256: String, data: Data, contentType: InventoryMediaContentType
+    ) async throws -> InventoryMediaUploadResult {
+        state.withLock { current in
+            let alreadyStored = current.media[sha256] != nil
+            current.media[sha256] = data
+            return InventoryMediaUploadResult(sha256: sha256, alreadyStored: alreadyStored)
+        }
+    }
+
     public func status() -> AsyncStream<InventoryReplicaStatus> {
         observe(.replicaStatus)
     }

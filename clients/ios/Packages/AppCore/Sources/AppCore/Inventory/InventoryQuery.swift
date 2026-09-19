@@ -6,6 +6,12 @@
 /// can answer the same reads a GRDB-backed implementation does.
 public protocol InventoryQuerySource: Sendable {
     func inventoryItem(id: String) -> InventoryItem?
+    /// The item whose `code` matches, compared the way the pillar's own
+    /// unique index does (case-insensitive). A scan of a tombstoned item's
+    /// code answers nil, the same as an id lookup does (POPS-4108): the code
+    /// stays reserved so it is never reissued, but the label no longer
+    /// resolves to anything the phone shows.
+    func inventoryItem(withCode code: String) -> InventoryItem?
     func inventoryLocation(id: String) -> InventoryLocation?
     func inventoryLocationTree() -> [InventoryLocation]
     /// Items resolving directly to this location or contained within
@@ -55,6 +61,10 @@ public struct InventoryQuery<Value: Sendable>: Sendable {
 
     public static func item(id: String) -> InventoryQuery<InventoryItem?> {
         .init { $0.inventoryItem(id: id) }
+    }
+
+    public static func item(withCode code: String) -> InventoryQuery<InventoryItem?> {
+        .init { $0.inventoryItem(withCode: code) }
     }
 
     public static func location(id: String) -> InventoryQuery<InventoryLocation?> {

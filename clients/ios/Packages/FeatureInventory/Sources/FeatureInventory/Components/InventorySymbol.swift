@@ -52,6 +52,9 @@ internal struct InventorySymbol: Hashable, Sendable {
     internal static let rename = InventorySymbol(system: "pencil")
     internal static let manage = InventorySymbol(system: "ellipsis.circle")
     internal static let offline = InventorySymbol(system: "wifi.slash")
+    internal static let torch = InventorySymbol(system: "flashlight.off.fill")
+    internal static let library = InventorySymbol(system: "photo.on.rectangle")
+    internal static let unavailable = InventorySymbol(system: "slash.circle")
 
     /// A row's kind glyph: a container by its access, anything else as an
     /// item.

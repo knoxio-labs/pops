@@ -15,6 +15,7 @@ internal struct InventoryItemFormView: View {
     @Environment(\.dismiss) private var dismiss
     /// Bumped by Retry to restart the observation after the store ended it.
     @State private var generation = 0
+    @State private var pickingPhoto: InventoryPhotoSource?
 
     internal var body: some View {
         NavigationStack {
@@ -39,6 +40,9 @@ internal struct InventoryItemFormView: View {
         .tint(.popsInventory)
         .interactiveDismissDisabled(model.hasStagedWork)
         .task(id: generation) { await model.load() }
+        .inventoryPhotoPickerSheet(source: $pickingPhoto) { data in
+            Task { await model.photoCaptured(data) }
+        }
         .alert(
             InventoryCopy.failureTitle,
             isPresented: Binding(
@@ -67,7 +71,10 @@ internal struct InventoryItemFormView: View {
         Form {
             Section {
                 InventoryPhotoStrip(
-                    photos: model.draft.photos, capture: nil,
+                    photos: model.draft.photos,
+                    capture: { pickingPhoto = $0 },
+                    retry: { sha256 in Task { await model.retryUpload(sha256: sha256) } },
+                    remove: { sha256 in model.removeFailedPhoto(sha256: sha256) },
                     thumbnail: { await model.thumbnail($0) }
                 )
                 .listRowInsets(EdgeInsets())

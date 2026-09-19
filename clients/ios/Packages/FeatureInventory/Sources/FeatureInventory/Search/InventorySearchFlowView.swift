@@ -12,10 +12,14 @@ public struct InventorySearchFlowView: View {
     @State private var model: InventorySearchViewModel
     @State private var path: [InventoryRoute] = []
     private let store: any InventoryStore
+    private let entityRouter: any EntityRouter
 
     /// Reads and writes through `dependencies.inventory`, and nothing else.
-    public init(dependencies: AppDependencies) {
+    /// `entityRouter` is the composition root's one instance, the same
+    /// `InventoryFlowView` carries.
+    public init(dependencies: AppDependencies, entityRouter: any EntityRouter) {
         store = dependencies.inventory
+        self.entityRouter = entityRouter
         _model = State(wrappedValue: InventorySearchViewModel(store: dependencies.inventory))
     }
 
@@ -23,7 +27,7 @@ public struct InventorySearchFlowView: View {
         NavigationStack(path: $path) {
             InventorySearchView(model: model, scan: { path.append(.scan) })
                 .navigationDestination(for: InventoryRoute.self) { route in
-                    InventoryDestinationView(route: route, store: store)
+                    InventoryDestinationView(route: route, store: store, entityRouter: entityRouter)
                 }
         }
     }

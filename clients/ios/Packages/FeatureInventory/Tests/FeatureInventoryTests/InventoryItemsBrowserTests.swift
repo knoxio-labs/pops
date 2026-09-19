@@ -174,5 +174,11 @@ internal struct EndedInventoryStore: InventoryStore {
         throw RepositoryError.dependencyNotBound
     }
 
+    func uploadPhoto(
+        sha256: String, data: Data, contentType: InventoryMediaContentType
+    ) async throws -> InventoryMediaUploadResult {
+        throw RepositoryError.dependencyNotBound
+    }
+
     func status() -> AsyncStream<InventoryReplicaStatus> { AsyncStream { $0.finish() } }
 }

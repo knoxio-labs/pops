@@ -6,14 +6,14 @@ import SwiftUI
 ///
 /// Every route the dashboard links to already resolves here, so a link never
 /// lands on a blank page. Item detail, containers, locations, the items
-/// browser, In hand, and Sync and repair have moved; the scanner (POPS-4078)
-/// has not. Until it lands its route shows a pending screen. Recent activity
-/// has no approved design at all; the playground draws the same pending
-/// screen for it. The Inventory tab's stack and a routed `pops://` reference
-/// (`InventoryEntityView`) both resolve their routes here.
+/// browser, In hand, Sync and repair, and the scanner have moved. Recent
+/// activity has no approved design at all; the playground draws the same
+/// pending screen for it. The Inventory tab's stack and a routed `pops://`
+/// reference (`InventoryEntityView`) both resolve their routes here.
 internal struct InventoryDestinationView: View {
     internal let route: InventoryRoute
     internal let store: any InventoryStore
+    internal let entityRouter: any EntityRouter
 
     @ViewBuilder internal var body: some View {
         switch route {
@@ -35,6 +35,8 @@ internal struct InventoryDestinationView: View {
             InventoryLocationPage(model: InventoryLocationPageModel(id: id, store: store))
         case .containers:
             InventoryContainerBrowserView(model: InventoryContainerBrowserModel(store: store))
+        case .scan:
+            InventoryScanScreen(store: store, entityRouter: entityRouter)
         default:
             InventoryPendingScreen(title: title, detail: detail, symbol: symbol)
         }

@@ -14,6 +14,9 @@ internal struct FormFixtureSource: InventoryQuerySource {
     var status: InventoryReplicaStatus = .current
 
     func inventoryItem(id: String) -> InventoryItem? { items.first { $0.id == id } }
+    func inventoryItem(withCode code: String) -> InventoryItem? {
+        items.first { !$0.isDeleted && $0.code?.caseInsensitiveCompare(code) == .orderedSame }
+    }
     func inventoryLocation(id: String) -> InventoryLocation? { locations.first { $0.id == id } }
     func inventoryLocationTree() -> [InventoryLocation] { locations }
     func inventoryContents(ofLocation locationId: String) -> [InventoryItem] { [] }
@@ -54,6 +57,8 @@ internal final class RecordingFormStore: InventoryStore, Sendable {
         var performed: [InventoryCommand] = []
         var failing: Set<String> = []
         var observers: [UUID: @Sendable (FormFixtureSource) -> Void] = [:]
+        var uploaded: [(sha256: String, data: Data)] = []
+        var uploadFailure: Error?
     }
 
     private let state: Mutex<State>
@@ -63,10 +68,17 @@ internal final class RecordingFormStore: InventoryStore, Sendable {
     }
 
     internal var performed: [InventoryCommand] { state.withLock { $0.performed } }
+    internal var uploaded: [(sha256: String, data: Data)] { state.withLock { $0.uploaded } }
 
     /// Makes every command of this kind throw `RepositoryError.unavailable`.
     internal func fail(_ kind: String) {
         state.withLock { _ = $0.failing.insert(kind) }
+    }
+
+    /// Makes every `uploadPhoto` call throw this error instead of succeeding.
+    /// `nil` clears a previously scripted failure.
+    internal func failUploads(with error: Error?) {
+        state.withLock { $0.uploadFailure = error }
     }
 
     internal func setStatus(_ status: InventoryReplicaStatus) {
@@ -109,6 +121,16 @@ internal final class RecordingFormStore: InventoryStore, Sendable {
 
     func photo(_ sha256: String, variant: InventoryPhotoVariant) async throws -> Data {
         throw RepositoryError.unavailable
+    }
+
+    func uploadPhoto(
+        sha256: String, data: Data, contentType: InventoryMediaContentType
+    ) async throws -> InventoryMediaUploadResult {
+        try state.withLock { current in
+            current.uploaded.append((sha256, data))
+            if let failure = current.uploadFailure { throw failure }
+        }
+        return InventoryMediaUploadResult(sha256: sha256, alreadyStored: false)
     }
 
     func status() -> AsyncStream<InventoryReplicaStatus> { observe(.replicaStatus) }

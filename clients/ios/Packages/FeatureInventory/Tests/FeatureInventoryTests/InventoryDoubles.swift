@@ -26,6 +26,12 @@ internal struct PendingInventoryStore: InventoryStore {
         throw RepositoryError.unavailable
     }
 
+    func uploadPhoto(
+        sha256: String, data: Data, contentType: InventoryMediaContentType
+    ) async throws -> InventoryMediaUploadResult {
+        throw RepositoryError.unavailable
+    }
+
     func status() -> AsyncStream<InventoryReplicaStatus> { AsyncStream { _ in } }
 }
 
@@ -41,10 +47,11 @@ internal enum InventoryFixture {
     static func item(
         _ id: String, _ name: String, at placement: InventoryPlacement,
         previous: InventoryPreviousPlacement? = nil, access: InventoryAccess? = nil,
-        lifecycle: InventoryLifecycle = .active, updatedAt: Date = epoch, deleted: Bool = false
+        lifecycle: InventoryLifecycle = .active, code: String? = nil, updatedAt: Date = epoch,
+        deleted: Bool = false
     ) -> InventoryItem {
         InventoryItem(
-            id: id, revision: 1, seq: 1, name: name, typeKey: nil, lifecycle: lifecycle,
+            id: id, revision: 1, seq: 1, name: name, typeKey: nil, code: code, lifecycle: lifecycle,
             placement: placement, previousPlacement: previous,
             containment: access.map { InventoryContainment(access: $0, isFull: false) },
             createdAt: epoch, updatedAt: updatedAt, deletedAt: deleted ? epoch : nil)

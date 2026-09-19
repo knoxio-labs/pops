@@ -15,6 +15,21 @@ internal enum ReplicaQueries {
         .map { try ItemRow.decode($0, in: db) }
     }
 
+    /// The pillar's own unique index is `code COLLATE NOCASE`; the column
+    /// itself carries no collation, so the comparison names one explicitly
+    /// rather than relying on it being the connection's default. Tombstoned
+    /// alongside a plain id lookup, per this file's own doc comment: a code
+    /// stays reserved once issued, so a deleted holder's label reads as
+    /// "target missing", not as though the code had never been used.
+    static func item(withCode code: String, in db: Database) throws -> InventoryItem? {
+        try Row.fetchOne(
+            db,
+            sql: "SELECT * FROM item WHERE code = ?1 COLLATE NOCASE AND deleted_at IS NULL",
+            arguments: [code]
+        )
+        .map { try ItemRow.decode($0, in: db) }
+    }
+
     static func location(id: String, in db: Database) throws -> InventoryLocation? {
         try Row.fetchOne(
             db, sql: "SELECT * FROM location WHERE id = ? AND deleted_at IS NULL", arguments: [id]

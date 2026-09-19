@@ -9,12 +9,12 @@ internal enum Fixture {
 
     static func item(
         _ id: String, name: String? = nil, revision: Int = 1, placement: InventoryPlacement = .hand,
-        containment: InventoryContainment? = nil
+        containment: InventoryContainment? = nil, code: String? = nil, deletedAt: Date? = nil
     ) -> InventoryItem {
         InventoryItem(
             id: id, revision: revision, seq: revision, name: name ?? id, typeKey: nil,
-            placement: placement, containment: containment, createdAt: created,
-            updatedAt: created.addingTimeInterval(Double(revision)))
+            code: code, placement: placement, containment: containment, createdAt: created,
+            updatedAt: created.addingTimeInterval(Double(revision)), deletedAt: deletedAt)
     }
 
     static func box(

@@ -27,7 +27,7 @@ internal struct InventoryItemDraft: Hashable, Sendable {
     internal var placement: InventoryPlacement
     /// What the destination row names; nil for in hand.
     internal var placementName: String?
-    internal var photos: [InventoryPhotoReference]
+    internal var photos: [InventoryFormPhoto]
 
     internal static let quantityRange = 1...999
 
@@ -59,7 +59,7 @@ internal struct InventoryItemDraft: Hashable, Sendable {
         code = InventoryCodeEntry(value: item.code ?? "")
         identifiers = item.externalIds.map(InventoryIdentifierDraft.init)
         quantity = item.quantity.count
-        photos = item.photos
+        photos = item.photos.map(InventoryFormPhoto.init)
     }
 
     internal var isNamed: Bool { !trimmedName.isEmpty }
@@ -87,6 +87,7 @@ internal struct InventoryItemDraft: Hashable, Sendable {
     internal var hasStagedWork: Bool {
         isNamed || code.normalized != nil || !identifiers.isEmpty || !pendingIdentifier.isEmpty
             || !note.isEmpty || typeKey != nil || quantity > 1 || !touchedFields.isEmpty
+            || photos.contains { $0.upload != .attached }
     }
 
     /// Every identifier that will be stored, including one typed into the

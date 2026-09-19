@@ -52,6 +52,12 @@ internal final class RecordingInventoryStore: InventoryStore {
         try await inner.photo(sha256, variant: variant)
     }
 
+    func uploadPhoto(
+        sha256: String, data: Data, contentType: InventoryMediaContentType
+    ) async throws -> InventoryMediaUploadResult {
+        try await inner.uploadPhoto(sha256: sha256, data: data, contentType: contentType)
+    }
+
     func status() -> AsyncStream<InventoryReplicaStatus> { inner.status() }
 }
 
@@ -66,6 +72,9 @@ internal struct InventoryHistoryOverlay: InventoryQuerySource {
     }
 
     func inventoryItem(id: String) -> InventoryItem? { base.inventoryItem(id: id) }
+    func inventoryItem(withCode code: String) -> InventoryItem? {
+        base.inventoryItem(withCode: code)
+    }
     func inventoryLocation(id: String) -> InventoryLocation? { base.inventoryLocation(id: id) }
     func inventoryLocationTree() -> [InventoryLocation] { base.inventoryLocationTree() }
     func inventoryContents(ofLocation locationId: String) -> [InventoryItem] {

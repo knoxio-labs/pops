@@ -31,6 +31,14 @@ extension InMemoryInventoryStore {
 
         func inventoryItem(id: String) -> InventoryItem? { items[id] }
 
+        /// Case-insensitive, and excludes a tombstoned item: the same rule
+        /// `ReplicaQueries.item(withCode:)` follows against the real replica.
+        func inventoryItem(withCode code: String) -> InventoryItem? {
+            items.values.first {
+                !$0.isDeleted && $0.code?.caseInsensitiveCompare(code) == .orderedSame
+            }
+        }
+
         func inventoryLocation(id: String) -> InventoryLocation? { locations[id] }
 
         func inventoryLocationTree() -> [InventoryLocation] {

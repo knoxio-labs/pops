@@ -7,6 +7,7 @@ import Foundation
 /// writes.
 private struct EmptyInventorySource: InventoryQuerySource {
     func inventoryItem(id: String) -> InventoryItem? { nil }
+    func inventoryItem(withCode code: String) -> InventoryItem? { nil }
     func inventoryLocation(id: String) -> InventoryLocation? { nil }
     func inventoryLocationTree() -> [InventoryLocation] { [] }
     func inventoryContents(ofLocation locationId: String) -> [InventoryItem] { [] }
@@ -55,6 +56,12 @@ internal struct FailingInventoryStore: InventoryStore {
     func refresh() async {}
 
     func photo(_ sha256: String, variant: InventoryPhotoVariant) async throws -> Data {
+        throw RepositoryError.unavailable
+    }
+
+    func uploadPhoto(
+        sha256: String, data: Data, contentType: InventoryMediaContentType
+    ) async throws -> InventoryMediaUploadResult {
         throw RepositoryError.unavailable
     }
 
