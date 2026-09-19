@@ -92,6 +92,16 @@ public final class LocalFirstInventoryStore: InventoryStore, Sendable {
         drain?.request()
     }
 
+    /// ``refresh()``, then waits for a drain pass that starts after it to
+    /// end, for a background refresh whose time is short: when this returns,
+    /// the feed has been read and the log sent as far as the network allowed.
+    /// Returns early, leaving the pass to finish on its own, when the calling
+    /// task is cancelled. Without a reachability, only refreshes.
+    public func synchronize() async {
+        await online.refresh()
+        await drain?.requestAndWait()
+    }
+
     public func photo(_ sha256: String, variant: InventoryPhotoVariant) async throws -> Data {
         try await online.photo(sha256, variant: variant)
     }

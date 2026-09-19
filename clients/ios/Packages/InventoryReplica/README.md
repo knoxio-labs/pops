@@ -35,6 +35,7 @@ Items and locations each have two tables of the same shape: `*_base` is what the
 - A batch that never arrived is resent under the same mutation ids; a pass that did not empty the log, or where the server deferred something, retries after 2 s, doubling, at most 5 min. A pass that applied anything reads the feed so the changes settle. Rows a crashed pass left in flight are requeued at the start of the next.
 - `409 resync_required` takes a fresh snapshot, keeping the log, and carries on. `401` and `426` block the replica as `.sessionExpired` and `.appTooOld` and schedule no retry.
 - An Undo whose change ended conflicted or rejected is dropped unsent, and what was logged on top of it inherits its dependencies, so it stays held.
+- `LocalFirstInventoryStore.synchronize()` is `refresh()` followed by waiting for a pass that starts after it to end, for a background refresh (POPS-4076); a cancelled caller stops waiting and leaves the pass to finish.
 - It runs after each change and Undo, on every `refresh()`, when the backoff elapses, and when the `InventoryReachability` path becomes satisfied (`NetworkPathReachability`, over `NWPathMonitor`). Nothing is sent while the path is down.
 
 Conflicted and rejected rows stay in the log in that state, with the server's outcome stored whole in `outcome`, and anything depending on them stays queued behind them until their repair is settled.

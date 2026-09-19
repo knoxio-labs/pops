@@ -146,6 +146,12 @@ The value is a per-configuration build setting in `project.yml`, read through `A
 
 `mise run verify:release-carries-no-host` builds Release and greps the result for the host Debug uses, reading that host out of the Debug configuration rather than repeating it, so the check cannot drift.
 
+## Background refresh
+
+Inventory refreshes in the background (POPS-4076): leaving the foreground requests a `BGAppRefreshTask`, and when the system grants one the app reads Inventory's change feed and sends its queued changes. `BackgroundRefresh` in `Packages/AppCore` decides what a run does: reschedule the next one first, do nothing before the first unlock after a restart (`FirstUnlockProbe`, a marker the app writes while in the foreground, under the same file protection as the replica), then run inside a 25 second budget, cancelled at the budget or when the system expires the task. `PopsApp` registers the handler through SwiftUI's `backgroundTask(.appRefresh(_:))`, which is why it, not `RootView`, holds the composition root: a background launch draws no scene.
+
+`BGTaskSchedulerPermittedIdentifiers` and `UIBackgroundModes` (`fetch`) are arrays, which no `INFOPLIST_KEY_*` setting can carry, so they are in `App/Info.plist`; `AppBundleTests` checks the built product has them.
+
 ## `Pops.xcodeproj` is generated, and gitignored
 
 `project.yml` is the source of truth for the project; the `.xcodeproj` is output. A committed `.xcodeproj` is a large generated-looking XML blob that conflicts on every branch touching it and that no tool — including a coding agent — edits reliably.

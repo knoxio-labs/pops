@@ -57,8 +57,8 @@ internal final class InventoryDrain: Sendable {
         }
     }
 
-    private let replica: InventoryReplica
-    private let online: OnlineInventoryStore
+    let replica: InventoryReplica
+    let online: OnlineInventoryStore
     private let reachability: any InventoryReachability
     private let clock: any InventoryDrainClock
     private let batchSize: Int
@@ -67,6 +67,8 @@ internal final class InventoryDrain: Sendable {
     private let triggers: AsyncStream<Void>
     private let trigger: AsyncStream<Void>.Continuation
     private let tasks = Mutex(Tasks())
+    /// Callers of ``requestAndWait()`` waiting for the next pass to finish.
+    private let waiters = Mutex<[UUID: CheckedContinuation<Void, Never>]>([:])
 
     /// - Parameters:
     ///   - online: The store whose transport the batches go through, and
@@ -97,6 +99,7 @@ internal final class InventoryDrain: Sendable {
     deinit {
         tasks.withLock { $0.cancelAll() }
         trigger.finish()
+        for waiter in takeWaiters() { waiter.resume() }
     }
 
     /// Starts listening for triggers and path changes. The reachability
@@ -109,7 +112,9 @@ internal final class InventoryDrain: Sendable {
                 var failures = 0
                 for await _ in triggers {
                     guard let self else { return }
+                    let waiting = self.takeWaiters()
                     failures = await self.runPass(afterFailures: failures)
+                    for waiter in waiting { waiter.resume() }
                 }
             }
             tasks.watcher = Task { [weak self, reachability] in
@@ -125,6 +130,37 @@ internal final class InventoryDrain: Sendable {
     /// Asks for a pass. Requests made while one runs collapse into one more.
     func request() {
         trigger.yield()
+    }
+
+    private func takeWaiters() -> [CheckedContinuation<Void, Never>] {
+        waiters.withLock { waiters in
+            defer { waiters.removeAll() }
+            return Array(waiters.values)
+        }
+    }
+
+    /// Asks for a pass and returns once a pass that started after this call
+    /// has ended, however it ended, or at once when the calling task is
+    /// cancelled. The pass itself is not cancelled: rows it leaves in flight
+    /// are requeued by the next one.
+    func requestAndWait() async {
+        let id = UUID()
+        await withTaskCancellationHandler {
+            await withCheckedContinuation { continuation in
+                let waiting = waiters.withLock { waiters in
+                    guard !Task.isCancelled else { return false }
+                    waiters[id] = continuation
+                    return true
+                }
+                guard waiting else {
+                    continuation.resume()
+                    return
+                }
+                trigger.yield()
+            }
+        } onCancel: {
+            waiters.withLock { $0.removeValue(forKey: id) }?.resume()
+        }
     }
 
     private func runPass(afterFailures failures: Int) async -> Int {
@@ -228,38 +264,6 @@ internal final class InventoryDrain: Sendable {
             }
         }
         return .settled(SettledBatch(deferred: deferred, appliedAny: appliedAny))
-    }
-
-    /// Uploads every staged photo waiting to go.
-    ///
-    /// - Returns: How the pass ends when an upload did not arrive; nil when
-    ///   the pass can go on to its batch.
-    private func uploadStagedPhotos() async throws -> InventoryDrainPass? {
-        for upload in try replica.uploadsToSend() {
-            guard let data = try replica.stagedPhoto(upload.sha256) else {
-                try replica.failUpload(upload.sha256, .bytesMissing)
-                continue
-            }
-            try replica.markUploading(upload.sha256)
-            do {
-                _ = try await online.transport.uploadMedia(
-                    sha256: upload.sha256, data: data, contentType: upload.contentType)
-            } catch let refusal as InventorySyncTransportError
-                where refusal == .mediaTooLarge || refusal == .mediaUnsupported
-            {
-                online.noteReached()
-                try replica.failUpload(
-                    upload.sha256, refusal == .mediaTooLarge ? .tooLarge : .unsupported)
-                continue
-            } catch {
-                try replica.returnUpload(upload.sha256)
-                online.noteFailure(error)
-                return OnlineInventoryStore.blockReason(for: error) == nil ? .retryLater : .blocked
-            }
-            online.noteReached()
-            try replica.markUploaded(upload.sha256)
-        }
-        return nil
     }
 
     /// Puts what was in flight back in the queue, so the next attempt

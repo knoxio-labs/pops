@@ -1,3 +1,4 @@
+import AppCore
 import BFMClient
 import Foundation
 import Testing
@@ -92,6 +93,24 @@ internal struct AppBundleTests {
             """
         )
         #expect(declared == false)
+    }
+
+    /// `BGTaskSchedulerPermittedIdentifiers` and `UIBackgroundModes` are
+    /// arrays with no `INFOPLIST_KEY_` equivalent, so they reach the product
+    /// only through `App/Info.plist`. Without them the background refresh is
+    /// not a failure anyone sees: every request is refused, quietly.
+    @Test("the built product permits the Inventory background refresh")
+    func permitsBackgroundRefresh() throws {
+        let identifiers = try #require(
+            infoValue("BGTaskSchedulerPermittedIdentifiers") as? [String],
+            "BGTaskSchedulerPermittedIdentifiers is missing from the built Info.plist"
+        )
+        #expect(identifiers.contains(BackgroundRefresh.inventoryIdentifier))
+        let modes = try #require(
+            infoValue("UIBackgroundModes") as? [String],
+            "UIBackgroundModes is missing from the built Info.plist"
+        )
+        #expect(modes.contains("fetch"))
     }
 
     /// The host, identified. Every other assertion in this file reads

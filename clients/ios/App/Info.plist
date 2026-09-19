@@ -15,6 +15,12 @@
 	(`pops://<pillar>/<type>/<id>`) opens through this scheme and resolves via
 	`onOpenURL` the same way the QR scanner resolves it, through
 	`AppCore`'s `EntityRouter`.
+
+	BGTaskSchedulerPermittedIdentifiers and UIBackgroundModes are arrays with
+	no INFOPLIST_KEY_ equivalent either. The identifier is
+	`BackgroundRefresh.inventoryIdentifier` in AppCore: a request for one not
+	listed here is refused, and `fetch` is what lets the system grant an app
+	refresh task at all.
 -->
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -33,6 +39,14 @@
 				<string>pops</string>
 			</array>
 		</dict>
+	</array>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>com.knoxiolabs.pops.inventory.refresh</string>
+	</array>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
 	</array>
 </dict>
 </plist>

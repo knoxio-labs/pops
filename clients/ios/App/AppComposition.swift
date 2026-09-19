@@ -59,6 +59,11 @@ internal final class AppComposition {
     private let credentialStore: DeviceCredentialStore
     private let authenticated: @Sendable (PairedDevice) -> BFMHTTPClient
     private let openInventoryReplica: (PairedDevice) throws -> InventoryReplica
+    private let backgroundRefresh: BackgroundRefresh
+    private let firstUnlock: FirstUnlockProbe
+    /// Refreshes the bound device's Inventory and waits for its log to be
+    /// sent, for a background refresh; `nil` until a device is bound.
+    private var synchronizeInventory: (@Sendable () async -> Void)?
 
     /// One navigation path per feature, since each draws its own
     /// `NavigationStack`.
@@ -89,13 +94,20 @@ internal final class AppComposition {
     /// a re-pair replaces the entry rather than growing it.
     private var bound: (device: PairedDevice, dependencies: AppDependencies)?
 
-    /// - Parameter openInventoryReplica: Opens a paired device's Inventory
-    ///   replica. The on-disk one under Application Support by default;
-    ///   tests point it somewhere disposable, or make it throw.
+    /// - Parameters:
+    ///   - openInventoryReplica: Opens a paired device's Inventory replica.
+    ///     The on-disk one under Application Support by default; tests point
+    ///     it somewhere disposable, or make it throw.
+    ///   - backgroundScheduler: Where the next background refresh is
+    ///     requested; `BGTaskScheduler` by default.
+    ///   - firstUnlock: Whether the phone has been unlocked since it started;
+    ///     a marker under Application Support by default.
     internal init(
         credentialStore: DeviceCredentialStore = .live(),
         openInventoryReplica: @escaping (PairedDevice) throws -> InventoryReplica =
-            AppComposition.onDiskInventoryReplica(for:)
+            AppComposition.onDiskInventoryReplica(for:),
+        backgroundScheduler: any BackgroundRefreshScheduler = BackgroundTaskRefreshScheduler(),
+        firstUnlock: FirstUnlockProbe = AppComposition.applicationSupportFirstUnlockProbe()
     ) {
         let session = SessionStore()
         let refresher = DeviceSessionRefresher(
@@ -114,6 +126,10 @@ internal final class AppComposition {
         self.credentialStore = credentialStore
         self.authenticated = authenticated
         self.openInventoryReplica = openInventoryReplica
+        self.firstUnlock = firstUnlock
+        backgroundRefresh = BackgroundRefresh(
+            scheduler: backgroundScheduler,
+            isUnlockedSinceBoot: { firstUnlock.isUnlockedSinceBoot })
         pairingDependencies = AppDependencies(
             transactions: AppDependencies.unbound.transactions,
             pairing: BFMDevicePairingService(credentialStore: credentialStore),
@@ -171,10 +187,13 @@ internal final class AppComposition {
     /// from, and the screens get the unbound store.
     private func inventoryStore(for device: PairedDevice) -> any InventoryStore {
         let transport = BFMInventoryTransport(client: authenticated(device))
+        synchronizeInventory = nil
         do {
-            return LocalFirstInventoryStore(
+            let store = LocalFirstInventoryStore(
                 replica: try openInventoryReplica(device), transport: transport,
                 reachability: NetworkPathReachability())
+            synchronizeInventory = { await store.synchronize() }
+            return store
         } catch InventoryStorageError.full {
             return StorageFullInventoryStore(transport: transport)
         } catch {
@@ -186,6 +205,46 @@ internal final class AppComposition {
     /// for when the app comes back to the foreground. Nothing while unpaired.
     internal func refreshInventory() async {
         await bound?.dependencies.inventory.refresh()
+    }
+
+    /// Records that the app is in the foreground, which means the phone has
+    /// been unlocked since it started (``FirstUnlockProbe``).
+    internal func noteForeground() {
+        try? firstUnlock.markUnlocked()
+    }
+
+    /// Asks for the next background refresh, for when the app leaves the
+    /// foreground.
+    internal func scheduleBackgroundRefresh() {
+        backgroundRefresh.schedule()
+    }
+
+    /// One background refresh (``AppCore/BackgroundRefresh``): schedules the
+    /// next, then, if the phone has been unlocked since it started, restores
+    /// the paired device, reads Inventory's change feed and sends its log,
+    /// within the refresh's budget. Nothing while unpaired.
+    @discardableResult
+    internal func refreshInventoryInBackground() async -> BackgroundRefreshOutcome {
+        await backgroundRefresh.run { [self] in await synchronizeBoundInventory() }
+    }
+
+    private func synchronizeBoundInventory() async {
+        await shell.restoreSession()
+        guard case .paired(let device) = session.state else { return }
+        let inventory = dependencies(for: device).inventory
+        if let synchronizeInventory {
+            await synchronizeInventory()
+        } else {
+            await inventory.refresh()
+        }
+    }
+
+    /// The first-unlock marker under Application Support.
+    nonisolated internal static func applicationSupportFirstUnlockProbe() -> FirstUnlockProbe {
+        FirstUnlockProbe(
+            directory: FileManager.default.urls(
+                for: .applicationSupportDirectory, in: .userDomainMask
+            ).first ?? FileManager.default.temporaryDirectory)
     }
 
     /// `Application Support/Inventory/<device>`: one replica per paired
