@@ -34,7 +34,13 @@ const c = initContract();
  * These are the same scope terms `GET /items` already takes
  * (`room`/`type`/`condition`/`inUse`/`deductible`/`locationId`/`assetId`),
  * because search narrows the same set of items and a second scope language
- * would be a second thing to keep true.
+ * would be a second thing to keep true. `includeInactive` is the odd one out
+ * — it does not narrow on a column value, it toggles the same default-active
+ * exclusion `GET /web/items` applies (Inventory ADR-002): omitted or `false`,
+ * only `lifecycle: 'active'` items are matched; `true` also matches
+ * `retired`/`discarded`/`lost`/`destroyed` items. A tombstoned item
+ * (`deletedAt` set) is never matched either way — that is deletion, not
+ * inactivity, and this toggle does not reach it.
  *
  * Closed rather than a free string. The field a caller may send is published
  * in the OpenAPI projection and therefore in every generated client, so an
@@ -49,6 +55,7 @@ export const SEARCH_FILTER_FIELDS = [
   'deductible',
   'locationId',
   'assetId',
+  'includeInactive',
 ] as const;
 export type SearchFilterField = (typeof SEARCH_FILTER_FIELDS)[number];
 

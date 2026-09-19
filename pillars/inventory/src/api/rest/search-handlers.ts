@@ -15,12 +15,17 @@
  * `LIKE` scan across the same columns, un-ranked beyond the tier and name
  * order — the same threshold and fallback the phone uses.
  *
- * Only active, non-tombstoned items are matched: `items_fts` is never
- * pruned when an item is deleted or retired (nothing does that yet), and
- * the contract's filter vocabulary has no "include inactive" toggle for
- * this pillar's slice of unified search — see the inventory web read
- * endpoints (`rest-web.ts`) for the item catalogue's own inactive-inclusive
- * listing.
+ * Only non-tombstoned items are ever matched: `items_fts` is never pruned
+ * when an item is deleted (nothing does that yet), and a tombstoned row
+ * (`deletedAt` set) is excluded regardless of the `includeInactive` filter
+ * below — deletion is not the same axis as lifecycle inactivity (Inventory
+ * ADR-002), and this pillar's slice of unified search never surfaces a
+ * deleted item.
+ *
+ * Active items match by default; sending the `includeInactive` filter
+ * (`eq true`) also matches items whose lifecycle is `retired`/`discarded`/
+ * `lost`/`destroyed`, mirroring `GET /web/items`'s own `includeInactive`
+ * semantics (`rest-web.ts` / `items-page.ts`).
  *
  * `query.filters` is read by `searchFilterScope` into a scope applied
  * before ranking, before the budget is spent — the same order purchases and
@@ -229,7 +234,7 @@ function searchItems(db: InventoryDb, text: string, scope: InventorySearchScope)
           candidates.map((c) => c.id)
         ),
         isNull(items.deletedAt),
-        eq(items.lifecycle, 'active'),
+        ...(scope.includeInactive ? [] : [eq(items.lifecycle, 'active')]),
         ...scopeConditions(scope)
       )
     )

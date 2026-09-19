@@ -6493,7 +6493,8 @@
                                 "inUse",
                                 "deductible",
                                 "locationId",
-                                "assetId"
+                                "assetId",
+                                "includeInactive"
                               ],
                               "type": "string"
                             },
