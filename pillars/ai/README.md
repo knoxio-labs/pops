@@ -106,10 +106,13 @@ worth anything.
 
 ## Who may call it
 
-An inbound service-account gate also covers the whole contract surface
+An inbound service-account gate also covers the whole contract surface, including `/ai-usage/record`
 (ADR-044, `src/api/middleware/service-account-scope.ts`), separate from the
 internal-credential check above: it governs `X-API-Key`, not
-`x-pops-internal-credential`, and the two never overlap on the same path.
+`x-pops-internal-credential`. On `/ai-usage/record` both apply: a caller
+presenting a key there would also need `ai.aiIngest.record`. Today's sender
+(`libs/ai-telemetry`'s report sink) presents only the internal credential,
+so the gate admits it as uncredentialled.
 Every route the gate covers stays reachable with NO credential at all — the
 AI-ops UI's browser traffic through the shell's nginx presents none, and this
 gate leaves that unconditionally admitted, exactly as before it existed. A

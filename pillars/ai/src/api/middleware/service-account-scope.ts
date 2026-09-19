@@ -14,8 +14,11 @@
  * traffic arrives through the shell's nginx with no key, and the cross-pillar
  * telemetry ingest (`POST /ai-usage/record`) is authenticated by an entirely
  * separate mechanism — a per-caller `x-pops-internal-credential` checked in
- * `api/app.ts`'s `requireInternalToken`, never `X-API-Key` — so it is
- * unaffected by this gate either way. A caller that DOES present an
+ * `api/app.ts`'s `requireInternalToken`. That route is still part of the
+ * contract, so this gate projects it to `ai.aiIngest.record`: a caller that
+ * presented a key there would need that scope too. Today's sender presents
+ * only the internal credential, so the gate admits it as uncredentialled.
+ * A caller that DOES present an
  * `X-API-Key` is a machine, and is held to the service account behind that
  * key: today that is only inventory's `codes/suggest`, calling
  * `POST /codes/rank` with the `ai.codes.rank` scope.
