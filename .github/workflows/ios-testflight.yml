@@ -1,0 +1,128 @@
+name: iOS TestFlight
+
+run-name: >-
+  iOS TestFlight for ${{ github.event.workflow_run.head_sha || inputs.sha }}
+
+# Ships what iOS Quality already proved, and nothing else. A `workflow_run` of
+# iOS Quality rather than a `push` trigger of its own, so a commit reaches
+# TestFlight only after the full lane — tests, analyzer, UI flow — passed on
+# that exact commit. The merge-queue lane does not prove that (it compiles and
+# skips the suites), which is why the queue's green is not enough on its own.
+# iOS Quality's own path filter is what scopes this: a merge that touches no
+# iOS input never produces a run to chain from.
+#
+# Both apps ship from every run. `DesignPlayground` depends on every Feature
+# package and on AppCore and DesignSystem, so the two apps share nearly every
+# input and a per-app filter would save little — while a filter diffed against
+# the parent commit would silently never ship a change whose own run failed.
+#
+# Not in `ci-gate.yml`: this runs after merge and has nothing to block.
+#
+# `workflow_dispatch` is for proving the pipeline without a merge (the first
+# upload after the App Store Connect setup, POPS-4136), and for re-shipping a
+# commit. It takes a commit already on `main`, never a branch tip.
+
+on:
+  workflow_run:
+    workflows: ["iOS Quality"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: A commit on main to archive and upload
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  upload:
+    name: Upload ${{ matrix.scheme }}
+    # Only a push to `main` of this repository that iOS Quality passed. A pull
+    # request's run and a merge group's run complete this trigger too, and
+    # must not ship.
+    #
+    # And only once the repository variable TESTFLIGHT_ENABLED is `true`, set
+    # as the last step of the App Store Connect setup (POPS-4136). Until then
+    # the job skips rather than failing on missing secrets after every merge.
+    if: >-
+      vars.TESTFLIGHT_ENABLED == 'true' &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event == 'push' &&
+        github.event.workflow_run.head_repository.full_name == github.repository &&
+        github.event.workflow_run.head_branch == 'main'))
+    runs-on: macos-latest
+    # The environment named `main` — deployments restricted to the `main`
+    # branch in the repository settings — is the only holder of the App Store
+    # Connect key and the team id. The repo is public: a job that does not
+    # name this environment cannot read either.
+    environment: main
+    timeout-minutes: 60
+    strategy:
+      # One app failing to upload is no reason to withhold the other.
+      fail-fast: false
+      matrix:
+        scheme: [Pops, PopsPlayground]
+    # One lane per app per commit, so only a re-run of the same commit
+    # replaces an in-flight one. Keyed on the commit because triggers do not
+    # arrive in commit order: a dispatch re-shipping an older commit must not
+    # cancel a newer commit's upload. (`env` is not available here, hence the
+    # expression spelled out rather than `env.SHA`.)
+    concurrency:
+      group: ios-testflight-${{ matrix.scheme }}-${{ github.event.workflow_run.head_sha || inputs.sha }}
+      cancel-in-progress: true
+    defaults:
+      run:
+        working-directory: clients/ios
+    env:
+      # `generate` needs xcodegen and nothing else mise would install here.
+      MISE_DISABLE_TOOLS: rust,node,pnpm,maestro,swiftlint
+      SHA: ${{ github.event.workflow_run.head_sha || inputs.sha }}
+
+    steps:
+      # Full history: the build number is the commit count.
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.SHA }}
+          fetch-depth: 0
+
+      - name: Refuse a commit that is not on main
+        run: |
+          set -euo pipefail
+          git fetch --quiet origin main
+          if ! git merge-base --is-ancestor "$SHA" origin/main; then
+            echo "::error::$SHA is not on main; only commits on main are shipped."
+            exit 1
+          fi
+
+      - uses: ./.github/actions/select-xcode
+
+      - uses: ./.github/actions/setup-mise
+        with:
+          working_directory: clients/ios
+
+      - name: Generate Pops.xcodeproj
+        run: mise run generate
+
+      - name: Write the App Store Connect key
+        env:
+          ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          umask 077
+          key="$RUNNER_TEMP/asc-key.p8"
+          printf '%s\n' "$ASC_PRIVATE_KEY" > "$key"
+          echo "ASC_KEY_PATH=$key" >> "$GITHUB_ENV"
+
+      - name: Archive and upload
+        env:
+          DEVELOPMENT_TEAM: ${{ secrets.APPLE_TEAM_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: mise run release:testflight ${{ matrix.scheme }}
+
+      - name: Remove the App Store Connect key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/asc-key.p8"
