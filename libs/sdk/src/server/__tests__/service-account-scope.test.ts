@@ -61,6 +61,18 @@ describe('buildContractScopeMap', () => {
   it('finds every leaf, so a new route cannot be added ungated by omission', () => {
     expect(buildContractScopeMap(contract, 'finance').routes).toHaveLength(5);
   });
+
+  it('throws when two literal routes collide once case-folded, instead of silently overwriting one', () => {
+    const collidingContract = {
+      transactions: {
+        list: { method: 'GET', path: '/transactions' },
+      },
+      legacyTransactions: {
+        list: { method: 'GET', path: '/TRANSACTIONS' },
+      },
+    };
+    expect(() => buildContractScopeMap(collidingContract, 'finance')).toThrow(/already registered/);
+  });
 });
 
 describe('resolveContractScope', () => {

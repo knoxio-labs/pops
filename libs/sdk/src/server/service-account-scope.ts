@@ -114,7 +114,16 @@ export function buildContractScopeMap(router: unknown, rootScope: string): Contr
     if (route.path.includes('/:')) {
       patterns.push({ method: route.method, regex: compilePath(route.path), scope: route.scope });
     } else {
-      literal.set(literalKey(route.method, route.path), route.scope);
+      const key = literalKey(route.method, route.path);
+      const existingScope = literal.get(key);
+      if (existingScope !== undefined) {
+        throw new Error(
+          `buildContractScopeMap: ${route.method} ${route.path} is already registered ` +
+            `(as scope ${existingScope}) — two contract routes differ only by path case, ` +
+            `which the case-insensitive scope gate cannot tell apart`
+        );
+      }
+      literal.set(key, route.scope);
     }
   }
   return { routes, literal, patterns };
