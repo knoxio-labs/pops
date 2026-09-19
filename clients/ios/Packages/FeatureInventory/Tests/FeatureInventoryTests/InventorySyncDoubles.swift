@@ -119,6 +119,10 @@ internal struct RefusingResolveStore: InventoryStore {
     func discardPhoto(_ sha256: String) async throws { try await inner.discardPhoto(sha256) }
 
     func status() -> AsyncStream<InventoryReplicaStatus> { inner.status() }
+
+    func settleTypeArrival(typeKey: String) async throws {
+        try await inner.settleTypeArrival(typeKey: typeKey)
+    }
 }
 
 extension InventoryFixture {
