@@ -108,7 +108,13 @@ public protocol InventoryStore: Sendable {
     /// compensating event if it has.
     func undo(_ receipt: InventoryReceipt) async throws
 
-    /// Settles an open repair with the person's choice.
+    /// Settles an open repair with the person's choice, moving it to the
+    /// resolved list.
+    ///
+    /// - Throws: `InventoryCommandError.repairNotFound` when no open repair
+    ///   has this id, including one the change feed already settled; an
+    ///   `InventoryCommandError` when keeping this phone's side is something
+    ///   the server would refuse too (a code another record holds).
     func resolve(_ repairId: InventoryRepair.ID, with choice: InventoryRepairChoice) async throws
 
     /// Takes the replica from empty to a current snapshot.

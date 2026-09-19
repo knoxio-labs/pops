@@ -23,6 +23,11 @@ public enum InventorySyncSource: Hashable, Sendable {
 /// D10 lets the set of outcomes grow without a protocol bump for additive
 /// cases, so an old app meets an unknown one with no inline fix rather than
 /// refusing to show the repair at all.
+///
+/// A change the server refused outright (a `rejected` outcome) has no
+/// approved repair of its own, so it is `unrecognised` too, carrying the
+/// rejection's reason, and offers only Let go. The one exception is
+/// `media_missing` on a photo attach, which is `photoFailed`.
 public enum InventoryRepairKind: Hashable, Sendable {
     /// The same field was changed here and elsewhere.
     case conflict
@@ -103,13 +108,14 @@ public struct InventoryRepair: Identifiable, Hashable, Sendable {
 
 /// The choice a person makes on a repair, passed to
 /// `InventoryStore.resolve(_:with:)`. Each kind offers exactly one pair (D8,
-/// D7): the mutation's own value, or the other side.
+/// D7): the mutation's own value, or the other side. An `unrecognised` repair
+/// offers only Let go, so either choice lets it go.
 public enum InventoryRepairChoice: Hashable, Sendable {
     /// Keep this phone's value: re-sends the change rebased on the current
     /// revision (`conflict`), relabels with a chosen code
-    /// (`codeCollision`, with the code to use), or restores a deleted record
-    /// (`deletedElsewhere`) before replaying the original change. Retries the
-    /// upload for `photoFailed`.
+    /// (`codeCollision`, with the code to use, or the suggested one when
+    /// nil), or restores a deleted record (`deletedElsewhere`) before
+    /// replaying the original change. Retries the upload for `photoFailed`.
     case keepMine(code: String? = nil)
     /// Discard this phone's value: rebases on the server's value
     /// (`conflict`), drops the code (`codeCollision`), lets the deletion
