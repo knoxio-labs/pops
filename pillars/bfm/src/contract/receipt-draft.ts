@@ -44,8 +44,15 @@ export type MobileResolvedCapture = z.infer<typeof MobileResolvedCaptureSchema>;
 /** One line, editable — a plain quantity and two cent figures, not printed text. */
 export const MobileDraftLineSchema = z.object({
   name: z.string().min(1),
-  /** `null` when the receipt did not state a count; never invented as `1`. */
-  quantity: z.number().int().positive().nullable(),
+  /**
+   * `null` when the receipt did not state a count; never invented as `1`.
+   *
+   * Absent means the same as `null`. The iOS client is generated, and its
+   * encoder omits an optional that is `nil` rather than writing `null`, so a
+   * key required-but-nullable here rejected every hand-entered line with a
+   * 400 — no line typed by hand carries a count.
+   */
+  quantity: z.number().int().positive().nullable().optional(),
   unitPriceCents: z.number().int(),
   lineTotalCents: z.number().int(),
   notes: z.array(z.string()),

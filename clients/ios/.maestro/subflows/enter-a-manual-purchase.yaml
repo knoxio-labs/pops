@@ -2,11 +2,11 @@ appId: com.knoxiolabs.pops.local
 name: Fill in a blank receipt draft and submit it
 ---
 # The manual-entry half of `receipt-manual-entry.yaml`, pulled into its own
-# subflow for the same reason `enter-the-pairing-details.yaml` is: five fields
+# subflow for the same reason `enter-the-pairing-details.yaml` is: the fields
 # share the one typing hazard that file's own header explains at length —
 # `tapOn` returns once the tap is delivered, not once the tapped field has
 # become first responder, so a field can silently keep whatever it already
-# held. Asserting every field's own text AFTER all five are typed, and
+# held. Asserting every field's own text AFTER all of them are typed, and
 # retrying the whole set together on a miss, is what keeps the values that
 # reach Save the values that were checked.
 #
@@ -14,44 +14,97 @@ name: Fill in a blank receipt draft and submit it
 # address by id without an index: `ReceiptDraftPresentation.blankDraft`
 # starts with exactly one line, so each identifier matches exactly one field
 # on this screen.
+
+# The merchant is not a text field: it opens a sheet to choose a merchant on
+# file or create one by name (`ReceiptDraftRecordSelect`). Creating is local to
+# the draft — nothing is sent until Save — so it needs nothing from the stub.
+# Its own retry, for the typing hazard above, and the name is confirmed in the
+# sheet before Create, because Create takes whatever the field holds.
 - retry:
     maxRetries: 2
     commands:
       - tapOn:
           id: 'receipt-draft-merchant'
+      - tapOn:
+          id: 'receipt-draft-record-new-name'
       - eraseText
       - inputText: 'Corner Store'
+      # The identifier sits on `PopsTextField`'s wrapper and the typed text on
+      # the field inside it, so the text is matched as its child.
+      - assertVisible:
+          text: 'Corner Store'
+          childOf:
+            id: 'receipt-draft-record-new-name'
+      - tapOn:
+          id: 'receipt-draft-record-create'
+      - assertVisible: 'Corner Store'
+
+# Ordered so no tap lands under the keyboard. With it up, the form's action
+# bars ride above it and cover the lower fields, and `tapOn` aims at an
+# element's centre without asking whether something is drawn over it: a tap
+# meant for the item amount once landed on Done and discarded the whole draft
+# (POPS-4189). So the two text fields end with Return, which puts the keyboard
+# away; the total, lowest on the form, is scrolled to and filled while nothing
+# covers it; and the item amount, whose decimal pad has no Return, goes last.
+# `hideKeyboard` is not used: it fails outright on this simulator.
+# The form is taller than the screen once the keyboard is up, so each attempt
+# starts from the top (a retry would otherwise aim its first taps at a form
+# still scrolled to the total) and the checks scroll back to what they read:
+# an element scrolled off screen is not visible to `assertVisible`. The typed
+# text sits on the field inside each `PopsTextField`'s identified wrapper, hence
+# `childOf`.
+- retry:
+    maxRetries: 2
+    commands:
+      - scrollUntilVisible:
+          direction: UP
+          element:
+            id: 'receipt-draft-date'
       - tapOn:
           id: 'receipt-draft-date'
       - eraseText
       - inputText: '2026-09-01'
+      - pressKey: Enter
       - tapOn:
           id: 'receipt-draft-item-description'
       - eraseText
       - inputText: 'Coffee'
-      - tapOn:
-          id: 'receipt-draft-item-amount'
-      - eraseText
-      - inputText: '5.00'
+      - pressKey: Enter
+      - scrollUntilVisible:
+          element:
+            id: 'receipt-draft-total'
       - tapOn:
           id: 'receipt-draft-total'
       - eraseText
       - inputText: '5.00'
+      # Near the top of the wrapper, not its centre: once the line shows its
+      # "an amount is needed" note the wrapper is twice as tall and its centre
+      # is the note, while the field is the wrapper's top band either way.
+      - tapOn:
+          id: 'receipt-draft-item-amount'
+          point: '50%,10%'
+      - eraseText
+      - inputText: '5.00'
       - assertVisible:
-          id: 'receipt-draft-merchant'
-          text: 'Corner Store'
+          text: '5.00'
+          childOf:
+            id: 'receipt-draft-total'
       - assertVisible:
-          id: 'receipt-draft-date'
+          text: '5.00'
+          childOf:
+            id: 'receipt-draft-item-amount'
+      - scrollUntilVisible:
+          direction: UP
+          element:
+            id: 'receipt-draft-date'
+      - assertVisible:
           text: '2026-09-01'
+          childOf:
+            id: 'receipt-draft-date'
       - assertVisible:
-          id: 'receipt-draft-item-description'
           text: 'Coffee'
-      - assertVisible:
-          id: 'receipt-draft-item-amount'
-          text: '5.00'
-      - assertVisible:
-          id: 'receipt-draft-total'
-          text: '5.00'
+          childOf:
+            id: 'receipt-draft-item-description'
 
 - tapOn:
     id: 'receipt-draft-save'

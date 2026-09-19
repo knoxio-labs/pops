@@ -327,4 +327,35 @@ describe('createManualPurchase', () => {
     expect(fake.created).toHaveLength(1);
     expect((fake.created[0] as { documents?: unknown }).documents).toBeUndefined();
   });
+
+  // The body the iOS client actually sends. Its generated encoder omits a `nil`
+  // optional rather than writing `null`, so a hand-typed line — which has no
+  // count — arrives with no `quantity` key at all. A required-but-nullable key
+  // turned every such save into a 400 the app showed as "could not reach the
+  // server".
+  it('accepts a line with no quantity key, as the iOS client sends it', async () => {
+    const { app, token, fake } = openWith(
+      purchasesDraft(),
+      purchasesPurchaseDetail({ id: 'pur-manual-2', source: 'manual' }),
+      ['session.read', 'purchases.write']
+    );
+
+    const res = await post(app, token, MANUAL_PATH, {
+      merchantName: 'Corner Store',
+      orderedAt: '2026-09-01T00:00:00+00:00',
+      currency: 'AUD',
+      totalCents: 500,
+      taxCents: 0,
+      surchargeCents: 0,
+      shippingCents: 0,
+      discountCents: 0,
+      items: [{ name: 'Coffee', unitPriceCents: 500, lineTotalCents: 500, notes: [] }],
+      idempotencyKey: 'manual-2',
+    });
+
+    expect(res.status).toBe(200);
+    expect(fake.created).toHaveLength(1);
+    const [line] = (fake.created[0] as { items: Array<{ quantity?: unknown }> }).items;
+    expect(line?.quantity).toBeUndefined();
+  });
 });
