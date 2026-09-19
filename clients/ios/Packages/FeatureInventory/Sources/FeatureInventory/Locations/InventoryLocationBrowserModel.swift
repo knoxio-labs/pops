@@ -1,5 +1,4 @@
 import AppCore
-import Foundation
 import Observation
 
 /// The locations browser's state, over `InventoryStore`: the whole tree in

@@ -1,5 +1,4 @@
 import AppCore
-import Foundation
 import Observation
 
 /// Where one observed query stands, as a screen draws it.
@@ -26,11 +25,6 @@ internal final class InventoryObservation<Value: Sendable & Equatable> {
     internal init(store: any InventoryStore, query: InventoryQuery<Value>) {
         self.store = store
         self.query = query
-    }
-
-    internal var value: Value? {
-        guard case .loaded(let value) = phase else { return nil }
-        return value
     }
 
     /// Follows the store until the calling task is cancelled.
