@@ -60,8 +60,10 @@ extension InMemoryInventoryStore {
         }
 
         func inventoryOpenContainers() -> [InventoryItem] {
-            items.values.filter { $0.containment?.access == .open && $0.lifecycle == .active }
-                .sorted { $0.name < $1.name }
+            items.values.filter {
+                $0.containment?.access == .open && $0.lifecycle == .active && !$0.isDeleted
+            }
+            .sorted { $0.name < $1.name }
         }
 
         func inventoryContainers() -> [InventoryItem] {

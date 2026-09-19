@@ -35,6 +35,8 @@ internal struct InventoryDestinationView: View {
             InventoryLocationPage(model: InventoryLocationPageModel(id: id, store: store))
         case .containers:
             InventoryContainerBrowserView(model: InventoryContainerBrowserModel(store: store))
+        case .openContainers:
+            InventoryOpenContainersView(model: InventoryOpenContainersModel(store: store))
         case .scan:
             InventoryScanScreen(store: store, entityRouter: entityRouter)
         default:
@@ -46,6 +48,7 @@ internal struct InventoryDestinationView: View {
         switch route {
         case .items: "Items"
         case .containers: "Containers"
+        case .openContainers: "Open containers"
         case .locations: "Locations"
         case .inHand: "In hand"
         case .activity: "Recent activity"
@@ -62,6 +65,7 @@ internal struct InventoryDestinationView: View {
         switch route {
         case .items: "The complete item catalogue opens here."
         case .containers: "All open and closed containers open here."
+        case .openContainers: "Every open container opens here."
         case .locations: "The complete place hierarchy opens here."
         case .inHand: "Everything picked up and not put anywhere yet opens here."
         case .activity: "The complete movement and edit history opens here."
@@ -77,7 +81,7 @@ internal struct InventoryDestinationView: View {
     private var symbol: String {
         switch route {
         case .items, .item: "cube"
-        case .containers, .container: "shippingbox"
+        case .containers, .container, .openContainers: "shippingbox"
         case .locations, .place: "house"
         case .inHand: "hand.raised"
         case .activity: "clock.arrow.circlepath"

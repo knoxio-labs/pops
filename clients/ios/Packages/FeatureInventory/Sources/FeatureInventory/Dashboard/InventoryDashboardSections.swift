@@ -6,8 +6,14 @@ extension InventoryDashboardView {
     internal func openContainers(_ dashboard: InventoryDashboard) -> some View {
         InventoryGroundedOpenPanel {
             VStack(alignment: .leading, spacing: PopsSpacing.zero) {
-                openContainerSummary(dashboard)
-                    .padding(.bottom, PopsSpacing.sm)
+                NavigationLink(value: InventoryRoute.openContainers) {
+                    openContainerSummary(dashboard)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(.rect)
+                }
+                .buttonStyle(.plain)
+                .accessibilityHint("Shows every open container")
+                .padding(.bottom, PopsSpacing.sm)
 
                 ForEach(dashboard.openContainers) { container in
                     containerRow(container)

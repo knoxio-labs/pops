@@ -135,6 +135,19 @@ internal struct ReplicaPlacementTests {
         #expect(try replica.ids(.openContainers) == ["open"])
     }
 
+    @Test("a deleted open container is not an open container")
+    func deletedOpenContainerIsNotOpen() throws {
+        let replica = try Fixture.downloaded(items: [
+            Fixture.box("open", placement: .hand),
+            Fixture.item(
+                "gone", placement: .hand,
+                containment: InventoryContainment(access: .open, isFull: false),
+                deletedAt: Fixture.created),
+        ])
+
+        #expect(try replica.ids(.openContainers) == ["open"])
+    }
+
     @Test("recents are newest first and honour the limit")
     func recents() throws {
         let replica = try Fixture.downloaded(items: [
