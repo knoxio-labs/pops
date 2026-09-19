@@ -57,6 +57,23 @@ internal struct InventoryDetailPhoto: Identifiable, Equatable {
     internal var id: String { sha256 }
 }
 
+extension Array where Element == InventoryDetailPhoto {
+    /// This item's photos, in their current order, with `sha256` swapped one
+    /// step `direction`. Nil when `sha256` names none of them, or is already
+    /// at that end.
+    internal func reorderedIds(
+        moving sha256: String, _ direction: InventoryPhotoReorderDirection
+    ) -> [String]? {
+        let ids = map(\.sha256)
+        guard let index = ids.firstIndex(of: sha256) else { return nil }
+        let target = direction == .earlier ? index - 1 : index + 1
+        guard ids.indices.contains(target) else { return nil }
+        var reordered = ids
+        reordered.swapAt(index, target)
+        return reordered
+    }
+}
+
 /// Provenance as the section reads it, already formatted.
 internal struct InventoryDetailProvenance: Equatable {
     internal let merchant: String?

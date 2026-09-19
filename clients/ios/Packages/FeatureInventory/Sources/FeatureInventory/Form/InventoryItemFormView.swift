@@ -16,6 +16,7 @@ internal struct InventoryItemFormView: View {
     /// Bumped by Retry to restart the observation after the store ended it.
     @State private var generation = 0
     @State private var pickingPhoto: InventoryPhotoSource?
+    @State private var retakingSha256: String?
 
     internal var body: some View {
         NavigationStack {
@@ -41,7 +42,15 @@ internal struct InventoryItemFormView: View {
         .interactiveDismissDisabled(model.hasStagedWork)
         .task(id: generation) { await model.load() }
         .inventoryPhotoPickerSheet(source: $pickingPhoto) { data in
-            Task { await model.photoCaptured(data) }
+            if let sha256 = retakingSha256 {
+                retakingSha256 = nil
+                Task { await model.retake(replacing: sha256, with: data) }
+            } else {
+                Task { await model.photoCaptured(data) }
+            }
+        }
+        .inventoryUndoCapsule(photoUndoOffer) { offer in
+            Task { await model.undoPhotoRemoval(offer) }
         }
         .alert(
             InventoryCopy.failureTitle,
@@ -53,6 +62,16 @@ internal struct InventoryItemFormView: View {
         } message: { failure in
             Text(InventoryCopy.message(for: failure))
         }
+    }
+
+    /// A hand-built binding rather than `$model.photoRunner.undoOffer`:
+    /// `photoRunner` is a nested observable object held by `let`, and
+    /// SwiftUI's dynamic member binding through one only works for a
+    /// property owned directly by the `@Bindable` root.
+    private var photoUndoOffer: Binding<InventoryUndoOffer?> {
+        Binding(
+            get: { model.photoRunner.undoOffer },
+            set: { model.photoRunner.undoOffer = $0 })
     }
 
     @ViewBuilder private var content: some View {
@@ -74,7 +93,14 @@ internal struct InventoryItemFormView: View {
                     photos: model.draft.photos,
                     capture: { pickingPhoto = $0 },
                     retry: { sha256 in Task { await model.retryUpload(sha256: sha256) } },
-                    remove: { sha256 in model.removeFailedPhoto(sha256: sha256) },
+                    remove: { sha256 in Task { await model.removePhoto(sha256: sha256) } },
+                    retake: { sha256, source in
+                        retakingSha256 = sha256
+                        pickingPhoto = source
+                    },
+                    reorder: { sha256, direction in
+                        Task { await model.movePhoto(sha256, direction) }
+                    },
                     thumbnail: { await model.thumbnail($0) }
                 )
                 .listRowInsets(EdgeInsets())

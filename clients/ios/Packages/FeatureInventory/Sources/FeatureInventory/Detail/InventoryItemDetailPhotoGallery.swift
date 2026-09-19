@@ -20,6 +20,9 @@ internal struct InventoryItemDetailHeroPhotos: View {
     /// The item's own glyph, which stands in when there is no photograph.
     internal let symbol: String
     internal let load: InventoryPhotoLoader
+    /// What Retake, Delete, Move earlier and Move later do, when the page
+    /// has a place to send them; nil hides all four from every tile's menu.
+    internal let manage: InventoryPhotoManagement?
     @State private var viewing: InventoryDetailPhoto?
     @ScaledMetric(relativeTo: .caption) private var thumbnail = PopsSize.countField
 
@@ -29,7 +32,8 @@ internal struct InventoryItemDetailHeroPhotos: View {
                 if photos.count > 1 { strip }
             }
             .sheet(item: $viewing) { photo in
-                InventoryItemDetailLightbox(photos: photos, opening: photo, load: load)
+                InventoryItemDetailLightbox(
+                    photos: photos, opening: photo, load: load, manage: manage)
             }
     }
 
@@ -46,6 +50,7 @@ internal struct InventoryItemDetailHeroPhotos: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel(first.caption)
+            .modifier(InventoryPhotoMenu(photo: first, manage: manage))
         } else {
             InventoryItemDetailPicture(photo: nil, variant: .medium, symbol: symbol, load: load)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -64,6 +69,7 @@ internal struct InventoryItemDetailHeroPhotos: View {
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(photo.caption)
+                    .modifier(InventoryPhotoMenu(photo: photo, manage: manage))
                 }
             }
             .padding(PopsSpacing.md)
@@ -79,6 +85,42 @@ internal struct InventoryItemDetailHeroPhotos: View {
             startPoint: .top, endPoint: .bottom
         )
         .allowsHitTesting(false)
+    }
+}
+
+/// What a photo already on the item can be asked to do, from Item detail's
+/// gallery: Retake and Delete on every photo, and Move earlier and Move
+/// later among the others.
+internal struct InventoryPhotoManagement {
+    internal let remove: (String) -> Void
+    internal let move: (String, InventoryPhotoReorderDirection) -> Void
+    internal let retake: (String, InventoryPhotoSource) -> Void
+}
+
+/// The context menu every photo tile carries once the page can manage its
+/// photos: Retake and Delete always, Move earlier and later only where the
+/// photo is not already at that end.
+private struct InventoryPhotoMenu: ViewModifier {
+    let photo: InventoryDetailPhoto
+    let manage: InventoryPhotoManagement?
+
+    func body(content: Content) -> some View {
+        if let manage {
+            content.contextMenu {
+                Button("Retake") {
+                    if InventoryCameraAvailability.isAvailable {
+                        manage.retake(photo.sha256, .camera)
+                    } else {
+                        manage.retake(photo.sha256, .library)
+                    }
+                }
+                Button("Move earlier") { manage.move(photo.sha256, .earlier) }
+                Button("Move later") { manage.move(photo.sha256, .later) }
+                Button("Delete", role: .destructive) { manage.remove(photo.sha256) }
+            }
+        } else {
+            content
+        }
     }
 }
 
@@ -176,15 +218,17 @@ internal struct InventoryItemDetailPlate: View {
 internal struct InventoryItemDetailLightbox: View {
     internal let photos: [InventoryDetailPhoto]
     internal let load: InventoryPhotoLoader
+    internal let manage: InventoryPhotoManagement?
     @Environment(\.dismiss) private var dismiss
     @State private var index: Int
 
     internal init(
         photos: [InventoryDetailPhoto], opening: InventoryDetailPhoto,
-        load: @escaping InventoryPhotoLoader
+        load: @escaping InventoryPhotoLoader, manage: InventoryPhotoManagement? = nil
     ) {
         self.photos = photos
         self.load = load
+        self.manage = manage
         _index = State(initialValue: photos.firstIndex(of: opening) ?? 0)
     }
 
@@ -204,6 +248,23 @@ internal struct InventoryItemDetailLightbox: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close") { dismiss() }
+                }
+                if let manage {
+                    ToolbarItem(placement: .primaryAction) {
+                        Menu("Manage", systemImage: "ellipsis.circle") {
+                            Button("Retake") {
+                                manage.retake(
+                                    current.sha256,
+                                    InventoryCameraAvailability.isAvailable ? .camera : .library)
+                            }
+                            Button("Move earlier") { manage.move(current.sha256, .earlier) }
+                            Button("Move later") { manage.move(current.sha256, .later) }
+                            Button("Delete", role: .destructive) {
+                                manage.remove(current.sha256)
+                                dismiss()
+                            }
+                        }
+                    }
                 }
             }
         }

@@ -164,6 +164,50 @@ internal final class InventoryItemDetailViewModel {
         try? await store.photo(sha256, variant: variant)
     }
 
+    /// Takes one photo off the item (`item.removePhoto`), through the shared
+    /// runner every write on this page goes through, offering Undo. The page
+    /// itself never has to put the photo back on Undo: it reads
+    /// `InventoryItemDetail` from the store, and reverting the command's
+    /// effect is exactly what makes that query emit it again.
+    internal func removePhoto(_ sha256: String) async {
+        guard detail?.photos.contains(where: { $0.sha256 == sha256 }) == true else { return }
+        await runner.perform(
+            [.removePhoto(itemId: itemId, sha256: sha256)], announcing: "Removed photo",
+            symbol: .photo)
+    }
+
+    /// Moves one photo earlier or later among the item's others
+    /// (`item.reorderPhotos`), through the shared runner, offering Undo.
+    /// Does nothing for a photo not on the item, or already at that end.
+    internal func movePhoto(_ sha256: String, _ direction: InventoryPhotoReorderDirection) async {
+        guard let sha256s = detail?.photos.reorderedIds(moving: sha256, direction) else { return }
+        await runner.perform(
+            [.reorderPhotos(itemId: itemId, sha256s: sha256s)], announcing: "Reordered photos",
+            symbol: .photo)
+    }
+
+    /// Replaces one photo with a freshly captured one: the new bytes are
+    /// handed to the store the way any capture is, then attached where the
+    /// old one stood and the old one removed, as the one Undo-able change a
+    /// Retake is.
+    internal func retakePhoto(_ sha256: String, with jpegData: Data) async {
+        guard let index = detail?.photos.firstIndex(where: { $0.sha256 == sha256 }) else {
+            return
+        }
+        let newSha256 = InventoryPhotoHashing.sha256(of: jpegData)
+        do {
+            _ = try await store.uploadPhoto(sha256: newSha256, data: jpegData, contentType: .jpeg)
+        } catch {
+            record(error)
+            return
+        }
+        await runner.perform(
+            [
+                .attachPhoto(itemId: itemId, sha256: newSha256, position: index),
+                .removePhoto(itemId: itemId, sha256: sha256),
+            ], announcing: "Retook photo", symbol: .photo)
+    }
+
     private func run(_ command: InventoryCommand, offering offer: InventoryUndoOffer) async {
         guard let receipt = await send(command) else { return }
         receipts[offer.id] = receipt
