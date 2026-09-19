@@ -21,10 +21,10 @@ Items and locations each have two tables of the same shape: `*_base` is what the
 - A change depends on the newest pending change that wrote any row it writes or points at, so the server never applies it first.
 - Its base revision is the one its author saw. A change behind another of this phone's changes to the same row is based on the revision that one leaves, recomputed on every rebase and corrected by the applied outcome, so it never conflicts with this phone's own edit.
 - A feed page changing a row under a pending change resets the row to the new base and replays the change over it. A change the reducer now refuses, because its target was deleted elsewhere for instance, stops showing but stays logged: the server's outcome decides.
-- An applied change keeps showing, at the server's revision, until the feed reaches the batch's high-water `seq`. A conflicted or rejected one stops showing; its row shows the server's state until repairs exist (POPS-4073).
+- An applied change keeps showing, at the server's revision, until the feed reaches the batch's high-water `seq`. A conflicted or rejected one stops showing, its row shows the server's state, and it opens a repair (below).
 - `undo(_:undoMutationId:clientTime:)` cancels a change still on the device, along with what depends on it, and otherwise logs an Undo that goes out as `event.revert` once the change's outcome names its event. Undoing a create, a split or a destroy is refused, as the server refuses it.
 
-`LocalFirstInventoryStore` is the `InventoryStore` over this: `perform` and `undo` are local, everything else is `OnlineInventoryStore`'s, and given an `InventoryReachability` it runs the drain.
+`LocalFirstInventoryStore` is the `InventoryStore` over this: `perform`, `undo` and `resolve` are local, everything else is `OnlineInventoryStore`'s, and given an `InventoryReachability` it runs the drain.
 
 ## The drain
 
@@ -37,7 +37,21 @@ Items and locations each have two tables of the same shape: `*_base` is what the
 - An Undo whose change ended conflicted or rejected is dropped unsent, and what was logged on top of it inherits its dependencies, so it stays held.
 - It runs after each change and Undo, on every `refresh()`, when the backoff elapses, and when the `InventoryReachability` path becomes satisfied (`NetworkPathReachability`, over `NWPathMonitor`). Nothing is sent while the path is down.
 
-Conflicted and rejected rows stay in the log in that state, with the server's outcome stored whole in `outcome`, and anything depending on them stays queued behind them. That is where repairs (POPS-4073) start: nothing here settles them.
+Conflicted and rejected rows stay in the log in that state, with the server's outcome stored whole in `outcome`, and anything depending on them stays queued behind them until their repair is settled.
+
+## Repairs
+
+`recordOutcomes(_:)` opens one repair per mutation the server answered `conflict` or `rejected`, in the `repair` table (POPS-4073), in the same transaction that records the outcome. The mutation stays in the log in that state, held with everything depending on it, and its entity reads as needing attention for as long as the repair is open. An `applied` outcome with `converged: true` opens nothing and is listed as resolved ("Same count on both").
+
+A field conflict, a code collision and a record deleted elsewhere are their own kinds. A photo attach refused with `media_missing` is a failed photo. Any other refusal has no approved repair, so it is shown with its reason and offers only Let go, whichever choice is passed.
+
+`resolve(_:with:mintMutationId:at:)` settles one:
+
+- Keeping this phone's side logs the change again under a new mutation id, in its old place in the log, because the server answers an id it has seen with the outcome it stored. What depended on the old id depends on the new one. A field conflict is based on the conflict's `currentRevision`, and stays at least there while the feed has not delivered it; a code collision takes the chosen code, or the suggested one; a record deleted elsewhere goes behind a new `item.restoreDeleted` it depends on; a failed photo's attach is sent again. The reducer checks first, so a code another item on this phone holds is refused and the repair stays open. A place deleted elsewhere cannot be restored: there is no command for it.
+- Letting go drops the change and rebases its row on the server's state. What depended on it depends on what it depended on instead, so it is released and sent; a change that cannot apply without it (a code set on a create that was let go) comes back as its own refusal.
+- A change feed page that already carries the change, so applying it to the server's row would alter nothing, settles the repair as "Already resolved elsewhere".
+
+Replay follows the log order corrected for dependencies, the drain's order, so a Restore logged after the change it brings back replays first. The `repair` and `resolved_entry` tables survive the on-disk fallback with the log. A resolution cannot be undone yet.
 
 ## The online store
 
@@ -58,4 +72,4 @@ Effective location is walked, never stored (D2). Contents of a place are every a
 
 Search is FTS5 with the trigram tokenizer, because the approved rule is "contains", not "has a word starting with". A query shorter than three characters has no trigram, so it falls back to `LIKE` over the same columns. Results are ranked the way the design playground's `InventorySearchRanking` does: name prefix, then name contains, then any other field. A type's label is searchable, so storing a new catalogue re-indexes every row.
 
-The sync ledger lists what waits for the server, in log order. It has no repairs yet (POPS-4073).
+The sync ledger lists what waits for the server, in log order (a change in the drain's batch with progress `0`, which is what makes its row read as syncing), the open repairs, oldest first, and what was resolved, newest first. A row's sync mark is derived from the ledger by whoever draws it, never stored.
