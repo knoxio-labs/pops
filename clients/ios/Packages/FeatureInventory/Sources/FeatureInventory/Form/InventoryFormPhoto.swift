@@ -1,5 +1,4 @@
 import AppCore
-import Foundation
 
 /// One photograph on the draft: already on the record, or captured this
 /// session and somewhere on its way to being.
@@ -35,10 +34,6 @@ internal struct InventoryFormPhoto: Identifiable, Hashable, Sendable {
 
     internal var id: String { sha256 }
 
-    internal var reference: InventoryPhotoReference {
-        InventoryPhotoReference(sha256: sha256, caption: caption)
-    }
-
     /// Whether this photo failed its upload and is asking for Retry or
     /// Remove rather than sitting quietly.
     internal var hasFailed: Bool {
@@ -48,12 +43,6 @@ internal struct InventoryFormPhoto: Identifiable, Hashable, Sendable {
 }
 
 extension Array where Element == InventoryFormPhoto {
-    /// Every photo whose bytes reached the server this session and are
-    /// waiting for their `item.attachPhoto`, in strip order.
-    internal var readyToAttach: [InventoryFormPhoto] {
-        filter { $0.upload == .uploaded }
-    }
-
     internal func removing(sha256: String) -> [InventoryFormPhoto] {
         filter { $0.sha256 != sha256 }
     }

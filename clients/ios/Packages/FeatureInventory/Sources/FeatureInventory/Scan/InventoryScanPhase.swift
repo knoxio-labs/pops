@@ -1,5 +1,3 @@
-import AppCore
-
 /// Where the scan screen is: looking, resolving, or holding an answer.
 ///
 /// A well-formed `pops://inventory/...` reference for something this build
