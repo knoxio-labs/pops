@@ -137,6 +137,10 @@ public final class OnlineInventoryStore: InventoryStore, Sendable {
     /// discard.
     public func discardPhoto(_ sha256: String) async throws {}
 
+    public func settleTypeArrival(typeKey: String) async throws {
+        try replica.settleTypeArrival(typeKey: typeKey)
+    }
+
     private func submit(_ mutation: InventoryOutboundMutation) async throws
         -> InventoryMutationOutcome
     {

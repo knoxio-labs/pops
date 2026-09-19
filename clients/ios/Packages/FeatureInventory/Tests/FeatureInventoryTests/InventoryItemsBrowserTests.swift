@@ -183,4 +183,5 @@ internal struct EndedInventoryStore: InventoryStore {
     func discardPhoto(_ sha256: String) async throws {}
 
     func status() -> AsyncStream<InventoryReplicaStatus> { AsyncStream { $0.finish() } }
+    func settleTypeArrival(typeKey: String) async throws {}
 }

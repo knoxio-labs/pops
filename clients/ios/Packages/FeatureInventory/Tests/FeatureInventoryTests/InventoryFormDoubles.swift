@@ -49,6 +49,7 @@ internal struct FormFixtureSource: InventoryQuerySource {
     func inventorySyncLedger() -> InventoryReplicaSyncLedger { InventoryReplicaSyncLedger() }
     func inventoryReplicaStatus() -> InventoryReplicaStatus { status }
     func inventoryPhotoUploads() -> [String: InventoryPhotoUpload] { photoUploads }
+    func inventoryAwaitingTypeArrivals() -> [String] { [] }
 }
 
 /// A store that records every command in order and applies none, answering
@@ -151,6 +152,8 @@ internal final class RecordingFormStore: InventoryStore, Sendable {
     }
 
     func status() -> AsyncStream<InventoryReplicaStatus> { observe(.replicaStatus) }
+
+    func settleTypeArrival(typeKey: String) async throws {}
 
     private static func kind(of command: InventoryCommand) -> String {
         switch command {

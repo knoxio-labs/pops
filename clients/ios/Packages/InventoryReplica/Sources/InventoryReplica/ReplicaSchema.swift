@@ -115,6 +115,7 @@ internal enum ReplicaSchema {
         registerMutationLog(in: &migrator)
         registerRepairs(in: &migrator)
         registerMedia(in: &migrator)
+        registerTypeArrivals(in: &migrator)
         return migrator
     }
 

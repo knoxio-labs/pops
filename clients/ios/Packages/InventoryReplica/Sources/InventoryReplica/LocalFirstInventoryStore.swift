@@ -121,4 +121,8 @@ public final class LocalFirstInventoryStore: InventoryStore, Sendable {
     public func discardPhoto(_ sha256: String) async throws {
         try replica.discardPhoto(sha256)
     }
+
+    public func settleTypeArrival(typeKey: String) async throws {
+        try await online.settleTypeArrival(typeKey: typeKey)
+    }
 }

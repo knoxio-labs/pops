@@ -27,6 +27,7 @@ internal enum InventoryWire {
         seq: Int = 1,
         name: String = "Lamp",
         typeKey: String? = nil,
+        legacyType: String? = nil,
         fields: String = "{}",
         note: String? = nil,
         code: String? = nil,
@@ -43,7 +44,8 @@ internal enum InventoryWire {
     ) -> String {
         """
         {"id":"\(id)","revision":\(revision),"seq":\(seq),"name":"\(name)",\
-        "typeKey":\(typeKey.map { "\"\($0)\"" } ?? "null"),"fields":\(fields),\
+        "typeKey":\(typeKey.map { "\"\($0)\"" } ?? "null"),\
+        "legacyType":\(legacyType.map { "\"\($0)\"" } ?? "null"),"fields":\(fields),\
         "note":\(note.map { "\"\($0)\"" } ?? "null"),"code":\(code.map { "\"\($0)\"" } ?? "null"),\
         "externalIds":[],"quantity":\(quantity),"lifecycle":"\(lifecycle)",\
         "lifecycleChangedAt":\(lifecycleChangedAt.map { "\"\($0)\"" } ?? "null"),\

@@ -101,4 +101,8 @@ public struct UnboundInventoryStore: InventoryStore {
     public func status() -> AsyncStream<InventoryReplicaStatus> {
         AsyncStream { $0.finish() }
     }
+
+    public func settleTypeArrival(typeKey: String) async throws {
+        throw RepositoryError.dependencyNotBound
+    }
 }

@@ -31,6 +31,7 @@ private struct EmptyInventorySource: InventoryQuerySource {
     func inventorySyncLedger() -> InventoryReplicaSyncLedger { InventoryReplicaSyncLedger() }
     func inventoryReplicaStatus() -> InventoryReplicaStatus { .current }
     func inventoryPhotoUploads() -> [String: InventoryPhotoUpload] { [:] }
+    func inventoryAwaitingTypeArrivals() -> [String] { [] }
 }
 
 /// A store whose every write fails with `.unavailable`, for a test of the
@@ -70,6 +71,8 @@ internal struct FailingInventoryStore: InventoryStore {
     func discardPhoto(_ sha256: String) async throws {}
 
     func status() -> AsyncStream<InventoryReplicaStatus> { AsyncStream { _ in } }
+
+    func settleTypeArrival(typeKey: String) async throws { throw RepositoryError.unavailable }
 }
 
 /// Forwards everything to an in-memory store except a repair's resolution,

@@ -74,6 +74,10 @@ internal struct WorkingItem: WorkingRow {
     var seq: Int
     var name: String
     var typeKey: String?
+    /// Read-only: no command sets it, so it is not a tracked field. Optional
+    /// in the stored JSON too, which a log entry written before the column
+    /// existed simply lacks.
+    var legacyType: String?
     var fields: [String: StoredFieldValue]
     var note: String?
     var code: String?
@@ -118,7 +122,8 @@ extension WorkingItem {
     init(_ item: InventoryItem) {
         self.init(
             id: item.id, revision: item.revision, seq: item.seq, name: item.name,
-            typeKey: item.typeKey, fields: item.fields.mapValues(StoredFieldValue.init),
+            typeKey: item.typeKey, legacyType: item.legacyType,
+            fields: item.fields.mapValues(StoredFieldValue.init),
             note: item.note, code: item.code,
             externalIds: item.externalIds.map {
                 StoredExternalIdentifier(kind: $0.kind, value: $0.value)
@@ -140,7 +145,7 @@ extension WorkingItem {
     var item: InventoryItem {
         InventoryItem(
             id: id, revision: revision, seq: seq, name: name, typeKey: typeKey,
-            fields: fields.mapValues(\.domainValue), note: note, code: code,
+            legacyType: legacyType, fields: fields.mapValues(\.domainValue), note: note, code: code,
             externalIds: externalIds.map {
                 InventoryExternalIdentifier(kind: $0.kind, value: $0.value)
             },

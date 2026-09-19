@@ -54,8 +54,9 @@ extension LocalReducer {
     }
 
     /// The split-off item copies placement, type, fields, note, external ids
-    /// and photos, and not the code, the lifecycle or the remembered previous
-    /// placement: the server inserts it fresh with only those columns.
+    /// and photos, and not the code, the lifecycle, the remembered previous
+    /// placement or the legacy type: the server inserts it fresh with only
+    /// those columns.
     func splitItem(id: String, newItemId: String, quantity: Int) throws -> Written {
         try requireUUID(newItemId, for: "item.split")
         guard quantity >= 1 else { throw refusal(.invalid, "a quantity is at least 1") }
@@ -74,6 +75,7 @@ extension LocalReducer {
         split.id = newItemId
         split.seq = 0
         split.code = nil
+        split.legacyType = nil
         split.quantity = quantity
         split.lifecycle = "active"
         split.lifecycleChangedAt = nil

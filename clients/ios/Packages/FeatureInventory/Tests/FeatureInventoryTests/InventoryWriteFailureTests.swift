@@ -32,6 +32,7 @@ private struct RefusingInventoryStore: InventoryStore {
     }
     func discardPhoto(_ sha256: String) async throws {}
     func status() -> AsyncStream<InventoryReplicaStatus> { inner.status() }
+    func settleTypeArrival(typeKey: String) async throws { throw error }
 }
 
 @MainActor

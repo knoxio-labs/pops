@@ -18,7 +18,7 @@ extension LocalReducer {
         try assertPlacementAllowed(itemId: new.id, to: new.placement)
         noteReference(new.placement)
         let row = WorkingItem(
-            id: new.id, revision: 1, seq: 0, name: name, typeKey: new.typeKey,
+            id: new.id, revision: 1, seq: 0, name: name, typeKey: new.typeKey, legacyType: nil,
             fields: new.fields.mapValues(StoredFieldValue.init), note: normalizedNote(new.note),
             code: nil, externalIds: externalIds, quantity: new.quantity, lifecycle: "active",
             lifecycleChangedAt: nil, placement: StoredPlacement(new.placement),

@@ -35,6 +35,8 @@ internal struct PendingInventoryStore: InventoryStore {
     func discardPhoto(_ sha256: String) async throws {}
 
     func status() -> AsyncStream<InventoryReplicaStatus> { AsyncStream { _ in } }
+
+    func settleTypeArrival(typeKey: String) async throws {}
 }
 
 internal enum InventoryFixture {
