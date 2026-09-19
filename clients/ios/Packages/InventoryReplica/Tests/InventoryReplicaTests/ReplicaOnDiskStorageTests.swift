@@ -41,15 +41,7 @@ internal struct ReplicaOnDiskStorageTests {
         defer { try? FileManager.default.removeItem(at: directory) }
         let path = directory.appendingPathComponent("replica.sqlite").path
 
-        var initial = DatabaseMigrator()
-        initial.registerMigration("v1_standin") { db in
-            try db.execute(
-                sql: """
-                    CREATE TABLE mutation_log (
-                        id TEXT PRIMARY KEY NOT NULL, payload TEXT NOT NULL
-                    )
-                    """)
-        }
+        let initial = Self.standInMigrator()
         do {
             let queue = try ReplicaSchema.openOnDisk(at: path, migrator: initial)
             try queue.write { db in
@@ -66,15 +58,7 @@ internal struct ReplicaOnDiskStorageTests {
             }
         }
 
-        var broken = DatabaseMigrator()
-        broken.registerMigration("v1_standin") { db in
-            try db.execute(
-                sql: """
-                    CREATE TABLE mutation_log (
-                        id TEXT PRIMARY KEY NOT NULL, payload TEXT NOT NULL
-                    )
-                    """)
-        }
+        var broken = Self.standInMigrator()
         broken.registerMigration("v2_needs_clean_state") { db in
             if try db.tableExists("poison") { throw StandInMigrationFailure() }
         }
@@ -87,6 +71,19 @@ internal struct ReplicaOnDiskStorageTests {
         #expect(rows.map { $0["id"] as String } == ["m1", "m2"])
         #expect(rows.map { $0["payload"] as String } == ["queued-1", "queued-2"])
         #expect(try !reopened.read { try $0.tableExists("poison") })
+    }
+
+    private static func standInMigrator() -> DatabaseMigrator {
+        var migrator = DatabaseMigrator()
+        migrator.registerMigration("v1_standin") { db in
+            try db.execute(
+                sql: """
+                    CREATE TABLE mutation_log (
+                        id TEXT PRIMARY KEY NOT NULL, payload TEXT NOT NULL
+                    )
+                    """)
+        }
+        return migrator
     }
 
     private static func temporaryDirectory() throws -> URL {
