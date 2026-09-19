@@ -105,6 +105,8 @@ function routes(req: IncomingMessage, res: ServerResponse): void {
     res.end(JSON.stringify(OPENAPI));
     return;
   }
+  // Node lowercases every incoming header name; `X-API-Key` on the wire
+  // arrives here as `x-api-key`.
   received.push({ path: url.pathname, apiKey: req.headers['x-api-key'] });
   res.statusCode = status;
   res.end(
