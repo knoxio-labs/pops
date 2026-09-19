@@ -139,6 +139,11 @@ targets:
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_NSCameraUsageDescription: Pops uses the camera to scan pairing QR codes and photograph receipts.
+        # Export compliance (POPS-4137): the only encryption is the OS's own —
+        # HTTPS and Secure Enclave signing for device auth — which is exempt.
+        # Without the key every TestFlight build stops at Missing Compliance
+        # and reaches no tester until someone answers by hand.
+        INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
         PRODUCT_BUNDLE_IDENTIFIER: com.knoxiolabs.pops
         # Placeholders. A TestFlight build's version is CalVer derived from its
         # commit by scripts/release-version.sh and passed to xcodebuild on the
@@ -245,6 +250,9 @@ targets:
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         # So it is distinguishable from `Pops` on a home screen that has both.
         INFOPLIST_KEY_CFBundleDisplayName: Pops Design
+        # No network and no cryptography at all; see `Pops` for why the key
+        # must be present rather than left to the questionnaire.
+        INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
         ASSETCATALOG_COMPILER_APPICON_NAME: PlaygroundIcon
         PRODUCT_BUNDLE_IDENTIFIER: com.knoxiolabs.pops.playground
         # Placeholders, for the reason given on `Pops` above.
