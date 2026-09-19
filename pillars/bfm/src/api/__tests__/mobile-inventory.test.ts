@@ -63,6 +63,26 @@ function get(app: Express, token: string | null, path: string) {
   });
 }
 
+function post(app: Express, token: string | null, path: string, body: object) {
+  return requestOn(app, (r) => {
+    const request = r.post(path).send(body);
+    return token === null ? request : request.set('Authorization', `Bearer ${token}`);
+  });
+}
+
+function aMutation(overrides: Partial<Record<string, unknown>> = {}): Record<string, unknown> {
+  return {
+    mutationId: '11111111-1111-4111-8111-111111111111',
+    op: 'item.rename',
+    entityId: 'item-1',
+    baseRevision: 1,
+    dependsOn: [],
+    clientTime: '2026-09-19T00:00:00.000Z',
+    args: { name: 'New name' },
+    ...overrides,
+  };
+}
+
 describe('the catalogue', () => {
   it('answers the type catalogue', async () => {
     const fake = createInventoryFake({
@@ -308,5 +328,159 @@ describe("one item's history", () => {
 
     expect(res.status).toBe(400);
     expect(res.body.code).toBe('invalid_cursor');
+  });
+});
+
+describe('mutations', () => {
+  it('passes every per-mutation outcome through unchanged, in order', async () => {
+    const fake = createInventoryFake({
+      mutationsResult: () => ({
+        kind: 'ok',
+        value: {
+          outcomes: [
+            {
+              mutationId: 'a',
+              status: 'applied',
+              revision: 2,
+              seq: 10,
+              converged: true,
+            },
+            {
+              mutationId: 'b',
+              status: 'conflict',
+              kind: 'code_collision',
+              heldBy: { id: 'item-9', name: 'Existing box' },
+              suggestedCode: 'BOX-2',
+            },
+            { mutationId: 'c', status: 'rejected', reason: 'invalid', message: 'bad op' },
+            { mutationId: 'd', status: 'deferred', waitingOn: 'a' },
+          ],
+          highWaterSeq: 10,
+        },
+      }),
+    });
+    const { app, token } = openWith(fake.factory, ['inventory.write']);
+
+    const res = await post(app, token, '/mobile/inventory/mutations', {
+      mutations: [aMutation()],
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.highWaterSeq).toBe(10);
+    expect(res.body.outcomes).toEqual([
+      { mutationId: 'a', status: 'applied', revision: 2, seq: 10, converged: true },
+      {
+        mutationId: 'b',
+        status: 'conflict',
+        kind: 'code_collision',
+        heldBy: { id: 'item-9', name: 'Existing box' },
+        suggestedCode: 'BOX-2',
+      },
+      { mutationId: 'c', status: 'rejected', reason: 'invalid', message: 'bad op' },
+      { mutationId: 'd', status: 'deferred', waitingOn: 'a' },
+    ]);
+  });
+
+  it('sends the paired device as Pops-Actor, never anything the phone could set', async () => {
+    const fake = createInventoryFake();
+    const { app, token } = openWith(fake.factory, ['inventory.write']);
+
+    const res = await post(app, token, '/mobile/inventory/mutations', {
+      mutations: [aMutation()],
+    });
+
+    expect(res.status).toBe(200);
+    expect(fake.mutationsCalls).toHaveLength(1);
+    expect(fake.mutationsCalls[0]?.mutations).toHaveLength(1);
+  });
+
+  it('refuses a batch above the 256KB cap before it ever reaches inventory', async () => {
+    const fake = createInventoryFake();
+    const { app, token } = openWith(fake.factory, ['inventory.write']);
+
+    const res = await post(app, token, '/mobile/inventory/mutations', {
+      mutations: [aMutation({ args: { note: 'x'.repeat(300 * 1024) } })],
+    });
+
+    expect(res.status).toBe(413);
+    expect(res.body).toEqual({
+      code: 'payload_too_large',
+      maxBytes: 256 * 1024,
+      message: expect.any(String),
+    });
+    expect(fake.mutationsCalls).toEqual([]);
+  });
+
+  it('refuses a device without inventory.write', async () => {
+    const fake = createInventoryFake();
+    const { app, token } = openWith(fake.factory, ['inventory.read']);
+
+    const res = await post(app, token, '/mobile/inventory/mutations', {
+      mutations: [aMutation()],
+    });
+
+    expect(res.status).toBe(403);
+    expect(res.body.code).toBe('capability_not_granted');
+    expect(res.body.capability).toBe('inventory.write');
+    expect(fake.mutationsCalls).toEqual([]);
+  });
+
+  it('answers 426 when this build sends a protocol inventory no longer serves', async () => {
+    const fake = createInventoryFake({
+      mutationsResult: () => ({
+        kind: 'refused',
+        pillar: 'inventory',
+        status: 426,
+        message: 'old',
+      }),
+    });
+    const { app, token } = openWith(fake.factory, ['inventory.write']);
+
+    const res = await post(app, token, '/mobile/inventory/mutations', {
+      mutations: [aMutation()],
+    });
+
+    expect(res.status).toBe(426);
+    expect(res.body.code).toBe('client_too_old');
+  });
+});
+
+describe('code suggestions', () => {
+  it('forwards the name, type and stem, and answers the suggestions unchanged', async () => {
+    const fake = createInventoryFake({
+      suggestResult: { kind: 'ok', value: { suggestions: ['BOX-1', 'BOX-2'] } },
+    });
+    const { app, token } = openWith(fake.factory, ['inventory.write']);
+
+    const res = await post(app, token, '/mobile/inventory/codes/suggest', {
+      name: 'A new box',
+      typeKey: 'box',
+      stem: 'BOX',
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.suggestions).toEqual(['BOX-1', 'BOX-2']);
+    expect(fake.suggestCalls).toEqual([{ name: 'A new box', typeKey: 'box', stem: 'BOX' }]);
+  });
+
+  it('refuses a device without inventory.write', async () => {
+    const fake = createInventoryFake();
+    const { app, token } = openWith(fake.factory, ['inventory.read']);
+
+    const res = await post(app, token, '/mobile/inventory/codes/suggest', { name: 'A new box' });
+
+    expect(res.status).toBe(403);
+    expect(res.body.code).toBe('capability_not_granted');
+    expect(res.body.capability).toBe('inventory.write');
+  });
+
+  it('rejects an empty name before ever reaching inventory', async () => {
+    const fake = createInventoryFake();
+    const { app, token } = openWith(fake.factory, ['inventory.write']);
+
+    const res = await post(app, token, '/mobile/inventory/codes/suggest', { name: '' });
+
+    expect(res.status).toBe(400);
+    expect(fake.suggestCalls).toEqual([]);
   });
 });
