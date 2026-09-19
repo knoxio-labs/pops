@@ -77,8 +77,7 @@ internal struct InventoryItemFormView: View {
     @ViewBuilder private var content: some View {
         switch model.phase {
         case .loading:
-            ProgressView()
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            InventoryItemFormSkeleton()
         case .unavailable:
             ErrorStateView(message: InventoryCopy.unavailable) { generation += 1 }
         case .ready:

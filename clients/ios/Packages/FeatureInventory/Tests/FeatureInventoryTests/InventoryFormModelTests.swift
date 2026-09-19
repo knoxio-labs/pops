@@ -56,8 +56,8 @@ internal struct InventoryFormModelTests {
         #expect(store.performed.count == 1)
     }
 
-    @Test("a code already held by another item blocks create, whatever its case")
-    func heldCodeBlocksCreate() async {
+    @Test("a code already held by another item does not block create, only a missing name does")
+    func heldCodeDoesNotBlockCreate() async {
         let store = RecordingFormStore(
             FormFixtureSource(
                 items: [FormFixture.item("item-9", "Kitchen 09", code: "B412")],
@@ -67,17 +67,26 @@ internal struct InventoryFormModelTests {
         defer { loading.cancel() }
         form.draft.name = "Kettle"
         form.codeChanged(to: "b412")
+        await form.checkCode()
 
-        #expect(await form.submit() == false)
-        #expect(store.performed.isEmpty)
         #expect(form.draft.code.heldBy == "Kitchen 09")
         #expect(form.issues == [.codeTaken(heldBy: "Kitchen 09")])
-        #expect(!form.canSubmit)
+        #expect(form.canSubmit)
 
-        form.codeChanged(to: "B413")
-        await form.checkCode()
-        #expect(form.draft.code.heldBy == nil)
         #expect(await form.submit())
+        #expect(store.performed.contains { if case .createItem = $0 { true } else { false } })
+    }
+
+    @Test("a missing name blocks create even with no code collision")
+    func missingNameBlocksCreate() async {
+        let store = RecordingFormStore(FormFixtureSource(catalogue: FormFixture.catalogue))
+        let form = model(store)
+        let loading = await form.startAndAwaitReady()
+        defer { loading.cancel() }
+
+        #expect(!form.canSubmit)
+        #expect(await form.submit() == false)
+        #expect(store.performed.isEmpty)
     }
 
     @Test("an item's own code is not a collision when editing it")
@@ -144,8 +153,10 @@ internal struct InventoryFormModelTests {
         #expect(await form.await { form.draft.code.assist == .idle })
     }
 
-    @Test("a suggestion fills the code and keeps the runners-up; typing over it is an edit")
-    func suggestionIsOffered() async {
+    @Test(
+        "a suggestion fills the code, is accepted once confirmed free, and typing over it is an edit"
+    )
+    func suggestionIsAcceptedThenEdited() async {
         let store = RecordingFormStore(FormFixtureSource(catalogue: FormFixture.catalogue))
         let form = model(
             store, suggester: InventoryCodeSuggester { _, _, _ in ["CBL-0042", "CBL-0043"] })
@@ -154,10 +165,28 @@ internal struct InventoryFormModelTests {
 
         await form.suggestCode()
         #expect(form.draft.code.value == "CBL-0042")
-        #expect(form.draft.code.assist == .offered(alternatives: ["CBL-0043"]))
+        #expect(form.draft.code.assist == .accepted)
+        #expect(form.draft.code.heldBy == nil)
 
         form.codeChanged(to: "CBL-0042-A")
         #expect(form.draft.code.assist == .edited(suggested: "CBL-0042"))
+    }
+
+    @Test("a suggestion that turns out to be held stays offered, not accepted")
+    func suggestionAlreadyHeldIsNotAccepted() async {
+        let store = RecordingFormStore(
+            FormFixtureSource(
+                items: [FormFixture.item("item-9", "Kitchen 09", code: "CBL-0042")],
+                catalogue: FormFixture.catalogue))
+        let form = model(
+            store, suggester: InventoryCodeSuggester { _, _, _ in ["CBL-0042"] })
+        let loading = await form.startAndAwaitReady()
+        defer { loading.cancel() }
+
+        await form.suggestCode()
+
+        #expect(form.draft.code.heldBy == "Kitchen 09")
+        #expect(form.draft.code.assist == .offered(alternatives: []))
     }
 
     @Test("a server that cannot suggest shows unavailable, not an error")

@@ -96,8 +96,11 @@ internal final class InventoryItemFormModel {
         InventoryItemFormSubmission.issues(for: draft, catalogue: catalogue)
     }
 
+    /// A code already worn by something else never blocks Create: the item
+    /// is finished without one, the same as it would be with no code typed
+    /// at all. Only a missing name does.
     internal var canSubmit: Bool {
-        phase == .ready && !isSubmitting && draft.isNamed && draft.code.heldBy == nil
+        phase == .ready && !isSubmitting && draft.isNamed
     }
 
     /// Whether Cancel has something to lose and so asks first.
@@ -161,6 +164,9 @@ internal final class InventoryItemFormModel {
             draft.code.value = first
             draft.code.assist = .offered(alternatives: Array(suggestions.dropFirst()))
             await checkCode()
+            if draft.code.normalized == first, draft.code.heldBy == nil {
+                draft.code.assist = .accepted
+            }
         } catch RepositoryError.unavailable, RepositoryError.transport {
             draft.code.assist = .offline
         } catch {
@@ -169,11 +175,18 @@ internal final class InventoryItemFormModel {
     }
 
     /// Writes the draft. Returns true when every command landed and the form
-    /// can close; there is no interstitial after a create.
+    /// can close; there is no interstitial after a create. A code already
+    /// worn by something else never stops this: the store refuses only
+    /// `item.setCode`, per `InventoryItemFormSubmission`'s doc, and the rest
+    /// of the write still lands.
     internal func submit() async -> Bool {
         showsValidation = true
         await checkCode()
-        guard issues.isEmpty, phase == .ready, !isSubmitting else { return false }
+        let blocking = issues.filter {
+            if case .codeTaken = $0 { return false }
+            return true
+        }
+        guard blocking.isEmpty, phase == .ready, !isSubmitting else { return false }
         isSubmitting = true
         defer { isSubmitting = false }
         for command in commands {

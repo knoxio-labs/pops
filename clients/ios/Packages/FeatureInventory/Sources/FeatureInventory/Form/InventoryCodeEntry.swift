@@ -33,11 +33,16 @@ internal enum InventoryCodeAssist: Hashable, Sendable {
     /// Nothing asked. The field is the person's alone.
     case idle
     case suggesting
-    /// A code proposed and put in the field, with the runners-up behind it.
+    /// A code proposed and put in the field, with the runners-up behind it,
+    /// not yet checked against the replica.
     case offered(alternatives: [String])
+    /// Offered, then confirmed free: `checkCode()` found nobody already
+    /// holding it. The suggestion stands until it is typed over.
+    case accepted
     /// Offered, then cleared. The field stays blank and says nothing further.
     case rejected
-    /// Offered, then typed over. `suggested` is what was offered.
+    /// Offered or accepted, then typed over. `suggested` is what was
+    /// offered.
     case edited(suggested: String)
     /// No connection, so no suggestion. Typing one by hand still works, and is
     /// still checked against this phone's replica.
@@ -49,14 +54,14 @@ internal enum InventoryCodeAssist: Hashable, Sendable {
     internal var canSuggest: Bool {
         switch self {
         case .suggesting, .offline, .unavailable: false
-        case .idle, .offered, .rejected, .edited: true
+        case .idle, .offered, .accepted, .rejected, .edited: true
         }
     }
 
     /// The state after the person typed `value` over whatever was there.
     internal func typed(_ value: String, previous: String) -> InventoryCodeAssist {
         switch self {
-        case .offered:
+        case .offered, .accepted:
             return value.isEmpty ? .rejected : .edited(suggested: previous)
         case .edited(let suggested):
             return value == suggested ? .offered(alternatives: []) : self
