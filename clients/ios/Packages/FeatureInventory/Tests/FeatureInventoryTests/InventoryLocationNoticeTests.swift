@@ -181,5 +181,7 @@ private struct RefusingResolveStore: InventoryStore {
         try await inner.uploadPhoto(sha256: sha256, data: data, contentType: contentType)
     }
 
+    func discardPhoto(_ sha256: String) async throws { try await inner.discardPhoto(sha256) }
+
     func status() -> AsyncStream<InventoryReplicaStatus> { inner.status() }
 }
