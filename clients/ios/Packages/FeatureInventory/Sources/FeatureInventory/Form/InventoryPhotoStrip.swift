@@ -44,6 +44,7 @@ internal struct InventoryPhotoStrip: View {
         .scrollIndicators(.hidden)
     }
 
+    @MainActor
     private var captureTile: some View {
         Button {
             if InventoryCameraAvailability.isAvailable {

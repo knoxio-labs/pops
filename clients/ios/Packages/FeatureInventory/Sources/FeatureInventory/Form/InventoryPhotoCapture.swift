@@ -17,6 +17,10 @@ internal enum InventoryPhotoSource: String, Identifiable {
     /// Whether this device can take a picture at all — a simulator or an
     /// iPad without a rear camera cannot, and the capture tile's menu should
     /// never offer a source that only shows an system alert.
+    ///
+    /// `UIImagePickerController` is main-actor-isolated, so the check is
+    /// too; every caller is UI code and already runs there.
+    @MainActor
     internal enum InventoryCameraAvailability {
         internal static var isAvailable: Bool {
             UIImagePickerController.isSourceTypeAvailable(.camera)
@@ -79,6 +83,7 @@ internal enum InventoryPhotoSource: String, Identifiable {
 
 #else
 
+    @MainActor
     internal enum InventoryCameraAvailability {
         internal static var isAvailable: Bool { false }
     }
