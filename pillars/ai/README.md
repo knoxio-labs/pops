@@ -104,6 +104,27 @@ refused, and its AI spend is simply absent from the ledger — so the row here
 and the credential on the calling side are provisioned together or neither is
 worth anything.
 
+## Who may call it
+
+An inbound service-account gate also covers the whole contract surface
+(ADR-044, `src/api/middleware/service-account-scope.ts`), separate from the
+internal-credential check above: it governs `X-API-Key`, not
+`x-pops-internal-credential`, and the two never overlap on the same path.
+Every route the gate covers stays reachable with NO credential at all — the
+AI-ops UI's browser traffic through the shell's nginx presents none, and this
+gate leaves that unconditionally admitted, exactly as before it existed. A
+caller that DOES present an `X-API-Key` is held to the service account
+behind it, scoped by the contract's own shape: `POST /codes/rank` requires
+`ai.codes.rank`.
+
+Today's only credentialled caller is inventory's `codes/suggest`
+(`pillars/inventory/src/api/ai/client.ts`), reordering the deterministic
+candidates it already computed. Its registry service account needs
+`ai.codes.rank` granted before this ships, or every call 403s and
+`codes/suggest` silently falls back to its own deterministic order — a
+missing grant degrades gracefully here, but is still worth fixing before
+release.
+
 ## Commands
 
 ```bash
