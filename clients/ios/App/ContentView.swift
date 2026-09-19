@@ -40,6 +40,10 @@ internal struct ContentView: View {
                     entity: entity, dependencies: dependencies,
                     entityRouter: composition.entityRouter)
             }
+            .environment(
+                \.startRePairing,
+                RePairingAction { composition.session.send(.revoked(.credentialsRejected)) }
+            )
     }
 
     /// Identifies Inventory's search tab in the switcher below. Not a

@@ -35,6 +35,7 @@ public struct InventoryEntityView: View {
                 }
         }
         .inventoryItemFormPresentation(store: store)
+        .inventorySyncInterruptions(store: store)
     }
 }
 
