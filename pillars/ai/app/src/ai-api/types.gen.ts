@@ -1101,6 +1101,49 @@ export type AiUsageGetStatsResponses = {
 
 export type AiUsageGetStatsResponse = AiUsageGetStatsResponses[keyof AiUsageGetStatsResponses];
 
+export type CodesRankData = {
+  /**
+   * Body
+   */
+  body?: {
+    candidates: Array<string>;
+    name: string;
+    typeKey?: string;
+  };
+  path?: never;
+  query?: never;
+  url: '/codes/rank';
+};
+
+export type CodesRankErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+  };
+  /**
+   * 403
+   */
+  403: {
+    message: string;
+  };
+};
+
+export type CodesRankError = CodesRankErrors[keyof CodesRankErrors];
+
+export type CodesRankResponses = {
+  /**
+   * 200
+   */
+  200: {
+    ranked: Array<string>;
+  };
+};
+
+export type CodesRankResponse = CodesRankResponses[keyof CodesRankResponses];
+
 export type JobsListData = {
   body?: never;
   path?: never;
