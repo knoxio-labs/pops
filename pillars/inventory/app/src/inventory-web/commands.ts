@@ -32,7 +32,10 @@ interface NewLocationInput {
 
 /** One command and its arguments, keyed by `op` exactly as the server expects. */
 export type InventoryCommand =
-  | { op: 'item.move'; args: { to: InventoryPlacementTarget; verb: 'move' | 'store' | 'pickUp' } }
+  | {
+      op: 'item.move';
+      args: { to: InventoryPlacementTarget; verb: 'move' | 'store' | 'pick_up' | 'put_back' };
+    }
   | { op: 'item.setAccess'; args: { access: 'open' | 'closed' } }
   | { op: 'item.setFull'; args: { full: boolean } }
   | { op: 'item.setLifecycle'; args: { lifecycle: string; reason?: string } }
