@@ -40,16 +40,7 @@ internal struct InventoryRepairScreen: View {
         .navigationTitle("Repair")
         .inventoryTitleDisplay(large: false)
         .tint(.popsInventory)
-        .alert(
-            InventoryCopy.failureTitle,
-            isPresented: Binding(
-                get: { model.failure != nil }, set: { if !$0 { model.failure = nil } }),
-            presenting: model.failure
-        ) { _ in
-            Button("OK", role: .cancel) {}
-        } message: { failure in
-            Text(InventoryCopy.message(for: failure))
-        }
+        .inventoryWriteFailureAlerts($model.failure)
     }
 
     private func content(_ row: InventorySyncRepairRow) -> some View {

@@ -52,16 +52,7 @@ internal struct InventoryItemFormView: View {
         .inventoryUndoCapsule(photoUndoOffer) { offer in
             Task { await model.undoPhotoRemoval(offer) }
         }
-        .alert(
-            InventoryCopy.failureTitle,
-            isPresented: Binding(
-                get: { model.failure != nil }, set: { if !$0 { model.failure = nil } }),
-            presenting: model.failure
-        ) { _ in
-            Button("OK", role: .cancel) {}
-        } message: { failure in
-            Text(InventoryCopy.message(for: failure))
-        }
+        .inventoryWriteFailureAlerts($model.failure)
     }
 
     /// A hand-built binding rather than `$model.photoRunner.undoOffer`:

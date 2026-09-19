@@ -84,7 +84,24 @@ internal struct InventoryRepairViewModelTests {
         try await store.resolve("m1", with: .keepMine())
         await model.commit(keepingMine: true, code: nil)
 
-        #expect(model.failure == .contractMismatch)
+        #expect(model.failure == .repository(.contractMismatch))
+        #expect(model.outcome == nil)
+    }
+
+    @Test("a resolution the phone has no room for reports storage full, not a network fault")
+    func storageFullCommitIsReported() async throws {
+        let repair = Fixture.repair("m1", on: "box", kind: .conflict, field: "name")
+        let store = RefusingResolveStore(
+            InMemoryInventoryStore(repairs: [repair]), error: InventoryStorageError.full)
+        let model = InventoryRepairViewModel(repairId: "m1", store: store)
+        let task = await model.startAndAwaitFirstAnswer()
+        defer { task.cancel() }
+        #expect(model.row != nil)
+
+        await model.commit(keepingMine: true, code: nil)
+
+        #expect(model.failure == .storageFull)
+        #expect(InventoryWriteFailureAlerts.storageFullFailure(model.failure) == .storageFull)
         #expect(model.outcome == nil)
     }
 

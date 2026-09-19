@@ -1,6 +1,5 @@
 import AppCore
 import AppCoreFakes
-import Foundation
 import Testing
 
 @testable import FeatureInventory
@@ -144,44 +143,4 @@ internal struct InventoryLocationNoticeTests {
 
         #expect(store.resolutions.isEmpty)
     }
-}
-
-/// Forwards everything to an in-memory store except a repair's resolution,
-/// which it refuses the way an unreachable server would.
-private struct RefusingResolveStore: InventoryStore {
-    let inner: InMemoryInventoryStore
-
-    init(_ inner: InMemoryInventoryStore) { self.inner = inner }
-
-    func observe<Value: Sendable>(_ query: InventoryQuery<Value>) -> AsyncStream<Value> {
-        inner.observe(query)
-    }
-
-    func perform(_ command: InventoryCommand) async throws -> InventoryReceipt {
-        try await inner.perform(command)
-    }
-
-    func undo(_ receipt: InventoryReceipt) async throws { try await inner.undo(receipt) }
-
-    func resolve(_ repairId: InventoryRepair.ID, with choice: InventoryRepairChoice) async throws {
-        throw RepositoryError.unavailable
-    }
-
-    func download() async throws { try await inner.download() }
-
-    func refresh() async { await inner.refresh() }
-
-    func photo(_ sha256: String, variant: InventoryPhotoVariant) async throws -> Data {
-        try await inner.photo(sha256, variant: variant)
-    }
-
-    func uploadPhoto(
-        sha256: String, data: Data, contentType: InventoryMediaContentType
-    ) async throws -> InventoryMediaUploadResult {
-        try await inner.uploadPhoto(sha256: sha256, data: data, contentType: contentType)
-    }
-
-    func discardPhoto(_ sha256: String) async throws { try await inner.discardPhoto(sha256) }
-
-    func status() -> AsyncStream<InventoryReplicaStatus> { inner.status() }
 }
