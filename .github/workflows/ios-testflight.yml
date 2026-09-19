@@ -1,15 +1,17 @@
 name: iOS TestFlight
 
 run-name: >-
-  iOS TestFlight for ${{ github.event.workflow_run.head_sha || inputs.sha }}
+  iOS TestFlight for ${{ inputs.sha || github.sha }}
 
-# Ships what iOS Quality already proved, and nothing else. A `workflow_run` of
-# iOS Quality rather than a `push` trigger of its own, so a commit reaches
-# TestFlight only after the full lane — tests, analyzer, UI flow — passed on
-# that exact commit. The merge-queue lane does not prove that (it compiles and
-# skips the suites), which is why the queue's green is not enough on its own.
-# iOS Quality's own path filter is what scopes this: a merge that touches no
-# iOS input never produces a run to chain from.
+# Ships what iOS Quality already proved, and nothing else. iOS Quality runs
+# its full job — suite, analyzer, Release check, UI flow — in the merge queue,
+# on the very commit that then lands on `main`, and no longer runs on `push`
+# at all (POPS-4152: that second run rebuilt the same commit on the shared
+# five-runner macOS pool). So this triggers on the push and asks the API what
+# the merge group's run said: `scripts/ci/testflight-ship-sha.mjs` picks the
+# newest pushed commit whose merge-group iOS job actually ran and passed, and
+# ships nothing if the newest one that ran did not pass. A merge that touches
+# no iOS input has its lane scoped out, so there is nothing to ship.
 #
 # Both apps ship from every run. `DesignPlayground` depends on every Feature
 # package and on AppCore and DesignSystem, so the two apps share nearly every
@@ -23,9 +25,8 @@ run-name: >-
 # commit. It takes a commit already on `main`, never a branch tip.
 
 on:
-  workflow_run:
-    workflows: ["iOS Quality"]
-    types: [completed]
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       sha:
@@ -37,22 +38,40 @@ permissions:
   contents: read
 
 jobs:
+  # Only once the repository variable TESTFLIGHT_ENABLED is `true`, set as the
+  # last step of the App Store Connect setup (POPS-4136). Until then both jobs
+  # skip rather than failing on missing secrets after every merge.
+  pick:
+    name: Pick the commit to ship
+    if: vars.TESTFLIGHT_ENABLED == 'true' && github.repository == 'knoxio-labs/pops'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      sha: ${{ steps.dispatch.outputs.sha || steps.push.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Take the dispatched commit
+        id: dispatch
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          SHA: ${{ inputs.sha }}
+        run: echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+      - name: Read the merge group's iOS verdict
+        id: push
+        if: github.event_name == 'push'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/ci/testflight-ship-sha.mjs
+
   upload:
     name: Upload ${{ matrix.scheme }}
-    # Only a push to `main` of this repository that iOS Quality passed. A pull
-    # request's run and a merge group's run complete this trigger too, and
-    # must not ship.
-    #
-    # And only once the repository variable TESTFLIGHT_ENABLED is `true`, set
-    # as the last step of the App Store Connect setup (POPS-4136). Until then
-    # the job skips rather than failing on missing secrets after every merge.
-    if: >-
-      vars.TESTFLIGHT_ENABLED == 'true' &&
-      (github.event_name == 'workflow_dispatch' ||
-       (github.event.workflow_run.conclusion == 'success' &&
-        github.event.workflow_run.event == 'push' &&
-        github.event.workflow_run.head_repository.full_name == github.repository &&
-        github.event.workflow_run.head_branch == 'main'))
+    needs: [pick]
+    if: always() && needs.pick.result == 'success' && needs.pick.outputs.sha != ''
     runs-on: macos-latest
     # The environment named `main` — deployments restricted to the `main`
     # branch in the repository settings — is the only holder of the App Store
@@ -71,7 +90,7 @@ jobs:
     # cancel a newer commit's upload. (`env` is not available here, hence the
     # expression spelled out rather than `env.SHA`.)
     concurrency:
-      group: ios-testflight-${{ matrix.scheme }}-${{ github.event.workflow_run.head_sha || inputs.sha }}
+      group: ios-testflight-${{ matrix.scheme }}-${{ needs.pick.outputs.sha }}
       cancel-in-progress: true
     defaults:
       run:
@@ -79,7 +98,7 @@ jobs:
     env:
       # `generate` needs xcodegen and nothing else mise would install here.
       MISE_DISABLE_TOOLS: rust,node,pnpm,maestro,swiftlint
-      SHA: ${{ github.event.workflow_run.head_sha || inputs.sha }}
+      SHA: ${{ needs.pick.outputs.sha }}
 
     steps:
       # Full history: the build number is the commit count.
