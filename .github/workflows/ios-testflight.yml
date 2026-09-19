@@ -42,12 +42,19 @@ jobs:
     # Only a push to `main` of this repository that iOS Quality passed. A pull
     # request's run and a merge group's run complete this trigger too, and
     # must not ship.
+    #
+    # And only once the repository variable TESTFLIGHT_ENABLED is `true`, set
+    # as the last step of the App Store Connect setup (POPS-4136). Until then
+    # the job skips rather than failing on missing secrets after every merge —
+    # and rather than letting its first run auto-create the `testflight`
+    # environment with no branch restriction on it.
     if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (github.event.workflow_run.conclusion == 'success' &&
-       github.event.workflow_run.event == 'push' &&
-       github.event.workflow_run.head_repository.full_name == github.repository &&
-       github.event.workflow_run.head_branch == 'main')
+      vars.TESTFLIGHT_ENABLED == 'true' &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event == 'push' &&
+        github.event.workflow_run.head_repository.full_name == github.repository &&
+        github.event.workflow_run.head_branch == 'main'))
     runs-on: macos-latest
     # Restricted to `main` in the repository settings, and the only holder of
     # the App Store Connect key and the team id. The repo is public: a job
