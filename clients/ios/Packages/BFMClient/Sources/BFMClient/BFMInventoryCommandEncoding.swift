@@ -15,16 +15,11 @@ internal enum BFMInventoryCommandEncoding {
         internal let args: [String: (any Sendable)?]
     }
 
-    /// - Throws: ``RepositoryError/contractMismatch`` for `.revertEvent`,
-    ///   whose entity is the reverted event's own (`event.revert`'s doc:
-    ///   "the mutation's entityId must be the event's entity") — a fact
-    ///   `InventoryCommand` does not carry (its own `entityId` is `nil` for
-    ///   this case). Submitting a revert needs that id from whichever screen
-    ///   is showing the history it came from, which nothing on this seam is
-    ///   handed today (POPS-4174).
+    /// A revert's entity is the reverted event's own (`event.revert`'s
+    /// contract: "the mutation's entityId must be the event's entity"); its
+    /// kind is not sent, because the server reads it off the event.
     internal static func envelope(for command: InventoryCommand) throws -> Envelope {
-        guard let entityId = command.entityId else { throw RepositoryError.contractMismatch }
-        return Envelope(op: op(for: command), entityId: entityId, args: try args(for: command))
+        Envelope(op: op(for: command), entityId: command.entityId, args: try args(for: command))
     }
 
     /// Split into groups purely to stay under this repo's cyclomatic-complexity
@@ -124,7 +119,7 @@ internal enum BFMInventoryCommandEncoding {
         case .renameLocation(_, let name): ["name": name]
         case .moveLocation(_, let parentId): ["parentId": parentId]
         case .deleteLocation: [:]
-        case .revertEvent(let seq): ["seq": seq]
+        case .revertEvent(let seq, _, _): ["seq": seq]
         default:
             preconditionFailure("every other case is covered by itemWriteArgs/itemAuxArgs")
         }

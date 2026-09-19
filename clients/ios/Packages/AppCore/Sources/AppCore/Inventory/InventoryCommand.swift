@@ -105,12 +105,14 @@ public enum InventoryCommand: Hashable, Sendable {
     case renameLocation(id: InventoryLocation.ID, name: String)
     case moveLocation(id: InventoryLocation.ID, parentId: InventoryLocation.ID?)
     case deleteLocation(id: InventoryLocation.ID)
-    case revertEvent(seq: Int)
+    /// Undoes one event (`event.revert`). The server requires the mutation's
+    /// entity to be the one the event is about, so the command names it:
+    /// `entityKind` and `entityId` are the reverted event's own.
+    case revertEvent(seq: Int, entityKind: InventoryEntityKind, entityId: String)
 
     /// The entity the command's outcome, receipt and any repair are filed
-    /// under. `revertEvent` names none of its own: it is filed under whatever
-    /// entity the reverted event touched, which only the store's log knows.
-    public var entityId: String? {
+    /// under. A revert is filed under the entity of the event it undoes.
+    public var entityId: String {
         switch self {
         case .createItem(let item): item.id
         case .editItem(let id, _, _, _): id
@@ -130,7 +132,16 @@ public enum InventoryCommand: Hashable, Sendable {
         case .renameLocation(let id, _): id
         case .moveLocation(let id, _): id
         case .deleteLocation(let id): id
-        case .revertEvent: nil
+        case .revertEvent(_, _, let entityId): entityId
+        }
+    }
+
+    /// Which table ``entityId`` names.
+    public var entityKind: InventoryEntityKind {
+        switch self {
+        case .createLocation, .renameLocation, .moveLocation, .deleteLocation: .location
+        case .revertEvent(_, let entityKind, _): entityKind
+        default: .item
         }
     }
 }

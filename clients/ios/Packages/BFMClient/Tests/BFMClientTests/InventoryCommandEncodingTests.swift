@@ -59,10 +59,15 @@ internal struct InventoryCommandEncodingTests {
         #expect(envelope.args["reason"] as? String == "used_up")
     }
 
-    @Test("event.revert has no entity of its own to send, and fails loudly rather than guessing")
-    func revertHasNoEntity() throws {
-        #expect(throws: RepositoryError.contractMismatch) {
-            _ = try BFMInventoryCommandEncoding.envelope(for: .revertEvent(seq: 1))
-        }
+    @Test("event.revert sends the reverted event's entity as the mutation's own")
+    func revertCarriesItsEntity() throws {
+        let envelope = try BFMInventoryCommandEncoding.envelope(
+            for: .revertEvent(seq: 3, entityKind: .location, entityId: "loc-1")
+        )
+
+        #expect(envelope.op == "event.revert")
+        #expect(envelope.entityId == "loc-1")
+        #expect(envelope.args.count == 1)
+        #expect(envelope.args["seq"] as? Int == 3)
     }
 }
