@@ -44,6 +44,10 @@ Two things it reaches for belong to other screens, and it asks for them rather t
 
 Move, from any of the three, and from the dashboard's own In hand section, goes through the same `inventoryPlacementPicker` and `InventoryCommandRunner` Containers and Locations use (POPS-4064): each view model carries its own runner, built from the same store as its `InventoryWriter`.
 
+## A type arrives
+
+`Untyped/` is the type-arrived sheet (POPS-4106), attached to the dashboard with `inventoryTypeArrivedSheet(_:)`. `InventoryTypeArrivalModel` follows `InventoryQuery.typeArrival`, records the ask with `settleTypeArrival(typeKey:)` before opening the sheet, so it shows once however it is closed, and Apply types the ticked items with one `item.changeType` each through the dashboard's `InventoryCommandRunner`, whose capsule offers Undo.
+
 ## Deduplication
 
 Search, Browse and In hand share the row, list-panel, motion, symbol and platform-glass components the containers and locations screens already draw from (`Components/`), rather than each carrying its own copy: a screen that needs a new one of these adds it there, not beside itself.

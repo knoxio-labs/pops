@@ -30,12 +30,16 @@ internal final class InventoryDashboardViewModel {
     internal let writer: InventoryWriter
     /// Move's writes: the one runner every placement picker in this package shares.
     internal let runner: InventoryCommandRunner
+    /// The type-arrived sheet, asked over the dashboard and typing through
+    /// the same runner, so its Undo is the dashboard's capsule.
+    internal let typeArrival: InventoryTypeArrivalModel
     private let store: any InventoryStore
 
     internal init(store: any InventoryStore) {
         self.store = store
         writer = InventoryWriter(store: store)
         runner = InventoryCommandRunner(store: store)
+        typeArrival = InventoryTypeArrivalModel(runner: runner)
     }
 
     internal var dashboard: InventoryDashboard? {
