@@ -82,7 +82,9 @@ internal struct ContentView: View {
     /// otherwise the first — so a reload that drops the chosen feature lands
     /// somewhere real instead of on a tab that no longer exists. Only asked
     /// with two or more features available, which is when there are tabs.
-    internal static func shownFeature(
+    /// `nonisolated` because it is pure: a `View` puts its members on the main
+    /// actor, which this rule has no need of.
+    nonisolated internal static func shownFeature(
         chosen: MobileFeature?, available: [MobileFeature]
     ) -> MobileFeature {
         if let chosen, available.contains(chosen) { return chosen }
