@@ -38,6 +38,7 @@ public struct InventoryFlowView: View {
                 }
         }
         .inventoryItemFormPresentation(store: store)
+        .inventorySyncInterruptions(store: store)
     }
 
     private var scanControl: some View {

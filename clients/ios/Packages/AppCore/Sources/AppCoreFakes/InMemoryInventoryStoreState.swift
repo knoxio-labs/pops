@@ -17,6 +17,17 @@ extension InMemoryInventoryStore {
         var nextSeq: Int
         var undoLog: [String: UndoEntry] = [:]
         var observers: [UUID: Observer] = [:]
+        /// Changes a test has staged as waiting to sync, for the Sync page's
+        /// ledger and a row's mark. `InMemoryInventoryStore.perform(_:)` never
+        /// appends here itself (see the type's own doc comment): a real drain
+        /// does not exist yet (B3/B4), so a test seeds this directly with
+        /// `addWaitingMutation(_:)`.
+        var waiting: [InventoryQueuedMutation] = []
+        /// When set, the next `perform(_:)` or `download()` fails with
+        /// `InventoryStorageError.full` instead of applying, and the flag
+        /// clears itself — the same one-shot shape a real free-space check
+        /// would have.
+        var forcedStorageFull = false
 
         func inventoryItem(id: String) -> InventoryItem? { items[id] }
 
@@ -85,7 +96,7 @@ extension InMemoryInventoryStore {
         func inventoryCatalogue() -> InventoryCatalogue { catalogue }
 
         func inventorySyncLedger() -> InventoryReplicaSyncLedger {
-            InventoryReplicaSyncLedger(waiting: [], repairs: repairs, resolved: resolved)
+            InventoryReplicaSyncLedger(waiting: waiting, repairs: repairs, resolved: resolved)
         }
 
         func inventoryReplicaStatus() -> InventoryReplicaStatus { replicaStatus }

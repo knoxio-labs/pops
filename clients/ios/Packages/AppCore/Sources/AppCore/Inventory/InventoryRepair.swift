@@ -73,6 +73,9 @@ public struct InventoryRepair: Identifiable, Hashable, Sendable {
     public let options: [InventoryRepairOption]
     /// The code a collision proposes instead.
     public let suggestedCode: String?
+    /// Who already holds the colliding code, for `codeCollision`'s "B412 is
+    /// on Kitchen 09" line. Mirrors the wire outcome's `heldBy.name`.
+    public let heldByName: String?
     public let openedAt: Date
 
     public init(
@@ -83,6 +86,7 @@ public struct InventoryRepair: Identifiable, Hashable, Sendable {
         field: String? = nil,
         options: [InventoryRepairOption] = [],
         suggestedCode: String? = nil,
+        heldByName: String? = nil,
         openedAt: Date
     ) {
         self.id = id
@@ -92,6 +96,7 @@ public struct InventoryRepair: Identifiable, Hashable, Sendable {
         self.field = field
         self.options = options
         self.suggestedCode = suggestedCode
+        self.heldByName = heldByName
         self.openedAt = openedAt
     }
 }

@@ -1,0 +1,66 @@
+import AppCore
+import Foundation
+
+/// Everything the Sync page draws, read from one state of the store: the
+/// replica's own status and its ledger of waiting, needing-attention and
+/// resolved changes never disagree with each other, because both come from
+/// the same snapshot.
+internal struct InventorySyncPage: Equatable, Sendable {
+    internal let status: InventoryReplicaStatus
+    internal let ledger: InventoryReplicaSyncLedger
+    internal let resolvedToday: Int
+    /// Every row, resolved against the same read as `status` and `ledger`:
+    /// a name looked up after this state has moved on would show the wrong
+    /// record for the row it is drawn beside.
+    internal let waitingRows: [InventorySyncWaitingRow]
+    internal let repairRows: [InventorySyncRepairRow]
+    internal let resolvedRows: [InventorySyncResolvedRow]
+
+    internal static func query() -> InventoryQuery<InventorySyncPage> {
+        InventoryQuery { InventorySyncPage(reading: $0) }
+    }
+
+    internal init(reading source: any InventoryQuerySource, now: Date = .now) {
+        status = source.inventoryReplicaStatus()
+        let ledger = source.inventorySyncLedger()
+        self.ledger = ledger
+        let calendar = Calendar.current
+        resolvedToday =
+            ledger.resolved.filter { calendar.isDate($0.resolvedAt, inSameDayAs: now) }
+            .count
+        waitingRows = Self.buildWaitingRows(ledger, reading: source)
+        repairRows = Self.buildRepairRows(ledger, reading: source)
+        resolvedRows = Self.buildResolvedRows(ledger, reading: source)
+    }
+
+    /// The batch the drain currently has in flight, if any.
+    internal var sending: [InventoryQueuedMutation] {
+        ledger.waiting.filter { $0.progress != nil }
+    }
+}
+
+/// The Sync page's header line: whether this phone can reach the server, and
+/// when it last did. Distinct from `InventoryDashboardSync` (the dashboard's
+/// quiet pill, silent when current): the header always says something,
+/// because the whole point of this page is to say where sync stands.
+internal enum InventorySyncHeaderStatus: Equatable {
+    case online(lastRefreshAt: Date?)
+    case offline(lastRefreshAt: Date?)
+    case syncing(count: Int)
+
+    internal static func derive(page: InventorySyncPage) -> Self {
+        let sendingCount = page.sending.count
+        switch page.status {
+        case .offline(let since), .stale(let since):
+            return .offline(lastRefreshAt: since)
+        case .blocked:
+            return .offline(lastRefreshAt: nil)
+        case .refreshing where sendingCount > 0:
+            return .syncing(count: sendingCount)
+        case .empty, .downloading, .current, .refreshing:
+            break
+        }
+        if sendingCount > 0 { return .syncing(count: sendingCount) }
+        return .online(lastRefreshAt: nil)
+    }
+}

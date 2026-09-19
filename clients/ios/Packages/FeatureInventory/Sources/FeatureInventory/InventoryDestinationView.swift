@@ -6,11 +6,11 @@ import SwiftUI
 ///
 /// Every route the dashboard links to already resolves here, so a link never
 /// lands on a blank page. Item detail, containers, locations, the items
-/// browser and In hand have moved; Sync and repair (POPS-4074) and the
-/// scanner (POPS-4078) have not. Until each lands its route shows a pending
-/// screen. Recent activity has no approved design at all; the playground
-/// draws the same pending screen for it. Nothing reaches this from the app
-/// until the Inventory tab is wired (POPS-4066).
+/// browser, In hand, and Sync and repair have moved; the scanner (POPS-4078)
+/// has not. Until it lands its route shows a pending screen. Recent activity
+/// has no approved design at all; the playground draws the same pending
+/// screen for it. Nothing reaches this from the app until the Inventory tab
+/// is wired (POPS-4066).
 internal struct InventoryDestinationView: View {
     internal let route: InventoryRoute
     internal let store: any InventoryStore
@@ -23,6 +23,10 @@ internal struct InventoryDestinationView: View {
             InventoryInHandView(store: store)
         case .item(let id):
             InventoryItemDetailScreen(itemId: id, store: store)
+        case .syncRepair:
+            InventorySyncView(model: InventorySyncViewModel(store: store))
+        case .repair(let id):
+            InventoryRepairScreen(repairId: id, store: store)
         case .container(let id):
             InventoryContainerPage(model: InventoryContainerPageModel(id: id, store: store))
         case .locations:
@@ -48,6 +52,7 @@ internal struct InventoryDestinationView: View {
         case .item: "Item"
         case .container: "Container"
         case .place: "Location"
+        case .repair: "Repair"
         }
     }
 
@@ -63,6 +68,7 @@ internal struct InventoryDestinationView: View {
         case .item: "The item detail opens here."
         case .container: "The container opens here."
         case .place: "The place opens here."
+        case .repair: "The repair opens here."
         }
     }
 
@@ -73,7 +79,7 @@ internal struct InventoryDestinationView: View {
         case .locations, .place: "house"
         case .inHand: "hand.raised"
         case .activity: "clock.arrow.circlepath"
-        case .syncRepair: "arrow.trianglehead.2.clockwise.rotate.90"
+        case .syncRepair, .repair: "arrow.trianglehead.2.clockwise.rotate.90"
         case .scan: "barcode.viewfinder"
         }
     }

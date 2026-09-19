@@ -40,6 +40,11 @@ internal struct InventorySymbol: Hashable, Sendable {
     /// and ships in this package's asset catalogue.
     internal static let open = InventorySymbol(system: "shippingbox.open", isCustom: true)
     internal static let restore = InventorySymbol(system: "arrow.uturn.backward")
+    internal static let resolved = InventorySymbol(system: "checkmark.circle.fill")
+    internal static let retry = InventorySymbol(system: "arrow.clockwise")
+    internal static let signIn = InventorySymbol(system: "person.crop.circle.badge.exclamationmark")
+    internal static let appUpdate = InventorySymbol(system: "arrow.up.circle.fill")
+    internal static let device = InventorySymbol(system: "iphone")
     internal static let search = InventorySymbol(system: "magnifyingglass")
     internal static let scan = InventorySymbol(system: "qrcode.viewfinder")
     internal static let dictate = InventorySymbol(system: "mic")
