@@ -1,0 +1,81 @@
+import DesignSystem
+import SwiftUI
+
+/// Turns a route into its screen.
+///
+/// Every route the dashboard links to already resolves here, so a link never
+/// lands on a blank page, but most screens have not moved into this package
+/// yet: item detail (POPS-4062), containers and locations (POPS-4064), the
+/// items browser and In hand (POPS-4065), Sync and repair (POPS-4074), and the
+/// scanner (POPS-4078). Until each lands its route shows a pending screen.
+/// Recent activity has no approved design at all; the playground draws the
+/// same pending screen for it. Nothing reaches this from the app until the
+/// Inventory tab is wired (POPS-4066).
+internal struct InventoryDestinationView: View {
+    internal let route: InventoryRoute
+
+    internal var body: some View {
+        InventoryPendingScreen(title: title, detail: detail, symbol: symbol)
+    }
+
+    private var title: String {
+        switch route {
+        case .items: "Items"
+        case .containers: "Containers"
+        case .locations: "Locations"
+        case .inHand: "In hand"
+        case .activity: "Recent activity"
+        case .syncRepair: "Sync"
+        case .scan: "Scan a label"
+        case .item: "Item"
+        case .container: "Container"
+        case .place: "Location"
+        }
+    }
+
+    private var detail: String {
+        switch route {
+        case .items: "The complete item catalogue opens here."
+        case .containers: "All open and closed containers open here."
+        case .locations: "The complete place hierarchy opens here."
+        case .inHand: "Everything picked up and not put anywhere yet opens here."
+        case .activity: "The complete movement and edit history opens here."
+        case .syncRepair: "Pending changes, conflicts, and repair actions open here."
+        case .scan: "Camera opens here and accepts a container or item label."
+        case .item: "The item detail opens here."
+        case .container: "The container opens here."
+        case .place: "The place opens here."
+        }
+    }
+
+    private var symbol: String {
+        switch route {
+        case .items, .item: "cube"
+        case .containers, .container: "shippingbox"
+        case .locations, .place: "house"
+        case .inHand: "hand.raised"
+        case .activity: "clock.arrow.circlepath"
+        case .syncRepair: "arrow.trianglehead.2.clockwise.rotate.90"
+        case .scan: "barcode.viewfinder"
+        }
+    }
+}
+
+/// A screen that has not moved into this package yet, drawn the way the
+/// design playground draws a route it has no surface for.
+internal struct InventoryPendingScreen: View {
+    internal let title: String
+    internal let detail: String
+    internal let symbol: String
+
+    internal var body: some View {
+        List {
+            Section {
+                Label(detail, systemImage: symbol)
+                    .font(.popsBody)
+                    .foregroundStyle(Color.popsForeground)
+            }
+        }
+        .navigationTitle(title)
+    }
+}
