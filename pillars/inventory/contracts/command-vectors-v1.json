@@ -1,0 +1,730 @@
+{
+  "version": 1,
+  "vectors": [
+    {
+      "name": "item.move-to-location",
+      "op": "item.move",
+      "seedLocations": [
+        {
+          "id": "10000000-0000-4000-8000-000000000001",
+          "name": "House"
+        }
+      ],
+      "seedItems": [
+        {
+          "id": "20000000-0000-4000-8000-000000000002",
+          "name": "Lamp",
+          "placement": {
+            "kind": "hand"
+          }
+        }
+      ],
+      "mutation": {
+        "mutationId": "30000000-0000-4000-8000-000000000001",
+        "op": "item.move",
+        "entityId": "20000000-0000-4000-8000-000000000002",
+        "baseRevision": 1,
+        "dependsOn": [],
+        "args": {
+          "to": {
+            "kind": "location",
+            "locationId": "10000000-0000-4000-8000-000000000001"
+          },
+          "verb": "move"
+        },
+        "clientTime": "2026-09-19T00:00:00.000Z"
+      },
+      "actor": {
+        "kind": "device",
+        "id": "device-fixture",
+        "label": "Fixture"
+      },
+      "outcome": {
+        "mutationId": "30000000-0000-4000-8000-000000000001",
+        "status": "applied",
+        "revision": 2,
+        "seq": 1,
+        "converged": false
+      }
+    },
+    {
+      "name": "item.setAccess-close",
+      "op": "item.setAccess",
+      "seedLocations": [],
+      "seedItems": [
+        {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "name": "Crate",
+          "placement": {
+            "kind": "hand"
+          },
+          "isContainer": true
+        }
+      ],
+      "mutation": {
+        "mutationId": "30000000-0000-4000-8000-000000000002",
+        "op": "item.setAccess",
+        "entityId": "20000000-0000-4000-8000-000000000001",
+        "baseRevision": 1,
+        "dependsOn": [],
+        "args": {
+          "access": "closed"
+        },
+        "clientTime": "2026-09-19T00:00:00.000Z"
+      },
+      "actor": {
+        "kind": "device",
+        "id": "device-fixture",
+        "label": "Fixture"
+      },
+      "outcome": {
+        "mutationId": "30000000-0000-4000-8000-000000000002",
+        "status": "applied",
+        "revision": 2,
+        "seq": 1,
+        "converged": false
+      }
+    },
+    {
+      "name": "item.setFull-true",
+      "op": "item.setFull",
+      "seedLocations": [],
+      "seedItems": [
+        {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "name": "Crate",
+          "placement": {
+            "kind": "hand"
+          },
+          "isContainer": true
+        }
+      ],
+      "mutation": {
+        "mutationId": "30000000-0000-4000-8000-000000000003",
+        "op": "item.setFull",
+        "entityId": "20000000-0000-4000-8000-000000000001",
+        "baseRevision": 1,
+        "dependsOn": [],
+        "args": {
+          "full": true
+        },
+        "clientTime": "2026-09-19T00:00:00.000Z"
+      },
+      "actor": {
+        "kind": "device",
+        "id": "device-fixture",
+        "label": "Fixture"
+      },
+      "outcome": {
+        "mutationId": "30000000-0000-4000-8000-000000000003",
+        "status": "applied",
+        "revision": 2,
+        "seq": 1,
+        "converged": false
+      }
+    },
+    {
+      "name": "item.setLifecycle-discard",
+      "op": "item.setLifecycle",
+      "seedLocations": [],
+      "seedItems": [
+        {
+          "id": "20000000-0000-4000-8000-000000000002",
+          "name": "Lamp",
+          "placement": {
+            "kind": "hand"
+          }
+        }
+      ],
+      "mutation": {
+        "mutationId": "30000000-0000-4000-8000-000000000004",
+        "op": "item.setLifecycle",
+        "entityId": "20000000-0000-4000-8000-000000000002",
+        "baseRevision": 1,
+        "dependsOn": [],
+        "args": {
+          "lifecycle": "discarded",
+          "reason": "broken"
+        },
+        "clientTime": "2026-09-19T00:00:00.000Z"
+      },
+      "actor": {
+        "kind": "device",
+        "id": "device-fixture",
+        "label": "Fixture"
+      },
+      "outcome": {
+        "mutationId": "30000000-0000-4000-8000-000000000004",
+        "status": "applied",
+        "revision": 2,
+        "seq": 1,
+        "converged": false
+      }
+    },
+    {
+      "name": "item.restoreDeleted",
+      "op": "item.restoreDeleted",
+      "seedLocations": [],
+      "seedItems": [
+        {
+          "id": "20000000-0000-4000-8000-000000000002",
+          "name": "Lamp",
+          "placement": {
+            "kind": "hand"
+          },
+          "deletedAt": "2026-09-19T00:00:00.000Z"
+        }
+      ],
+      "mutation": {
+        "mutationId": "30000000-0000-4000-8000-000000000005",
+        "op": "item.restoreDeleted",
+        "entityId": "20000000-0000-4000-8000-000000000002",
+        "baseRevision": null,
+        "dependsOn": [],
+        "args": {},
+        "clientTime": "2026-09-19T00:00:00.000Z"
+      },
+      "actor": {
+        "kind": "device",
+        "id": "device-fixture",
+        "label": "Fixture"
+      },
+      "outcome": {
+        "mutationId": "30000000-0000-4000-8000-000000000005",
+        "status": "applied",
+        "revision": 2,
+        "seq": 1,
+        "converged": false
+      }
+    },
+    {
+      "name": "event.revert-move",
+      "op": "event.revert",
+      "seedLocations": [
+        {
+          "id": "10000000-0000-4000-8000-000000000001",
+          "name": "House"
+        }
+      ],
+      "seedItems": [
+        {
+          "id": "20000000-0000-4000-8000-000000000002",
+          "name": "Lamp",
+          "placement": {
+            "kind": "hand"
+          }
+        }
+      ],
+      "mutation": {
+        "mutationId": "30000000-0000-4000-8000-000000000006",
+        "op": "event.revert",
+        "entityId": "20000000-0000-4000-8000-000000000002",
+        "baseRevision": null,
+        "dependsOn": [],
+        "args": {
+          "seq": 1
+        },
+        "clientTime": "2026-09-19T00:00:00.000Z"
+      },
+      "actor": {
+        "kind": "device",
+        "id": "device-fixture",
+        "label": "Fixture"
+      },
+      "outcome": {
+        "mutationId": "30000000-0000-4000-8000-000000000006",
+        "status": "applied",
+        "revision": 3,
+        "seq": 2,
+        "converged": false
+      }
+    },
+    {
+      "name": "item.create-untyped-in-hand",
+      "op": "item.create",
+      "seedLocations": [],
+      "seedItems": [],
+      "mutation": {
+        "mutationId": "30000000-0000-4000-8000-000000000007",
+        "op": "item.create",
+        "entityId": "20000000-0000-4000-8000-000000000002",
+        "baseRevision": null,
+        "dependsOn": [],
+        "args": {
+          "item": {
+            "name": "Lamp",
+            "placement": {
+              "kind": "hand"
+            }
+          }
+        },
+        "clientTime": "2026-09-19T00:00:00.000Z"
+      },
+      "actor": {
+        "kind": "device",
+        "id": "device-fixture",
+        "label": "Fixture"
+      },
+      "outcome": {
+        "mutationId": "30000000-0000-4000-8000-000000000007",
+        "status": "applied",
+        "revision": 1,
+        "seq": 1,
+        "converged": false
+      }
+    },
+    {
+      "name": "item.edit-name",
+      "op": "item.edit",
+      "seedLocations": [],
+      "seedItems": [
+        {
+          "id": "20000000-0000-4000-8000-000000000002",
+          "name": "Lamp",
+          "placement": {
+            "kind": "hand"
+          }
+        }
+      ],
+      "mutation": {
+        "mutationId": "30000000-0000-4000-8000-000000000008",
+        "op": "item.edit",
+        "entityId": "20000000-0000-4000-8000-000000000002",
+        "baseRevision": 1,
+        "dependsOn": [],
+        "args": {
+          "name": "Reading lamp"
+        },
+        "clientTime": "2026-09-19T00:00:00.000Z"
+      },
+      "actor": {
+        "kind": "device",
+        "id": "device-fixture",
+        "label": "Fixture"
+      },
+      "outcome": {
+        "mutationId": "30000000-0000-4000-8000-000000000008",
+        "status": "applied",
+        "revision": 2,
+        "seq": 1,
+        "converged": false
+      }
+    },
+    {
+      "name": "item.changeType-to-bulb",
+      "op": "item.changeType",
+      "seedLocations": [],
+      "seedItems": [
+        {
+          "id": "20000000-0000-4000-8000-000000000002",
+          "name": "Lamp",
+          "placement": {
+            "kind": "hand"
+          }
+        }
+      ],
+      "mutation": {
+        "mutationId": "30000000-0000-4000-8000-000000000009",
+        "op": "item.changeType",
+        "entityId": "20000000-0000-4000-8000-000000000002",
+        "baseRevision": 1,
+        "dependsOn": [],
+        "args": {
+          "typeKey": "bulb",
+          "fields": {
+            "Fitting": "E27"
+          }
+        },
+        "clientTime": "2026-09-19T00:00:00.000Z"
+      },
+      "actor": {
+        "kind": "device",
+        "id": "device-fixture",
+        "label": "Fixture"
+      },
+      "outcome": {
+        "mutationId": "30000000-0000-4000-8000-000000000009",
+        "status": "applied",
+        "revision": 2,
+        "seq": 1,
+        "converged": false
+      }
+    },
+    {
+      "name": "item.setCode",
+      "op": "item.setCode",
+      "seedLocations": [],
+      "seedItems": [
+        {
+          "id": "20000000-0000-4000-8000-000000000002",
+          "name": "Lamp",
+          "placement": {
+            "kind": "hand"
+          }
+        }
+      ],
+      "mutation": {
+        "mutationId": "30000000-0000-4000-8000-00000000000a",
+        "op": "item.setCode",
+        "entityId": "20000000-0000-4000-8000-000000000002",
+        "baseRevision": 1,
+        "dependsOn": [],
+        "args": {
+          "code": "B412"
+        },
+        "clientTime": "2026-09-19T00:00:00.000Z"
+      },
+      "actor": {
+        "kind": "device",
+        "id": "device-fixture",
+        "label": "Fixture"
+      },
+      "outcome": {
+        "mutationId": "30000000-0000-4000-8000-00000000000a",
+        "status": "applied",
+        "revision": 2,
+        "seq": 1,
+        "converged": false
+      }
+    },
+    {
+      "name": "item.setQuantity",
+      "op": "item.setQuantity",
+      "seedLocations": [],
+      "seedItems": [
+        {
+          "id": "20000000-0000-4000-8000-000000000002",
+          "name": "Screws",
+          "placement": {
+            "kind": "hand"
+          },
+          "quantity": 1
+        }
+      ],
+      "mutation": {
+        "mutationId": "30000000-0000-4000-8000-00000000000b",
+        "op": "item.setQuantity",
+        "entityId": "20000000-0000-4000-8000-000000000002",
+        "baseRevision": 1,
+        "dependsOn": [],
+        "args": {
+          "quantity": 40
+        },
+        "clientTime": "2026-09-19T00:00:00.000Z"
+      },
+      "actor": {
+        "kind": "device",
+        "id": "device-fixture",
+        "label": "Fixture"
+      },
+      "outcome": {
+        "mutationId": "30000000-0000-4000-8000-00000000000b",
+        "status": "applied",
+        "revision": 2,
+        "seq": 1,
+        "converged": false
+      }
+    },
+    {
+      "name": "item.split",
+      "op": "item.split",
+      "seedLocations": [],
+      "seedItems": [
+        {
+          "id": "20000000-0000-4000-8000-000000000002",
+          "name": "Screws",
+          "placement": {
+            "kind": "hand"
+          },
+          "quantity": 40
+        }
+      ],
+      "mutation": {
+        "mutationId": "30000000-0000-4000-8000-00000000000c",
+        "op": "item.split",
+        "entityId": "20000000-0000-4000-8000-000000000002",
+        "baseRevision": 1,
+        "dependsOn": [],
+        "args": {
+          "newItemId": "20000000-0000-4000-8000-000000000003",
+          "quantity": 10
+        },
+        "clientTime": "2026-09-19T00:00:00.000Z"
+      },
+      "actor": {
+        "kind": "device",
+        "id": "device-fixture",
+        "label": "Fixture"
+      },
+      "outcome": {
+        "mutationId": "30000000-0000-4000-8000-00000000000c",
+        "status": "applied",
+        "revision": 2,
+        "seq": 1,
+        "converged": false
+      }
+    },
+    {
+      "name": "item.attachPhoto",
+      "op": "item.attachPhoto",
+      "seedLocations": [],
+      "seedItems": [
+        {
+          "id": "20000000-0000-4000-8000-000000000002",
+          "name": "Lamp",
+          "placement": {
+            "kind": "hand"
+          }
+        }
+      ],
+      "mutation": {
+        "mutationId": "30000000-0000-4000-8000-00000000000d",
+        "op": "item.attachPhoto",
+        "entityId": "20000000-0000-4000-8000-000000000002",
+        "baseRevision": null,
+        "dependsOn": [],
+        "args": {
+          "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "position": 0
+        },
+        "clientTime": "2026-09-19T00:00:00.000Z"
+      },
+      "actor": {
+        "kind": "device",
+        "id": "device-fixture",
+        "label": "Fixture"
+      },
+      "outcome": {
+        "mutationId": "30000000-0000-4000-8000-00000000000d",
+        "status": "applied",
+        "revision": 2,
+        "seq": 1,
+        "converged": false
+      }
+    },
+    {
+      "name": "item.removePhoto",
+      "op": "item.removePhoto",
+      "seedLocations": [],
+      "seedItems": [
+        {
+          "id": "20000000-0000-4000-8000-000000000002",
+          "name": "Lamp",
+          "placement": {
+            "kind": "hand"
+          }
+        }
+      ],
+      "mutation": {
+        "mutationId": "30000000-0000-4000-8000-00000000000e",
+        "op": "item.removePhoto",
+        "entityId": "20000000-0000-4000-8000-000000000002",
+        "baseRevision": null,
+        "dependsOn": [],
+        "args": {
+          "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "clientTime": "2026-09-19T00:00:00.000Z"
+      },
+      "actor": {
+        "kind": "device",
+        "id": "device-fixture",
+        "label": "Fixture"
+      },
+      "outcome": {
+        "mutationId": "30000000-0000-4000-8000-00000000000e",
+        "status": "applied",
+        "revision": 3,
+        "seq": 2,
+        "converged": false
+      }
+    },
+    {
+      "name": "item.reorderPhotos",
+      "op": "item.reorderPhotos",
+      "seedLocations": [],
+      "seedItems": [
+        {
+          "id": "20000000-0000-4000-8000-000000000002",
+          "name": "Lamp",
+          "placement": {
+            "kind": "hand"
+          }
+        }
+      ],
+      "mutation": {
+        "mutationId": "30000000-0000-4000-8000-00000000000f",
+        "op": "item.reorderPhotos",
+        "entityId": "20000000-0000-4000-8000-000000000002",
+        "baseRevision": null,
+        "dependsOn": [],
+        "args": {
+          "sha256s": ["aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"]
+        },
+        "clientTime": "2026-09-19T00:00:00.000Z"
+      },
+      "actor": {
+        "kind": "device",
+        "id": "device-fixture",
+        "label": "Fixture"
+      },
+      "outcome": {
+        "mutationId": "30000000-0000-4000-8000-00000000000f",
+        "status": "applied",
+        "revision": 3,
+        "seq": 2,
+        "converged": false
+      }
+    },
+    {
+      "name": "location.create-under-parent",
+      "op": "location.create",
+      "seedLocations": [
+        {
+          "id": "10000000-0000-4000-8000-000000000001",
+          "name": "House"
+        }
+      ],
+      "seedItems": [],
+      "mutation": {
+        "mutationId": "30000000-0000-4000-8000-000000000010",
+        "op": "location.create",
+        "entityId": "10000000-0000-4000-8000-000000000002",
+        "baseRevision": null,
+        "dependsOn": [],
+        "args": {
+          "location": {
+            "name": "Garage",
+            "parentId": "10000000-0000-4000-8000-000000000001"
+          }
+        },
+        "clientTime": "2026-09-19T00:00:00.000Z"
+      },
+      "actor": {
+        "kind": "device",
+        "id": "device-fixture",
+        "label": "Fixture"
+      },
+      "outcome": {
+        "mutationId": "30000000-0000-4000-8000-000000000010",
+        "status": "applied",
+        "revision": 1,
+        "seq": 1,
+        "converged": false
+      }
+    },
+    {
+      "name": "location.rename",
+      "op": "location.rename",
+      "seedLocations": [
+        {
+          "id": "10000000-0000-4000-8000-000000000001",
+          "name": "House"
+        }
+      ],
+      "seedItems": [],
+      "mutation": {
+        "mutationId": "30000000-0000-4000-8000-000000000011",
+        "op": "location.rename",
+        "entityId": "10000000-0000-4000-8000-000000000001",
+        "baseRevision": 1,
+        "dependsOn": [],
+        "args": {
+          "name": "The house"
+        },
+        "clientTime": "2026-09-19T00:00:00.000Z"
+      },
+      "actor": {
+        "kind": "device",
+        "id": "device-fixture",
+        "label": "Fixture"
+      },
+      "outcome": {
+        "mutationId": "30000000-0000-4000-8000-000000000011",
+        "status": "applied",
+        "revision": 2,
+        "seq": 1,
+        "converged": false
+      }
+    },
+    {
+      "name": "location.move",
+      "op": "location.move",
+      "seedLocations": [
+        {
+          "id": "10000000-0000-4000-8000-000000000001",
+          "name": "House"
+        },
+        {
+          "id": "10000000-0000-4000-8000-000000000002",
+          "name": "Garage"
+        }
+      ],
+      "seedItems": [],
+      "mutation": {
+        "mutationId": "30000000-0000-4000-8000-000000000012",
+        "op": "location.move",
+        "entityId": "10000000-0000-4000-8000-000000000002",
+        "baseRevision": 1,
+        "dependsOn": [],
+        "args": {
+          "parentId": "10000000-0000-4000-8000-000000000001"
+        },
+        "clientTime": "2026-09-19T00:00:00.000Z"
+      },
+      "actor": {
+        "kind": "device",
+        "id": "device-fixture",
+        "label": "Fixture"
+      },
+      "outcome": {
+        "mutationId": "30000000-0000-4000-8000-000000000012",
+        "status": "applied",
+        "revision": 2,
+        "seq": 1,
+        "converged": false
+      }
+    },
+    {
+      "name": "location.delete-root",
+      "op": "location.delete",
+      "seedLocations": [
+        {
+          "id": "10000000-0000-4000-8000-000000000001",
+          "name": "House"
+        }
+      ],
+      "seedItems": [
+        {
+          "id": "20000000-0000-4000-8000-000000000002",
+          "name": "Lamp",
+          "placement": {
+            "kind": "location",
+            "locationId": "10000000-0000-4000-8000-000000000001"
+          }
+        }
+      ],
+      "mutation": {
+        "mutationId": "30000000-0000-4000-8000-000000000013",
+        "op": "location.delete",
+        "entityId": "10000000-0000-4000-8000-000000000001",
+        "baseRevision": 1,
+        "dependsOn": [],
+        "args": {},
+        "clientTime": "2026-09-19T00:00:00.000Z"
+      },
+      "actor": {
+        "kind": "device",
+        "id": "device-fixture",
+        "label": "Fixture"
+      },
+      "outcome": {
+        "mutationId": "30000000-0000-4000-8000-000000000013",
+        "status": "applied",
+        "revision": 2,
+        "seq": 1,
+        "converged": false
+      }
+    }
+  ]
+}

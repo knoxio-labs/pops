@@ -146,6 +146,38 @@ moment this ships — precisely what POPS-1878 did to purchases when its own
 gate landed ahead of the MCP grant. Minting or widening a grant is a row in
 the registry DB, an operator step rather than a repo change.
 
+## Sync protocol
+
+`src/contract/rest-sync.ts` is the protocol bfm relays to the phone under
+`/mobile/inventory/*` (Inventory ADR-002, D9 and D10), in three sub-routers so
+the gate above derives three grants: `inventory.sync` (`GET /sync/snapshot`,
+`GET /sync/changes`, `GET /sync/items/:id/events`, `POST /sync/mutations`),
+`inventory.types` (`GET /types`) and `inventory.codes`
+(`POST /codes/suggest`).
+
+- Every one of those routes needs `Pops-Inventory-Protocol: <n>`; missing or
+  below `sync_meta.min_protocol` is `426 client_too_old`, checked by
+  `src/api/sync/protocol.ts` ahead of the handlers.
+- The snapshot serves live items and locations in pages whose opaque cursor
+  pins the high-water `seq` of the first page; the change feed then serves
+  every row (tombstones included) and every event after a `seq`. A cursor or
+  feed position from another `sync_meta.epoch`, or a `since` above the latest
+  `seq`, is `409 resync_required`; a cursor this server did not issue is
+  `400 invalid_cursor`.
+- `POST /sync/mutations` runs up to 50 mutations through the command layer
+  in order, one transaction each, and answers one outcome per mutation.
+  `Pops-Actor: device:<deviceId>;label=<percent-encoded label>` names the
+  phone the change is recorded against, and is believed only from a caller
+  whose account holds `inventory.sync`; no key records `web`, any other key
+  `service:<account>`.
+- Events carry `before`/`after` keyed by wire field. A move records both
+  `placement` and `previousPlacement`, each in the item row's placement
+  shape (`{ kind: 'location', locationId }`, `{ kind: 'container', itemId }`,
+  `{ kind: 'hand' }`, and `null` for no previous placement).
+- Connections, fixtures and uploaded files are not on the snapshot or the
+  feed: Inventory ADR-002 keeps them on their current tables and routes.
+  Whether the phone needs connections at all is POPS-4110.
+
 ## Cross-pillar reconciliation
 
 `items.purchase_transaction_uri` is a soft reference to a row the
