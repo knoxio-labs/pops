@@ -94,6 +94,10 @@ public struct UnboundInventoryStore: InventoryStore {
         throw RepositoryError.dependencyNotBound
     }
 
+    public func discardPhoto(_ sha256: String) async throws {
+        throw RepositoryError.dependencyNotBound
+    }
+
     public func status() -> AsyncStream<InventoryReplicaStatus> {
         AsyncStream { $0.finish() }
     }

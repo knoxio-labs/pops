@@ -66,6 +66,8 @@ internal struct FailingInventoryStore: InventoryStore {
         throw RepositoryError.unavailable
     }
 
+    func discardPhoto(_ sha256: String) async throws {}
+
     func status() -> AsyncStream<InventoryReplicaStatus> { AsyncStream { _ in } }
 }
 

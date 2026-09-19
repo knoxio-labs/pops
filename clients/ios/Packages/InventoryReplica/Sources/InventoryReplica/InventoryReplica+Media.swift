@@ -47,6 +47,17 @@ extension InventoryReplica {
             named: MediaRows.fileName(sha256: sha256, variant: MediaRows.stagedVariant))
     }
 
+    /// Discards this phone'''s staged copy of a photo removed from a draft
+    /// before it was ever attached, unless a change still in the log
+    /// attaches the hash: that attach may still be in flight, so the bytes
+    /// stay pinned for it.
+    public func discardPhoto(_ sha256: String) throws {
+        let discarded = try write { db in try MediaRows.discardUnlessAwaited(sha256, in: db) }
+        guard discarded else { return }
+        try? mediaFiles.remove(
+            named: MediaRows.fileName(sha256: sha256, variant: MediaRows.stagedVariant))
+    }
+
     /// Staged photos waiting to upload, oldest first. Before listing them,
     /// uploads a pass the app did not live to finish left in flight are
     /// returned to waiting, and every change attaching a photo that failed

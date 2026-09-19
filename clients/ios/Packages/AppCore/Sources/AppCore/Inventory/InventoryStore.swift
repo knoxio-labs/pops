@@ -138,5 +138,11 @@ public protocol InventoryStore: Sendable {
     func uploadPhoto(sha256: String, data: Data, contentType: InventoryMediaContentType)
         async throws -> InventoryMediaUploadResult
 
+    /// Discards bytes handed over for a photo that a person removed from a
+    /// draft before it was ever attached to an item. A no-op when a change
+    /// still in the log attaches the hash (an `item.attachPhoto` in flight
+    /// or waiting to send), and when the store never held the bytes at all.
+    func discardPhoto(_ sha256: String) async throws
+
     func status() -> AsyncStream<InventoryReplicaStatus>
 }

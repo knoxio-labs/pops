@@ -115,4 +115,10 @@ public final class LocalFirstInventoryStore: InventoryStore, Sendable {
         drain?.request()
         return result
     }
+
+    /// Drops the phone's staged copy (``InventoryReplica/discardPhoto(_:)``)
+    /// when nothing in the log still needs to send it.
+    public func discardPhoto(_ sha256: String) async throws {
+        try replica.discardPhoto(sha256)
+    }
 }
