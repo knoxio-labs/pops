@@ -21,11 +21,23 @@ export interface InventoryChangesCall {
   limit?: number;
 }
 
+export interface InventoryMutationsCall {
+  mutations?: unknown[];
+}
+
+export interface InventorySuggestCall {
+  name?: string;
+  typeKey?: string;
+  stem?: string;
+}
+
 export interface InventoryFake {
   factory: PillarHandleFactory;
   snapshotCalls: InventorySyncCall[];
   changesCalls: InventoryChangesCall[];
   itemEventsCalls: (InventorySyncCall & { id?: string })[];
+  mutationsCalls: InventoryMutationsCall[];
+  suggestCalls: InventorySuggestCall[];
   catalogueCalls: number;
 }
 
@@ -41,6 +53,10 @@ export interface InventoryFakeOptions {
   itemEventsResult?: Readonly<Record<string, CallResult<unknown>>>;
   /** What `types.catalogue` answers. */
   catalogueResult?: CallResult<unknown>;
+  /** What `sync.mutations` answers. Defaults to one `applied` outcome per mutation sent. */
+  mutationsResult?: (input: unknown) => CallResult<unknown>;
+  /** What `codes.suggest` answers. */
+  suggestResult?: CallResult<unknown>;
 }
 
 function makeSnapshotProcedure(
@@ -104,17 +120,59 @@ function makeItemEventsProcedure(
   };
 }
 
+function readMutationsCall(input: unknown): InventoryMutationsCall {
+  if (input === null || typeof input !== 'object' || !('mutations' in input)) return {};
+  const { mutations } = input;
+  return { mutations: Array.isArray(mutations) ? mutations : undefined };
+}
+
+/** One `applied` outcome per mutation sent, in order — the default shape a clean batch gets. */
+function defaultMutationsResult(input: unknown): CallResult<unknown> {
+  const { mutations } = readMutationsCall(input);
+  const outcomes = (mutations ?? []).map((mutation, index) => {
+    const mutationId =
+      typeof mutation === 'object' && mutation !== null && 'mutationId' in mutation
+        ? mutation.mutationId
+        : `mutation-${String(index)}`;
+    return { mutationId, status: 'applied', revision: 1, seq: index + 1, converged: true };
+  });
+  return { kind: 'ok', value: { outcomes, highWaterSeq: outcomes.length } };
+}
+
+function readSuggestCall(input: unknown): InventorySuggestCall {
+  if (input === null || typeof input !== 'object') return {};
+  return {
+    name: 'name' in input && typeof input.name === 'string' ? input.name : undefined,
+    typeKey: 'typeKey' in input && typeof input.typeKey === 'string' ? input.typeKey : undefined,
+    stem: 'stem' in input && typeof input.stem === 'string' ? input.stem : undefined,
+  };
+}
+
 /** @param options What each procedure answers; see {@link InventoryFakeOptions}. */
 export function createInventoryFake(options: InventoryFakeOptions = {}): InventoryFake {
   const snapshotCalls: InventorySyncCall[] = [];
   const changesCalls: InventoryChangesCall[] = [];
   const itemEventsCalls: (InventorySyncCall & { id?: string })[] = [];
+  const mutationsCalls: InventoryMutationsCall[] = [];
+  const suggestCalls: InventorySuggestCall[] = [];
   let catalogueCalls = 0;
 
   const catalogue = (): Promise<CallResult<unknown>> => {
     catalogueCalls += 1;
     return Promise.resolve(
       options.catalogueResult ?? { kind: 'ok', value: { version: 'cat-1', units: [], types: [] } }
+    );
+  };
+
+  const mutations = (rawInput: unknown): Promise<CallResult<unknown>> => {
+    mutationsCalls.push(readMutationsCall(rawInput));
+    return Promise.resolve((options.mutationsResult ?? defaultMutationsResult)(rawInput));
+  };
+
+  const suggest = (rawInput: unknown): Promise<CallResult<unknown>> => {
+    suggestCalls.push(readSuggestCall(rawInput));
+    return Promise.resolve(
+      options.suggestResult ?? { kind: 'ok', value: { suggestions: ['box-1'] } }
     );
   };
 
@@ -125,12 +183,16 @@ export function createInventoryFake(options: InventoryFakeOptions = {}): Invento
           snapshot: makeSnapshotProcedure(options, snapshotCalls),
           changes: makeChangesProcedure(options, changesCalls),
           itemEvents: makeItemEventsProcedure(options, itemEventsCalls),
+          mutations,
         },
         types: { catalogue },
+        codes: { suggest },
       }),
     snapshotCalls,
     changesCalls,
     itemEventsCalls,
+    mutationsCalls,
+    suggestCalls,
     get catalogueCalls() {
       return catalogueCalls;
     },

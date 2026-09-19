@@ -12,6 +12,13 @@ internal enum RootCopy {
     internal static let degraded =
         "Some of Pops could not be reached, so this may be out of date."
 
+    /// A `pops` URL scheme link whose pillar has no screen registered in this
+    /// build. Not an error sentence: the code is fine, this build just cannot
+    /// show it yet.
+    internal static func opensIn(_ pillar: String) -> String {
+        "Opens in \(pillar.capitalized)"
+    }
+
     /// Why there is nothing on screen.
     ///
     /// The two reasons the BFM distinguishes are kept distinct here, because

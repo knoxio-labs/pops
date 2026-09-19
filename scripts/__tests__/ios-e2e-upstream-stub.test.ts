@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { EVERYDAY_ACCOUNT_ID, seededAccounts } from '../ios-e2e/accounts-fixture.mjs';
 import { seededTransactions } from '../ios-e2e/transactions-fixture.mjs';
 import {
+  accountGetRoute,
   buildRegistrySnapshot,
   compareRows,
   financeRoutes,
@@ -9,6 +11,7 @@ import {
   parseListQuery,
   pathMatcher,
   readFinanceContract,
+  requiredResponseFields,
   selectPage,
   startUpstreamStub,
 } from '../ios-e2e/upstream-stub.mjs';
@@ -58,6 +61,106 @@ describe('financeRoutes', () => {
       },
     };
     expect(financeRoutes(noisy).list.path).toBe('/transactions');
+  });
+});
+
+describe('accountGetRoute', () => {
+  const accountsContract = {
+    paths: { '/accounts/{id}': { get: { operationId: 'accounts.get' } } },
+  };
+
+  it('reads the operation out of the document', () => {
+    expect(accountGetRoute(accountsContract)).toEqual({ method: 'GET', path: '/accounts/{id}' });
+  });
+
+  it('resolves against finance’s committed snapshot, which is what the SDK reads', () => {
+    // The same drift check `financeRoutes` runs on `transactions.list`/`.get`:
+    // a rename on finance's side has to fail here, not as an account that
+    // silently falls back to "Unknown account" on a simulator.
+    expect(accountGetRoute(readFinanceContract())).toEqual({
+      method: 'GET',
+      path: '/accounts/{id}',
+    });
+  });
+
+  it('names the operation it could not find', () => {
+    expect(() => accountGetRoute({ paths: {} })).toThrow(/declares no accounts\.get/u);
+  });
+
+  it('reports a document with no paths instead of returning undefined', () => {
+    expect(() => accountGetRoute({})).toThrow(/no `paths` object/u);
+  });
+});
+
+describe('requiredResponseFields', () => {
+  it('reads a get operation’s required fields off `data` directly', () => {
+    const document = {
+      paths: {
+        '/accounts/{id}': {
+          get: {
+            operationId: 'accounts.get',
+            responses: {
+              200: {
+                content: {
+                  'application/json': {
+                    schema: { properties: { data: { required: ['id', 'name'] } } },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+    expect(requiredResponseFields(document, 'accounts.get')).toEqual(['id', 'name']);
+  });
+
+  it('reads a list operation’s required fields off `data.items`', () => {
+    const document = {
+      paths: {
+        '/transactions': {
+          get: {
+            operationId: 'transactions.list',
+            responses: {
+              200: {
+                content: {
+                  'application/json': {
+                    schema: { properties: { data: { items: { required: ['id'] } } } },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+    expect(requiredResponseFields(document, 'transactions.list')).toEqual(['id']);
+  });
+
+  it('agrees with itself on transactions.list and transactions.get', () => {
+    // Both operations answer the same row shape in finance's own contract
+    // (`pillars/finance/openapi/finance.openapi.json`) — this is the
+    // assumption `startUpstreamStub` relies on by serving the same seeded
+    // rows for both routes.
+    const contract = readFinanceContract();
+    expect(requiredResponseFields(contract, 'transactions.list').toSorted()).toEqual(
+      requiredResponseFields(contract, 'transactions.get').toSorted()
+    );
+  });
+
+  it('throws rather than returning undefined when the document names no such operation', () => {
+    expect(() => requiredResponseFields({ paths: {} }, 'transactions.get')).toThrow(
+      /declares no transactions\.get/u
+    );
+  });
+
+  it('throws when the operation exists but its response shape carries no required array', () => {
+    const document = {
+      paths: { '/accounts/{id}': { get: { operationId: 'accounts.get', responses: {} } } },
+    };
+    expect(() => requiredResponseFields(document, 'accounts.get')).toThrow(
+      /has no data\.required array/u
+    );
   });
 });
 
@@ -287,13 +390,18 @@ describe('the finance outage switch', () => {
   it('serves the rows until the switch is thrown', async () => {
     expect((await get('/transactions')).status).toBe(200);
     expect((await get('/transactions/e2e-groceries')).status).toBe(200);
+    expect((await get(`/accounts/${EVERYDAY_ACCOUNT_ID}`)).status).toBe(200);
     expect(stub.isFinanceOutage()).toBe(false);
   });
 
-  it('refuses both data routes while it is on', async () => {
+  it('refuses every data route while it is on, accounts included', async () => {
     stub.setFinanceOutage(true);
 
-    for (const path of ['/transactions', '/transactions/e2e-groceries']) {
+    for (const path of [
+      '/transactions',
+      '/transactions/e2e-groceries',
+      `/accounts/${EVERYDAY_ACCOUNT_ID}`,
+    ]) {
       const answered = await get(path);
       expect(answered.status).toBe(503);
       expect(await answered.json()).toEqual(FINANCE_OUTAGE_BODY);
@@ -416,26 +524,19 @@ describe('the root-unreachable switches', () => {
 });
 
 describe('the seeded rows', () => {
-  it('carry every field the BFM requires of a finance detail response', () => {
-    // `pillars/bfm/src/api/finance/wire.ts` requires all of these and answers
-    // 502 when one is missing — a failure that reads, on the phone, as "this
-    // version of Pops cannot read what the server sent".
-    const required = [
-      'id',
-      'description',
-      'account',
-      'amount',
-      'date',
-      'type',
-      'tags',
-      'entityId',
-      'entityName',
-      'location',
-      'country',
-      'relatedTransactionId',
-      'notes',
-      'lastEditedTime',
-    ];
+  // Derived from finance's own contract rather than hand-copied: a hand-typed
+  // list is exactly what let `accountId` go missing from every row while
+  // this test kept passing (POPS-4157) — it asserted the OLD field named
+  // `account` and had no way to notice finance's contract had moved on.
+  const required = requiredResponseFields(readFinanceContract(), 'transactions.get');
+
+  it('carry every field finance’s own contract requires of a transaction', () => {
+    // `pillars/bfm/src/api/finance/wire.ts` reads a subset of these and
+    // answers 502 when one it reads is missing — a failure that shows up on
+    // the phone as "this version of Pops cannot read what the server sent".
+    // Matching finance's full contract, not just the BFM's subset, is what
+    // keeps this fixture reading as a real finance response instead of the
+    // narrower slice one caller happens to need today.
     for (const row of seededTransactions) {
       expect(Object.keys(row).toSorted()).toEqual(required.toSorted());
     }
@@ -447,10 +548,54 @@ describe('the seeded rows', () => {
     }
   });
 
-  it('includes the row the flow taps, with the account line the flow asserts on', () => {
+  it('names an account that is actually seeded', () => {
+    // `resolveAccount`/`resolveAccountCurrencies`
+    // (`pillars/bfm/src/api/finance/accounts-client.ts`) fetch a row's
+    // `accountId` from finance; a row naming one `accounts-fixture.mjs` does
+    // not seed 404s that lookup and the BFM falls back to "Unknown account" —
+    // which is exactly the bug this fixture exists to keep off a simulator.
+    const seededAccountIds = new Set(seededAccounts.map((account) => account.id));
+    for (const row of seededTransactions) {
+      expect(seededAccountIds.has(row.accountId)).toBe(true);
+    }
+  });
+
+  it('includes the row the flow taps, on the account the flow asserts by name', () => {
     // The flow names both. If either moves, this fails in a second instead of
     // twenty minutes into a macOS job.
     const tapped = seededTransactions.find((row) => row.id === 'e2e-groceries');
-    expect(tapped?.account).toBe('Everyday');
+    expect(tapped?.accountId).toBe(EVERYDAY_ACCOUNT_ID);
+  });
+});
+
+describe('the seeded account', () => {
+  const required = requiredResponseFields(readFinanceContract(), 'accounts.get');
+
+  it('carries every field finance’s own contract requires of an account', () => {
+    for (const account of seededAccounts) {
+      expect(Object.keys(account).toSorted()).toEqual(required.toSorted());
+    }
+  });
+
+  it('is the "Everyday" account the transaction detail flow asserts by name', () => {
+    // `clients/ios/.maestro/pairing-to-transaction-detail.yaml` asserts
+    // `Account, Everyday` on the detail screen — text that only appears once
+    // `resolveAccount` has actually resolved this row.
+    const everyday = seededAccounts.find((account) => account.id === EVERYDAY_ACCOUNT_ID);
+    expect(everyday?.name).toBe('Everyday');
+  });
+
+  it('is served over HTTP at the route finance’s own contract names', async () => {
+    const stub = await startUpstreamStub({ rows: seededTransactions });
+    try {
+      const answered = await fetch(`${stub.url}/accounts/${EVERYDAY_ACCOUNT_ID}`);
+      expect(answered.status).toBe(200);
+      expect((await answered.json()).data.name).toBe('Everyday');
+
+      const missing = await fetch(`${stub.url}/accounts/not-a-seeded-account`);
+      expect(missing.status).toBe(404);
+    } finally {
+      await stub.close();
+    }
   });
 });

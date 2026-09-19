@@ -1,13 +1,6 @@
 import { eq } from 'drizzle-orm';
 
-import {
-  items,
-  locations,
-  type ItemInsert,
-  type ItemRow,
-  type LocationInsert,
-  type LocationRow,
-} from '../../db/index.js';
+import { items, locations } from '../../db/schema.js';
 import { CommandRejected } from './errors.js';
 import { ITEM_FIELD_CODECS } from './item-fields.js';
 import { LEGACY_ITEM_FIELD_CODECS } from './legacy-item-fields.js';
@@ -16,6 +9,7 @@ import { LOCATION_FIELD_CODECS } from './location-fields.js';
 import type { RunResult } from 'better-sqlite3';
 import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 
+import type { ItemInsert, ItemRow, LocationInsert, LocationRow } from '../../db/row-types.js';
 import type { JsonValue } from './outcome.js';
 
 /** A synchronous drizzle handle: the database or a transaction (or savepoint) on it. */

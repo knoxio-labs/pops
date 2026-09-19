@@ -180,14 +180,12 @@ describe('applying the rest of the journal to a populated inventory database', (
       purchase_transaction_id: string | null;
     }>(`SELECT id, name, location_id, purchase_transaction_id FROM items ORDER BY id`);
     expect(stored).toEqual(
-      [...ITEMS]
-        .sort((a, b) => a.id.localeCompare(b.id))
-        .map((item) => ({
-          id: item.id,
-          name: item.itemName,
-          location_id: item.locationId,
-          purchase_transaction_id: item.purchaseTransactionId,
-        }))
+      ITEMS.toSorted((a, b) => a.id.localeCompare(b.id)).map((item) => ({
+        id: item.id,
+        name: item.itemName,
+        location_id: item.locationId,
+        purchase_transaction_id: item.purchaseTransactionId,
+      }))
     );
   });
 

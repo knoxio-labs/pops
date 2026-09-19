@@ -21,6 +21,7 @@ import { fileURLToPath } from 'node:url';
 import { createExpressEndpoints } from '@ts-rest/express';
 import express, { type Express, type Request, type Response } from 'express';
 
+import { MOBILE_INVENTORY_MUTATIONS_MAX_BYTES } from '../contract/rest-mobile-inventory.js';
 import { MOBILE_UPLOAD_MAX_BYTES } from '../contract/rest-schemas.js';
 import { bfmContract } from '../contract/rest.js';
 import { createMobileRateLimit, type MobileRateLimitOptions } from './auth/mobile-rate-limit.js';
@@ -32,6 +33,7 @@ import { createRequireDevice } from './auth/require-device.js';
 import { createIdentityMiddleware } from './middleware/identity.js';
 import {
   CHALLENGE_PATH,
+  MOBILE_INVENTORY_MUTATIONS_PATH,
   MOBILE_PATH_PREFIX,
   MOBILE_RECEIPT_UPLOAD_PATH,
   PAIRING_PATH,
@@ -168,6 +170,15 @@ export function createBfmApiApp(deps: BfmApiDeps, options: CreateBfmApiAppOption
   // `requireDevice`, so the megabytes it will buffer are a paired handset's.
   // Its refusal is reshaped below (ADR-046).
   app.use(MOBILE_RECEIPT_UPLOAD_PATH, express.json({ limit: MOBILE_UPLOAD_MAX_BYTES }));
+
+  // Same reasoning as the receipt upload's own mount above: a batch of 50
+  // mutations carrying real field values is comfortably past Express's
+  // 100kb default, and this is bfm's own ceiling on that one body rather
+  // than a limit inventory itself imposes.
+  app.use(
+    MOBILE_INVENTORY_MUTATIONS_PATH,
+    express.json({ limit: MOBILE_INVENTORY_MUTATIONS_MAX_BYTES })
+  );
 
   app.use(express.json());
 

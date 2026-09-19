@@ -1,13 +1,14 @@
 /**
  * Integration tests for the `search.*` REST surface — inventory's slice of
- * unified search.
+ * unified search (Inventory ADR-002, POPS-3329).
  *
  * The suite seeds items through the pillar's own CRUD endpoint, then asserts
- * the TIERED ranking: exact assetId (1.0) > assetId prefix (0.9)
- * > itemName exact (0.85) / prefix (0.7) / contains (0.5), with the
- * `/inventory/items/<id>` uri shape, the dedup between asset and name tiers,
- * and descending score sort. An empty / whitespace query short-circuits to an
- * empty hit list.
+ * the three-tier ranking the phone's own search uses (a name that starts
+ * with the query, then a name that merely contains it, then a match on some
+ * other indexed field), mapped onto the shared cross-pillar search score
+ * scale, with `bm25` breaking ties inside a tier. Several cases are ported
+ * from `InventoryReplicaTests/ReplicaSearchTests.swift` so the two rankers
+ * agree on which tier a hit falls into.
  */
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -43,55 +44,75 @@ function client() {
 }
 
 describe('search — inventory items adapter', () => {
-  it('returns an exact-assetId hit scored 1.0 with the legacy uri shape', async () => {
-    const created = await client().items.create({ itemName: 'Laptop', assetId: 'AST-001' });
-
-    const { hits } = await client().search.run({ query: { text: 'ast-001' } });
-    expect(hits).toHaveLength(1);
-    const [hit] = hits;
-    expect(hit?.uri).toBe(`/inventory/items/${created.data.id}`);
-    expect(hit?.score).toBe(1.0);
-    expect(hit?.matchField).toBe('assetId');
-    expect(hit?.matchType).toBe('exact');
-    expect(hit?.data).toMatchObject({ itemName: 'Laptop', assetId: 'AST-001' });
-  });
-
-  it('orders asset-exact (1.0) > asset-prefix (0.9) and dedups the same row across tiers', async () => {
-    const exact = await client().items.create({ itemName: 'Router', assetId: 'AST-100' });
-    const prefixed = await client().items.create({ itemName: 'Switch', assetId: 'AST-1000' });
-
-    const { hits } = await client().search.run({ query: { text: 'ast-100' } });
-    expect(hits.map((h) => h.uri)).toEqual([
-      `/inventory/items/${exact.data.id}`,
-      `/inventory/items/${prefixed.data.id}`,
-    ]);
-    expect(hits.map((h) => h.score)).toEqual([1.0, 0.9]);
-    expect(hits.map((h) => h.matchType)).toEqual(['exact', 'prefix']);
-  });
-
-  it('ranks itemName matches exact (0.85) > prefix (0.7) > contains (0.5)', async () => {
-    await client().items.create({ itemName: 'Drill' });
-    await client().items.create({ itemName: 'Drill bit set' });
-    await client().items.create({ itemName: 'Cordless Drill' });
+  it('ranks a name prefix above a name that contains, above any other field, matching the phone', async () => {
+    await client().items.create({ itemName: 'Adapter', notes: 'spare drill bits' });
+    await client().items.create({ itemName: 'Cordless drill' });
+    const prefix = await client().items.create({ itemName: 'Drill press' });
+    await client().items.create({ itemName: 'Hammer' });
 
     const { hits } = await client().search.run({ query: { text: 'drill' } });
     expect(hits.map((h) => h.data['itemName'])).toEqual([
-      'Drill',
-      'Drill bit set',
-      'Cordless Drill',
+      'Drill press',
+      'Cordless drill',
+      'Adapter',
     ]);
-    expect(hits.map((h) => h.score)).toEqual([0.85, 0.7, 0.5]);
-    expect(hits.every((h) => h.matchField === 'itemName')).toBe(true);
+    expect(hits[0]?.uri).toBe(`/inventory/items/${prefix.data.id}`);
+    expect(hits.map((h) => h.matchType)).toEqual(['prefix', 'contains', 'contains']);
+    expect(hits.map((h) => h.matchField)).toEqual(['itemName', 'itemName', 'fts']);
+    // The shared cross-pillar 0-1 search scale (finance/purchases `classify()`):
+    // a name-prefix hit outranks a name-contains hit, which outranks any hit
+    // that only matched some other field.
+    expect(hits[0]!.score).toBeGreaterThan(hits[1]!.score);
+    expect(hits[1]!.score).toBeGreaterThan(hits[2]!.score);
   });
 
-  it('places an asset match above any name match', async () => {
+  it('finds a match in the middle of a word, not only at a word start', async () => {
+    await client().items.create({ itemName: 'Sledgehammer' });
+
+    expect((await client().search.run({ query: { text: 'HAMMER' } })).hits).toHaveLength(1);
+    expect((await client().search.run({ query: { text: 'dgeh' } })).hits).toHaveLength(1);
+  });
+
+  it('matches a query shorter than a trigram, case-insensitively, via the LIKE fallback', async () => {
+    await client().items.create({ itemName: 'TV stand' });
+    await client().items.create({ itemName: 'Lamp' });
+
+    const { hits } = await client().search.run({ query: { text: 'tv' } });
+    expect(hits.map((h) => h.data['itemName'])).toEqual(['TV stand']);
+  });
+
+  it('treats LIKE wildcards in a short query as literal characters', async () => {
+    await client().items.create({ itemName: '50% off' });
+    await client().items.create({ itemName: 'Lamp' });
+
+    expect((await client().search.run({ query: { text: '%' } })).hits).toHaveLength(1);
+    expect((await client().search.run({ query: { text: '_' } })).hits).toEqual([]);
+  });
+
+  it('finds an asset id match only among other fields, ranked below any name match', async () => {
     const asset = await client().items.create({ itemName: 'Camera', assetId: 'CAM-1' });
-    await client().items.create({ itemName: 'CAM-1 spare battery' });
+    const named = await client().items.create({ itemName: 'CAM-1 spare battery' });
 
     const { hits } = await client().search.run({ query: { text: 'cam-1' } });
-    expect(hits[0]?.uri).toBe(`/inventory/items/${asset.data.id}`);
-    expect(hits[0]?.score).toBe(1.0);
-    expect(hits[0]?.matchField).toBe('assetId');
+    expect(hits.map((h) => h.uri)).toEqual([
+      `/inventory/items/${named.data.id}`,
+      `/inventory/items/${asset.data.id}`,
+    ]);
+    expect(hits[1]?.matchField).toBe('fts');
+  });
+
+  it('excludes an inactive item from the default (federated) search', async () => {
+    const active = await client().items.create({ itemName: 'New kettle' });
+    const retired = await client().items.create({ itemName: 'Old kettle' });
+    // The legacy `/items` REST surface has no lifecycle transition of its
+    // own (that is the command layer's `item.retire` and friends, reached
+    // through the sync protocol); set it directly for this integration test.
+    inventoryDb.raw
+      .prepare(`UPDATE items SET lifecycle = 'discarded' WHERE id = ?`)
+      .run(retired.data.id);
+
+    const { hits } = await client().search.run({ query: { text: 'kettle' } });
+    expect(hits.map((h) => h.uri)).toEqual([`/inventory/items/${active.data.id}`]);
   });
 
   it('returns an empty list for an empty or whitespace query', async () => {

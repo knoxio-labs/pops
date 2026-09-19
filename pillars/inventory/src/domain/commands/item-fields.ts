@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { ACCESS_STATES, LIFECYCLES, type ItemInsert, type ItemRow } from '../../db/index.js';
+import { ACCESS_STATES, LIFECYCLES } from '../../db/schema.js';
 import { CommandRejected } from './errors.js';
 import {
   placementSchema,
@@ -9,6 +9,7 @@ import {
   type PreviousPlacement,
 } from './placement-schema.js';
 
+import type { ItemInsert, ItemRow } from '../../db/row-types.js';
 import type { JsonValue } from './outcome.js';
 
 export { placementSchema, previousPlacementSchema, type Placement, type PreviousPlacement };
