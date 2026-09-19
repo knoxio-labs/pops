@@ -2,63 +2,82 @@ import DesignSystem
 import SwiftUI
 
 /// Which part of Store here is showing. The sheet swaps its root rather than
-/// pushing, so there is no screen between the choice and the task.
+/// pushing, so there is no screen between the choice and the existing-item
+/// search. New item does not swap the root: it opens the real create form as
+/// a sheet of its own, nested inside this one.
 internal enum InventoryStoreHereStep: Equatable {
     case choice
-    case newItem
     case existing
 }
 
 /// Store here: a new item placed in this container or place, or an existing
 /// one put into it. Neither needs a container open.
 ///
-/// New item opens the item form placed here once the form has moved into
-/// this package (POPS-4063); until then that step is a pending screen.
+/// New item installs its own `inventoryItemFormPresentation`, scoped to this
+/// sheet's own `NavigationStack`, so the form opens as a sheet nested inside
+/// this one rather than through whatever `inventoryItemForm` an ancestor
+/// installed — that ancestor's own sheet is not the topmost presentation
+/// once this one is up, and presenting from it there fails or shows behind
+/// this sheet rather than on top of it.
 internal struct InventoryStoreHereSheet: View {
     internal let target: InventoryStoreTarget
     internal let runner: InventoryCommandRunner
-    @State private var step: InventoryStoreHereStep = .choice
     @State private var detent: PresentationDetent = .height(Self.choiceHeight)
 
     private static let choiceHeight: CGFloat = 220
 
     internal var body: some View {
         NavigationStack {
-            Group {
-                switch step {
-                case .choice:
-                    InventoryStoreHereChoice(targetName: target.name) { next in
-                        step = next
-                        detent = .large
-                    }
-                case .newItem:
-                    InventoryPendingScreen(
-                        title: "Store in \(target.name)",
-                        detail: "The new item form opens here, placed in \(target.name).",
-                        symbol: InventorySymbol.addNew.system)
-                case .existing:
-                    InventoryStoreExistingPicker(
-                        model: InventoryStoreHereModel(target: target, runner: runner))
-                }
-            }
-            .transition(.opacity.combined(with: .move(edge: .trailing)))
-            .inventoryMotion(InventoryMotion.smooth, value: step)
+            InventoryStoreHereRoot(target: target, runner: runner, detent: $detent)
         }
         .presentationDetents([.height(Self.choiceHeight), .large], selection: $detent)
         .tint(.popsInventory)
+        .inventoryItemFormPresentation(store: runner.store)
+    }
+}
+
+/// The sheet's root content, inside the locally scoped item-form
+/// presentation so `\.inventoryItemForm` here opens a sheet nested inside
+/// `InventoryStoreHereSheet` rather than reaching for an ancestor's.
+private struct InventoryStoreHereRoot: View {
+    let target: InventoryStoreTarget
+    let runner: InventoryCommandRunner
+    @Binding var detent: PresentationDetent
+    @State private var step: InventoryStoreHereStep = .choice
+    @Environment(\.inventoryItemForm) private var itemForm
+
+    var body: some View {
+        Group {
+            switch step {
+            case .choice:
+                InventoryStoreHereChoice(
+                    targetName: target.name,
+                    onNewItem: { itemForm?(.create(placement: target.placement)) },
+                    onExisting: {
+                        step = .existing
+                        detent = .large
+                    })
+            case .existing:
+                InventoryStoreExistingPicker(
+                    model: InventoryStoreHereModel(target: target, runner: runner))
+            }
+        }
+        .transition(.opacity.combined(with: .move(edge: .trailing)))
+        .inventoryMotion(InventoryMotion.smooth, value: step)
     }
 }
 
 /// The two ways in, side by side.
 internal struct InventoryStoreHereChoice: View {
     internal let targetName: String
-    internal let onChoose: (InventoryStoreHereStep) -> Void
+    internal let onNewItem: () -> Void
+    internal let onExisting: () -> Void
     @Environment(\.dismiss) private var dismiss
 
     internal var body: some View {
         HStack(spacing: PopsSpacing.md) {
-            option("New item", symbol: InventorySymbol.addNew.system, step: .newItem)
-            option("Existing item", symbol: InventorySymbol.search.system, step: .existing)
+            option("New item", symbol: InventorySymbol.addNew.system, action: onNewItem)
+            option("Existing item", symbol: InventorySymbol.search.system, action: onExisting)
         }
         .padding(.horizontal, PopsSpacing.lg)
         .frame(maxHeight: .infinity, alignment: .top)
@@ -69,12 +88,10 @@ internal struct InventoryStoreHereChoice: View {
         }
     }
 
-    private func option(_ title: String, symbol: String, step: InventoryStoreHereStep)
+    private func option(_ title: String, symbol: String, action: @escaping () -> Void)
         -> some View
     {
-        Button {
-            onChoose(step)
-        } label: {
+        Button(action: action) {
             VStack(spacing: PopsSpacing.sm) {
                 Image(systemName: symbol)
                     .font(.popsTitle)
