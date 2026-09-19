@@ -7,11 +7,6 @@ import AppCore
 internal enum LoggedCommand: Equatable, Sendable {
     case command(InventoryCommand)
     case undo(of: String)
-
-    var entityKind: InventoryEntityKind? {
-        guard case .command(let command) = self else { return nil }
-        return command.entityKind
-    }
 }
 
 /// `InventoryCommand.editItem`'s note patch, stored.

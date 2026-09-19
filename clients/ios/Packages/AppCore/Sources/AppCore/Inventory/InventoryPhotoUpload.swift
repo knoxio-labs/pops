@@ -1,5 +1,3 @@
-import Foundation
-
 /// How far a photo staged on this phone has got towards the server
 /// (ADR-002 D11: photos are written on the phone before the change that
 /// attaches them, and sent ahead of it).

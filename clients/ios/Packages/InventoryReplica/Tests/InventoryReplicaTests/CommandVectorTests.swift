@@ -2,8 +2,6 @@ import AppCore
 import Foundation
 import Testing
 
-@testable import InventoryReplica
-
 /// Every command vector the server generated, through the phone's reducer:
 /// the same outcome (revision, and the `seq` its event would take), the
 /// same mutation on the wire, and the state the server's op leaves.
@@ -31,6 +29,8 @@ internal struct CommandVectorTests {
         let vector = try #require(Self.vectors.first { $0.name == name })
         let result = try CommandVectorHarness.run(vector)
 
+        #expect(vector.op == vector.mutation.op)
+        #expect(vector.outcome.mutationId == vector.mutation.mutationId)
         #expect(vector.outcome.status == "applied")
         #expect(result.revision == vector.outcome.revision)
         #expect(result.seq == vector.outcome.seq)

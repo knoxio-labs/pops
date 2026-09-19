@@ -1,5 +1,3 @@
-import AppCore
-import Foundation
 import GRDB
 
 /// Where one logged mutation stands with the server.
@@ -11,8 +9,6 @@ internal enum MutationState: String, Codable, Sendable {
     case rejected
     case deferred
 
-    /// Not yet settled by the server, so still this phone's to send.
-    var isPending: Bool { self == .queued || self == .sending || self == .deferred }
     /// Not in flight and not applied, so an Undo can simply drop it.
     var isCancellable: Bool { self != .sending && self != .applied }
 

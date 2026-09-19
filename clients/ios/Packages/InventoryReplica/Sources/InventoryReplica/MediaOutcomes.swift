@@ -1,5 +1,4 @@
 import AppCore
-import Foundation
 import GRDB
 
 /// What the server's outcome for a photo attach means for the bytes behind

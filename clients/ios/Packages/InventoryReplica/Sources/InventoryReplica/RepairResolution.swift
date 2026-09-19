@@ -1,5 +1,4 @@
 import AppCore
-import Foundation
 
 /// How a repair was settled: the `repair.resolution` column, and the line
 /// the Sync page's resolved list shows for it.

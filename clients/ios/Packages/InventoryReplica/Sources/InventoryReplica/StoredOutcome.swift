@@ -1,5 +1,4 @@
 import AppCore
-import Foundation
 
 /// `InventoryMutationOutcome`'s storage twin, for the log's `outcome`
 /// column: kept whole, because the repair a conflict or a rejection opens is

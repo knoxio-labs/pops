@@ -1,5 +1,4 @@
 import AppCore
-import Foundation
 import GRDB
 
 /// Reads and writes `media` rows inside the caller's transaction.

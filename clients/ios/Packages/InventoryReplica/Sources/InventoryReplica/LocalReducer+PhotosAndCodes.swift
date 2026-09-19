@@ -1,5 +1,4 @@
 import AppCore
-import Foundation
 import GRDB
 
 /// `item-photos.ts` and the code lookups `item-code.ts` makes.

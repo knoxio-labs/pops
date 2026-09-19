@@ -1,5 +1,4 @@
 import AppCore
-import Foundation
 import GRDB
 
 /// Reads and writes the media cache's `media` rows inside the caller's

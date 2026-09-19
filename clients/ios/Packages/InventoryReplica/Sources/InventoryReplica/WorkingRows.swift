@@ -34,7 +34,6 @@ internal protocol WorkingRow: Codable, Equatable, Sendable {
     static var tracked: [TrackedField<Self>] { get }
     var ref: EntityRef { get }
     var revision: Int { get set }
-    var isDeleted: Bool { get }
     var snapshot: EntitySnapshot { get }
     /// Sets what the server's write stamps besides the changed fields.
     mutating func stamp(at now: Double, changedFrom previous: Self)

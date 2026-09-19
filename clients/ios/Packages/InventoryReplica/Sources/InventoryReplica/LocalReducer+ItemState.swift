@@ -1,5 +1,4 @@
 import AppCore
-import Foundation
 import GRDB
 
 /// `access.ts`, `lifecycle.ts`, `item-quantity.ts`, `item-split.ts` and

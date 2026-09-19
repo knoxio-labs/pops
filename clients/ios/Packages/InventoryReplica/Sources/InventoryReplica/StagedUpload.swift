@@ -1,6 +1,4 @@
 import AppCore
-import Foundation
-import GRDB
 
 /// The `media.upload_state` column: how far a staged photo has got.
 internal enum StagedUploadState: String {

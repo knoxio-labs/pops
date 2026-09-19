@@ -1,6 +1,5 @@
 import AppCore
 import Foundation
-import Testing
 
 /// Turns a vector's seed and mutation into the domain values the replica
 /// takes. A malformed vector or an op with no mapping fails the test that

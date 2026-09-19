@@ -1,5 +1,4 @@
 import AppCore
-import Foundation
 
 extension InventoryDrain {
     /// Uploads every staged photo waiting to go.
