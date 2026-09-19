@@ -90,6 +90,6 @@ extension LocalReducer {
     }
 
     private func currentRevision() throws -> Written {
-        Written(revision: try revision(of: primary) ?? 0, eventIndex: nil)
+        Written(revision: try revision(of: primaryEntity) ?? 0, eventIndex: nil)
     }
 }

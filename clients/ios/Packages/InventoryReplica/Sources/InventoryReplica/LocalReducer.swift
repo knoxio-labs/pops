@@ -67,7 +67,7 @@ internal final class LocalReducer {
     let db: Database
     let now: Double
     let catalogue: InventoryCatalogue?
-    let primary: EntityRef
+    let primaryEntity: EntityRef
     private(set) var events: [LocalEvent] = []
     private(set) var touched: Set<EntityRef> = []
     private(set) var change: PrimaryChange?
@@ -76,7 +76,7 @@ internal final class LocalReducer {
     private init(db: Database, now: Date, primary: EntityRef) throws {
         self.db = db
         self.now = storedDate(now)
-        self.primary = primary
+        primaryEntity = primary
         catalogue = try SyncMeta.read(db).storedCatalogue()
     }
 
@@ -160,7 +160,7 @@ internal final class LocalReducer {
         try save(created)
         events.append(LocalEvent(entity: created.ref, kind: kind, fields: []))
         touched.insert(created.ref)
-        if created.ref == primary, change == nil {
+        if created.ref == primaryEntity, change == nil {
             change = PrimaryChange(
                 eventKind: kind, fields: [], before: created.snapshot, after: created.snapshot)
         }
@@ -176,7 +176,7 @@ internal final class LocalReducer {
         try save(written)
         events.append(LocalEvent(entity: written.ref, kind: kind, fields: fields))
         touched.insert(written.ref)
-        if written.ref == primary, change == nil {
+        if written.ref == primaryEntity, change == nil {
             change = PrimaryChange(
                 eventKind: kind, fields: fields, before: before.snapshot, after: written.snapshot)
         }
