@@ -24,7 +24,17 @@ function locationAncestry(db: CommandDb, locationId: string): string[] {
   return idListSchema.parse(rows).map((row) => row.id);
 }
 
-function assertParentAllowed(db: CommandDb, locationId: string, parentId: string | null): void {
+/**
+ * Refuse a parent a location cannot take: missing, tombstoned, or the
+ * location itself or one of its own descendants (a cycle). `null` (a root)
+ * is always allowed. Shared by `location.create` and `location.move`
+ * (through {@link validateChanges}).
+ */
+export function assertParentAllowed(
+  db: CommandDb,
+  locationId: string,
+  parentId: string | null
+): void {
   if (parentId === null) return;
   const parent = db
     .select({ deletedAt: locations.deletedAt })
