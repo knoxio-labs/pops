@@ -41,22 +41,6 @@ extension BFMInventoryTransport {
                 for: .undocumented(status), operation: SuggestCodes.id)
         }
     }
-
-    /// `PUT`/`GET /mobile/inventory/media/*` are slice A13, not on this
-    /// branch (the delivery plan marks it "not critical path" and it depends
-    /// on A8/A12 rather than A9/A12 the way this transport does). Both throw
-    /// rather than being left unimplemented, so a caller reaching them today
-    /// gets a diagnosable failure instead of a crash, and the day A13 lands
-    /// this file's two bodies are what changes (POPS-4175).
-    public func uploadMedia(
-        sha256: String, data: Data, contentType: InventoryMediaContentType
-    ) async throws -> InventoryMediaUploadResult {
-        throw RepositoryError.transport("mobileInventory.media.upload: not yet available (A13)")
-    }
-
-    public func fetchMedia(sha256: String, variant: InventoryPhotoVariant) async throws -> Data {
-        throw RepositoryError.transport("mobileInventory.media.fetch: not yet available (A13)")
-    }
 }
 
 private typealias SuggestCodes = Operations.MobileInventory_suggestCodes

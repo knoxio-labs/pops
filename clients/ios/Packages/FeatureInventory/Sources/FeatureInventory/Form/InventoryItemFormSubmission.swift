@@ -30,7 +30,10 @@ internal enum InventoryItemFormSubmission {
         return issues
     }
 
-    /// `item.create`, then `item.setCode` when the draft carries a code.
+    /// `item.create`, then `item.setCode` when the draft carries a code, then
+    /// `item.attachPhoto` for every photo this session uploaded but has not
+    /// yet attached (A22) — never for a photo already `attached`, and never
+    /// for one that failed, whose bytes never reached the server.
     internal static func create(
         _ draft: InventoryItemDraft, catalogue: InventoryCatalogue
     ) -> [InventoryCommand] {
@@ -43,6 +46,7 @@ internal enum InventoryItemFormSubmission {
         if let code = draft.code.normalized {
             commands.append(.setItemCode(id: draft.id, code: code))
         }
+        commands += photoAttachCommands(for: draft.id, in: draft)
         return commands
     }
 
@@ -70,7 +74,21 @@ internal enum InventoryItemFormSubmission {
         if draft.placement != original.placement {
             commands.append(.moveItem(id: original.id, to: draft.placement, verb: .move))
         }
+        commands += photoAttachCommands(for: original.id, in: draft)
         return commands
+    }
+
+    /// One `item.attachPhoto` per newly uploaded photo, positioned by where
+    /// it sits in the draft's own strip (existing photos included), so a
+    /// photo taken ahead of ones already on the item lands ahead of them
+    /// server-side too.
+    private static func photoAttachCommands(
+        for itemId: InventoryItem.ID, in draft: InventoryItemDraft
+    ) -> [InventoryCommand] {
+        draft.photos.enumerated().compactMap { position, photo in
+            guard photo.upload == .uploaded else { return nil }
+            return .attachPhoto(itemId: itemId, sha256: photo.sha256, position: position)
+        }
     }
 
     /// The chosen type's fields that hold a storable value, by key.

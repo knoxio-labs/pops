@@ -54,6 +54,10 @@ internal final class InventoryItemFormModel {
     private let suggester: InventoryCodeSuggester
     private var original: InventoryItem?
     private var created = false
+    /// Bytes for a photo captured this session, by hash: the source for its
+    /// thumbnail before the server has ever seen it, and for a retry after a
+    /// failed upload.
+    private var localPhotoData: [String: Data] = [:]
 
     internal init(
         request: InventoryItemFormRequest, store: any InventoryStore,
@@ -172,7 +176,56 @@ internal final class InventoryItemFormModel {
     }
 
     internal func thumbnail(_ sha256: String) async -> Data? {
-        try? await store.photo(sha256, variant: .thumb)
+        if let local = localPhotoData[sha256] { return local }
+        return try? await store.photo(sha256, variant: .thumb)
+    }
+
+    /// Encodes, hashes and uploads a freshly captured photo (A22): the tile
+    /// stages it as `.uploading` immediately, so the strip shows something
+    /// the instant a picture is taken, then flips to `.uploaded` or
+    /// `.failed` once the media `PUT` answers. A failure never touches
+    /// `draft.photos` beyond that one entry — the create or edit this form
+    /// performs is never blocked by a photo that could not be sent.
+    internal func photoCaptured(_ jpegData: Data) async {
+        let sha256 = InventoryPhotoHashing.sha256(of: jpegData)
+        localPhotoData[sha256] = jpegData
+        guard !draft.photos.contains(where: { $0.sha256 == sha256 }) else { return }
+        draft.photos.append(InventoryFormPhoto(sha256: sha256, upload: .uploading))
+        await upload(sha256: sha256, data: jpegData)
+    }
+
+    /// Retries a photo whose upload failed, reusing the bytes captured
+    /// earlier this session (never re-encoded, since JPEG encoding is
+    /// deterministic on the same source and the failure was never about the
+    /// bytes changing).
+    internal func retryUpload(sha256: String) async {
+        guard let data = localPhotoData[sha256] else { return }
+        setUpload(.uploading, for: sha256)
+        await upload(sha256: sha256, data: data)
+    }
+
+    /// Drops a photo that never reached the server. Only a `.failed` photo
+    /// is ever removed this way: one already `.attached` or `.uploaded`
+    /// needs `item.removePhoto` instead, outside this slice's scope.
+    internal func removeFailedPhoto(sha256: String) {
+        draft.photos = draft.photos.removing(sha256: sha256)
+        localPhotoData.removeValue(forKey: sha256)
+    }
+
+    private func upload(sha256: String, data: Data) async {
+        do {
+            _ = try await store.uploadPhoto(sha256: sha256, data: data, contentType: .jpeg)
+            setUpload(.uploaded, for: sha256)
+        } catch let error as RepositoryError {
+            setUpload(.failed(InventoryCopy.message(for: error)), for: sha256)
+        } catch {
+            setUpload(.failed("Couldn't upload this photo."), for: sha256)
+        }
+    }
+
+    private func setUpload(_ upload: InventoryFormPhoto.Upload, for sha256: String) {
+        guard let index = draft.photos.firstIndex(where: { $0.sha256 == sha256 }) else { return }
+        draft.photos[index].upload = upload
     }
 
     private var commands: [InventoryCommand] {

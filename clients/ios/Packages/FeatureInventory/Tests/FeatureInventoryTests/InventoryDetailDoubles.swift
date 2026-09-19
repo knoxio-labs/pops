@@ -52,6 +52,12 @@ internal final class RecordingInventoryStore: InventoryStore {
         try await inner.photo(sha256, variant: variant)
     }
 
+    func uploadPhoto(
+        sha256: String, data: Data, contentType: InventoryMediaContentType
+    ) async throws -> InventoryMediaUploadResult {
+        try await inner.uploadPhoto(sha256: sha256, data: data, contentType: contentType)
+    }
+
     func status() -> AsyncStream<InventoryReplicaStatus> { inner.status() }
 }
 

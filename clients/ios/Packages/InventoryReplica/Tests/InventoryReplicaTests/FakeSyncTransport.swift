@@ -12,11 +12,20 @@ internal final class FakeSyncTransport: InventorySyncTransport {
     typealias SubmitHandler =
         @Sendable ([InventoryOutboundMutation]) async throws -> InventoryMutationBatchResult
 
+    typealias UploadHandler =
+        @Sendable (String, Data, InventoryMediaContentType) async throws ->
+        InventoryMediaUploadResult
+    typealias FetchHandler = @Sendable (String, InventoryPhotoVariant) async throws -> Data
+
     struct Script {
         var snapshot: SnapshotHandler = { _ in throw RepositoryError.contractMismatch }
         var changes: ChangesHandler = { _, _ in throw RepositoryError.contractMismatch }
         var submit: SubmitHandler = { _ in throw RepositoryError.contractMismatch }
         var catalogue: InventoryCatalogue?
+        var upload: UploadHandler = { sha256, _, _ in
+            InventoryMediaUploadResult(sha256: sha256, alreadyStored: false)
+        }
+        var fetch: FetchHandler = { _, _ in throw RepositoryError.contractMismatch }
     }
 
     struct Calls {
@@ -24,6 +33,8 @@ internal final class FakeSyncTransport: InventorySyncTransport {
         var changesSince: [Int] = []
         var submitted: [InventoryOutboundMutation] = []
         var catalogueRequests: [String?] = []
+        var uploaded: [String] = []
+        var fetched: [String] = []
     }
 
     private let script: Mutex<Script>
@@ -72,11 +83,13 @@ internal final class FakeSyncTransport: InventorySyncTransport {
     func uploadMedia(sha256: String, data: Data, contentType: InventoryMediaContentType)
         async throws -> InventoryMediaUploadResult
     {
-        throw RepositoryError.contractMismatch
+        recorded.withLock { $0.uploaded.append(sha256) }
+        return try await script.withLock { $0.upload }(sha256, data, contentType)
     }
 
     func fetchMedia(sha256: String, variant: InventoryPhotoVariant) async throws -> Data {
-        throw RepositoryError.contractMismatch
+        recorded.withLock { $0.fetched.append(sha256) }
+        return try await script.withLock { $0.fetch }(sha256, variant)
     }
 
     func suggestCodes(name: String, typeKey: String?, stem: String?) async throws -> [String] {

@@ -88,6 +88,12 @@ public struct UnboundInventoryStore: InventoryStore {
         throw RepositoryError.dependencyNotBound
     }
 
+    public func uploadPhoto(
+        sha256: String, data: Data, contentType: InventoryMediaContentType
+    ) async throws -> InventoryMediaUploadResult {
+        throw RepositoryError.dependencyNotBound
+    }
+
     public func status() -> AsyncStream<InventoryReplicaStatus> {
         AsyncStream { $0.finish() }
     }
