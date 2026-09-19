@@ -36,12 +36,18 @@ import type {
   MobileInventoryChangesData,
   MobileInventoryChangesErrors,
   MobileInventoryChangesResponses,
+  MobileInventoryGetMediaData,
+  MobileInventoryGetMediaErrors,
+  MobileInventoryGetMediaResponses,
   MobileInventoryItemHistoryData,
   MobileInventoryItemHistoryErrors,
   MobileInventoryItemHistoryResponses,
   MobileInventoryMutationsData,
   MobileInventoryMutationsErrors,
   MobileInventoryMutationsResponses,
+  MobileInventoryPutMediaData,
+  MobileInventoryPutMediaErrors,
+  MobileInventoryPutMediaResponses,
   MobileInventorySnapshotData,
   MobileInventorySnapshotErrors,
   MobileInventorySnapshotResponses,
@@ -263,6 +269,37 @@ export const mobileInventoryItemHistory = <ThrowOnError extends boolean = false>
     MobileInventoryItemHistoryErrors,
     ThrowOnError
   >({ url: '/mobile/inventory/items/{id}/history', ...options });
+
+/**
+ * A photo's bytes, base64, for a detail screen or a thumbnail row
+ */
+export const mobileInventoryGetMedia = <ThrowOnError extends boolean = false>(
+  options: Options<MobileInventoryGetMediaData, ThrowOnError>
+): RequestResult<MobileInventoryGetMediaResponses, MobileInventoryGetMediaErrors, ThrowOnError> =>
+  (options.client ?? client).get<
+    MobileInventoryGetMediaResponses,
+    MobileInventoryGetMediaErrors,
+    ThrowOnError
+  >({ url: '/mobile/inventory/media/{sha256}', ...options });
+
+/**
+ * Store a photo's bytes, content-addressed by their own sha256
+ */
+export const mobileInventoryPutMedia = <ThrowOnError extends boolean = false>(
+  options: Options<MobileInventoryPutMediaData, ThrowOnError>
+): RequestResult<MobileInventoryPutMediaResponses, MobileInventoryPutMediaErrors, ThrowOnError> =>
+  (options.client ?? client).put<
+    MobileInventoryPutMediaResponses,
+    MobileInventoryPutMediaErrors,
+    ThrowOnError
+  >({
+    url: '/mobile/inventory/media/{sha256}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
 
 /**
  * Apply up to 50 mutations in order, each in its own transaction, idempotently

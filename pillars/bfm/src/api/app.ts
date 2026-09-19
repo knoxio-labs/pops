@@ -21,7 +21,10 @@ import { fileURLToPath } from 'node:url';
 import { createExpressEndpoints } from '@ts-rest/express';
 import express, { type Express, type Request, type Response } from 'express';
 
-import { MOBILE_INVENTORY_MUTATIONS_MAX_BYTES } from '../contract/rest-mobile-inventory.js';
+import {
+  MOBILE_INVENTORY_MEDIA_MAX_BYTES,
+  MOBILE_INVENTORY_MUTATIONS_MAX_BYTES,
+} from '../contract/rest-mobile-inventory.js';
 import { MOBILE_UPLOAD_MAX_BYTES } from '../contract/rest-schemas.js';
 import { bfmContract } from '../contract/rest.js';
 import { createMobileRateLimit, type MobileRateLimitOptions } from './auth/mobile-rate-limit.js';
@@ -33,6 +36,7 @@ import { createRequireDevice } from './auth/require-device.js';
 import { createIdentityMiddleware } from './middleware/identity.js';
 import {
   CHALLENGE_PATH,
+  MOBILE_INVENTORY_MEDIA_UPLOAD_PATH,
   MOBILE_INVENTORY_MUTATIONS_PATH,
   MOBILE_PATH_PREFIX,
   MOBILE_RECEIPT_UPLOAD_PATH,
@@ -178,6 +182,15 @@ export function createBfmApiApp(deps: BfmApiDeps, options: CreateBfmApiAppOption
   app.use(
     MOBILE_INVENTORY_MUTATIONS_PATH,
     express.json({ limit: MOBILE_INVENTORY_MUTATIONS_MAX_BYTES })
+  );
+
+  // A photo's bytes, base64 in JSON, on the same footing as the receipt
+  // upload's own mount above — this is the outer envelope limit only; the
+  // authoritative 8 MB cap on the DECODED bytes is enforced in the handler,
+  // before any upstream call (see `mobile-inventory-handlers.ts`).
+  app.use(
+    MOBILE_INVENTORY_MEDIA_UPLOAD_PATH,
+    express.json({ limit: MOBILE_INVENTORY_MEDIA_MAX_BYTES })
   );
 
   app.use(express.json());

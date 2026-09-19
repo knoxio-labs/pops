@@ -68,6 +68,7 @@ import {
 import { createMobileFinanceClient } from './finance/client.js';
 import { createMobileInventoryClient } from './inventory/client.js';
 import { createInventoryPillarHandleFactory } from './inventory/handle-factory.js';
+import { createMobileInventoryMediaClient } from './inventory/media-client.js';
 import { buildBfmManifest } from './manifest.js';
 import { resolveProbeTimeoutMs } from './pillars/env.js';
 import { createPillarGateway } from './pillars/gateway.js';
@@ -119,6 +120,11 @@ const purchases = createMobilePurchasesClient(gateway);
 const inventoryGateway = createPillarGateway(createInventoryPillarHandleFactory());
 const inventory = createMobileInventoryClient(inventoryGateway);
 
+// Its own client again, and for the same reason the gateway above is: this
+// leg calls inventory's raw media store, which publishes no OpenAPI
+// operation `pillar()` could call at all — see `inventory/media-client.ts`.
+const inventoryMedia = createMobileInventoryMediaClient();
+
 // Unset in every real deployment, where this reconstructs the same limiter
 // `makeBfmRestHandlers` would have built on its own — see
 // `resolvePairingCodeIssuanceLimit`'s doc comment for the one caller that
@@ -146,6 +152,7 @@ const app = createBfmApiApp({
   probeTimeoutMs,
   finance,
   inventory,
+  inventoryMedia,
   purchases,
   refreshTokenTtlMs,
   issuanceLimiter,

@@ -34,6 +34,7 @@ import { readDevice } from '../auth/require-device.js';
 import { buildInventoryActorHeader } from '../inventory/actor-header.js';
 import { InventoryProtocolTooOldError } from '../inventory/protocol-error.js';
 import { isGatewayOk } from '../pillars/gateway.js';
+import { makeMobileInventoryMediaHandlers } from './mobile-inventory-media-handlers.js';
 import { toCollectionUpstreamErrorResponse, toUpstreamErrorResponse } from './upstream-error.js';
 
 import type { ServerInferRequest } from '@ts-rest/core';
@@ -42,6 +43,7 @@ import type { Response } from 'express';
 import type { bfmContract } from '../../contract/rest.js';
 import type { MobileInventoryClient } from '../inventory/client.js';
 import type { GatewayOutcome } from '../pillars/gateway.js';
+import type { MobileInventoryMediaHandlerDeps } from './mobile-inventory-media-handlers.js';
 
 type Req = ServerInferRequest<typeof bfmContract>['mobileInventory'];
 
@@ -54,7 +56,7 @@ const RESYNC_REQUIRED_MESSAGE =
 
 const INVALID_CURSOR_MESSAGE = 'The cursor is not one this server issued. Start the list again.';
 
-export interface MobileInventoryHandlerDeps {
+export interface MobileInventoryHandlerDeps extends MobileInventoryMediaHandlerDeps {
   inventory: MobileInventoryClient;
 }
 
@@ -70,6 +72,9 @@ function orThrowIfTooOld<T>(outcome: GatewayOutcome<T>) {
 
 export function makeMobileInventoryHandlers(deps: MobileInventoryHandlerDeps) {
   return {
+    // `putMedia`/`getMedia` (A13) live in their own module — see
+    // `mobile-inventory-media-handlers.ts`'s header for why.
+    ...makeMobileInventoryMediaHandlers(deps),
     catalogue: async () => {
       const outcome = orThrowIfTooOld(await deps.inventory.catalogue());
       if (!isGatewayOk(outcome)) return toCollectionUpstreamErrorResponse(outcome);
