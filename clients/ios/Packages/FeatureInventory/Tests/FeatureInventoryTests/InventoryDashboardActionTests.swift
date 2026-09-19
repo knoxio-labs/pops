@@ -134,4 +134,27 @@ internal struct InventoryDashboardActionTests {
 
         #expect(model.writer.failure == .repository(.unavailable))
     }
+
+    @Test("Move from the dashboard's In hand runs the shared placement plan on the model's runner")
+    func moveGoesThroughTheSharedRunner() async throws {
+        let store = RecordingInventoryStore(Self.store())
+        let model = InventoryDashboardViewModel(store: store)
+        let (task, loaded) = await model.startAndAwaitFirstAnswer()
+        defer { task.cancel() }
+        let router = try #require(loaded?.inHand.first { $0.id == "router" })
+        let destination = InventoryDestination(id: "kitchen", name: "Kitchen", kind: .location)
+
+        let moving = InventoryInHand.moveRequest(for: [router])
+        let plan = InventoryPlacementPlan(
+            request: moving, destination: destination, tree: InventoryLocationTree(nodes: []))
+        let landed = await model.runner.perform(
+            plan.commands, announcing: plan.message, symbol: .move)
+
+        #expect(landed)
+        #expect(
+            store.commands == [.moveItem(id: "router", to: .location("kitchen"), verb: .move)])
+        #expect(model.runner.undoOffer?.message == "Moved to Kitchen")
+        #expect(model.writer.undoOffer == nil)
+        #expect(await model.awaitDashboard { !$0.inHand.contains { $0.id == "router" } } != nil)
+    }
 }
