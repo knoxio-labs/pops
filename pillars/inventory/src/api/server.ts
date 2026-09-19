@@ -18,7 +18,7 @@ import {
   shutdownPillar,
   type PillarBootstrapHandle,
 } from '@pops/pillar-sdk/bootstrap';
-import { resolveSelfBaseUrl } from '@pops/pillar-sdk/pillar-env';
+import { assertSecretFilesReadable, resolveSelfBaseUrl } from '@pops/pillar-sdk/pillar-env';
 
 import { backfillPhotoMedia, openInventoryDb } from '../db/index.js';
 import { createInventoryApiApp } from './app.js';
@@ -28,6 +28,16 @@ import { createDocumentsClient } from './documents/client.js';
 import { resolveInventorySqlitePath } from './inventory-sqlite-path.js';
 import { buildInventoryCapabilityReporter, buildInventoryManifest } from './manifest.js';
 import { getInventoryImagesDir } from './modules/photos/paths.js';
+import { configureInventoryServerSdk } from './pillars/sdk-config.js';
+
+// Before the port, the database, or anything that resolves a credential. A
+// `*_FILE` variable pointing at a file this process cannot open makes the
+// outbound leg to `ai` authenticate as though nothing had been configured,
+// reported only in a startup log line — see the incident
+// `assertSecretFilesReadable`'s own doc comment describes (POPS-3315). An
+// unset variable is a supported configuration; a set one naming an
+// unreadable path is not, so this refuses to boot.
+assertSecretFilesReadable();
 
 function resolvePort(): number {
   const raw = process.env['PORT'];
@@ -48,6 +58,8 @@ const selfBaseUrl = resolveSelfBaseUrl({
 });
 
 const reconcileIntervalMs = resolveReconcileIntervalMs();
+
+configureInventoryServerSdk();
 
 const inventoryDb = openInventoryDb(resolveInventorySqlitePath());
 const app = createInventoryApiApp({
