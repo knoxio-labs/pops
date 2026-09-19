@@ -39,9 +39,15 @@ import type {
   MobileInventoryItemHistoryData,
   MobileInventoryItemHistoryErrors,
   MobileInventoryItemHistoryResponses,
+  MobileInventoryMutationsData,
+  MobileInventoryMutationsErrors,
+  MobileInventoryMutationsResponses,
   MobileInventorySnapshotData,
   MobileInventorySnapshotErrors,
   MobileInventorySnapshotResponses,
+  MobileInventorySuggestCodesData,
+  MobileInventorySuggestCodesErrors,
+  MobileInventorySuggestCodesResponses,
   MobilePurchasesCreateManualPurchaseData,
   MobilePurchasesCreateManualPurchaseErrors,
   MobilePurchasesCreateManualPurchaseResponses,
@@ -220,6 +226,29 @@ export const mobileFinanceGetTransaction = <ThrowOnError extends boolean = false
   >({ url: '/mobile/finance/transactions/{id}', ...options });
 
 /**
+ * Free codes for a new item: a stem followed by the next unused numbers
+ */
+export const mobileInventorySuggestCodes = <ThrowOnError extends boolean = false>(
+  options?: Options<MobileInventorySuggestCodesData, ThrowOnError>
+): RequestResult<
+  MobileInventorySuggestCodesResponses,
+  MobileInventorySuggestCodesErrors,
+  ThrowOnError
+> =>
+  (options?.client ?? client).post<
+    MobileInventorySuggestCodesResponses,
+    MobileInventorySuggestCodesErrors,
+    ThrowOnError
+  >({
+    url: '/mobile/inventory/codes/suggest',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
+
+/**
  * One item's history, newest first
  */
 export const mobileInventoryItemHistory = <ThrowOnError extends boolean = false>(
@@ -234,6 +263,25 @@ export const mobileInventoryItemHistory = <ThrowOnError extends boolean = false>
     MobileInventoryItemHistoryErrors,
     ThrowOnError
   >({ url: '/mobile/inventory/items/{id}/history', ...options });
+
+/**
+ * Apply up to 50 mutations in order, each in its own transaction, idempotently
+ */
+export const mobileInventoryMutations = <ThrowOnError extends boolean = false>(
+  options?: Options<MobileInventoryMutationsData, ThrowOnError>
+): RequestResult<MobileInventoryMutationsResponses, MobileInventoryMutationsErrors, ThrowOnError> =>
+  (options?.client ?? client).post<
+    MobileInventoryMutationsResponses,
+    MobileInventoryMutationsErrors,
+    ThrowOnError
+  >({
+    url: '/mobile/inventory/mutations',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
 
 /**
  * Rows and events changed after `since`, tombstones included, in seq order
