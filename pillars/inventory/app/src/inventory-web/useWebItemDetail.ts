@@ -17,7 +17,7 @@ const DEFAULT_HISTORY_LIMIT = 50;
  */
 export function useWebItemDetail(id: string | undefined, historyLimit = DEFAULT_HISTORY_LIMIT) {
   return useQuery({
-    queryKey: webItemDetailQueryKey(id ?? ''),
+    queryKey: [...webItemDetailQueryKey(id ?? ''), historyLimit] as const,
     queryFn: async () => unwrap(await webGet({ path: { id: id ?? '' }, query: { historyLimit } })),
     enabled: id !== undefined && id.length > 0,
   });

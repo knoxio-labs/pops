@@ -44,6 +44,32 @@ describe('useWebItemDetail', () => {
     });
     expect(result.current.data?.item.id).toBe('item-1');
   });
+
+  it('caches distinct historyLimit values separately, not sharing a cache slot', async () => {
+    mocks.webGet.mockResolvedValue(
+      ok({ item: { id: 'item-1' }, history: { events: [], nextCursor: null } })
+    );
+    const client = createTestQueryClient();
+    const { result: resultA } = renderHook(() => useWebItemDetail('item-1', 10), {
+      wrapper: withQueryClient(client),
+    });
+    await waitFor(() => expect(resultA.current.isSuccess).toBe(true));
+
+    const { result: resultB } = renderHook(() => useWebItemDetail('item-1', 99), {
+      wrapper: withQueryClient(client),
+    });
+    await waitFor(() => expect(resultB.current.isSuccess).toBe(true));
+
+    expect(mocks.webGet).toHaveBeenCalledTimes(2);
+    expect(mocks.webGet).toHaveBeenNthCalledWith(1, {
+      path: { id: 'item-1' },
+      query: { historyLimit: 10 },
+    });
+    expect(mocks.webGet).toHaveBeenNthCalledWith(2, {
+      path: { id: 'item-1' },
+      query: { historyLimit: 99 },
+    });
+  });
 });
 
 describe('useWebItemHistory', () => {
