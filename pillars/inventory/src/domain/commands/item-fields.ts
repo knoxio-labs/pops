@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { ACCESS_STATES, LIFECYCLES, type ItemInsert, type ItemRow } from '../../db/index.js';
+import { ACCESS_STATES, LIFECYCLES } from '../../db/schema.js';
 import { CommandRejected } from './errors.js';
 import {
   placementSchema,
@@ -9,6 +9,7 @@ import {
   type PreviousPlacement,
 } from './placement-schema.js';
 
+import type { ItemInsert, ItemRow } from '../../db/row-types.js';
 import type { JsonValue } from './outcome.js';
 
 export { placementSchema, previousPlacementSchema, type Placement, type PreviousPlacement };
@@ -111,10 +112,22 @@ const nameCodec: ItemCodec = {
   columns: (value) => ({ name: parseFieldValue(z.string().trim().min(1), 'name', value) }),
 };
 
+/**
+ * A note exactly as a client sends it (POPS-4053): empty or whitespace-only
+ * becomes `null` rather than a 400, since a client clearing a note by
+ * blanking the field is not an error. Anything else is kept byte for byte —
+ * no trimming of indentation or trailing newlines a person may have typed on
+ * purpose.
+ */
+export function normalizeNote(value: string | null | undefined): string | null {
+  if (value == null) return null;
+  return value.trim().length > 0 ? value : null;
+}
+
 const noteCodec: ItemCodec = {
   read: (row) => row.note,
   columns: (value) => ({
-    note: parseFieldValue(z.string().trim().min(1).nullable(), 'note', value),
+    note: normalizeNote(parseFieldValue(z.string().nullable(), 'note', value)),
   }),
 };
 
@@ -162,6 +175,19 @@ const isContainerCodec: ItemCodec = {
 };
 
 /**
+ * Write-only: `item.restoreDeleted` uses this to drop a `sourceRef` a live
+ * item has since claimed (POPS-4053). No op sets a non-null value through
+ * this codec; `item.create`'s own `sourceRef` bypasses the codec system
+ * entirely, since a create has no prior value to diff against.
+ */
+const sourceRefCodec: ItemCodec = {
+  read: (row) => row.sourceRef,
+  columns: (value) => ({
+    sourceRef: parseFieldValue(z.string().nullable(), 'sourceRef', value),
+  }),
+};
+
+/**
  * Every item field the command layer can write, keyed by its wire name (the
  * name events record). `placement` is one field, so a move is compared as a
  * whole; `previousPlacement` moves with it whenever an item enters or leaves
@@ -184,4 +210,5 @@ export const ITEM_FIELD_CODECS: Readonly<Record<string, ItemCodec>> = {
   code: codeCodec,
   typeKey: typeKeyCodec,
   isContainer: isContainerCodec,
+  sourceRef: sourceRefCodec,
 };

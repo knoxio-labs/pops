@@ -53,6 +53,17 @@ internal enum ReplicaApply {
         try meta.write(db)
     }
 
+    /// Forgets every server row and where the feed stood, keeping only the
+    /// catalogue, so the snapshot that follows a `409 resync_required` is
+    /// the whole truth. Upserting by revision alone would keep a row the
+    /// server no longer has, and ignore one whose revision a restored server
+    /// rewound below the stored one, even within the same epoch.
+    static func resetForResync(in db: Database) throws {
+        let meta = try SyncMeta.read(db)
+        try discardServerState(db)
+        try SyncMeta(catalogue: meta.catalogue, snapshotTotal: 0, snapshotRows: 0).write(db)
+    }
+
     static func store(_ catalogue: InventoryCatalogue, in db: Database) throws {
         var meta = try SyncMeta.read(db)
         meta.catalogue = try StoredJSON.encode(StoredCatalogue(catalogue))

@@ -361,6 +361,68 @@ export const EXPECTATIONS = [
     usedBy: 'pillars/bfm/src/api/purchases/client.ts',
   },
   {
+    consumer: 'bfm',
+    producer: 'inventory',
+    operationId: 'sync.snapshot',
+    path: '/sync/snapshot',
+    method: 'get',
+    // The pinned mark against a rotated-epoch or paged-past-drift cursor.
+    // Losing either leaves the phone's replica pinned to nothing, or drops
+    // the page size back to inventory's own default.
+    query: ['cursor', 'limit'],
+    usedBy: 'pillars/bfm/src/api/inventory/client.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'inventory',
+    operationId: 'sync.changes',
+    path: '/sync/changes',
+    method: 'get',
+    // `since`/`epoch` are the feed's own resume point; losing either silently
+    // restarts the feed from zero or forgets which epoch it is walking.
+    query: ['since', 'epoch', 'limit'],
+    usedBy: 'pillars/bfm/src/api/inventory/client.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'inventory',
+    operationId: 'sync.itemEvents',
+    path: '/sync/items/{id}/events',
+    method: 'get',
+    query: ['cursor', 'limit'],
+    pathParams: ['id'],
+    usedBy: 'pillars/bfm/src/api/inventory/client.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'inventory',
+    operationId: 'types.catalogue',
+    path: '/types',
+    method: 'get',
+    // No query params on this route; the catalogue is served whole.
+    query: [],
+    usedBy: 'pillars/bfm/src/api/inventory/client.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'inventory',
+    operationId: 'sync.mutations',
+    path: '/sync/mutations',
+    method: 'post',
+    // POST body, not query params; nothing here to lose to a rename.
+    query: [],
+    usedBy: 'pillars/bfm/src/api/inventory/client.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'inventory',
+    operationId: 'codes.suggest',
+    path: '/codes/suggest',
+    method: 'post',
+    query: [],
+    usedBy: 'pillars/bfm/src/api/inventory/client.ts',
+  },
+  {
     consumer: 'finance',
     producer: 'contacts',
     operationId: 'entities.list',
@@ -582,6 +644,20 @@ export const EXPECTATIONS = [
     query: ['limit', 'offset'],
     usedBy: 'pillars/cerebrum/src/api/modules/retrieval/peer-clients.ts',
   },
+  {
+    consumer: 'inventory',
+    producer: 'ai',
+    operationId: 'codes.rank',
+    path: '/codes/rank',
+    method: 'post',
+    // The whole payload is a body (`name`, optional `typeKey`, and the
+    // deterministic candidates to reorder) — this guard does not model
+    // bodies. What it can pin is that the operation still exists as a POST,
+    // so a rename or drop breaks loudly here rather than as a silent
+    // permanent fallback to the deterministic order in production.
+    query: [],
+    usedBy: 'pillars/inventory/src/api/ai/client.ts',
+  },
 ];
 
 /**
@@ -626,6 +702,15 @@ export const UNPINNABLE_CALL_SITES = [
       'Shell is the browser SPA, not a pillar server. Settings option loaders are ' +
       'declared by a runtime manifest and invoked via `callDynamic`, so both the ' +
       'pillar and the procedure are data.',
+  },
+  {
+    file: 'pillars/bfm/src/api/inventory/handle-factory.ts',
+    reason:
+      'Builds a `PillarHandle<TRouter>` for the extra outbound header inventory ' +
+      'sync needs but calls no operation on it — the bare `TRouter` this guard ' +
+      "cannot resolve belongs to whichever caller supplies it, same as the SDK's " +
+      'own `pillar()`. The operations actually called through the resulting ' +
+      'handle are pinned where they are called, in `client.ts`.',
   },
 ];
 

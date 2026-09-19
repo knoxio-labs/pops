@@ -1,0 +1,37 @@
+name: Select the pinned Xcode
+description: >-
+  Point xcode-select at the Xcode that clients/ios/mise.toml pins as
+  POPS_XCODE_VERSION, and export that version to the job's environment.
+
+# Never the runner image's default Xcode: it moves without notice and turns an
+# unrelated change red. One implementation for every macOS job, because iOS
+# Quality proving a commit on one Xcode and the TestFlight upload archiving it
+# on another would ship a binary nothing tested.
+#
+# POPS_XCODE_VERSION is exported so a caller can key caches on it: a build
+# product from another toolchain is not a cache, Swift rebuilds it from scratch.
+
+runs:
+  using: composite
+  steps:
+    - name: Select the pinned Xcode
+      shell: bash
+      env:
+        MISE_TOML: ${{ github.workspace }}/clients/ios/mise.toml
+      run: |
+        set -euo pipefail
+        version=$(sed -nE 's/^POPS_XCODE_VERSION *= *"([^"]+)".*/\1/p' "$MISE_TOML" | head -1)
+        if [ -z "$version" ]; then
+          echo "::error::no POPS_XCODE_VERSION pin found in clients/ios/mise.toml [env]"
+          exit 1
+        fi
+        app="/Applications/Xcode_${version}.app"
+        if [ ! -d "$app" ]; then
+          echo "::error::clients/ios/mise.toml pins Xcode $version, which this runner image does not carry. Available:"
+          ls -d /Applications/Xcode*.app
+          exit 1
+        fi
+        echo "pinning Xcode to $version (from clients/ios/mise.toml)"
+        sudo xcode-select -s "$app/Contents/Developer"
+        xcodebuild -version
+        echo "POPS_XCODE_VERSION=$version" >> "$GITHUB_ENV"

@@ -93,11 +93,29 @@ internal struct InventoryDashboardActionTests {
         #expect(model.writer.failure == .contractMismatch)
     }
 
+    @Test("Undo on a place's event reverts it under that place, not under an item")
+    func undoNamesTheEventsOwnEntity() async throws {
+        let store = RecordingInventoryStore(
+            InMemoryInventoryStore(
+                locations: [Fixture.location("kitchen", "Kitchen")],
+                events: [Fixture.event(4, .locationRenamed, on: "kitchen", entityKind: .location)]))
+        let model = InventoryDashboardViewModel(store: store)
+        let (task, loaded) = await model.startAndAwaitFirstAnswer()
+        defer { task.cancel() }
+        let activity = try #require(loaded?.recentWork.first)
+
+        await model.undo(activity)
+
+        #expect(
+            store.commands == [.revertEvent(seq: 4, entityKind: .location, entityId: "kitchen")])
+    }
+
     @Test("Undo on an event that is no longer undoable sends nothing")
     func nonUndoableActivityIsInert() async {
         let model = InventoryDashboardViewModel(store: Self.store())
         let activity = InventoryDashboard.Activity(
-            id: 9, title: "Wi-Fi router moved", place: nil, at: Fixture.epoch,
+            id: 9, entityKind: .item, entityId: "router", title: "Wi-Fi router moved", place: nil,
+            at: Fixture.epoch,
             symbol: "arrow.right",
             isUndoable: false)
 

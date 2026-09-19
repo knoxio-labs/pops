@@ -141,7 +141,7 @@ internal final class InventoryItemDetailViewModel {
     /// deleting it, so the event log stays append-only.
     internal func revert(_ entry: InventoryActivityEntry) async {
         guard entry.isUndoable else { return }
-        _ = await send(.revertEvent(seq: entry.seq))
+        _ = await send(.revertEvent(seq: entry.seq, entityKind: .item, entityId: itemId))
     }
 
     /// Takes the conflict notice's one choice.

@@ -4,9 +4,15 @@
  *
  * Composes the AI-ops telemetry routers (usage reads, observability, providers,
  * budgets, alerts), the cross-pillar ingest `POST /ai-usage/record`
- * (`aiIngest`), the pricing read `GET /ai-pricing/:p/:m` (`aiPricing`), and the
- * per-pillar `settings.*` RU+reset surface for its own `ai.*` keys, plus the
- * shared `jobs.*` management surface over this pillar's own queues.
+ * (`aiIngest`), the pricing read `GET /ai-pricing/:p/:m` (`aiPricing`), the
+ * candidate-code ranking `POST /codes/rank` (`codes`), and the per-pillar
+ * `settings.*` RU+reset surface for its own `ai.*` keys, plus the shared
+ * `jobs.*` management surface over this pillar's own queues.
+ *
+ * Passed whole to `createServiceAccountScopeGate` (`api/middleware/service-account-scope.ts`)
+ * with root scope `ai`, so every top-level key here doubles as a scope
+ * segment: `codes` projects to `ai.codes.rank`. A route added under any of
+ * these routers is gated the moment it exists.
  */
 import { initContract } from '@ts-rest/core';
 
@@ -15,6 +21,7 @@ import { aiBudgetsContract } from './rest-ai-budgets.js';
 import { aiObservabilityContract } from './rest-ai-observability.js';
 import { aiProvidersContract } from './rest-ai-providers.js';
 import { aiUsageContract } from './rest-ai-usage.js';
+import { aiCodesContract } from './rest-codes.js';
 import { aiIngestContract } from './rest-ingest.js';
 import { aiJobsContract } from './rest-jobs.js';
 import { aiPricingContract } from './rest-pricing.js';
@@ -31,6 +38,7 @@ export const aiContract = c.router(
     aiUsage: aiUsageContract,
     aiIngest: aiIngestContract,
     aiPricing: aiPricingContract,
+    codes: aiCodesContract,
     jobs: aiJobsContract,
     settings: aiSettingsContract,
   },

@@ -21,6 +21,7 @@ import { fileURLToPath } from 'node:url';
 import { createExpressEndpoints } from '@ts-rest/express';
 import express, { type Express, type Request, type Response } from 'express';
 
+import { MOBILE_INVENTORY_MUTATIONS_MAX_BYTES } from '../contract/rest-mobile-inventory.js';
 import { MOBILE_UPLOAD_MAX_BYTES } from '../contract/rest-schemas.js';
 import { bfmContract } from '../contract/rest.js';
 import { createMobileRateLimit, type MobileRateLimitOptions } from './auth/mobile-rate-limit.js';
@@ -32,12 +33,14 @@ import { createRequireDevice } from './auth/require-device.js';
 import { createIdentityMiddleware } from './middleware/identity.js';
 import {
   CHALLENGE_PATH,
+  MOBILE_INVENTORY_MUTATIONS_PATH,
   MOBILE_PATH_PREFIX,
   MOBILE_RECEIPT_UPLOAD_PATH,
   PAIRING_PATH,
   REFRESH_PATH,
 } from './paths.js';
 import { type BfmRestHandlerDeps, makeBfmRestHandlers } from './rest/handlers.js';
+import { createInventoryProtocolErrorHandler } from './rest/inventory-protocol-error.js';
 import { createJsonBodyErrorHandler } from './rest/json-body-error.js';
 import { createPayloadTooLargeErrorHandler } from './rest/payload-too-large.js';
 import { createRequestValidationErrorHandler } from './rest/request-validation.js';
@@ -168,6 +171,15 @@ export function createBfmApiApp(deps: BfmApiDeps, options: CreateBfmApiAppOption
   // Its refusal is reshaped below (ADR-046).
   app.use(MOBILE_RECEIPT_UPLOAD_PATH, express.json({ limit: MOBILE_UPLOAD_MAX_BYTES }));
 
+  // Same reasoning as the receipt upload's own mount above: a batch of 50
+  // mutations carrying real field values is comfortably past Express's
+  // 100kb default, and this is bfm's own ceiling on that one body rather
+  // than a limit inventory itself imposes.
+  app.use(
+    MOBILE_INVENTORY_MUTATIONS_PATH,
+    express.json({ limit: MOBILE_INVENTORY_MUTATIONS_MAX_BYTES })
+  );
+
   app.use(express.json());
 
   // Directly after BOTH parsers above, so a parse failure from either one
@@ -201,6 +213,12 @@ export function createBfmApiApp(deps: BfmApiDeps, options: CreateBfmApiAppOption
   // reaches an error handler rather than a handler — and left to Express's
   // default it would be an HTML page the generated client cannot decode.
   app.use(createPayloadTooLargeErrorHandler());
+
+  // Also last, and order-independent of the one above (they match disjoint
+  // error types). `426` sits outside ts-rest's status type, so the
+  // `/mobile/inventory/*` handlers throw rather than return it — see
+  // `inventory-protocol-error.ts`.
+  app.use(createInventoryProtocolErrorHandler());
 
   return app;
 }

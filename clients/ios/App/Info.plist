@@ -8,11 +8,31 @@
 	POPS_BFM_BASE_URL is per-configuration and defined in project.yml. Release
 	defines it empty on purpose: a shipped binary carries no hostname, and the
 	base URL it uses arrives with the pairing QR instead.
+
+	CFBundleURLTypes has no INFOPLIST_KEY_ equivalent at all — there is no
+	build setting for an array of dictionaries — so the `pops` URL scheme can
+	only be declared here. A label's soft reference
+	(`pops://<pillar>/<type>/<id>`) opens through this scheme and resolves via
+	`onOpenURL` the same way the QR scanner resolves it, through
+	`AppCore`'s `EntityRouter`.
 -->
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
 	<key>POPSBFMBaseURL</key>
 	<string>$(POPS_BFM_BASE_URL)</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.knoxiolabs.pops</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>pops</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

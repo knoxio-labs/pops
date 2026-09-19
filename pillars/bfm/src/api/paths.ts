@@ -31,6 +31,15 @@ export const MOBILE_RECEIPT_UPLOAD_PATH = bfmContract.mobilePurchases.saveReceip
 /** Where the photographs actually arrive. Sits under the path above. */
 export const MOBILE_RECEIPT_EXTRACT_PATH = bfmContract.mobilePurchases.extractReceipt.path;
 
+/**
+ * Where a batch of inventory mutations arrives, and therefore the mount for
+ * its own body limit (`MOBILE_INVENTORY_MUTATIONS_MAX_BYTES`) — well below
+ * the receipt upload's, since this body is structured JSON with no
+ * photograph in it, but still above Express's 100kb default, which a batch
+ * of 50 mutations carrying real field values can reach.
+ */
+export const MOBILE_INVENTORY_MUTATIONS_PATH = bfmContract.mobileInventory.mutations.path;
+
 /*
  * `app.use` matches a PREFIX, and `extractReceipt` sits under this path at
  * `/extract` — so the budget and the rate limit mounted here cover the call

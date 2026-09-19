@@ -123,6 +123,9 @@ describe('the granted scopes', () => {
       'finance.checkpoints',
       'purchases.purchase',
       'purchases.receipt',
+      'inventory.sync',
+      'inventory.types',
+      'inventory.codes',
     ]);
   });
 

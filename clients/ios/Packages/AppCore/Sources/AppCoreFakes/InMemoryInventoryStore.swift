@@ -98,8 +98,8 @@ public final class InMemoryInventoryStore: InventoryStore, @unchecked Sendable {
         notify(snapshot)
         return InventoryReceipt(
             mutationId: mutationId,
-            entityKind: Self.entityKind(of: command),
-            entityId: command.entityId ?? mutationId)
+            entityKind: command.entityKind,
+            entityId: command.entityId)
     }
 
     public func undo(_ receipt: InventoryReceipt) async throws {
@@ -187,15 +187,6 @@ public final class InMemoryInventoryStore: InventoryStore, @unchecked Sendable {
 
     func notify(_ snapshot: State) {
         for observer in snapshot.observers.values { observer.deliver(snapshot) }
-    }
-
-    private static func entityKind(of command: InventoryCommand) -> InventoryEntityKind {
-        switch command {
-        case .createLocation, .renameLocation, .moveLocation, .deleteLocation:
-            .location
-        default:
-            .item
-        }
     }
 
     /// Groups every command into the three files that actually apply it, so

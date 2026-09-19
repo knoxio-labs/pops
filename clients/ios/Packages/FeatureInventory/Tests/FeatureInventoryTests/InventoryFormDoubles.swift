@@ -98,7 +98,8 @@ internal final class RecordingFormStore: InventoryStore, Sendable {
             if current.failing.contains(kind) { throw RepositoryError.unavailable }
         }
         return InventoryReceipt(
-            mutationId: UUID().uuidString, entityKind: .item, entityId: command.entityId ?? "")
+            mutationId: UUID().uuidString, entityKind: command.entityKind,
+            entityId: command.entityId)
     }
 
     func undo(_ receipt: InventoryReceipt) async throws {}
