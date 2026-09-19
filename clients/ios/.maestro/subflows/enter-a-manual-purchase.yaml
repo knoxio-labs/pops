@@ -39,20 +39,26 @@ name: Fill in a blank receipt draft and submit it
           id: 'receipt-draft-record-create'
       - assertVisible: 'Corner Store'
 
-# Ordered so no tap lands under the keyboard. With it up, the form's action
-# bars ride above it and cover the lower fields, and `tapOn` aims at an
-# element's centre without asking whether something is drawn over it: a tap
-# meant for the item amount once landed on Done and discarded the whole draft
-# (POPS-4189). So the two text fields end with Return, which puts the keyboard
-# away; the total, lowest on the form, is scrolled to and filled while nothing
-# covers it; and the item amount, whose decimal pad has no Return, goes last.
-# `hideKeyboard` is not used: it fails outright on this simulator.
-# The form is taller than the screen once the keyboard is up, so each attempt
-# starts from the top (a retry would otherwise aim its first taps at a form
-# still scrolled to the total) and the checks scroll back to what they read:
-# an element scrolled off screen is not visible to `assertVisible`. The typed
-# text sits on the field inside each `PopsTextField`'s identified wrapper, hence
-# `childOf`.
+# The keyboard is put away after every field, and each next field is scrolled
+# to the middle of the screen before it is tapped (only on the way down: the
+# date sits too near the top of the form ever to reach the middle, and the
+# upward scrolls are only for the checks). With the keyboard up, the
+# form's action bars ride above it, and together they cover more than half of
+# an iPhone 17 — the middle included — while `tapOn` aims at an element
+# without asking whether something is drawn over it. A tap meant for the item
+# amount once landed on Done and discarded the draft (POPS-4189); on iOS 26 a
+# tap meant for the next field landed on the bars and everything after it was
+# typed into the date. Return is no way out: iOS 26 moves focus to the next
+# field instead of putting the keyboard away, and `hideKeyboard` fails
+# outright. Dragging the form down is: the form declares
+# `scrollDismissesKeyboard(.interactively)`, so the drag takes the keyboard
+# with it on every iOS this runs on.
+#
+# Each field is tapped inside its text box at the trailing end, not at its
+# wrapper's centre: the wrappers carry a label or a note, and a caret placed
+# after the existing text is what lets `eraseText` clear a retry's first try.
+# The typed text sits on the field inside each `PopsTextField`'s identified
+# wrapper, hence `childOf` for the checks.
 - retry:
     maxRetries: 2
     commands:
@@ -62,37 +68,68 @@ name: Fill in a blank receipt draft and submit it
             id: 'receipt-draft-date'
       - tapOn:
           id: 'receipt-draft-date'
+          point: '90%,60%'
       - eraseText
       - inputText: '2026-09-01'
-      - pressKey: Enter
+      - swipe:
+          start: 50%, 25%
+          end: 50%, 85%
+          duration: 600
+      - scrollUntilVisible:
+          centerElement: true
+          element:
+            id: 'receipt-draft-item-description'
       - tapOn:
           id: 'receipt-draft-item-description'
+          point: '90%,30%'
       - eraseText
       - inputText: 'Coffee'
-      - pressKey: Enter
+      - swipe:
+          start: 50%, 25%
+          end: 50%, 85%
+          duration: 600
       - scrollUntilVisible:
+          centerElement: true
+          element:
+            id: 'receipt-draft-item-amount'
+      - tapOn:
+          id: 'receipt-draft-item-amount'
+          point: '90%,10%'
+      - eraseText
+      - inputText: '5.00'
+      - swipe:
+          start: 50%, 25%
+          end: 50%, 85%
+          duration: 600
+      - scrollUntilVisible:
+          centerElement: true
           element:
             id: 'receipt-draft-total'
       - tapOn:
           id: 'receipt-draft-total'
-      - eraseText
-      - inputText: '5.00'
-      # Near the top of the wrapper, not its centre: once the line shows its
-      # "an amount is needed" note the wrapper is twice as tall and its centre
-      # is the note, while the field is the wrapper's top band either way.
-      - tapOn:
-          id: 'receipt-draft-item-amount'
-          point: '50%,10%'
+          point: '90%,60%'
       - eraseText
       - inputText: '5.00'
       - assertVisible:
           text: '5.00'
           childOf:
             id: 'receipt-draft-total'
+      - swipe:
+          start: 50%, 25%
+          end: 50%, 85%
+          duration: 600
+      - scrollUntilVisible:
+          direction: UP
+          element:
+            id: 'receipt-draft-item-amount'
       - assertVisible:
           text: '5.00'
           childOf:
             id: 'receipt-draft-item-amount'
+      - assertVisible:
+          text: 'Coffee'
+          childOf:
+            id: 'receipt-draft-item-description'
       - scrollUntilVisible:
           direction: UP
           element:
@@ -101,10 +138,6 @@ name: Fill in a blank receipt draft and submit it
           text: '2026-09-01'
           childOf:
             id: 'receipt-draft-date'
-      - assertVisible:
-          text: 'Coffee'
-          childOf:
-            id: 'receipt-draft-item-description'
 
 - tapOn:
     id: 'receipt-draft-save'
