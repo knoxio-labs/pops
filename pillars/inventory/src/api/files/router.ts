@@ -50,6 +50,13 @@ const PHOTO_FILENAME_RE = /^photo_\d+\.jpg$/;
 /** Direct-upload doc filenames: `file_NNN.{ext}` (PDFs, images, text). */
 const DOC_FILENAME_RE = /^file_\d+\.[a-z0-9]+$/i;
 
+/** Uploaded item photo bytes. Exported so the service-account gate scopes this exact path. */
+export const ITEM_PHOTO_FILE_ROUTE_PATH = '/api/inventory/photos/items/:itemId/:filename';
+/** Direct-upload item document bytes. Exported so the service-account gate scopes this exact path. */
+export const ITEM_DOCUMENT_FILE_ROUTE_PATH = '/api/inventory/documents/items/:itemId/:filename';
+/** The Paperless thumbnail proxy. Exported so the service-account gate scopes this exact path. */
+export const DOCUMENT_THUMBNAIL_ROUTE_PATH = '/inventory/documents/:id/thumbnail';
+
 interface ServeSpec {
   /** Resolved at request time so tests can flip the env per case. */
   baseDir: string;
@@ -164,7 +171,7 @@ export function createInventoryFilesRouter(
   const fetchImpl = options.fetchImpl ?? fetch;
   const router = Router();
 
-  router.get('/api/inventory/photos/items/:itemId/:filename', async (req, res): Promise<void> => {
+  router.get(ITEM_PHOTO_FILE_ROUTE_PATH, async (req, res): Promise<void> => {
     await serveItemFile(req, res, {
       baseDir: getInventoryImagesDir(),
       filenameRe: PHOTO_FILENAME_RE,
@@ -172,19 +179,16 @@ export function createInventoryFilesRouter(
     });
   });
 
-  router.get(
-    '/api/inventory/documents/items/:itemId/:filename',
-    async (req, res): Promise<void> => {
-      await serveItemFile(req, res, {
-        baseDir: getInventoryDocumentsDir(),
-        filenameRe: DOC_FILENAME_RE,
-        notFound: 'Document not found',
-      });
-    }
-  );
+  router.get(ITEM_DOCUMENT_FILE_ROUTE_PATH, async (req, res): Promise<void> => {
+    await serveItemFile(req, res, {
+      baseDir: getInventoryDocumentsDir(),
+      filenameRe: DOC_FILENAME_RE,
+      notFound: 'Document not found',
+    });
+  });
 
   router.get(
-    '/inventory/documents/:id/thumbnail',
+    DOCUMENT_THUMBNAIL_ROUTE_PATH,
     createThumbnailProxyHandler(lookupDocumentsPillar, fetchImpl)
   );
 

@@ -1,23 +1,17 @@
 /**
- * Locations CRUD service.
+ * Locations read service.
  *
  * Each function takes an `InventoryDb` handle as its first argument; the
  * calling layer resolves the singleton or transaction handle to pass in.
+ * Writes go through the command engine (`location.create`, `location.update`,
+ * `location.delete`, POPS-4053); this module keeps only the read surface,
+ * shared with downstream slices.
  *
- * Read helpers live in `locations-queries.ts` so the mutating CRUD layer
- * stays small and the read surface can be shared with downstream slices.
+ * Read helpers live in `locations-queries.ts` so this barrel stays small.
  */
-import { randomUUID } from 'node:crypto';
+import { and, asc, eq, isNull } from 'drizzle-orm';
 
-import { asc, eq } from 'drizzle-orm';
-
-import {
-  LocationCycleError,
-  LocationNotFoundError,
-  LocationSelfParentError,
-  ParentLocationNotFoundError,
-} from '../errors.js';
-import { items, locations } from '../schema.js';
+import { locations } from '../schema.js';
 import {
   getDeleteStats,
   getDescendantLocationIds,
@@ -69,18 +63,6 @@ export interface LocationTreeNode extends Location {
   children: LocationTreeNode[];
 }
 
-export interface CreateLocationInput {
-  name: string;
-  parentId?: string | null;
-  sortOrder?: number;
-}
-
-export interface UpdateLocationInput {
-  name?: string;
-  parentId?: string | null;
-  sortOrder?: number;
-}
-
 export interface LocationListResult {
   rows: LocationRow[];
   total: number;
@@ -119,110 +101,7 @@ export function getChildren(db: InventoryDb, parentId: string): LocationRow[] {
   return db
     .select()
     .from(locations)
-    .where(eq(locations.parentId, parentId))
+    .where(and(eq(locations.parentId, parentId), isNull(locations.deletedAt)))
     .orderBy(asc(locations.sortOrder), asc(locations.name))
     .all();
-}
-
-function assertParentExists(db: InventoryDb, parentId: string): void {
-  const parent = db
-    .select({ id: locations.id })
-    .from(locations)
-    .where(eq(locations.id, parentId))
-    .get();
-  if (!parent) throw new ParentLocationNotFoundError(parentId);
-}
-
-export function createLocation(db: InventoryDb, input: CreateLocationInput): LocationRow {
-  if (input.parentId !== undefined && input.parentId !== null) {
-    assertParentExists(db, input.parentId);
-  }
-
-  const id = randomUUID();
-  const now = new Date().toISOString();
-
-  db.insert(locations)
-    .values({
-      id,
-      name: input.name,
-      parentId: input.parentId ?? null,
-      sortOrder: input.sortOrder ?? 0,
-      lastEditedTime: now,
-      createdAt: now,
-      updatedAt: now,
-    })
-    .run();
-
-  return getLocation(db, id);
-}
-
-function assertNoCycle(db: InventoryDb, id: string, newParentId: string): void {
-  let current: string | null = newParentId;
-  while (current) {
-    const ancestor: { parentId: string | null } | undefined = db
-      .select({ parentId: locations.parentId })
-      .from(locations)
-      .where(eq(locations.id, current))
-      .get();
-    if (!ancestor) break;
-    if (ancestor.parentId === id) {
-      throw new LocationCycleError(id, newParentId);
-    }
-    current = ancestor.parentId;
-  }
-}
-
-function buildLocationUpdates(input: UpdateLocationInput): Partial<LocationRow> {
-  const updates: Partial<LocationRow> = {};
-  if (input.name !== undefined) updates.name = input.name;
-  if (input.parentId !== undefined) updates.parentId = input.parentId;
-  if (input.sortOrder !== undefined) updates.sortOrder = input.sortOrder;
-  return updates;
-}
-
-export function updateLocation(
-  db: InventoryDb,
-  id: string,
-  input: UpdateLocationInput
-): LocationRow {
-  getLocation(db, id);
-
-  if (input.parentId !== undefined && input.parentId !== null) {
-    if (input.parentId === id) throw new LocationSelfParentError(id);
-    assertParentExists(db, input.parentId);
-    assertNoCycle(db, id, input.parentId);
-  }
-
-  const updates = buildLocationUpdates(input);
-  if (Object.keys(updates).length > 0) {
-    updates.lastEditedTime = new Date().toISOString();
-    db.update(locations).set(updates).where(eq(locations.id, id)).run();
-  }
-
-  return getLocation(db, id);
-}
-
-/**
- * Delete a location. Items placed directly at it go in hand remembering it
- * (the "Previous place deleted" state of Inventory ADR-002 D2), because
- * `items.location_id` has no `ON DELETE` action and a placement cannot
- * simply lose its reference. Child locations are left as they were.
- */
-export function deleteLocation(db: InventoryDb, id: string): void {
-  getLocation(db, id);
-  db.transaction((tx) => {
-    tx.update(items)
-      .set({
-        placementKind: 'hand',
-        locationId: null,
-        previousPlacementKind: 'location',
-        previousLocationId: id,
-        previousContainingItemId: null,
-        lastEditedTime: new Date().toISOString(),
-      })
-      .where(eq(items.locationId, id))
-      .run();
-    const result = tx.delete(locations).where(eq(locations.id, id)).run();
-    if (result.changes === 0) throw new LocationNotFoundError(id);
-  });
 }

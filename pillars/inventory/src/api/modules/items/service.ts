@@ -1,23 +1,20 @@
 /**
- * Inventory items service — CRUD operations using Drizzle ORM against the
- * per-pillar `inventory.db` handle.
+ * Inventory items read service, using Drizzle ORM against the per-pillar
+ * `inventory.db` handle. Every read here excludes a tombstoned row, since
+ * `item.delete` (POPS-4053) marks `deleted_at` rather than removing the row.
+ * The legacy `/items` routes' writes go through the command layer
+ * (`../../domain/commands`) instead of this module.
  *
  * The `InventoryDb` handle is passed in explicitly to every function rather
  * than resolved via a module-global getter, keeping this service free of
  * ambient state and trivially testable with an in-memory db.
  */
-import crypto from 'crypto';
-
 import { and, count, eq, inArray, isNotNull, isNull, like, sql, sum, type SQL } from 'drizzle-orm';
 
 import { items, type InventoryDb, locationsService } from '../../../db/index.js';
-import { isSourceRefConflict } from '../../../db/services/source-ref-conflict.js';
-import { NotFoundError, ValidationError } from '../../shared/errors.js';
-import { buildCreateValues } from './create-builder.js';
-import { placementForCreate, placementForUpdate } from './legacy-placement.js';
-import { buildInventoryUpdate } from './update-builder.js';
+import { NotFoundError } from '../../shared/errors.js';
 
-import type { CreateInventoryItemInput, ItemRow, UpdateInventoryItemInput } from './types.js';
+import type { ItemRow } from './types.js';
 
 /** Count + rows + value aggregates for a paginated list. */
 export interface InventoryListResult {
@@ -44,7 +41,7 @@ export interface ListInventoryItemsOptions {
 }
 
 function buildInventoryConditions(db: InventoryDb, opts: ListInventoryItemsOptions): SQL[] {
-  const conditions: SQL[] = [];
+  const conditions: SQL[] = [isNull(items.deletedAt)];
   if (opts.search) conditions.push(like(items.name, `%${opts.search}%`));
   if (opts.room) conditions.push(eq(items.room, opts.room));
   if (opts.type) conditions.push(eq(items.legacyType, opts.type));
@@ -120,13 +117,49 @@ export function searchByAssetId(db: InventoryDb, assetId: string): ItemRow | nul
   const [row] = db
     .select()
     .from(items)
-    .where(sql`LOWER(${items.code}) = LOWER(${assetId})`)
+    .where(and(sql`LOWER(${items.code}) = LOWER(${assetId})`, isNull(items.deletedAt)))
     .all();
   return row ?? null;
 }
 
+/** Who a `code` is held by, case-insensitively, tombstoned or not (POPS-4053/4124). */
+export interface CodeHolder {
+  readonly id: string;
+  readonly name: string;
+  readonly deletedAt: string | null;
+}
+
 /**
- * Count inventory items whose assetId starts with the given prefix (case-insensitive).
+ * The item already holding `code` (case-insensitive), if any, so a legacy
+ * create/update route that hits `items.code`'s unique index can report a
+ * clean 409 naming whether the holder is a deleted item rather than letting
+ * the raw constraint violation surface as a 500 (POPS-4053).
+ */
+export function findCodeHolder(db: InventoryDb, code: string): CodeHolder | undefined {
+  return db
+    .select({ id: items.id, name: items.name, deletedAt: items.deletedAt })
+    .from(items)
+    .where(sql`LOWER(${items.code}) = LOWER(${code})`)
+    .get();
+}
+
+/**
+ * Whether `id` names a tombstoned item, `undefined` when it names no item at
+ * all. Used to word a `code_collision`'s 409 message: the holder an
+ * `item.setCode` conflict names is only an id and a name, not whether it is
+ * live (POPS-4053).
+ */
+export function isItemDeleted(db: InventoryDb, id: string): boolean | undefined {
+  const row = db.select({ deletedAt: items.deletedAt }).from(items).where(eq(items.id, id)).get();
+  return row ? row.deletedAt != null : undefined;
+}
+
+/**
+ * Count inventory items whose assetId starts with the given prefix
+ * (case-insensitive), deleted items included (POPS-4053): `items.code`
+ * stays held by a deleted item (POPS-4124), so an id the web app's counter
+ * skipped counting could still collide with one. Undercounting here is what
+ * used to make the counter suggest an id already held by a tombstoned item.
  */
 export function countByAssetPrefix(db: InventoryDb, prefix: string): number {
   const [result] = db
@@ -142,131 +175,39 @@ export function getDistinctTypes(db: InventoryDb): string[] {
   const rows = db
     .selectDistinct({ type: items.legacyType })
     .from(items)
-    .where(isNotNull(items.legacyType))
+    .where(and(isNotNull(items.legacyType), isNull(items.deletedAt)))
     .orderBy(items.legacyType)
     .all();
   return rows.map((r) => r.type).filter((t): t is string => t !== null);
 }
 
-/** Get a single inventory item by id. Throws NotFoundError if missing. */
+/**
+ * Get a single, non-tombstoned inventory item by id. Throws NotFoundError
+ * when missing or already deleted: the legacy routes hard-deleted a row, so
+ * a tombstone left by `item.delete` (POPS-4053) has to look the same as
+ * gone.
+ */
 export function getInventoryItem(db: InventoryDb, id: string): ItemRow {
-  const [row] = db.select().from(items).where(eq(items.id, id)).all();
+  const [row] = db
+    .select()
+    .from(items)
+    .where(and(eq(items.id, id), isNull(items.deletedAt)))
+    .all();
 
   if (!row) throw new NotFoundError('Inventory item', id);
   return row;
 }
 
-/** The row a given `source_ref` already names, if any. */
-function getBySourceRef(db: InventoryDb, sourceRef: string): ItemRow | undefined {
-  return db.select().from(items).where(eq(items.sourceRef, sourceRef)).get();
-}
-
-/** Longest containment chain the legacy writer walks (ADR-002 D2's cap). */
-const MAX_CONTAINMENT_DEPTH = 32;
-
 /**
- * Refuse a legacy `containerId` that names no live container, or that would
- * put the item inside itself or its own contents. Throws rather than letting
- * a bad id reach the `containing_item_id` foreign key or the placement CHECK
- * as an unmapped constraint error.
+ * The LIVE row a given `source_ref` already names, if any (POPS-4053):
+ * `items_source_ref` is unique only among live rows, so a ref held solely by
+ * a deleted item has no live holder here, and a fan-out caller (purchases)
+ * must never be handed a tombstoned row back from a create.
  */
-function assertContainerTarget(db: InventoryDb, itemId: string | null, containerId: string): void {
-  const container = db
-    .select({ id: items.id })
+export function getBySourceRef(db: InventoryDb, sourceRef: string): ItemRow | undefined {
+  return db
+    .select()
     .from(items)
-    .where(and(eq(items.id, containerId), eq(items.isContainer, 1), isNull(items.deletedAt)))
+    .where(and(eq(items.sourceRef, sourceRef), isNull(items.deletedAt)))
     .get();
-  if (!container) throw new NotFoundError('Container', containerId);
-  if (itemId === null) return;
-
-  let ancestor: string | null = container.id;
-  for (let depth = 0; ancestor !== null; depth += 1) {
-    if (ancestor === itemId || depth >= MAX_CONTAINMENT_DEPTH) {
-      throw new ValidationError('An item cannot be placed inside itself or its own contents');
-    }
-    const next = db
-      .select({ containingItemId: items.containingItemId })
-      .from(items)
-      .where(eq(items.id, ancestor))
-      .get();
-    ancestor = next?.containingItemId ?? null;
-  }
-}
-
-/**
- * Create a new inventory item. Returns the created row.
- * Generates a local UUID and inserts directly into SQLite.
- *
- * Idempotent when `input.sourceRef` is supplied (POPS-2433): two concurrent
- * calls naming the same reference race to the insert, the loser's write
- * raises the `items_source_ref` UNIQUE violation, and that loser returns the
- * winner's row rather than surfacing the error or minting a second one. A
- * caller with no `sourceRef` gets the old, non-idempotent behaviour — a plain
- * insert.
- */
-export function createInventoryItem(db: InventoryDb, input: CreateInventoryItemInput): ItemRow {
-  const id = crypto.randomUUID();
-  const now = new Date().toISOString();
-
-  if (typeof input.containerId === 'string') assertContainerTarget(db, null, input.containerId);
-  const values = buildCreateValues(id, now, input, placementForCreate(input));
-
-  try {
-    db.insert(items).values(values).run();
-  } catch (err) {
-    if (typeof input.sourceRef === 'string' && input.sourceRef.length > 0) {
-      const existing = isSourceRefConflict(err) ? getBySourceRef(db, input.sourceRef) : undefined;
-      if (existing !== undefined) return existing;
-    }
-    throw err;
-  }
-
-  return getInventoryItem(db, id);
-}
-
-/**
- * Update an existing inventory item. Returns the updated row.
- */
-export function updateInventoryItem(
-  db: InventoryDb,
-  id: string,
-  input: UpdateInventoryItemInput
-): ItemRow {
-  const current = getInventoryItem(db, id);
-
-  if (typeof input.containerId === 'string') assertContainerTarget(db, id, input.containerId);
-  const updates = buildInventoryUpdate(input, placementForUpdate(current, input));
-  if (updates) {
-    db.update(items).set(updates).where(eq(items.id, id)).run();
-  }
-
-  return getInventoryItem(db, id);
-}
-
-/**
- * Delete an inventory item by ID. Throws NotFoundError if missing.
- *
- * Deleting a container empties it rather than deleting what was inside, as
- * before Inventory ADR-002: its contents go in hand, remembering the
- * container. `containing_item_id` has no `ON DELETE` action, so they have to
- * move before the row goes.
- */
-export function deleteInventoryItem(db: InventoryDb, id: string): void {
-  getInventoryItem(db, id);
-
-  db.transaction((tx) => {
-    tx.update(items)
-      .set({
-        placementKind: 'hand',
-        containingItemId: null,
-        previousPlacementKind: 'container',
-        previousLocationId: null,
-        previousContainingItemId: id,
-        lastEditedTime: new Date().toISOString(),
-      })
-      .where(eq(items.containingItemId, id))
-      .run();
-    const result = tx.delete(items).where(eq(items.id, id)).run();
-    if (result.changes === 0) throw new NotFoundError('Inventory item', id);
-  });
 }
