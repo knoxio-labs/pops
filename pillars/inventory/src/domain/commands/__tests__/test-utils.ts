@@ -86,6 +86,7 @@ export interface SeedItem {
   quantity?: number;
   code?: string;
   typeKey?: string;
+  sourceRef?: string;
 }
 
 function seededPlacementKind(seed: SeedItem): ItemRow['placementKind'] {
@@ -111,6 +112,7 @@ export function seedItem(h: Harness, seed: SeedItem): void {
       quantity: seed.quantity ?? 1,
       code: seed.code ?? null,
       typeKey: seed.typeKey ?? null,
+      sourceRef: seed.sourceRef ?? null,
       lastEditedTime: '2026-09-18T00:00:00.000Z',
       seq: 0,
     })

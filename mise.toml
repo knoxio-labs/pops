@@ -275,6 +275,29 @@ run = [
   "mise run fixture:refresh-message:vendor",
 ]
 
+# The command-vectors fixture (Inventory ADR-002 D11) is the same arrangement
+# again: the inventory pillar's command engine is the party the vectors are
+# generated against, so it holds the canonical copy, and `clients/ios` vendors
+# it (ADR-043 — the Swift reducer must not read a path under `pillars/`). The
+# copy step lives here for the same reason as its two neighbours above.
+[tasks."fixture:command-vectors:vendor"]
+description = "Re-vendor the inventory command-vectors fixture into the iOS client"
+dir = "{{config_root}}"
+run = "cp pillars/inventory/contracts/command-vectors-v1.json clients/ios/Contracts/command-vectors-v1.json"
+
+# Safe to re-run: the vectors are derived from a fixed clock, fixed ids and the
+# real command engine, so an unchanged engine regenerates identical bytes.
+# Changing an op's behaviour still means updating the Swift reducer B3 pins
+# against these vectors in the same change — regenerating here does not do
+# that for you.
+[tasks."fixture:command-vectors"]
+description = "Regenerate the inventory command-vectors fixture from the command engine, and re-vendor it"
+dir = "{{config_root}}"
+run = [
+  "pnpm --filter @pops/inventory run generate:command-vectors",
+  "mise run fixture:command-vectors:vendor",
+]
+
 # ============================================================================
 # Development Servers
 # ============================================================================

@@ -213,8 +213,10 @@ jobs:
     if: ${{ !cancelled() && (github.event_name != 'merge_group' || needs.scope.outputs.selected == 'true') }}
     runs-on: macos-latest
     # A wedged simulator is the classic macOS-CI failure and it does not fail —
-    # it hangs. Without a ceiling that burns the job's full 6h default.
-    timeout-minutes: 45
+    # it hangs. Without a ceiling that burns the job's full 6h default. The
+    # ceiling sits well above a healthy run, which already takes 40-50 minutes
+    # (package tests, the shared compile, the Release check and the UI flow).
+    timeout-minutes: 75
     defaults:
       run:
         working-directory: clients/ios
@@ -232,27 +234,8 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Select the pinned Xcode
-        run: |
-          set -euo pipefail
-          version=$(sed -nE 's/^POPS_XCODE_VERSION *= *"([^"]+)".*/\1/p' mise.toml | head -1)
-          if [ -z "$version" ]; then
-            echo "::error::no POPS_XCODE_VERSION pin found in clients/ios/mise.toml [env]"
-            exit 1
-          fi
-          app="/Applications/Xcode_${version}.app"
-          if [ ! -d "$app" ]; then
-            echo "::error::clients/ios/mise.toml pins Xcode $version, which this runner image does not carry. Available:"
-            ls -d /Applications/Xcode*.app
-            exit 1
-          fi
-          echo "pinning Xcode to $version (from clients/ios/mise.toml)"
-          sudo xcode-select -s "$app/Contents/Developer"
-          xcodebuild -version
-          # Exported so the generator cache below can key on it. A `.build`
-          # produced by another toolchain is not a cache — Swift rebuilds it
-          # from scratch and the stale one just wastes the restore.
-          echo "POPS_XCODE_VERSION=$version" >> "$GITHUB_ENV"
+      - uses: ./.github/actions/select-xcode
+
       - uses: ./.github/actions/setup-mise
         with:
           working_directory: clients/ios

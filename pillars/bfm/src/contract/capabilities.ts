@@ -77,6 +77,14 @@ export const MOBILE_CAPABILITIES = [
    * principle hold either alone.
    */
   'purchases.write',
+  /**
+   * Read the inventory replica: the type catalogue, the paged snapshot, the
+   * change feed and one item's history. Buys every GET on
+   * `/mobile/inventory/*` (A9) — writing a mutation or suggesting a code is
+   * its own later capability, on the same reasoning `purchases.write` is not
+   * implied by `purchases.read`.
+   */
+  'inventory.read',
 ] as const;
 
 export type MobileCapability = (typeof MOBILE_CAPABILITIES)[number];
@@ -124,6 +132,14 @@ export const MOBILE_CAPABILITY_SCOPES: Readonly<Record<MobileCapability, readonl
    * covers.
    */
   'purchases.write': ['purchases.purchase'],
+  /**
+   * Two prefixes because the sync contract's own scope gate derives two
+   * grants from its two other sub-routers (`inventory.sync` for the
+   * snapshot/changes/history routes, `inventory.types` for the catalogue) —
+   * see `pillars/inventory/src/contract/rest-sync.ts`. `inventory.codes` (the
+   * third) is not here: nothing this capability reaches calls it.
+   */
+  'inventory.read': ['inventory.sync', 'inventory.types'],
 };
 
 /**

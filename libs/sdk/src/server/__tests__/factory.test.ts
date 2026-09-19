@@ -150,6 +150,49 @@ describe('server pillar() — outbound auth header', () => {
     await finance.wishlist.list({});
     expect(calls.at(-1)?.headers['x-api-key']).toBe('env-b');
   });
+
+  it('merges extraHeaders alongside the service-account key', async () => {
+    const transport = new FakeRegistryTransport({ pillars: [discoveredPillar()] });
+    const { fetchImpl, calls } = recordingFetch(() => jsonResponse({ result: { data: null } }));
+    const finance = pillar<FinanceRouter>('finance', {
+      transport,
+      fetchImpl,
+      extraHeaders: () => ({ 'pops-inventory-protocol': '1' }),
+    });
+    await finance.wishlist.list({ limit: 1 });
+    expect(calls[0]?.headers['pops-inventory-protocol']).toBe('1');
+    expect(calls[0]?.headers['x-api-key']).toBe('svc-key-123');
+  });
+
+  it('reads extraHeaders fresh on every call', async () => {
+    const transport = new FakeRegistryTransport({ pillars: [discoveredPillar()] });
+    const { fetchImpl, calls } = recordingFetch(() => jsonResponse({ result: { data: null } }));
+    let protocolVersion = 1;
+    const finance = pillar<FinanceRouter>('finance', {
+      transport,
+      fetchImpl,
+      extraHeaders: () => ({ 'pops-inventory-protocol': String(protocolVersion) }),
+    });
+
+    await finance.wishlist.list({});
+    expect(calls.at(-1)?.headers['pops-inventory-protocol']).toBe('1');
+
+    protocolVersion = 2;
+    await finance.wishlist.list({});
+    expect(calls.at(-1)?.headers['pops-inventory-protocol']).toBe('2');
+  });
+
+  it('never lets extraHeaders override the service-account key', async () => {
+    const transport = new FakeRegistryTransport({ pillars: [discoveredPillar()] });
+    const { fetchImpl, calls } = recordingFetch(() => jsonResponse({ result: { data: null } }));
+    const finance = pillar<FinanceRouter>('finance', {
+      transport,
+      fetchImpl,
+      extraHeaders: () => ({ 'x-api-key': 'attacker-supplied' }),
+    });
+    await finance.wishlist.list({});
+    expect(calls[0]?.headers['x-api-key']).toBe('svc-key-123');
+  });
 });
 
 describe('server pillar() — handle reuse + discovery cache', () => {
