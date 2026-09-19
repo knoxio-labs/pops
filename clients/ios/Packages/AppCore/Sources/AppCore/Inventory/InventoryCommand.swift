@@ -109,6 +109,10 @@ public enum InventoryCommand: Hashable, Sendable {
     case removePhoto(itemId: InventoryItem.ID, sha256: String)
     case reorderPhotos(itemId: InventoryItem.ID, sha256s: [String])
     case restoreDeletedItem(id: InventoryItem.ID)
+    /// Tombstones an item (`item.delete`). A container is emptied first: its
+    /// direct contents go in hand remembering it, since deletion never
+    /// cascades.
+    case deleteItem(id: InventoryItem.ID)
     case createLocation(InventoryNewLocation)
     case renameLocation(id: InventoryLocation.ID, name: String)
     case moveLocation(id: InventoryLocation.ID, parentId: InventoryLocation.ID?)
@@ -136,6 +140,7 @@ public enum InventoryCommand: Hashable, Sendable {
         case .removePhoto(let id, _): id
         case .reorderPhotos(let id, _): id
         case .restoreDeletedItem(let id): id
+        case .deleteItem(let id): id
         case .createLocation(let location): location.id
         case .renameLocation(let id, _): id
         case .moveLocation(let id, _): id

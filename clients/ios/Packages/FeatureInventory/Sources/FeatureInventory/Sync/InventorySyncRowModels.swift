@@ -137,6 +137,7 @@ extension InventorySyncPage {
         case .removePhoto: "Remove photo"
         case .reorderPhotos: "Reorder photos"
         case .restoreDeletedItem: "Restore"
+        case .deleteItem: "Delete"
         case .createItem, .editItem, .changeItemType, .setItemCode, .moveItem, .setItemAccess,
             .setItemFull, .createLocation, .renameLocation, .moveLocation, .deleteLocation,
             .revertEvent:

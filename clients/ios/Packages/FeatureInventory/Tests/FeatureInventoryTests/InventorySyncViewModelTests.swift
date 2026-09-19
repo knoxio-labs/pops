@@ -108,6 +108,21 @@ internal struct InventorySyncViewModelTests {
         #expect(sending?.sending.count == 1)
     }
 
+    @Test("a waiting delete reads as Delete")
+    func waitingDeleteTitled() async throws {
+        let store = InMemoryInventoryStore(
+            items: [Fixture.item("box", "Moving box", at: .location("kitchen"))],
+            locations: [Fixture.location("kitchen", "Kitchen")])
+        store.addWaitingMutation(
+            Fixture.waitingMutation("m1", on: "box", command: .deleteItem(id: "box")))
+        let model = InventorySyncViewModel(store: store)
+        let (task, _) = await model.startAndAwaitFirstAnswer()
+        defer { task.cancel() }
+
+        let queued = await model.awaitPage { !$0.waitingRows.isEmpty }
+        #expect(queued?.waitingRows.first?.detail == "Delete")
+    }
+
     @Test("a storage-full download failure raises the alert rather than the failure banner")
     func downloadStorageFullRaisesAlert() async {
         let store = InMemoryInventoryStore()

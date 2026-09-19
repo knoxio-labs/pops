@@ -60,6 +60,8 @@ extension InMemoryInventoryStore {
                 itemId: id, sha256s: sha256s, mutationId: mutationId, into: &state)
         case .restoreDeletedItem(let id):
             try applyRestoreDeletedItem(id: id, mutationId: mutationId, into: &state)
+        case .deleteItem(let id):
+            try applyDeleteItem(id: id, mutationId: mutationId, into: &state)
         default:
             throw RepositoryError.contractMismatch
         }

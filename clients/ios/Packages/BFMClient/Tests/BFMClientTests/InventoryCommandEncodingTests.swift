@@ -113,4 +113,13 @@ internal struct InventoryCommandEncodingTests {
         #expect(envelope.args.count == 1)
         #expect(envelope.args["seq"] as? Int == 3)
     }
+
+    @Test("item.delete sends the vector file's op with no arguments")
+    func deleteItem() throws {
+        let envelope = try BFMInventoryCommandEncoding.envelope(for: .deleteItem(id: "item-1"))
+
+        #expect(envelope.op == "item.delete")
+        #expect(envelope.entityId == "item-1")
+        #expect(envelope.args.isEmpty)
+    }
 }

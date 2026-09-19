@@ -20,6 +20,8 @@ internal struct InventoryCommandTests {
         #expect(
             InventoryCommand.moveItem(id: "item-1", to: .hand, verb: .pickUp).entityKind == .item)
         #expect(InventoryCommand.restoreDeletedItem(id: "item-1").entityKind == .item)
+        #expect(InventoryCommand.deleteItem(id: "item-1").entityKind == .item)
+        #expect(InventoryCommand.deleteItem(id: "item-1").entityId == "item-1")
     }
 
     @Test("the in-memory store's receipt carries the command's own entity")
