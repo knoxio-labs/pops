@@ -1,5 +1,5 @@
 appId: com.knoxiolabs.pops.local
-name: Inventory downloads, then creates, moves, discards and undoes against the real pillar
+name: Inventory downloads, then creates, moves, discards and undoes against the real pillar, and drains a change made while it was unreachable
 ---
 # An unpaired launch, every time — the credentials live in the keychain,
 # outside what `clearState` empties.
@@ -39,9 +39,8 @@ name: Inventory downloads, then creates, moves, discards and undoes against the 
 # Everything this flow creates carries the run's suffix, and the counts are
 # matched as any number, because the pillar's database outlives one attempt.
 #
-# A place to move into, created through the same server round trip every write
-# takes: the row appears only once the pillar has applied it and the feed has
-# delivered it back.
+# A place to move into. It shows at once, from the phone's own replica, and
+# drains to the pillar behind the screen.
 - tapOn: 'Inventory'
 - tapOn: 'Locations, \d+'
 # An empty list offers its own button; a list with places offers the toolbar's.
@@ -90,3 +89,35 @@ name: Inventory downloads, then creates, moves, discards and undoes against the 
 # After the positive assertion above, which settles the screen: the status line
 # that said it was discarded is gone.
 - assertNotVisible: 'Discarded Today · Donated'
+
+# Offline: with every sync request the BFM relays failing, a new place still
+# lands at once, because the phone writes to its own replica first, and it
+# waits on the Sync page. Once the pillar answers again, the pull to refresh
+# sends it, and nothing is left waiting.
+- runScript:
+    file: scripts/inventory-sync-outage.js
+    env:
+      SYNC: down
+- assertTrue: ${output.syncOutage.state.inventorySyncOutage == true}
+- tapOn: 'Inventory'
+- tapOn: 'Locations, \d+'
+- tapOn: 'Add a place|New place'
+- tapOn: 'Name'
+- inputText: Shed ${output.inventory.run}
+- tapOn: 'Create'
+- assertVisible: Shed ${output.inventory.run}, Place
+- tapOn: 'Inventory'
+- tapOn: 'Sync status: .*'
+- assertVisible: 'Waiting to sync'
+- runScript:
+    file: scripts/inventory-sync-outage.js
+    env:
+      SYNC: up
+- assertTrue: ${output.syncOutage.state.inventorySyncOutage == false}
+- swipe:
+    start: 50%, 35%
+    end: 50%, 85%
+- extendedWaitUntil:
+    notVisible: 'Waiting to sync'
+    timeout: 60000
+- assertVisible: 'Synced.*'

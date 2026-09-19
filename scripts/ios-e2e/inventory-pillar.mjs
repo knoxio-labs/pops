@@ -23,6 +23,15 @@
  * file gives: `/openapi` resets the connection until a flow arms it, so the
  * registry entry never has to appear or disappear. Everything else is
  * forwarded to the pillar untouched, armed or not.
+ *
+ * ## The sync outage
+ *
+ * The phone writes to its own replica first and sends later, so the one
+ * offline behaviour a flow can check end to end is that what it changed while
+ * the pillar could not be reached still arrives once it can. `setSyncOutage`
+ * resets every connection except `/openapi` and `/health`, so the BFM keeps
+ * naming `inventory` usable (the tab stays) while every snapshot, feed page
+ * and mutation it relays fails, as it would with the pillar unplugged.
  */
 
 import { spawn } from 'node:child_process';
@@ -76,11 +85,14 @@ export function inventoryRegistryEntry({ baseUrl, now }) {
  *   close: () => Promise<void>,
  *   setReachable: (active: boolean) => void,
  *   isReachable: () => boolean,
+ *   setSyncOutage: (active: boolean) => void,
+ *   isSyncOutage: () => boolean,
  * }>}
  */
 export async function startInventoryGate({ pillarBaseUrl, host = '127.0.0.1' }) {
   const pillar = new URL(pillarBaseUrl);
   let reachable = false;
+  let syncOutage = false;
 
   const server = createServer((request, response) => {
     const target = request.url ?? '/';
@@ -89,7 +101,12 @@ export async function startInventoryGate({ pillarBaseUrl, host = '127.0.0.1' }) 
       response.end(JSON.stringify({ message: 'ios-e2e inventory gate forwards paths only' }));
       return;
     }
-    if (!reachable && new URL(target, pillar).pathname === '/openapi') {
+    const { pathname } = new URL(target, pillar);
+    if (syncOutage && pathname !== '/openapi' && pathname !== '/health') {
+      request.socket.destroy();
+      return;
+    }
+    if (!reachable && pathname === '/openapi') {
       // Reset rather than left hanging, for the reason `purchases-stub.mjs`
       // gives: a socket nobody answers holds the BFM's probe for its whole
       // timeout on every bootstrap.
@@ -147,6 +164,10 @@ export async function startInventoryGate({ pillarBaseUrl, host = '127.0.0.1' }) 
       reachable = active;
     },
     isReachable: () => reachable,
+    setSyncOutage: (active) => {
+      syncOutage = active;
+    },
+    isSyncOutage: () => syncOutage,
   };
 }
 

@@ -96,6 +96,23 @@ describe('the inventory gate', () => {
     ]);
   });
 
+  it('refuses every relayed route during a sync outage, keeping /openapi and /health', async () => {
+    gate.setReachable(true);
+    gate.setSyncOutage(true);
+
+    await expect(
+      fetch(`${gate.url}/sync/mutations`, { method: 'POST', body: '{"mutations":[]}' })
+    ).rejects.toThrow();
+    await expect(fetch(`${gate.url}/sync/changes?cursor=1`)).rejects.toThrow();
+    expect((await fetch(`${gate.url}/openapi`)).status).toBe(207);
+    expect((await fetch(`${gate.url}/health`)).status).toBe(207);
+    expect(seen.map((request) => request.url)).toEqual(['/openapi', '/health']);
+
+    gate.setSyncOutage(false);
+    expect((await fetch(`${gate.url}/sync/changes?cursor=1`)).status).toBe(207);
+    expect(gate.isSyncOutage()).toBe(false);
+  });
+
   it('reports a pillar it cannot reach as its own failure', async () => {
     await new Promise<void>((resolve) => {
       pillar.closeAllConnections();

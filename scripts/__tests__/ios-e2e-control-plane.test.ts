@@ -130,6 +130,7 @@ describe('the control plane', () => {
   let contractMismatch: boolean;
   let purchasesReachable: boolean;
   let inventoryReachable: boolean;
+  let inventorySyncOutage: boolean;
   let control: Awaited<ReturnType<typeof startControlPlane>>;
 
   beforeEach(async () => {
@@ -139,6 +140,7 @@ describe('the control plane', () => {
     contractMismatch = false;
     purchasesReachable = false;
     inventoryReachable = false;
+    inventorySyncOutage = false;
 
     bfm = createServer((request: IncomingMessage, response) => {
       const chunks: Buffer[] = [];
@@ -187,6 +189,10 @@ describe('the control plane', () => {
           inventoryReachable = active;
         },
         isReachable: () => inventoryReachable,
+        setSyncOutage: (active: boolean) => {
+          inventorySyncOutage = active;
+        },
+        isSyncOutage: () => inventorySyncOutage,
       },
     });
   });
@@ -231,6 +237,7 @@ describe('the control plane', () => {
       financeContractMismatch: false,
       purchasesReachable: false,
       inventoryReachable: false,
+      inventorySyncOutage: false,
     });
     expect(seen).toEqual([]);
   });
@@ -260,6 +267,7 @@ describe('the control plane', () => {
     await call('/__e2e/finance/contract-mismatch', { method: 'POST' });
     await call('/__e2e/purchases/up', { method: 'POST' });
     await call('/__e2e/inventory/up', { method: 'POST' });
+    await call('/__e2e/inventory/sync-down', { method: 'POST' });
     await arm();
     await call('/mobile/bootstrap', { headers: { authorization: bearer('device-1') } });
     await call('/devices/refresh', { method: 'POST', body: '{}' });
@@ -274,6 +282,7 @@ describe('the control plane', () => {
       financeContractMismatch: false,
       purchasesReachable: false,
       inventoryReachable: false,
+      inventorySyncOutage: false,
     });
     expect(outage).toBe(false);
     expect(openApiUnreachable).toBe(false);
@@ -282,6 +291,7 @@ describe('the control plane', () => {
     // flow written before `receipt-capture` existed was written against.
     expect(purchasesReachable).toBe(false);
     expect(inventoryReachable).toBe(false);
+    expect(inventorySyncOutage).toBe(false);
   });
 
   it('refuses a target that could resolve to another host', async () => {
@@ -417,6 +427,18 @@ describe('the control plane', () => {
       expect.objectContaining({ purchasesReachable: false })
     );
     expect(purchasesReachable).toBe(false);
+  });
+
+  it('throws the inventory sync outage both ways', async () => {
+    expect(await (await call('/__e2e/inventory/sync-down', { method: 'POST' })).json()).toEqual(
+      expect.objectContaining({ inventorySyncOutage: true })
+    );
+    expect(inventorySyncOutage).toBe(true);
+    expect(await (await call('/__e2e/inventory/sync-up', { method: 'POST' })).json()).toEqual(
+      expect.objectContaining({ inventorySyncOutage: false })
+    );
+    expect(inventorySyncOutage).toBe(false);
+    expect(seen).toEqual([]);
   });
 
   it('throws the inventory switch both ways', async () => {
