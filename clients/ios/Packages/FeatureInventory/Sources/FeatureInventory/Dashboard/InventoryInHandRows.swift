@@ -2,9 +2,12 @@ import DesignSystem
 import SwiftUI
 
 /// The in-hand rows inside a list panel: photo, name over where each came
-/// from, Put back on the trailing edge, and the same swipes everywhere.
+/// from, Put back on the trailing edge, and the same swipes and selection
+/// everywhere. The dashboard's In hand section and the In hand page both
+/// draw these.
 internal struct InventoryInHandRows: View {
     internal let items: [InventoryDashboard.InHandItem]
+    @Binding internal var selection: InventorySelection
     internal let onPutBack: (InventoryDashboard.InHandItem) -> Void
     internal let onMove: (InventoryDashboard.InHandItem) -> Void
     internal let loadPhoto: @MainActor (String) async -> Data?
@@ -32,6 +35,7 @@ internal struct InventoryInHandRows: View {
                 onMove: { onMove(item) })
         }
         .buttonStyle(.plain)
+        .inventorySelectable(item.id, in: $selection)
         .inventoryInHandSwipes(
             canPutBack: item.previous.putBackPlacement != nil,
             isActive: activeSwipe == item.id,

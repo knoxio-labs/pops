@@ -49,7 +49,8 @@ extension View {
         #endif
     }
 
-    /// The inset-grouped list style, which is iOS-only.
+    /// The inset-grouped list style, which is iOS-only; on the host
+    /// toolchain the platform's own default stands in.
     @ViewBuilder
     internal func inventoryInsetGroupedList() -> some View {
         #if os(iOS)
