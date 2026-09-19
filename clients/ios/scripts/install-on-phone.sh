@@ -90,8 +90,23 @@ cmd_install() {
     esac
 
     xcrun devicectl device install app --device "$device" "$app"
-    xcrun devicectl device process launch --device "$device" "$bundle_id"
-    printf 'install-on-phone: %s installed and launched on %s\n' "$bundle_id" "$device"
+
+    # A locked phone refuses the launch, not the install; that is a finished
+    # install, and reporting it as a failed task misreports what happened.
+    local launch_output
+    if launch_output="$(xcrun devicectl device process launch --device "$device" "$bundle_id" 2>&1)"; then
+        printf 'install-on-phone: %s installed and launched on %s\n' "$bundle_id" "$device"
+    elif launch_is_locked "$launch_output"; then
+        printf 'install-on-phone: %s installed on %s; not launched because the phone is locked\n' "$bundle_id" "$device"
+    else
+        printf '%s\n' "$launch_output" >&2
+        die "$bundle_id installed on $device, but launching it failed (above)."
+    fi
+}
+
+# Whether devicectl's launch failure is the phone being locked, from its output.
+launch_is_locked() {
+    grep -qE 'BSErrorCodeDescription = Locked|could not be, unlocked' <<<"$1"
 }
 
 # ---------------------------------------------------------------------------
@@ -150,8 +165,15 @@ cmd_self_test() {
     expect "an unknown POPS_DEVICE did not name it: $out" \
         grep -q "named or identified 'Nope'" <<<"$out" || status=1
 
+    # The text devicectl printed on 2026-09-19 when the phone was locked.
+    local locked=$'ERROR: The request to launch "PopsPlayground" failed.\n    NSLocalizedFailureReason = Unable to launch com.knoxiolabs.pops.playground.local because the device was not, or could not be, unlocked.\n    BSErrorCodeDescription = Locked'
+    expect "a locked-phone launch failure was not recognised." \
+        launch_is_locked "$locked" || status=1
+    expect "an unrelated launch failure was read as a locked phone." \
+        eval '! launch_is_locked "ERROR: The application failed to launch. BSErrorCodeDescription = RequestDenied"' || status=1
+
     if [ "$status" -eq 0 ]; then
-        printf 'install-on-phone: device selection holds for one, none, several and a named phone.\n'
+        printf 'install-on-phone: device selection holds for one, none, several and a named phone; a locked phone is told apart.\n'
     fi
     return "$status"
 }

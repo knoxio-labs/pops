@@ -40,8 +40,8 @@ name or identifier (the script lists them).
   `clients/ios/README.md`, "Signing, and installing on a phone") and an Apple
   account signed in to Xcode. The first build of a `.local` identifier
   registers it with Apple; that is expected.
-- **Launch refused with the phone locked:** the install succeeded; unlock and
-  open "Pops Local" by hand.
+- **Phone locked:** the script says "installed …; not launched because the
+  phone is locked" and exits 0. The install is done; tell Joao to open it.
 
 Report the bundle identifier and device from the script's last line. Do not
 report "installed" from the build step alone.
