@@ -117,7 +117,7 @@ internal struct InventoryDashboardActionTests {
             id: 9, entityKind: .item, entityId: "router", title: "Wi-Fi router moved", place: nil,
             at: Fixture.epoch,
             symbol: "arrow.right",
-            isUndoable: false)
+            isUndoable: false, route: nil)
 
         await model.undo(activity)
 

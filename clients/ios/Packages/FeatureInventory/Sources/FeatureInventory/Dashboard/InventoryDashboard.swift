@@ -51,6 +51,10 @@ internal struct InventoryDashboard: Equatable, Sendable {
         /// Whether Undo is offered: the event is still the latest change to
         /// each field it touched (D4).
         internal let isUndoable: Bool
+        /// The page a tap on the row opens: the item, container or place the
+        /// event is about, or nil once that record is gone, when the row
+        /// opens Recent activity instead.
+        internal let route: InventoryRoute?
     }
 
     /// How many items the open containers hold between them.

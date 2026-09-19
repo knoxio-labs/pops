@@ -14,7 +14,7 @@ Until that query answers once, the dashboard shows a skeleton. A store that ends
 
 The dashboard, its panels, tiles, rows and sync pill are the design playground's grounded dashboard (POPS-3978), moved here and fed from `InventoryDashboard` instead of fixtures. The `InventoryGrounded*` names are kept so the screens still to move can be carried over with their references intact.
 
-Most of what the dashboard links to has moved: item detail (POPS-4062), containers and locations (POPS-4064), the item form (POPS-4063), the items browser, In hand and selection mode (POPS-4065). Sync and repair (POPS-4074) and the scanner (POPS-4078) still resolve to a pending screen.
+Everything the dashboard links to has its own screen: item detail (POPS-4062), containers and locations (POPS-4064), the item form (POPS-4063), the items browser, In hand and selection mode (POPS-4065), Sync and repair (POPS-4074), the scanner (POPS-4078), and the full-screen open containers list (POPS-4113). The playground has no design for Recent activity; it is the item History page over every record's newest events (POPS-4198), and a Recent work row opens the record its event is about.
 
 ## One placement picker
 

@@ -11,7 +11,11 @@ internal struct InventoryItemHistoryRoute: Hashable {
 /// heading, narrowed by kind from the filter circle beside the title. A line
 /// opens its account as a sheet, and the account offers Undo while the event
 /// is still undoable.
+///
+/// Recent activity is the same page over every record's events, under its
+/// own `title`, with each line naming the record it is about.
 internal struct InventoryItemHistoryView: View {
+    internal let title: String
     internal let name: String
     internal let entries: [InventoryActivityEntry]
     internal let isLoading: Bool
@@ -21,12 +25,14 @@ internal struct InventoryItemHistoryView: View {
     @ScaledMetric(relativeTo: .body) private var circleSize = PopsSize.touchTarget
 
     internal init(
+        title: String = "History",
         name: String,
         entries: [InventoryActivityEntry],
         isLoading: Bool = false,
         viewing: InventoryActivityEntry? = nil,
         onUndo: @escaping (InventoryActivityEntry) -> Void
     ) {
+        self.title = title
         self.name = name
         self.entries = entries
         self.isLoading = isLoading
@@ -38,7 +44,7 @@ internal struct InventoryItemHistoryView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: PopsSpacing.lg) {
                 VStack(alignment: .leading, spacing: PopsSpacing.xs) {
-                    InventoryPageTitle(title: "History") { filterMenu }
+                    InventoryPageTitle(title: title) { filterMenu }
                     Text(name)
                         .font(.popsSubheadline)
                         .foregroundStyle(Color.popsMutedForeground)
@@ -54,7 +60,7 @@ internal struct InventoryItemHistoryView: View {
             .padding(.horizontal, PopsSpacing.lg)
             .padding(.bottom, PopsSpacing.xxl)
         }
-        .inventoryCollapsingTitle("History")
+        .inventoryCollapsingTitle(title)
         .background(Color.popsBackground)
         .tint(.popsInventory)
         .sheet(item: $viewing) { entry in

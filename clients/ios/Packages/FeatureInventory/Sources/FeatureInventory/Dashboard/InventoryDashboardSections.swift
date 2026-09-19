@@ -148,7 +148,7 @@ extension InventoryDashboardView {
     }
 
     private func activityRow(_ activity: InventoryDashboard.Activity) -> some View {
-        NavigationLink(value: InventoryRoute.activity) {
+        NavigationLink(value: activity.route ?? InventoryRoute.activity) {
             InventoryGroundedRowLabel(
                 title: activity.title,
                 detail: InventoryCopy.detail(place: activity.place, at: activity.at),
