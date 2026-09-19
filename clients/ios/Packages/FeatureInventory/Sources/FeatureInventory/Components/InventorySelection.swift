@@ -56,59 +56,6 @@ extension EnvironmentValues {
     @Entry internal var inventorySelectableRow: InventorySelectableRowContext?
 }
 
-/// A row's leading mark, the photo or the kind glyph. Inside a selectable
-/// row it is the tap target that selects the row, and it flips to an empty
-/// circle or an amber checkmark while the list is selecting. Anywhere else it
-/// is the mark, untouched.
-internal struct InventorySelectableMark<Mark: View>: View {
-    private let mark: Mark
-    @Environment(\.inventorySelectableRow) private var row
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @ScaledMetric(relativeTo: .body) private var size = PopsSize.touchTarget
-
-    internal init(@ViewBuilder mark: () -> Mark) {
-        self.mark = mark()
-    }
-
-    internal var body: some View {
-        if let row {
-            Button(action: row.toggle) {
-                face(row)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(row.isSelected ? "Deselect" : "Select")
-            .accessibilityAddTraits(row.isSelected ? .isSelected : [])
-        } else {
-            mark
-        }
-    }
-
-    private func face(_ row: InventorySelectableRowContext) -> some View {
-        ZStack {
-            if row.isSelecting {
-                Image(systemName: row.isSelected ? "checkmark.circle.fill" : "circle")
-                    .font(.popsTitle)
-                    .foregroundStyle(
-                        row.isSelected ? Color.popsInventory : Color.popsMutedForeground
-                    )
-                    .contentTransition(.symbolEffect(.replace))
-                    .transition(transition)
-            } else {
-                mark
-                    .transition(transition)
-            }
-        }
-        .frame(width: size, height: size)
-        .contentShape(.rect)
-        .animation(reduceMotion ? nil : InventoryMotion.snappy, value: row.isSelecting)
-        .animation(reduceMotion ? nil : InventoryMotion.snappy, value: row.isSelected)
-    }
-
-    private var transition: AnyTransition {
-        reduceMotion ? .opacity : InventoryMotion.flip
-    }
-}
-
 extension View {
     /// Makes this row selectable in `selection`: its leading mark selects
     /// it, a selected row takes an amber tint, and while the list is
