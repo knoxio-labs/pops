@@ -1,4 +1,5 @@
 import AppCore
+import OpenAPIRuntime
 import Testing
 
 @testable import BFMClient
@@ -49,7 +50,7 @@ internal struct InventoryCommandEncodingTests {
         #expect((cleared.args["note"] ?? "not present") == nil)
     }
 
-    @Test("editItem sends externalIds only when given, replacing the whole list")
+    @Test("editItem sends externalIds only when the edit replaces the list")
     func editExternalIds() throws {
         let untouched = try BFMInventoryCommandEncoding.envelope(
             for: .editItem(id: "item-1", name: nil, note: .unchanged, fields: [:])
@@ -61,10 +62,34 @@ internal struct InventoryCommandEncodingTests {
                 id: "item-1", name: nil, note: .unchanged, fields: [:],
                 externalIds: [InventoryExternalIdentifier(kind: "serial", value: "SN-1")])
         )
-        let externalIds = try #require(replaced.args["externalIds"] as? [(any Sendable)?])
-        let first = try #require(externalIds.first as? [String: (any Sendable)?])
+        let ids = try #require(replaced.args["externalIds"] as? [(any Sendable)?])
+        #expect(ids.count == 1)
+        let first = try #require(ids.first as? [String: (any Sendable)?])
         #expect(first["kind"] as? String == "serial")
         #expect(first["value"] as? String == "SN-1")
+
+        let emptied = try BFMInventoryCommandEncoding.envelope(
+            for: .editItem(id: "item-1", name: nil, note: .unchanged, fields: [:], externalIds: [])
+        )
+        #expect((emptied.args["externalIds"] as? [(any Sendable)?])?.isEmpty == true)
+    }
+
+    @Test("createItem carries the new item's external identifiers")
+    func createExternalIds() throws {
+        let envelope = try BFMInventoryCommandEncoding.envelope(
+            for: .createItem(
+                InventoryNewItem(
+                    id: "item-9", name: "Drill", typeKey: nil,
+                    externalIds: [InventoryExternalIdentifier(kind: "model", value: "DCD777")],
+                    placement: .hand))
+        )
+        let item = try #require(envelope.args["item"] as? [String: (any Sendable)?])
+        let ids = try #require(item["externalIds"] as? [(any Sendable)?])
+        let first = try #require(ids.first as? [String: (any Sendable)?])
+        #expect(first["kind"] as? String == "model")
+        #expect(first["value"] as? String == "DCD777")
+        let wire = try OpenAPIValueContainer(unvalidatedValue: envelope.args)
+        #expect(String(describing: wire).contains("DCD777"))
     }
 
     @Test("setLifecycle carries the discard reason's wire spelling")
