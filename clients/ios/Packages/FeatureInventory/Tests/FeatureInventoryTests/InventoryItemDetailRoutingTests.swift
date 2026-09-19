@@ -33,7 +33,7 @@ internal struct InventoryItemDetailRoutingTests {
     @Test(
         "Every other pending screen still opens the placeholder sheet",
         arguments: [
-            InventoryItemDetailPending.move, .storeHere, .label, .printLabel,
+            InventoryItemDetailPending.label, .printLabel,
         ]
     )
     func everyOtherScreenStillFallsBackToThePlaceholder(screen: InventoryItemDetailPending) {
