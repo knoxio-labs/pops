@@ -8,7 +8,7 @@ import { sql } from 'drizzle-orm';
 
 import { findType } from '../../types/index.js';
 
-import type { ItemRow } from '../../db/index.js';
+import type { ItemRow } from '../../db/row-types.js';
 import type { FieldDefinition } from '../../types/index.js';
 import type { CommandDb } from './entities.js';
 

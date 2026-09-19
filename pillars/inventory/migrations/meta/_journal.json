@@ -71,6 +71,13 @@
       "when": 1781650200008,
       "tag": "0014_items_source_ref_live_only",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1781650200009,
+      "tag": "0015_items_fts_trigram",
+      "breakpoints": true
     }
   ]
 }

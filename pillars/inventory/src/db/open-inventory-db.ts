@@ -15,6 +15,8 @@ import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 
 import { withPreMigrationBackup } from '@pops/pillar-sdk/db';
 
+import { rebuildSearchIndexFromItems } from './backfill-search-index.js';
+
 import type { InventoryDb } from './services/internal.js';
 
 /**
@@ -40,6 +42,26 @@ export interface OpenedInventoryDb {
 }
 
 /**
+ * Whether `items_fts` is missing rows for live `items` after migrations have
+ * just applied (POPS-4158). Checked fresh on every boot, from the tables'
+ * own row counts, rather than from whether `0015_items_fts_trigram` was
+ * pending this run: that migration's DROP+CREATE and the JS backfill that
+ * repopulates it from `items` are two separate steps with no shared
+ * transaction, so a boot that is killed (OOM, preemption, a bad row throwing
+ * mid-`rebuildSearchIndexFromItems`) between them commits `0015` — and its
+ * `__drizzle_migrations` row — while leaving `items_fts` empty or partial.
+ * On the next boot `0015` is no longer pending, so a decision made only from
+ * pending migrations would skip the backfill forever. Comparing row counts
+ * instead re-detects the gap on every subsequent boot until it closes, and
+ * costs one extra `count(*)` pair when it is already closed.
+ */
+function searchIndexIncomplete(raw: Database.Database): boolean {
+  const itemsCount = raw.prepare('SELECT count(*) AS n FROM items').get() as { n: number };
+  const ftsCount = raw.prepare('SELECT count(*) AS n FROM items_fts').get() as { n: number };
+  return itemsCount.n !== ftsCount.n;
+}
+
+/**
  * Open the inventory pillar's SQLite database at `path`, configure
  * it, apply the in-package migrations journal, and return both the
  * drizzle wrapper and the raw handle.
@@ -51,8 +73,14 @@ export interface OpenedInventoryDb {
  *   - Every migration in
  *     `pillars/inventory/migrations/meta/_journal.json` is applied
  *     via drizzle's built-in migrator (idempotent — re-running against
- *     the same DB short-circuits on the `__drizzle_migrations` hash
- *     check).
+ *     the same DB compares each entry's recorded timestamp, not its SQL,
+ *     so an already-applied entry is never re-run even if its file changes
+ *     afterwards).
+ *   - Once migrations have applied, `items_fts` is rebuilt from every row in
+ *     `items` whenever its row count disagrees with `items`' — whether
+ *     because `0015_items_fts_trigram` just recreated it empty, or because
+ *     an earlier boot committed that migration and was killed before
+ *     finishing the rebuild (POPS-4158; see {@link searchIndexIncomplete}).
  *
  * If the migration apply throws (corrupt DB, malformed migration,
  * missing folder), the raw handle is closed before the error is
@@ -78,6 +106,7 @@ export function openInventoryDb(path: string): OpenedInventoryDb {
       { connection: raw, databasePath: path, migrationsFolder: migrations },
       () => migrate(db, { migrationsFolder: migrations })
     );
+    if (searchIndexIncomplete(raw)) rebuildSearchIndexFromItems(db);
   } catch (err) {
     raw.close();
     throw err;

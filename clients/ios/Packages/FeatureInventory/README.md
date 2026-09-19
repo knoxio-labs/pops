@@ -15,3 +15,12 @@ Until that query answers once, the dashboard shows a skeleton. A store that ends
 The dashboard, its panels, tiles, rows and sync pill are the design playground's grounded dashboard (POPS-3978), moved here and fed from `InventoryDashboard` instead of fixtures. The `InventoryGrounded*` names are kept so the screens still to move can be carried over with their references intact.
 
 Most of what the dashboard links to has not moved yet, and resolves to a pending screen until it does: item detail (POPS-4062), containers, locations and the destination picker behind Move (POPS-4064), the items browser, In hand and selection mode (POPS-4065), Sync and repair (POPS-4074), and the scanner (POPS-4078).
+
+## The item form
+
+New item and Edit item are one sheet (`Form/`), installed once over the whole stack by `InventoryFlowView`. A screen opens it through the `inventoryItemForm` environment value with an `InventoryItemFormRequest`; nothing pushes it as a route. Its fields are drawn from the catalogue descriptor the store serves, so a type the server adds renders without an app release.
+
+Two things it reaches for belong to other screens, and it asks for them rather than owning them:
+
+- **Where it goes.** The destination row opens whatever `inventoryPlacementPicker` the containers and locations screens install (POPS-4064). With none installed, the row states the placement it was opened with and does not offer to change it.
+- **A suggested code.** Suggestions are the server's alone (`POST /codes/suggest`), and `InventoryStore` carries no call for them, so the form takes an `InventoryCodeSuggester`. Until the app binds one it answers as a server that cannot suggest, which the form shows as the approved unavailable state. A typed code is always checked against the replica, online or not.

@@ -53,4 +53,20 @@ internal struct RootCopyPresentationTests {
 
         #expect(RootCopy.nothingAvailable([withheld]) == "Purchases is not available right now.")
     }
+
+    @Test("opensIn names an unsupported pillar as a proper noun")
+    func opensInNamesThePillar() {
+        #expect(RootCopy.opensIn("inventory") == "Opens in Inventory")
+    }
+
+    /// `.capitalized` is not idempotent-looking title case: a multi-word
+    /// pillar id keeps a word that already started capitalised, and each
+    /// word is capitalised independently rather than just the first letter
+    /// of the whole string. Pinning this stops a switch to a hand-rolled
+    /// capitalisation from drifting away from what the BFM's pillar ids
+    /// actually look like once they carry a space.
+    @Test("opensIn capitalizes every word of a multi-word pillar id")
+    func opensInHandlesMultiWordPillarIds() {
+        #expect(RootCopy.opensIn("already Capitalized") == "Opens in Already Capitalized")
+    }
 }

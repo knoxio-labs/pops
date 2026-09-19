@@ -19,6 +19,8 @@ import type { Express } from 'express';
 import type { LocationTreeNodeShape } from '../../contract/rest-locations.js';
 import type { InventoryItem } from '../modules/items/types.js';
 import type { Location } from '../modules/locations/types.js';
+import type { SyncEvent } from '../sync/events.js';
+import type { SyncItem } from '../sync/wire.js';
 import type { Test } from './test-http.js';
 
 export class HttpError extends Error {
@@ -124,6 +126,14 @@ export function makeClient(app: Express) {
       countByAssetPrefix: (prefix: string) =>
         send<{ data: number }>(r.get('/items/stats/count-by-asset-prefix').query({ prefix })),
       distinctTypes: () => send<{ data: string[] }>(r.get('/items/stats/distinct-types')),
+    },
+    web: {
+      listItems: (query: Record<string, unknown> = {}) =>
+        send<{ items: SyncItem[]; nextCursor: string | null }>(r.get('/web/items').query(query)),
+      getItem: (id: string, query: Record<string, unknown> = {}) =>
+        send<{ item: SyncItem; history: { events: SyncEvent[]; nextCursor: string | null } }>(
+          r.get(`/web/items/${id}`).query(query)
+        ),
     },
     locations: {
       list: () => send<{ data: Location[]; total: number }>(r.get('/locations')),
