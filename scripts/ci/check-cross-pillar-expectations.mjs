@@ -404,6 +404,25 @@ export const EXPECTATIONS = [
     usedBy: 'pillars/bfm/src/api/inventory/client.ts',
   },
   {
+    consumer: 'bfm',
+    producer: 'inventory',
+    operationId: 'sync.mutations',
+    path: '/sync/mutations',
+    method: 'post',
+    // POST body, not query params; nothing here to lose to a rename.
+    query: [],
+    usedBy: 'pillars/bfm/src/api/inventory/client.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'inventory',
+    operationId: 'codes.suggest',
+    path: '/codes/suggest',
+    method: 'post',
+    query: [],
+    usedBy: 'pillars/bfm/src/api/inventory/client.ts',
+  },
+  {
     consumer: 'finance',
     producer: 'contacts',
     operationId: 'entities.list',
