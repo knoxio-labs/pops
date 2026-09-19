@@ -80,8 +80,8 @@ internal enum BFMInventoryCommandEncoding {
     ) throws -> [String: (any Sendable)?]? {
         switch command {
         case .createItem(let item): try ["item": itemArgs(item)]
-        case .editItem(_, let name, let note, let fields):
-            try editArgs(name: name, note: note, fields: fields)
+        case .editItem(_, let name, let note, let fields, let externalIds):
+            try editArgs(name: name, note: note, fields: fields, externalIds: externalIds)
         case .changeItemType(_, let typeKey, let fields):
             try ["typeKey": typeKey, "fields": fieldsBlob(fields)]
         case .setItemCode(_, let code): ["code": code]
@@ -141,7 +141,8 @@ internal enum BFMInventoryCommandEncoding {
     /// an empty `fields` patch omit the key entirely rather than sending it
     /// as `null`.
     private static func editArgs(
-        name: String?, note: InventoryFieldUpdate<String>, fields: [String: InventoryFieldValue?]
+        name: String?, note: InventoryFieldUpdate<String>, fields: [String: InventoryFieldValue?],
+        externalIds: [InventoryExternalIdentifier]?
     ) throws -> [String: (any Sendable)?] {
         var args: [String: (any Sendable)?] = [:]
         if let name { args["name"] = name }
@@ -151,7 +152,12 @@ internal enum BFMInventoryCommandEncoding {
         case .cleared: args.updateValue(nil, forKey: "note")
         }
         if !fields.isEmpty { args["fields"] = try fieldsPatch(fields) }
+        if let externalIds { args["externalIds"] = externalIdArgs(externalIds) }
         return args
+    }
+
+    private static func externalIdArgs(_ ids: [InventoryExternalIdentifier]) -> [(any Sendable)?] {
+        ids.map { ["kind": $0.kind, "value": $0.value] }
     }
 
     private static func placementArgs(_ placement: InventoryPlacement) -> [String: (any Sendable)?]

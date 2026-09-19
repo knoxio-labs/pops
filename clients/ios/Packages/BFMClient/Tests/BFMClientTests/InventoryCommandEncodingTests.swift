@@ -49,6 +49,24 @@ internal struct InventoryCommandEncodingTests {
         #expect((cleared.args["note"] ?? "not present") == nil)
     }
 
+    @Test("editItem sends externalIds only when given, replacing the whole list")
+    func editExternalIds() throws {
+        let untouched = try BFMInventoryCommandEncoding.envelope(
+            for: .editItem(id: "item-1", name: nil, note: .unchanged, fields: [:])
+        )
+        #expect(untouched.args.keys.contains("externalIds") == false)
+
+        let replaced = try BFMInventoryCommandEncoding.envelope(
+            for: .editItem(
+                id: "item-1", name: nil, note: .unchanged, fields: [:],
+                externalIds: [InventoryExternalIdentifier(kind: "serial", value: "SN-1")])
+        )
+        let externalIds = try #require(replaced.args["externalIds"] as? [(any Sendable)?])
+        let first = try #require(externalIds.first as? [String: (any Sendable)?])
+        #expect(first["kind"] as? String == "serial")
+        #expect(first["value"] as? String == "SN-1")
+    }
+
     @Test("setLifecycle carries the discard reason's wire spelling")
     func setLifecycle() throws {
         let envelope = try BFMInventoryCommandEncoding.envelope(
