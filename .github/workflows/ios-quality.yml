@@ -210,7 +210,22 @@ jobs:
     # merge group it runs only on an explicit `selected=true`: a `scope` job that
     # FAILED leaves the output empty, so this stays skipped and the workflow goes
     # red on the scope job — never green over an unbuilt tree.
-    if: ${{ !cancelled() && (github.event_name != 'merge_group' || needs.scope.outputs.selected == 'true') }}
+    #
+    # A pull request runs it only when its base is the default branch. A PR
+    # stacked on another branch skips it: a stack of eight iOS PRs otherwise
+    # starts eight macOS jobs on every rebase and holds the whole five-runner
+    # pool for an hour (POPS-4150). It gets the lane once it is rebased onto
+    # main, and the merge queue runs it regardless, so nothing reaches main
+    # uncompiled. Deliberately NOT extended with `labeled`/`edited` triggers to
+    # opt a stacked PR back in: CI Gate keeps only the newest run per workflow
+    # at a SHA, and a later skipped run would hide an earlier red one.
+    if: >-
+      ${{ !cancelled() && (
+        (github.event_name == 'merge_group' && needs.scope.outputs.selected == 'true') ||
+        (github.event_name != 'merge_group' &&
+          (github.event_name != 'pull_request' ||
+            github.event.pull_request.base.ref == github.event.repository.default_branch))
+      ) }}
     runs-on: macos-latest
     # A wedged simulator is the classic macOS-CI failure and it does not fail —
     # it hangs. Without a ceiling that burns the job's full 6h default. The
@@ -365,34 +380,30 @@ jobs:
       - name: Lint (swift-format + SwiftLint)
         run: mise run lint
 
-      # The merge queue proves that the combined tree compiles and remains
-      # analyzable. Its job is merge-order validation, not repeating the PR's
-      # test suite. Pull requests run the simulator suite; pushes to main also
-      # run the UI flow below.
+      # WHERE EACH LANE SPENDS ITS MINUTES. The shared compile is ~2 minutes and
+      # the simulator suite ~3; `swiftlint analyze` over the whole tree is ~19.5
+      # (run 35408330810, 693 files, 2026-09-19). The analyzer is therefore run
+      # in exactly one lane, the merge queue, which is also the only lane that
+      # sees the combined tree it is judging. Pull requests and pushes to main
+      # run the simulator suite and nothing else here.
       #
-      # What this replaced: `xcodebuild test` compiled the whole tree against
-      # the iOS SDK, and `lint:analyze` then did its own `clean
-      # build-for-testing` to get a complete compiler log — two full compiles of
-      # the same sources, 399s and 473s when last measured, for a test action
-      # whose assertions take 1.5 seconds. The compile is the cost here; the
-      # tests are not. That is also why splitting the suites across the host and
-      # the simulator was NOT the fix — the packages a host lane would take are
-      # dependencies of the app target and the render suites that have to stay,
-      # so they get compiled either way and the split would move 1.5 seconds.
+      # The trade is where an unused declaration or unused import is reported:
+      # as a queue ejection instead of a red PR. `mise run lint:analyze` locally
+      # still answers it before a push. What it buys is the ~19.5 minutes, on a
+      # lane that shares GitHub's five-runner macOS pool with every other PR and
+      # every queue entry — runs were waiting 20-40 minutes for a runner before
+      # this (POPS-4149).
       #
-      # `-j 1` is mandatory for the PR and post-merge suite. mise
-      # runs the two tasks concurrently by default, which is ~3 minutes faster
-      # and turned the job flaky: `swiftlint analyze` saturates the runner's
-      # three cores while the simulator suite is running, and the Auth
-      # concurrency tests poll for a condition with a timeout.
-      # `twentyConcurrentRejectionsRefreshOnce` waits for twenty tasks to reach
-      # a barrier; starved of CPU they do not all get there, and it failed with
-      # "a request never reached the refresher" on one run in three. A required
-      # check that fails one time in three costs far more than three minutes.
-      #
-      - name: Test + SwiftLint analyzer rules (one shared compile)
+      # If both tasks are ever run in one invocation again, it is
+      # `mise run -j 1 test ::: lint:analyze` and the `-j 1` is mandatory: mise
+      # runs the two concurrently by default, `swiftlint analyze` then saturates
+      # the runner's three cores while the simulator suite is running, and the
+      # Auth concurrency tests poll for a condition with a timeout.
+      # `twentyConcurrentRejectionsRefreshOnce` failed with "a request never
+      # reached the refresher" on one run in three that way.
+      - name: Test (iOS Simulator)
         if: github.event_name != 'merge_group'
-        run: "mise run -j 1 test ::: lint:analyze"
+        run: mise run test
 
       - name: Compile + SwiftLint analyzer rules
         if: github.event_name == 'merge_group'
