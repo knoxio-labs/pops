@@ -193,6 +193,8 @@ function agedAuthorization(header, secret) {
  *   inventory: {
  *     setReachable: (active: boolean) => void,
  *     isReachable: () => boolean,
+ *     setSyncOutage: (active: boolean) => void,
+ *     isSyncOutage: () => boolean,
  *   },
  *   host?: string,
  * }} options
@@ -217,6 +219,7 @@ export async function startControlPlane({
     financeContractMismatch: upstream.isFinanceContractMismatch(),
     purchasesReachable: purchases.isReachable(),
     inventoryReachable: inventory.isReachable(),
+    inventorySyncOutage: inventory.isSyncOutage(),
   });
 
   /**
@@ -242,6 +245,7 @@ export async function startControlPlane({
       // second tab arms it for itself.
       purchases.setReachable(false);
       inventory.setReachable(false);
+      inventory.setSyncOutage(false);
       return { status: 200, body: state() };
     }
     if (method === 'POST' && pathname === '/__e2e/finance/down') {
@@ -291,6 +295,16 @@ export async function startControlPlane({
       inventory.setReachable(false);
       return { status: 200, body: state() };
     }
+    // Every relayed sync request failing while the tab stays, for the
+    // offline step of the Inventory flow; `inventory-pillar.mjs` says how.
+    if (method === 'POST' && pathname === '/__e2e/inventory/sync-down') {
+      inventory.setSyncOutage(true);
+      return { status: 200, body: state() };
+    }
+    if (method === 'POST' && pathname === '/__e2e/inventory/sync-up') {
+      inventory.setSyncOutage(false);
+      return { status: 200, body: state() };
+    }
     if (method === 'GET' && pathname === '/__e2e/state') return { status: 200, body: state() };
     // Named rather than forwarded. A typo in a flow would otherwise reach the
     // BFM, 404 there, and read as the pillar having lost a route.
@@ -310,6 +324,8 @@ export async function startControlPlane({
           'POST /__e2e/purchases/down',
           'POST /__e2e/inventory/up',
           'POST /__e2e/inventory/down',
+          'POST /__e2e/inventory/sync-down',
+          'POST /__e2e/inventory/sync-up',
           'POST /__e2e/reset',
           'GET /__e2e/state',
         ],

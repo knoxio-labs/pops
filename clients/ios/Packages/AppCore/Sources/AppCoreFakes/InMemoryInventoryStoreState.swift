@@ -108,6 +108,10 @@ extension InMemoryInventoryStore {
         }
 
         func inventoryReplicaStatus() -> InventoryReplicaStatus { replicaStatus }
+
+        /// Always empty: this fake stores a photo while its caller waits,
+        /// as the server does, so nothing is ever staged.
+        func inventoryPhotoUploads() -> [String: InventoryPhotoUpload] { [:] }
     }
 }
 

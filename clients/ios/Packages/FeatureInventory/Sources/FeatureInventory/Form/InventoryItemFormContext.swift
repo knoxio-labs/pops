@@ -12,6 +12,8 @@ internal struct InventoryItemFormContext: Equatable, Sendable {
     /// The name of where the item is (edit) or where it was opened from
     /// (create).
     internal let placementName: String?
+    /// How far each photo the store staged has got, by hash.
+    internal let photoUploads: [String: InventoryPhotoUpload]
 
     internal static func query(
         for request: InventoryItemFormRequest
@@ -35,7 +37,8 @@ internal struct InventoryItemFormContext: Equatable, Sendable {
             }
             return InventoryItemFormContext(
                 catalogue: source.inventoryCatalogue(), isOffline: isOffline, item: item,
-                placementName: placement.flatMap { name(of: $0, in: source) })
+                placementName: placement.flatMap { name(of: $0, in: source) },
+                photoUploads: source.inventoryPhotoUploads())
         }
     }
 

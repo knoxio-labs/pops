@@ -6,6 +6,8 @@ internal enum InventoryCopy {
     internal static let unavailable = "Inventory is not available on this phone right now."
 
     internal static let failureTitle = "That change did not save"
+    internal static let storageFullMessage =
+        "This phone is nearly out of storage, so that change was not saved."
 
     /// Why a write did not land, one sentence per failure, never the
     /// diagnostic a transport error carries.
@@ -49,4 +51,16 @@ internal enum InventoryCopy {
     internal static let noLongerInInventory = "No longer in Inventory"
 
     internal static let cameraAccessOff = "Camera access is off"
+
+    internal static let photoStorageFull =
+        "This phone is nearly out of storage, so the photo was not kept."
+
+    /// Why a photo staged on this phone will not upload as it stands.
+    internal static func message(for failure: InventoryPhotoUploadFailure) -> String {
+        switch failure {
+        case .tooLarge: "This photo is too large to upload."
+        case .unsupported: "This photo's format can't be uploaded."
+        case .bytesMissing: "This photo is no longer on this phone."
+        }
+    }
 }

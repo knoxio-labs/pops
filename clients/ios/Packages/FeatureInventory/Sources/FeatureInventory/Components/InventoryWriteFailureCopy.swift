@@ -8,6 +8,7 @@ extension InventoryCopy {
         switch failure {
         case .repository(let error): message(for: error)
         case .command(let error): message(for: error)
+        case .storageFull: storageFullMessage
         }
     }
 

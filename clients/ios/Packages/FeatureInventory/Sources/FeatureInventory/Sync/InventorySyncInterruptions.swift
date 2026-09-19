@@ -46,7 +46,7 @@ extension View {
             Button("Free up space") {}
             Button("Not now", role: .cancel) {}
         } message: {
-            Text("This phone is nearly out of storage, so that change was not saved.")
+            Text(InventoryCopy.storageFullMessage)
         }
     }
 }

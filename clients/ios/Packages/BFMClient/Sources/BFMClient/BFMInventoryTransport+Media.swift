@@ -8,7 +8,10 @@ extension BFMInventoryTransport {
     /// references them. `200` and `201` both answer the same shape
     /// (`alreadyStored` tells them apart); re-sending the same bytes is
     /// naturally idempotent, so both are read as success rather than only
-    /// `201`.
+    /// `201`. `413` and `415` are thrown as
+    /// ``AppCore/InventorySyncTransportError/mediaTooLarge`` and
+    /// ``AppCore/InventorySyncTransportError/mediaUnsupported`` rather than as
+    /// transport failures, because resending the same bytes cannot succeed.
     public func uploadMedia(
         sha256: String, data: Data, contentType: InventoryMediaContentType
     ) async throws -> InventoryMediaUploadResult {
@@ -34,11 +37,9 @@ extension BFMInventoryTransport {
             return InventoryMediaUploadResult(
                 sha256: payload.sha256, alreadyStored: payload.alreadyStored)
         case .contentTooLarge:
-            throw BFMInventoryFailureMapping.repositoryError(
-                for: .payloadTooLarge, operation: PutMedia.id)
+            throw InventorySyncTransportError.mediaTooLarge
         case .unsupportedMediaType:
-            throw BFMInventoryFailureMapping.repositoryError(
-                for: .unsupportedMediaType, operation: PutMedia.id)
+            throw InventorySyncTransportError.mediaUnsupported
         default:
             throw try Self.commonFailure(output, operation: PutMedia.id)
         }

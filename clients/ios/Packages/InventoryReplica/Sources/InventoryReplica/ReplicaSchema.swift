@@ -1,3 +1,4 @@
+import Foundation
 import GRDB
 
 /// The replica's tables, per ADR-002's iOS replica design. Migrations are
@@ -11,6 +12,83 @@ import GRDB
 internal enum ReplicaSchema {
     static let itemLayers = ["item_base", "item"]
     static let locationLayers = ["location_base", "location"]
+
+    /// The mutation log's table name, fixed here so the on-disk fallback
+    /// knows what to keep (`registerMutationLog(in:)` creates it).
+    static let mutationLogTableName = "mutation_log"
+
+    /// What the on-disk fallback keeps: this phone's unsent changes, the
+    /// repairs opened on the ones the server would not take, with what was
+    /// already resolved (`registerRepairs(in:)` creates those two), and the
+    /// record of the photos it staged, whose bytes the unsent attaches need.
+    static let preservedTableNames = [
+        mutationLogTableName, repairTableName, resolvedEntryTableName, mediaTableName,
+    ]
+
+    /// Opens (or creates) the on-disk replica at `path` and brings it to the
+    /// current schema, in WAL journal mode with `synchronous = FULL` so a
+    /// commit survives power loss (ADR-002 D11: "durability before
+    /// success").
+    ///
+    /// A migration that cannot run -- a corrupt file, a schema this build
+    /// does not recognise -- falls back to a fresh snapshot: every table is
+    /// dropped and recreated except ``preservedTableNames``, whose rows
+    /// (this phone's queued, not-yet-sent changes and their repairs) survive
+    /// the reset so nothing staged is lost, only replayed against a clean
+    /// base.
+    static func openOnDisk(
+        at path: String, migrator: DatabaseMigrator = Self.migrator()
+    ) throws -> DatabaseQueue {
+        var configuration = Configuration()
+        configuration.prepareDatabase { db in
+            try db.execute(sql: "PRAGMA journal_mode = WAL")
+            try db.execute(sql: "PRAGMA synchronous = FULL")
+        }
+        let queue = try DatabaseQueue(path: path, configuration: configuration)
+        do {
+            try migrator.migrate(queue)
+        } catch {
+            try fallBackToFreshSnapshot(queue, at: path, using: migrator)
+        }
+        return queue
+    }
+
+    /// Copies every table in ``preservedTableNames`` that exists out to a
+    /// sibling file, erases the database, migrates it from empty, then copies
+    /// them back in. The copy goes through a second on-disk database (via
+    /// `ATTACH`) rather than reading rows into memory, so the preserved
+    /// tables' own columns never have to be known here.
+    private static func fallBackToFreshSnapshot(
+        _ queue: DatabaseQueue, at path: String, using migrator: DatabaseMigrator
+    ) throws {
+        let backupPath = path + ".fallback-\(UUID().uuidString)"
+        defer { try? FileManager.default.removeItem(atPath: backupPath) }
+        let kept = try queue.read { db in
+            try preservedTableNames.filter { try db.tableExists($0) }
+        }
+        if !kept.isEmpty {
+            try queue.writeWithoutTransaction { db in
+                try db.execute(
+                    sql: "ATTACH DATABASE ? AS fallback_backup", arguments: [backupPath])
+                for table in kept {
+                    try db.execute(
+                        sql: "CREATE TABLE fallback_backup.\(table) AS SELECT * FROM main.\(table)")
+                }
+                try db.execute(sql: "DETACH DATABASE fallback_backup")
+            }
+        }
+        try queue.erase()
+        try migrator.migrate(queue)
+        guard !kept.isEmpty else { return }
+        try queue.writeWithoutTransaction { db in
+            try db.execute(sql: "ATTACH DATABASE ? AS fallback_backup", arguments: [backupPath])
+            for table in kept where try db.tableExists(table) {
+                try db.execute(
+                    sql: "INSERT INTO main.\(table) SELECT * FROM fallback_backup.\(table)")
+            }
+            try db.execute(sql: "DETACH DATABASE fallback_backup")
+        }
+    }
 
     static func migrator() -> DatabaseMigrator {
         var migrator = DatabaseMigrator()
@@ -34,6 +112,9 @@ internal enum ReplicaSchema {
             try db.execute(sql: "ALTER TABLE event_v2 RENAME TO event")
             try db.execute(sql: eventIndex)
         }
+        registerMutationLog(in: &migrator)
+        registerRepairs(in: &migrator)
+        registerMedia(in: &migrator)
         return migrator
     }
 

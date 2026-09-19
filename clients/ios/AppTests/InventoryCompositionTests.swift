@@ -13,21 +13,84 @@ import Testing
 @Suite("Inventory composition")
 @MainActor
 internal struct InventoryCompositionTests {
-    private func composition() -> AppComposition {
+    private func composition(
+        openInventoryReplica: @escaping (PairedDevice) throws -> InventoryReplica = { _ in
+            try InventoryReplica()
+        }
+    ) -> AppComposition {
         AppComposition(
             credentialStore: DeviceCredentialStore(
                 keyStore: SecureEnclaveKeyStore(),
                 tokenStore: KeychainTokenStore(service: Self.namespace),
                 pairedDeviceStore: UserDefaultsPairedDeviceStore(suiteName: Self.namespace)
-            )
+            ),
+            openInventoryReplica: openInventoryReplica
         )
     }
 
-    @Test("a paired device reads and writes Inventory through the online store")
-    func pairedDeviceGetsTheOnlineStore() throws {
+    @Test("a paired device reads and writes Inventory through the local-first store")
+    func pairedDeviceGetsTheLocalFirstStore() throws {
         let bound = composition().dependencies(for: try device())
 
-        #expect(bound.inventory is OnlineInventoryStore)
+        #expect(bound.inventory is LocalFirstInventoryStore)
+    }
+
+    /// The default opener, as the app runs it: on disk, under Application
+    /// Support, in a folder of the device's own.
+    @Test("a paired device's replica lives on disk under Application Support")
+    func replicaIsOnDisk() throws {
+        let device = try device()
+        let support = try FileManager.default.url(
+            for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil,
+            create: true)
+        let folder = support.appendingPathComponent("Inventory/device-inventory-composition")
+        defer { try? FileManager.default.removeItem(at: folder) }
+
+        let replica = try AppComposition.onDiskInventoryReplica(for: device)
+
+        #expect(
+            replica.mediaCacheDirectory?.deletingLastPathComponent().standardized.path
+                == folder.standardized.path)
+        #expect(
+            FileManager.default.fileExists(
+                atPath: folder.appendingPathComponent("inventory.sqlite").path))
+    }
+
+    @Test(
+        "a device id becomes one folder name, never a path",
+        arguments: [
+            ("device-1_a", "device-1_a"), ("../etc", "___etc"), ("a/b", "a_b"), ("", "_"),
+        ])
+    func folderNameIsOneComponent(id: String, folder: String) throws {
+        let device = PairedDevice(id: id, baseURL: try #require(URL(string: "https://bfm.invalid")))
+
+        #expect(AppComposition.inventoryFolderName(for: device) == folder)
+    }
+
+    /// Reading still works while the phone is full, so Inventory is not
+    /// "unavailable": every write says Storage full instead.
+    @Test("no room to open the replica binds a store whose writes say Storage full")
+    func storageFullBindsTheStorageFullStore() async throws {
+        let bound = composition(openInventoryReplica: { _ in throw InventoryStorageError.full })
+            .dependencies(for: try device())
+
+        #expect(bound.inventory is StorageFullInventoryStore)
+        await #expect(throws: InventoryStorageError.full) {
+            _ = try await bound.inventory.perform(.deleteLocation(id: "anything"))
+        }
+        await #expect(throws: InventoryStorageError.full) {
+            try await bound.inventory.download()
+        }
+        var statuses = bound.inventory.status().makeAsyncIterator()
+        #expect(await statuses.next() == .empty)
+    }
+
+    @Test("any other failure to open the replica binds the unbound store")
+    func otherOpenFailureIsUnbound() throws {
+        let bound = composition(openInventoryReplica: { _ in throw CocoaError(.fileNoSuchFile) })
+            .dependencies(for: try device())
+
+        #expect(bound.inventory is UnboundInventoryStore)
     }
 
     /// The pairing screen has no BFM to reach, so Inventory is the unbound
@@ -37,7 +100,7 @@ internal struct InventoryCompositionTests {
         let unpaired = composition().pairingDependencies
 
         #expect(unpaired.inventory is UnboundInventoryStore)
-        #expect(!(unpaired.inventory is OnlineInventoryStore))
+        #expect(!(unpaired.inventory is LocalFirstInventoryStore))
         await #expect(throws: RepositoryError.dependencyNotBound) {
             _ = try await unpaired.inventory.perform(.deleteLocation(id: "anything"))
         }
@@ -54,7 +117,8 @@ internal struct InventoryCompositionTests {
         let first = root.dependencies(for: device).inventory
         let second = root.dependencies(for: device).inventory
 
-        #expect((first as? OnlineInventoryStore) === (second as? OnlineInventoryStore))
+        let firstStore = try #require(first as? LocalFirstInventoryStore)
+        #expect(firstStore === (second as? LocalFirstInventoryStore))
     }
 
     @Test("this build can draw the Inventory feature, under its own name and icon")

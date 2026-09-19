@@ -57,17 +57,19 @@ internal struct OnlineStorePhotoCacheTests {
         return OnlineHarness(store: store, transport: transport, replica: replica)
     }
 
+    private static let cachedSha = String(repeating: "1", count: 64)
+
     @Test("a second read of the same hash and variant is served from the cache")
     func cachesByHashAndVariant() async throws {
         let harness = try Self.harness()
         harness.transport.update { $0.fetch = { _, _ in Data("thumb bytes".utf8) } }
 
-        let first = try await harness.store.photo("sha-1", variant: .thumb)
-        let second = try await harness.store.photo("sha-1", variant: .thumb)
+        let first = try await harness.store.photo(Self.cachedSha, variant: .thumb)
+        let second = try await harness.store.photo(Self.cachedSha, variant: .thumb)
 
         #expect(first == Data("thumb bytes".utf8))
         #expect(second == first)
-        #expect(harness.transport.calls.fetched == ["sha-1"])
+        #expect(harness.transport.calls.fetched == [Self.cachedSha])
     }
 
     @Test("the same hash under a different variant is fetched again")
@@ -77,9 +79,9 @@ internal struct OnlineStorePhotoCacheTests {
             $0.fetch = { sha256, variant in Data("\(sha256)-\(variant)".utf8) }
         }
 
-        _ = try await harness.store.photo("sha-1", variant: .thumb)
-        _ = try await harness.store.photo("sha-1", variant: .full)
+        _ = try await harness.store.photo(Self.cachedSha, variant: .thumb)
+        _ = try await harness.store.photo(Self.cachedSha, variant: .full)
 
-        #expect(harness.transport.calls.fetched == ["sha-1", "sha-1"])
+        #expect(harness.transport.calls.fetched == [Self.cachedSha, Self.cachedSha])
     }
 }

@@ -11,34 +11,120 @@ import Synchronization
 /// `InventorySyncTransport` and hands them to `apply(_:)`, so what a page
 /// means for the replica is tested here without a network.
 ///
-/// The database is held in memory: rows live as long as this instance, and a
-/// relaunch downloads again.
+/// Either held in memory, for tests and previews, or on disk under
+/// `init(onDiskAt:)` (POPS-4069) so a relaunch reads what the last sync
+/// stored instead of downloading again.
 public final class InventoryReplica: Sendable {
     /// What `InventoryQuery.catalogue` answers before any catalogue is
     /// stored: no types, no units, and an empty version that no server
     /// catalogue carries.
     public static let emptyCatalogue = InventoryCatalogue(version: "", units: [], types: [])
 
-    private let database: DatabaseQueue
-    private let now: @Sendable () -> Date
+    /// ADR-002's budget for medium and full-size photo variants: 500 MB.
+    public static let defaultMediaBudgetBytes: Int64 = 500 * 1024 * 1024
+
+    let database: DatabaseQueue
+    let now: @Sendable () -> Date
     private let staleAfter: TimeInterval
     private let observers = ReplicaObservers()
     private let activity = Mutex(ReplicaActivity())
 
+    /// Where photo variants are cached on disk, excluded from backup because
+    /// they are recreatable from the server (ADR-002 D11). `nil` for an
+    /// in-memory replica, which has nowhere to cache to.
+    public let mediaCacheDirectory: URL?
+
+    /// Where photo bytes are written: files under ``mediaCacheDirectory`` on
+    /// disk, memory otherwise.
+    let mediaFiles: any InventoryMediaFiles
+
+    /// The free space left for a photo about to be staged, in bytes; `nil`
+    /// when there is no volume to measure (in memory).
+    let freeBytes: (@Sendable () throws -> Int64)?
+
+    /// How many bytes of medium and full-size photo variants the media cache
+    /// keeps before it evicts the least recently used.
+    let mediaBudgetBytes: Int64
+
+    /// An in-memory replica, for tests and previews: rows live as long as
+    /// this instance, and a relaunch downloads again.
+    ///
     /// - Parameters:
     ///   - now: The clock `last_refresh_at` is stamped with and staleness is
     ///     measured against.
     ///   - staleAfter: How long after its last complete refresh the replica
     ///     reports itself stale. ADR-002 leaves the threshold to the owner and
     ///     names 24 hours as the default until they answer.
+    ///   - mediaFiles: Where staged and cached photo bytes go; memory by
+    ///     default.
+    ///   - freeBytes: The free space checked before a photo is staged, if
+    ///     any.
+    ///   - mediaBudgetBytes: The media cache's budget for medium and
+    ///     full-size variants; 500 MB by default.
     public init(
         now: @escaping @Sendable () -> Date = { Date() },
-        staleAfter: TimeInterval = 24 * 60 * 60
+        staleAfter: TimeInterval = 24 * 60 * 60,
+        mediaFiles: any InventoryMediaFiles = InMemoryMediaFiles(),
+        freeBytes: (@Sendable () throws -> Int64)? = nil,
+        mediaBudgetBytes: Int64 = InventoryReplica.defaultMediaBudgetBytes
     ) throws {
         database = try DatabaseQueue()
         try ReplicaSchema.migrator().migrate(database)
         self.now = now
         self.staleAfter = staleAfter
+        self.mediaCacheDirectory = nil
+        self.mediaFiles = mediaFiles
+        self.freeBytes = freeBytes
+        self.mediaBudgetBytes = mediaBudgetBytes
+    }
+
+    /// The durable, on-disk replica (POPS-4069, ADR-002 D11): WAL journalling
+    /// with `synchronous = FULL` so a commit survives power loss, database
+    /// and media cache under `FileProtectionType.completeUntilFirstUserAuthentication`
+    /// so a scheduled refresh can still read and write after first unlock,
+    /// and the media cache excluded from backup (the database is not: it can
+    /// hold unsynced work).
+    ///
+    /// - Parameters:
+    ///   - directory: Where the replica lives, typically Application
+    ///     Support. Created if missing, along with a `MediaCache`
+    ///     subdirectory under it.
+    ///   - freeBytes: The free space to check before opening, and before
+    ///     staging a photo, in bytes, given `directory`. `nil` (the default)
+    ///     reads the real volume; tests inject a fixed value.
+    ///   - mediaBudgetBytes: The media cache's budget for medium and
+    ///     full-size variants; 500 MB by default.
+    /// - Throws: ``AppCore/InventoryStorageError/full`` if `freeBytes`
+    ///   answers under 200 MB, or if opening or migrating the database itself
+    ///   hits `SQLITE_FULL`. A migration that fails for any other reason
+    ///   falls back to a fresh snapshot (`ReplicaSchema.openOnDisk(at:)`).
+    public init(
+        onDiskAt directory: URL,
+        now: @escaping @Sendable () -> Date = { Date() },
+        staleAfter: TimeInterval = 24 * 60 * 60,
+        freeBytes: (@Sendable (URL) throws -> Int64)? = nil,
+        mediaBudgetBytes: Int64 = InventoryReplica.defaultMediaBudgetBytes
+    ) throws {
+        let freeBytes = freeBytes ?? ReplicaStorage.systemFreeBytes(at:)
+        try ReplicaStorage.ensureFreeSpace { try freeBytes(directory) }
+        let fileManager = FileManager.default
+        try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
+        let mediaCacheDirectory = directory.appendingPathComponent("MediaCache", isDirectory: true)
+        try fileManager.createDirectory(
+            at: mediaCacheDirectory, withIntermediateDirectories: true)
+        let databasePath = directory.appendingPathComponent("inventory.sqlite").path
+        database = try ReplicaStorage.mappingFull {
+            try ReplicaSchema.openOnDisk(at: databasePath)
+        }
+        try Self.excludeFromBackup(mediaCacheDirectory)
+        try Self.applyFileProtection(to: directory)
+        try Self.applyFileProtection(to: mediaCacheDirectory)
+        self.now = now
+        self.staleAfter = staleAfter
+        self.mediaCacheDirectory = mediaCacheDirectory
+        self.mediaFiles = DirectoryMediaFiles(directory: mediaCacheDirectory)
+        self.freeBytes = { try freeBytes(directory) }
+        self.mediaBudgetBytes = mediaBudgetBytes
     }
 
     /// Where the next snapshot or feed request should start.
@@ -149,8 +235,32 @@ public final class InventoryReplica: Sendable {
         }
     }
 
-    private func write(_ body: (Database) throws -> Void) throws {
-        try database.write(body)
+    /// Runs `body` in one write transaction and tells every observer once
+    /// it commits.
+    func write<Value>(_ body: (Database) throws -> Value) throws -> Value {
+        let value = try ReplicaStorage.mappingFull { try database.write(body) }
         observers.notify()
+        return value
+    }
+
+    /// `.isExcludedFromBackup`: recreatable from the server, unlike the
+    /// database, which can hold work the server has not seen yet.
+    private static func excludeFromBackup(_ url: URL) throws {
+        var url = url
+        var values = URLResourceValues()
+        values.isExcludedFromBackup = true
+        try url.setResourceValues(values)
+    }
+
+    /// `FileProtectionType.completeUntilFirstUserAuthentication` (ADR-002
+    /// D11), so a background refresh can still read and write after first
+    /// unlock. Only meaningful on iOS: the type does not exist on the macOS
+    /// host `swift test` runs on.
+    private static func applyFileProtection(to url: URL) throws {
+        #if os(iOS)
+            try FileManager.default.setAttributes(
+                [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication],
+                ofItemAtPath: url.path)
+        #endif
     }
 }

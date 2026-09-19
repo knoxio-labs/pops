@@ -36,9 +36,9 @@ internal struct InventoryMediaMappingTests {
         #expect(result == InventoryMediaUploadResult(sha256: Self.sha, alreadyStored: true))
     }
 
-    @Test("413 is thrown as a transport failure a caller can catch, not a crash")
+    @Test("413 is thrown as too large, which no retry of the same bytes can fix")
     func contentTooLargeThrows() async {
-        await #expect(throws: RepositoryError.self) {
+        await #expect(throws: InventorySyncTransportError.mediaTooLarge) {
             _ = try await self.upload(
                 status: .contentTooLarge,
                 json:
@@ -47,21 +47,27 @@ internal struct InventoryMediaMappingTests {
         }
     }
 
-    @Test("415 is thrown distinctly from a payload that was simply too large")
+    @Test("415 is thrown as unsupported, distinctly from a payload that was too large")
     func unsupportedMediaTypeThrows() async {
-        do {
-            _ = try await upload(
+        await #expect(throws: InventorySyncTransportError.mediaUnsupported) {
+            _ = try await self.upload(
                 status: .unsupportedMediaType,
                 json: "{\"code\":\"upstream_unsupported_media\",\"pillar\":\"inventory\","
                     + "\"retryable\":false,\"message\":\"no\"}"
             )
+        }
+    }
+
+    @Test("a rate-limited upload stays a transport failure the drain retries")
+    func rateLimitedIsTransport() async {
+        do {
+            _ = try await upload(status: .tooManyRequests, json: InventoryWire.rateLimited)
             Issue.record("expected a thrown error")
         } catch let error as RepositoryError {
-            guard case .transport(let message) = error else {
+            guard case .transport = error else {
                 Issue.record("expected .transport, got \(error)")
                 return
             }
-            #expect(message.contains("unsupported media type"))
         } catch {
             Issue.record("expected a RepositoryError, got \(error)")
         }

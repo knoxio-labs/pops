@@ -9,6 +9,10 @@ import Testing
 /// `pillars/inventory/src/contract/rest-sync-schemas.ts` and
 /// `pillars/bfm/src/contract/mobile-inventory-schemas.ts`.
 internal enum InventoryWire {
+    internal static let rateLimited = """
+        {"code":"rate_limited","message":"slow down","retryAfterSeconds":30}
+        """
+
     internal static func placement(kind: String, id: String? = nil) -> String {
         switch kind {
         case "location": "{\"kind\":\"location\",\"locationId\":\"\(id ?? "loc-1")\"}"

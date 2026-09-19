@@ -40,8 +40,10 @@ internal enum ItemRow {
     /// Decodes a row read from either layer. A remembered previous placement
     /// whose target has since been tombstoned reads as `.tombstoned` (D2's
     /// "Previous place deleted"), which is why this needs the database and
-    /// not only the row.
-    static func decode(_ row: Row, in db: Database) throws -> InventoryItem {
+    /// not only the row. With `db` nil it is read exactly as stored, target
+    /// id and all, which is what the local reducer needs to write the row
+    /// back without losing the reference.
+    static func decode(_ row: Row, in db: Database?) throws -> InventoryItem {
         let id: String = try row.decode(forColumn: "id")
         return InventoryItem(
             id: id, revision: try row.decode(forColumn: "revision"),
@@ -121,7 +123,7 @@ extension ItemRow {
     }
 
     private static func previousPlacement(
-        _ row: Row, in db: Database
+        _ row: Row, in db: Database?
     ) throws -> InventoryPreviousPlacement? {
         let kind: String? = try row.decode(forColumn: "previous_placement_kind")
         let id: String? = try row.decode(forColumn: "previous_placement_id")
@@ -136,9 +138,10 @@ extension ItemRow {
         }
     }
 
-    private static func isTombstoned(_ id: String, in table: String, _ db: Database) throws -> Bool
+    private static func isTombstoned(_ id: String, in table: String, _ db: Database?) throws -> Bool
     {
-        try Bool.fetchOne(
+        guard let db else { return false }
+        return try Bool.fetchOne(
             db, sql: "SELECT deleted_at IS NOT NULL FROM \(table) WHERE id = ?", arguments: [id]
         ) ?? false
     }

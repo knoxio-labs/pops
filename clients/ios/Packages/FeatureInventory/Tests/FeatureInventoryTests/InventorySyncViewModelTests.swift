@@ -85,6 +85,49 @@ internal struct InventorySyncViewModelTests {
         #expect(model.undoOffer?.message == "Restored")
     }
 
+    @Test("inline Let go on a refused change sends the let-go choice and says Let go")
+    func inlineLetGoOnUnrecognised() async throws {
+        let inner = InMemoryInventoryStore()
+        let repair = Fixture.repair("m1", on: "box", kind: .unrecognised("rejected"))
+        inner.addRepair(repair)
+        let store = RecordingInventoryStore(inner)
+        let model = InventorySyncViewModel(store: store)
+        let (task, _) = await model.startAndAwaitFirstAnswer()
+        defer { task.cancel() }
+        _ = await model.awaitPage { !$0.repairRows.isEmpty }
+
+        await model.resolveInline(repair)
+
+        #expect(store.resolutions == [.discardMine])
+        let after = await model.awaitPage { !$0.resolvedRows.isEmpty }
+        #expect(after?.resolvedRows.map(\.entry.outcome) == ["Let go"])
+        #expect(model.undoOffer?.message == "Let go")
+    }
+
+    @Test("inline fix on every other repair keeps this phone's side")
+    func inlineFixKeepsMine() {
+        for kind: InventoryRepairKind in [
+            .conflict, .codeCollision, .deletedElsewhere, .photoFailed,
+        ] {
+            #expect(InventorySyncViewModel.inlineChoice(for: kind) == .keepMine())
+        }
+    }
+
+    @Test("the Undo capsule repeats the ledger's own line for the resolution")
+    func capsuleReadsTheLedger() async throws {
+        let inner = InMemoryInventoryStore()
+        let repair = Fixture.repair("m1", on: "box", kind: .photoFailed)
+        inner.addRepair(repair)
+        let model = InventorySyncViewModel(store: inner)
+        let (task, _) = await model.startAndAwaitFirstAnswer()
+        defer { task.cancel() }
+        _ = await model.awaitPage { !$0.repairRows.isEmpty }
+
+        await model.resolveInline(repair)
+
+        #expect(model.undoOffer?.message == "Photo retried")
+    }
+
     @Test("a waiting mutation with no progress marks queued; sending marks synchronizing")
     func waitingRowProgressMarksState() async throws {
         let store = InMemoryInventoryStore(
@@ -106,6 +149,21 @@ internal struct InventorySyncViewModelTests {
         let sending = await model.awaitPage { $0.waitingRows.first?.progress != nil }
         #expect(sending?.waitingRows.first?.progress == 0.5)
         #expect(sending?.sending.count == 1)
+    }
+
+    @Test("a waiting delete reads as Delete")
+    func waitingDeleteTitled() async throws {
+        let store = InMemoryInventoryStore(
+            items: [Fixture.item("box", "Moving box", at: .location("kitchen"))],
+            locations: [Fixture.location("kitchen", "Kitchen")])
+        store.addWaitingMutation(
+            Fixture.waitingMutation("m1", on: "box", command: .deleteItem(id: "box")))
+        let model = InventorySyncViewModel(store: store)
+        let (task, _) = await model.startAndAwaitFirstAnswer()
+        defer { task.cancel() }
+
+        let queued = await model.awaitPage { !$0.waitingRows.isEmpty }
+        #expect(queued?.waitingRows.first?.detail == "Delete")
     }
 
     @Test("a storage-full download failure raises the alert rather than the failure banner")

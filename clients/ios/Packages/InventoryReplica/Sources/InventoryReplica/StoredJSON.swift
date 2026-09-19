@@ -24,7 +24,7 @@ internal enum StoredJSON {
 /// `InventoryFieldValue`'s storage twin. The synthesised `Codable` of an enum
 /// with associated values keys each value by its case, so the kind and the
 /// payload cannot disagree in a stored row.
-internal enum StoredFieldValue: Codable {
+internal enum StoredFieldValue: Codable, Equatable {
     case text(String)
     case choice(String)
     case flag(Bool)
@@ -73,17 +73,27 @@ internal enum StoredFieldValue: Codable {
     }
 }
 
-internal struct StoredExternalIdentifier: Codable {
+internal struct StoredExternalIdentifier: Codable, Equatable {
     let kind: String
     let value: String
 }
 
-internal struct StoredPhoto: Codable {
+extension StoredExternalIdentifier {
+    init(_ identifier: InventoryExternalIdentifier) {
+        self.init(kind: identifier.kind, value: identifier.value)
+    }
+
+    var domainValue: InventoryExternalIdentifier {
+        InventoryExternalIdentifier(kind: kind, value: value)
+    }
+}
+
+internal struct StoredPhoto: Codable, Equatable {
     let sha256: String
     let caption: String?
 }
 
-internal struct StoredProvenance: Codable {
+internal struct StoredProvenance: Codable, Equatable {
     let merchant: String?
     let priceMinorUnits: Int?
     let priceCurrency: String?

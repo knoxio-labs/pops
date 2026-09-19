@@ -41,6 +41,12 @@ extension OnlineInventoryStore {
         }
     }
 
+    /// A fresh snapshot whatever the feed says, for a `409` the drain met
+    /// while sending. The mutation log is kept and replayed over it.
+    func resyncNow() async throws {
+        try await recovering { try await self.resync() }
+    }
+
     private func resync() async throws {
         replica.updateActivity { $0.isDownloading = true }
         defer { replica.updateActivity { $0.isDownloading = false } }
@@ -101,13 +107,13 @@ extension OnlineInventoryStore {
         }
     }
 
-    private static func needsResync(_ error: any Error) -> Bool {
+    static func needsResync(_ error: any Error) -> Bool {
         if error as? InventorySyncTransportError == .resyncRequired { return true }
         if case .epochMismatch = error as? InventoryReplicaError { return true }
         return false
     }
 
-    private static func blockReason(for error: any Error) -> InventoryBlockReason? {
+    static func blockReason(for error: any Error) -> InventoryBlockReason? {
         if error as? InventorySyncTransportError == .clientTooOld { return .appTooOld }
         if error as? RepositoryError == .unauthorized { return .sessionExpired }
         return nil

@@ -206,4 +206,11 @@ public enum InventorySyncTransportError: Error, Hashable, Sendable {
     case resyncRequired
     case clientTooOld
     case suggestionsUnavailable
+    /// `413` on the media route: the bytes are over its cap. Sending them
+    /// again changes nothing, so a phone that staged them opens the failed
+    /// photo repair instead of retrying.
+    case mediaTooLarge
+    /// `415` on the media route: neither JPEG nor HEIC. As final as
+    /// ``mediaTooLarge``.
+    case mediaUnsupported
 }

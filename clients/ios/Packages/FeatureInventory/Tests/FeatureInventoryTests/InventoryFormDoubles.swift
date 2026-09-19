@@ -12,6 +12,7 @@ internal struct FormFixtureSource: InventoryQuerySource {
     var locations: [InventoryLocation] = []
     var catalogue = InventoryCatalogue(version: "test", units: [], types: [])
     var status: InventoryReplicaStatus = .current
+    var photoUploads: [String: InventoryPhotoUpload] = [:]
 
     func inventoryItem(id: String) -> InventoryItem? { items.first { $0.id == id } }
     func inventoryItem(withCode code: String) -> InventoryItem? {
@@ -47,6 +48,7 @@ internal struct FormFixtureSource: InventoryQuerySource {
     func inventoryCatalogue() -> InventoryCatalogue { catalogue }
     func inventorySyncLedger() -> InventoryReplicaSyncLedger { InventoryReplicaSyncLedger() }
     func inventoryReplicaStatus() -> InventoryReplicaStatus { status }
+    func inventoryPhotoUploads() -> [String: InventoryPhotoUpload] { photoUploads }
 }
 
 /// A store that records every command in order and applies none, answering
@@ -82,8 +84,17 @@ internal final class RecordingFormStore: InventoryStore, Sendable {
     }
 
     internal func setStatus(_ status: InventoryReplicaStatus) {
+        change { $0.status = status }
+    }
+
+    /// Reports how far each staged photo got, as a local-first store does.
+    internal func setPhotoUploads(_ uploads: [String: InventoryPhotoUpload]) {
+        change { $0.photoUploads = uploads }
+    }
+
+    private func change(_ edit: (inout FormFixtureSource) -> Void) {
         let (source, observers) = state.withLock { current in
-            current.source.status = status
+            edit(&current.source)
             return (current.source, Array(current.observers.values))
         }
         for observer in observers { observer(source) }

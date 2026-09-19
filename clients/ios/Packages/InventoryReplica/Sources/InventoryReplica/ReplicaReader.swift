@@ -101,10 +101,15 @@ internal final class ReplicaReader: InventoryQuerySource {
         }
     }
 
-    /// Empty: nothing on this phone waits for the server or needs repair
-    /// while every write is answered by the server before it lands here.
+    /// What waits for the server, in log order; the open repairs, oldest
+    /// first; and what was resolved, newest first.
     func inventorySyncLedger() -> InventoryReplicaSyncLedger {
-        InventoryReplicaSyncLedger()
+        attempt(InventoryReplicaSyncLedger()) { db in
+            InventoryReplicaSyncLedger(
+                waiting: try MutationLogLedger.waiting(in: db),
+                repairs: try RepairRows.openRepairs(in: db).compactMap(\.repair),
+                resolved: try RepairRows.resolvedEntries(in: db))
+        }
     }
 
     func inventoryReplicaStatus() -> InventoryReplicaStatus {
@@ -114,6 +119,10 @@ internal final class ReplicaReader: InventoryQuerySource {
                 on: meta.status(now: now, staleAfter: staleAfter), lastRefreshAt: meta.lastRefreshAt
             )
         }
+    }
+
+    func inventoryPhotoUploads() -> [String: InventoryPhotoUpload] {
+        attempt([:]) { try MediaRows.uploads(in: $0) }
     }
 
     private func attempt<Value>(_ fallback: Value, _ read: (Database) throws -> Value) -> Value {

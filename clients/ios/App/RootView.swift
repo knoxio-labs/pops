@@ -16,7 +16,7 @@ import SwiftUI
 /// does nothing at all while unpaired.
 internal struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase
-    @State private var composition = AppComposition()
+    internal let composition: AppComposition
 
     /// The pillar named by the last `pops` URL this build could not route
     /// anywhere. Drives ``unsupportedPillarAlertPresented`` rather than a
@@ -35,9 +35,20 @@ internal struct RootView: View {
             // the screen the app is stuck on would ever find that out.
             // `onChange` does not fire for the initial value, so this cannot
             // double the launch request.
+            // Inventory refreshes and drains its queued changes at the same
+            // moment, for the same reason.
+            // Leaving the foreground schedules the next background refresh.
             .onChange(of: scenePhase) { _, phase in
-                guard phase == .active else { return }
-                Task { await composition.shell.reloadBootstrap() }
+                switch phase {
+                case .active:
+                    composition.noteForeground()
+                    Task { await composition.shell.reloadBootstrap() }
+                    Task { await composition.refreshInventory() }
+                case .background:
+                    composition.scheduleBackgroundRefresh()
+                default:
+                    break
+                }
             }
             .onOpenURL { url in
                 let outcome = handleOpenPopsURL(url, router: composition.entityRouter)

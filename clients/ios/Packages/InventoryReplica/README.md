@@ -4,7 +4,7 @@ The phone's copy of the inventory. The Inventory screens read from here, not fro
 
 It is one of the packages `ModuleBoundaryTests` allows to hold a concrete implementation of an `AppCore` seam, and the only one allowed to depend on [GRDB](https://github.com/groue/GRDB.swift), pinned `exact:` for the reason [`../BFMClient/Package.swift`](../BFMClient/Package.swift) gives. It performs no HTTP: `OnlineInventoryStore` fetches pages through `AppCore`'s `InventorySyncTransport` and hands them to `InventoryReplica.apply(_:)`.
 
-The database is in memory, so a relaunch downloads again; the on-disk replica is POPS-4069.
+`InventoryReplica()` is in memory, for tests and previews, so a relaunch downloads again. `InventoryReplica(onDiskAt:)` (POPS-4069) is the durable one: WAL with `synchronous = FULL`, `completeUntilFirstUserAuthentication` on the database and media cache, the media cache excluded from backup, a free-space floor and `SQLITE_FULL` both raised as `InventoryStorageError.full`, and a migration that cannot run falling back to a fresh snapshot while keeping the `mutation_log` table by name.
 
 ## How a page lands
 
@@ -12,7 +12,60 @@ Every page is one transaction. Rows are upserted by revision: a row at or below 
 
 A snapshot page from a new epoch discards every stored row first: a restored server rewinds revisions and `seq`, so nothing stored compares with what it sends. A feed page from another epoch is refused outright; the answer to it is a fresh snapshot.
 
-Items and locations each have two tables of the same shape: `*_base` is what the server last sent, and the unsuffixed table is what queries read. They hold the same rows until the mutation log replays this phone's pending changes over the base (POPS-4071).
+Items and locations each have two tables of the same shape: `*_base` is what the server last sent, and the unsuffixed table is what queries read. A page writes only the base; the rebase that follows in the same transaction resets every row the page changed, or any logged change wrote, and replays the log over it.
+
+## The mutation log
+
+`perform(_:mutationId:clientTime:)` applies a command to the optimistic layer through `LocalReducer` and logs it in `mutation_log`, in one transaction, and returns: the change is on disk before anything is sent. The reducer is the server's command layer (`pillars/inventory/src/domain/commands/`) redone in Swift. It refuses what the server refuses, with the same reason, and records the same revision bumps and events. `CommandVectorTests` replays every vector in `clients/ios/Contracts/command-vectors-v1.json` through it and checks the outcome, the mutation that would be sent, and the resulting rows.
+
+- A change depends on the newest pending change that wrote any row it writes or points at, so the server never applies it first.
+- Its base revision is the one its author saw. A change behind another of this phone's changes to the same row is based on the revision that one leaves, recomputed on every rebase and corrected by the applied outcome, so it never conflicts with this phone's own edit.
+- A feed page changing a row under a pending change resets the row to the new base and replays the change over it. A change the reducer now refuses, because its target was deleted elsewhere for instance, stops showing but stays logged: the server's outcome decides.
+- An applied change keeps showing, at the server's revision, until the feed reaches the batch's high-water `seq`. A conflicted or rejected one stops showing, its row shows the server's state, and it opens a repair (below).
+- `undo(_:undoMutationId:clientTime:)` cancels a change still on the device, along with what depends on it, and otherwise logs an Undo that goes out as `event.revert` once the change's outcome names its event. Undoing a create, a split or a destroy is refused, as the server refuses it.
+
+`LocalFirstInventoryStore` is the `InventoryStore` over this: `perform`, `undo` and `resolve` are local, everything else is `OnlineInventoryStore`'s, and given an `InventoryReachability` it runs the drain.
+
+## The drain
+
+`InventoryDrain` (POPS-4072) sends the log. It takes `outboundMutations(limit:excluding:)`, marks them with `markSending(_:at:)`, submits them, and hands the result to `recordOutcomes(_:)`, or to `returnToQueue(_:)` when the batch never arrived.
+
+- Batches are up to 50, in stable topological order: enqueue order, corrected so nothing precedes what it depends on (`DrainOrder`, the design playground's `InventoryQueue.ordered`). A dependency not in the log holds nothing back, and a cycle goes last rather than being lost.
+- Held back, with everything depending on them: what is in flight, conflicted or rejected, and an Undo whose change has no applied outcome yet. What the server deferred is not offered again in the same pass.
+- A batch that never arrived is resent under the same mutation ids; a pass that did not empty the log, or where the server deferred something, retries after 2 s, doubling, at most 5 min. A pass that applied anything reads the feed so the changes settle. Rows a crashed pass left in flight are requeued at the start of the next.
+- `409 resync_required` takes a fresh snapshot, keeping the log, and carries on. `401` and `426` block the replica as `.sessionExpired` and `.appTooOld` and schedule no retry.
+- An Undo whose change ended conflicted or rejected is dropped unsent, and what was logged on top of it inherits its dependencies, so it stays held.
+- `LocalFirstInventoryStore.synchronize()` is `refresh()` followed by waiting for a pass that starts after it to end, for a background refresh (POPS-4076); a cancelled caller stops waiting and leaves the pass to finish.
+- It runs after each change and Undo, on every `refresh()`, when the backoff elapses, and when the `InventoryReachability` path becomes satisfied (`NetworkPathReachability`, over `NWPathMonitor`). Nothing is sent while the path is down.
+
+Conflicted and rejected rows stay in the log in that state, with the server's outcome stored whole in `outcome`, and anything depending on them stays queued behind them until their repair is settled.
+
+## Photos
+
+A photo is staged on the phone before anything attaches it (POPS-4075). `LocalFirstInventoryStore.uploadPhoto` calls `stagePhoto(sha256:data:contentType:)`, which checks the bytes hash to their name, checks for 200 MB free (else `InventoryStorageError.full`), writes them to the media store (the `MediaCache` directory on disk, excluded from backup) and records them in the `media` table as waiting, pinned. The `item.attachPhoto` the form then performs is logged at once, like any change; `photo(_:variant:)` answers a staged photo from the phone, so it shows before the server has it.
+
+- The drain uploads every waiting photo, oldest first, before each batch, and holds an attach of one until it is on the server. `alreadyStored` counts as uploaded.
+- A `413` or `415`, or staged bytes gone from the phone, fails the photo; every attach waiting on it is refused on the phone and opens the failed photo repair. Any other upload failure ends the pass like a batch that never arrived.
+- An attach the server refuses as `media_missing` whose bytes this phone staged uploads them again and is logged again under a new id, once; after that, or without the bytes, it opens the failed photo repair. Retry stages the bytes again before the attach is re-sent; Remove drops the attach.
+- Staged bytes stay pinned until the server has them and no change in the log still attaches them.
+
+Every variant `photo(_:variant:)` fetches is kept in the same store and table (POPS-4080), so it is not fetched again, even after a relaunch. Thumbnails are kept for good; medium and full-size variants are evicted least recently used first once they add up to more than 500 MB (`defaultMediaBudgetBytes`). Pinned bytes count towards that but are never evicted. A photo this phone staged answers every variant with its own bytes until that variant is cached, and a row whose file has gone is forgotten and fetched again.
+
+`InventoryQuery.photoUploads` reports each staged photo as waiting, uploading, uploaded or failed, which is what the form's photo tiles show. The `media` table survives the on-disk fallback with the log, because the log's attaches need it.
+
+## Repairs
+
+`recordOutcomes(_:)` opens one repair per mutation the server answered `conflict` or `rejected`, in the `repair` table (POPS-4073), in the same transaction that records the outcome. The mutation stays in the log in that state, held with everything depending on it, and its entity reads as needing attention for as long as the repair is open. An `applied` outcome with `converged: true` opens nothing and is listed as resolved ("Same count on both").
+
+A field conflict, a code collision and a record deleted elsewhere are their own kinds. A photo attach refused with `media_missing` is a failed photo. Any other refusal has no approved repair, so it is shown with its reason and offers only Let go, whichever choice is passed.
+
+`resolve(_:with:mintMutationId:at:)` settles one:
+
+- Keeping this phone's side logs the change again under a new mutation id, in its old place in the log, because the server answers an id it has seen with the outcome it stored. What depended on the old id depends on the new one. A field conflict is based on the conflict's `currentRevision`, and stays at least there while the feed has not delivered it; a code collision takes the chosen code, or the suggested one; a record deleted elsewhere goes behind a new `item.restoreDeleted` it depends on; a failed photo's attach is sent again. The reducer checks first, so a code another item on this phone holds is refused and the repair stays open. A place deleted elsewhere cannot be restored: there is no command for it.
+- Letting go drops the change and rebases its row on the server's state. What depended on it depends on what it depended on instead, so it is released and sent; a change that cannot apply without it (a code set on a create that was let go) comes back as its own refusal.
+- A change feed page that already carries the change, so applying it to the server's row would alter nothing, settles the repair as "Already resolved elsewhere".
+
+Replay follows the log order corrected for dependencies, the drain's order, so a Restore logged after the change it brings back replays first. The `repair` and `resolved_entry` tables survive the on-disk fallback with the log. A resolution cannot be undone yet.
 
 ## The online store
 
@@ -33,4 +86,4 @@ Effective location is walked, never stored (D2). Contents of a place are every a
 
 Search is FTS5 with the trigram tokenizer, because the approved rule is "contains", not "has a word starting with". A query shorter than three characters has no trigram, so it falls back to `LIKE` over the same columns. Results are ranked the way the design playground's `InventorySearchRanking` does: name prefix, then name contains, then any other field. A type's label is searchable, so storing a new catalogue re-indexes every row.
 
-The sync ledger is always empty: there is no mutation log or repair table yet (POPS-4071, POPS-4073).
+The sync ledger lists what waits for the server, in log order (a change in the drain's batch with progress `0`, which is what makes its row read as syncing), the open repairs, oldest first, and what was resolved, newest first. A row's sync mark is derived from the ledger by whoever draws it, never stored.

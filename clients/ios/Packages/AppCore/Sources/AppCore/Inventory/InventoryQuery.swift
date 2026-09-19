@@ -42,6 +42,9 @@ public protocol InventoryQuerySource: Sendable {
     func inventoryCatalogue() -> InventoryCatalogue
     func inventorySyncLedger() -> InventoryReplicaSyncLedger
     func inventoryReplicaStatus() -> InventoryReplicaStatus
+    /// The photos this phone staged for upload, by hash, and how far each
+    /// got. Empty for a store that uploads while the caller waits.
+    func inventoryPhotoUploads() -> [String: InventoryPhotoUpload]
 }
 
 /// A read `InventoryStore.observe(_:)` can serve, typed by the value it
@@ -136,6 +139,10 @@ public struct InventoryQuery<Value: Sendable>: Sendable {
 
     public static var replicaStatus: InventoryQuery<InventoryReplicaStatus> {
         .init { $0.inventoryReplicaStatus() }
+    }
+
+    public static var photoUploads: InventoryQuery<[String: InventoryPhotoUpload]> {
+        .init { $0.inventoryPhotoUploads() }
     }
 }
 

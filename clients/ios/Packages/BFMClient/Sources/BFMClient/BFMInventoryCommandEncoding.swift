@@ -53,6 +53,7 @@ internal enum BFMInventoryCommandEncoding {
         case .removePhoto: "item.removePhoto"
         case .reorderPhotos: "item.reorderPhotos"
         case .restoreDeletedItem: "item.restoreDeleted"
+        case .deleteItem: "item.delete"
         default: nil
         }
     }
@@ -104,7 +105,7 @@ internal enum BFMInventoryCommandEncoding {
         case .attachPhoto(_, let sha256, let position): ["sha256": sha256, "position": position]
         case .removePhoto(_, let sha256): ["sha256": sha256]
         case .reorderPhotos(_, let sha256s): ["sha256s": sha256s]
-        case .restoreDeletedItem: [:]
+        case .restoreDeletedItem, .deleteItem: [:]
         default: nil
         }
     }

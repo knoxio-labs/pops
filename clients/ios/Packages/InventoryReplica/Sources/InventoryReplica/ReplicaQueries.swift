@@ -30,6 +30,12 @@ internal enum ReplicaQueries {
         .map { try ItemRow.decode($0, in: db) }
     }
 
+    /// The optimistic row, tombstone or not, for the rebase to re-index.
+    static func storedItem(id: String, in db: Database) throws -> InventoryItem? {
+        try Row.fetchOne(db, sql: "SELECT * FROM item WHERE id = ?", arguments: [id])
+            .map { try ItemRow.decode($0, in: db) }
+    }
+
     static func location(id: String, in db: Database) throws -> InventoryLocation? {
         try Row.fetchOne(
             db, sql: "SELECT * FROM location WHERE id = ? AND deleted_at IS NULL", arguments: [id]

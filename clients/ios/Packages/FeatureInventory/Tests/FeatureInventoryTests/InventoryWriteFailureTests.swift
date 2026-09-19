@@ -54,6 +54,20 @@ internal struct InventoryWriteFailureTests {
                 == "Placement was changed on Joao's iPad first, so nothing changed here.")
     }
 
+    @Test("a write the phone has no room for says so, rather than blaming the network")
+    func storageFullSaysSo() async throws {
+        let runner = InventoryCommandRunner(
+            store: RefusingInventoryStore(error: InventoryStorageError.full))
+
+        _ = await runner.perform([.setItemFull(id: "tv", isFull: true)])
+
+        let failure = try #require(runner.failure)
+        #expect(failure == .storageFull)
+        #expect(
+            InventoryCopy.message(for: failure)
+                == "This phone is nearly out of storage, so that change was not saved.")
+    }
+
     @Test("an Undo the server refuses says why, rather than blaming the network")
     func refusedUndoSaysWhy() async throws {
         let refusal = InventoryCommandError.rejected(
