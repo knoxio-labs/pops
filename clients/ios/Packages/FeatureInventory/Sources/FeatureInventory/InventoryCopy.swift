@@ -6,6 +6,8 @@ internal enum InventoryCopy {
     internal static let unavailable = "Inventory is not available on this phone right now."
 
     internal static let failureTitle = "That change did not save"
+    internal static let storageFullMessage =
+        "This phone is nearly out of storage, so that change was not saved."
 
     /// Why a write did not land, one sentence per failure, never the
     /// diagnostic a transport error carries.

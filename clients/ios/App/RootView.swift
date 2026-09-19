@@ -35,9 +35,12 @@ internal struct RootView: View {
             // the screen the app is stuck on would ever find that out.
             // `onChange` does not fire for the initial value, so this cannot
             // double the launch request.
+            // Inventory refreshes and drains its queued changes at the same
+            // moment, for the same reason.
             .onChange(of: scenePhase) { _, phase in
                 guard phase == .active else { return }
                 Task { await composition.shell.reloadBootstrap() }
+                Task { await composition.refreshInventory() }
             }
             .onOpenURL { url in
                 let outcome = handleOpenPopsURL(url, router: composition.entityRouter)

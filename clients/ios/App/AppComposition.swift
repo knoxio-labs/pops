@@ -58,6 +58,7 @@ internal final class AppComposition {
 
     private let credentialStore: DeviceCredentialStore
     private let authenticated: @Sendable (PairedDevice) -> BFMHTTPClient
+    private let openInventoryReplica: (PairedDevice) throws -> InventoryReplica
 
     /// One navigation path per feature, since each draws its own
     /// `NavigationStack`.
@@ -88,7 +89,14 @@ internal final class AppComposition {
     /// a re-pair replaces the entry rather than growing it.
     private var bound: (device: PairedDevice, dependencies: AppDependencies)?
 
-    internal init(credentialStore: DeviceCredentialStore = .live()) {
+    /// - Parameter openInventoryReplica: Opens a paired device's Inventory
+    ///   replica. The on-disk one under Application Support by default;
+    ///   tests point it somewhere disposable, or make it throw.
+    internal init(
+        credentialStore: DeviceCredentialStore = .live(),
+        openInventoryReplica: @escaping (PairedDevice) throws -> InventoryReplica =
+            AppComposition.onDiskInventoryReplica(for:)
+    ) {
         let session = SessionStore()
         let refresher = DeviceSessionRefresher(
             credentialStore: credentialStore,
@@ -105,6 +113,7 @@ internal final class AppComposition {
         self.session = session
         self.credentialStore = credentialStore
         self.authenticated = authenticated
+        self.openInventoryReplica = openInventoryReplica
         pairingDependencies = AppDependencies(
             transactions: AppDependencies.unbound.transactions,
             pairing: BFMDevicePairingService(credentialStore: credentialStore),
@@ -144,23 +153,63 @@ internal final class AppComposition {
             receiptCapture: BFMReceiptCaptureRepository(client: authenticated(device)),
             purchases: BFMPurchasesRepository(client: authenticated(device)),
             accounts: BFMAccountsRepository(client: authenticated(device)),
-            inventory: Self.inventoryStore(client: authenticated(device))
+            inventory: inventoryStore(for: device)
         )
         bound = (device, dependencies)
         return dependencies
     }
 
-    /// The paired device's Inventory: a replica of its own, kept current
-    /// through the BFM's relay, with every write waiting for the server.
+    /// The paired device's Inventory: a replica of its own on disk, where
+    /// every change lands first and is sent to the BFM's relay when the
+    /// network allows (`LocalFirstInventoryStore`).
     ///
-    /// The replica is an in-memory database, so opening it fails only when
-    /// SQLite itself cannot allocate one. That leaves nothing to read from, so
-    /// the screens get the unbound store, which says Inventory is not
-    /// available rather than showing an empty catalogue as if it were real.
-    private static func inventoryStore(client: BFMHTTPClient) -> any InventoryStore {
-        guard let replica = try? InventoryReplica() else { return UnboundInventoryStore() }
-        return OnlineInventoryStore(
-            replica: replica, transport: BFMInventoryTransport(client: client))
+    /// Opening the replica fails with `InventoryStorageError.full` when the
+    /// phone has no room for it. Reading is still possible then, so the
+    /// screens get `StorageFullInventoryStore`, whose every write raises
+    /// the Storage full interruption, rather than a store that says
+    /// Inventory is not available. Any other failure leaves nothing to read
+    /// from, and the screens get the unbound store.
+    private func inventoryStore(for device: PairedDevice) -> any InventoryStore {
+        let transport = BFMInventoryTransport(client: authenticated(device))
+        do {
+            return LocalFirstInventoryStore(
+                replica: try openInventoryReplica(device), transport: transport,
+                reachability: NetworkPathReachability())
+        } catch InventoryStorageError.full {
+            return StorageFullInventoryStore(transport: transport)
+        } catch {
+            return UnboundInventoryStore()
+        }
+    }
+
+    /// Catches the paired device's Inventory up and sends what it holds,
+    /// for when the app comes back to the foreground. Nothing while unpaired.
+    internal func refreshInventory() async {
+        await bound?.dependencies.inventory.refresh()
+    }
+
+    /// `Application Support/Inventory/<device>`: one replica per paired
+    /// device, so a re-pair to another BFM never sends one server's queued
+    /// changes to the other.
+    nonisolated internal static func onDiskInventoryReplica(for device: PairedDevice) throws
+        -> InventoryReplica
+    {
+        let support = try FileManager.default.url(
+            for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil,
+            create: true)
+        return try InventoryReplica(
+            onDiskAt: support.appendingPathComponent("Inventory", isDirectory: true)
+                .appendingPathComponent(inventoryFolderName(for: device), isDirectory: true))
+    }
+
+    /// The device id, with anything but letters, digits, `-` and `_`
+    /// replaced, so an id can never climb out of `Inventory/` or name a
+    /// hidden folder.
+    nonisolated internal static func inventoryFolderName(for device: PairedDevice) -> String {
+        let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "-_"))
+        let name = String(
+            device.id.unicodeScalars.map { allowed.contains($0) ? Character($0) : "_" })
+        return name.isEmpty ? "_" : name
     }
 
     /// What to prefill the pairing form's server field with.
