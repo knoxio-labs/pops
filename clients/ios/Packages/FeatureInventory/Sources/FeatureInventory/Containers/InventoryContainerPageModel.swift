@@ -1,5 +1,4 @@
 import AppCore
-import Foundation
 import Observation
 
 /// A container page's state and the writes it issues, over `InventoryStore`.

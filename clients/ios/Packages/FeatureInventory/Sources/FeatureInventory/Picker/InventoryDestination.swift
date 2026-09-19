@@ -52,13 +52,6 @@ internal struct InventoryDestination: Identifiable, Hashable {
 
     internal var isContainer: Bool { kind == .container || kind == .closedContainer }
 
-    internal var isLocation: Bool {
-        switch kind {
-        case .location, .newLocation: true
-        case .container, .closedContainer, .putBack: false
-        }
-    }
-
     /// Where choosing this puts an item, once any new place exists. Nil only
     /// for a new place, whose id is minted when it is created.
     internal var placement: InventoryPlacement? {
