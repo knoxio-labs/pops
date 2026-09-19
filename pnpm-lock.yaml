@@ -629,6 +629,9 @@ importers:
       '@pops/ai-telemetry':
         specifier: workspace:*
         version: link:../../libs/ai-telemetry
+      '@pops/pillar-express':
+        specifier: workspace:*
+        version: link:../../libs/pillar-express
       '@pops/pillar-jobs':
         specifier: workspace:*
         version: link:../../libs/jobs
