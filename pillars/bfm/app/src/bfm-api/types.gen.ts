@@ -732,6 +732,114 @@ export type MobileFinanceGetTransactionResponses = {
 export type MobileFinanceGetTransactionResponse =
   MobileFinanceGetTransactionResponses[keyof MobileFinanceGetTransactionResponses];
 
+export type MobileInventorySuggestCodesData = {
+  /**
+   * Body
+   */
+  body?: {
+    name: string;
+    stem?: string;
+    typeKey?: string;
+  };
+  path?: never;
+  query?: never;
+  url: '/mobile/inventory/codes/suggest';
+};
+
+export type MobileInventorySuggestCodesErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code: 'invalid_cursor' | 'invalid_request';
+    message: string;
+  };
+  /**
+   * 401
+   */
+  401: {
+    code: 'invalid_token';
+    message: string;
+  };
+  /**
+   * 403
+   */
+  403:
+    | {
+        code: 'device_revoked';
+        message: string;
+      }
+    | {
+        capability: string;
+        code: 'capability_not_granted';
+        message: string;
+      };
+  /**
+   * 426
+   */
+  426: {
+    code: 'client_too_old';
+    message: string;
+  };
+  /**
+   * 429
+   */
+  429: {
+    code: 'rate_limited';
+    message: string;
+    retryAfterSeconds: number;
+  };
+  /**
+   * 502
+   */
+  502: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'upstream_unsupported_media'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'upstream_unsupported_media'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+};
+
+export type MobileInventorySuggestCodesError =
+  MobileInventorySuggestCodesErrors[keyof MobileInventorySuggestCodesErrors];
+
+export type MobileInventorySuggestCodesResponses = {
+  /**
+   * 200
+   */
+  200: {
+    suggestions: Array<string>;
+  };
+};
+
+export type MobileInventorySuggestCodesResponse =
+  MobileInventorySuggestCodesResponses[keyof MobileInventorySuggestCodesResponses];
+
 export type MobileInventoryItemHistoryData = {
   body?: never;
   path: {
@@ -920,6 +1028,182 @@ export type MobileInventoryItemHistoryResponses = {
 
 export type MobileInventoryItemHistoryResponse =
   MobileInventoryItemHistoryResponses[keyof MobileInventoryItemHistoryResponses];
+
+export type MobileInventoryMutationsData = {
+  /**
+   * Body
+   */
+  body?: {
+    mutations: Array<{
+      args: unknown;
+      baseRevision?: number | null;
+      clientTime: string;
+      dependsOn: Array<string>;
+      entityId: string;
+      mutationId: string;
+      op: string;
+    }>;
+  };
+  path?: never;
+  query?: never;
+  url: '/mobile/inventory/mutations';
+};
+
+export type MobileInventoryMutationsErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code: 'invalid_cursor' | 'invalid_request';
+    message: string;
+  };
+  /**
+   * 401
+   */
+  401: {
+    code: 'invalid_token';
+    message: string;
+  };
+  /**
+   * 403
+   */
+  403:
+    | {
+        code: 'device_revoked';
+        message: string;
+      }
+    | {
+        capability: string;
+        code: 'capability_not_granted';
+        message: string;
+      };
+  /**
+   * 413
+   */
+  413: {
+    code: 'payload_too_large';
+    maxBytes: number;
+    message: string;
+  };
+  /**
+   * 426
+   */
+  426: {
+    code: 'client_too_old';
+    message: string;
+  };
+  /**
+   * 429
+   */
+  429: {
+    code: 'rate_limited';
+    message: string;
+    retryAfterSeconds: number;
+  };
+  /**
+   * 502
+   */
+  502: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'upstream_unsupported_media'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'upstream_unsupported_media'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+};
+
+export type MobileInventoryMutationsError =
+  MobileInventoryMutationsErrors[keyof MobileInventoryMutationsErrors];
+
+export type MobileInventoryMutationsResponses = {
+  /**
+   * 200
+   */
+  200: {
+    highWaterSeq: number;
+    outcomes: Array<
+      | {
+          converged: boolean;
+          mutationId: string;
+          revision: number;
+          seq: number;
+          status: 'applied';
+        }
+      | {
+          at: string;
+          currentRevision: number;
+          field: string;
+          kind: 'field';
+          mine: unknown;
+          mutationId: string;
+          source: {
+            kind: string;
+            label: string;
+          };
+          status: 'conflict';
+          theirs: unknown;
+        }
+      | {
+          heldBy: {
+            id: string;
+            name: string;
+          };
+          kind: 'code_collision';
+          mutationId: string;
+          status: 'conflict';
+          suggestedCode: string | null;
+        }
+      | {
+          at: string;
+          kind: 'deleted';
+          mutationId: string;
+          source: {
+            kind: string;
+            label: string;
+          };
+          status: 'conflict';
+        }
+      | {
+          message: string;
+          mutationId: string;
+          reason: string;
+          status: 'rejected';
+        }
+      | {
+          mutationId: string;
+          status: 'deferred';
+          waitingOn: string;
+        }
+    >;
+  };
+};
+
+export type MobileInventoryMutationsResponse =
+  MobileInventoryMutationsResponses[keyof MobileInventoryMutationsResponses];
 
 export type MobileInventoryChangesData = {
   body?: never;
