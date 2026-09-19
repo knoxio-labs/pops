@@ -996,8 +996,12 @@ describe('0012_items_single_identity preflight', () => {
       expect(tables).toContain('containers');
       expect(tables).not.toContain('items');
       expect(tables).not.toContain('events');
+      const journal = readMigrationJournal(MIGRATIONS_DIR);
+      const abortingIndex = journal.findIndex(
+        (entry) => entry.tag === '0012_items_single_identity'
+      );
       expect(raw.prepare(`SELECT count(*) AS n FROM __drizzle_migrations`).get()).toEqual({
-        n: readMigrationJournal(MIGRATIONS_DIR).length - 1,
+        n: abortingIndex,
       });
       expect(raw.prepare(`SELECT count(*) AS n FROM home_inventory`).get()).toEqual({
         n: itemRows,

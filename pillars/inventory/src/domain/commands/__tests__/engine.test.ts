@@ -409,11 +409,25 @@ describe('registry', () => {
   it('holds exactly the ops this pillar defines so far', () => {
     expect([...COMMAND_REGISTRY.keys()].toSorted()).toEqual([
       'event.revert',
+      'item.attachPhoto',
+      'item.changeType',
+      'item.create',
+      'item.delete',
+      'item.edit',
       'item.move',
+      'item.removePhoto',
+      'item.reorderPhotos',
       'item.restoreDeleted',
       'item.setAccess',
+      'item.setCode',
       'item.setFull',
       'item.setLifecycle',
+      'item.setQuantity',
+      'item.split',
+      'location.create',
+      'location.delete',
+      'location.move',
+      'location.rename',
     ]);
   });
 });

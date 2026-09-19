@@ -87,6 +87,7 @@ export interface ItemCreateBody {
   purchasePrice?: number | null;
   purchaseTransactionId?: string | null;
   sourceRef?: string | null;
+  notes?: string | null;
 }
 
 export interface ItemListQuery {

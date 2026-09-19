@@ -57,6 +57,20 @@
       "when": 1781650200006,
       "tag": "0012_items_single_identity",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1781650200007,
+      "tag": "0013_items_fts",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1781650200008,
+      "tag": "0014_items_source_ref_live_only",
+      "breakpoints": true
     }
   ]
 }

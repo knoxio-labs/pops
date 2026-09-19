@@ -1,5 +1,14 @@
 import { itemSetAccess, itemSetFull } from './access.js';
+import { itemSetCode } from './item-code.js';
+import { itemCreate } from './item-create.js';
+import { itemDelete } from './item-delete.js';
+import { itemEdit } from './item-edit.js';
+import { itemAttachPhoto, itemRemovePhoto, itemReorderPhotos } from './item-photos.js';
+import { itemSetQuantity } from './item-quantity.js';
+import { itemSplit } from './item-split.js';
+import { itemChangeType } from './item-type.js';
 import { itemRestoreDeleted, itemSetLifecycle } from './lifecycle.js';
+import { locationCreate, locationDelete, locationMove, locationRename } from './location.js';
 import { itemMove } from './placement.js';
 import { eventRevert } from './revert.js';
 
@@ -26,4 +35,18 @@ export const COMMAND_REGISTRY: OpRegistry = buildRegistry([
   itemSetLifecycle,
   itemRestoreDeleted,
   eventRevert,
+  itemCreate,
+  itemEdit,
+  itemDelete,
+  itemChangeType,
+  itemSetCode,
+  itemSetQuantity,
+  itemSplit,
+  itemAttachPhoto,
+  itemRemovePhoto,
+  itemReorderPhotos,
+  locationCreate,
+  locationRename,
+  locationMove,
+  locationDelete,
 ]);
