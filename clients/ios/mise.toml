@@ -631,6 +631,14 @@ description = "The CalVer derivation for TestFlight builds still holds against f
 hide = true
 run = "scripts/release-version.sh self-test"
 
+# The pre-upload purpose-string check `scripts/testflight.sh` runs on each
+# archive. Self-tested here for the same reason as `verify:release-version`:
+# its only real caller runs after merge.
+[tasks."verify:camera-purpose"]
+description = "The pre-upload camera purpose-string check still rejects what App Store Connect rejects"
+hide = true
+run = "scripts/check-camera-purpose.sh self-test"
+
 # The one entry point. `.github/workflows/ios-quality.yml` invokes this task
 # rather than restating the commands, because the moment the two are written
 # out separately they drift and a green local run means nothing.
@@ -673,6 +681,7 @@ authoritative=1
 swiftlint lint --strict --quiet || status=1
 mise run generated-boundary || status=1
 mise run verify:release-version || status=1
+mise run verify:camera-purpose || status=1
 
 if mise run verify:xcode-version; then
   mise run swift-format lint || status=1

@@ -256,6 +256,12 @@ targets:
         # No network and no cryptography at all; see `Pops` for why the key
         # must be present rather than left to the questionnaire.
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
+        # Required although nothing here opens a camera: staging the real
+        # pairing and receipt-capture screens links AVFoundation and VisionKit,
+        # and App Store Connect judges the binary (ITMS-90683 rejected build
+        # 3289 without it). `scripts/check-camera-purpose.sh` catches a missing
+        # one before upload.
+        INFOPLIST_KEY_NSCameraUsageDescription: Pops Design previews the Pops screens that scan pairing QR codes and photograph receipts.
         ASSETCATALOG_COMPILER_APPICON_NAME: PlaygroundIcon
         PRODUCT_BUNDLE_IDENTIFIER: com.knoxiolabs.pops.playground
         # Placeholders, for the reason given on `Pops` above.
