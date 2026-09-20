@@ -163,18 +163,35 @@ Two consequences follow, and both bite:
 - **Adding or removing a source file means regenerating.** Sources are explicit file references in the generated project, so a new `.swift` file is invisible to `xcodebuild` until `xcodegen generate` runs again — it does not fail, it silently does not compile the file.
 - **Xcode settings changed through the GUI do not survive.** Change `project.yml` instead; anything else is erased on the next generate.
 
-## The app icon is one layer on purpose
+## App icon artwork
 
-`App/AppIcon.icon` is an Icon Composer source, not an exported `AppIcon.appiconset`: one `icon.json` naming a gradient background and a single image layer, with the dark, tinted and clear variants derived by the system rather than checked in as a hundred and fifty PNGs. The artwork is a three-by-three weave of six cords, one per member of `NAV_COLOR` in [`libs/sdk/src/manifest-schema/ui.ts`](../../libs/sdk/src/manifest-schema/ui.ts) — that enum is closed and has exactly six members, which is where the thread count comes from.
+`App/AppIcon.icon` and `App/AppIconLocal.icon` are Icon Composer sources. [`scripts/ios-app-icon.mjs`](../../scripts/ios-app-icon.mjs) generates their SVG layers and manifests; run `mise run icon:ios` after editing it. The local bundle adds its existing LOCAL badge above the weave.
 
-**A weave needs the warp drawn twice** — once beneath the weft, and again on top at the crossings where it passes over — so the obvious construction is three groups: warp, weft, over. It was built that way first and it was wrong on a device in two ways a preview cannot show:
+The mark is a three-by-three basketweave using the six `NAV_COLOR` families. Cords are 148 points wide, spaced 216 points apart, and span 780 points of the 1024-point canvas. This leaves room around the mark while keeping the cords thick enough to read at home-screen size. The warp is continuous; the weft has five even-odd cutouts, exactly the width of the warp, so there are no background slits at crossings.
 
-- **Groups composite top-first.** Index `0` in `groups` is the topmost layer, the way a layer list reads in a drawing tool rather than the way a painter's algorithm runs. Written bottom-up, the warp lands above the weft and the over-crossings end up buried beneath both, invisible — and the mark renders as a stack rather than a weave.
-- **Each group gets a specular rim along its own alpha edge.** That is the real reason this is one layer. Every additional group draws a bright outline around its own silhouette, so a full-length weft cord picks up a rim that runs straight across the warp beneath it. Outlines nothing in the artwork asked for, in the middle of the mark.
+Cross-axis gradients shade the cylinders; a second gradient along each cord provides contact shadows only where it passes underneath another cord. Small radial highlights round the exposed caps. The two opaque groups retain system drop shadows, but disable system specular highlights: applying another bevel to the cutout edges makes the weave look like disconnected recessed bars. The background remains system-rendered and unmasked.
 
-So the interlace is composited into a single image and the system rims only the outline of the mark. Depth comes from shading in the artwork, which is authored; not from per-layer glass, which is not. **Splitting this into more groups to get more depth will make it worse** — check it on a device before believing otherwise.
+### Preview and validate
 
-`translucency` is off for the same class of reason: it is for layers meant to read as glass, and on solid artwork it makes the cords semi-transparent and lets the layer beneath show through.
+Icon Composer's bundled renderer exports the actual material and appearance at full resolution. It is a different executable from `xcrun ictool`:
+
+```bash
+ICON_TOOL="$(xcode-select -p)/../Applications/Icon Composer.app/Contents/Executables/ictool"
+mkdir -p tmp/icon-preview
+"$ICON_TOOL" clients/ios/App/AppIcon.icon --export-image \
+  --output-file tmp/icon-preview/default.png --platform iOS \
+  --rendition Default --width 1024 --height 1024 --scale 1 --design-generation 27
+```
+
+Run from the repository root. Compare design generations 26 and 27, and the Default, Dark, Mono and TintedDark renditions, whenever changing palette or shading. Icon Composer also provides interactive appearance previews. To validate the Xcode asset pipeline:
+
+```bash
+xcrun actool clients/ios/App/AppIcon.icon --compile tmp/icon-preview \
+  --platform iphonesimulator --minimum-deployment-target 26.0 \
+  --app-icon AppIcon --output-partial-info-plist tmp/icon-preview/partial.plist
+```
+
+[`scripts/__tests__/ios-app-icon.test.ts`](../../scripts/__tests__/ios-app-icon.test.ts) checks weave topology, proportions, touching crossings, shadow placement, manifest effects and exact agreement between generated and committed bundles. These tests protect geometry and reproducibility; native renders remain the visual check.
 
 ## Module boundaries
 

@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="warp-0" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#e90e46"/>
+      <stop offset="0.08" stop-color="#f4416e"/>
+      <stop offset="0.16" stop-color="#f7ccd7"/>
+      <stop offset="0.23" stop-color="#f37494"/>
+      <stop offset="0.36" stop-color="#f44a76"/>
+      <stop offset="0.55" stop-color="#f33767"/>
+      <stop offset="0.85" stop-color="#db0d42"/>
+      <stop offset="0.96" stop-color="#f1114a"/>
+      <stop offset="1" stop-color="#f22458"/>
+    </linearGradient>
+    <linearGradient id="warp-0-contact" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#000000" stop-opacity="0.22"/>
+      <stop offset="0.09487179487179487" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="0.36666666666666664" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="0.40512820512820513" stop-color="#000000" stop-opacity="0.36"/>
+      <stop offset="0.5948717948717949" stop-color="#000000" stop-opacity="0.46"/>
+      <stop offset="0.6333333333333333" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="0.9051282051282051" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0.28"/>
+    </linearGradient>
+    <linearGradient id="warp-1" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#008648"/>
+      <stop offset="0.08" stop-color="#00c368"/>
+      <stop offset="0.16" stop-color="#61f1ae"/>
+      <stop offset="0.23" stop-color="#05f183"/>
+      <stop offset="0.36" stop-color="#00cd6e"/>
+      <stop offset="0.55" stop-color="#00b963"/>
+      <stop offset="0.85" stop-color="#007740"/>
+      <stop offset="0.96" stop-color="#00904d"/>
+      <stop offset="1" stop-color="#00a558"/>
+    </linearGradient>
+    <linearGradient id="warp-1-contact" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#000000" stop-opacity="0.22"/>
+      <stop offset="0.08974358974358974" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="0.09487179487179487" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="0.1282051282051282" stop-color="#000000" stop-opacity="0.36"/>
+      <stop offset="0.31794871794871793" stop-color="#000000" stop-opacity="0.46"/>
+      <stop offset="0.3564102564102564" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="0.6435897435897436" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="0.6820512820512821" stop-color="#000000" stop-opacity="0.36"/>
+      <stop offset="0.8717948717948718" stop-color="#000000" stop-opacity="0.46"/>
+      <stop offset="0.9051282051282051" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="0.9102564102564102" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0.28"/>
+    </linearGradient>
+    <linearGradient id="warp-2" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#1143f2"/>
+      <stop offset="0.08" stop-color="#4b71f6"/>
+      <stop offset="0.16" stop-color="#d6def9"/>
+      <stop offset="0.23" stop-color="#7e98f5"/>
+      <stop offset="0.36" stop-color="#5478f6"/>
+      <stop offset="0.55" stop-color="#4169f5"/>
+      <stop offset="0.85" stop-color="#0c3de8"/>
+      <stop offset="0.96" stop-color="#1a4af3"/>
+      <stop offset="1" stop-color="#2e5af4"/>
+    </linearGradient>
+    <linearGradient id="warp-2-contact" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#000000" stop-opacity="0.22"/>
+      <stop offset="0.09487179487179487" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="0.36666666666666664" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="0.40512820512820513" stop-color="#000000" stop-opacity="0.36"/>
+      <stop offset="0.5948717948717949" stop-color="#000000" stop-opacity="0.46"/>
+      <stop offset="0.6333333333333333" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="0.9051282051282051" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0.28"/>
+    </linearGradient>
+    <radialGradient id="cap-highlight">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.85"/>
+      <stop offset="0.4" stop-color="#ffffff" stop-opacity="0.3"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect x="222" y="122" width="148" height="780" rx="74" fill="url(#warp-0)"/>
+  <rect x="222" y="122" width="148" height="780" rx="74" fill="url(#warp-0-contact)"/>
+  <ellipse cx="275.28" cy="160.48000000000002" rx="34.04" ry="23.68" fill="url(#cap-highlight)"/>
+  <rect x="438" y="122" width="148" height="780" rx="74" fill="url(#warp-1)"/>
+  <rect x="438" y="122" width="148" height="780" rx="74" fill="url(#warp-1-contact)"/>
+  <ellipse cx="491.28" cy="160.48000000000002" rx="34.04" ry="23.68" fill="url(#cap-highlight)"/>
+  <rect x="654" y="122" width="148" height="780" rx="74" fill="url(#warp-2)"/>
+  <rect x="654" y="122" width="148" height="780" rx="74" fill="url(#warp-2-contact)"/>
+  <ellipse cx="707.28" cy="160.48000000000002" rx="34.04" ry="23.68" fill="url(#cap-highlight)"/>
+</svg>
