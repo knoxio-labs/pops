@@ -65,7 +65,7 @@ internal struct InventoryShellView: View {
         NavigationLink(value: InventoryRoute.scan) {
             Image(systemName: "barcode.viewfinder")
                 .font(.popsTitle)
-                .foregroundStyle(Color.popsForeground)
+                .foregroundStyle(Color.popsInventory)
                 .frame(width: scanDiameter, height: scanDiameter)
         }
         .playgroundGlass(in: Circle())
