@@ -263,6 +263,7 @@ jobs:
               "iOS Quality": [
                 "clients/ios/**",
                 "pillars/bfm/**",
+                "pillars/inventory/**",
                 "scripts/ios-e2e/**",
                 "pnpm-lock.yaml",
                 ".github/workflows/ios-quality.yml",

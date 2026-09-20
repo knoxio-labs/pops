@@ -122,13 +122,14 @@ describe('reading a workflow’s own pull_request.paths', () => {
     expect(paths.every((p) => typeof p === 'string' && p.length > 0)).toBe(true);
   });
 
-  it('reads ios-quality.yml’s real filter, including the BFM it boots', () => {
+  it('reads ios-quality.yml’s real filter, including the pillars it boots', () => {
     const paths = pullRequestPaths(workflowSource('ios-quality.yml'), 'ios-quality.yml');
     // Pinned rather than floored: this list is what the queue lane is scoped
     // by, so a silent narrowing of it silently narrows the queue lane too.
     expect(paths).toEqual([
       'clients/ios/**',
       'pillars/bfm/**',
+      'pillars/inventory/**',
       'scripts/ios-e2e/**',
       'pnpm-lock.yaml',
       '.github/workflows/ios-quality.yml',
@@ -344,6 +345,7 @@ describe('one glob implementation, two homes', () => {
     'clients/ios/Packages/Auth/README.md',
     'pillars/bfm/src/server.ts',
     'pillars/bfm/openapi/bfm.json',
+    'pillars/inventory/src/index.ts',
     'pillars/finance/Dockerfile',
     'pillars/finance/app/src/main.tsx',
     'pillars/finance/src/index.ts',

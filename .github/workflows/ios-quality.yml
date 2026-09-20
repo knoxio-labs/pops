@@ -35,6 +35,19 @@ name: iOS Quality
 # too. `scripts/ios-e2e/**` is in for the same reason: it is the harness that
 # boots it.
 #
+# `pillars/inventory/**` is in on exactly that second ground and no other
+# (POPS-4206). Since POPS-4066 the UI flow boots a real inventory pillar
+# alongside the BFM (`scripts/ios-e2e/inventory-pillar.mjs`, and the install
+# step below resolves `@pops/inventory...` as well), so its source is an input
+# to the flow the same way the BFM's is, and until this was listed an
+# inventory-only change drove that flow on neither the PR nor the queue lane.
+# It is not free: of the last 100 commits to `main`, 14 touched
+# `pillars/inventory/**` and nothing else already in this filter, so that is
+# how often the macOS lane is newly selected in both places. Paid anyway,
+# because the alternative is a flow that boots a process no change to it is
+# ever tested against — the same argument that put `pillars/bfm/**` here, not
+# the transitive one that keeps `libs/*` out below.
+#
 # TWO MORE INPUTS FEED THE PROCESS THE UI FLOW TALKS TO: `pnpm-lock.yaml` and
 # the BFM's transitive workspace dependencies. The merge-queue lane used to
 # cover for both by accident — it ran this job unconditionally — and since it
@@ -106,6 +119,7 @@ on:
     paths:
       - "clients/ios/**"
       - "pillars/bfm/**"
+      - "pillars/inventory/**"
       - "scripts/ios-e2e/**"
       - "pnpm-lock.yaml"
       - ".github/workflows/ios-quality.yml"
