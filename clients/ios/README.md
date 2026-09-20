@@ -172,9 +172,20 @@ Two consequences follow, and both bite:
 - **Groups composite top-first.** Index `0` in `groups` is the topmost layer, the way a layer list reads in a drawing tool rather than the way a painter's algorithm runs. Written bottom-up, the warp lands above the weft and the over-crossings end up buried beneath both, invisible — and the mark renders as a stack rather than a weave.
 - **Each group gets a specular rim along its own alpha edge.** That is the real reason this is one layer. Every additional group draws a bright outline around its own silhouette, so a full-length weft cord picks up a rim that runs straight across the warp beneath it. Outlines nothing in the artwork asked for, in the middle of the mark.
 
-So the interlace is composited into a single image and the system rims only the outline of the mark. Depth comes from shading in the artwork, which is authored; not from per-layer glass, which is not. **Splitting this into more groups to get more depth will make it worse** — check it on a device before believing otherwise.
+So the interlace is composited into a single image and the system rims only the outline of the mark. **Splitting this into more groups to get more depth will make it worse** — check it on a device before believing otherwise.
 
 `translucency` is off for the same class of reason: it is for layers meant to read as glass, and on solid artwork it makes the cords semi-transparent and lets the layer beneath show through.
+
+### The artwork is generated, and it is flat
+
+`Assets/layer-weave.png` is not drawn. It is rendered by [`scripts/ios-app-icon.mjs`](../../scripts/ios-app-icon.mjs) from the dozen constants at the top of that file — regenerate with `mise run icon:ios`, and [`scripts/__tests__/ios-app-icon.test.ts`](../../scripts/__tests__/ios-app-icon.test.ts) fails if the committed PNGs and the script disagree. It was a checked-in PNG with no source first, and that is how it stayed wrong: the geometry existed only in the pixels, so nobody could correct it without redrawing it.
+
+**Nothing in the artwork is shaded.** The cords are solid fills, with no gradient, no highlight and no drop shadow, because this one image is also what the dark, tinted and clear variants are derived from — a tint is a monochrome remap, and baked lighting survives that remap as mud. Depth comes from geometry instead: a cord passing over another opens a small gap in the cord beneath it (`CROSSING_CLEARANCE`), which is a hole in the alpha, so it survives every variant and the system lights it along with everything else.
+
+Two geometry rules are worth naming because breaking either is what the mark looked like before:
+
+- **All six cords are the same length and that length is a constant** (`MARK_SPAN`), so the twelve ends land on one square boundary. Letting a cord stop shortly after the crossing it passes under leaves a stub shorter than the cord is wide, which reads as a detached bead rather than a cord end; the test asserts the stub is longer than `CORD_WIDTH`.
+- **The mark is inset from the canvas.** It spans 86% of the 1024-point canvas rather than filling it, so the squircle never cuts a cord. It can take 86% and not the usual 80% only because this silhouette is a cross — its four corners are empty, so there is nothing out there to crowd the rounding.
 
 ## Module boundaries
 
