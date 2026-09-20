@@ -13,6 +13,7 @@ import {
   CORD_GAP,
   CORD_WIDTH,
   CROSSING_CLEARANCE,
+  GLOSS,
   LAYER_FILES,
   MARK_SPAN,
   PALETTE,
@@ -80,6 +81,26 @@ function weftPaths(svg: string): WeftPath[] {
     return { fill, rule, holes };
   });
 }
+
+/** Every gradient in a layer, by id, as its ordered stop colours. */
+function gradients(svg: string): Map<string, string[]> {
+  const found = new Map<string, string[]>();
+  for (const match of svg.matchAll(
+    /<linearGradient id="([^"]+)"[^>]*>([\s\S]*?)<\/linearGradient>/g
+  )) {
+    const id = match[1] ?? '';
+    const stops = [...(match[2] ?? '').matchAll(/stop-color="(#[0-9a-f]{6})"/g)].map(
+      (stop) => stop[1] ?? ''
+    );
+    found.set(id, stops);
+  }
+  return found;
+}
+
+/** The index of the stop in {@link GLOSS} that carries the unmodified body colour. */
+const BODY_STOP = GLOSS.findIndex(
+  ([, lightness, saturation]) => lightness === 0 && saturation === 0
+);
 
 type Group = {
   layers: { 'image-name': string; opacity: number; position: { scale: number } }[];
@@ -188,23 +209,34 @@ describe('the interlace', () => {
 });
 
 describe('a generated layer', () => {
-  it('draws three warp cords at the right centres, in palette order', () => {
-    rects(layerSvg('warp')).forEach((rect, index) => {
+  it('draws three warp cords at the right centres, each filled by its own gloss', () => {
+    const svg = layerSvg('warp');
+    const ramps = gradients(svg);
+    rects(svg).forEach((rect, index) => {
       expect(rect.width).toBe(CORD_WIDTH);
       expect(rect.height).toBe(MARK_SPAN);
       expect(rect.x + CORD_WIDTH / 2).toBe(centreAt(index));
       expect(rect.rx, 'an rx below half the thickness squares the ends off').toBe(CORD_WIDTH / 2);
-      expect(rect.fill).toBe(paletteOf(WARP[index] ?? ''));
+      expect(rect.fill).toBe(`url(#warp-${index})`);
+      // The body stop is the cord's palette colour untouched; every other stop
+      // is that colour shaded, so this is what ties the gloss to the palette.
+      expect(ramps.get(`warp-${index}`)?.[BODY_STOP]).toBe(paletteOf(WARP[index] ?? ''));
     });
   });
 
-  it('spans every weft cord the full mark, in palette order', () => {
+  it('spans every weft cord the full mark, each filled by its own gloss', () => {
     const svg = layerSvg('weft');
+    const ramps = gradients(svg);
     weftPaths(svg).forEach((path, index) => {
-      expect(path.fill).toBe(paletteOf(WEFT[index] ?? ''));
+      expect(path.fill).toBe(`url(#weft-${index})`);
+      expect(ramps.get(`weft-${index}`)?.[BODY_STOP]).toBe(paletteOf(WEFT[index] ?? ''));
     });
     const margin = (CANVAS - MARK_SPAN) / 2;
     expect(svg).toContain(`M ${margin + CORD_WIDTH / 2} `);
+  });
+
+  it('declares a body stop at all, so the palette is reachable from the artwork', () => {
+    expect(BODY_STOP).toBeGreaterThanOrEqual(0);
   });
 
   it('keeps every cord inside the canvas, clear of the corner mask', () => {
@@ -255,15 +287,55 @@ describe('a generated layer', () => {
       expect(svg).not.toMatch(/\b(clip-path|mask)=/);
     }
   });
+});
 
-  it('paints nothing the system is supposed to paint', () => {
-    for (const which of ['warp', 'weft'] as const) {
-      const svg = layerSvg(which);
-      expect(svg, 'baked lighting cannot survive the tinted and clear appearances').not.toMatch(
-        /<(linearGradient|radialGradient|filter|feGaussianBlur|feDropShadow)\b/
-      );
-      expect(svg).not.toMatch(/\b(filter|opacity|fill-opacity|stroke)=/);
-    }
+describe('the gloss profile', () => {
+  const lightness = GLOSS.map(([, delta]) => delta);
+  const saturation = GLOSS.map(([, , delta]) => delta);
+
+  it('runs from one edge to the other, in order', () => {
+    const offsets = GLOSS.map(([offset]) => offset);
+    expect(offsets.at(0)).toBe(0);
+    expect(offsets.at(-1)).toBe(1);
+    expect(offsets).toEqual(offsets.toSorted((a, b) => a - b));
+    expect(new Set(offsets).size).toBe(offsets.length);
+  });
+
+  it('carries all four features a cylinder needs', () => {
+    // 1. a specular above the body, in the first half
+    const specular = GLOSS.filter(([offset]) => offset < 0.5).map(([, delta]) => delta);
+    expect(Math.max(...specular)).toBeGreaterThan(0);
+    // 2. the body colour itself, somewhere in the middle
+    expect(GLOSS.some(([offset, delta]) => delta === 0 && offset > 0.2 && offset < 0.7)).toBe(true);
+    // 3. a shadow side
+    expect(Math.min(...lightness)).toBeLessThan(-4);
+    // 4. a bounce: the far edge lifts back up off the darkest band
+    const darkest = Math.min(...lightness);
+    expect(lightness.at(-1), 'without the bounce the tube reads as a flat ramp').toBeGreaterThan(
+      darkest
+    );
+  });
+
+  it('keeps the specular narrow rather than a broad band', () => {
+    const peak = Math.max(...lightness);
+    const atPeak = GLOSS.find(([, delta]) => delta === peak);
+    expect(atPeak?.[0]).toBeLessThanOrEqual(0.25);
+  });
+
+  it('spans about what the reference spans, not more', () => {
+    // The reference cross-section spans 15 lightness points. An early attempt
+    // reached 36 and read as plastic; the shape carries the tube, not the span.
+    const span = Math.max(...lightness) - Math.min(...lightness);
+    expect(span).toBeGreaterThan(10);
+    expect(span).toBeLessThan(24);
+  });
+
+  it('never slides a cord toward grey', () => {
+    // Darkening by scaling channels was the first attempt and dropped rose's
+    // shadow to 38% saturation against the reference's 55%, which is what
+    // washed the mark out.
+    expect(Math.min(...saturation)).toBeGreaterThan(-22);
+    expect(Math.max(...saturation)).toBeLessThanOrEqual(0);
   });
 });
 

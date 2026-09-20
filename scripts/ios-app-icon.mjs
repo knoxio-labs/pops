@@ -111,24 +111,94 @@ export const CROSSING_CLEARANCE = 10;
  */
 export const UPPER_TRANSLUCENCY = 0;
 
+/**
+ * The cross-axis profile each cord carries, as `[offset, lightnessDelta,
+ * saturationDelta]` in HSL percentage points off the cord's body colour.
+ *
+ * THIS IS A DELIBERATE DEPARTURE FROM THE HIG, and the one thing in this file a
+ * reviewer should challenge rather than assume. Apple's default is the
+ * opposite: "Let the system handle blurring and other visual effects... there's
+ * no need to include specular highlights, drop shadows between layers, beveled
+ * edges, blurs, glows. In addition to interfering with system-provided effects,
+ * custom effects are static, whereas the system supplies dynamic ones" (HIG,
+ * App icons › Visual effects). The same paragraph permits it with a condition,
+ * and the condition is why this constant is allowed to exist: "If you do
+ * include custom visual effects on your icon layers, use them intentionally and
+ * test carefully with Icon Composer, on a simulated device in Device Hub, or on
+ * a physical device to make sure they appear as expected and don't conflict
+ * with system effects."
+ *
+ * The profile is measured, not invented: it reproduces the cross-section of a
+ * reference mark the operator approved, which spans about 17 lightness points
+ * peaking a fifth of the way across. The SHAPE carries it, not the span — a
+ * cylinder reads as a cylinder because of FOUR features, and a ramp with only
+ * the middle two looks flat however wide its range. Widening the span instead
+ * of fixing the shape was tried, reached 36 points against the reference's 15,
+ * and looked like plastic.
+ *
+ * 1. a NARROW specular near the lit edge — broad is what reads as a fade;
+ * 2. the body colour across the middle;
+ * 3. a dark shadow side;
+ * 4. a BOUNCE at the far edge, lifting the very last band back up. Real
+ *    cylinders catch reflected light there. Leaving it out is what made the
+ *    first attempt "flat and boring", and it is the single most load-bearing
+ *    stop in this table.
+ *
+ * Saturation falls with lightness in both directions, which is also measured:
+ * plain channel multiplication was tried first and slid the shadow side toward
+ * grey (rose's shadow at 38% saturation against the reference's 55%), which is
+ * what washed the mark out.
+ *
+ * **Changing these numbers means re-checking the appearances in Icon Composer.**
+ * The tinted and clear appearances are a luminance remap of this artwork, which
+ * is exactly what a baked lightness gradient interferes with, and they cannot
+ * be rendered offline — the system derives them at runtime from the vector
+ * layers, so neither CI nor a build will catch a regression here.
+ *
+ * @type {readonly [number, number, number][]}
+ */
+export const GLOSS = [
+  [0, 4, -2],
+  [0.2, 8, -2],
+  [0.45, 0, 0],
+  [0.8, -9, -18],
+  [0.93, -5, -14],
+  [1, -6, -14],
+];
+
 /** How hard the system shadow beneath each group is. */
 export const SHADOW_OPACITY = 0.5;
 
 /**
- * One cord per member of `NAV_COLOR`, at Tailwind's 400 tier — the mark sits
- * on a near-black ground, so it wants the bright end of each hue.
+ * One cord per member of `NAV_COLOR`.
+ *
+ * These are the **cord bodies**, sampled off a reference mark the operator
+ * approved: the median colour across each cord's width, taken between two
+ * crossings so no crossing shadow is in the sample. In HSL they land at
+ * lightness 53-67% and saturation 41-79%.
+ *
+ * Tailwind tiers were tried first and every tier is wrong here in the same
+ * direction: 400 puts `rose` and `indigo` at lightness 74% and 72% against the
+ * reference's 67% and 63%, which is the difference between a cord and a pastel.
+ * The lighter a fill is, the less room the gloss in {@link GLOSS} has to lift a
+ * highlight out of it before clipping, so too-light bodies and a flat-looking
+ * tube are the same defect.
+ *
+ * `violet` has no reference — the badge in the reference covers that cord — so
+ * it is derived rather than invented: Tailwind's violet hue at the mean
+ * lightness and saturation of the other five (60%, 67%).
  *
  * A seventh nav colour would have nowhere to go in a three-by-three lattice,
  * and the test asserts these keys against the enum rather than letting the two
  * drift apart quietly.
  */
 export const PALETTE = {
-  rose: '#fb7185',
-  amber: '#fbbf24',
-  emerald: '#34d399',
-  sky: '#38bdf8',
-  indigo: '#818cf8',
-  violet: '#a78bfa',
+  rose: '#ea6c83',
+  amber: '#e8ab40',
+  emerald: '#57b97a',
+  sky: '#4ba6dd',
+  indigo: '#5b78e7',
+  violet: '#8954de',
 };
 
 /** The three vertical cords, left to right. The lower group. */
@@ -207,6 +277,101 @@ function centreAt(index) {
 }
 
 /**
+ * sRGB hex to HSL, with hue in degrees and the rest in percentage points.
+ *
+ * @param {string} hex a `#rrggbb` literal
+ * @returns {[number, number, number]}
+ */
+function toHsl(hex) {
+  const channels = [1, 3, 5].map((i) => Number.parseInt(hex.slice(i, i + 2), 16) / 255);
+  const [r, g, b] = channels;
+  if (r === undefined || g === undefined || b === undefined) {
+    throw new Error(`${hex} is not a #rrggbb literal`);
+  }
+
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const lightness = (max + min) / 2;
+  const span = max - min;
+  if (span === 0) return [0, 0, lightness * 100];
+
+  const saturation = span / (1 - Math.abs(2 * lightness - 1));
+  let hue;
+  if (max === r) hue = ((g - b) / span + (g < b ? 6 : 0)) * 60;
+  else if (max === g) hue = ((b - r) / span + 2) * 60;
+  else hue = ((r - g) / span + 4) * 60;
+
+  return [hue, saturation * 100, lightness * 100];
+}
+
+/**
+ * HSL back to an sRGB hex, clamping rather than wrapping so an out-of-range
+ * stop flattens instead of inverting.
+ *
+ * @param {number} hue degrees
+ * @param {number} saturation percentage points
+ * @param {number} lightness percentage points
+ * @returns {string}
+ */
+function fromHsl(hue, saturation, lightness) {
+  const s = Math.min(100, Math.max(0, saturation)) / 100;
+  const l = Math.min(100, Math.max(0, lightness)) / 100;
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const h = ((hue % 360) + 360) % 360;
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+  const m = l - c / 2;
+  const sector = Math.floor(h / 60) % 6;
+  const rgb = [
+    [c, x, 0],
+    [x, c, 0],
+    [0, c, x],
+    [0, x, c],
+    [x, 0, c],
+    [c, 0, x],
+  ][sector] ?? [0, 0, 0];
+  return `#${rgb
+    .map((channel) => Math.round(Math.min(255, Math.max(0, (channel + m) * 255))))
+    .map((value) => value.toString(16).padStart(2, '0'))
+    .join('')}`;
+}
+
+/**
+ * One stop of {@link GLOSS} applied to a cord's body colour.
+ *
+ * In HSL rather than by scaling channels, because scaling channels desaturates
+ * as it darkens — the shadow side slides toward grey, which is what made the
+ * first attempt look washed out.
+ *
+ * @param {string} hex the cord's body colour
+ * @param {number} lightnessDelta percentage points
+ * @param {number} saturationDelta percentage points
+ * @returns {string}
+ */
+function shade(hex, lightnessDelta, saturationDelta) {
+  const [hue, saturation, lightness] = toHsl(hex);
+  return fromHsl(hue, saturation + saturationDelta, lightness + lightnessDelta);
+}
+
+/**
+ * The gradient for one cord, running across its width rather than along its
+ * length, so the ramp reads as a cylinder rather than a fade.
+ *
+ * @param {string} id
+ * @param {string} base
+ * @param {'vertical' | 'horizontal'} axis
+ * @returns {string}
+ */
+function glossGradient(id, base, axis) {
+  const vector =
+    axis === 'vertical' ? 'x1="0" y1="0" x2="1" y2="0"' : 'x1="0" y1="0" x2="0" y2="1"';
+  const stops = GLOSS.map(
+    ([offset, lightnessDelta, saturationDelta]) =>
+      `      <stop offset="${offset}" stop-color="${shade(base, lightnessDelta, saturationDelta)}"/>`
+  ).join('\n');
+  return `    <linearGradient id="${id}" ${vector}>\n${stops}\n    </linearGradient>`;
+}
+
+/**
  * One warp cord as an SVG capsule. `rx` equal to half the thickness is what
  * rounds the ends into caps rather than merely softening the corners.
  *
@@ -267,12 +432,25 @@ function weftPath(row, fill) {
  * @returns {string}
  */
 export function layerSvg(which) {
+  const axis = which === 'warp' ? 'vertical' : 'horizontal';
+  const cords = which === 'warp' ? WARP : WEFT;
+  /** @param {number} index @returns {string} */
+  const gradientId = (index) => `${which}-${index}`;
+
+  const defs = CORD_CENTRES.map((_, index) =>
+    glossGradient(gradientId(index), fillOf(cordAt(cords, index)), axis)
+  ).join('\n');
+
   const body = CORD_CENTRES.map((_, index) =>
     which === 'warp'
-      ? warpCapsule(centreAt(index), fillOf(cordAt(WARP, index)))
-      : weftPath(index, fillOf(cordAt(WEFT, index)))
+      ? warpCapsule(centreAt(index), `url(#${gradientId(index)})`)
+      : weftPath(index, `url(#${gradientId(index)})`)
   ).join('\n');
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${CANVAS} ${CANVAS}" width="${CANVAS}" height="${CANVAS}">\n${body}\n</svg>\n`;
+
+  return (
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${CANVAS} ${CANVAS}" width="${CANVAS}" height="${CANVAS}">\n` +
+    `  <defs>\n${defs}\n  </defs>\n${body}\n</svg>\n`
+  );
 }
 
 const BACKGROUND = {

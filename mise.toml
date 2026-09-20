@@ -306,7 +306,9 @@ run = [
 # identical files, and `scripts/__tests__/ios-app-icon.test.ts` fails if the
 # committed bundles and the script disagree. To see a change, render the bundle
 # with `xcrun actool` — the recipe is in clients/ios/README.md — never by
-# assembling the layers by hand.
+# assembling the layers by hand. A change to the icon's palette or its baked
+# gloss additionally needs the appearances re-checked in Icon Composer, which
+# no automated gate can do for you; the README says why.
 [tasks."icon:ios"]
 description = "Regenerate the iOS app icon layers into both Icon Composer bundles"
 dir = "{{config_root}}"

@@ -1,5 +1,31 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
-  <rect x="230" y="72" width="132" height="880" rx="66" fill="#fb7185"/>
-  <rect x="446" y="72" width="132" height="880" rx="66" fill="#34d399"/>
-  <rect x="662" y="72" width="132" height="880" rx="66" fill="#818cf8"/>
+  <defs>
+    <linearGradient id="warp-0" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#eb7f93"/>
+      <stop offset="0.2" stop-color="#ee91a2"/>
+      <stop offset="0.45" stop-color="#ea6c83"/>
+      <stop offset="0.8" stop-color="#d1576d"/>
+      <stop offset="0.93" stop-color="#d96379"/>
+      <stop offset="1" stop-color="#d85f75"/>
+    </linearGradient>
+    <linearGradient id="warp-1" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#68bd86"/>
+      <stop offset="0.2" stop-color="#76c391"/>
+      <stop offset="0.45" stop-color="#57b97a"/>
+      <stop offset="0.8" stop-color="#578b6a"/>
+      <stop offset="0.93" stop-color="#5a9d72"/>
+      <stop offset="1" stop-color="#589a6f"/>
+    </linearGradient>
+    <linearGradient id="warp-2" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#6e88e8"/>
+      <stop offset="0.2" stop-color="#8096eb"/>
+      <stop offset="0.45" stop-color="#5b78e7"/>
+      <stop offset="0.8" stop-color="#4863cc"/>
+      <stop offset="0.93" stop-color="#546ed5"/>
+      <stop offset="1" stop-color="#506bd4"/>
+    </linearGradient>
+  </defs>
+  <rect x="230" y="72" width="132" height="880" rx="66" fill="url(#warp-0)"/>
+  <rect x="446" y="72" width="132" height="880" rx="66" fill="url(#warp-1)"/>
+  <rect x="662" y="72" width="132" height="880" rx="66" fill="url(#warp-2)"/>
 </svg>

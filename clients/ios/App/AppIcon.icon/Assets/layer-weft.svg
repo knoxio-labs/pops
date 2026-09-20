@@ -1,5 +1,31 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
-  <path fill-rule="evenodd" d="M 138 230 L 886 230 A 66 66 0 0 1 886 362 L 138 362 A 66 66 0 0 1 138 230 Z M 220 230 L 372 230 L 372 362 L 220 362 Z M 652 230 L 804 230 L 804 362 L 652 362 Z" fill="#fbbf24"/>
-  <path fill-rule="evenodd" d="M 138 446 L 886 446 A 66 66 0 0 1 886 578 L 138 578 A 66 66 0 0 1 138 446 Z M 436 446 L 588 446 L 588 578 L 436 578 Z" fill="#38bdf8"/>
-  <path fill-rule="evenodd" d="M 138 662 L 886 662 A 66 66 0 0 1 886 794 L 138 794 A 66 66 0 0 1 138 662 Z M 220 662 L 372 662 L 372 794 L 220 794 Z M 652 662 L 804 662 L 804 794 L 652 794 Z" fill="#a78bfa"/>
+  <defs>
+    <linearGradient id="weft-0" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e8b254"/>
+      <stop offset="0.2" stop-color="#ebbb66"/>
+      <stop offset="0.45" stop-color="#e8ab40"/>
+      <stop offset="0.8" stop-color="#c99231"/>
+      <stop offset="0.93" stop-color="#d49c3a"/>
+      <stop offset="1" stop-color="#d49a36"/>
+    </linearGradient>
+    <linearGradient id="weft-1" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5eaede"/>
+      <stop offset="0.2" stop-color="#6fb7e2"/>
+      <stop offset="0.45" stop-color="#4ba6dd"/>
+      <stop offset="0.8" stop-color="#3e8dbc"/>
+      <stop offset="0.93" stop-color="#4697c8"/>
+      <stop offset="1" stop-color="#4295c7"/>
+    </linearGradient>
+    <linearGradient id="weft-2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#9567df"/>
+      <stop offset="0.2" stop-color="#a178e3"/>
+      <stop offset="0.45" stop-color="#8954de"/>
+      <stop offset="0.8" stop-color="#7444c0"/>
+      <stop offset="0.93" stop-color="#7e4fca"/>
+      <stop offset="1" stop-color="#7b4bc9"/>
+    </linearGradient>
+  </defs>
+  <path fill-rule="evenodd" d="M 138 230 L 886 230 A 66 66 0 0 1 886 362 L 138 362 A 66 66 0 0 1 138 230 Z M 220 230 L 372 230 L 372 362 L 220 362 Z M 652 230 L 804 230 L 804 362 L 652 362 Z" fill="url(#weft-0)"/>
+  <path fill-rule="evenodd" d="M 138 446 L 886 446 A 66 66 0 0 1 886 578 L 138 578 A 66 66 0 0 1 138 446 Z M 436 446 L 588 446 L 588 578 L 436 578 Z" fill="url(#weft-1)"/>
+  <path fill-rule="evenodd" d="M 138 662 L 886 662 A 66 66 0 0 1 886 794 L 138 794 A 66 66 0 0 1 138 662 Z M 220 662 L 372 662 L 372 794 L 220 794 Z M 652 662 L 804 662 L 804 794 L 652 794 Z" fill="url(#weft-2)"/>
 </svg>
