@@ -41,7 +41,8 @@ internal struct ContentViewTabSelectionTests {
     @Test("choosing Inventory's search tab keeps it shown")
     func theInventorySearchTabStaysChosen() {
         let tabs = ContentView.tabs(for: [Self.transactions, FeatureInventory.feature])
-        let shown = ContentView.shownFeature(chosen: ContentView.inventorySearchTab, available: tabs)
+        let shown = ContentView.shownFeature(
+            chosen: ContentView.inventorySearchTab, available: tabs)
         #expect(shown == ContentView.inventorySearchTab)
     }
 
@@ -49,7 +50,8 @@ internal struct ContentViewTabSelectionTests {
     func theSearchTabLeavesWithInventory() {
         let tabs = ContentView.tabs(for: [Self.transactions, Self.accounts])
         #expect(tabs == [Self.transactions, Self.accounts])
-        let shown = ContentView.shownFeature(chosen: ContentView.inventorySearchTab, available: tabs)
+        let shown = ContentView.shownFeature(
+            chosen: ContentView.inventorySearchTab, available: tabs)
         #expect(shown == Self.transactions)
     }
 }

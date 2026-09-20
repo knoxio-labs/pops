@@ -115,7 +115,10 @@ internal struct ContentView: View {
 
     private var selection: Binding<MobileFeature> {
         Binding(
-            get: { Self.shownFeature(chosen: chosenFeature, available: Self.tabs(for: surface.available)) },
+            get: {
+                Self.shownFeature(
+                    chosen: chosenFeature, available: Self.tabs(for: surface.available))
+            },
             set: { chosenFeature = $0 }
         )
     }
