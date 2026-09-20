@@ -1,4 +1,14 @@
-import { describe, expect, it, vi } from 'vitest';
+import { once } from 'node:events';
+import {
+  Agent,
+  createServer,
+  get,
+  type IncomingMessage,
+  type Server,
+  type ServerResponse,
+} from 'node:http';
+
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { shutdownPillar, type ClosableServer } from '../shutdown.js';
 
@@ -172,5 +182,141 @@ describe('shutdownPillar', () => {
     release?.();
     await pending;
     expect(order).toEqual(['server', 'db']);
+  });
+});
+
+/**
+ * A promise whose resolver is available to the test body, without a definite
+ * assignment assertion.
+ */
+function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
+  let capture: ((value: T) => void) | undefined;
+  const promise = new Promise<T>((resolve) => {
+    capture = resolve;
+  });
+  if (capture === undefined) {
+    throw new Error('promise executor did not run synchronously');
+  }
+  return { promise, resolve: capture };
+}
+
+function portOf(server: Server): number {
+  const address = server.address();
+  if (address === null || typeof address === 'string') {
+    throw new Error('expected a TCP address');
+  }
+  return address.port;
+}
+
+/**
+ * These drive a real `node:http` server over a real keep-alive socket on
+ * purpose. The defect POPS-4218 fixes is a property of node's own `close()`
+ * against a client that has not hung up, so every test double in this file —
+ * and every pillar's `test-http.ts`, each of which calls
+ * `server.closeAllConnections()` in teardown — is blind to it by construction.
+ */
+describe('shutdownPillar connection draining', () => {
+  const openServers: Server[] = [];
+  const openAgents: Agent[] = [];
+
+  function serve(handler: (res: ServerResponse) => void): Promise<Server> {
+    const server = createServer((_req, res) => void handler(res));
+    openServers.push(server);
+    server.listen(0, '127.0.0.1');
+    return once(server, 'listening').then(() => server);
+  }
+
+  function keepAliveAgent(): Agent {
+    const agent = new Agent({ keepAlive: true });
+    openAgents.push(agent);
+    return agent;
+  }
+
+  afterEach(() => {
+    for (const agent of openAgents) agent.destroy();
+    openAgents.length = 0;
+    for (const server of openServers) {
+      server.closeAllConnections();
+      server.close();
+    }
+    openServers.length = 0;
+  });
+
+  it('stops serving while a client holds an open SSE stream', async () => {
+    const streaming = deferred<void>();
+    const server = await serve((res) => {
+      res.writeHead(200, { 'content-type': 'text/event-stream' });
+      res.write(': open\n\n');
+      streaming.resolve();
+    });
+    const agent = keepAliveAgent();
+
+    const response = await new Promise<IncomingMessage>((resolve) => {
+      get({ host: '127.0.0.1', port: portOf(server), path: '/', agent }, resolve);
+    });
+    response.resume();
+    response.on('error', () => undefined);
+    await streaming.promise;
+
+    await shutdownPillar({
+      label: 'registry-api',
+      steps: [],
+      server,
+      drainGraceMs: 25,
+      logger: recordingLogger().logger,
+    });
+  });
+
+  it('lets a request that is already in flight finish', async () => {
+    const entered = deferred<ServerResponse>();
+    const server = await serve((res) => entered.resolve(res));
+    const agent = keepAliveAgent();
+
+    const body = new Promise<string>((resolve) => {
+      get({ host: '127.0.0.1', port: portOf(server), path: '/', agent }, (res) => {
+        let text = '';
+        res.setEncoding('utf8');
+        res.on('data', (chunk: string) => {
+          text += chunk;
+        });
+        res.on('end', () => resolve(text));
+      });
+    });
+
+    const inFlight = await entered.promise;
+    const stopping = shutdownPillar({
+      label: 'registry-api',
+      steps: [],
+      server,
+      drainGraceMs: 1_500,
+      logger: recordingLogger().logger,
+    });
+
+    inFlight.end('finished');
+    // The body arriving whole is the assertion: shutting down mid-response
+    // must not truncate it. The socket it came in on is a separate matter —
+    // it goes back to the agent's pool and is reaped by the grace timer.
+    await expect(body).resolves.toBe('finished');
+    await stopping;
+  });
+
+  it('destroys a connection that outlives the drain grace', async () => {
+    const entered = deferred<ServerResponse>();
+    const server = await serve((res) => entered.resolve(res));
+    const agent = keepAliveAgent();
+    const { logger, warns } = recordingLogger();
+
+    get({ host: '127.0.0.1', port: portOf(server), path: '/', agent }).on('error', () => undefined);
+    await entered.promise;
+
+    await shutdownPillar({
+      label: 'registry-api',
+      steps: [],
+      server,
+      drainGraceMs: 25,
+      logger,
+    });
+
+    expect(warns).toContain('[registry-api] drain grace elapsed; destroying remaining connections');
   });
 });
