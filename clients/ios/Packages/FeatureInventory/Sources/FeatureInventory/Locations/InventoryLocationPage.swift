@@ -40,15 +40,32 @@ internal struct InventoryLocationPage: View {
             VStack(alignment: .leading, spacing: PopsSpacing.lg) {
                 InventoryLocationHeader(tree: tree, place: place)
                 actions(place)
+                noticeLine
                 InventoryLocationSections(tree: tree, place: place, model: model)
             }
             .padding(.horizontal, PopsSpacing.lg)
             .padding(.bottom, PopsSpacing.xxl)
+            .inventoryMotion(value: model.shownNotice)
         }
         .inventoryCollapsingTitle(place.name)
         .background(Color.popsBackground)
         .tint(.popsInventory)
         .pageChrome(tree, place, model: model, newName: $newName)
+    }
+
+    @ViewBuilder private var noticeLine: some View {
+        switch model.shownNotice {
+        case .queuedMove(let destination):
+            InventoryLocationNoticeLine(
+                symbol: InventorySymbol.queued.system, tint: .popsMutedForeground,
+                text: "Moving to \(destination) when online")
+        case .conflictingMove(_, let mine, let theirs, let device):
+            InventoryLocationConflict(mine: mine, theirs: theirs, device: device) { keepingMine in
+                Task { await model.resolveMove(keepingMine: keepingMine) }
+            }
+        case nil:
+            EmptyView()
+        }
     }
 
     private func actions(_ place: InventoryLocationNode) -> some View {

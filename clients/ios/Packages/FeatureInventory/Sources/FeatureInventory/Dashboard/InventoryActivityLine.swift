@@ -19,7 +19,18 @@ internal enum InventoryActivityLine {
             place: item.flatMap { places.immediate($0.placement) },
             at: event.serverTime,
             symbol: symbol(for: event.kind),
-            isUndoable: event.undoable)
+            isUndoable: event.undoable,
+            route: route(item: item, location: location))
+    }
+
+    private static func route(item: InventoryItem?, location: InventoryLocation?)
+        -> InventoryRoute?
+    {
+        if let item, !item.isDeleted {
+            return .record(id: item.id, isContainer: item.isContainer)
+        }
+        if let location, !location.isDeleted { return .place(location.id) }
+        return nil
     }
 
     /// The past-tense verb. Access, fullness and lifecycle read the value the event

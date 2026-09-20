@@ -151,9 +151,21 @@ public final class InventoryReplica: Sendable {
     }
 
     /// Stores the served catalogue and re-indexes search, because type
-    /// labels are searchable.
+    /// labels are searchable. Every type it adds to a previously stored
+    /// catalogue is queued as a type arrival.
     public func store(_ catalogue: InventoryCatalogue) throws {
         try write { try ReplicaApply.store(catalogue, in: $0) }
+    }
+
+    /// Records that the type-arrived sheet asked about `typeKey`, in
+    /// `sync_meta`, so it is never offered again
+    /// (`InventoryStore.settleTypeArrival(typeKey:)`).
+    public func settleTypeArrival(typeKey: String) throws {
+        try write { db in
+            var meta = try SyncMeta.read(db)
+            meta.typeArrivals.settle(typeKey)
+            try meta.write(db)
+        }
     }
 
     /// Answers one query against the current state.

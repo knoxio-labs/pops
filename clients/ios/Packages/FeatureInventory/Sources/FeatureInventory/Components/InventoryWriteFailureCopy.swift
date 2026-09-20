@@ -4,6 +4,11 @@ extension InventoryCopy {
     /// Why a write or an Undo did not land: who won a conflict, which code is
     /// taken, or what the server refused, in one short sentence. Never the
     /// server's own diagnostic `message`, which is written for a log.
+    ///
+    /// `.storageFull` answers with the Storage full alert's own message. No
+    /// screen shows it through the one-line alert: `inventoryWriteFailureAlerts`
+    /// routes it to `inventoryStorageFullAlert`, the same approved alert the
+    /// Sync page shows, before this function is ever called.
     internal static func message(for failure: InventoryWriteFailure) -> String {
         switch failure {
         case .repository(let error): message(for: error)

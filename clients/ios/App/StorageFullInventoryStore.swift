@@ -57,4 +57,12 @@ internal struct StorageFullInventoryStore: InventoryStore {
     ) async throws -> InventoryMediaUploadResult {
         throw InventoryStorageError.full
     }
+
+    internal func discardPhoto(_ sha256: String) async throws {
+        throw InventoryStorageError.full
+    }
+
+    internal func settleTypeArrival(typeKey: String) async throws {
+        throw InventoryStorageError.full
+    }
 }

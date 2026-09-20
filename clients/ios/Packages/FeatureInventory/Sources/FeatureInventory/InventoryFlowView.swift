@@ -45,6 +45,7 @@ public struct InventoryFlowView: View {
         }
         .inventoryItemFormPresentation(store: store)
         .inventorySyncInterruptions(store: store)
+        .inventoryAnnouncesStorageFullOnEntry()
     }
 
     private var scanControl: some View {

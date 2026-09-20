@@ -67,10 +67,18 @@ internal struct InventoryHistoryLine: View {
                 .foregroundStyle(tone)
                 .frame(width: markSize, height: markSize)
                 .accessibilityHidden(true)
-            Text(entry.title)
-                .font(.popsBody)
-                .foregroundStyle(Color.popsForeground)
-                .fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: PopsSpacing.xs) {
+                Text(entry.title)
+                    .font(.popsBody)
+                    .foregroundStyle(Color.popsForeground)
+                    .fixedSize(horizontal: false, vertical: true)
+                if let record = entry.record {
+                    Text(record)
+                        .font(.popsCaption)
+                        .foregroundStyle(Color.popsMutedForeground)
+                        .lineLimit(1)
+                }
+            }
             Spacer(minLength: PopsSpacing.sm)
             Text(entry.when)
                 .font(.popsCaption)

@@ -125,6 +125,36 @@ describe('the catalogue', () => {
   });
 });
 
+function drillItem(): Record<string, unknown> {
+  return {
+    id: 'item-1',
+    revision: 1,
+    seq: 3,
+    name: 'Drill',
+    typeKey: null,
+    legacyType: 'Tools',
+    fields: {},
+    note: null,
+    code: null,
+    externalIds: [],
+    quantity: 1,
+    lifecycle: 'active',
+    lifecycleChangedAt: null,
+    placement: { kind: 'hand' },
+    previousPlacement: null,
+    isContainer: false,
+    access: null,
+    isFull: null,
+    photos: [],
+    provenance: null,
+    documentsStatus: 'none',
+    documentTitles: [],
+    createdAt: '2026-09-01T00:00:00Z',
+    updatedAt: '2026-09-01T00:00:00Z',
+    deletedAt: null,
+  };
+}
+
 describe('the snapshot', () => {
   it('answers one page, forwarding cursor and limit unmodified', async () => {
     const fake = createInventoryFake({
@@ -189,6 +219,59 @@ describe('the snapshot', () => {
 
     expect(res.status).toBe(426);
     expect(res.body.code).toBe('client_too_old');
+  });
+
+  it.each([
+    ['relays an item migrated from free text with its legacyType', 'Tools'],
+    ['relays an item with no legacy type as null', null],
+  ] as const)('%s', async (_name, legacyType) => {
+    const item = { ...drillItem(), legacyType };
+    const fake = createInventoryFake({
+      snapshotResult: {
+        kind: 'ok',
+        value: {
+          epoch: 'epoch-1',
+          highWaterSeq: 3,
+          catalogueVersion: 'cat-1',
+          total: 1,
+          items: [item],
+          locations: [],
+          nextCursor: null,
+        },
+      },
+    });
+    const { app, token } = openWith(fake.factory);
+
+    const res = await get(app, token, '/mobile/inventory/sync/snapshot');
+
+    expect(res.status).toBe(200);
+    expect(res.body.items[0].legacyType).toBe(legacyType);
+  });
+
+  it('refuses an item the producer sent without legacyType as a contract mismatch', async () => {
+    const withoutLegacyType = Object.fromEntries(
+      Object.entries(drillItem()).filter(([key]) => key !== 'legacyType')
+    );
+    const fake = createInventoryFake({
+      snapshotResult: {
+        kind: 'ok',
+        value: {
+          epoch: 'epoch-1',
+          highWaterSeq: 3,
+          catalogueVersion: 'cat-1',
+          total: 1,
+          items: [withoutLegacyType],
+          locations: [],
+          nextCursor: null,
+        },
+      },
+    });
+    const { app, token } = openWith(fake.factory);
+
+    const res = await get(app, token, '/mobile/inventory/sync/snapshot');
+
+    expect(res.status).toBe(502);
+    expect(res.body.code).toBe('upstream_contract_mismatch');
   });
 
   it('reports a producer answer that does not match the wire contract as a mismatch, not as data', async () => {

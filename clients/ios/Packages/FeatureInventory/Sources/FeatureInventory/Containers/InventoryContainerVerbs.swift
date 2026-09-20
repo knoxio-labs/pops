@@ -1,6 +1,4 @@
 import AppCore
-import DesignSystem
-import SwiftUI
 
 /// The verbs a container's page puts in its action row: Pick up or Put back,
 /// Move, Open or Close, Store here. An inactive container is offered only
@@ -75,6 +73,18 @@ internal enum InventoryContainerVerb: String, Identifiable, CaseIterable {
         }
     }
 
+    /// The verb as the item page's action row draws it. Its id is the verb's
+    /// raw value, which is how ``init(action:)`` reads a tap back.
+    internal var action: InventoryAction {
+        InventoryAction(rawValue, title, symbol: symbol)
+    }
+
+    /// The verb a tap on the item page's action row names, or nil for an
+    /// action no container verb drew.
+    internal init?(action: InventoryAction) {
+        self.init(rawValue: action.id)
+    }
+
     internal func announcement(_ name: String) -> String {
         switch self {
         case .pickUp: "Picked up \(name)"
@@ -91,39 +101,6 @@ internal enum InventoryContainerVerb: String, Identifiable, CaseIterable {
         case .location(let id): .location(id)
         case .container(let id): .container(id)
         case .tombstoned: nil
-        }
-    }
-}
-
-/// The verbs side by side under the header: one centred row of the same
-/// glass icon buttons the item page uses, none of them drawn as the page's
-/// one call to action.
-internal struct InventoryContainerActionRow: View {
-    internal let verbs: [InventoryContainerVerb]
-    internal let perform: (InventoryContainerVerb) -> Void
-
-    internal var body: some View {
-        if !verbs.isEmpty {
-            InventoryGlassGroup(spacing: PopsSpacing.lg) {
-                HStack(spacing: PopsSpacing.lg) {
-                    ForEach(verbs) { verb in
-                        Button {
-                            perform(verb)
-                        } label: {
-                            verb.symbol.image
-                                .font(.popsSubheadline.weight(.semibold))
-                                .frame(width: PopsSize.touchTarget, height: PopsSize.touchTarget)
-                        }
-                        .inventoryGlassButton()
-                        .accessibilityLabel(verb.title)
-                        .transition(.opacity.combined(with: .scale))
-                    }
-                }
-                .inventoryMotion(value: verbs)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.horizontal, PopsSpacing.lg)
-            .padding(.vertical, PopsSpacing.sm)
         }
     }
 }

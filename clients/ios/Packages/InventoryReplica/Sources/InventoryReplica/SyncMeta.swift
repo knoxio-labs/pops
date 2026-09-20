@@ -37,6 +37,17 @@ internal struct SyncMeta {
     var snapshotCursor: String?
     var snapshotTotal: Int
     var snapshotRows: Int
+    var typeArrivals: StoredTypeArrivals
+
+    /// A position with nothing downloaded, for a replica starting over from
+    /// a fresh snapshot. The catalogue and the type arrivals are kept: the
+    /// catalogue is versioned by content rather than by epoch, and which
+    /// types this phone already asked about is its own record, not the
+    /// server's.
+    func startingOver() -> SyncMeta {
+        SyncMeta(
+            catalogue: catalogue, snapshotTotal: 0, snapshotRows: 0, typeArrivals: typeArrivals)
+    }
 
     static func read(_ db: Database) throws -> SyncMeta {
         guard let row = try Row.fetchOne(db, sql: "SELECT * FROM sync_meta WHERE id = 1") else {
@@ -49,19 +60,22 @@ internal struct SyncMeta {
             lastRefreshAt: try date(row, "last_refresh_at"),
             snapshotCursor: try row.decode(forColumn: "snapshot_cursor"),
             snapshotTotal: try row.decode(forColumn: "snapshot_total"),
-            snapshotRows: try row.decode(forColumn: "snapshot_rows"))
+            snapshotRows: try row.decode(forColumn: "snapshot_rows"),
+            typeArrivals: try StoredJSON.decode(
+                StoredTypeArrivals.self, from: try row.decode(forColumn: "type_arrivals")))
     }
 
     func write(_ db: Database) throws {
         try db.execute(
             sql: """
                 UPDATE sync_meta SET epoch = ?, since = ?, catalogue = ?, catalogue_version = ?,
-                    last_refresh_at = ?, snapshot_cursor = ?, snapshot_total = ?, snapshot_rows = ?
+                    last_refresh_at = ?, snapshot_cursor = ?, snapshot_total = ?, snapshot_rows = ?,
+                    type_arrivals = ?
                 WHERE id = 1
                 """,
             arguments: [
                 epoch, since, catalogue, catalogueVersion, lastRefreshAt.map(storedDate),
-                snapshotCursor, snapshotTotal, snapshotRows,
+                snapshotCursor, snapshotTotal, snapshotRows, try StoredJSON.encode(typeArrivals),
             ])
     }
 

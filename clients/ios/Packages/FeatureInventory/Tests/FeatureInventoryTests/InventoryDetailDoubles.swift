@@ -66,7 +66,15 @@ internal final class RecordingInventoryStore: InventoryStore {
         try await inner.uploadPhoto(sha256: sha256, data: data, contentType: contentType)
     }
 
+    func discardPhoto(_ sha256: String) async throws {
+        try await inner.discardPhoto(sha256)
+    }
+
     func status() -> AsyncStream<InventoryReplicaStatus> { inner.status() }
+
+    func settleTypeArrival(typeKey: String) async throws {
+        try await inner.settleTypeArrival(typeKey: typeKey)
+    }
 }
 
 /// A query source that answers item history from `events` and forwards every
@@ -114,6 +122,8 @@ internal struct InventoryHistoryOverlay: InventoryQuerySource {
     func inventoryPhotoUploads() -> [String: InventoryPhotoUpload] {
         base.inventoryPhotoUploads()
     }
+
+    func inventoryAwaitingTypeArrivals() -> [String] { base.inventoryAwaitingTypeArrivals() }
 }
 
 extension InventoryItemDetailViewModel {

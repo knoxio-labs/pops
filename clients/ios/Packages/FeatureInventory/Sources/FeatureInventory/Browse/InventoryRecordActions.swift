@@ -104,15 +104,6 @@ private struct InventoryWriterFeedback: ViewModifier {
             .inventoryUndoCapsule($writer.undoOffer) { offer in
                 Task { await writer.undo(offer) }
             }
-            .alert(
-                InventoryCopy.failureTitle,
-                isPresented: Binding(
-                    get: { writer.failure != nil }, set: { if !$0 { writer.failure = nil } }),
-                presenting: writer.failure
-            ) { _ in
-                Button("OK", role: .cancel) {}
-            } message: { failure in
-                Text(InventoryCopy.message(for: failure))
-            }
+            .inventoryWriteFailureAlerts($writer.failure)
     }
 }

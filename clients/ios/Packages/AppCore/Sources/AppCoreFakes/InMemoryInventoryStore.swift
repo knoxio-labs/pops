@@ -186,6 +186,19 @@ public final class InMemoryInventoryStore: InventoryStore, @unchecked Sendable {
         }
     }
 
+    /// Discards a hash'''s bytes unless some item still has it attached: a
+    /// fake with no async command queue has nothing else that could be
+    /// awaiting the attach.
+    public func discardPhoto(_ sha256: String) async throws {
+        state.withLock { current in
+            guard
+                !current.items.values.contains(where: { $0.photos.contains { $0.sha256 == sha256 } }
+                )
+            else { return }
+            current.media.removeValue(forKey: sha256)
+        }
+    }
+
     public func status() -> AsyncStream<InventoryReplicaStatus> {
         observe(.replicaStatus)
     }

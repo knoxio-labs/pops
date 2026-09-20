@@ -104,7 +104,7 @@ internal struct InventoryFormPhotoTests {
         #expect(store.uploaded.map(\.sha256) == [sha256, sha256])
     }
 
-    @Test("removing a failed photo drops it from the draft without touching the store")
+    @Test("removing a failed photo drops it from the draft and discards its bytes")
     func removeFailedPhoto() async throws {
         let store = RecordingFormStore(FormFixtureSource(catalogue: FormFixture.catalogue))
         store.failUploads(with: RepositoryError.transport("offline"))
@@ -115,9 +115,28 @@ internal struct InventoryFormPhotoTests {
         await form.photoCaptured(bytes)
         let sha256 = InventoryPhotoHashing.sha256(of: bytes)
 
-        form.removeFailedPhoto(sha256: sha256)
+        await form.removePhoto(sha256: sha256)
 
         #expect(form.draft.photos.isEmpty)
+        #expect(store.discarded == [sha256])
+        #expect(store.performed.isEmpty)
+    }
+
+    @Test("removing an uploaded photo not yet attached discards its bytes too")
+    func removeUploadedButUnattachedPhoto() async throws {
+        let store = RecordingFormStore(FormFixtureSource(catalogue: FormFixture.catalogue))
+        let form = model(store)
+        let loading = await form.startAndAwaitReady()
+        defer { loading.cancel() }
+        let bytes = Data("a photo".utf8)
+        await form.photoCaptured(bytes)
+        let sha256 = InventoryPhotoHashing.sha256(of: bytes)
+        #expect(form.draft.photos.first?.upload == .uploaded)
+
+        await form.removePhoto(sha256: sha256)
+
+        #expect(form.draft.photos.isEmpty)
+        #expect(store.discarded == [sha256])
     }
 
     @Test("re-capturing the same bytes twice keeps one photo, not two")

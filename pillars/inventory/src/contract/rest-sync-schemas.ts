@@ -60,6 +60,7 @@ export const SyncItemSchema = z.object({
   seq: z.number().int(),
   name: z.string(),
   typeKey: z.string().nullable(),
+  legacyType: z.string().nullable(),
   fields: z.record(z.string(), AnyJson),
   note: z.string().nullable(),
   code: z.string().nullable(),

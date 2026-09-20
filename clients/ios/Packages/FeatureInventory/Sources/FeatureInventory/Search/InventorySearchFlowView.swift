@@ -30,5 +30,7 @@ public struct InventorySearchFlowView: View {
                     InventoryDestinationView(route: route, store: store, entityRouter: entityRouter)
                 }
         }
+        .inventoryItemFormPresentation(store: store)
+        .inventorySyncInterruptions(store: store)
     }
 }

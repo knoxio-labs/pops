@@ -11,7 +11,7 @@ internal enum ItemRow {
         "quantity", "lifecycle", "lifecycle_changed_at", "placement_kind", "location_id",
         "containing_item_id", "previous_placement_kind", "previous_placement_id", "is_container",
         "access", "is_full", "photos", "provenance", "documents_status", "documents_linked",
-        "document_titles", "created_at", "updated_at", "deleted_at",
+        "document_titles", "created_at", "updated_at", "deleted_at", "legacy_type",
     ]
 
     static func values(of item: InventoryItem) throws -> [(any DatabaseValueConvertible)?] {
@@ -34,6 +34,7 @@ internal enum ItemRow {
             documents.status, try StoredJSON.encode(documents.linked),
             try StoredJSON.encode(item.documentTitles),
             storedDate(item.createdAt), storedDate(item.updatedAt), item.deletedAt.map(storedDate),
+            item.legacyType,
         ]
     }
 
@@ -49,6 +50,7 @@ internal enum ItemRow {
             id: id, revision: try row.decode(forColumn: "revision"),
             seq: try row.decode(forColumn: "seq"), name: try row.decode(forColumn: "name"),
             typeKey: try row.decode(forColumn: "type_key"),
+            legacyType: try row.decode(forColumn: "legacy_type"),
             fields: try StoredFieldValue.decodeFields(try row.decode(forColumn: "fields")),
             note: try row.decode(forColumn: "note"), code: try row.decode(forColumn: "code"),
             externalIds: try externalIds(row),

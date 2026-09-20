@@ -19,7 +19,7 @@ internal final class InventoryRepairViewModel {
 
     internal private(set) var phase: Phase = .loading
     internal var outcome: String?
-    internal var failure: RepositoryError?
+    internal var failure: InventoryWriteFailure?
 
     private let repairId: InventoryRepair.ID
     private let store: any InventoryStore
@@ -54,8 +54,8 @@ internal final class InventoryRepairViewModel {
             outcome =
                 keepingMine ? outcomeKeeping(row.repair, code: code) : row.repair.kind.letGoOutcome
         } catch {
-            guard !(Task.isCancelled || error is CancellationError) else { return }
-            failure = error as? RepositoryError ?? .transport(String(describing: error))
+            guard let reported = InventoryWriteFailure.reporting(error) else { return }
+            failure = reported
         }
     }
 

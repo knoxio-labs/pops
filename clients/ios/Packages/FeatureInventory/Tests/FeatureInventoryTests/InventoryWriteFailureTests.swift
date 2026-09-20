@@ -30,7 +30,9 @@ private struct RefusingInventoryStore: InventoryStore {
     ) async throws -> InventoryMediaUploadResult {
         throw RepositoryError.unavailable
     }
+    func discardPhoto(_ sha256: String) async throws {}
     func status() -> AsyncStream<InventoryReplicaStatus> { inner.status() }
+    func settleTypeArrival(typeKey: String) async throws { throw error }
 }
 
 @MainActor

@@ -16,7 +16,7 @@ internal enum ReplicaApply {
         var meta = try SyncMeta.read(db)
         if let epoch = meta.epoch, epoch != page.epoch {
             try discardServerState(db)
-            meta = SyncMeta(catalogue: meta.catalogue, snapshotTotal: 0, snapshotRows: 0)
+            meta = meta.startingOver()
         }
         let changed = try upsert(items: page.items, locations: page.locations, in: db)
         meta.epoch = page.epoch
@@ -58,19 +58,23 @@ internal enum ReplicaApply {
     }
 
     /// Forgets every server row and where the feed stood, keeping only the
-    /// catalogue, so the snapshot that follows a `409 resync_required` is
+    /// catalogue and the type arrivals, so the snapshot that follows a `409 resync_required` is
     /// the whole truth. Upserting by revision alone would keep a row the
     /// server no longer has, and ignore one whose revision a restored server
     /// rewound below the stored one, even within the same epoch.
     static func resetForResync(in db: Database) throws {
         let meta = try SyncMeta.read(db)
         try discardServerState(db)
-        try SyncMeta(catalogue: meta.catalogue, snapshotTotal: 0, snapshotRows: 0).write(db)
+        try meta.startingOver().write(db)
         try MutationLogReplay.rebase(resetting: [], in: db)
     }
 
+    /// Stores `catalogue` over the previous one, queueing a type arrival for
+    /// every type it adds (`InventoryTypeArrival.addedTypeKeys(from:to:)`).
     static func store(_ catalogue: InventoryCatalogue, in db: Database) throws {
         var meta = try SyncMeta.read(db)
+        meta.typeArrivals.queue(
+            InventoryTypeArrival.addedTypeKeys(from: try meta.storedCatalogue(), to: catalogue))
         meta.catalogue = try StoredJSON.encode(StoredCatalogue(catalogue))
         try meta.write(db)
         try ReplicaSearchIndex.reindexAll(catalogue: catalogue, in: db)

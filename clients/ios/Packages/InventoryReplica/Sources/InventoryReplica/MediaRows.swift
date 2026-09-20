@@ -118,6 +118,19 @@ internal enum MediaRows {
             arguments: [sha256, stagedVariant])
     }
 
+    /// Deletes a staged row unless a change in the log still attaches its
+    /// bytes.
+    ///
+    /// - Returns: Whether the row was deleted, which tells the caller
+    ///   whether to also remove the file it names.
+    static func discardUnlessAwaited(_ sha256: String, in db: Database) throws -> Bool {
+        guard try !isAwaited(sha256, in: db) else { return false }
+        try db.execute(
+            sql: "DELETE FROM \(table) WHERE sha256 = ? AND variant = ?",
+            arguments: [sha256, stagedVariant])
+        return db.changesCount > 0
+    }
+
     /// Stages held bytes again for Retry: waiting, pinned, with the
     /// automatic re-stage allowance restored. Bytes the phone never staged
     /// have no row, and the attach is simply sent again.

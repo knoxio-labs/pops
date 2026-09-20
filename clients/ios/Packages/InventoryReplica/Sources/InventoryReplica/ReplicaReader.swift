@@ -125,6 +125,10 @@ internal final class ReplicaReader: InventoryQuerySource {
         attempt([:]) { try MediaRows.uploads(in: $0) }
     }
 
+    func inventoryAwaitingTypeArrivals() -> [String] {
+        attempt([]) { try SyncMeta.read($0).typeArrivals.awaiting }
+    }
+
     private func attempt<Value>(_ fallback: Value, _ read: (Database) throws -> Value) -> Value {
         do {
             return try database.read(read)

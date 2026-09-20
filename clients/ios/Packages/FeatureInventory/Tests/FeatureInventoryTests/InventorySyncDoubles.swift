@@ -1,4 +1,5 @@
 import AppCore
+import AppCoreFakes
 import Foundation
 
 @testable import FeatureInventory
@@ -30,6 +31,7 @@ private struct EmptyInventorySource: InventoryQuerySource {
     func inventorySyncLedger() -> InventoryReplicaSyncLedger { InventoryReplicaSyncLedger() }
     func inventoryReplicaStatus() -> InventoryReplicaStatus { .current }
     func inventoryPhotoUploads() -> [String: InventoryPhotoUpload] { [:] }
+    func inventoryAwaitingTypeArrivals() -> [String] { [] }
 }
 
 /// A store whose every write fails with `.unavailable`, for a test of the
@@ -66,7 +68,61 @@ internal struct FailingInventoryStore: InventoryStore {
         throw RepositoryError.unavailable
     }
 
+    func discardPhoto(_ sha256: String) async throws {}
+
     func status() -> AsyncStream<InventoryReplicaStatus> { AsyncStream { _ in } }
+
+    func settleTypeArrival(typeKey: String) async throws { throw RepositoryError.unavailable }
+}
+
+/// Forwards everything to an in-memory store except a repair's resolution,
+/// which it refuses with `error`: by default the way an unreachable server
+/// would.
+internal struct RefusingResolveStore: InventoryStore {
+    let inner: InMemoryInventoryStore
+    let error: any Error & Sendable
+
+    init(_ inner: InMemoryInventoryStore, error: any Error & Sendable = RepositoryError.unavailable)
+    {
+        self.inner = inner
+        self.error = error
+    }
+
+    func observe<Value: Sendable>(_ query: InventoryQuery<Value>) -> AsyncStream<Value> {
+        inner.observe(query)
+    }
+
+    func perform(_ command: InventoryCommand) async throws -> InventoryReceipt {
+        try await inner.perform(command)
+    }
+
+    func undo(_ receipt: InventoryReceipt) async throws { try await inner.undo(receipt) }
+
+    func resolve(_ repairId: InventoryRepair.ID, with choice: InventoryRepairChoice) async throws {
+        throw error
+    }
+
+    func download() async throws { try await inner.download() }
+
+    func refresh() async { await inner.refresh() }
+
+    func photo(_ sha256: String, variant: InventoryPhotoVariant) async throws -> Data {
+        try await inner.photo(sha256, variant: variant)
+    }
+
+    func uploadPhoto(
+        sha256: String, data: Data, contentType: InventoryMediaContentType
+    ) async throws -> InventoryMediaUploadResult {
+        try await inner.uploadPhoto(sha256: sha256, data: data, contentType: contentType)
+    }
+
+    func discardPhoto(_ sha256: String) async throws { try await inner.discardPhoto(sha256) }
+
+    func status() -> AsyncStream<InventoryReplicaStatus> { inner.status() }
+
+    func settleTypeArrival(typeKey: String) async throws {
+        try await inner.settleTypeArrival(typeKey: typeKey)
+    }
 }
 
 extension InventoryFixture {

@@ -2,59 +2,62 @@ import AppCore
 import DesignSystem
 import SwiftUI
 
-/// A container's page: who it is and where, the container's verbs in its
-/// action row, and its contents as one more section.
+/// A container's page: the item page with the container's verbs in its
+/// action row and its contents as one more section.
 ///
-/// The approved page is the item page with these parts added. That page
-/// moves into this package separately (POPS-4062); until it lands, the
-/// container draws its own name, path and state marks above the verbs, and
-/// the contents section is written to drop into the item page as its
-/// capability section unchanged.
+/// Everything the item page has, a container has: photographs, facts,
+/// fields, provenance, documents, history, the sync banner, Edit, the More
+/// menu and Undo. Unpacking is this page's ordinary actions: rows leave by
+/// swipe, or several at once once their marks are tapped, and each action
+/// leaves an Undo capsule rather than asking first.
 internal struct InventoryContainerPage: View {
+    @State private var detail: InventoryItemDetailViewModel
     @State private var model: InventoryContainerPageModel
     @State private var generation = 0
 
-    internal init(model: InventoryContainerPageModel) {
-        _model = State(initialValue: model)
+    internal init(id: InventoryItem.ID, store: any InventoryStore) {
+        let detail = InventoryItemDetailViewModel(itemId: id, store: store)
+        _detail = State(initialValue: detail)
+        _model = State(initialValue: InventoryContainerPageModel(id: id, runner: detail.runner))
     }
 
     internal var body: some View {
         Group {
-            switch model.content.phase {
+            switch InventoryContainerPagePhase(detail: detail.phase, container: model.content.phase)
+            {
             case .loading:
                 InventoryContainerPageSkeleton()
             case .unavailable:
                 InventoryUnavailableView { generation += 1 }
-            case .loaded(nil):
+            case .missing:
                 ContentUnavailableView(
                     "Container not found", systemImage: InventorySymbol.openContainer.system)
-            case .loaded(.some(let profile)):
-                page(profile)
+            case .loaded(let item, let profile):
+                page(item, profile)
                     .onChange(of: profile, initial: true) { _, latest in model.note(latest) }
             }
         }
-        .task(id: generation) { await model.observe() }
-        .inventoryRunnerChrome(model.runner)
+        .task(id: generation) {
+            async let container: Void = model.observe()
+            async let item: Void = detail.observe()
+            _ = await (container, item)
+        }
+        .inventoryDetailFailureAlert(detail)
     }
 
-    private func page(_ profile: InventoryContainerProfile) -> some View {
+    private func page(_ item: InventoryItemDetail, _ profile: InventoryContainerProfile)
+        -> some View
+    {
         @Bindable var model = model
-        return ScrollView {
-            VStack(alignment: .leading, spacing: PopsSpacing.md) {
-                InventoryContainerHeader(profile: profile)
-                InventoryContainerActionRow(
-                    verbs: InventoryContainerVerb.row(for: profile.item)
-                ) { verb in
-                    Task { await model.perform(verb, on: profile) }
-                }
-                InventoryContainerContentsSection(profile: profile, model: model)
-            }
-            .padding(.bottom, PopsSpacing.xl)
-        }
-        .background(Color.popsBackground)
-        .tint(.popsInventory)
-        .navigationTitle(profile.name)
-        .inventoryTitleDisplay(large: false)
+        return InventoryItemDetailView(
+            detail: item.onContainerPage, model: detail,
+            actions: InventoryContainerVerb.row(for: profile.item).map(\.action),
+            onAction: { action in
+                guard let verb = InventoryContainerVerb(action: action) else { return }
+                Task { await model.perform(verb, on: profile) }
+            },
+            capability: { InventoryContainerContentsSection(profile: profile, model: model) }
+        )
         .inventorySelectionBar(
             $model.selection, all: profile.contents.entries.map(\.id),
             actions: [
@@ -77,52 +80,72 @@ internal struct InventoryContainerPage: View {
     }
 }
 
-/// The name, what it is and its code, where it is, and its state marks.
-internal struct InventoryContainerHeader: View {
-    internal let profile: InventoryContainerProfile
+/// Where the container page is, from its two answers: the item page's and
+/// the contents'. It shows once both have answered, and says the container
+/// is gone as soon as either says so.
+internal enum InventoryContainerPagePhase: Equatable {
+    case loading
+    case unavailable
+    /// The record is absent, deleted, or not a container.
+    case missing
+    case loaded(InventoryItemDetail, InventoryContainerProfile)
 
-    internal var body: some View {
-        VStack(alignment: .leading, spacing: PopsSpacing.xs) {
-            Text(profile.name)
-                .font(.popsTitle)
-                .foregroundStyle(
-                    profile.isActive ? Color.popsForeground : Color.popsMutedForeground
-                )
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .accessibilityAddTraits(.isHeader)
-            Text(subtitle)
-                .font(.popsSubheadline)
-                .foregroundStyle(Color.popsMutedForeground)
-                .lineLimit(1)
-            InventoryPlacementPath(
-                crumbs: profile.crumbs, isInHand: profile.item.placement == .hand)
-            let marks = InventoryStateMark.marks(for: profile.item)
-            if !marks.isEmpty {
-                HStack(spacing: PopsSpacing.xs) {
-                    ForEach(marks) { InventoryStateBadge(mark: $0) }
-                }
-                .inventoryFadeIn()
-            }
+    internal init(
+        detail: InventoryItemDetailViewModel.Phase,
+        container: InventoryLoadPhase<InventoryContainerProfile?>
+    ) {
+        switch (detail, container) {
+        case (.unavailable, _), (_, .unavailable):
+            self = .unavailable
+        case (.missing, _), (_, .loaded(nil)):
+            self = .missing
+        case (.loaded(let item), .loaded(.some(let profile))):
+            self = .loaded(item, profile)
+        default:
+            self = .loading
         }
-        .padding(.horizontal, PopsSpacing.lg)
-        .padding(.top, PopsSpacing.md)
-    }
-
-    private var subtitle: String {
-        [profile.typeName ?? "No type yet", profile.item.code].compactMap(\.self)
-            .joined(separator: " · ")
     }
 }
 
-/// The container page before its record arrives: the page's blocks, then
-/// skeleton rows where the contents go.
+extension InventoryItemDetail {
+    /// The record as its own container page draws it. The page's contents
+    /// section replaces the summary, which would only link back to the page
+    /// it sits on.
+    internal var onContainerPage: InventoryItemDetail {
+        InventoryItemDetail(
+            record: record, photos: photos, externalIdentifiers: externalIdentifiers, note: note,
+            highlightedFields: highlightedFields, otherFields: otherFields,
+            containerSummary: nil, provenance: provenance, documents: documents,
+            activity: activity, conflict: conflict, lastSynced: lastSynced,
+            lifecycleChange: lifecycleChange)
+    }
+}
+
+/// The container page before its record arrives: the item page's blocks,
+/// then skeleton rows where the contents go.
 internal struct InventoryContainerPageSkeleton: View {
+    @ScaledMetric(relativeTo: .largeTitle) private var heroHeight = PopsSize.pageHeight * 1.5
     @ScaledMetric(relativeTo: .body) private var line = PopsSpacing.lg
     @ScaledMetric(relativeTo: .body) private var control = PopsSize.touchTarget
 
     internal var body: some View {
         VStack(alignment: .leading, spacing: PopsSpacing.md) {
+            blocks
+                .popsShimmer()
+            Spacer(minLength: PopsSpacing.zero)
+        }
+        .background(Color.popsBackground)
+        .ignoresSafeArea(edges: .top)
+        .navigationTitle("")
+        .inventoryTitleDisplay(large: false)
+        .accessibilityLabel("Loading")
+    }
+
+    private var blocks: some View {
+        VStack(alignment: .leading, spacing: PopsSpacing.md) {
+            Color.popsSurface
+                .frame(height: heroHeight)
+                .frame(maxWidth: .infinity)
             VStack(alignment: .leading, spacing: PopsSpacing.sm) {
                 bar(width: 0.7, height: line)
                 bar(width: 0.4, height: line)
@@ -141,14 +164,7 @@ internal struct InventoryContainerPageSkeleton: View {
                 ForEach(0..<4, id: \.self) { _ in bar(width: 1, height: control) }
             }
             .padding(.horizontal, PopsSpacing.lg)
-            Spacer(minLength: PopsSpacing.zero)
         }
-        .popsShimmer()
-        .padding(.top, PopsSpacing.md)
-        .background(Color.popsBackground)
-        .navigationTitle("")
-        .inventoryTitleDisplay(large: false)
-        .accessibilityLabel("Loading")
     }
 
     private func bar(width: CGFloat, height: CGFloat) -> some View {

@@ -7977,6 +7977,10 @@
                             "nullable": true,
                             "type": "boolean"
                           },
+                          "legacyType": {
+                            "nullable": true,
+                            "type": "string"
+                          },
                           "lifecycle": {
                             "type": "string"
                           },
@@ -8151,6 +8155,7 @@
                           "seq",
                           "name",
                           "typeKey",
+                          "legacyType",
                           "fields",
                           "note",
                           "code",
@@ -9171,6 +9176,10 @@
                             "nullable": true,
                             "type": "boolean"
                           },
+                          "legacyType": {
+                            "nullable": true,
+                            "type": "string"
+                          },
                           "lifecycle": {
                             "type": "string"
                           },
@@ -9345,6 +9354,7 @@
                           "seq",
                           "name",
                           "typeKey",
+                          "legacyType",
                           "fields",
                           "note",
                           "code",
@@ -9968,6 +9978,10 @@
                             "nullable": true,
                             "type": "boolean"
                           },
+                          "legacyType": {
+                            "nullable": true,
+                            "type": "string"
+                          },
                           "lifecycle": {
                             "type": "string"
                           },
@@ -10142,6 +10156,7 @@
                           "seq",
                           "name",
                           "typeKey",
+                          "legacyType",
                           "fields",
                           "note",
                           "code",
@@ -10565,6 +10580,10 @@
                           "nullable": true,
                           "type": "boolean"
                         },
+                        "legacyType": {
+                          "nullable": true,
+                          "type": "string"
+                        },
                         "lifecycle": {
                           "type": "string"
                         },
@@ -10739,6 +10758,7 @@
                         "seq",
                         "name",
                         "typeKey",
+                        "legacyType",
                         "fields",
                         "note",
                         "code",

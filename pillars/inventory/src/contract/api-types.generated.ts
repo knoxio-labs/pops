@@ -4645,6 +4645,7 @@ export interface operations {
               id: string;
               isContainer: boolean;
               isFull: boolean | null;
+              legacyType: string | null;
               lifecycle: string;
               lifecycleChangedAt: string | null;
               name: string;
@@ -5077,6 +5078,7 @@ export interface operations {
               id: string;
               isContainer: boolean;
               isFull: boolean | null;
+              legacyType: string | null;
               lifecycle: string;
               lifecycleChangedAt: string | null;
               name: string;
@@ -5392,6 +5394,7 @@ export interface operations {
               id: string;
               isContainer: boolean;
               isFull: boolean | null;
+              legacyType: string | null;
               lifecycle: string;
               lifecycleChangedAt: string | null;
               name: string;
@@ -5587,6 +5590,7 @@ export interface operations {
               id: string;
               isContainer: boolean;
               isFull: boolean | null;
+              legacyType: string | null;
               lifecycle: string;
               lifecycleChangedAt: string | null;
               name: string;

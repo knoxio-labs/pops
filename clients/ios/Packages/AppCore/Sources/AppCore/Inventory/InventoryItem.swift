@@ -90,6 +90,11 @@ public struct InventoryItem: Identifiable, Hashable, Sendable {
     public let seq: Int
     public let name: String
     public let typeKey: String?
+    /// The free-text type the item carried before types existed, kept
+    /// read-only by the migration and never set by any command. Only an
+    /// untyped item's is ever consulted: it is what a newly arrived type's
+    /// `legacyLabels` are matched against.
+    public let legacyType: String?
     public let fields: [String: InventoryFieldValue]
     public let note: String?
     public let code: String?
@@ -114,6 +119,7 @@ public struct InventoryItem: Identifiable, Hashable, Sendable {
         seq: Int,
         name: String,
         typeKey: String?,
+        legacyType: String? = nil,
         fields: [String: InventoryFieldValue] = [:],
         note: String? = nil,
         code: String? = nil,
@@ -137,6 +143,7 @@ public struct InventoryItem: Identifiable, Hashable, Sendable {
         self.seq = seq
         self.name = name
         self.typeKey = typeKey
+        self.legacyType = legacyType
         self.fields = fields
         self.note = note
         self.code = code

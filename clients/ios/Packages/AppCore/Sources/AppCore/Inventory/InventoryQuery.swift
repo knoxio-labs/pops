@@ -45,6 +45,11 @@ public protocol InventoryQuerySource: Sendable {
     /// The photos this phone staged for upload, by hash, and how far each
     /// got. Empty for a store that uploads while the caller waits.
     func inventoryPhotoUploads() -> [String: InventoryPhotoUpload]
+    /// Keys of the types a catalogue change added whose arrival has not been
+    /// asked about yet, oldest first. A key stays here until
+    /// `InventoryStore.settleTypeArrival(typeKey:)` records the ask, and
+    /// never comes back once it has.
+    func inventoryAwaitingTypeArrivals() -> [String]
 }
 
 /// A read `InventoryStore.observe(_:)` can serve, typed by the value it
@@ -143,6 +148,12 @@ public struct InventoryQuery<Value: Sendable>: Sendable {
 
     public static var photoUploads: InventoryQuery<[String: InventoryPhotoUpload]> {
         .init { $0.inventoryPhotoUploads() }
+    }
+
+    /// The type-arrived sheet's question, when there is one to ask:
+    /// `InventoryTypeArrival.next(reading:)`.
+    public static var typeArrival: InventoryQuery<InventoryTypeArrival?> {
+        .init { InventoryTypeArrival.next(reading: $0) }
     }
 }
 

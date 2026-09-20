@@ -138,5 +138,18 @@ public protocol InventoryStore: Sendable {
     func uploadPhoto(sha256: String, data: Data, contentType: InventoryMediaContentType)
         async throws -> InventoryMediaUploadResult
 
+    /// Discards bytes handed over for a photo that a person removed from a
+    /// draft before it was ever attached to an item. A no-op when a change
+    /// still in the log attaches the hash (an `item.attachPhoto` in flight
+    /// or waiting to send), and when the store never held the bytes at all.
+    func discardPhoto(_ sha256: String) async throws
+
     func status() -> AsyncStream<InventoryReplicaStatus>
+
+    /// Records that the type-arrived sheet asked about `typeKey`, whatever
+    /// the answer, so `InventoryQuery.typeArrival` never offers it again:
+    /// Apply and Not now both settle it. The record is this phone's own and
+    /// is never sent to the server. A key settled before its type ever
+    /// arrived is still recorded, and is not asked about when it does.
+    func settleTypeArrival(typeKey: String) async throws
 }

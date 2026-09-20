@@ -117,4 +117,36 @@ internal struct PhotoStagingTests {
         #expect(try reopened.photoUploads == [Self.sha256: .uploaded])
         #expect(try reopened.isPinned(Self.sha256) == false)
     }
+
+    @Test("discarding a staged photo nothing attaches removes its row and bytes")
+    func discardsUnawaitedPhoto() throws {
+        let files = InMemoryMediaFiles()
+        let replica = try PhotoFixture.staged(files: files)
+
+        try replica.discardPhoto(Self.sha256)
+
+        #expect(try replica.photoUploads.isEmpty)
+        #expect(try replica.stagedPhoto(Self.sha256) == nil)
+        #expect(try files.read(named: "\(Self.sha256)-full") == nil)
+    }
+
+    @Test("discarding a photo a queued attach still needs leaves it staged")
+    func keepsPhotoAChangeStillAttaches() throws {
+        let replica = try PhotoFixture.staged()
+        try PhotoFixture.attach("m1", on: replica)
+
+        try replica.discardPhoto(Self.sha256)
+
+        #expect(try replica.stagedPhoto(Self.sha256) == PhotoFixture.bytes)
+        #expect(try replica.photoUploads == [Self.sha256: .waiting])
+    }
+
+    @Test("discarding a hash the phone never staged does nothing")
+    func discardingUnknownPhotoIsInert() throws {
+        let replica = try InventoryReplica()
+
+        try replica.discardPhoto(String(repeating: "d", count: 64))
+
+        #expect(try replica.photoUploads.isEmpty)
+    }
 }

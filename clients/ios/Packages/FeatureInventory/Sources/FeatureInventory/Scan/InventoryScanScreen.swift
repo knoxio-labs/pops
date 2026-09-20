@@ -15,7 +15,9 @@ internal struct InventoryScanScreen: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
     @State private var torchOn = false
+    @State private var torchAvailable = false
     @State private var shown = false
+    @State private var pickingLibraryPhoto = false
 
     internal init(store: any InventoryStore, entityRouter: any EntityRouter) {
         self.store = store
@@ -51,6 +53,17 @@ internal struct InventoryScanScreen: View {
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { model.refreshCameraAccess() }
         }
+        .inventoryPhotoPickerSheet(
+            source: Binding(
+                get: { pickingLibraryPhoto ? .library : nil },
+                set: { pickingLibraryPhoto = $0 != nil })
+        ) { data in
+            #if canImport(UIKit)
+                if let payload = InventoryScanLibraryDecoding.decode(data) {
+                    _ = model.didScan(payload)
+                }
+            #endif
+        }
         .tint(.popsInventory)
         .inventoryHidesNavigationBar()
     }
@@ -62,9 +75,12 @@ internal struct InventoryScanScreen: View {
 
     @ViewBuilder private var viewfinder: some View {
         #if canImport(UIKit)
-            InventoryScanCameraView(onScan: { model.didScan($0) })
-                .ignoresSafeArea()
-                .accessibilityHidden(true)
+            InventoryScanCameraView(
+                onScan: { model.didScan($0) }, torchOn: torchOn,
+                onTorchAvailabilityChange: { torchAvailable = $0 }
+            )
+            .ignoresSafeArea()
+            .accessibilityHidden(true)
         #else
             // No camera to preview on the host toolchain; nothing shipped ever
             // reaches this branch — see `InventoryScanCameraView.swift`.
@@ -78,13 +94,15 @@ internal struct InventoryScanScreen: View {
                 InventoryScanControl(symbol: "xmark", label: "Close") { dismiss() }
                 Spacer(minLength: PopsSpacing.sm)
                 if model.phase != .denied {
-                    InventoryScanControl(
-                        symbol: torchOn ? "flashlight.on.fill" : InventorySymbol.torch.system,
-                        label: "Torch", isOn: torchOn
-                    ) { torchOn.toggle() }
+                    if torchAvailable {
+                        InventoryScanControl(
+                            symbol: torchOn ? "flashlight.on.fill" : InventorySymbol.torch.system,
+                            label: "Torch", isOn: torchOn
+                        ) { torchOn.toggle() }
+                    }
                     InventoryScanControl(
                         symbol: InventorySymbol.library.system, label: "Photo library"
-                    ) {}
+                    ) { pickingLibraryPhoto = true }
                 }
             }
         }
@@ -212,70 +230,5 @@ private struct InventoryScanLineCard: View {
 private enum InventoryScanCard {
     static var shape: RoundedRectangle {
         RoundedRectangle(cornerRadius: PopsRadius.card * 2, style: .continuous)
-    }
-}
-
-/// One round glass control over the camera.
-private struct InventoryScanControl: View {
-    let symbol: String
-    let label: String
-    var isOn = false
-    let action: () -> Void
-    @ScaledMetric(relativeTo: .body) private var size = PopsSize.touchTarget
-
-    var body: some View {
-        Button(action: action) {
-            Image(systemName: symbol)
-                .font(.popsBody.weight(.semibold))
-                .foregroundStyle(isOn ? Color.popsBackground : Color.popsInventory)
-                .contentTransition(.symbolEffect(.replace))
-                .frame(width: size, height: size)
-                .background {
-                    if isOn { Circle().fill(Color.popsInventory) }
-                }
-                .inventoryGlass(in: Circle())
-                .contentShape(Circle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(label)
-        .accessibilityAddTraits(isOn ? .isSelected : [])
-    }
-}
-
-/// Four amber corners a label is lined up inside; they close in a little
-/// once something is found.
-private struct InventoryScanReticle: View {
-    let found: Bool
-
-    var body: some View {
-        InventoryScanReticleCorners()
-            .stroke(
-                Color.popsInventory,
-                style: StrokeStyle(lineWidth: PopsBorder.emphasis * 2, lineCap: .round)
-            )
-            .aspectRatio(1, contentMode: .fit)
-            .containerRelativeFrame(.horizontal) { width, _ in width * 0.62 }
-            .scaleEffect(found ? 0.92 : 1)
-            .inventoryMotion(InventoryMotion.smooth, value: found)
-            .accessibilityHidden(true)
-    }
-}
-
-private struct InventoryScanReticleCorners: Shape {
-    func path(in rect: CGRect) -> Path {
-        let arm = rect.width * 0.18
-        var path = Path()
-        for corner in 0..<4 {
-            let isLeading = corner % 2 == 0
-            let isTop = corner < 2
-            let tip = CGPoint(
-                x: isLeading ? rect.minX : rect.maxX, y: isTop ? rect.minY : rect.maxY)
-            let dx = isLeading ? arm : -arm
-            let dy = isTop ? arm : -arm
-            path.move(to: CGPoint(x: tip.x + dx, y: tip.y))
-            path.addLine(to: tip)
-            path.addLine(to: CGPoint(x: tip.x, y: tip.y + dy))
-        }
-        return path
     }
 }
