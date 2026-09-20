@@ -7,6 +7,7 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import express, { type Express } from 'express';
 
+import { shutdownPillar, type ClosableServer } from '@pops/pillar-sdk/bootstrap';
 import { assertSecretFilesReadable } from '@pops/pillar-sdk/pillar-env';
 
 import { inboundAuth } from './auth.js';
@@ -133,6 +134,41 @@ export function resolvePort(env: NodeJS.ProcessEnv = process.env): number {
   return port;
 }
 
+/** Where the shutdown handlers are registered. `process`, outside a test. */
+export interface SignalTarget {
+  on(signal: 'SIGTERM' | 'SIGINT', handler: (signal: NodeJS.Signals) => void): unknown;
+}
+
+/**
+ * Register the shutdown handlers this process would otherwise die without.
+ *
+ * Not a nicety. `CMD ["node", "dist/index.js"]` makes node PID 1, and the
+ * kernel applies no default signal disposition to PID 1 — a signal reaches it
+ * only if it has installed a handler for that signal. Without this, SIGTERM
+ * was discarded and docker SIGKILLed the container once its stop timeout ran
+ * out, on 46 of 46 Watchtower restarts (POPS-4219). Measured against
+ * node:24-slim as PID 1: `docker stop -t 10` takes 11s with no handler and 0s
+ * with one.
+ *
+ * `shutdownPillar` rather than a hand-rolled close, so the connection draining
+ * it grew for POPS-4218 applies here too. mcp registers with nothing and owns
+ * no database, so it has no steps and nothing to close after the server.
+ */
+export function installShutdownHandlers(
+  server: ClosableServer,
+  target: SignalTarget = process
+): void {
+  let shuttingDown = false;
+  const shutdown = (signal: NodeJS.Signals): void => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    console.warn(`[pops-mcp] Shutting down (${signal})`);
+    void shutdownPillar({ label: 'pops-mcp', steps: [], server });
+  };
+  target.on('SIGTERM', shutdown);
+  target.on('SIGINT', shutdown);
+}
+
 // Only start listening when run directly (not in tests). The key is resolved
 // BEFORE listening and is fatal when absent (POPS-2760): every tool proxies a
 // pillar, so a keyless process would bind the port, pass its healthcheck and
@@ -146,7 +182,8 @@ if (process.env['NODE_ENV'] !== 'test') {
   assertSecretFilesReadable();
   requireServiceAccountKey();
   const port = resolvePort();
-  app.listen(port, '0.0.0.0', () => {
+  const server = app.listen(port, '0.0.0.0', () => {
     console.warn(`[pops-mcp] HTTP MCP server on port ${port} (${allTools.length} tools)`);
   });
+  installShutdownHandlers(server);
 }
