@@ -1,49 +1,8 @@
 #!/usr/bin/env node
 /**
- * Generator for the iOS app icon's layers.
- *
- * `clients/ios/App/AppIcon.icon` is an Icon Composer source: a gradient
- * background plus foreground layers, with the dark, tinted and clear
- * appearances derived by the system rather than checked in. The artwork is a
- * three-by-three lattice of six cords, one per member of `NAV_COLOR` in
- * `libs/sdk/src/manifest-schema/ui.ts` — that enum is closed and has exactly
- * six members, which is where the thread count comes from.
- *
- * The layers were a single checked-in PNG with no source, which is why the
- * mark drifted into a state nobody could correct: its geometry lived only in
- * the pixels. They are derived here instead, from the constants below.
- *
- * `xcrun actool <bundle> --compile <dir> --platform iphonesimulator
- * --minimum-deployment-target 26.0 --app-icon <name>` renders a bundle through
- * the real system compositor in about a second, which is the loop to use when
- * changing any of this. A full Xcode build is not needed, and a hand-drawn
- * mock-up of the icon is worse than useless here: it shows none of the
- * lighting the decisions are about.
- *
- * NOTHING HERE IS SHADED, AND THE MARK IS SPLIT ACROSS TWO GROUPS. Both halves
- * matter and it is easy to get half-right:
- *
- * - Apple's guidance is to let the system light the artwork: "The system
- *   dynamically applies visual effects to your app icon layers, so there's no
- *   need to include specular highlights, drop shadows between layers, beveled
- *   edges, blurs, glows" (HIG, App icons › Visual effects). Baked lighting also
- *   cannot survive the tinted and clear appearances, which are a luminance
- *   remap of this same artwork.
- * - But ONE group is coplanar. A single group does get a specular rim along
- *   every edge in its artwork, interior cord edges included — that much was
- *   verified by rendering it — so the flatness people see in a one-group mark
- *   is not missing rims. It is that nothing casts onto anything: every shape
- *   sits in the same plane, so there is no shadow between the cords. "App
- *   icons include a background layer and one or more foreground layers that
- *   coalesce to create dimensionality" (HIG, App icons › Layer design), and the
- *   dimensionality is between the layers.
- *
- * Usage:
- *   node scripts/ios-app-icon.mjs            write the layers to both icon bundles
- *   node scripts/ios-app-icon.mjs --check    fail if either bundle is out of date
- *
- * Exit 0 = written, or already current under `--check`. Exit 1 = drift under
- * `--check`. Exit 2 = usage error.
+ * Generates the two SVG layers and Icon Composer manifests for the iOS icon.
+ * Run without arguments to write both bundles, or with --check to detect drift.
+ * Validate artwork changes with actool and Icon Composer's appearance previews.
  */
 
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -61,144 +20,52 @@ const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
 export const CANVAS = 1024;
 
 /** Thickness of a cord, and the diameter of its rounded cap. */
-export const CORD_WIDTH = 132;
+export const CORD_WIDTH = 148;
 
 /**
  * Background showing between two parallel cords. Wide enough that the lattice
  * still reads as a lattice at the 29pt settings-row size, which is the size
  * this mark is hardest to hold together at.
  */
-export const CORD_GAP = 84;
+export const CORD_GAP = 68;
 
-/**
- * Corner-to-corner extent of the mark, and therefore the full length of every
- * cord. All six are the same length, which is what makes the twelve ends land
- * on one square boundary instead of some being cropped by the canvas and
- * others stopping just past a crossing.
- *
- * It is 86% of the canvas rather than the 80% an icon's artwork usually keeps
- * to, because this silhouette is a cross: its four corners are empty, so the
- * extremes that would otherwise crowd the squircle's rounding do not exist.
- * The layers are authored square and unmasked because the system does the
- * masking — "providing layers with pre-defined masking negatively impacts
- * specular highlight effects and makes edges look jagged" (HIG, App icons ›
- * Icon shape).
- */
-export const MARK_SPAN = 880;
+/** Full cord length; leaves a 122-point inset around the unmasked artwork. */
+export const MARK_SPAN = 780;
 
-/**
- * How much wider than a warp cord each hole in the weft layer is cut, so a
- * band of background shows around the warp where it passes over.
- *
- * This is what makes the interlace read. The system lights the hole's edge and
- * the warp cord's edge separately and casts the weft's shadow into the gap, so
- * the warp looks like it is in front rather than merely adjacent. Zero would
- * butt the two colours together with no separation at all.
- */
-export const CROSSING_CLEARANCE = 10;
+/** Crossings meet without background slits between the over and under cords. */
+export const CROSSING_CLEARANCE = 0;
 
-/**
- * Translucency is OFF on both groups.
- *
- * Apple suggests varying opacity for depth — "vary opacity in foreground
- * layers to increase the sense of depth and liveliness" (HIG, App icons ›
- * Layer design) — and it was rendered at 0.15, 0.25 and 0.35 before being
- * rejected. It is the wrong tool for this mark: a translucent weft mixes with
- * the warp beneath into a third hue that is in no pillar's palette, and it is
- * redundant here, because the cut-outs already put the warp in front at the
- * crossings that call for it. The depth comes from the two groups and the
- * clearance, which cost the palette nothing.
- */
+/** Opaque layers preserve each cord's colour at crossings. */
 export const UPPER_TRANSLUCENCY = 0;
 
 /**
- * The cross-axis profile each cord carries, as `[offset, lightnessDelta,
- * saturationDelta]` in HSL percentage points off the cord's body colour.
- *
- * THIS IS A DELIBERATE DEPARTURE FROM THE HIG, and the one thing in this file a
- * reviewer should challenge rather than assume. Apple's default is the
- * opposite: "Let the system handle blurring and other visual effects... there's
- * no need to include specular highlights, drop shadows between layers, beveled
- * edges, blurs, glows. In addition to interfering with system-provided effects,
- * custom effects are static, whereas the system supplies dynamic ones" (HIG,
- * App icons › Visual effects). The same paragraph permits it with a condition,
- * and the condition is why this constant is allowed to exist: "If you do
- * include custom visual effects on your icon layers, use them intentionally and
- * test carefully with Icon Composer, on a simulated device in Device Hub, or on
- * a physical device to make sure they appear as expected and don't conflict
- * with system effects."
- *
- * The profile is measured, not invented: it reproduces the cross-section of a
- * reference mark the operator approved, which spans about 17 lightness points
- * peaking a fifth of the way across. The SHAPE carries it, not the span — a
- * cylinder reads as a cylinder because of FOUR features, and a ramp with only
- * the middle two looks flat however wide its range. Widening the span instead
- * of fixing the shape was tried, reached 36 points against the reference's 15,
- * and looked like plastic.
- *
- * 1. a NARROW specular near the lit edge — broad is what reads as a fade;
- * 2. the body colour across the middle;
- * 3. a dark shadow side;
- * 4. a BOUNCE at the far edge, lifting the very last band back up. Real
- *    cylinders catch reflected light there. Leaving it out is what made the
- *    first attempt "flat and boring", and it is the single most load-bearing
- *    stop in this table.
- *
- * Saturation falls with lightness in both directions, which is also measured:
- * plain channel multiplication was tried first and slid the shadow side toward
- * grey (rose's shadow at 38% saturation against the reference's 55%), which is
- * what washed the mark out.
- *
- * **Changing these numbers means re-checking the appearances in Icon Composer.**
- * The tinted and clear appearances are a luminance remap of this artwork, which
- * is exactly what a baked lightness gradient interferes with, and they cannot
- * be rendered offline — the system derives them at runtime from the vector
- * layers, so neither CI nor a build will catch a regression here.
- *
+ * Cylinder cross-section as [offset, lightness delta, saturation delta] in HSL.
+ * The narrow highlight and dark flank model a rounded, glossy surface.
  * @type {readonly [number, number, number][]}
  */
 export const GLOSS = [
-  [0, 4, -2],
-  [0.2, 8, -2],
-  [0.45, 0, 0],
-  [0.8, -9, -18],
-  [0.93, -5, -14],
-  [1, -6, -14],
+  [0, -10, 0],
+  [0.08, 2, 0],
+  [0.16, 30, -16],
+  [0.23, 12, -4],
+  [0.36, 4, 0],
+  [0.55, 0, 0],
+  [0.85, -13, 0],
+  [0.96, -8, 0],
+  [1, -4, 0],
 ];
 
 /** How hard the system shadow beneath each group is. */
 export const SHADOW_OPACITY = 0.5;
 
-/**
- * One cord per member of `NAV_COLOR`.
- *
- * These are the **cord bodies**, sampled off a reference mark the operator
- * approved: the median colour across each cord's width, taken between two
- * crossings so no crossing shadow is in the sample. In HSL they land at
- * lightness 53-67% and saturation 41-79%.
- *
- * Tailwind tiers were tried first and every tier is wrong here in the same
- * direction: 400 puts `rose` and `indigo` at lightness 74% and 72% against the
- * reference's 67% and 63%, which is the difference between a cord and a pastel.
- * The lighter a fill is, the less room the gloss in {@link GLOSS} has to lift a
- * highlight out of it before clipping, so too-light bodies and a flat-looking
- * tube are the same defect.
- *
- * `violet` has no reference — the badge in the reference covers that cord — so
- * it is derived rather than invented: Tailwind's violet hue at the mean
- * lightness and saturation of the other five (60%, 67%).
- *
- * A seventh nav colour would have nowhere to go in a three-by-three lattice,
- * and the test asserts these keys against the enum rather than letting the two
- * drift apart quietly.
- */
+/** Saturated body colours, one for each member of NAV_COLOR. */
 export const PALETTE = {
-  rose: '#ea6c83',
-  amber: '#e8ab40',
-  emerald: '#57b97a',
-  sky: '#4ba6dd',
-  indigo: '#5b78e7',
-  violet: '#8954de',
+  rose: '#f33767',
+  amber: '#ffb900',
+  emerald: '#00b963',
+  sky: '#00bcec',
+  indigo: '#4169f5',
+  violet: '#9344e8',
 };
 
 /** The three vertical cords, left to right. The lower group. */
@@ -208,24 +75,10 @@ export const WARP = ['rose', 'emerald', 'indigo'];
 export const WEFT = ['amber', 'sky', 'violet'];
 
 /**
- * Whether the horizontal cord of row `row` passes over the vertical cord of
- * column `col`. Alternating on the parity of the sum is what a basketweave is;
- * any crossing that agrees with its neighbour turns the mark into a stack of
- * bars.
- *
- * A z-stack of two groups cannot express that on its own — the upper group is
- * above the lower one everywhere. So the weft layer, which is the upper group,
- * is CUT: at each crossing this returns `false` for, a hole the width of the
- * warp cord plus {@link CROSSING_CLEARANCE} is removed from the weft, and the
- * warp beneath shows through it.
- *
- * The alternative constructions were both rendered and both are worse. Three
- * groups, with warp-over segments on top, gives every segment its own rim and
- * shadow, so the crossings read as separate pills sewn onto the cord beneath.
- * Two groups with no cuts loses the interlace outright.
- *
- * @param {number} row index into {@link WEFT}
- * @param {number} col index into {@link WARP}
+ * True where a horizontal cord passes over a vertical cord in the basketweave.
+ * The weft SVG cuts out the other crossings to expose the continuous warp.
+ * @param {number} row index into WEFT
+ * @param {number} col index into WARP
  * @returns {boolean}
  */
 export function horizontalIsOver(row, col) {
@@ -424,6 +277,63 @@ function weftPath(row, fill) {
   return `  <path fill-rule="evenodd" d="${d}" fill="${fill}"/>`;
 }
 
+/** Distance a crossing's contact shadow extends along the underlying cord. */
+export const CONTACT_SHADOW_REACH = 30;
+
+/**
+ * Contact shadows run along each cord, perpendicular to its cylinder shading.
+ * The hidden crossing stays dark; its exposed shoulders fade back to the body.
+ * @param {'warp' | 'weft'} which
+ * @param {number} index
+ * @returns {readonly [number, number][]} offset in canvas points and black opacity
+ */
+export function contactShadowStops(which, index) {
+  const start = CENTRE - HALF_SPAN;
+  const end = CENTRE + HALF_SPAN;
+  /** @type {[number, number][]} */
+  const stops = [
+    [start, 0.22],
+    [start + HALF_WIDTH, 0],
+  ];
+  for (let crossing = 0; crossing < CORD_CENTRES.length; crossing += 1) {
+    const under =
+      which === 'warp' ? horizontalIsOver(crossing, index) : !horizontalIsOver(index, crossing);
+    if (!under) continue;
+    const near = centreAt(crossing) - HALF_WIDTH;
+    const far = centreAt(crossing) + HALF_WIDTH;
+    stops.push(
+      [near - CONTACT_SHADOW_REACH, 0],
+      [near, 0.36],
+      [far, 0.46],
+      [far + CONTACT_SHADOW_REACH, 0]
+    );
+  }
+  stops.push([end - HALF_WIDTH, 0], [end, 0.28]);
+  return stops.toSorted(([a], [b]) => a - b);
+}
+
+/** @param {'warp' | 'weft'} which @param {number} index @returns {string} */
+function depthGradients(which, index) {
+  const start = CENTRE - HALF_SPAN;
+  const stops = contactShadowStops(which, index)
+    .map(
+      ([position, opacity]) =>
+        `      <stop offset="${(position - start) / MARK_SPAN}" stop-color="#000000" stop-opacity="${opacity}"/>`
+    )
+    .join('\n');
+  const vector = which === 'warp' ? 'x1="0" y1="0" x2="0" y2="1"' : 'x1="0" y1="0" x2="1" y2="0"';
+  return `    <linearGradient id="${which}-${index}-contact" ${vector}>\n${stops}\n    </linearGradient>`;
+}
+
+/** @param {'warp' | 'weft'} which @param {number} index @returns {string} */
+function capHighlight(which, index) {
+  const along = CENTRE - HALF_SPAN + HALF_WIDTH * 0.52;
+  const across = centreAt(index) - HALF_WIDTH * 0.28;
+  const x = which === 'warp' ? across : along;
+  const y = which === 'warp' ? along : across;
+  return `  <ellipse cx="${x}" cy="${y}" rx="${HALF_WIDTH * 0.46}" ry="${HALF_WIDTH * 0.32}" fill="url(#cap-highlight)"/>`;
+}
+
 /**
  * One foreground layer: the three cords of one axis, as a square unmasked SVG
  * the size of the canvas.
@@ -437,15 +347,30 @@ export function layerSvg(which) {
   /** @param {number} index @returns {string} */
   const gradientId = (index) => `${which}-${index}`;
 
-  const defs = CORD_CENTRES.map((_, index) =>
-    glossGradient(gradientId(index), fillOf(cordAt(cords, index)), axis)
-  ).join('\n');
+  const defs =
+    CORD_CENTRES.map(
+      (_, index) =>
+        glossGradient(gradientId(index), fillOf(cordAt(cords, index)), axis) +
+        '\n' +
+        depthGradients(which, index)
+    ).join('\n') +
+    `
+    <radialGradient id="cap-highlight">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.85"/>
+      <stop offset="0.4" stop-color="#ffffff" stop-opacity="0.3"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>`;
 
-  const body = CORD_CENTRES.map((_, index) =>
-    which === 'warp'
-      ? warpCapsule(centreAt(index), `url(#${gradientId(index)})`)
-      : weftPath(index, `url(#${gradientId(index)})`)
-  ).join('\n');
+  const body = CORD_CENTRES.map((_, index) => {
+    /** @param {string} fill @returns {string} */
+    const shape = (fill) =>
+      which === 'warp' ? warpCapsule(centreAt(index), fill) : weftPath(index, fill);
+    return [
+      shape(`url(#${gradientId(index)})`),
+      shape(`url(#${gradientId(index)}-contact)`),
+      capHighlight(which, index),
+    ].join('\n');
+  }).join('\n');
 
   return (
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${CANVAS} ${CANVAS}" width="${CANVAS}" height="${CANVAS}">\n` +
@@ -455,8 +380,8 @@ export function layerSvg(which) {
 
 const BACKGROUND = {
   'linear-gradient': [
-    'display-p3:0.12059,0.13284,0.19482,1.00000',
-    'display-p3:0.03671,0.04289,0.06837,1.00000',
+    'display-p3:0.10500,0.11500,0.12500,1.00000',
+    'display-p3:0.00900,0.01300,0.01800,1.00000',
   ],
 };
 
@@ -477,6 +402,7 @@ function group(name, imageName, translucency) {
         position: { scale: 1, 'translation-in-points': [0, 0] },
       },
     ],
+    specular: false,
     shadow: { kind: 'neutral', opacity: SHADOW_OPACITY },
     translucency: { enabled: translucency > 0, value: translucency },
   };
@@ -501,7 +427,9 @@ export function iconManifest(options = {}) {
     group('Weft', 'layer-weft.svg', UPPER_TRANSLUCENCY),
     group('Warp', 'layer-warp.svg', 0),
   ];
-  if (options.badge !== undefined) groups.unshift(group('Local badge', options.badge, 0));
+  if (options.badge !== undefined) {
+    groups.unshift({ ...group('Local badge', options.badge, 0), specular: true });
+  }
 
   return {
     fill: BACKGROUND,

@@ -1,8 +1,8 @@
 {
   "fill": {
     "linear-gradient": [
-      "display-p3:0.12059,0.13284,0.19482,1.00000",
-      "display-p3:0.03671,0.04289,0.06837,1.00000"
+      "display-p3:0.10500,0.11500,0.12500,1.00000",
+      "display-p3:0.00900,0.01300,0.01800,1.00000"
     ]
   },
   "groups": [
@@ -22,6 +22,7 @@
           }
         }
       ],
+      "specular": true,
       "shadow": {
         "kind": "neutral",
         "opacity": 0.5
@@ -47,6 +48,7 @@
           }
         }
       ],
+      "specular": false,
       "shadow": {
         "kind": "neutral",
         "opacity": 0.5
@@ -72,6 +74,7 @@
           }
         }
       ],
+      "specular": false,
       "shadow": {
         "kind": "neutral",
         "opacity": 0.5

@@ -9,6 +9,7 @@ import { NAV_COLOR } from '@pops/pillar-sdk/manifest-schema';
 import {
   BUNDLES,
   CANVAS,
+  CONTACT_SHADOW_REACH,
   CORD_CENTRES,
   CORD_GAP,
   CORD_WIDTH,
@@ -22,6 +23,7 @@ import {
   WARP,
   WEFT,
   bundleFiles,
+  contactShadowStops,
   horizontalIsOver,
   iconManifest,
   layerSvg,
@@ -36,50 +38,54 @@ type Rect = { x: number; y: number; width: number; height: number; rx: number; f
 
 /** Every `<rect>` in a generated layer, in document order. */
 function rects(svg: string): Rect[] {
-  return [...svg.matchAll(/<rect ([^/]*)\/>/g)].map((match) => {
-    const body = match[1] ?? '';
-    const attrs = new Map(
-      [...body.matchAll(/([a-z]+)="([^"]*)"/g)].map((a) => [a[1] ?? '', a[2] ?? ''] as const)
-    );
-    const number = (key: string): number => {
-      const raw = attrs.get(key);
-      if (raw === undefined) throw new Error(`<rect> has no ${key}: ${match[0]}`);
-      return Number(raw);
-    };
-    const fill = attrs.get('fill');
-    if (fill === undefined) throw new Error(`<rect> has no fill: ${match[0]}`);
-    return {
-      x: number('x'),
-      y: number('y'),
-      width: number('width'),
-      height: number('height'),
-      rx: number('rx'),
-      fill,
-    };
-  });
+  return [...svg.matchAll(/<rect ([^/]*)\/>/g)]
+    .filter((match) => /fill="url\(#warp-\d\)"/.test(match[0]))
+    .map((match) => {
+      const body = match[1] ?? '';
+      const attrs = new Map(
+        [...body.matchAll(/([a-z]+)="([^"]*)"/g)].map((a) => [a[1] ?? '', a[2] ?? ''] as const)
+      );
+      const number = (key: string): number => {
+        const raw = attrs.get(key);
+        if (raw === undefined) throw new Error(`<rect> has no ${key}: ${match[0]}`);
+        return Number(raw);
+      };
+      const fill = attrs.get('fill');
+      if (fill === undefined) throw new Error(`<rect> has no fill: ${match[0]}`);
+      return {
+        x: number('x'),
+        y: number('y'),
+        width: number('width'),
+        height: number('height'),
+        rx: number('rx'),
+        fill,
+      };
+    });
 }
 
 type WeftPath = { fill: string; rule: string; holes: { x0: number; x1: number }[] };
 
 /** Every `<path>` in the weft layer, with the holes its even-odd subpaths cut. */
 function weftPaths(svg: string): WeftPath[] {
-  return [...svg.matchAll(/<path ([^/]*)\/>/g)].map((match) => {
-    const body = match[1] ?? '';
-    const rule = /fill-rule="([^"]*)"/.exec(body)?.[1] ?? '';
-    const fill = /[^-]fill="([^"]*)"/.exec(` ${body}`)?.[1] ?? '';
-    const d = /d="([^"]*)"/.exec(body)?.[1] ?? '';
-    // The first subpath is the capsule outline; every later one is a hole.
-    const subpaths = d
-      .split('Z')
-      .map((part) => part.trim())
-      .filter((part) => part.length > 0)
-      .slice(1);
-    const holes = subpaths.map((sub) => {
-      const xs = [...sub.matchAll(/[ML] (-?\d+(?:\.\d+)?) /g)].map((m) => Number(m[1]));
-      return { x0: Math.min(...xs), x1: Math.max(...xs) };
+  return [...svg.matchAll(/<path ([^/]*)\/>/g)]
+    .filter((match) => /fill="url\(#weft-\d\)"/.test(match[0]))
+    .map((match) => {
+      const body = match[1] ?? '';
+      const rule = /fill-rule="([^"]*)"/.exec(body)?.[1] ?? '';
+      const fill = /[^-]fill="([^"]*)"/.exec(` ${body}`)?.[1] ?? '';
+      const d = /d="([^"]*)"/.exec(body)?.[1] ?? '';
+      // The first subpath is the capsule outline; every later one is a hole.
+      const subpaths = d
+        .split('Z')
+        .map((part) => part.trim())
+        .filter((part) => part.length > 0)
+        .slice(1);
+      const holes = subpaths.map((sub) => {
+        const xs = [...sub.matchAll(/[ML] (-?\d+(?:\.\d+)?) /g)].map((m) => Number(m[1]));
+        return { x0: Math.min(...xs), x1: Math.max(...xs) };
+      });
+      return { fill, rule, holes };
     });
-    return { fill, rule, holes };
-  });
 }
 
 /** Every gradient in a layer, by id, as its ordered stop colours. */
@@ -104,6 +110,7 @@ const BODY_STOP = GLOSS.findIndex(
 
 type Group = {
   layers: { 'image-name': string; opacity: number; position: { scale: number } }[];
+  specular: boolean;
   shadow: { kind: string; opacity: number };
   translucency: { enabled: boolean; value: number };
 };
@@ -191,8 +198,8 @@ describe('the interlace', () => {
     expect(holes).toHaveLength(5);
   });
 
-  it('opens each hole wider than the warp cord, so the two edges read apart', () => {
-    expect(CROSSING_CLEARANCE).toBeGreaterThan(0);
+  it('meets the warp exactly, without a background slit at any crossing', () => {
+    expect(CROSSING_CLEARANCE).toBe(0);
     for (const hole of weftPaths(layerSvg('weft')).flatMap((path) => path.holes)) {
       expect(hole.x1 - hole.x0).toBe(CORD_WIDTH + CROSSING_CLEARANCE * 2);
     }
@@ -239,6 +246,13 @@ describe('a generated layer', () => {
     expect(BODY_STOP).toBeGreaterThanOrEqual(0);
   });
 
+  it('matches the reference proportions with room around the weave', () => {
+    expect(MARK_SPAN / CANVAS).toBeGreaterThan(0.74);
+    expect(MARK_SPAN / CANVAS).toBeLessThan(0.79);
+    expect(CORD_WIDTH / MARK_SPAN).toBeGreaterThan(0.18);
+    expect(CORD_WIDTH / MARK_SPAN).toBeLessThan(0.21);
+  });
+
   it('keeps every cord inside the canvas, clear of the corner mask', () => {
     const margin = (CANVAS - MARK_SPAN) / 2;
     expect(margin).toBeGreaterThan(CORD_WIDTH / 3);
@@ -271,7 +285,7 @@ describe('a generated layer', () => {
   });
 
   it('leaves a background channel between parallel cords', () => {
-    expect(CORD_GAP).toBeGreaterThan(CORD_WIDTH / 2);
+    expect(CORD_GAP).toBeGreaterThan(CORD_WIDTH / 3);
     for (let i = 0; i + 1 < CORD_CENTRES.length; i += 1) {
       expect(centreAt(i + 1) - centreAt(i)).toBe(CORD_WIDTH + CORD_GAP);
     }
@@ -322,12 +336,10 @@ describe('the gloss profile', () => {
     expect(atPeak?.[0]).toBeLessThanOrEqual(0.25);
   });
 
-  it('spans about what the reference spans, not more', () => {
-    // The reference cross-section spans 15 lightness points. An early attempt
-    // reached 36 and read as plastic; the shape carries the tube, not the span.
-    const span = Math.max(...lightness) - Math.min(...lightness);
-    expect(span).toBeGreaterThan(10);
-    expect(span).toBeLessThan(24);
+  it('separates a bright reflection from the shaded cylinder flank', () => {
+    expect(Math.max(...lightness)).toBeGreaterThanOrEqual(25);
+    expect(Math.min(...lightness)).toBeLessThanOrEqual(-10);
+    expect(Math.max(...lightness) - Math.min(...lightness)).toBeLessThan(50);
   });
 
   it('never slides a cord toward grey', () => {
@@ -339,11 +351,79 @@ describe('the gloss profile', () => {
   });
 });
 
+describe('contact shading', () => {
+  it('darkens every underpass and leaves every overpass unshadowed', () => {
+    for (const which of ['warp', 'weft'] as const) {
+      for (const index of COLS) {
+        const stops = contactShadowStops(which, index);
+        for (const crossing of ROWS) {
+          const under =
+            which === 'warp'
+              ? horizontalIsOver(crossing, index)
+              : !horizontalIsOver(index, crossing);
+          const near = centreAt(crossing) - CORD_WIDTH / 2;
+          const far = centreAt(crossing) + CORD_WIDTH / 2;
+          const at = (position: number) => stops.find(([offset]) => offset === position)?.[1];
+          if (under) {
+            expect(at(near)).toBeGreaterThan(0.3);
+            expect(at(far)).toBeGreaterThan(0.3);
+            expect(at(near - CONTACT_SHADOW_REACH)).toBe(0);
+            expect(at(far + CONTACT_SHADOW_REACH)).toBe(0);
+          } else {
+            expect(at(near)).toBeUndefined();
+            expect(at(far)).toBeUndefined();
+          }
+        }
+      }
+    }
+  });
+
+  it('keeps fading shadows ordered, inside the cord, and clear of their neighbours', () => {
+    expect(CONTACT_SHADOW_REACH * 2).toBeLessThan(CORD_GAP);
+    for (const which of ['warp', 'weft'] as const) {
+      for (const index of COLS) {
+        const stops = contactShadowStops(which, index);
+        const offsets = stops.map(([offset]) => offset);
+        expect(offsets).toEqual(offsets.toSorted((a, b) => a - b));
+        expect(new Set(offsets).size).toBe(offsets.length);
+        expect(offsets.at(0)).toBe((CANVAS - MARK_SPAN) / 2);
+        expect(offsets.at(-1)).toBe((CANVAS + MARK_SPAN) / 2);
+        for (const [, opacity] of stops) {
+          expect(opacity).toBeGreaterThanOrEqual(0);
+          expect(opacity).toBeLessThanOrEqual(1);
+        }
+      }
+    }
+  });
+
+  it('paints the same silhouette for body and contact shadow', () => {
+    for (const which of ['warp', 'weft'] as const) {
+      const svg = layerSvg(which);
+      const shapes = [...svg.matchAll(/<(rect|path) ([^/]*)\/>/g)].map((match) => match[0]);
+      expect(shapes).toHaveLength(6);
+      for (const index of COLS) {
+        const body = shapes[index * 2];
+        const contact = shapes[index * 2 + 1];
+        expect(contact).toBe(
+          body?.replace(`url(#${which}-${index})`, `url(#${which}-${index}-contact)`)
+        );
+        expect(svg).toContain(`id="${which}-${index}-contact"`);
+      }
+      expect([...svg.matchAll(/<ellipse /g)]).toHaveLength(3);
+      expect(svg).toContain('<radialGradient id="cap-highlight">');
+    }
+  });
+});
+
 describe('the icon manifest', () => {
   it('composites top-first, so the weft group lands above the warp', () => {
     expect(groupsOf(iconManifest())).toHaveLength(2);
     expect(imageOf(groupAt(iconManifest(), 0))).toBe('layer-weft.svg');
     expect(imageOf(groupAt(iconManifest(), 1))).toBe('layer-warp.svg');
+  });
+
+  it('disables the extra bevel that makes cut crossings look recessed', () => {
+    for (const group of groupsOf(iconManifest())) expect(group.specular).toBe(false);
   });
 
   it('leaves translucency off, because the cut-outs already put the warp in front', () => {
@@ -367,6 +447,7 @@ describe('the icon manifest', () => {
     expect(groupsOf(badged)).toHaveLength(3);
     expect(imageOf(groupAt(badged, 0))).toBe('local-badge.png');
     expect(groupAt(badged, 0).translucency.enabled).toBe(false);
+    expect(groupAt(badged, 0).specular).toBe(true);
   });
 
   it('references only layers the generator writes, plus the badge', () => {

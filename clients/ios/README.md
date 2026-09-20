@@ -163,59 +163,35 @@ Two consequences follow, and both bite:
 - **Adding or removing a source file means regenerating.** Sources are explicit file references in the generated project, so a new `.swift` file is invisible to `xcodebuild` until `xcodegen generate` runs again — it does not fail, it silently does not compile the file.
 - **Xcode settings changed through the GUI do not survive.** Change `project.yml` instead; anything else is erased on the next generate.
 
-## The app icon is two groups on purpose
+## App icon artwork
 
-`App/AppIcon.icon` is an Icon Composer source, not an exported `AppIcon.appiconset`: one `icon.json` naming a gradient background and two foreground groups, with the dark, tinted and clear variants derived by the system rather than checked in as a hundred and fifty PNGs. The artwork is a three-by-three basketweave of six cords, one per member of `NAV_COLOR` in [`libs/sdk/src/manifest-schema/ui.ts`](../../libs/sdk/src/manifest-schema/ui.ts) — that enum is closed and has exactly six members, which is where the thread count comes from.
+`App/AppIcon.icon` and `App/AppIconLocal.icon` are Icon Composer sources. [`scripts/ios-app-icon.mjs`](../../scripts/ios-app-icon.mjs) generates their SVG layers and manifests; run `mise run icon:ios` after editing it. The local bundle adds its existing LOCAL badge above the weave.
 
-Nothing in the artwork is drawn by hand. [`scripts/ios-app-icon.mjs`](../../scripts/ios-app-icon.mjs) emits both SVG layers and both bundles' `icon.json` from a dozen constants; `mise run icon:ios` regenerates, and [`scripts/__tests__/ios-app-icon.test.ts`](../../scripts/__tests__/ios-app-icon.test.ts) fails if the committed bundles and the script disagree. It was a single checked-in PNG with no source first, and that is how it stayed wrong: the geometry existed only in the pixels, so nobody could correct it without redrawing it.
+The mark is a three-by-three basketweave using the six `NAV_COLOR` families. Cords are 148 points wide, spaced 216 points apart, and span 780 points of the 1024-point canvas. This leaves room around the mark while keeping the cords thick enough to read at home-screen size. The warp is continuous; the weft has five even-odd cutouts, exactly the width of the warp, so there are no background slits at crossings.
 
-### Render it with `actool`, not with a mock-up
+Cross-axis gradients shade the cylinders; a second gradient along each cord provides contact shadows only where it passes underneath another cord. Small radial highlights round the exposed caps. The two opaque groups retain system drop shadows, but disable system specular highlights: applying another bevel to the cutout edges makes the weave look like disconnected recessed bars. The background remains system-rendered and unmasked.
 
+### Preview and validate
+
+Icon Composer's bundled renderer exports the actual material and appearance at full resolution. It is a different executable from `xcrun ictool`:
+
+```bash
+ICON_TOOL="$(xcode-select -p)/../Applications/Icon Composer.app/Contents/Executables/ictool"
+mkdir -p tmp/icon-preview
+"$ICON_TOOL" clients/ios/App/AppIcon.icon --export-image \
+  --output-file tmp/icon-preview/default.png --platform iOS \
+  --rendition Default --width 1024 --height 1024 --scale 1 --design-generation 27
 ```
-xcrun actool App/AppIcon.icon --compile <outdir> --platform iphonesimulator \
-  --minimum-deployment-target 26.0 --app-icon AppIcon \
-  --output-partial-info-plist <outdir>/partial.plist
+
+Run from the repository root. Compare design generations 26 and 27, and the Default, Dark, Mono and TintedDark renditions, whenever changing palette or shading. Icon Composer also provides interactive appearance previews. To validate the Xcode asset pipeline:
+
+```bash
+xcrun actool clients/ios/App/AppIcon.icon --compile tmp/icon-preview \
+  --platform iphonesimulator --minimum-deployment-target 26.0 \
+  --app-icon AppIcon --output-partial-info-plist tmp/icon-preview/partial.plist
 ```
 
-About a second, and the PNGs it writes are the real system composite — specular rim, refraction and shadow included. Use it for every change to the icon. **A hand-assembled preview of the layers is worse than useless**, because the lighting is the entire subject: a flat composite of this artwork looks flat, and concluding anything from that is how the wrong fix gets made.
-
-### Two groups, and one baked effect
-
-The depth has two sources, and they are separate decisions.
-
-**Between the layers, the system does it.** One group is coplanar: a single group _does_ get a specular rim along every edge in its artwork, interior cord edges included — that was verified by rendering it — so a flat one-group mark is not missing rims. What it cannot do is cast anything onto anything. "App icons include a background layer and one or more foreground layers that coalesce to create dimensionality" (HIG, App icons › Layer design), and the dimensionality is _between_ the layers. So the warp is the lower group, the weft the upper, and the system shadows between them. `translucency` is off on both: Apple suggests varying opacity for depth, it was rendered at 0.15, 0.25 and 0.35, and it mixes the weft with the warp into a hue in no pillar's palette while buying nothing the cut-outs below do not already give.
-
-**Within a cord, the artwork does it, and this is a deliberate departure.** Each cord carries a cross-axis lightness gradient — `GLOSS` in the generator — against Apple's default position:
-
-> "Let the system handle blurring and other visual effects... there's no need to include specular highlights, drop shadows between layers, beveled edges, blurs, glows. In addition to interfering with system-provided effects, custom effects are static, whereas the system supplies dynamic ones." — HIG, App icons › Visual effects
-
-The same paragraph permits it with a condition, and the condition is the whole licence for it: _"If you do include custom visual effects on your icon layers, use them intentionally and test carefully with Icon Composer, on a simulated device in Device Hub, or on a physical device."_ The operator chose this look against a reference mark, the profile is sampled off that reference rather than invented, and it was checked in Icon Composer across Default, Dark and Mono before landing. **Changing those numbers means repeating that check** — see below for why nothing else can catch a regression in them.
-
-Two things about the profile are worth knowing before touching it, because both were got wrong first:
-
-- **Shade in HSL, not by scaling channels.** Scaling channels desaturates as it darkens, which slid rose's shadow side to 38% saturation against the reference's 55%. That is what "washed out" looks like numerically.
-- **The shape carries the cylinder, not the span.** A cord needs four features: a narrow specular near the lit edge, the body colour across the middle, a dark shadow side, and a **bounce** that lifts the very last band back up, the way a real cylinder catches reflected light. Leaving the bounce out is what makes a tube read as flat, and the first attempt answered that by widening the range to 36 lightness points against the reference's 15, which reads as plastic. The profile now spans 17.
-
-`PALETTE` holds cord **bodies**, sampled as the median across each cord's width between two crossings. Tailwind tiers were tried and every tier is too light in the same way: at 400, rose and indigo sit at 74% and 72% lightness against the reference's 67% and 63%. A too-light body also leaves the gloss no room to lift a highlight before clipping, so pastel bodies and a flat-looking tube are one defect, not two.
-
-### The weft is cut, and that is what makes it a weave
-
-A z-stack cannot interlace: the upper group is above the lower one everywhere. So at each crossing where the warp should pass over, a hole the width of the warp cord plus `CROSSING_CLEARANCE` is cut out of the weft, and the warp shows through it. Five holes, for the five crossings a three-by-three basketweave puts the warp on top of. The weft layer is therefore `<path fill-rule="evenodd">` rather than `<rect>` — a rect cannot carry a hole.
-
-**The two other constructions were rendered and are both worse.** Three groups, with warp-over segments on top, gives each segment its own rim and shadow, so the crossings read as separate pills sewn onto the cord beneath. Two groups with no cuts loses the interlace outright and reads as three bars laid on three bars.
-
-### Nothing offline can check the appearances
-
-The compiled catalog stores the layers as **vectors**; `assetutil --info` on it reports `ISAppearanceTintable` and `UIAppearanceDark` but no rendered variant, because the system derives Dark, Tinted and Clear at runtime from the vector data. So neither CI, nor a build, nor any script can catch a regression in `GLOSS` or `PALETTE` — the tests assert the profile's _shape_ (that a specular, a body stop, a shadow and a bounce all exist, that the span stays near the reference's, that saturation never slides toward grey) precisely because they cannot assert the result.
-
-Icon Composer is the check. It previews Default, Dark and Mono, and **Mono is the one that matters**: Tinted and Clear are both rendered from it at runtime, so a mark that survives Mono survives them. `open -a "$(xcode-select -p)/../Applications/Icon Composer.app" App/AppIcon.icon`, then the three buttons at the bottom right of the canvas.
-
-### Two geometry rules worth naming
-
-Breaking either is what the mark looked like before:
-
-- **All six cords are the same length** (`MARK_SPAN`), so the twelve ends land on one square boundary. Letting a cord stop shortly after the crossing it passes under leaves a stub shorter than the cord is wide, which reads as a detached bead rather than a cord end.
-- **The mark is inset from the canvas.** It spans 86% of the 1024-point canvas, so the squircle never cuts a cord, and the layers are authored square and unmasked because the system does the masking — "providing layers with pre-defined masking negatively impacts specular highlight effects and makes edges look jagged" (HIG, App icons › Icon shape). It can take 86% rather than the usual 80% only because this silhouette is a cross: its four corners are empty.
+[`scripts/__tests__/ios-app-icon.test.ts`](../../scripts/__tests__/ios-app-icon.test.ts) checks weave topology, proportions, touching crossings, shadow placement, manifest effects and exact agreement between generated and committed bundles. These tests protect geometry and reproducibility; native renders remain the visual check.
 
 ## Module boundaries
 
