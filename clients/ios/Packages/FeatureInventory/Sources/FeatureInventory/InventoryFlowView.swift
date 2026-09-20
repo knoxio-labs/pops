@@ -36,7 +36,7 @@ public struct InventoryFlowView: View {
                 .inventoryTitleDisplay(large: true)
                 .safeAreaInset(edge: .bottom, alignment: .trailing) {
                     if model.dashboard.map({ !$0.isFirstRun }) ?? false {
-                        scanControl
+                        controls
                     }
                 }
                 .navigationDestination(for: InventoryRoute.self) { route in
@@ -45,18 +45,29 @@ public struct InventoryFlowView: View {
         }
         .inventoryItemFormPresentation(store: store)
         .inventorySyncInterruptions(store: store)
+        .inventoryAnnouncesStorageFullOnEntry()
+    }
+
+    /// Add and Scan, side by side at the foot of the dashboard. Scan carries
+    /// the amber: it is the screen's call to action, and one tint per screen
+    /// means Add stays the neutral glass beside it.
+    private var controls: some View {
+        HStack(spacing: PopsSpacing.md) {
+            InventoryDashboardAddControl(runner: model.runner, diameter: scanDiameter)
+            scanControl
+        }
+        .padding(.trailing, PopsSpacing.xl)
+        .padding(.bottom, PopsSpacing.lg)
     }
 
     private var scanControl: some View {
         NavigationLink(value: InventoryRoute.scan) {
             Image(systemName: "barcode.viewfinder")
                 .font(.popsTitle)
-                .foregroundStyle(Color.popsForeground)
+                .foregroundStyle(Color.popsInventory)
                 .frame(width: scanDiameter, height: scanDiameter)
         }
         .inventoryGlass(in: Circle())
-        .padding(.trailing, PopsSpacing.xl)
-        .padding(.bottom, PopsSpacing.lg)
         .accessibilityLabel("Scan an item or container label")
     }
 }

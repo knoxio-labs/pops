@@ -40,7 +40,7 @@ internal struct InventoryLocationBrowserView: View {
             case .loaded(let tree): content(tree)
             }
         }
-        .task(id: generation) { await model.tree.observe() }
+        .task(id: generation) { await model.observe() }
         .inventoryRunnerChrome(model.runner)
     }
 
@@ -58,6 +58,10 @@ internal struct InventoryLocationBrowserView: View {
         return ScrollView {
             VStack(alignment: .leading, spacing: PopsSpacing.lg) {
                 InventoryPageTitle(title: "Locations")
+                if let offline = model.offlineLine {
+                    InventoryLocationNoticeLine(
+                        symbol: InventorySymbol.offline.system, tint: .popsWarning, text: offline)
+                }
                 if tree.nodes.isEmpty {
                     firstRun
                 } else {

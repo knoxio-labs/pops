@@ -1,0 +1,49 @@
+import AppCore
+import DesignSystem
+import FeatureInventory
+import SwiftUI
+import Testing
+
+@testable import Pops
+
+/// POPS-4209: the tab bar tints the item that is selected, so tinting the
+/// whole `TabView` from the selection is what makes Inventory's amber belong
+/// to Inventory rather than to whichever tab happens to be chosen.
+///
+/// These pin the rule, not the rendering: `nil` is what restores the
+/// platform's own tint, and every tab other than Inventory must get it.
+@Suite("ContentView tab tint")
+internal struct ContentViewTabTintTests {
+    private static let transactions = MobileFeature(rawValue: "transactions")
+    private static let accounts = MobileFeature(rawValue: "accounts")
+    private static let receipts = MobileFeature(rawValue: "receipt-capture")
+
+    @Test("Inventory selected tints the tab bar with Inventory's amber")
+    func inventorySelectedIsAmber() {
+        #expect(ContentView.tabTint(for: FeatureInventory.feature) == Color.popsInventory)
+    }
+
+    @Test("every other feature keeps the app's usual tint")
+    func otherFeaturesKeepTheDefault() {
+        for feature in [Self.transactions, Self.accounts, Self.receipts] {
+            #expect(
+                ContentView.tabTint(for: feature) == nil,
+                Comment(rawValue: "\(feature.rawValue) no longer keeps the platform's own tint"))
+        }
+    }
+
+    @Test("Inventory's search sibling is not the Inventory tab item")
+    func theSearchSiblingKeepsTheDefault() {
+        #expect(ContentView.tabTint(for: ContentView.inventorySearchTab) == nil)
+    }
+
+    @Test("the amber is never the tint while another tab is the one shown")
+    func amberFollowsTheSelection() {
+        let tabs = ContentView.tabs(for: [Self.transactions, FeatureInventory.feature])
+        let shown = ContentView.shownFeature(chosen: Self.transactions, available: tabs)
+        #expect(ContentView.tabTint(for: shown) == nil)
+        let inventoryShown = ContentView.shownFeature(
+            chosen: FeatureInventory.feature, available: tabs)
+        #expect(ContentView.tabTint(for: inventoryShown) == Color.popsInventory)
+    }
+}

@@ -81,7 +81,7 @@ internal struct InventoryFormCodeRow: View {
             InventorySymbol.offline.image
                 .foregroundStyle(Color.popsMutedForeground)
                 .accessibilityLabel("No code can be suggested right now")
-        case .idle, .offered, .rejected, .edited:
+        case .idle, .offered, .accepted, .rejected, .edited:
             Button(action: onSuggest) {
                 InventorySymbol.suggest.image
             }

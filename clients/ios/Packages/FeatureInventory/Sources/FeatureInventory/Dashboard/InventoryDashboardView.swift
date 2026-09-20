@@ -42,6 +42,7 @@ internal struct InventoryDashboardView: View {
         .inventoryPlacementPicker($moving, runner: model.runner) { _ in
             inHandSelection.deselectAll()
         }
+        .inventoryTypeArrivedSheet(model.typeArrival)
         .inventoryRunnerChrome(model.runner)
     }
 

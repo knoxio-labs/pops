@@ -14,6 +14,10 @@ A snapshot page from a new epoch discards every stored row first: a restored ser
 
 Items and locations each have two tables of the same shape: `*_base` is what the server last sent, and the unsuffixed table is what queries read. A page writes only the base; the rebase that follows in the same transaction resets every row the page changed, or any logged change wrote, and replays the log over it.
 
+## Type arrivals
+
+Each item row keeps the migrated free-text `legacy_type` the server sends as `legacyType`; no command writes it. Storing a catalogue over an older version queues every type it adds in `sync_meta.type_arrivals`, and `settleTypeArrival(typeKey:)` moves a key from waiting to settled, which is the type-arrived sheet's shown-once flag. The first catalogue a replica stores queues nothing, a resync keeps both lists, and a settled key is never queued again. The migration that added the column gives a downloaded replica an epoch no server issued, so its next feed request is a `409 resync_required` and the snapshot that answers it brings every row's legacy type.
+
 ## The mutation log
 
 `perform(_:mutationId:clientTime:)` applies a command to the optimistic layer through `LocalReducer` and logs it in `mutation_log`, in one transaction, and returns: the change is on disk before anything is sent. The reducer is the server's command layer (`pillars/inventory/src/domain/commands/`) redone in Swift. It refuses what the server refuses, with the same reason, and records the same revision bumps and events. `CommandVectorTests` replays every vector in `clients/ios/Contracts/command-vectors-v1.json` through it and checks the outcome, the mutation that would be sent, and the resulting rows.

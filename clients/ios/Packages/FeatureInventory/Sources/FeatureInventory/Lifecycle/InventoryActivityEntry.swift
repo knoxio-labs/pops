@@ -22,6 +22,9 @@ internal struct InventoryActivityEntry: Identifiable, Hashable {
     /// Still the latest change to every field it touched, and not a destroy,
     /// so its account offers Undo.
     internal let isUndoable: Bool
+    /// The record the event is about, for a list that mixes records; nil on
+    /// one record's own History, where the page already names it.
+    internal var record: String?
 
     internal var id: Int { seq }
 

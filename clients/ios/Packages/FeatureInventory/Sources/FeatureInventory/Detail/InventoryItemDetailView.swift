@@ -23,6 +23,7 @@ internal struct InventoryItemDetailView<Capability: View>: View {
     @State private var pending: InventoryItemDetailPending?
     @State private var moving: InventoryPlacementRequest?
     @State private var storing = false
+    @State private var retakingPhoto: (sha256: String, source: InventoryPhotoSource)?
     @Environment(\.inventoryItemForm) private var itemForm
 
     internal init(
@@ -42,7 +43,9 @@ internal struct InventoryItemDetailView<Capability: View>: View {
     internal var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: PopsSpacing.md) {
-                InventoryItemDetailHeader(detail: detail) { await model.photo($0, variant: $1) }
+                InventoryItemDetailHeader(
+                    detail: detail, load: { await model.photo($0, variant: $1) },
+                    manage: photoManagement)
                 InventoryItemDetailFacts(detail: detail)
                 InventoryItemDetailLifecycleNotice(detail: detail)
                 InventoryItemDetailActionRow(
@@ -92,6 +95,23 @@ internal struct InventoryItemDetailView<Capability: View>: View {
         .inventoryUndoCapsule($model.undoOffer) { offer in
             Task { await model.undo(offer) }
         }
+        .inventoryPhotoPickerSheet(
+            source: Binding(
+                get: { retakingPhoto?.source },
+                set: { newValue in if newValue == nil { retakingPhoto = nil } })
+        ) { data in
+            guard let sha256 = retakingPhoto?.sha256 else { return }
+            retakingPhoto = nil
+            Task { await model.retakePhoto(sha256, with: data) }
+        }
+    }
+
+    private var photoManagement: InventoryPhotoManagement {
+        InventoryPhotoManagement(
+            remove: { sha256 in Task { await model.removePhoto(sha256) } },
+            move: { sha256, direction in Task { await model.movePhoto(sha256, direction) } },
+            retake: { sha256, source in retakingPhoto = (sha256, source) }
+        )
     }
 
     private var sections: some View {

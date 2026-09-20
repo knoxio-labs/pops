@@ -16,10 +16,18 @@ internal struct InventoryPhotoStrip: View {
     internal let capture: ((InventoryPhotoSource) -> Void)?
     internal let retry: (String) -> Void
     internal let remove: (String) -> Void
+    /// Replaces one photo with a freshly captured one, when `capture` can
+    /// take a photo at all; nil hides Retake from every tile's menu.
+    internal let retake: ((String, InventoryPhotoSource) -> Void)?
+    /// Moves an attached photo earlier or later among the other attached
+    /// photos; nil (a photo still local, with no place of its own yet) hides
+    /// both entries from that tile's menu.
+    internal let reorder: ((String, InventoryPhotoReorderDirection) -> Void)?
     internal let thumbnail: (String) async -> Data?
 
     @ScaledMetric(relativeTo: .body) private var side = PopsSize.countField
     @State private var isChoosingSource = false
+    @State private var retakingSha256: String?
 
     internal var body: some View {
         ScrollView(.horizontal) {
@@ -27,12 +35,7 @@ internal struct InventoryPhotoStrip: View {
                 captureTile
                 ForEach(photos) { photo in
                     InventoryPhotoTile(photo: photo, side: side, thumbnail: thumbnail)
-                        .contextMenu {
-                            if photo.hasFailed {
-                                Button("Retry") { retry(photo.sha256) }
-                                Button("Remove", role: .destructive) { remove(photo.sha256) }
-                            }
-                        }
+                        .contextMenu { menu(for: photo) }
                         .transition(.scale.combined(with: .opacity))
                 }
             }
@@ -41,6 +44,43 @@ internal struct InventoryPhotoStrip: View {
             .padding(.vertical, PopsSpacing.sm)
         }
         .scrollIndicators(.hidden)
+        .confirmationDialog(
+            "Retake photo", isPresented: retakeSourceBinding, titleVisibility: .hidden
+        ) {
+            Button("Take Photo") { chooseRetakeSource(.camera) }
+            Button("Choose from Library") { chooseRetakeSource(.library) }
+        }
+    }
+
+    @ViewBuilder
+    private func menu(for photo: InventoryFormPhoto) -> some View {
+        if photo.hasFailed {
+            Button("Retry") { retry(photo.sha256) }
+        }
+        if capture != nil {
+            Button("Retake") {
+                if InventoryCameraAvailability.isAvailable {
+                    retakingSha256 = photo.sha256
+                } else {
+                    retake?(photo.sha256, .library)
+                }
+            }
+        }
+        if let reorder, case .attached = photo.upload {
+            Button("Move earlier") { reorder(photo.sha256, .earlier) }
+            Button("Move later") { reorder(photo.sha256, .later) }
+        }
+        Button("Delete", role: .destructive) { remove(photo.sha256) }
+    }
+
+    private var retakeSourceBinding: Binding<Bool> {
+        Binding(get: { retakingSha256 != nil }, set: { if !$0 { retakingSha256 = nil } })
+    }
+
+    private func chooseRetakeSource(_ source: InventoryPhotoSource) {
+        guard let sha256 = retakingSha256 else { return }
+        retakingSha256 = nil
+        retake?(sha256, source)
     }
 
     @MainActor

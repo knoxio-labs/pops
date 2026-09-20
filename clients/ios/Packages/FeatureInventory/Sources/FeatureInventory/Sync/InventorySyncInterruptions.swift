@@ -1,12 +1,13 @@
 import AppCore
 import DesignSystem
+import Foundation
 import SwiftUI
 
 /// The three things that stop a change from syncing, per ADR-002's per-
 /// replica state machine. Session expired and app too old block until acted
 /// on; storage full is an alert, because reading still works while it is
 /// outstanding.
-private enum InventorySyncInterruptionCopy {
+internal enum InventorySyncInterruptionCopy {
     internal static func line(_ reason: InventoryBlockReason) -> String {
         switch reason {
         case .sessionExpired: "Session expired"
@@ -27,6 +28,14 @@ private enum InventorySyncInterruptionCopy {
         case .appTooOld: .appUpdate
         }
     }
+
+    /// Opens the TestFlight app to check for an update. This build ships
+    /// only through TestFlight — no App Store Connect app id and no
+    /// TestFlight public join link is checked into this repo, so a URL
+    /// naming a specific build's page cannot be built here — and this
+    /// generic scheme, which needs neither, is the one public URL this
+    /// build can name.
+    internal static let updateURL = URL(string: "itms-beta://")!
 }
 
 extension View {
@@ -39,11 +48,24 @@ extension View {
         modifier(InventorySyncInterruptionsModifier(store: store))
     }
 
+    /// Announces Storage full the moment this view appears, when the
+    /// composition root says the bound device's replica never opened. Attach
+    /// once, at Inventory's own root: every write already goes to
+    /// `StorageFullInventoryStore` before this fires, so there is nothing
+    /// to wait for and nothing a screen underneath needs to gate on.
+    internal func inventoryAnnouncesStorageFullOnEntry() -> some View {
+        modifier(InventoryStorageFullOnEntryModifier())
+    }
+
     /// The alert Storage full shows: read still works, so this can be put
     /// off rather than blocking the screen underneath.
+    ///
+    /// No "Free up space" action: iOS has no public URL that opens
+    /// Settings > General > iPhone Storage directly, so there is nothing
+    /// this button could open that "Not now" does not already cover —
+    /// dismissing and leaving the person to open Settings themselves.
     internal func inventoryStorageFullAlert(isPresented: Binding<Bool>) -> some View {
         alert("Storage full", isPresented: isPresented) {
-            Button("Free up space") {}
             Button("Not now", role: .cancel) {}
         } message: {
             Text(InventoryCopy.storageFullMessage)
@@ -80,6 +102,20 @@ internal struct InventorySyncInterruptionsModifier: ViewModifier {
     }
 }
 
+internal struct InventoryStorageFullOnEntryModifier: ViewModifier {
+    @Environment(\.inventoryStorageFullOnEntry) private var storageFullOnEntry
+    @State private var presented = false
+
+    func body(content: Content) -> some View {
+        content
+            .task {
+                guard storageFullOnEntry else { return }
+                presented = true
+            }
+            .inventoryStorageFullAlert(isPresented: $presented)
+    }
+}
+
 extension Binding where Value == InventoryBlockReason? {
     /// `InventoryBlockReason` has no identity of its own; a sheet keyed on
     /// it needs one, and the reason itself is exactly that key (there is at
@@ -104,6 +140,9 @@ internal struct IdentifiedBlockReason: Identifiable {
 internal struct InventoryBlockingSheet: View {
     internal let reason: IdentifiedBlockReason
 
+    @Environment(\.startRePairing) private var startRePairing
+    @Environment(\.openURL) private var openURL
+
     internal init(reason: IdentifiedBlockReason) {
         self.reason = reason
     }
@@ -120,6 +159,7 @@ internal struct InventoryBlockingSheet: View {
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
             Button {
+                act()
             } label: {
                 Text(InventorySyncInterruptionCopy.action(reason.reason))
                     .font(.popsHeadline)
@@ -132,5 +172,17 @@ internal struct InventoryBlockingSheet: View {
         .tint(.popsInventory)
         .presentationDetents([.medium])
         .interactiveDismissDisabled()
+    }
+
+    /// Sign in re-pairs, through the shell rather than through anything this
+    /// feature owns — see ``RePairingAction``. Update opens the app this
+    /// build's updates arrive through; see ``InventorySyncInterruptionCopy/updateURL``
+    /// for why that is a generic TestFlight launch rather than a link to a
+    /// specific build.
+    private func act() {
+        switch reason.reason {
+        case .sessionExpired: startRePairing()
+        case .appTooOld: openURL(InventorySyncInterruptionCopy.updateURL)
+        }
     }
 }

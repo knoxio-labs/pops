@@ -243,8 +243,12 @@ jobs:
     # it hangs. Without a ceiling that burns the job's full 6h default. The
     # ceiling sits well above a healthy queue-lane run, which takes ~50 minutes
     # (package tests, the shared compile, suite + analyzer, the Release check
-    # and the UI flow); a pull request's run is ~16.
-    timeout-minutes: 75
+    # and the UI flow); a pull request's run is ~16. It also has to cover the
+    # tail: when several iOS lanes share the macOS runners the shared compile
+    # alone can take 46 minutes, and a ceiling with no headroom cancels the UI
+    # flow mid-run, which fails the merge group and ejects the pull request
+    # instead of reporting anything about it (POPS-4215).
+    timeout-minutes: 100
     defaults:
       run:
         working-directory: clients/ios

@@ -218,6 +218,18 @@ describe('item rows on the wire', () => {
     });
     expect(byId.get(found)?.provenance).toBeNull();
   });
+
+  it('carry the migrated free-text type as legacyType, null when there was none', async () => {
+    const target = harness();
+    const [migrated, fresh] = [randomUUID(), randomUUID()];
+    await apply(target, createItem(migrated, 'Drill'), createItem(fresh, 'Mug'));
+    target.db.db.update(items).set({ legacyType: 'Tools' }).where(eq(items.id, migrated)).run();
+
+    const { items: rows } = await feed(target);
+    const byId = new Map(rows.map((row) => [row.id, row]));
+    expect(byId.get(migrated)?.legacyType).toBe('Tools');
+    expect(byId.get(fresh)?.legacyType).toBeNull();
+  });
 });
 
 describe('GET /sync/items/:id/events', () => {

@@ -17,6 +17,7 @@ internal protocol WireInventoryItem {
     var seq: Int { get }
     var name: String { get }
     var typeKey: String? { get }
+    var legacyType: String? { get }
     var fieldsAdditionalProperties: [String: OpenAPIValueContainer] { get }
     var note: String? { get }
     var code: String? { get }
@@ -82,6 +83,7 @@ internal func inventoryItem<Item: WireInventoryItem>(
         seq: wire.seq,
         name: wire.name,
         typeKey: wire.typeKey,
+        legacyType: wire.legacyType,
         fields: customFields(from: wire.fieldsAdditionalProperties),
         note: wire.note,
         code: wire.code,

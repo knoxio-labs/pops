@@ -1,5 +1,6 @@
 import AppCore
 import Auth
+import FeatureInventory
 import FeatureReceiptCapture
 import Foundation
 import SwiftUI
@@ -234,6 +235,26 @@ internal struct ContentViewTabSwitcherTests {
             Comment(
                 rawValue: "the features the BFM said are available are not the features on offer "
                     + "— a feature the app cannot reach is a feature that may as well not exist"
+            )
+        )
+    }
+
+    /// POPS-4191: Inventory's search flow lives in the tab bar's search slot,
+    /// not inside the Inventory tab — so Inventory being the *only* available
+    /// feature must not fall into the single-feature, no-tab-bar path above:
+    /// there are two things to switch between even then.
+    @Test("Inventory alone still gets a tab bar, for its search sibling")
+    func inventoryAloneGetsATabBarForItsSearchSibling() throws {
+        let switcher = try #require(
+            try mountedTabBar(available: [FeatureInventory.feature]),
+            "Inventory is available alone but no tab bar was built for its search sibling"
+        )
+
+        #expect(
+            switcher.tabBar.items?.count == 2,
+            Comment(
+                rawValue: "expected Inventory's own tab plus its search sibling, found "
+                    + "\(switcher.tabBar.items?.count ?? 0)"
             )
         )
     }

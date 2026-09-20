@@ -9,6 +9,7 @@ import AppCore
 internal enum InventoryRoute: Hashable, Sendable {
     case items
     case containers
+    case openContainers
     case locations
     case inHand
     case activity

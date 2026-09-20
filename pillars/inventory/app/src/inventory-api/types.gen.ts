@@ -3139,6 +3139,7 @@ export type SyncChangesResponses = {
       id: string;
       isContainer: boolean;
       isFull: boolean | null;
+      legacyType: string | null;
       lifecycle: string;
       lifecycleChangedAt: string | null;
       name: string;
@@ -3495,6 +3496,7 @@ export type SyncSnapshotResponses = {
       id: string;
       isContainer: boolean;
       isFull: boolean | null;
+      legacyType: string | null;
       lifecycle: string;
       lifecycleChangedAt: string | null;
       name: string;
@@ -3741,6 +3743,7 @@ export type WebListResponses = {
       id: string;
       isContainer: boolean;
       isFull: boolean | null;
+      legacyType: string | null;
       lifecycle: string;
       lifecycleChangedAt: string | null;
       name: string;
@@ -3914,6 +3917,7 @@ export type WebGetResponses = {
       id: string;
       isContainer: boolean;
       isFull: boolean | null;
+      legacyType: string | null;
       lifecycle: string;
       lifecycleChangedAt: string | null;
       name: string;

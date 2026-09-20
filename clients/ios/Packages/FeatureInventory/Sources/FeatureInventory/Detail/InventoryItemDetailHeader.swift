@@ -11,7 +11,17 @@ import SwiftUI
 internal struct InventoryItemDetailHeader: View {
     internal let detail: InventoryItemDetail
     internal let load: InventoryPhotoLoader
+    internal let manage: InventoryPhotoManagement?
     @ScaledMetric(relativeTo: .largeTitle) private var heroHeight = PopsSize.pageHeight * 1.5
+
+    internal init(
+        detail: InventoryItemDetail, load: @escaping InventoryPhotoLoader,
+        manage: InventoryPhotoManagement? = nil
+    ) {
+        self.detail = detail
+        self.load = load
+        self.manage = manage
+    }
 
     internal var body: some View {
         VStack(alignment: .leading, spacing: PopsSpacing.md) {
@@ -23,7 +33,7 @@ internal struct InventoryItemDetailHeader: View {
 
     private var hero: some View {
         InventoryItemDetailHeroPhotos(
-            photos: detail.photos, symbol: detail.record.symbol.system, load: load
+            photos: detail.photos, symbol: detail.record.symbol.system, load: load, manage: manage
         )
         .frame(height: heroHeight)
         .frame(maxWidth: .infinity)

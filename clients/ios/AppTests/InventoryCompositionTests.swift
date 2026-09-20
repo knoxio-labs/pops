@@ -85,6 +85,30 @@ internal struct InventoryCompositionTests {
         #expect(await statuses.next() == .empty)
     }
 
+    /// POPS-4176: this is what lets Inventory announce Storage full the
+    /// moment it is entered, rather than waiting for a write nobody has
+    /// made yet to discover the same thing.
+    @Test("no room to open the replica is recorded, for entering Inventory to announce")
+    func storageFullIsRecordedForTheBoundDevice() throws {
+        let root = composition(openInventoryReplica: { _ in throw InventoryStorageError.full })
+        _ = root.dependencies(for: try device())
+
+        #expect(root.inventoryStorageFull)
+    }
+
+    @Test("a replica that opened fine records nothing to announce")
+    func healthyReplicaRecordsNoStorageFull() throws {
+        let root = composition()
+        _ = root.dependencies(for: try device())
+
+        #expect(!root.inventoryStorageFull)
+    }
+
+    @Test("before any device is bound, there is nothing to announce")
+    func nothingBoundRecordsNoStorageFull() {
+        #expect(!composition().inventoryStorageFull)
+    }
+
     @Test("any other failure to open the replica binds the unbound store")
     func otherOpenFailureIsUnbound() throws {
         let bound = composition(openInventoryReplica: { _ in throw CocoaError(.fileNoSuchFile) })

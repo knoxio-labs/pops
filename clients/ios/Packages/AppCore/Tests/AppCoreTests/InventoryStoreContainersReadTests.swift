@@ -31,4 +31,20 @@ internal struct InventoryStoreContainersReadTests {
 
         #expect(containers.map(\.id) == ["closed-box", "open-box", "retired-box"])
     }
+
+    @Test("open containers are the active, undeleted containers whose access is open")
+    func openContainersExcludeDeletedClosedAndInactive() async throws {
+        let store = InMemoryInventoryStore(items: [
+            Self.item("open-box", placement: .location("loc"), access: .open),
+            Self.item("closed-box", placement: .hand, access: .closed),
+            Self.item("retired-box", placement: .hand, access: .open, lifecycle: .retired),
+            Self.item("gone-box", placement: .hand, access: .open, deletedAt: .now),
+            Self.item("plate", placement: .container("open-box")),
+        ])
+
+        var values = store.observe(.openContainers).makeAsyncIterator()
+        let open = try #require(await values.next())
+
+        #expect(open.map(\.id) == ["open-box"])
+    }
 }

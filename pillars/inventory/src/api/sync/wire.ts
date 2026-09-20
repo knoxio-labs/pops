@@ -115,6 +115,7 @@ export function toSyncItem(row: ItemRow, extras: ItemExtras, available: boolean)
     seq: row.seq,
     name: row.name,
     typeKey: row.typeKey,
+    legacyType: row.legacyType,
     fields: fieldsBlobSchema.parse(JSON.parse(row.fields)),
     note: row.note,
     code: row.code,

@@ -19,3 +19,4 @@ export {
   type ValidationResult,
   type ValidationIssue,
 } from './validate.js';
+export { NAV_COLOR } from './ui.js';

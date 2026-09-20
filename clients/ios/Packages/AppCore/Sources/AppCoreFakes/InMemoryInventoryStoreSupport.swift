@@ -47,6 +47,7 @@ internal func bumped(
         seq: seq,
         name: name.resolved(against: item.name),
         typeKey: item.typeKey,
+        legacyType: item.legacyType,
         fields: fields.resolved(against: item.fields),
         note: note.resolved(against: item.note),
         code: code.resolved(against: item.code),
@@ -71,7 +72,8 @@ internal func bumped(
 internal func retyped(_ item: InventoryItem, typeKey: String, isContainer: Bool) -> InventoryItem {
     InventoryItem(
         id: item.id, revision: item.revision, seq: item.seq, name: item.name, typeKey: typeKey,
-        fields: item.fields, note: item.note, code: item.code, externalIds: item.externalIds,
+        legacyType: item.legacyType, fields: item.fields, note: item.note, code: item.code,
+        externalIds: item.externalIds,
         quantity: item.quantity, lifecycle: item.lifecycle,
         lifecycleChangedAt: item.lifecycleChangedAt, placement: item.placement,
         previousPlacement: item.previousPlacement,

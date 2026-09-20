@@ -133,6 +133,14 @@ public final class OnlineInventoryStore: InventoryStore, Sendable {
         try await transport.uploadMedia(sha256: sha256, data: data, contentType: contentType)
     }
 
+    /// Nothing is ever staged locally by this store, so there is nothing to
+    /// discard.
+    public func discardPhoto(_ sha256: String) async throws {}
+
+    public func settleTypeArrival(typeKey: String) async throws {
+        try replica.settleTypeArrival(typeKey: typeKey)
+    }
+
     private func submit(_ mutation: InventoryOutboundMutation) async throws
         -> InventoryMutationOutcome
     {

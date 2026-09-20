@@ -49,6 +49,7 @@ internal struct FormFixtureSource: InventoryQuerySource {
     func inventorySyncLedger() -> InventoryReplicaSyncLedger { InventoryReplicaSyncLedger() }
     func inventoryReplicaStatus() -> InventoryReplicaStatus { status }
     func inventoryPhotoUploads() -> [String: InventoryPhotoUpload] { photoUploads }
+    func inventoryAwaitingTypeArrivals() -> [String] { [] }
 }
 
 /// A store that records every command in order and applies none, answering
@@ -61,6 +62,7 @@ internal final class RecordingFormStore: InventoryStore, Sendable {
         var observers: [UUID: @Sendable (FormFixtureSource) -> Void] = [:]
         var uploaded: [(sha256: String, data: Data)] = []
         var uploadFailure: Error?
+        var discarded: [String] = []
     }
 
     private let state: Mutex<State>
@@ -71,6 +73,7 @@ internal final class RecordingFormStore: InventoryStore, Sendable {
 
     internal var performed: [InventoryCommand] { state.withLock { $0.performed } }
     internal var uploaded: [(sha256: String, data: Data)] { state.withLock { $0.uploaded } }
+    internal var discarded: [String] { state.withLock { $0.discarded } }
 
     /// Makes every command of this kind throw `RepositoryError.unavailable`.
     internal func fail(_ kind: String) {
@@ -144,7 +147,13 @@ internal final class RecordingFormStore: InventoryStore, Sendable {
         return InventoryMediaUploadResult(sha256: sha256, alreadyStored: false)
     }
 
+    func discardPhoto(_ sha256: String) async throws {
+        state.withLock { $0.discarded.append(sha256) }
+    }
+
     func status() -> AsyncStream<InventoryReplicaStatus> { observe(.replicaStatus) }
+
+    func settleTypeArrival(typeKey: String) async throws {}
 
     private static func kind(of command: InventoryCommand) -> String {
         switch command {

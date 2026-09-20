@@ -28,6 +28,11 @@ extension InMemoryInventoryStore {
         /// clears itself — the same one-shot shape a real free-space check
         /// would have.
         var forcedStorageFull = false
+        /// Keys of types a catalogue change added that the type-arrived
+        /// sheet has not asked about, oldest first; `settled` holds the ones
+        /// it has, so a type removed and added again is not asked twice.
+        var awaitingTypeArrivals: [String] = []
+        var settledTypeArrivals: Set<String> = []
 
         func inventoryItem(id: String) -> InventoryItem? { items[id] }
 
@@ -60,8 +65,10 @@ extension InMemoryInventoryStore {
         }
 
         func inventoryOpenContainers() -> [InventoryItem] {
-            items.values.filter { $0.containment?.access == .open && $0.lifecycle == .active }
-                .sorted { $0.name < $1.name }
+            items.values.filter {
+                $0.containment?.access == .open && $0.lifecycle == .active && !$0.isDeleted
+            }
+            .sorted { $0.name < $1.name }
         }
 
         func inventoryContainers() -> [InventoryItem] {
@@ -112,6 +119,8 @@ extension InMemoryInventoryStore {
         /// Always empty: this fake stores a photo while its caller waits,
         /// as the server does, so nothing is ever staged.
         func inventoryPhotoUploads() -> [String: InventoryPhotoUpload] { [:] }
+
+        func inventoryAwaitingTypeArrivals() -> [String] { awaitingTypeArrivals }
     }
 }
 

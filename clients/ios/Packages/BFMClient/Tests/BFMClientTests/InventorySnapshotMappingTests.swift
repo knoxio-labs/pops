@@ -26,6 +26,23 @@ internal struct InventorySnapshotMappingTests {
         #expect(page.nextCursor == "cursor-2")
     }
 
+    @Test("an item carries its migrated legacy type on both the snapshot and the feed")
+    func legacyType() async throws {
+        let items = [
+            InventoryWire.item(id: "drill", legacyType: "Tools"),
+            InventoryWire.item(id: "mug"),
+        ]
+        let snapshot = try await BFMInventoryTransport.stubbed(
+            StubTransport(status: .ok, json: InventoryWire.snapshot(items: items))
+        ).fetchSnapshot(cursor: nil, limit: 250)
+        let feed = try await BFMInventoryTransport.stubbed(
+            StubTransport(status: .ok, json: InventoryWire.changes(items: items))
+        ).fetchChanges(since: 10, epoch: "epoch-1", limit: 250)
+
+        #expect(snapshot.items.map(\.legacyType) == ["Tools", nil])
+        #expect(feed.items.map(\.legacyType) == ["Tools", nil])
+    }
+
     @Test("a container item carries its access and fullness; a non-container carries neither")
     func containment() async throws {
         let page = try await BFMInventoryTransport.stubbed(
