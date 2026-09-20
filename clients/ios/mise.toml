@@ -654,6 +654,49 @@ description = "The pre-upload camera purpose-string check still rejects what App
 hide = true
 run = "scripts/check-camera-purpose.sh self-test"
 
+# WHICH CERTIFICATE THE SHIPPED ARCHIVE ASKS FOR, which nothing else here can
+# see: `release:testflight` is the only caller that passes POPS_FLAVOR=testflight
+# and it runs after merge, against an Apple account, so its first verdict on a
+# regression would be a red `main` and a burnt certificate slot (POPS-4221).
+# Build settings alone answer it, so this signs nothing, compiles nothing and
+# needs no Apple account.
+#
+# Both halves are the check. A shipped archive signed for development mints a
+# certificate per ephemeral runner until the account hits its cap; a local
+# device build signed for distribution will not launch on a phone.
+[tasks."verify:signing-identity"]
+description = "The TestFlight archive asks for a distribution certificate, and a local build for a development one"
+depends = ["generate"]
+run = '''
+set -euo pipefail
+
+identity() {
+  xcodebuild -project Pops.xcodeproj -scheme "$1" -configuration Release \
+    -destination 'generic/platform=iOS' -showBuildSettings ${2:+POPS_FLAVOR="$2"} |
+    awk -F ' = ' '$1 ~ /^ *CODE_SIGN_IDENTITY$/ { print $2 }'
+}
+
+status=0
+for scheme in Pops PopsPlayground; do
+  # No flavour named is the local flavour, which is what every build but the
+  # upload gets — including `build:device` and `install:phone`.
+  for spec in "::Apple Development" "testflight::Apple Distribution"; do
+    flavor="${spec%%::*}"
+    expected="${spec##*::}"
+    actual="$(identity "$scheme" "$flavor")"
+    if [ "$actual" != "$expected" ]; then
+      echo "$scheme (flavour ${flavor:-local}) signs with '$actual', expected '$expected'" >&2
+      status=1
+    fi
+  done
+done
+
+if [ "$status" -eq 0 ]; then
+  echo "Signing identities: development locally, distribution for TestFlight."
+fi
+exit $status
+'''
+
 # The one entry point. `.github/workflows/ios-quality.yml` invokes this task
 # rather than restating the commands, because the moment the two are written
 # out separately they drift and a green local run means nothing.
@@ -698,6 +741,7 @@ mise run generated-boundary || status=1
 mise run verify:release-version || status=1
 mise run verify:install-on-phone || status=1
 mise run verify:camera-purpose || status=1
+mise run verify:signing-identity || status=1
 
 if mise run verify:xcode-version; then
   mise run swift-format lint || status=1
