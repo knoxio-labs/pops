@@ -298,15 +298,17 @@ run = [
   "mise run fixture:command-vectors:vendor",
 ]
 
-# The iOS app icon's artwork is generated, not drawn. It lives here rather than
-# under `clients/ios` because it writes into both Icon Composer bundles and
-# reads the nav palette out of `libs/sdk` — three units, so the task belongs
-# above all of them. Safe to re-run: the render is derived from constants in the
-# script, so an unchanged script rewrites identical pixels, and
-# `scripts/__tests__/ios-app-icon.test.ts` fails if the committed PNGs and the
-# script disagree.
+# The iOS app icon's layers are generated, not drawn. The task lives here rather
+# than under `clients/ios` because it writes into both Icon Composer bundles and
+# its palette is asserted against `libs/sdk`'s nav enum — three units, so it
+# belongs above all of them. Safe to re-run: the SVG and the `icon.json` are
+# derived from constants in the script, so an unchanged script rewrites
+# identical files, and `scripts/__tests__/ios-app-icon.test.ts` fails if the
+# committed bundles and the script disagree. To see a change, render the bundle
+# with `xcrun actool` — the recipe is in clients/ios/README.md — never by
+# assembling the layers by hand.
 [tasks."icon:ios"]
-description = "Regenerate the iOS app icon artwork into both Icon Composer bundles"
+description = "Regenerate the iOS app icon layers into both Icon Composer bundles"
 dir = "{{config_root}}"
 run = "node scripts/ios-app-icon.mjs"
 

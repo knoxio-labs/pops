@@ -10,18 +10,46 @@
       "layers": [
         {
           "blend-mode": "normal",
-          "image-name": "layer-weave.png",
-          "name": "Weave",
+          "image-name": "layer-weft.svg",
+          "name": "Weft",
           "opacity": 1,
           "position": {
-            "scale": 0.5,
-            "translation-in-points": [0, 0]
+            "scale": 1,
+            "translation-in-points": [
+              0,
+              0
+            ]
           }
         }
       ],
       "shadow": {
         "kind": "neutral",
-        "opacity": 0.35
+        "opacity": 0.5
+      },
+      "translucency": {
+        "enabled": false,
+        "value": 0
+      }
+    },
+    {
+      "layers": [
+        {
+          "blend-mode": "normal",
+          "image-name": "layer-warp.svg",
+          "name": "Warp",
+          "opacity": 1,
+          "position": {
+            "scale": 1,
+            "translation-in-points": [
+              0,
+              0
+            ]
+          }
+        }
+      ],
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.5
       },
       "translucency": {
         "enabled": false,
@@ -30,7 +58,9 @@
     }
   ],
   "supported-platforms": {
-    "circles": ["watchOS"],
+    "circles": [
+      "watchOS"
+    ],
     "squares": "shared"
   }
 }

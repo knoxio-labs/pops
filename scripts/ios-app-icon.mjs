@@ -1,28 +1,45 @@
 #!/usr/bin/env node
 /**
- * Generator for the iOS app icon artwork.
+ * Generator for the iOS app icon's layers.
  *
- * `clients/ios/App/AppIcon.icon` is an Icon Composer source whose single
- * image layer is a 3x3 basketweave of six cords, one per member of
- * `NAV_COLOR` in `libs/sdk/src/manifest-schema/ui.ts`. That layer used to be
- * a checked-in PNG with no source, which is why it drifted into a state
- * nobody could correct: the geometry lived only in the pixels.
+ * `clients/ios/App/AppIcon.icon` is an Icon Composer source: a gradient
+ * background plus foreground layers, with the dark, tinted and clear
+ * appearances derived by the system rather than checked in. The artwork is a
+ * three-by-three lattice of six cords, one per member of `NAV_COLOR` in
+ * `libs/sdk/src/manifest-schema/ui.ts` — that enum is closed and has exactly
+ * six members, which is where the thread count comes from.
  *
- * So the pixels are derived here instead, from the constants below, with no
- * dependency beyond `node:zlib` — the mark is capsules on a transparent
- * ground, which is signed-distance arithmetic rather than anything a
- * rasteriser is needed for.
+ * The layers were a single checked-in PNG with no source, which is why the
+ * mark drifted into a state nobody could correct: its geometry lived only in
+ * the pixels. They are derived here instead, from the constants below.
  *
- * THE ARTWORK IS FLAT ON PURPOSE. Icon Composer lights the layer itself: it
- * draws a specular rim along the alpha edge, and `icon.json` asks for a
- * neutral system shadow. It also derives the dark, tinted and clear variants
- * from this one image, and a tint is a monochrome remap — baked highlights
- * and baked drop shadows survive that remap as mud. Depth here therefore
- * comes from geometry the system can relight (`CROSSING_CLEARANCE`), never
- * from shading painted into the cords.
+ * `xcrun actool <bundle> --compile <dir> --platform iphonesimulator
+ * --minimum-deployment-target 26.0 --app-icon <name>` renders a bundle through
+ * the real system compositor in about a second, which is the loop to use when
+ * changing any of this. A full Xcode build is not needed, and a hand-drawn
+ * mock-up of the icon is worse than useless here: it shows none of the
+ * lighting the decisions are about.
+ *
+ * NOTHING HERE IS SHADED, AND THE MARK IS SPLIT ACROSS TWO GROUPS. Both halves
+ * matter and it is easy to get half-right:
+ *
+ * - Apple's guidance is to let the system light the artwork: "The system
+ *   dynamically applies visual effects to your app icon layers, so there's no
+ *   need to include specular highlights, drop shadows between layers, beveled
+ *   edges, blurs, glows" (HIG, App icons › Visual effects). Baked lighting also
+ *   cannot survive the tinted and clear appearances, which are a luminance
+ *   remap of this same artwork.
+ * - But ONE group is coplanar. A single group does get a specular rim along
+ *   every edge in its artwork, interior cord edges included — that much was
+ *   verified by rendering it — so the flatness people see in a one-group mark
+ *   is not missing rims. It is that nothing casts onto anything: every shape
+ *   sits in the same plane, so there is no shadow between the cords. "App
+ *   icons include a background layer and one or more foreground layers that
+ *   coalesce to create dimensionality" (HIG, App icons › Layer design), and the
+ *   dimensionality is between the layers.
  *
  * Usage:
- *   node scripts/ios-app-icon.mjs            write the artwork to both icon bundles
+ *   node scripts/ios-app-icon.mjs            write the layers to both icon bundles
  *   node scripts/ios-app-icon.mjs --check    fail if either bundle is out of date
  *
  * Exit 0 = written, or already current under `--check`. Exit 1 = drift under
@@ -32,25 +49,24 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { deflateSync, inflateSync } from 'node:zlib';
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 /**
- * Icon Composer's canvas is 1024 points, and `icon.json` places this layer at
- * `scale: 0.5`, so the artwork is authored in 1024 canvas units and rasterised
- * at twice that. Every constant below is in canvas units.
+ * Icon Composer's canvas, in points. The layers are authored at this size and
+ * placed at `scale: 1`. They are SVG, so there is no raster resolution to pick
+ * — "vector graphics (such as SVG or PDF) scale gracefully and appear crisp at
+ * any size" (HIG, App icons › Layer design).
  */
-export const CANVAS_UNITS = 1024;
-export const RENDER_PIXELS = 2048;
+export const CANVAS = 1024;
 
 /** Thickness of a cord, and the diameter of its rounded cap. */
 export const CORD_WIDTH = 132;
 
 /**
- * Background showing between two parallel cords. Kept wide enough that the
- * lattice still reads as a grid rather than a block at the 29pt settings-row
- * size, which is the size this mark is hardest to hold together at.
+ * Background showing between two parallel cords. Wide enough that the lattice
+ * still reads as a lattice at the 29pt settings-row size, which is the size
+ * this mark is hardest to hold together at.
  */
 export const CORD_GAP = 84;
 
@@ -62,26 +78,49 @@ export const CORD_GAP = 84;
  *
  * It is 86% of the canvas rather than the 80% an icon's artwork usually keeps
  * to, because this silhouette is a cross: its four corners are empty, so the
- * extremes that would otherwise crowd the squircle's own corners do not exist.
+ * extremes that would otherwise crowd the squircle's rounding do not exist.
+ * The layers are authored square and unmasked because the system does the
+ * masking — "providing layers with pre-defined masking negatively impacts
+ * specular highlight effects and makes edges look jagged" (HIG, App icons ›
+ * Icon shape).
  */
 export const MARK_SPAN = 880;
 
 /**
- * How far the background is opened around a cord passing OVER another, cut out
- * of the cord beneath. This is the entire depth cue — an over-cord reads as
- * over because the cord under it stops short of it, not because either is
- * shaded.
+ * How much wider than a warp cord each hole in the weft layer is cut, so a
+ * band of background shows around the warp where it passes over.
+ *
+ * This is what makes the interlace read. The system lights the hole's edge and
+ * the warp cord's edge separately and casts the weft's shadow into the gap, so
+ * the warp looks like it is in front rather than merely adjacent. Zero would
+ * butt the two colours together with no separation at all.
  */
-export const CROSSING_CLEARANCE = 9;
+export const CROSSING_CLEARANCE = 10;
+
+/**
+ * Translucency is OFF on both groups.
+ *
+ * Apple suggests varying opacity for depth — "vary opacity in foreground
+ * layers to increase the sense of depth and liveliness" (HIG, App icons ›
+ * Layer design) — and it was rendered at 0.15, 0.25 and 0.35 before being
+ * rejected. It is the wrong tool for this mark: a translucent weft mixes with
+ * the warp beneath into a third hue that is in no pillar's palette, and it is
+ * redundant here, because the cut-outs already put the warp in front at the
+ * crossings that call for it. The depth comes from the two groups and the
+ * clearance, which cost the palette nothing.
+ */
+export const UPPER_TRANSLUCENCY = 0;
+
+/** How hard the system shadow beneath each group is. */
+export const SHADOW_OPACITY = 0.5;
 
 /**
  * One cord per member of `NAV_COLOR`, at Tailwind's 400 tier — the mark sits
  * on a near-black ground, so it wants the bright end of each hue.
  *
- * The enum is closed and has exactly six members, which is where the thread
- * count comes from: a 3x3 weave needs three warp and three weft. A seventh
- * nav colour would have nowhere to go, and the test asserts these keys against
- * the enum rather than letting the two drift apart quietly.
+ * A seventh nav colour would have nowhere to go in a three-by-three lattice,
+ * and the test asserts these keys against the enum rather than letting the two
+ * drift apart quietly.
  */
 export const PALETTE = {
   rose: '#fb7185',
@@ -92,25 +131,28 @@ export const PALETTE = {
   violet: '#a78bfa',
 };
 
-/**
- * The three vertical cords, left to right.
- *
- * @type {readonly [string, string, string]}
- */
+/** The three vertical cords, left to right. The lower group. */
 export const WARP = ['rose', 'emerald', 'indigo'];
 
-/**
- * The three horizontal cords, top to bottom.
- *
- * @type {readonly [string, string, string]}
- */
+/** The three horizontal cords, top to bottom. The upper group. */
 export const WEFT = ['amber', 'sky', 'violet'];
 
 /**
  * Whether the horizontal cord of row `row` passes over the vertical cord of
- * column `col`. Alternating on the parity of the sum is what a basketweave
- * is; any crossing that agrees with its neighbour turns the mark into a stack
- * of bars.
+ * column `col`. Alternating on the parity of the sum is what a basketweave is;
+ * any crossing that agrees with its neighbour turns the mark into a stack of
+ * bars.
+ *
+ * A z-stack of two groups cannot express that on its own — the upper group is
+ * above the lower one everywhere. So the weft layer, which is the upper group,
+ * is CUT: at each crossing this returns `false` for, a hole the width of the
+ * warp cord plus {@link CROSSING_CLEARANCE} is removed from the weft, and the
+ * warp beneath shows through it.
+ *
+ * The alternative constructions were both rendered and both are worse. Three
+ * groups, with warp-over segments on top, gives every segment its own rim and
+ * shadow, so the crossings read as separate pills sewn onto the cord beneath.
+ * Two groups with no cuts loses the interlace outright.
  *
  * @param {number} row index into {@link WEFT}
  * @param {number} col index into {@link WARP}
@@ -122,52 +164,29 @@ export function horizontalIsOver(row, col) {
 
 const HALF_WIDTH = CORD_WIDTH / 2;
 const HALF_SPAN = MARK_SPAN / 2;
+const CENTRE = CANVAS / 2;
 const CORD_PITCH = CORD_WIDTH + CORD_GAP;
 
 /**
- * Centre offsets of the three parallel cords on either axis, from the canvas
- * centre.
+ * Centre coordinates of the three parallel cords on either axis, in canvas
+ * points from the top-left origin.
  *
  * @type {readonly [number, number, number]}
  */
-export const CORD_OFFSETS = [-CORD_PITCH, 0, CORD_PITCH];
+export const CORD_CENTRES = [CENTRE - CORD_PITCH, CENTRE, CENTRE + CORD_PITCH];
 
 /**
- * Signed distance from a point to a cord's capsule, in canvas units: negative
- * inside, zero on the edge.
- *
- * @param {number} along the point's coordinate on the cord's own axis, relative to the cord's centre
- * @param {number} across its coordinate on the perpendicular axis, likewise
- * @returns {number}
+ * @param {string} name a key of {@link PALETTE}
+ * @returns {string}
  */
-function cordDistance(along, across) {
-  const beyondCore = Math.max(0, Math.abs(along) - (HALF_SPAN - HALF_WIDTH));
-  return Math.hypot(across, beyondCore) - HALF_WIDTH;
-}
-
-const [OFFSET_LOW, OFFSET_MID, OFFSET_HIGH] = CORD_OFFSETS;
-
-/**
- * Which of the three parallel cords on one axis a point falls inside, or `-1`.
- *
- * `slack` widens every cord by that much before testing, which is how the
- * clearance around an over-cord is found. At most one cord can match even
- * widened, because `CORD_GAP` is several times `CROSSING_CLEARANCE`.
- *
- * @param {number} along the point's coordinate on the cords' shared axis
- * @param {number} across its coordinate on the axis the three are spread along
- * @param {number} [slack]
- * @returns {number}
- */
-function cordIndexAt(along, across, slack = 0) {
-  if (cordDistance(along, across - OFFSET_LOW) < slack) return 0;
-  if (cordDistance(along, across - OFFSET_MID) < slack) return 1;
-  if (cordDistance(along, across - OFFSET_HIGH) < slack) return 2;
-  return -1;
+function fillOf(name) {
+  const hex = Object.entries(PALETTE).find(([key]) => key === name)?.[1];
+  if (hex === undefined) throw new Error(`${name} is not one of the six nav colours`);
+  return hex;
 }
 
 /**
- * @param {readonly [string, string, string]} cords
+ * @param {readonly string[]} cords
  * @param {number} index
  * @returns {string}
  */
@@ -178,276 +197,169 @@ function cordAt(cords, index) {
 }
 
 /**
- * The colour visible at one point of the artwork, as a `NAV_COLOR` name, or
- * `null` where the background shows through.
- *
- * Coordinates are in canvas units relative to the canvas centre, x rightwards
- * and y downwards.
- *
- * @param {number} x
- * @param {number} y
- * @returns {string | null}
- */
-export function colorAt(x, y) {
-  const col = cordIndexAt(y, x);
-  const row = cordIndexAt(x, y);
-
-  if (col >= 0 && row >= 0) {
-    return horizontalIsOver(row, col) ? cordAt(WEFT, row) : cordAt(WARP, col);
-  }
-
-  if (col >= 0) {
-    const near = cordIndexAt(x, y, CROSSING_CLEARANCE);
-    if (near >= 0 && horizontalIsOver(near, col)) return null;
-    return cordAt(WARP, col);
-  }
-
-  if (row >= 0) {
-    const near = cordIndexAt(y, x, CROSSING_CLEARANCE);
-    if (near >= 0 && !horizontalIsOver(row, near)) return null;
-    return cordAt(WEFT, row);
-  }
-
-  return null;
-}
-
-/**
- * @param {string} hex a `#rrggbb` literal
- * @returns {[number, number, number]}
- */
-function parseHex(hex) {
-  return [
-    Number.parseInt(hex.slice(1, 3), 16),
-    Number.parseInt(hex.slice(3, 5), 16),
-    Number.parseInt(hex.slice(5, 7), 16),
-  ];
-}
-
-/** @type {Map<string, [number, number, number]>} */
-const RGB = new Map(Object.entries(PALETTE).map(([name, hex]) => [name, parseHex(hex)]));
-
-/**
- * @param {string} name
- * @returns {[number, number, number]}
- */
-function rgbOf(name) {
-  const rgb = RGB.get(name);
-  if (rgb === undefined) throw new Error(`${name} is not one of the six nav colours`);
-  return rgb;
-}
-
-/**
- * Rasterise the artwork to premultiplied-free straight-alpha RGBA.
- *
- * Supersampled, and the samples are resolved to colours individually rather
- * than blended geometrically, because the boundary where an over-cord meets
- * the cord beneath it is a real edge in the mark: averaging across it would
- * smear two saturated hues into a third that is in neither palette.
- *
- * @param {number} [pixels] side length of the square output
- * @param {number} [samples] supersamples per axis, per pixel
- * @returns {{ pixels: number, data: Uint8Array }}
- */
-export function renderArtwork(pixels = RENDER_PIXELS, samples = 4) {
-  const data = new Uint8Array(pixels * pixels * 4);
-  const unitsPerPixel = CANVAS_UNITS / pixels;
-  const sampleCount = samples * samples;
-
-  for (let py = 0; py < pixels; py += 1) {
-    for (let px = 0; px < pixels; px += 1) {
-      let r = 0;
-      let g = 0;
-      let b = 0;
-      let covered = 0;
-
-      for (let sy = 0; sy < samples; sy += 1) {
-        const y = (py + (sy + 0.5) / samples) * unitsPerPixel - CANVAS_UNITS / 2;
-        for (let sx = 0; sx < samples; sx += 1) {
-          const x = (px + (sx + 0.5) / samples) * unitsPerPixel - CANVAS_UNITS / 2;
-          const name = colorAt(x, y);
-          if (name === null) continue;
-          const rgb = rgbOf(name);
-          r += rgb[0];
-          g += rgb[1];
-          b += rgb[2];
-          covered += 1;
-        }
-      }
-
-      const offset = (py * pixels + px) * 4;
-      if (covered === 0) continue;
-      data[offset] = Math.round(r / covered);
-      data[offset + 1] = Math.round(g / covered);
-      data[offset + 2] = Math.round(b / covered);
-      data[offset + 3] = Math.round((covered / sampleCount) * 255);
-    }
-  }
-
-  return { pixels, data };
-}
-
-/**
- * CRC-32 as every PNG chunk carries it. Computed bit by bit rather than off a
- * lookup table: four chunks per file is not a hot path, and the table version
- * spends its whole body indexing, which reads worse than the polynomial does.
- *
- * @param {Uint8Array} bytes
- * @returns {number}
- */
-function crc32(bytes) {
-  let c = 0xffffffff;
-  for (const byte of bytes) {
-    c ^= byte;
-    for (let bit = 0; bit < 8; bit += 1) c = (c >>> 1) ^ (0xedb88320 & -(c & 1));
-  }
-  return (c ^ 0xffffffff) >>> 0;
-}
-
-/**
- * @param {string} type the four-character chunk name
- * @param {Buffer} body
- * @returns {Buffer}
- */
-function chunk(type, body) {
-  const head = Buffer.alloc(4);
-  head.writeUInt32BE(body.length, 0);
-  const typed = Buffer.concat([Buffer.from(type, 'ascii'), body]);
-  const crc = Buffer.alloc(4);
-  crc.writeUInt32BE(crc32(typed), 0);
-  return Buffer.concat([head, typed, crc]);
-}
-
-const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
-
-/**
- * Encode straight-alpha RGBA as an 8-bit colour-type-6 PNG.
- *
- * @param {number} pixels side length of the square image
- * @param {Uint8Array} data RGBA rows, top to bottom
- * @returns {Buffer}
- */
-export function encodePng(pixels, data) {
-  const stride = pixels * 4;
-  const raw = Buffer.alloc((stride + 1) * pixels);
-  for (let y = 0; y < pixels; y += 1) {
-    raw[y * (stride + 1)] = 0;
-    Buffer.from(data.buffer, data.byteOffset + y * stride, stride).copy(raw, y * (stride + 1) + 1);
-  }
-
-  const ihdr = Buffer.alloc(13);
-  ihdr.writeUInt32BE(pixels, 0);
-  ihdr.writeUInt32BE(pixels, 4);
-  ihdr[8] = 8;
-  ihdr[9] = 6;
-
-  return Buffer.concat([
-    PNG_MAGIC,
-    chunk('IHDR', ihdr),
-    chunk('IDAT', deflateSync(raw, { level: 9 })),
-    chunk('IEND', Buffer.alloc(0)),
-  ]);
-}
-
-/**
- * One byte of a buffer, with the bounds check the index signature only
- * promises. Every caller below computes an index it believes is in range; a
- * decoder reading a file it did not write should say so when it is wrong
- * rather than propagate an `undefined` into the arithmetic.
- *
- * @param {Uint8Array} bytes
  * @param {number} index
  * @returns {number}
  */
-function byteAt(bytes, index) {
-  const value = bytes[index];
-  if (value === undefined) throw new Error(`truncated PNG: no byte at ${index}`);
-  return value;
+function centreAt(index) {
+  const centre = CORD_CENTRES[index];
+  if (centre === undefined) throw new Error(`no cord at index ${index}`);
+  return centre;
 }
 
 /**
- * The PNG spec's Paeth predictor: whichever neighbour the linear estimate
- * lands nearest.
+ * One warp cord as an SVG capsule. `rx` equal to half the thickness is what
+ * rounds the ends into caps rather than merely softening the corners.
  *
- * @param {number} left
- * @param {number} up
- * @param {number} upLeft
- * @returns {number}
+ * @param {number} centre the cord's x, in canvas points
+ * @param {string} fill
+ * @returns {string}
  */
-function paeth(left, up, upLeft) {
-  const estimate = left + up - upLeft;
-  const toLeft = Math.abs(estimate - left);
-  const toUp = Math.abs(estimate - up);
-  const toUpLeft = Math.abs(estimate - upLeft);
-  if (toLeft <= toUp && toLeft <= toUpLeft) return left;
-  return toUp <= toUpLeft ? up : upLeft;
+function warpCapsule(centre, fill) {
+  const x = centre - HALF_WIDTH;
+  const y = CENTRE - HALF_SPAN;
+  return `  <rect x="${x}" y="${y}" width="${CORD_WIDTH}" height="${MARK_SPAN}" rx="${HALF_WIDTH}" fill="${fill}"/>`;
 }
 
 /**
- * Decode an 8-bit colour-type-6 PNG back to straight-alpha RGBA.
+ * One weft cord as an even-odd path: the capsule outline, followed by one
+ * rectangular subpath per crossing the warp passes over. Even-odd turns those
+ * subpaths into holes, which is how the upper group lets the lower one through.
  *
- * Narrow on purpose: it reads what {@link encodePng} writes, so that a drift
- * check can compare pixels rather than bytes. Byte equality would make the
- * check a hostage to whichever zlib the running Node was built against.
+ * A path rather than a rect because a rect cannot carry holes, and separate
+ * visible segments rather than holes would put a cap — and therefore a rim —
+ * inside the mark at every crossing.
  *
- * @param {Buffer} png
- * @returns {{ pixels: number, data: Uint8Array }}
+ * @param {number} row index into {@link WEFT}
+ * @param {string} fill
+ * @returns {string}
  */
-export function decodePng(png) {
-  if (!png.subarray(0, 8).equals(PNG_MAGIC)) throw new Error('not a PNG');
+function weftPath(row, fill) {
+  const centre = centreAt(row);
+  const left = CENTRE - HALF_SPAN;
+  const right = CENTRE + HALF_SPAN;
+  const top = centre - HALF_WIDTH;
+  const bottom = centre + HALF_WIDTH;
+  const r = HALF_WIDTH;
 
-  let offset = 8;
-  let pixels = 0;
-  /** @type {Buffer[]} */
-  const idat = [];
+  let d =
+    `M ${left + r} ${top}` +
+    ` L ${right - r} ${top}` +
+    ` A ${r} ${r} 0 0 1 ${right - r} ${bottom}` +
+    ` L ${left + r} ${bottom}` +
+    ` A ${r} ${r} 0 0 1 ${left + r} ${top} Z`;
 
-  while (offset < png.length) {
-    const length = png.readUInt32BE(offset);
-    const type = png.subarray(offset + 4, offset + 8).toString('ascii');
-    const body = png.subarray(offset + 8, offset + 8 + length);
-    if (type === 'IHDR') {
-      pixels = body.readUInt32BE(0);
-      if (body.readUInt32BE(4) !== pixels) throw new Error('expected a square image');
-      if (body[8] !== 8 || body[9] !== 6) throw new Error('expected 8-bit RGBA');
-    } else if (type === 'IDAT') {
-      idat.push(body);
-    }
-    offset += 12 + length;
+  for (let col = 0; col < CORD_CENTRES.length; col += 1) {
+    if (horizontalIsOver(row, col)) continue;
+    const half = HALF_WIDTH + CROSSING_CLEARANCE;
+    const x0 = centreAt(col) - half;
+    const x1 = centreAt(col) + half;
+    d += ` M ${x0} ${top} L ${x1} ${top} L ${x1} ${bottom} L ${x0} ${bottom} Z`;
   }
 
-  const raw = inflateSync(Buffer.concat(idat));
-  const stride = pixels * 4;
-  const data = new Uint8Array(stride * pixels);
-
-  for (let y = 0; y < pixels; y += 1) {
-    const filter = byteAt(raw, y * (stride + 1));
-    const row = raw.subarray(y * (stride + 1) + 1, (y + 1) * (stride + 1));
-    for (let i = 0; i < stride; i += 1) {
-      const left = i >= 4 ? byteAt(data, y * stride + i - 4) : 0;
-      const up = y > 0 ? byteAt(data, (y - 1) * stride + i) : 0;
-      const upLeft = y > 0 && i >= 4 ? byteAt(data, (y - 1) * stride + i - 4) : 0;
-      let value = byteAt(row, i);
-      if (filter === 1) value += left;
-      else if (filter === 2) value += up;
-      else if (filter === 3) value += (left + up) >> 1;
-      else if (filter === 4) value += paeth(left, up, upLeft);
-      else if (filter !== 0) throw new Error(`unsupported PNG filter ${filter}`);
-      data[y * stride + i] = value & 0xff;
-    }
-  }
-
-  return { pixels, data };
+  return `  <path fill-rule="evenodd" d="${d}" fill="${fill}"/>`;
 }
 
 /**
- * Where the artwork is written. Both Icon Composer bundles carry their own
- * copy — a bundle's `Assets/` is its own, and Xcode resolves `image-name`
- * inside it — so this writes the same bytes twice rather than symlinking one
- * into the other.
+ * One foreground layer: the three cords of one axis, as a square unmasked SVG
+ * the size of the canvas.
+ *
+ * @param {'warp' | 'weft'} which
+ * @returns {string}
  */
-export const ARTWORK_PATHS = [
-  'clients/ios/App/AppIcon.icon/Assets/layer-weave.png',
-  'clients/ios/App/AppIconLocal.icon/Assets/layer-weave.png',
+export function layerSvg(which) {
+  const body = CORD_CENTRES.map((_, index) =>
+    which === 'warp'
+      ? warpCapsule(centreAt(index), fillOf(cordAt(WARP, index)))
+      : weftPath(index, fillOf(cordAt(WEFT, index)))
+  ).join('\n');
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${CANVAS} ${CANVAS}" width="${CANVAS}" height="${CANVAS}">\n${body}\n</svg>\n`;
+}
+
+const BACKGROUND = {
+  'linear-gradient': [
+    'display-p3:0.12059,0.13284,0.19482,1.00000',
+    'display-p3:0.03671,0.04289,0.06837,1.00000',
+  ],
+};
+
+/**
+ * @param {string} name
+ * @param {string} imageName
+ * @param {number} translucency
+ * @returns {Record<string, unknown>}
+ */
+function group(name, imageName, translucency) {
+  return {
+    layers: [
+      {
+        'blend-mode': 'normal',
+        'image-name': imageName,
+        name,
+        opacity: 1,
+        position: { scale: 1, 'translation-in-points': [0, 0] },
+      },
+    ],
+    shadow: { kind: 'neutral', opacity: SHADOW_OPACITY },
+    translucency: { enabled: translucency > 0, value: translucency },
+  };
+}
+
+/** The SVG layer each bundle carries, by the file name `icon.json` names. */
+export const LAYER_FILES = { 'layer-warp.svg': 'warp', 'layer-weft.svg': 'weft' };
+
+/**
+ * A bundle's `icon.json`.
+ *
+ * **`groups` composites top-first.** Index `0` is the topmost group, the way a
+ * layer list reads in a drawing tool rather than the way a painter's algorithm
+ * runs. Written bottom-up, the warp lands above the weft and the mark renders
+ * as three verticals with the horizontals buried beneath them.
+ *
+ * @param {{ badge?: string }} [options] `badge` names a raster layer to sit above the mark
+ * @returns {Record<string, unknown>}
+ */
+export function iconManifest(options = {}) {
+  const groups = [
+    group('Weft', 'layer-weft.svg', UPPER_TRANSLUCENCY),
+    group('Warp', 'layer-warp.svg', 0),
+  ];
+  if (options.badge !== undefined) groups.unshift(group('Local badge', options.badge, 0));
+
+  return {
+    fill: BACKGROUND,
+    groups,
+    'supported-platforms': { circles: ['watchOS'], squares: 'shared' },
+  };
+}
+
+/**
+ * The Icon Composer bundles this writes, and the badge layer each one carries
+ * above the mark. A bundle's `Assets/` is its own and Xcode resolves
+ * `image-name` inside it, so the layers are written into each rather than
+ * shared between them.
+ *
+ * @type {readonly { path: string, badge?: string }[]}
+ */
+export const BUNDLES = [
+  { path: 'clients/ios/App/AppIcon.icon' },
+  { path: 'clients/ios/App/AppIconLocal.icon', badge: 'local-badge.png' },
 ];
+
+/**
+ * Every file this generator owns for one bundle, as published path to contents.
+ *
+ * @param {{ path: string, badge?: string }} bundle
+ * @returns {Map<string, string>}
+ */
+export function bundleFiles(bundle) {
+  /** @type {Map<string, string>} */
+  const files = new Map();
+  for (const [name, which] of Object.entries(LAYER_FILES)) {
+    files.set(`Assets/${name}`, layerSvg(which === 'warp' ? 'warp' : 'weft'));
+  }
+  files.set('icon.json', `${JSON.stringify(iconManifest({ badge: bundle.badge }), null, 2)}\n`);
+  return files;
+}
 
 /**
  * @param {string[]} argv
@@ -463,26 +375,25 @@ function main(argv) {
     return 2;
   }
 
-  const { pixels, data } = renderArtwork();
-  const png = encodePng(pixels, data);
-
   let drifted = false;
-  for (const relative of ARTWORK_PATHS) {
-    const absolute = join(repoRoot, relative);
-    if (check) {
-      const current = decodePng(readFileSync(absolute));
-      const same = current.pixels === pixels && Buffer.from(current.data).equals(Buffer.from(data));
-      if (!same) {
-        console.error(`drift: ${relative} does not match scripts/ios-app-icon.mjs`);
-        drifted = true;
+  for (const bundle of BUNDLES) {
+    for (const [relative, contents] of bundleFiles(bundle)) {
+      const absolute = join(repoRoot, bundle.path, relative);
+      if (check) {
+        if (readFileSync(absolute, 'utf8') !== contents) {
+          console.error(
+            `drift: ${bundle.path}/${relative} does not match scripts/ios-app-icon.mjs`
+          );
+          drifted = true;
+        }
+        continue;
       }
-      continue;
+      writeFileSync(absolute, contents);
+      console.log(`wrote ${bundle.path}/${relative}`);
     }
-    writeFileSync(absolute, png);
-    console.log(`wrote ${relative} (${pixels}x${pixels}, ${png.length} bytes)`);
   }
 
-  if (check && !drifted) console.log(`OK — ${ARTWORK_PATHS.length} bundles match the generator`);
+  if (check && !drifted) console.log(`OK — ${BUNDLES.length} bundles match the generator`);
   return drifted ? 1 : 0;
 }
 

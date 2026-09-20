@@ -163,29 +163,45 @@ Two consequences follow, and both bite:
 - **Adding or removing a source file means regenerating.** Sources are explicit file references in the generated project, so a new `.swift` file is invisible to `xcodebuild` until `xcodegen generate` runs again — it does not fail, it silently does not compile the file.
 - **Xcode settings changed through the GUI do not survive.** Change `project.yml` instead; anything else is erased on the next generate.
 
-## The app icon is one layer on purpose
+## The app icon is two groups on purpose
 
-`App/AppIcon.icon` is an Icon Composer source, not an exported `AppIcon.appiconset`: one `icon.json` naming a gradient background and a single image layer, with the dark, tinted and clear variants derived by the system rather than checked in as a hundred and fifty PNGs. The artwork is a three-by-three weave of six cords, one per member of `NAV_COLOR` in [`libs/sdk/src/manifest-schema/ui.ts`](../../libs/sdk/src/manifest-schema/ui.ts) — that enum is closed and has exactly six members, which is where the thread count comes from.
+`App/AppIcon.icon` is an Icon Composer source, not an exported `AppIcon.appiconset`: one `icon.json` naming a gradient background and two foreground groups, with the dark, tinted and clear variants derived by the system rather than checked in as a hundred and fifty PNGs. The artwork is a three-by-three basketweave of six cords, one per member of `NAV_COLOR` in [`libs/sdk/src/manifest-schema/ui.ts`](../../libs/sdk/src/manifest-schema/ui.ts) — that enum is closed and has exactly six members, which is where the thread count comes from.
 
-**A weave needs the warp drawn twice** — once beneath the weft, and again on top at the crossings where it passes over — so the obvious construction is three groups: warp, weft, over. It was built that way first and it was wrong on a device in two ways a preview cannot show:
+Nothing in the artwork is drawn by hand. [`scripts/ios-app-icon.mjs`](../../scripts/ios-app-icon.mjs) emits both SVG layers and both bundles' `icon.json` from a dozen constants; `mise run icon:ios` regenerates, and [`scripts/__tests__/ios-app-icon.test.ts`](../../scripts/__tests__/ios-app-icon.test.ts) fails if the committed bundles and the script disagree. It was a single checked-in PNG with no source first, and that is how it stayed wrong: the geometry existed only in the pixels, so nobody could correct it without redrawing it.
 
-- **Groups composite top-first.** Index `0` in `groups` is the topmost layer, the way a layer list reads in a drawing tool rather than the way a painter's algorithm runs. Written bottom-up, the warp lands above the weft and the over-crossings end up buried beneath both, invisible — and the mark renders as a stack rather than a weave.
-- **Each group gets a specular rim along its own alpha edge.** That is the real reason this is one layer. Every additional group draws a bright outline around its own silhouette, so a full-length weft cord picks up a rim that runs straight across the warp beneath it. Outlines nothing in the artwork asked for, in the middle of the mark.
+### Render it with `actool`, not with a mock-up
 
-So the interlace is composited into a single image and the system rims only the outline of the mark. **Splitting this into more groups to get more depth will make it worse** — check it on a device before believing otherwise.
+```
+xcrun actool App/AppIcon.icon --compile <outdir> --platform iphonesimulator \
+  --minimum-deployment-target 26.0 --app-icon AppIcon \
+  --output-partial-info-plist <outdir>/partial.plist
+```
 
-`translucency` is off for the same class of reason: it is for layers meant to read as glass, and on solid artwork it makes the cords semi-transparent and lets the layer beneath show through.
+About a second, and the PNGs it writes are the real system composite — specular rim, refraction and shadow included. Use it for every change to the icon. **A hand-assembled preview of the layers is worse than useless**, because the lighting is the entire subject: a flat composite of this artwork looks flat, and concluding anything from that is how the wrong fix gets made.
 
-### The artwork is generated, and it is flat
+### The layers are flat; the depth is between them
 
-`Assets/layer-weave.png` is not drawn. It is rendered by [`scripts/ios-app-icon.mjs`](../../scripts/ios-app-icon.mjs) from the dozen constants at the top of that file — regenerate with `mise run icon:ios`, and [`scripts/__tests__/ios-app-icon.test.ts`](../../scripts/__tests__/ios-app-icon.test.ts) fails if the committed PNGs and the script disagree. It was a checked-in PNG with no source first, and that is how it stayed wrong: the geometry existed only in the pixels, so nobody could correct it without redrawing it.
+Two rules that sound contradictory and are not:
 
-**Nothing in the artwork is shaded.** The cords are solid fills, with no gradient, no highlight and no drop shadow, because this one image is also what the dark, tinted and clear variants are derived from — a tint is a monochrome remap, and baked lighting survives that remap as mud. Depth comes from geometry instead: a cord passing over another opens a small gap in the cord beneath it (`CROSSING_CLEARANCE`), which is a hole in the alpha, so it survives every variant and the system lights it along with everything else.
+- **Nothing in a layer is shaded.** No gradient, no highlight, no drop shadow. Apple's line is "the system dynamically applies visual effects to your app icon layers, so there's no need to include specular highlights, drop shadows between layers, beveled edges, blurs, glows" (HIG, App icons › Visual effects). It is also the only way the tinted and clear appearances can work, since they are a luminance remap of this same artwork — remap a baked cylinder gradient and you get mud.
+- **But one group is coplanar.** A single group _does_ get a specular rim along every edge in its artwork, interior cord edges included; that was verified by rendering it, and it is why "add depth by un-flattening the artwork" is the wrong instinct. What one group cannot do is cast anything onto anything, because every shape is in the same plane. "App icons include a background layer and one or more foreground layers that coalesce to create dimensionality" (HIG, App icons › Layer design) — the dimensionality is _between_ the layers.
 
-Two geometry rules are worth naming because breaking either is what the mark looked like before:
+So the warp is the lower group and the weft is the upper one, and the system puts a shadow between them.
 
-- **All six cords are the same length and that length is a constant** (`MARK_SPAN`), so the twelve ends land on one square boundary. Letting a cord stop shortly after the crossing it passes under leaves a stub shorter than the cord is wide, which reads as a detached bead rather than a cord end; the test asserts the stub is longer than `CORD_WIDTH`.
-- **The mark is inset from the canvas.** It spans 86% of the 1024-point canvas rather than filling it, so the squircle never cuts a cord. It can take 86% and not the usual 80% only because this silhouette is a cross — its four corners are empty, so there is nothing out there to crowd the rounding.
+### The weft is cut, and that is what makes it a weave
+
+A z-stack cannot interlace: the upper group is above the lower one everywhere. So at each crossing where the warp should pass over, a hole the width of the warp cord plus `CROSSING_CLEARANCE` is cut out of the weft, and the warp shows through it. Five holes, for the five crossings a three-by-three basketweave puts the warp on top of. The weft layer is therefore `<path fill-rule="evenodd">` rather than `<rect>` — a rect cannot carry a hole.
+
+**The two other constructions were rendered and are both worse.** Three groups, with warp-over segments on top, gives each segment its own rim and shadow, so the crossings read as separate pills sewn onto the cord beneath. Two groups with no cuts loses the interlace outright and reads as three bars laid on three bars.
+
+`translucency` is off on both groups. Apple does suggest varying opacity for depth, and it was rendered at 0.15, 0.25 and 0.35 before being rejected: a translucent weft mixes with the warp into a third hue that is in no pillar's palette, and the cut-outs already put the warp in front where it belongs, so it buys nothing.
+
+### Two geometry rules worth naming
+
+Breaking either is what the mark looked like before:
+
+- **All six cords are the same length** (`MARK_SPAN`), so the twelve ends land on one square boundary. Letting a cord stop shortly after the crossing it passes under leaves a stub shorter than the cord is wide, which reads as a detached bead rather than a cord end.
+- **The mark is inset from the canvas.** It spans 86% of the 1024-point canvas, so the squircle never cuts a cord, and the layers are authored square and unmasked because the system does the masking — "providing layers with pre-defined masking negatively impacts specular highlight effects and makes edges look jagged" (HIG, App icons › Icon shape). It can take 86% rather than the usual 80% only because this silhouette is a cross: its four corners are empty.
 
 ## Module boundaries
 

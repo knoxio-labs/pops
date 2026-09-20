@@ -1,50 +1,126 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
+import { NAV_COLOR } from '@pops/pillar-sdk/manifest-schema';
+
 import {
-  ARTWORK_PATHS,
-  CANVAS_UNITS,
+  BUNDLES,
+  CANVAS,
+  CORD_CENTRES,
   CORD_GAP,
-  CORD_OFFSETS,
   CORD_WIDTH,
   CROSSING_CLEARANCE,
+  LAYER_FILES,
   MARK_SPAN,
   PALETTE,
-  RENDER_PIXELS,
+  SHADOW_OPACITY,
+  UPPER_TRANSLUCENCY,
   WARP,
   WEFT,
-  colorAt,
-  decodePng,
-  encodePng,
+  bundleFiles,
   horizontalIsOver,
-  renderArtwork,
+  iconManifest,
+  layerSvg,
 } from '../ios-app-icon.mjs';
 
-const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
-
-const HALF_SPAN = MARK_SPAN / 2;
 const ROWS = [0, 1, 2];
 const COLS = [0, 1, 2];
 
-/** Centre offset of one of the three parallel cords, by index. */
-function cordOffset(index: number): number {
-  const value = CORD_OFFSETS[index];
-  if (value === undefined) throw new Error(`no cord at index ${index}`);
-  return value;
+const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
+
+type Rect = { x: number; y: number; width: number; height: number; rx: number; fill: string };
+
+/** Every `<rect>` in a generated layer, in document order. */
+function rects(svg: string): Rect[] {
+  return [...svg.matchAll(/<rect ([^/]*)\/>/g)].map((match) => {
+    const body = match[1] ?? '';
+    const attrs = new Map(
+      [...body.matchAll(/([a-z]+)="([^"]*)"/g)].map((a) => [a[1] ?? '', a[2] ?? ''] as const)
+    );
+    const number = (key: string): number => {
+      const raw = attrs.get(key);
+      if (raw === undefined) throw new Error(`<rect> has no ${key}: ${match[0]}`);
+      return Number(raw);
+    };
+    const fill = attrs.get('fill');
+    if (fill === undefined) throw new Error(`<rect> has no fill: ${match[0]}`);
+    return {
+      x: number('x'),
+      y: number('y'),
+      width: number('width'),
+      height: number('height'),
+      rx: number('rx'),
+      fill,
+    };
+  });
+}
+
+type WeftPath = { fill: string; rule: string; holes: { x0: number; x1: number }[] };
+
+/** Every `<path>` in the weft layer, with the holes its even-odd subpaths cut. */
+function weftPaths(svg: string): WeftPath[] {
+  return [...svg.matchAll(/<path ([^/]*)\/>/g)].map((match) => {
+    const body = match[1] ?? '';
+    const rule = /fill-rule="([^"]*)"/.exec(body)?.[1] ?? '';
+    const fill = /[^-]fill="([^"]*)"/.exec(` ${body}`)?.[1] ?? '';
+    const d = /d="([^"]*)"/.exec(body)?.[1] ?? '';
+    // The first subpath is the capsule outline; every later one is a hole.
+    const subpaths = d
+      .split('Z')
+      .map((part) => part.trim())
+      .filter((part) => part.length > 0)
+      .slice(1);
+    const holes = subpaths.map((sub) => {
+      const xs = [...sub.matchAll(/[ML] (-?\d+(?:\.\d+)?) /g)].map((m) => Number(m[1]));
+      return { x0: Math.min(...xs), x1: Math.max(...xs) };
+    });
+    return { fill, rule, holes };
+  });
+}
+
+type Group = {
+  layers: { 'image-name': string; opacity: number; position: { scale: number } }[];
+  shadow: { kind: string; opacity: number };
+  translucency: { enabled: boolean; value: number };
+};
+
+function groupsOf(manifest: Record<string, unknown>): Group[] {
+  const groups = manifest.groups;
+  if (!Array.isArray(groups)) throw new Error('the manifest has no groups array');
+  return groups as Group[];
+}
+
+function groupAt(manifest: Record<string, unknown>, index: number): Group {
+  const group = groupsOf(manifest)[index];
+  if (group === undefined) throw new Error(`the manifest has no group ${index}`);
+  return group;
+}
+
+function imageOf(group: Group): string {
+  const layer = group.layers[0];
+  if (layer === undefined) throw new Error('a group has no layers');
+  return layer['image-name'];
+}
+
+function paletteOf(name: string): string {
+  const hex = Object.entries(PALETTE).find(([key]) => key === name)?.[1];
+  if (hex === undefined) throw new Error(`${name} is not in the palette`);
+  return hex;
+}
+
+function centreAt(index: number): number {
+  const centre = CORD_CENTRES[index];
+  if (centre === undefined) throw new Error(`no cord centre ${index}`);
+  return centre;
 }
 
 describe('the palette is the nav palette', () => {
   it('carries exactly the members of NAV_COLOR', () => {
-    const source = readFileSync(join(repoRoot, 'libs/sdk/src/manifest-schema/ui.ts'), 'utf8');
-    const declaration = /const NAV_COLOR = z\.enum\(\[([^\]]*)\]\)/.exec(source);
-    expect(declaration, 'NAV_COLOR is no longer a z.enum literal in ui.ts').not.toBeNull();
-
-    const members = [...(declaration?.[1] ?? '').matchAll(/'([^']+)'/g)].map((match) => match[1]);
-    expect(members).toHaveLength(6);
-    expect(members.toSorted()).toEqual(Object.keys(PALETTE).toSorted());
+    expect(NAV_COLOR.options).toHaveLength(6);
+    expect([...NAV_COLOR.options].toSorted()).toEqual(Object.keys(PALETTE).toSorted());
   });
 
   it('spends every colour exactly once, three per axis', () => {
@@ -72,203 +148,198 @@ describe('the interlace', () => {
     }
   });
 
-  it('shows the over-cord at the centre of every crossing', () => {
-    for (const row of ROWS) {
-      for (const col of COLS) {
-        const expected = horizontalIsOver(row, col) ? WEFT[row] : WARP[col];
-        expect(colorAt(cordOffset(col), cordOffset(row))).toBe(expected);
-      }
+  it('cuts a hole in the weft at exactly the crossings the warp passes over', () => {
+    const paths = weftPaths(layerSvg('weft'));
+    expect(paths).toHaveLength(3);
+
+    paths.forEach((path, row) => {
+      const expected = COLS.filter((col) => !horizontalIsOver(row, col));
+      expect(path.holes, `weft row ${row}`).toHaveLength(expected.length);
+
+      const half = CORD_WIDTH / 2 + CROSSING_CLEARANCE;
+      path.holes.forEach((hole, index) => {
+        const col = expected[index] ?? -1;
+        expect(hole.x0).toBe(centreAt(col) - half);
+        expect(hole.x1).toBe(centreAt(col) + half);
+      });
+    });
+  });
+
+  it('cuts five holes in total, which is what a three-by-three basketweave needs', () => {
+    const holes = weftPaths(layerSvg('weft')).flatMap((path) => path.holes);
+    expect(holes).toHaveLength(5);
+  });
+
+  it('opens each hole wider than the warp cord, so the two edges read apart', () => {
+    expect(CROSSING_CLEARANCE).toBeGreaterThan(0);
+    for (const hole of weftPaths(layerSvg('weft')).flatMap((path) => path.holes)) {
+      expect(hole.x1 - hole.x0).toBe(CORD_WIDTH + CROSSING_CLEARANCE * 2);
     }
   });
 
-  it('opens a gap in the under-cord alongside the cord crossing it', () => {
-    const justOutside = CORD_WIDTH / 2 + CROSSING_CLEARANCE / 2;
-    const wellOutside = CORD_WIDTH / 2 + CROSSING_CLEARANCE * 2;
+  it('needs even-odd fill for the holes to be holes at all', () => {
+    for (const path of weftPaths(layerSvg('weft'))) expect(path.rule).toBe('evenodd');
+  });
 
-    for (const row of ROWS) {
-      for (const col of COLS) {
-        // Step away from the crossing along the OVER-cord's own axis: that is
-        // the direction the under-cord reappears in.
-        const point = (distance: number): [number, number] =>
-          horizontalIsOver(row, col)
-            ? [cordOffset(col), cordOffset(row) + distance]
-            : [cordOffset(col) + distance, cordOffset(row)];
-
-        for (const sign of [-1, 1]) {
-          const [gapX, gapY] = point(sign * justOutside);
-          expect(colorAt(gapX, gapY), `crossing ${row},${col} has no clearance gap`).toBeNull();
-
-          const [bodyX, bodyY] = point(sign * wellOutside);
-          const underCord = horizontalIsOver(row, col) ? WARP[col] : WEFT[row];
-          expect(colorAt(bodyX, bodyY), `crossing ${row},${col} swallowed the under-cord`).toBe(
-            underCord
-          );
-        }
-      }
-    }
+  it('cuts nothing out of the warp, which is the lower group', () => {
+    expect(weftPaths(layerSvg('warp'))).toHaveLength(0);
+    expect(rects(layerSvg('warp'))).toHaveLength(3);
   });
 });
 
-describe('the geometry', () => {
-  const extentAlong = (axis: 'x' | 'y', offsetUnits: number): [number, number] => {
-    const covered: number[] = [];
-    for (let along = -CANVAS_UNITS / 2; along <= CANVAS_UNITS / 2; along += 0.5) {
-      const name = axis === 'x' ? colorAt(along, offsetUnits) : colorAt(offsetUnits, along);
-      if (name !== null) covered.push(along);
-    }
-    const first = covered.at(0);
-    const last = covered.at(-1);
-    if (first === undefined || last === undefined)
-      throw new Error(`nothing covered at ${offsetUnits}`);
-    return [first, last];
-  };
-
-  it('gives all six cords the same length, centred', () => {
-    for (const offset of CORD_OFFSETS) {
-      for (const axis of ['x', 'y'] as const) {
-        const [first, last] = extentAlong(axis, offset);
-        expect(
-          Math.abs(first + HALF_SPAN),
-          `${axis} cord at ${offset} starts at ${first}`
-        ).toBeLessThanOrEqual(1);
-        expect(
-          Math.abs(last - HALF_SPAN),
-          `${axis} cord at ${offset} ends at ${last}`
-        ).toBeLessThanOrEqual(1);
-      }
-    }
+describe('a generated layer', () => {
+  it('draws three warp cords at the right centres, in palette order', () => {
+    rects(layerSvg('warp')).forEach((rect, index) => {
+      expect(rect.width).toBe(CORD_WIDTH);
+      expect(rect.height).toBe(MARK_SPAN);
+      expect(rect.x + CORD_WIDTH / 2).toBe(centreAt(index));
+      expect(rect.rx, 'an rx below half the thickness squares the ends off').toBe(CORD_WIDTH / 2);
+      expect(rect.fill).toBe(paletteOf(WARP[index] ?? ''));
+    });
   });
 
-  it('leaves every cord end a stub longer than the cord is wide', () => {
-    const outerEdge = CORD_OFFSETS[2] + CORD_WIDTH / 2;
-    expect(HALF_SPAN - outerEdge).toBeGreaterThan(CORD_WIDTH);
+  it('spans every weft cord the full mark, in palette order', () => {
+    const svg = layerSvg('weft');
+    weftPaths(svg).forEach((path, index) => {
+      expect(path.fill).toBe(paletteOf(WEFT[index] ?? ''));
+    });
+    const margin = (CANVAS - MARK_SPAN) / 2;
+    expect(svg).toContain(`M ${margin + CORD_WIDTH / 2} `);
   });
 
-  it('keeps the whole mark clear of the canvas edge', () => {
-    const margin = CANVAS_UNITS / 2 - HALF_SPAN;
+  it('keeps every cord inside the canvas, clear of the corner mask', () => {
+    const margin = (CANVAS - MARK_SPAN) / 2;
     expect(margin).toBeGreaterThan(CORD_WIDTH / 3);
 
-    for (let along = -CANVAS_UNITS / 2; along <= CANVAS_UNITS / 2; along += 1) {
-      const edge = CANVAS_UNITS / 2 - 1;
-      expect(colorAt(along, -edge)).toBeNull();
-      expect(colorAt(along, edge)).toBeNull();
-      expect(colorAt(-edge, along)).toBeNull();
-      expect(colorAt(edge, along)).toBeNull();
+    for (const rect of rects(layerSvg('warp'))) {
+      expect(rect.x).toBeGreaterThanOrEqual(margin);
+      expect(rect.y).toBeGreaterThanOrEqual(margin);
+      expect(rect.x + rect.width).toBeLessThanOrEqual(CANVAS - margin);
+      expect(rect.y + rect.height).toBeLessThanOrEqual(CANVAS - margin);
     }
-  });
 
-  it('leaves the squircle corners empty', () => {
-    const corner = CANVAS_UNITS / 2 - CORD_WIDTH;
-    for (const x of [-corner, corner]) {
-      for (const y of [-corner, corner]) {
-        expect(colorAt(x, y)).toBeNull();
+    // Only M and L carry a bare coordinate pair; an A leads with its two radii.
+    const weft = layerSvg('weft');
+    const coords = [...weft.matchAll(/[ML] (-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?)/g)];
+    expect(coords.length).toBeGreaterThan(0);
+    for (const coord of coords) {
+      for (const value of [Number(coord[1]), Number(coord[2])]) {
+        expect(value).toBeGreaterThanOrEqual(margin);
+        expect(value).toBeLessThanOrEqual(CANVAS - margin);
       }
     }
+
+    // The caps are arcs, so the extremes are a radius beyond the last L. A
+    // radius other than half the thickness would either square the cap off or
+    // bulge it past the margin this test just checked.
+    for (const arc of weft.matchAll(/A (-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?)/g)) {
+      expect(Number(arc[1])).toBe(CORD_WIDTH / 2);
+      expect(Number(arc[2])).toBe(CORD_WIDTH / 2);
+    }
   });
 
-  it('keeps a background channel between parallel cords', () => {
+  it('leaves a background channel between parallel cords', () => {
     expect(CORD_GAP).toBeGreaterThan(CORD_WIDTH / 2);
-    const between = (CORD_OFFSETS[0] + CORD_OFFSETS[1]) / 2;
-    expect(colorAt(between, -HALF_SPAN + CORD_WIDTH)).toBeNull();
+    for (let i = 0; i + 1 < CORD_CENTRES.length; i += 1) {
+      expect(centreAt(i + 1) - centreAt(i)).toBe(CORD_WIDTH + CORD_GAP);
+    }
+  });
+
+  it('is square and unmasked, so the system can do the masking', () => {
+    for (const which of ['warp', 'weft'] as const) {
+      const svg = layerSvg(which);
+      expect(svg).toContain(`viewBox="0 0 ${CANVAS} ${CANVAS}"`);
+      expect(svg).toContain(`width="${CANVAS}"`);
+      expect(svg).toContain(`height="${CANVAS}"`);
+      expect(svg).not.toMatch(/<(clipPath|mask)\b/);
+      expect(svg).not.toMatch(/\b(clip-path|mask)=/);
+    }
+  });
+
+  it('paints nothing the system is supposed to paint', () => {
+    for (const which of ['warp', 'weft'] as const) {
+      const svg = layerSvg(which);
+      expect(svg, 'baked lighting cannot survive the tinted and clear appearances').not.toMatch(
+        /<(linearGradient|radialGradient|filter|feGaussianBlur|feDropShadow)\b/
+      );
+      expect(svg).not.toMatch(/\b(filter|opacity|fill-opacity|stroke)=/);
+    }
   });
 });
 
-describe('the artwork is flat', () => {
-  const { pixels, data } = renderArtwork(256, 2);
-  const channel = (index: number): number => {
-    const value = data[index];
-    if (value === undefined) throw new Error(`no channel at ${index}`);
-    return value;
-  };
-  const at = (px: number, py: number): [number, number, number, number] => {
-    const base = (py * pixels + px) * 4;
-    return [channel(base), channel(base + 1), channel(base + 2), channel(base + 3)];
-  };
-  const toCanvas = (units: number) =>
-    Math.round(((units + CANVAS_UNITS / 2) / CANVAS_UNITS) * pixels);
+describe('the icon manifest', () => {
+  it('composites top-first, so the weft group lands above the warp', () => {
+    expect(groupsOf(iconManifest())).toHaveLength(2);
+    expect(imageOf(groupAt(iconManifest(), 0))).toBe('layer-weft.svg');
+    expect(imageOf(groupAt(iconManifest(), 1))).toBe('layer-warp.svg');
+  });
 
-  it('paints no gradient along a cord', () => {
-    for (const offset of CORD_OFFSETS) {
-      const px = toCanvas(offset);
-      const samples = new Set<string>();
-      for (let units = -HALF_SPAN + CORD_WIDTH; units <= HALF_SPAN - CORD_WIDTH; units += 8) {
-        const [r, g, b, a] = at(px, toCanvas(units));
-        if (a === 255) samples.add(`${r},${g},${b}`);
-      }
-      expect(
-        samples.size,
-        `the cord at ${offset} is shaded across ${samples.size} tones`
-      ).toBeLessThanOrEqual(3);
+  it('leaves translucency off, because the cut-outs already put the warp in front', () => {
+    expect(UPPER_TRANSLUCENCY).toBe(0);
+    for (const group of groupsOf(iconManifest())) {
+      expect(group.translucency).toEqual({ enabled: false, value: 0 });
     }
   });
 
-  it('paints only palette colours on the cord centrelines', () => {
-    const palette = new Set(
-      Object.values(PALETTE).map((hex) =>
-        [1, 3, 5].map((i) => Number.parseInt(hex.slice(i, i + 2), 16)).join(',')
+  it('asks the system for a shadow under every group, which is where the depth comes from', () => {
+    for (const group of groupsOf(iconManifest())) {
+      expect(group.shadow).toEqual({ kind: 'neutral', opacity: SHADOW_OPACITY });
+      const layer = group.layers[0];
+      expect(layer?.opacity).toBe(1);
+      expect(layer?.position.scale).toBe(1);
+    }
+  });
+
+  it('puts the local badge on top of the mark, not under it', () => {
+    const badged = iconManifest({ badge: 'local-badge.png' });
+    expect(groupsOf(badged)).toHaveLength(3);
+    expect(imageOf(groupAt(badged, 0))).toBe('local-badge.png');
+    expect(groupAt(badged, 0).translucency.enabled).toBe(false);
+  });
+
+  it('references only layers the generator writes, plus the badge', () => {
+    for (const bundle of BUNDLES) {
+      const allowed = new Set(
+        [...Object.keys(LAYER_FILES), bundle.badge].filter((name) => name !== undefined)
+      );
+      for (const group of groupsOf(iconManifest({ badge: bundle.badge }))) {
+        expect(allowed, `${bundle.path} names ${imageOf(group)}`).toContain(imageOf(group));
+      }
+    }
+  });
+});
+
+describe('the committed bundles', () => {
+  it('match what the generator produces', () => {
+    for (const bundle of BUNDLES) {
+      for (const [relative, contents] of bundleFiles(bundle)) {
+        const actual = readFileSync(join(repoRoot, bundle.path, relative), 'utf8');
+        expect(actual, `${bundle.path}/${relative} is stale — run \`mise run icon:ios\``).toBe(
+          contents
+        );
+      }
+    }
+  });
+
+  it('carry no asset the generator does not own', () => {
+    for (const bundle of BUNDLES) {
+      const owned = new Set(
+        [...Object.keys(LAYER_FILES), bundle.badge].filter((name) => name !== undefined)
+      );
+      const present = readdirSync(join(repoRoot, bundle.path, 'Assets'));
+      for (const file of present) {
+        expect(owned, `${bundle.path}/Assets/${file} is orphaned`).toContain(file);
+      }
+      expect(present).toHaveLength(owned.size);
+    }
+  });
+
+  it('use the same layers in both bundles', () => {
+    const [first, ...rest] = BUNDLES.map((bundle) =>
+      Object.keys(LAYER_FILES).map((name) =>
+        readFileSync(join(repoRoot, bundle.path, 'Assets', name), 'utf8')
       )
     );
-    for (const row of CORD_OFFSETS) {
-      for (const col of CORD_OFFSETS) {
-        const [r, g, b, a] = at(toCanvas(col), toCanvas(row));
-        expect(a).toBe(255);
-        expect(palette).toContain(`${r},${g},${b}`);
-      }
-    }
-  });
-
-  it('leaves the background fully transparent rather than near-black', () => {
-    const [, , , alpha] = at(toCanvas(0), toCanvas(-CANVAS_UNITS / 2 + CORD_WIDTH / 2));
-    expect(alpha).toBe(0);
-  });
-});
-
-describe('the PNG codec', () => {
-  it('round-trips the pixels it wrote', () => {
-    const { pixels, data } = renderArtwork(64, 1);
-    const decoded = decodePng(encodePng(pixels, data));
-    expect(decoded.pixels).toBe(pixels);
-    expect(Buffer.from(decoded.data).equals(Buffer.from(data))).toBe(true);
-  });
-
-  it('rejects anything that is not the PNG it writes', () => {
-    expect(() => decodePng(Buffer.from('not a png at all'))).toThrow(/not a PNG/);
-  });
-});
-
-describe('the committed artwork', () => {
-  it('matches what the generator produces', () => {
-    const { pixels, data } = renderArtwork();
-    for (const relative of ARTWORK_PATHS) {
-      const decoded = decodePng(readFileSync(join(repoRoot, relative)));
-      expect(decoded.pixels, relative).toBe(pixels);
-      expect(
-        Buffer.from(decoded.data).equals(Buffer.from(data)),
-        `${relative} is stale — run \`mise run icon:ios\``
-      ).toBe(true);
-    }
-  }, 60_000);
-
-  it('is the same bytes in both icon bundles', () => {
-    const files = ARTWORK_PATHS.map((relative) => readFileSync(join(repoRoot, relative)));
-    const reference = files.at(0);
-    if (reference === undefined) throw new Error('ARTWORK_PATHS is empty');
-    for (const other of files) expect(other.equals(reference)).toBe(true);
-  });
-
-  it('is rasterised at twice the canvas, for the 0.5 scale icon.json asks for', () => {
-    expect(RENDER_PIXELS).toBe(CANVAS_UNITS * 2);
-    for (const relative of ARTWORK_PATHS) {
-      const bundle = join(repoRoot, relative, '..', '..', 'icon.json');
-      const icon = JSON.parse(readFileSync(bundle, 'utf8'));
-      const weave = icon.groups
-        .flatMap(
-          (group: { layers: { 'image-name': string; position: { scale: number } }[] }) =>
-            group.layers
-        )
-        .find((layer: { 'image-name': string }) => layer['image-name'] === 'layer-weave.png');
-      expect(weave, `${relative} is not referenced by its icon.json`).toBeDefined();
-      expect(weave.position.scale).toBe(CANVAS_UNITS / RENDER_PIXELS);
-    }
+    for (const other of rest) expect(other).toEqual(first);
   });
 });
