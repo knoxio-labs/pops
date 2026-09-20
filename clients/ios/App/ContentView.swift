@@ -101,7 +101,23 @@ internal struct ContentView: View {
                     }
                 }
             }
+            .tint(Self.tabTint(for: selection.wrappedValue))
         }
+    }
+
+    /// The tab bar's tint for the tab showing: Inventory's amber while
+    /// Inventory is the one selected, and the platform's own tint — which is
+    /// what `nil` restores — for every other tab.
+    ///
+    /// A tab bar tints the selected item and nothing else, so tinting the
+    /// whole `TabView` from the selection is what makes the amber belong to
+    /// Inventory rather than to whichever tab happens to be chosen. Inventory's
+    /// search sibling is a tab of its own and keeps the usual tint; the ticket
+    /// asks for the Inventory tab item.
+    ///
+    /// `nonisolated` because it is pure, for the reason ``shownFeature`` is.
+    nonisolated internal static func tabTint(for shown: MobileFeature) -> Color? {
+        shown == FeatureInventory.feature ? .popsInventory : nil
     }
 
     /// Every tab the switcher shows, in order: the BFM's features, then

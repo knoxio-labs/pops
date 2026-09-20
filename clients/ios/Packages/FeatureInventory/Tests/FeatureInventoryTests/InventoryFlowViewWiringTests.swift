@@ -30,4 +30,19 @@ internal struct InventoryFlowViewWiringTests {
             "InventoryFlowView no longer announces Storage full on entry"
         )
     }
+
+    /// POPS-4209: Scan is the dashboard's call to action and wears Inventory's
+    /// amber, which only the token carries — a literal here would pass this
+    /// and redden `DesignSystem`'s token discipline instead.
+    @Test("Scan wears Inventory's amber")
+    func scanIsAmber() {
+        #expect(
+            Self.source.contains(".foregroundStyle(Color.popsInventory)"),
+            "the Scan control no longer takes Color.popsInventory"
+        )
+        #expect(
+            !Self.source.contains(".foregroundStyle(Color.popsForeground)"),
+            "a control in InventoryFlowView is back on popsForeground where amber was asked for"
+        )
+    }
 }
