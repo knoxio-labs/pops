@@ -8,7 +8,16 @@ import {
   type ModuleCaptureOverlayConfig,
 } from '@pops/types';
 
-const NAV_COLOR = z.enum(['emerald', 'indigo', 'amber', 'rose', 'sky', 'violet']);
+/**
+ * The closed set of accent colours a pillar may claim for its app-rail entry.
+ *
+ * Exported because the set itself is part of the wire contract, not just the
+ * shape that validates against it: a consumer that has to enumerate the
+ * colours — to map each to a class, or to spend one per element in a mark that
+ * stands for the whole rail — needs the members, and reading them back out of
+ * this file's source instead is a reach behind the unit's boundary.
+ */
+export const NAV_COLOR = z.enum(['emerald', 'indigo', 'amber', 'rose', 'sky', 'violet']);
 
 const NAV_ITEM_DESCRIPTOR = z
   .object({
