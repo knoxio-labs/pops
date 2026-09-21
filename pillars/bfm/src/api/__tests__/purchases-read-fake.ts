@@ -25,6 +25,7 @@ import type { PillarHandleFactory } from '../pillars/gateway.js';
 export interface PurchasesFakeRow {
   id: string;
   source: string;
+  merchantEntityId: string | null;
   merchantEntityName: string | null;
   totalCents: number;
   currency: string;
@@ -55,6 +56,7 @@ export function purchasesRow(
 ): PurchasesFakeRow {
   return {
     source: 'receipt',
+    merchantEntityId: null,
     merchantEntityName: 'Woolworths',
     totalCents: 8420,
     currency: 'AUD',
@@ -189,6 +191,7 @@ export function createPurchasesReadFake(
 export function purchasesDetail(
   overrides: {
     id?: string;
+    merchantEntityId?: string | null;
     merchantEntityName?: string | null;
     totalCents?: number;
     orderedAt?: string;
@@ -210,7 +213,8 @@ export function purchasesDetail(
         sourceOrderId: null,
         merchantEntityName:
           overrides.merchantEntityName === undefined ? 'Woolworths' : overrides.merchantEntityName,
-        merchantEntityId: null,
+        merchantEntityId:
+          overrides.merchantEntityId === undefined ? null : overrides.merchantEntityId,
         totalCents: overrides.totalCents ?? 8420,
         subtotalCents: 7600,
         taxCents: 760,

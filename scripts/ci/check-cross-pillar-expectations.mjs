@@ -372,6 +372,18 @@ export const EXPECTATIONS = [
   },
   {
     consumer: 'bfm',
+    producer: 'contacts',
+    operationId: 'entities.lookup',
+    path: '/entities/lookup',
+    method: 'post',
+    // The whole request is a body this guard does not model. What it can pin
+    // is that the batched lookup bfm's merchant-identity resolution depends
+    // on (POPS-3634) still exists as a POST on this path.
+    query: [],
+    usedBy: 'pillars/bfm/src/api/contacts/client.ts',
+  },
+  {
+    consumer: 'bfm',
     producer: 'inventory',
     operationId: 'sync.snapshot',
     path: '/sync/snapshot',

@@ -15,6 +15,12 @@ import {
   purchasesDraftUnreadable,
   purchasesPurchaseDetail,
 } from '../../__tests__/purchases-draft-fake.js';
+import {
+  createPurchasesReadFake,
+  purchasesDetail,
+  purchasesRow,
+} from '../../__tests__/purchases-read-fake.js';
+import { type MobileContactsClient } from '../../contacts/client.js';
 import { createPillarGateway, isGatewayOk } from '../../pillars/gateway.js';
 import { createMobilePurchasesClient } from '../client.js';
 
@@ -25,8 +31,25 @@ import type { PillarHandleFactory } from '../../pillars/gateway.js';
 
 const PARTS: readonly MobileReceiptPart[] = [{ mediaType: 'image/jpeg', dataBase64: 'AAAA' }];
 
-function clientOver(factory: PillarHandleFactory) {
-  return createMobilePurchasesClient(createPillarGateway(factory));
+function clientOver(factory: PillarHandleFactory, contacts?: MobileContactsClient) {
+  return createMobilePurchasesClient(createPillarGateway(factory), contacts);
+}
+
+/** A `MobileContactsClient` stub that records every `lookupEntities` call. */
+function contactsSpy(names: ReadonlyMap<string, string> = new Map()): {
+  client: MobileContactsClient;
+  calls: (readonly string[])[];
+} {
+  const calls: (readonly string[])[] = [];
+  return {
+    calls,
+    client: {
+      lookupEntities: (ids) => {
+        calls.push(ids);
+        return Promise.resolve({ kind: 'ok', value: names });
+      },
+    },
+  };
 }
 
 describe('extractReceipt', () => {
@@ -207,5 +230,101 @@ describe('createManualPurchase', () => {
     if (!isGatewayOk(outcome)) return;
     expect(outcome.value.id).toBe('pur-manual-1');
     expect(outcome.value.source).toBe('manual');
+  });
+});
+
+describe('merchant identity batching', () => {
+  it('resolves 10 distinct merchant entity ids across 25 rows in exactly ONE call', async () => {
+    const rows = Array.from({ length: 25 }, (_, i) =>
+      purchasesRow({
+        id: `pur-${String(i)}`,
+        orderedAt: `2026-08-${String(13 - Math.floor(i / 2)).padStart(2, '0')}T02:00:00.000Z`,
+        merchantEntityId: `ent-${String(i % 10)}`,
+        merchantEntityName: `Merchant ${String(i % 10)}`,
+      })
+    );
+    const readFake = createPurchasesReadFake(rows);
+    const spy = contactsSpy();
+
+    const outcome = await clientOver(readFake.factory, spy.client).listPurchases({
+      limit: 25,
+      cursor: null,
+    });
+
+    expect(isGatewayOk(outcome)).toBe(true);
+    expect(spy.calls).toHaveLength(1);
+    expect(new Set(spy.calls[0])).toEqual(
+      new Set(Array.from({ length: 10 }, (_, i) => `ent-${String(i)}`))
+    );
+    expect(spy.calls[0]).toHaveLength(10);
+  });
+
+  it('makes zero calls for a page with no merchant entity ids at all', async () => {
+    const readFake = createPurchasesReadFake([
+      purchasesRow({ id: 'pur-1', merchantEntityId: null }),
+      purchasesRow({ id: 'pur-2', merchantEntityId: null, orderedAt: '2026-08-12T02:00:00.000Z' }),
+    ]);
+    const spy = contactsSpy();
+
+    await clientOver(readFake.factory, spy.client).listPurchases({ limit: 10, cursor: null });
+
+    expect(spy.calls).toHaveLength(0);
+  });
+
+  it('makes zero calls for an entirely empty page', async () => {
+    const readFake = createPurchasesReadFake([]);
+    const spy = contactsSpy();
+
+    await clientOver(readFake.factory, spy.client).listPurchases({ limit: 10, cursor: null });
+
+    expect(spy.calls).toHaveLength(0);
+  });
+
+  it('degrades to an unnamed entity rather than a 502 when contacts is down', async () => {
+    const readFake = createPurchasesReadFake([
+      purchasesRow({ id: 'pur-1', merchantEntityId: 'ent-1', merchantEntityName: 'K mart' }),
+    ]);
+    const downContacts: MobileContactsClient = {
+      lookupEntities: () =>
+        Promise.resolve({ kind: 'unavailable', pillar: 'contacts', status: 503 }),
+    };
+
+    const outcome = await clientOver(readFake.factory, downContacts).listPurchases({
+      limit: 10,
+      cursor: null,
+    });
+
+    expect(isGatewayOk(outcome)).toBe(true);
+    if (!isGatewayOk(outcome)) return;
+    expect(outcome.value.data[0]?.merchant).toEqual({
+      resolution: 'entity',
+      entityId: 'ent-1',
+      name: null,
+    });
+  });
+
+  it('resolves a single order’s merchant entity through the same batched call', async () => {
+    const readFake = createPurchasesReadFake(
+      [purchasesRow({ id: 'pur-1', merchantEntityId: 'ent-1' })],
+      {
+        'pur-1': purchasesDetail({
+          id: 'pur-1',
+          merchantEntityId: 'ent-1',
+          merchantEntityName: 'K mart',
+        }),
+      }
+    );
+    const spy = contactsSpy(new Map([['ent-1', 'Kmart']]));
+
+    const outcome = await clientOver(readFake.factory, spy.client).getPurchase('pur-1');
+
+    expect(isGatewayOk(outcome)).toBe(true);
+    if (!isGatewayOk(outcome)) return;
+    expect(outcome.value.merchant).toEqual({
+      resolution: 'entity',
+      entityId: 'ent-1',
+      name: 'Kmart',
+    });
+    expect(spy.calls).toEqual([['ent-1']]);
   });
 });

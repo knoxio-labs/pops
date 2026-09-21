@@ -10,6 +10,51 @@
 import { z } from 'zod';
 
 /**
+ * Who a purchase was made from, and how confidently that is known — mirrors
+ * `purchases`' own `MerchantIdentitySchema` (`contract/rest-analytics.ts`),
+ * not imported from it: a pillar contract is never imported across the
+ * boundary (ADR-040), so this is bfm's own copy of the same three-way shape.
+ *
+ * `entity` — bfm resolved `entityId` to a `contacts` entity and, when that
+ * lookup answered, its name. `name` is null rather than omitted when the
+ * lookup failed or the entity carries none, so a phone that only checks
+ * `resolution` never has to guess whether a missing field means "unresolved"
+ * or "resolved to nothing" — see `entity.name` docs below.
+ * `name` — no entity, only the till's own wording.
+ * `unattributed` — the order names no merchant at all.
+ *
+ * A discriminated union rather than one optional field beside a tag, for the
+ * same reason `purchases`' version is one: `resolution` CONSTRAINS the row.
+ * An `entity` row with no `entityId` and a `name` row with no `name` are the
+ * same bug — a resolution presented at a confidence its own data does not
+ * support.
+ */
+export const MobileMerchantIdentitySchema = z.discriminatedUnion('resolution', [
+  z.object({
+    resolution: z.literal('entity'),
+    entityId: z.string(),
+    /**
+     * The contacts entity's own name — the one a person would recognise.
+     * Null when bfm's batched lookup could not name it: the lookup failed,
+     * the entity carries no name, or (rare) `purchases` sent an id contacts
+     * no longer holds. A phone falls back to the till's own wording
+     * (`merchantName`) in that case, never to a blank.
+     */
+    name: z.string().nullable(),
+  }),
+  z.object({
+    resolution: z.literal('name'),
+    /** The grouping key itself, so never absent. */
+    name: z.string(),
+  }),
+  z.object({
+    resolution: z.literal('unattributed'),
+  }),
+]);
+
+export type MobileMerchantIdentity = z.infer<typeof MobileMerchantIdentitySchema>;
+
+/**
  * One row of the mobile purchases list.
  *
  * Everything a row draws and nothing else. Two of these fields are the whole
@@ -19,7 +64,19 @@ import { z } from 'zod';
  */
 export const MobilePurchaseSchema = z.object({
   id: z.string(),
-  /** Display name of the merchant, or null when purchases resolved none. */
+  /**
+   * The three-way merchant identity (POPS-3634): which of `contacts`, the
+   * till's own printed wording, or nothing this purchase carries.
+   */
+  merchant: MobileMerchantIdentitySchema,
+  /**
+   * The till's own printed wording, or null when purchases resolved none.
+   *
+   * @deprecated Superseded by `merchant`, which also carries the resolved
+   * `contacts` entity name and id. Kept for one release so an installed
+   * build older than this change keeps decoding; removing it needs its own
+   * ticket (filed: POPS-4317).
+   */
   merchantName: z.string().nullable(),
   /**
    * Integer cents, mirroring `purchases`' own wire field exactly. The finance

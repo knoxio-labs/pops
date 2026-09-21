@@ -19,6 +19,8 @@
  */
 import { z } from 'zod';
 
+import { toMerchantIdentity } from './merchant-identity.js';
+
 import type {
   MobileMonthMerchantLeader,
   MobileMonthSummary,
@@ -60,6 +62,12 @@ const OrderedAtOffsetSchema = z.int().min(-840).max(840).nullable().optional();
 export const PurchasesListRowSchema = z.object({
   id: z.string(),
   source: z.string(),
+  /**
+   * A resolved `contacts` entity, when `purchases` has one. Operative data —
+   * see `toMerchantIdentity`'s docstring for how it and `merchantEntityName`
+   * combine into the mobile `merchant` field.
+   */
+  merchantEntityId: z.string().nullable(),
   merchantEntityName: z.string().nullable(),
   totalCents: z.number().int(),
   currency: z.string(),
@@ -118,6 +126,7 @@ export const PurchasesDetailResponseSchema = z.object({
   purchase: z.object({
     id: z.string(),
     source: z.string(),
+    merchantEntityId: z.string().nullable(),
     merchantEntityName: z.string().nullable(),
     totalCents: z.number().int(),
     subtotalCents: z.number().int(),
@@ -240,9 +249,13 @@ function readOffsetMinutes(timestamp: string): number {
 }
 
 /** purchases list row → mobile list row. Field-for-field; no arithmetic on money. */
-export function toMobilePurchase(row: PurchasesListRow): MobilePurchase {
+export function toMobilePurchase(
+  row: PurchasesListRow,
+  mergedNames: ReadonlyMap<string, string> = new Map()
+): MobilePurchase {
   return {
     id: row.id,
+    merchant: toMerchantIdentity(row.merchantEntityId, row.merchantEntityName, mergedNames),
     merchantName: row.merchantEntityName,
     totalCents: row.totalCents,
     currency: row.currency,
@@ -254,10 +267,18 @@ export function toMobilePurchase(row: PurchasesListRow): MobilePurchase {
 }
 
 /** purchases detail → the mobile detail record. */
-export function toMobilePurchaseDetail(detail: PurchasesDetailResponse): MobilePurchaseDetail {
+export function toMobilePurchaseDetail(
+  detail: PurchasesDetailResponse,
+  mergedNames: ReadonlyMap<string, string> = new Map()
+): MobilePurchaseDetail {
   const purchase = detail.purchase;
   return {
     id: purchase.id,
+    merchant: toMerchantIdentity(
+      purchase.merchantEntityId,
+      purchase.merchantEntityName,
+      mergedNames
+    ),
     merchantName: purchase.merchantEntityName,
     totalCents: purchase.totalCents,
     currency: purchase.currency,

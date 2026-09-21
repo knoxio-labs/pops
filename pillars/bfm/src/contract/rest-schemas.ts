@@ -263,6 +263,7 @@ export const MobileUpstreamErrorSchema = z.object({
 export type MobileUpstreamError = z.infer<typeof MobileUpstreamErrorSchema>;
 
 export {
+  MobileMerchantIdentitySchema,
   MobileMonthCurrencyTotalSchema,
   MobileMonthMerchantLeaderSchema,
   MobileMonthSummarySchema,
@@ -270,6 +271,7 @@ export {
   MobilePurchaseItemSchema,
   MobilePurchaseSchema,
   MobilePurchasesPageSchema,
+  type MobileMerchantIdentity,
   type MobileMonthCurrencyTotal,
   type MobileMonthMerchantLeader,
   type MobileMonthSummary,

@@ -17,18 +17,18 @@
  * reached" and "purchases refused the write" are different facts and the
  * phone draws them differently.
  */
+import { createMobileContactsClient, type MobileContactsClient } from '../contacts/client.js';
 import { type GatewayOutcome, type PillarGateway, isGatewayOk } from '../pillars/gateway.js';
 import { parseOrMismatch } from '../pillars/parse-response.js';
 import { createManualPurchase, extractReceipt, saveReceiptDraft } from './draft-client.js';
-import { encodePurchasesCursor, type PurchasesPageCursor } from './list-cursor.js';
+import { type PurchasesPageCursor } from './list-cursor.js';
+import { distinctEntityIds, resolveMergedNames, servedRows, toPage } from './list-page.js';
 import {
   PurchasesDetailResponseSchema,
   PurchasesListResponseSchema,
   PurchasesMonthSummaryResponseSchema,
   toMobileMonthSummary,
-  toMobilePurchase,
   toMobilePurchaseDetail,
-  type PurchasesListRow,
 } from './list-wire.js';
 import { PurchasesReceiptBytesSchema } from './wire.js';
 
@@ -128,49 +128,17 @@ export interface MobilePurchasesClient {
   getMonthSummary(month: string): Promise<GatewayOutcome<MobileMonthSummary>>;
 }
 
-export function createMobilePurchasesClient(gateway: PillarGateway): MobilePurchasesClient {
+export function createMobilePurchasesClient(
+  gateway: PillarGateway,
+  contacts: MobileContactsClient = createMobileContactsClient(gateway)
+): MobilePurchasesClient {
   return {
     extractReceipt: (parts, capture) => extractReceipt(gateway, parts, capture),
     saveReceiptDraft: (body) => saveReceiptDraft(gateway, body),
     createManualPurchase: (body) => createManualPurchase(gateway, body),
 
-    async listPurchases(request: ListPurchasesRequest) {
-      // One row past the page, exactly as the finance leg does: the extra
-      // row's existence is what proves another page exists, and asking the
-      // producer for a total instead would be a second count query per scroll
-      // tick answering with a number that is stale the moment it is read.
-      const outcome = await gateway.call<PurchasesReceiptRouter, unknown>(
-        PURCHASES_PILLAR_ID,
-        (handle) => handle.purchase.list(toListInput(request))
-      );
-
-      const page = parseOrMismatch(
-        PURCHASES_PILLAR_ID,
-        outcome,
-        PurchasesListResponseSchema,
-        'purchase.list'
-      );
-      if (!isGatewayOk(page)) return page;
-
-      return { kind: 'ok', value: toPage(page.value.items, request.limit, page.value.total) };
-    },
-
-    async getPurchase(id: string) {
-      const outcome = await gateway.call<PurchasesReceiptRouter, unknown>(
-        PURCHASES_PILLAR_ID,
-        (handle) => handle.purchase.get({ id })
-      );
-
-      const detail = parseOrMismatch(
-        PURCHASES_PILLAR_ID,
-        outcome,
-        PurchasesDetailResponseSchema,
-        'purchase.get'
-      );
-      if (!isGatewayOk(detail)) return detail;
-
-      return { kind: 'ok', value: toMobilePurchaseDetail(detail.value) };
-    },
+    listPurchases: (request) => listPurchases(gateway, contacts, request),
+    getPurchase: (id) => getPurchase(gateway, contacts, id),
 
     async getReceipt(sha256: string) {
       return fetchReceiptBytes(gateway, 'receipt.read', (handle) =>
@@ -247,28 +215,55 @@ function toListInput(request: ListPurchasesRequest): {
   };
 }
 
-/**
- * Trim the probe row off the over-fetched page and mint the next cursor.
- *
- * The cursor names the LAST ROW SERVED, not the probe: naming the probe row
- * would anchor the next page one row too far forward, since the app never saw
- * it and could not have served it.
- */
-function toPage(
-  rows: readonly PurchasesListRow[],
-  limit: number,
-  total: number | undefined
-): MobilePurchasesPage {
-  const hasMore = rows.length > limit;
-  const served = hasMore ? rows.slice(0, limit) : rows;
-  const last = served.at(-1);
+async function listPurchases(
+  gateway: PillarGateway,
+  contacts: MobileContactsClient,
+  request: ListPurchasesRequest
+): Promise<GatewayOutcome<MobilePurchasesPage>> {
+  // One row past the page, exactly as the finance leg does: the extra row's
+  // existence is what proves another page exists, and asking the producer
+  // for a total instead would be a second count query per scroll tick
+  // answering with a number that is stale the moment it is read.
+  const outcome = await gateway.call<PurchasesReceiptRouter, unknown>(
+    PURCHASES_PILLAR_ID,
+    (handle) => handle.purchase.list(toListInput(request))
+  );
 
-  return {
-    data: served.map(toMobilePurchase),
-    nextCursor:
-      hasMore && last !== undefined
-        ? encodePurchasesCursor({ orderedAt: last.orderedAt, id: last.id })
-        : null,
-    total: total ?? null,
-  };
+  const page = parseOrMismatch(
+    PURCHASES_PILLAR_ID,
+    outcome,
+    PurchasesListResponseSchema,
+    'purchase.list'
+  );
+  if (!isGatewayOk(page)) return page;
+
+  const hasMore = page.value.items.length > request.limit;
+  const served = servedRows(page.value.items, request.limit);
+  const mergedNames = await resolveMergedNames(contacts, distinctEntityIds(served));
+
+  return { kind: 'ok', value: toPage(served, hasMore, mergedNames, page.value.total) };
+}
+
+async function getPurchase(
+  gateway: PillarGateway,
+  contacts: MobileContactsClient,
+  id: string
+): Promise<GatewayOutcome<MobilePurchaseDetail>> {
+  const outcome = await gateway.call<PurchasesReceiptRouter, unknown>(
+    PURCHASES_PILLAR_ID,
+    (handle) => handle.purchase.get({ id })
+  );
+
+  const detail = parseOrMismatch(
+    PURCHASES_PILLAR_ID,
+    outcome,
+    PurchasesDetailResponseSchema,
+    'purchase.get'
+  );
+  if (!isGatewayOk(detail)) return detail;
+
+  const entityId = detail.value.purchase.merchantEntityId;
+  const mergedNames = await resolveMergedNames(contacts, entityId === null ? [] : [entityId]);
+
+  return { kind: 'ok', value: toMobilePurchaseDetail(detail.value, mergedNames) };
 }
