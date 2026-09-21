@@ -9662,6 +9662,10 @@
                           "enum": ["draft"],
                           "type": "string"
                         },
+                        "matchedMerchantEntityId": {
+                          "nullable": true,
+                          "type": "string"
+                        },
                         "receiptUris": {
                           "items": {
                             "pattern": "^pops:\\/\\/[a-z0-9-]+\\/[a-z0-9-]+\\/[^/\\s]+$",
@@ -9674,7 +9678,14 @@
                           "type": "boolean"
                         }
                       },
-                      "required": ["kind", "receiptUris", "reconciled", "failures", "draft"],
+                      "required": [
+                        "kind",
+                        "receiptUris",
+                        "reconciled",
+                        "failures",
+                        "draft",
+                        "matchedMerchantEntityId"
+                      ],
                       "type": "object"
                     },
                     {

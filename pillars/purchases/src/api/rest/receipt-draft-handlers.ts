@@ -104,6 +104,7 @@ export function makeReceiptDraftHandlers(
         uploadedAt,
         capture,
       });
+      const matchedMerchantEntityId = await nameMerchant(merchant, outcome.extracted.merchantName);
 
       return okExtract({
         kind: 'draft',
@@ -111,6 +112,7 @@ export function makeReceiptDraftHandlers(
         reconciled: outcome.gate.admissible,
         failures: outcome.gate.admissible ? [] : [...outcome.gate.failures],
         draft,
+        matchedMerchantEntityId,
       });
     },
 

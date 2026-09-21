@@ -92,6 +92,7 @@ export function purchasesDraft(
     failures?: readonly { kind: string; detail: string; deltaCents?: number }[];
     receiptUris?: readonly string[];
     draft?: Record<string, unknown>;
+    matchedMerchantEntityId?: string | null;
   } = {}
 ): CallResult<unknown> {
   return {
@@ -101,6 +102,7 @@ export function purchasesDraft(
       receiptUris: overrides.receiptUris ?? ['pops://purchases/receipt/' + 'a'.repeat(64)],
       reconciled: overrides.reconciled ?? true,
       failures: overrides.failures ?? [],
+      matchedMerchantEntityId: overrides.matchedMerchantEntityId ?? null,
       draft: {
         merchantEntityName: 'Bunnings Warehouse',
         orderedAt: '2026-08-01T14:32:00+10:00',

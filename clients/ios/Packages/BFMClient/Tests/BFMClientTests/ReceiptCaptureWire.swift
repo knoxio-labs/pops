@@ -55,12 +55,15 @@ internal enum ReceiptCaptureWire {
         shippingIncluded: Bool = false,
         items: String = oneItem,
         documents: String =
-            "[{\"documentUri\":\"pops://purchases/receipt/\(String(repeating: "a", count: 64))\",\"kind\":\"receipt\"}]"
+            "[{\"documentUri\":\"pops://purchases/receipt/\(String(repeating: "a", count: 64))\",\"kind\":\"receipt\"}]",
+        matchedMerchantEntityId: String? = nil
     ) -> String {
         let merchantField = merchantName.map { "\"\($0)\"" } ?? "null"
+        let matchedMerchantField = matchedMerchantEntityId.map { "\"\($0)\"" } ?? "null"
         return """
             {"kind":"draft","receiptUris":\(receiptUris),"reconciled":\(reconciled),\
-            "failures":\(failures),"draft":{"merchantName":\(merchantField),\
+            "failures":\(failures),"matchedMerchantEntityId":\(matchedMerchantField),\
+            "draft":{"merchantName":\(merchantField),\
             "orderedAt":"\(orderedAt)","currency":"\(currency)","totalCents":\(totalCents),\
             "subtotalCents":\(subtotalCents),"taxCents":\(taxCents),\
             "surchargeCents":\(surchargeCents),"shippingCents":\(shippingCents),\

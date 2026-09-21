@@ -28,19 +28,25 @@ public struct ReceiptDraftReading: Hashable, Sendable {
     /// Opaque facts about when and where this was captured, carried forward
     /// unread and handed back verbatim on save — see ``ReceiptCaptureFacts``.
     public let capture: ReceiptCaptureFacts?
+    /// The contacts entity the server matched the printed merchant name to.
+    /// `nil` on no match — a proposal for the reviewer to confirm, never a
+    /// decision already made.
+    public let matchedMerchantEntityID: String?
 
     public init(
         receiptUris: [String],
         reconciled: Bool,
         failures: [ReceiptGateFailure],
         extracted: ExtractedReceipt,
-        capture: ReceiptCaptureFacts?
+        capture: ReceiptCaptureFacts?,
+        matchedMerchantEntityID: String? = nil
     ) {
         self.receiptUris = receiptUris
         self.reconciled = reconciled
         self.failures = failures
         self.extracted = extracted
         self.capture = capture
+        self.matchedMerchantEntityID = matchedMerchantEntityID
     }
 }
 
@@ -122,6 +128,14 @@ public struct ReceiptSaveDocument: Hashable, Sendable {
 /// field for field.
 public struct ReceiptPurchaseDraftFields: Hashable, Sendable {
     public let merchantName: String?
+    /// A merchant the reviewer resolved to a contacts entity — a server
+    /// proposal they confirmed, or their own pick from search. `nil` sends
+    /// ``merchantName`` as free text instead, the fallback path.
+    public let merchantEntityId: String?
+    /// The contacts address chosen for this purchase, if any.
+    public let merchantAddressId: String?
+    /// The address as printed, kept alongside the chosen id for display.
+    public let merchantAddressText: String?
     /// ISO-8601 with an offset — the date and time the reviewer confirmed.
     public let orderedAt: String
     public let currency: String
@@ -146,6 +160,9 @@ public struct ReceiptPurchaseDraftFields: Hashable, Sendable {
 
     public init(
         merchantName: String?,
+        merchantEntityId: String? = nil,
+        merchantAddressId: String? = nil,
+        merchantAddressText: String? = nil,
         orderedAt: String,
         currency: String,
         totalCents: Int,
@@ -162,6 +179,9 @@ public struct ReceiptPurchaseDraftFields: Hashable, Sendable {
         idempotencyKey: String
     ) {
         self.merchantName = merchantName
+        self.merchantEntityId = merchantEntityId
+        self.merchantAddressId = merchantAddressId
+        self.merchantAddressText = merchantAddressText
         self.orderedAt = orderedAt
         self.currency = currency
         self.totalCents = totalCents

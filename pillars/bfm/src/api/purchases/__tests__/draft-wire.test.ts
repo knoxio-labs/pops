@@ -22,6 +22,7 @@ const outcome = (draftOver: Record<string, unknown> = {}): PurchasesExtractOutco
   receiptUris: ['pops://receipts/x'],
   reconciled: true,
   failures: [],
+  matchedMerchantEntityId: null,
   draft: { ...BASE_DRAFT, ...draftOver },
 });
 

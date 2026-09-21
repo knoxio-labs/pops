@@ -161,7 +161,8 @@ extension BFMReceiptCaptureRepository {
                     reconciled: draft.reconciled,
                     failures: draft.failures.map(failure(from:)),
                     extracted: extracted(from: draft.draft),
-                    capture: capture(from: draft.draft.capture)
+                    capture: capture(from: draft.draft.capture),
+                    matchedMerchantEntityID: draft.matchedMerchantEntityId
                 )
             )
         case .case2(let unreadable):

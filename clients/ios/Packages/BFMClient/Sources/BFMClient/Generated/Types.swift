@@ -25885,6 +25885,8 @@ internal enum Operations {
                             }
                             /// - Remark: Generated from `#/paths/mobile/purchases/receipts/extract/POST/responses/200/content/json/case1/kind`.
                             internal var kind: Operations.MobilePurchases_extractReceipt.Output.Ok.Body.JsonPayload.Case1Payload.KindPayload
+                            /// - Remark: Generated from `#/paths/mobile/purchases/receipts/extract/POST/responses/200/content/json/case1/matchedMerchantEntityId`.
+                            internal var matchedMerchantEntityId: Swift.String?
                             /// - Remark: Generated from `#/paths/mobile/purchases/receipts/extract/POST/responses/200/content/json/case1/receiptUris`.
                             internal var receiptUris: [Swift.String]
                             /// - Remark: Generated from `#/paths/mobile/purchases/receipts/extract/POST/responses/200/content/json/case1/reconciled`.
@@ -25895,18 +25897,21 @@ internal enum Operations {
                             ///   - draft:
                             ///   - failures:
                             ///   - kind:
+                            ///   - matchedMerchantEntityId:
                             ///   - receiptUris:
                             ///   - reconciled:
                             internal init(
                                 draft: Operations.MobilePurchases_extractReceipt.Output.Ok.Body.JsonPayload.Case1Payload.DraftPayload,
                                 failures: Operations.MobilePurchases_extractReceipt.Output.Ok.Body.JsonPayload.Case1Payload.FailuresPayload,
                                 kind: Operations.MobilePurchases_extractReceipt.Output.Ok.Body.JsonPayload.Case1Payload.KindPayload,
+                                matchedMerchantEntityId: Swift.String? = nil,
                                 receiptUris: [Swift.String],
                                 reconciled: Swift.Bool
                             ) {
                                 self.draft = draft
                                 self.failures = failures
                                 self.kind = kind
+                                self.matchedMerchantEntityId = matchedMerchantEntityId
                                 self.receiptUris = receiptUris
                                 self.reconciled = reconciled
                             }
@@ -25914,6 +25919,7 @@ internal enum Operations {
                                 case draft
                                 case failures
                                 case kind
+                                case matchedMerchantEntityId
                                 case receiptUris
                                 case reconciled
                             }
@@ -25931,6 +25937,10 @@ internal enum Operations {
                                     Operations.MobilePurchases_extractReceipt.Output.Ok.Body.JsonPayload.Case1Payload.KindPayload.self,
                                     forKey: .kind
                                 )
+                                self.matchedMerchantEntityId = try container.decodeIfPresent(
+                                    Swift.String.self,
+                                    forKey: .matchedMerchantEntityId
+                                )
                                 self.receiptUris = try container.decode(
                                     [Swift.String].self,
                                     forKey: .receiptUris
@@ -25943,6 +25953,7 @@ internal enum Operations {
                                     "draft",
                                     "failures",
                                     "kind",
+                                    "matchedMerchantEntityId",
                                     "receiptUris",
                                     "reconciled"
                                 ])

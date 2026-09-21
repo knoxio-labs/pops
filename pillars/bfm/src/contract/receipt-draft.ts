@@ -182,6 +182,12 @@ export const MobileExtractOutcomeSchema = z.discriminatedUnion('kind', [
     reconciled: z.boolean(),
     failures: z.array(MobileDraftFailureSchema),
     draft: MobileReceiptDraftSchema,
+    /**
+     * The contacts entity `purchases` matched the printed merchant name to,
+     * carried through unchanged. Null on no match — a proposal for the
+     * reviewer to confirm, never a decision bfm makes.
+     */
+    matchedMerchantEntityId: z.string().nullable(),
   }),
   z.object({
     kind: z.literal('unreadable'),

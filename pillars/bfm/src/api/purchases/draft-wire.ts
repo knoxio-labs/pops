@@ -74,6 +74,7 @@ export const PurchasesExtractOutcomeSchema = z.discriminatedUnion('kind', [
     reconciled: z.boolean(),
     failures: z.array(PurchasesDraftGateFailureSchema),
     draft: PurchasesReceiptDraftSchema,
+    matchedMerchantEntityId: z.string().nullable(),
   }),
   z.object({
     kind: z.literal('unreadable'),
@@ -138,6 +139,7 @@ export function toMobileExtractOutcome(outcome: PurchasesExtractOutcome): Mobile
     kind: 'draft',
     receiptUris: outcome.receiptUris,
     reconciled: outcome.reconciled,
+    matchedMerchantEntityId: outcome.matchedMerchantEntityId,
     failures: outcome.failures.map((failure) => ({
       code: failure.kind,
       detail: failure.detail,

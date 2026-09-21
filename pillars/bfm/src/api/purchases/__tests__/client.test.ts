@@ -96,6 +96,26 @@ describe('extractReceipt', () => {
     expect(outcome.value.draft.items).toHaveLength(1);
   });
 
+  it('carries the matched merchant id through to the mobile shape', async () => {
+    const fake = createPurchasesDraftFake(
+      purchasesDraft({ matchedMerchantEntityId: 'entity-bunnings' })
+    );
+    const outcome = await clientOver(fake.factory).extractReceipt(PARTS);
+
+    expect(isGatewayOk(outcome)).toBe(true);
+    if (!isGatewayOk(outcome) || outcome.value.kind !== 'draft') return;
+    expect(outcome.value.matchedMerchantEntityId).toBe('entity-bunnings');
+  });
+
+  it('carries a null match through unchanged', async () => {
+    const fake = createPurchasesDraftFake(purchasesDraft());
+    const outcome = await clientOver(fake.factory).extractReceipt(PARTS);
+
+    expect(isGatewayOk(outcome)).toBe(true);
+    if (!isGatewayOk(outcome) || outcome.value.kind !== 'draft') return;
+    expect(outcome.value.matchedMerchantEntityId).toBeNull();
+  });
+
   it('maps unreadable straight through', async () => {
     const fake = createPurchasesDraftFake(purchasesDraftUnreadable('the model returned nothing'));
     const outcome = await clientOver(fake.factory).extractReceipt(PARTS);
