@@ -50,9 +50,6 @@ export const ReceiptPartSchema = z.object({
   dataBase64: z.string().min(1),
 });
 
-/** How many parts one receipt may be sent as. */
-export const MAX_RECEIPT_PARTS = 8;
-
 /**
  * Where the device was standing when the shutter fired.
  *
@@ -118,10 +115,12 @@ export const UploadReceiptBodySchema = z.object({
    * upload and one purchase — not several receipts. A PDF or a pasted body
    * is ordinarily the whole receipt and arrives on its own.
    *
-   * Bounded because every part is paid for in the same model call, and a
-   * receipt needing more than eight frames is a scanner's job.
+   * No count ceiling: a long shop is not told to stop partway through. The
+   * body-size limit (`JSON_BODY_LIMIT_BYTES`) is the only real bound on how
+   * many parts one upload can carry — see ADR-052
+   * (`docs/architecture/adr-052-receipt-part-count-ceiling.md`).
    */
-  parts: z.array(ReceiptPartSchema).min(1).max(MAX_RECEIPT_PARTS),
+  parts: z.array(ReceiptPartSchema).min(1),
   /**
    * What the device knew, for a client that has it. Additive and optional:
    * a caller that omits it gets exactly the behaviour it got before this

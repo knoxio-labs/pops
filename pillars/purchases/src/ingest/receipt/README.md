@@ -249,9 +249,10 @@ is a 413 before this route sees it.
 frame, so the parts are an ordered sequence covering one receipt, top to
 bottom. They go to the model in a single call and produce one extraction,
 one gate check and one purchase, which carries every part as evidence.
-Eight is the cap: each part is paid for in that call, and a receipt needing
-more frames is a scanner's job. A PDF or a pasted body is ordinarily the
-whole receipt and arrives on its own.
+There is no cap on how many parts one receipt may arrive as — the 20mb body
+limit above is the only ceiling, per ADR-052
+(`docs/architecture/adr-052-receipt-part-count-ceiling.md`). A PDF or a
+pasted body is ordinarily the whole receipt and arrives on its own.
 
 Nothing bounds a PDF's page count here. Anthropic's own limit is what
 applies, and a document past it comes back as `unreadable` with the
