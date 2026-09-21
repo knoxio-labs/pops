@@ -153,7 +153,7 @@ internal enum PurchaseEditDraft {
             shipping: nonZero(detail.shipping),
             lines: detail.lines.map {
                 ExtractedReceiptLine(
-                    description: PurchaseDetailLines.oneLine($0.name),
+                    description: PurchaseDetailLineText.oneLine($0.name),
                     amount: plain($0.lineTotal),
                     quantity: $0.quantity > 1 ? $0.quantity : nil,
                     unitNote: nil)

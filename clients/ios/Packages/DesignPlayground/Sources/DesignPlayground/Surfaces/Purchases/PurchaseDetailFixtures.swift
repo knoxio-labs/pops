@@ -129,14 +129,16 @@ internal enum PurchaseDetailFixtures {
         ])
 
     /// Every figure an online order can carry, and a status this build has
-    /// never heard of.
+    /// never heard of. The figures reconcile to the history's $79.90, because
+    /// the detail prints them as a receipt's foot and a foot that does not add
+    /// up reads as a bug.
     static let uniqlo = detail(
         "pur-returned",
-        Figures(subtotal: 8_990, tax: 817, shipping: 795, discount: 1_000, surcharge: 150),
+        Figures(subtotal: 8_480, tax: 595, shipping: 795, discount: 2_000, surcharge: 120),
         source: "pops://purchases/uniqlo/order",
         lines: [
             line("l1", "HEATTECH SOCKS 3P", 2, 1_990),
-            line("l2", "AIRISM CREW NECK T", 1, 7_000),
+            line("l2", "AIRISM COTTON OVERSIZED CREW NECK T-SHIRT", 1, 6_490),
         ],
         pages: 0)
 

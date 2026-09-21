@@ -266,6 +266,7 @@ public struct ReceiptDraftView: View {
         Button(isSaving ? ReceiptDraftCopy.saving : ReceiptDraftCopy.saveInBar) { save?(draft) }
             .disabled(!Self.canSave(draft, isSaving: isSaving, changedFrom: opened))
             .accessibilityIdentifier(ReceiptDraftAccessibility.saveButton)
+            .receiptDraftProminentBarButton()
     }
 
     /// Save is the prominent one; whatever else can be done here sits beside
@@ -367,5 +368,20 @@ extension ReceiptDraftView {
             status: status, complaints: complaints, merchants: merchants, parts: parts,
             secondaryAction: secondaryAction, addAnother: addAnother, lock: nil,
             commit: .actionBar, onChange: nil, isSaving: isSaving, save: save)
+    }
+}
+
+extension View {
+    /// The commit in a sheet's bar, drawn as the platform's prominent glass so
+    /// it reads as the sheet's one call to action. The glass style is
+    /// iOS-only; the host toolchain that runs this package's tests stands in
+    /// with the bordered prominent one.
+    @ViewBuilder
+    fileprivate func receiptDraftProminentBarButton() -> some View {
+        #if os(iOS)
+            buttonStyle(.glassProminent)
+        #else
+            buttonStyle(.borderedProminent)
+        #endif
     }
 }

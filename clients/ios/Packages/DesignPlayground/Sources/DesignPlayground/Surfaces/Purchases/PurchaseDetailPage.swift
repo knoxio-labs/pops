@@ -2,13 +2,13 @@ import AppCore
 import DesignSystem
 import SwiftUI
 
-/// A saved purchase on screen: who, what it came to, the paper, and the lines.
+/// A saved purchase on screen: who and what it came to, where it stands
+/// against the bank, and the receipt's lines with their totals.
 ///
 /// Laid out after Inventory's item detail and made to fit one phone screen.
-/// The receipt sits beside the identity rather than above it, because a till
-/// receipt is a tall narrow strip and a full-width banner of one is mostly
-/// crop. Everything above the lines is fixed; the lines are the one list,
-/// and the only thing that scrolls.
+/// Everything above the lines is fixed; the lines are the one list, and the
+/// only thing that scrolls. Edit and Share sit in the navigation bar, as
+/// Inventory's Edit and More do.
 internal struct PurchaseDetailPage: View {
     @State private var detail: PurchaseDetail
     @State private var refresh: PurchaseDetailFailure?
@@ -28,17 +28,15 @@ internal struct PurchaseDetailPage: View {
     }
 
     internal var body: some View {
-        VStack(alignment: .leading, spacing: PopsSpacing.zero) {
-            VStack(alignment: .leading, spacing: PopsSpacing.md) {
-                PurchaseDetailHeader(detail: detail) { viewing = $0 }
-                PurchaseDetailFigures(detail: detail)
-                notices
-                PurchaseDetailItemsHeader(count: detail.lines.count)
-            }
-            .padding(.horizontal, PopsSpacing.lg)
-            .padding(.top, PopsSpacing.sm)
-            PurchaseDetailLines(lines: detail.lines)
+        VStack(alignment: .leading, spacing: PopsSpacing.lg) {
+            PurchaseDetailHeader(detail: detail) { viewing = $0 }
+            notices
+            PurchaseDetailMatchRow(status: detail.purchase.status)
+            PurchaseDetailReceipt(detail: detail)
         }
+        .padding(.horizontal, PopsSpacing.lg)
+        .padding(.top, PopsSpacing.sm)
+        .padding(.bottom, PopsSpacing.lg)
         .inventoryMotion(value: detail)
         .inventoryMotion(value: refresh)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -48,6 +46,11 @@ internal struct PurchaseDetailPage: View {
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button("Edit") { editing = .open }
+            }
+            ToolbarItem(placement: .primaryAction) {
+                ShareLink(item: PurchaseDetailCopy.shareText(detail)) {
+                    Label("Share", systemImage: "square.and.arrow.up")
+                }
             }
         }
         .sheet(item: $editing) { stage in
@@ -70,18 +73,25 @@ internal struct PurchaseDetailPage: View {
 
     @ViewBuilder private var notices: some View {
         if let refresh {
-            PurchaseDetailNotice(
+            InventoryItemDetailNotice(
                 symbol: PurchaseDetailCopy.symbol(for: refresh),
                 tint: .popsWarning,
                 text: PurchaseDetailCopy.refreshNotice(for: refresh)
             ) {
-                Button("Retry") { self.refresh = nil }
-                    .font(.popsSubheadline.weight(.semibold))
+                Button {
+                    self.refresh = nil
+                } label: {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.popsSubheadline.weight(.semibold))
+                        .frame(width: PopsSize.touchTarget, height: PopsSize.touchTarget)
+                        .contentShape(.rect)
+                }
+                .buttonStyle(.borderless)
+                .accessibilityLabel("Retry")
             }
-            .transition(.opacity)
         }
         if let edit = detail.edit {
-            PurchaseDetailNotice(
+            InventoryItemDetailNotice(
                 symbol: "pencil",
                 tint: PurchaseDetailTint.color,
                 text: PurchaseDetailCopy.edited(edit.editedOn)
@@ -89,9 +99,9 @@ internal struct PurchaseDetailPage: View {
                 if !edit.changes.isEmpty {
                     Button("Original") { showsOriginal = true }
                         .font(.popsSubheadline.weight(.semibold))
+                        .frame(minHeight: PopsSize.touchTarget)
                 }
             }
-            .transition(.opacity)
         }
     }
 
@@ -105,49 +115,5 @@ internal struct PurchaseDetailPage: View {
                 shipping: detail.shipping, discount: detail.discount,
                 surcharge: detail.surcharge, source: detail.source, lines: detail.lines,
                 pages: detail.pages, edit: PurchaseEdit(editedOn: .now, changes: []))
-    }
-}
-
-/// One line saying something about the record, led by its glyph, with room at
-/// the end for the one thing to do about it.
-internal struct PurchaseDetailNotice<Action: View>: View {
-    internal let symbol: String
-    internal let tint: Color
-    internal let text: String
-    @ViewBuilder internal let action: Action
-
-    internal var body: some View {
-        HStack(spacing: PopsSpacing.sm) {
-            Image(systemName: symbol)
-                .font(.popsSubheadline)
-                .foregroundStyle(tint)
-                .accessibilityHidden(true)
-            Text(text)
-                .font(.popsSubheadline)
-                .foregroundStyle(Color.popsForeground)
-                .lineLimit(1)
-            Spacer(minLength: PopsSpacing.sm)
-            action
-        }
-        .frame(minHeight: PopsSize.touchTarget)
-    }
-}
-
-/// `Items` and how many, over the list.
-internal struct PurchaseDetailItemsHeader: View {
-    internal let count: Int
-
-    internal var body: some View {
-        HStack(alignment: .firstTextBaseline) {
-            Text("Items")
-                .font(.popsHeadline)
-                .foregroundStyle(Color.popsForeground)
-            Spacer(minLength: PopsSpacing.sm)
-            Text("\(count)")
-                .font(.popsSubheadline)
-                .monospacedDigit()
-                .foregroundStyle(Color.popsMutedForeground)
-                .contentTransition(.numericText())
-        }
     }
 }
