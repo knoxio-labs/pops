@@ -1,32 +1,33 @@
+import AppCore
 import DesignSystem
 import SwiftUI
 
-/// What was picked, as the files themselves.
+/// What was picked, as the files themselves, in the sheet the capture flow
+/// runs in.
 ///
-/// A list was the wrong shape here and the reason is worth keeping: at this
-/// point nothing has been read. There is no merchant, no date and no total —
-/// the only thing that identifies a receipt is the picture of it, and a row
-/// spending its full width on `IMG_4821.HEIC` is a row showing the least
-/// useful fact about the file at the largest size on screen.
-///
-/// So: a grid, and grouping by direct manipulation rather than by a selection
-/// mode and a button.
+/// A grid rather than a list: nothing has been read yet, so the picture is the
+/// only thing that identifies a receipt. Grouping is direct manipulation, as
+/// home-screen folders are, and the same gesture reads forwards and backwards:
 ///
 /// - Drag one page onto another and the two become one receipt.
-/// - Drag a page onto a receipt card and it joins it.
-/// - Drag a page out of a card, onto the loose area, and it leaves.
+/// - Drag a page onto a receipt and it joins it.
+/// - Drag a page out of a receipt, onto the loose area, and it leaves.
 ///
-/// Which means there is no Combine button, no Ungroup button and no selection
-/// state to be in or out of — the same gesture reads forwards and backwards,
-/// which is the property that makes iOS home-screen folders learnable without
-/// anybody explaining them.
+/// A receipt of several pages is a platter with its pages in it, and the title
+/// counts receipts, so a drop that groups two pages is seen twice: the platter
+/// forms and the count drops by one.
 ///
-/// The loose area stays on screen even when it is empty, because it is the
-/// drop target that ungroups, and a target you cannot see is a gesture with no
-/// way back.
+/// The loose area stays on screen when it has no pages, led by the Add tile,
+/// because it is the target that ungroups and a target you cannot see is a
+/// gesture with no way back.
+///
+/// Cancel leads and Read trails, in the navigation bar, as every sheet in the
+/// app commits.
 internal struct PurchaseStagingGrid: View {
     @State private var staged: StagedReceipts
     @State private var viewing: StagedPage?
+    @State private var reading = false
+    @State private var added = 0
     @Environment(\.dismiss) private var dismiss
     /// Which drop target the drag is currently over, if any. One value rather
     /// than a flag per tile: a drag is over exactly one thing at a time, and
@@ -48,34 +49,40 @@ internal struct PurchaseStagingGrid: View {
     }
 
     private let columns = [
-        GridItem(.flexible(), spacing: PopsSpacing.md),
-        GridItem(.flexible(), spacing: PopsSpacing.md),
-        GridItem(.flexible(), spacing: PopsSpacing.md),
+        GridItem(.flexible(), spacing: PopsSpacing.md, alignment: .top),
+        GridItem(.flexible(), spacing: PopsSpacing.md, alignment: .top),
+        GridItem(.flexible(), spacing: PopsSpacing.md, alignment: .top),
     ]
     private let tileWidth: CGFloat = 96
-    private let groupTile: CGFloat = 64
+    private let groupTile: CGFloat = 72
     private let groupTargetScale: CGFloat = 0.94
-
-    private var groups: [StagedReceipt] { staged.groups }
-    private var loose: [StagedPage] { staged.loose }
+    private let looseMinHeight: CGFloat = 160
 
     internal var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: PopsSpacing.xl) {
-                ForEach(groups) { group in
-                    groupCard(group)
+            VStack(alignment: .leading, spacing: PopsSpacing.lg) {
+                ForEach(staged.groups) { group in
+                    groupPlatter(group)
+                        .transition(.scale(scale: 0.96).combined(with: .opacity))
                 }
                 looseArea
             }
             .padding(PopsSpacing.lg)
         }
         .background(Color.popsBackground)
-        // An inset, not an overlay. An overlay reserves nothing, so the last
-        // row of the content sat underneath the controls with no way to
-        // scroll past them; an inset takes the height out of the scroll's safe
-        // area and the content clears it.
-        .safeAreaInset(edge: .bottom) { actions }
-        .playgroundLeadingBarItem { close }
+        .navigationTitle(title)
+        .playgroundTitleDisplay(large: false)
+        .playgroundLeadingBarItem { cancel }
+        .playgroundTrailingBarItem {
+            Button("Read") { reading = true }
+                .playgroundProminentGlassButton()
+                .disabled(staged.isEmpty)
+        }
+        .navigationDestination(isPresented: $reading) {
+            PurchaseProcessingSurface(
+                readings: PurchaseStagingGrid.readings(of: staged),
+                landing: PurchaseStagingGrid.landing(for: staged))
+        }
         .playgroundStage(item: $viewing) { page in
             PurchasePageViewer(
                 staged: staged,
@@ -86,35 +93,38 @@ internal struct PurchaseStagingGrid: View {
                 }
             )
         }
+        .inventoryMotion(value: staged)
+        .inventoryMotion(value: targeted)
+        .tint(.popsAccent)
     }
 
-    /// A receipt is a card with its pages in it, rather than a folder glyph
+    private var title: String {
+        switch staged.count {
+        case 0: "Receipts"
+        case 1: "1 receipt"
+        default: "\(staged.count) receipts"
+        }
+    }
+
+    /// A receipt is a platter with its pages in it, rather than a folder glyph
     /// that hides them. Hiding them would make the pages undraggable, and
     /// dragging a page out is the only way to ungroup.
-    private func groupCard(_ group: StagedReceipt) -> some View {
-        VStack(alignment: .leading, spacing: PopsSpacing.md) {
-            Text("1 receipt · \(group.pages.count) pages")
-                .font(.popsSectionLabel)
-                .foregroundStyle(Color.popsMutedForeground)
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: PopsSpacing.md) {
-                    ForEach(Array(group.pages.enumerated()), id: \.element.id) { index, page in
-                        tile(page, width: groupTile, caption: "Page \(index + 1)")
-                    }
+    private func groupPlatter(_ group: StagedReceipt) -> some View {
+        ScrollView(.horizontal) {
+            HStack(spacing: PopsSpacing.md) {
+                ForEach(group.pages) { page in
+                    tile(page, width: groupTile, caption: nil)
                 }
-                .padding(.vertical, PopsSpacing.xs)
             }
+            .padding(PopsSpacing.md)
         }
-        .padding(PopsSpacing.md)
+        .scrollIndicators(.hidden)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.popsSurface, in: .rect(cornerRadius: PopsRadius.card))
-        .overlay(
-            RoundedRectangle(cornerRadius: PopsRadius.card)
-                .strokeBorder(Color.popsSeparator, lineWidth: PopsBorder.hairline)
-        )
+        .background(Color.popsSurface, in: .rect(cornerRadius: PopsRadius.card * 2))
         .scaleEffect(targeted == .receipt(group.id) ? groupTargetScale : 1)
         .background { StagedDropWell(active: targeted == .receipt(group.id)) }
-        .animation(.snappy(duration: 0.18), value: targeted)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("One receipt, \(group.pages.count) pages")
         .onDrop(
             of: [.plainText],
             delegate: delegate(for: .receipt(group.id)) { ids in
@@ -146,32 +156,24 @@ internal struct PurchaseStagingGrid: View {
         }
     }
 
-    @ViewBuilder private var looseArea: some View {
-        VStack(alignment: .leading, spacing: PopsSpacing.md) {
-            Text(looseTitle)
-                .font(.popsSectionLabel)
-                .foregroundStyle(Color.popsMutedForeground)
-            if loose.isEmpty {
-                emptyLoose
-            } else {
-                LazyVGrid(columns: columns, spacing: PopsSpacing.lg) {
-                    ForEach(loose) { page in
-                        tile(page, width: tileWidth, caption: page.label)
-                    }
-                }
+    private var looseArea: some View {
+        LazyVGrid(columns: columns, alignment: .leading, spacing: PopsSpacing.lg) {
+            addTile
+            ForEach(staged.loose) { page in
+                tile(page, width: tileWidth, caption: page.label)
+                    .transition(.scale(scale: 0.9).combined(with: .opacity))
             }
         }
         .frame(maxWidth: .infinity, minHeight: looseMinHeight, alignment: .topLeading)
         .padding(PopsSpacing.sm)
         // Without a shape the drop region is whatever the tiles happen to
-        // cover, so the empty half of a part-filled row rejects the drag —
+        // cover, so the empty half of a part-filled row rejects the drag,
         // which is exactly where a page being taken out of a receipt is aimed.
         .contentShape(.rect)
         .background(
-            RoundedRectangle(cornerRadius: PopsRadius.card)
+            RoundedRectangle(cornerRadius: PopsRadius.card * 2)
                 .fill(Color.popsAccent.opacity(targeted == .loose ? 0.16 : 0))
         )
-        .animation(.snappy(duration: 0.18), value: targeted)
         .onDrop(
             of: [.plainText],
             delegate: delegate(for: .loose) { ids in
@@ -179,34 +181,41 @@ internal struct PurchaseStagingGrid: View {
             })
     }
 
-    private let looseMinHeight: CGFloat = 140
-
-    private var looseTitle: String {
-        switch loose.count {
-        case 0: "On their own"
-        case 1: "1 on its own"
-        default: "\(loose.count) on their own"
+    /// More pages, from the same three sources the capture control offers
+    /// for paper. Leads the loose pages, as the camera tile leads Inventory's
+    /// photo strip, and lands what it adds on its own.
+    private var addTile: some View {
+        Menu {
+            Button("Camera", systemImage: "camera") {
+                add("Scan \(added + 1)", media: .jpeg)
+            }
+            Button("Photo library", systemImage: "photo.on.rectangle") {
+                add("IMG_48\(31 + added).HEIC", media: .jpeg)
+            }
+            Button("Files", systemImage: "folder") {
+                add("invoice-\(2_210 + added).pdf", media: .pdf)
+            }
+        } label: {
+            VStack(spacing: PopsSpacing.xs) {
+                Image(systemName: "plus")
+                    .font(.popsTitle)
+                    .frame(width: tileWidth, height: tileWidth * PurchaseCaptureSurfaces.pageRatio)
+                    .background(
+                        Color.popsSurface, in: .rect(cornerRadius: PopsRadius.card))
+                Text("Add")
+                    .font(.popsCaption)
+                    .foregroundStyle(Color.popsMutedForeground)
+            }
         }
+        .accessibilityLabel("Add pages")
     }
 
-    /// Visible at zero, because this is the target that ungroups and a gesture
-    /// whose destination disappears is a gesture with no way back.
-    private var emptyLoose: some View {
-        Text("Drag a page here to take it out of its receipt.")
-            .font(.popsCaption)
-            .foregroundStyle(Color.popsMutedForeground)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, PopsSpacing.xl)
-            .background(
-                RoundedRectangle(cornerRadius: PopsRadius.card)
-                    .strokeBorder(
-                        Color.popsSeparator,
-                        style: StrokeStyle(lineWidth: PopsBorder.hairline, dash: [PopsSpacing.sm])
-                    )
-            )
+    private func add(_ label: String, media: ReceiptMediaType) {
+        added += 1
+        staged.add(PurchaseCaptureSurfaces.page(100 + added, label, media: media))
     }
 
-    private func tile(_ page: StagedPage, width: CGFloat, caption: String) -> some View {
+    private func tile(_ page: StagedPage, width: CGFloat, caption: String?) -> some View {
         StagedPageTile(
             page: page,
             width: width,
@@ -219,28 +228,13 @@ internal struct PurchaseStagingGrid: View {
         )
     }
 
-    /// The way out, back to the purchases home.
-    ///
-    /// An X rather than a back chevron, because there is nowhere to go back
-    /// to: the camera and the pickers are system presentations that have
-    /// already closed by the time this appears, so the only destination is
-    /// where the whole thing started.
-    ///
-    /// It asks first when anything is staged. Nothing here has been uploaded
-    /// yet, so the cost of leaving is only the picking — but the picking is
-    /// the part that took a person walking around with a phone, and a
-    /// mis-tapped X in the corner is how it would be lost.
-    private var close: some View {
-        Button {
-            if staged.isEmpty {
-                dismiss()
-            } else {
-                discarding = true
-            }
-        } label: {
-            Image(systemName: "xmark")
+    /// Asks first when anything is staged. Nothing has been uploaded yet, so
+    /// leaving costs only the picking, but the picking is the part that took
+    /// somebody walking around with a phone.
+    private var cancel: some View {
+        Button("Cancel") {
+            if staged.isEmpty { dismiss() } else { discarding = true }
         }
-        .accessibilityLabel("Close")
         .confirmationDialog(
             discardTitle, isPresented: $discarding, titleVisibility: .visible
         ) {
@@ -251,24 +245,27 @@ internal struct PurchaseStagingGrid: View {
 
     private var discardTitle: String {
         let pages = staged.everyPage.count
-        return pages == 1
-            ? "Discard this photo?" : "Discard these \(pages) photos?"
+        return pages == 1 ? "Discard this page?" : "Discard these \(pages) pages?"
     }
+}
 
-    private var actions: some View {
-        Button {
-        } label: {
-            Label(readTitle, systemImage: "text.viewfinder")
-                .font(.popsHeadline)
-                .padding(.horizontal, PopsSpacing.md)
-                .padding(.vertical, PopsSpacing.xs)
+extension PurchaseStagingGrid {
+    /// What Read starts with: the first receipt out, the rest waiting.
+    fileprivate static func readings(of staged: StagedReceipts) -> [ReceiptReading] {
+        staged.receipts.enumerated().map { index, receipt in
+            ReceiptReading(
+                id: receipt.id, pages: receipt.pages, outcome: index == 0 ? .reading : .queued)
         }
-        .playgroundProminentGlassButton()
-        .disabled(staged.isEmpty)
-        .padding(.bottom, PopsSpacing.lg)
     }
 
-    private var readTitle: String {
-        staged.count == 1 ? "Read this receipt" : "Read \(staged.count) receipts"
+    /// What each staged receipt reads back as, in the playground: the fixture
+    /// merchants in turn, so a walk from staging lands on real-looking rows.
+    fileprivate static func landing(for staged: StagedReceipts) -> [String: ReceiptReading.Outcome]
+    {
+        let outcomes = PurchaseCaptureSurfaces.readOutcomes
+        return Dictionary(
+            uniqueKeysWithValues: staged.receipts.enumerated().map { index, receipt in
+                (receipt.id, outcomes[index % outcomes.count])
+            })
     }
 }

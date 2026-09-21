@@ -134,6 +134,17 @@ extension View {
         #endif
     }
 
+    /// Items in the bottom toolbar, the glass bar iOS draws for a screen's
+    /// secondary controls. `bottomBar` is an iOS-only placement.
+    @ViewBuilder
+    func playgroundBottomBar<Items: View>(@ViewBuilder items: () -> Items) -> some View {
+        #if os(iOS)
+            toolbar { ToolbarItemGroup(placement: .bottomBar, content: items) }
+        #else
+            toolbar { ToolbarItemGroup(content: items) }
+        #endif
+    }
+
     /// Sets the navigation title's display mode, which is an iOS-only
     /// modifier. Same shape, and the same reason, as `DesignSystem`'s
     /// keyboard-type helper.

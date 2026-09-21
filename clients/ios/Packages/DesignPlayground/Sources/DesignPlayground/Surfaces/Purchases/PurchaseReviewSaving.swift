@@ -1,5 +1,4 @@
 import DesignSystem
-import FeatureReceiptCapture
 import SwiftUI
 
 /// How far pressing Save has got.
@@ -8,7 +7,7 @@ import SwiftUI
 /// draft, so a batch of three is three calls and can stop after two. The
 /// screen cannot pretend a batch saves or fails as a unit, so it does the next
 /// most honest thing: whatever was written is final and leaves the batch, and
-/// the one refused is put on screen with the reason as its banner.
+/// the one refused is put on screen with the reason over it.
 internal enum ReviewSaving: Hashable, Sendable {
     case idle
     /// Writing. `done` of the batch are already created.
@@ -35,18 +34,30 @@ internal enum ReviewSaving: Hashable, Sendable {
         return false
     }
 
-    /// The banner the refused purchase carries, and only that one.
-    ///
-    /// The danger tone is reserved for this. Everything else on the review
-    /// screen is a prompt to look; this is the one thing that went wrong.
-    internal func notice(for id: String) -> ReceiptDraftView.Status? {
+    /// Why the save stopped, shown over the refused purchase and only that one.
+    internal func notice(for id: String) -> String? {
         guard case .failed(let failed, let reason, _) = self, failed == id else { return nil }
-        return ReceiptDraftView.Status(tone: .danger, heading: "Not saved", message: reason)
+        return reason
+    }
+
+    /// What the navigation bar's Save says.
+    ///
+    /// After a retryable refusal it is Try again rather than Save, because the
+    /// retry resends the purchase that was refused and nothing else: what was
+    /// written has left the batch, so a second press cannot create it twice.
+    internal func saveTitle(count: Int) -> String {
+        switch self {
+        case .failed(_, _, true): "Try again"
+        case .idle, .saving, .failed: count == 1 ? "Save" : "Save all \(count)"
+        }
+    }
+
+    internal static func saved(_ count: Int) -> String {
+        "\(count) saved"
     }
 
     internal static func alreadySaved(_ count: Int) -> String {
-        count == 1
-            ? "1 is already saved and stays saved." : "\(count) are already saved and stay saved."
+        count == 1 ? "1 is saved and stays saved." : "\(count) are saved and stay saved."
     }
 }
 
@@ -64,56 +75,65 @@ internal enum ReviewBatch {
     ) -> [Entry] where Entry.ID == String {
         Array(entries.filter { !discarded.contains($0.id) }.dropFirst(written))
     }
+
+    /// The purchases holding Save, in batch order: a flagged reading nobody
+    /// has put on screen yet, or a draft that cannot be saved as it stands.
+    ///
+    /// Only flagged readings are gated on being seen. Asking somebody to page
+    /// through eleven clean receipts to unlock a button trains them to page
+    /// without looking; the ones the gate could not reconcile are where a
+    /// human's eye is the only thing that settles it. "Seen" is not "read",
+    /// and this does not pretend otherwise.
+    internal static func holding(
+        _ ids: [String], flagged: Set<String>, seen: Set<String>, saveable: Set<String>
+    ) -> [String] {
+        ids.filter { (flagged.contains($0) && !seen.contains($0)) || !saveable.contains($0) }
+    }
 }
 
-/// Save, in each of the states pressing it can leave it in.
+/// Why a save stopped, pinned under the navigation bar.
 ///
-/// While writing it is disabled and says how far it has got. That is half of
-/// what stops a double-tap creating two purchases: there is no second tap to
-/// make. The other half is the checksum carried through the reading
-/// (POPS-3646), for the tap that lands before the button knows.
-internal struct ReviewSaveButton: View {
-    internal let saving: ReviewSaving
-    internal let count: Int
-    internal let blocked: Bool
-    internal let action: () -> Void
+/// Not the form's status banner: the review form shows complaints as hints
+/// only, so a refusal handed to it was drawn nowhere. It is the one danger
+/// tone in the flow, because it is the one thing that went wrong.
+internal struct PurchaseSaveNotice: View {
+    internal let reason: String
 
     internal var body: some View {
-        Button(action: action) {
-            label
-                .font(.popsHeadline)
-                .padding(.horizontal, PopsSpacing.sm)
-                .padding(.vertical, PopsSpacing.xs)
+        Label {
+            Text(reason)
+                .font(.popsSubheadline)
+                .foregroundStyle(Color.popsForeground)
+                .fixedSize(horizontal: false, vertical: true)
+        } icon: {
+            Image(systemName: "exclamationmark.octagon.fill")
+                .foregroundStyle(Color.popsDestructive)
         }
-        .playgroundProminentGlassButton()
-        .disabled(blocked || saving.isInFlight)
-    }
-
-    @ViewBuilder private var label: some View {
-        switch saving {
-        case .saving(let done):
-            HStack(spacing: PopsSpacing.sm) {
-                ProgressView()
-                Text(count == 1 ? "Saving" : "Saving \(min(done + 1, count)) of \(count)")
-            }
-        case .failed(_, _, true):
-            Label("Try again", systemImage: "arrow.clockwise")
-        case .idle, .failed:
-            Label(count == 1 ? "Save" : "Save all \(count)", systemImage: "checkmark")
-        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(PopsSpacing.md)
+        .background(
+            Color.popsDestructive.opacity(0.12), in: .rect(cornerRadius: PopsRadius.card)
+        )
+        .padding(.horizontal, PopsSpacing.lg)
+        .padding(.bottom, PopsSpacing.sm)
+        .transition(.move(edge: .top).combined(with: .opacity))
     }
 }
 
-/// What an earlier attempt already wrote, where the gate would otherwise sit.
-internal struct ReviewSavedTally: View {
-    internal let saved: Int
+/// How much of a save has been written, as a bar that fills.
+///
+/// Determinate because the count is known: one write per purchase, and each
+/// one landing is a step somebody can watch.
+internal struct PurchaseSaveProgress: View {
+    internal let done: Int
+    internal let total: Int
 
     internal var body: some View {
-        Label(saved == 1 ? "1 saved" : "\(saved) saved", systemImage: "checkmark.circle.fill")
-            .font(.popsCaption)
-            .foregroundStyle(Color.popsSuccess)
-            .padding(.horizontal, PopsSpacing.md)
-            .padding(.vertical, PopsSpacing.sm)
-            .playgroundGlass(in: Capsule())
+        ProgressView(value: Double(done), total: Double(max(total, 1)))
+            .progressViewStyle(.linear)
+            .padding(.horizontal, PopsSpacing.lg)
+            .padding(.bottom, PopsSpacing.sm)
+            .accessibilityLabel("Saving \(min(done + 1, total)) of \(total)")
+            .transition(.opacity)
     }
 }

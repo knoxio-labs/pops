@@ -44,54 +44,67 @@ internal enum PurchaseReviewSurfaces {
         message: "Some of what came back does not check out."
     )
 
-    /// The standard three, for the states about what pressing Save does to a
-    /// batch rather than about the batch.
-    private static let batch: [ReviewEntry] = [
-        entry("e1", extracted: ReceiptPlaygroundFixtures.tillNamesExtracted),
-        entry("e2", extracted: ReceiptPlaygroundFixtures.typicalExtracted, pages: 3),
-        entry("e3", extracted: ReceiptPlaygroundFixtures.hardwareExtracted),
+    /// The standard three, each merchant matched by the server at ingest, which
+    /// is what an ordinary batch looks like once contacts knows the shops.
+    internal static let batch: [ReviewEntry] = [
+        entry(
+            "e1", extracted: ReceiptPlaygroundFixtures.tillNamesExtracted, matched: "ent-kmart"),
+        entry(
+            "e2", extracted: ReceiptPlaygroundFixtures.typicalExtracted, pages: 3,
+            matched: "ent-woolworths"),
+        entry(
+            "e3", extracted: ReceiptPlaygroundFixtures.hardwareExtracted,
+            matched: "ent-bunnings"),
     ]
 
     internal static let review = DesignSurface(
         id: SurfaceID(area: "purchases", slug: "review"),
         title: "Review",
         synopsis: "Checking what was read, one purchase at a time, before any of it is saved.",
-        chrome: .navigation,
-        states: [
+        chrome: .sheet,
+        sheetDetents: .large,
+        states: states,
+        backdrop: { PurchaseCaptureBackdrop() }
+    )
+
+    private static var states: [DesignState] {
+        [
             DesignState.standard {
+                PurchaseReviewSurface(entries: batch)
+            },
+            // The server matched nothing for one of them, so Save holds and
+            // the bottom bar says which one and goes there.
+            DesignState("unmatched", "A merchant nobody has matched") {
                 PurchaseReviewSurface(entries: [
                     entry("e1", extracted: ReceiptPlaygroundFixtures.tillNamesExtracted),
-                    entry("e2", extracted: ReceiptPlaygroundFixtures.typicalExtracted, pages: 3),
-                    entry("e3", extracted: ReceiptPlaygroundFixtures.hardwareExtracted),
+                    batch[1],
+                    batch[2],
                 ])
             },
             // The order the batch actually arrives in: what could not be read
             // is first and says so, because it needs every field typed and
             // last is where somebody has least patience for that.
             DesignState("unreadable-first", "One could not be read") {
-                PurchaseReviewSurface(entries: [
-                    entry("e0"),
-                    entry("e1", extracted: ReceiptPlaygroundFixtures.tillNamesExtracted),
-                    entry("e2", extracted: ReceiptPlaygroundFixtures.typicalExtracted),
-                ])
+                PurchaseReviewSurface(entries: [entry("e0"), batch[0], batch[1]])
             },
+            // The flagged reading is second, so Save holds on it until it has
+            // been on screen and the bottom bar offers to go there.
             DesignState("needs-review", "A reading the gate complained about") {
                 PurchaseReviewSurface(entries: [
+                    batch[0],
                     entry(
-                        "e1",
+                        "e3",
                         extracted: ReceiptPlaygroundFixtures.hardwareExtracted,
                         failures: ReceiptPlaygroundFixtures.hardwareFailures,
-                        status: needsReview),
-                    entry("e2", extracted: ReceiptPlaygroundFixtures.tillNamesExtracted),
+                        status: needsReview,
+                        matched: "ent-bunnings"),
                 ])
             },
             // Every adjustment stated, so the four included-toggles are all
             // on screen. Tax opens included because GST is inside a marked
             // price here; the rest do not.
             DesignState("adjustments", "Every adjustment, with its basis") {
-                PurchaseReviewSurface(entries: [
-                    entry("e1", extracted: ReceiptPlaygroundFixtures.typicalExtracted)
-                ])
+                PurchaseReviewSurface(entries: [batch[1]])
             },
             // The server matched the merchant at ingest. The mark is hollow
             // because nobody has looked at it yet — a match is a proposal,
@@ -122,7 +135,9 @@ internal enum PurchaseReviewSurfaces {
             },
             DesignState("single", "One purchase") {
                 PurchaseReviewSurface(entries: [
-                    entry("e1", extracted: ReceiptPlaygroundFixtures.tillNamesExtracted, pages: 2)
+                    entry(
+                        "e1", extracted: ReceiptPlaygroundFixtures.tillNamesExtracted, pages: 2,
+                        matched: "ent-kmart")
                 ])
             },
             // A reading with no lines at all, which is a different emptiness
@@ -137,13 +152,15 @@ internal enum PurchaseReviewSurfaces {
                         status: needsReview)
                 ])
             },
-            // Everything held still, and the button that was pressed saying
-            // how far it has got instead of being pressable again.
+            // Everything held still, the bar filling one write at a time and
+            // the title saying which. Nothing can be pressed twice.
             DesignState("saving", "Saving, one of three done") {
                 PurchaseReviewSurface(entries: batch, saving: .saving(done: 1))
             },
             // Two written and gone from the batch; the third refused by
-            // something a retry can get past.
+            // something a retry can get past. Save reads Try again, and the
+            // title keeps the two saved in view, so the retry reads as this
+            // one purchase again rather than as another batch.
             DesignState("save-failed-partway", "Two saved, the third refused") {
                 PurchaseReviewSurface(
                     entries: batch,
@@ -155,7 +172,7 @@ internal enum PurchaseReviewSurfaces {
                 PurchaseReviewSurface(
                     entries: batch,
                     saving: .failed(
-                        id: "e1", reason: "No connection, so nothing was saved.", retryable: true))
+                        id: "e1", reason: "No connection. Nothing was saved.", retryable: true))
             },
             // The refusal a retry cannot get past: the checksum says this
             // paper is already a purchase. Save holds until it is discarded,
@@ -165,12 +182,12 @@ internal enum PurchaseReviewSurfaces {
                     entries: batch,
                     saving: .failed(
                         id: "e2",
-                        reason: "This receipt is already a purchase. Discard it to save the rest.",
+                        reason: "Already saved as a purchase. Discard it to save the rest.",
                         retryable: false),
                     written: 1)
             },
         ]
-    )
+    }
 
     /// A batch whose first reading the gate complained about, and a clean one
     /// behind it — the shape the `review-complaint-density` experiment is

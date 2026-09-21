@@ -1,3 +1,4 @@
+import SwiftUI
 import Testing
 
 @testable import FeatureReceiptCapture
@@ -72,5 +73,16 @@ internal struct ReceiptDraftHandEntryTests {
         #expect(ReceiptDraftView.canSave(saveable, isSaving: false))
         #expect(!ReceiptDraftView.canSave(saveable, isSaving: true))
         #expect(!ReceiptDraftView.canSave(ReceiptDraft.blank(currency: nil), isSaving: false))
+    }
+
+    @Test("a form over a host's draft edits the host's copy, not one of its own")
+    func hostOwnedDraftIsEditedInPlace() {
+        var stored = presentation.blankDraft(currency: "AUD")
+        let form = ReceiptDraftView(
+            draft: Binding(get: { stored }, set: { stored = $0 }))
+
+        form.editing.wrappedValue.addLine()
+
+        #expect(stored.lines.count == 2)
     }
 }
