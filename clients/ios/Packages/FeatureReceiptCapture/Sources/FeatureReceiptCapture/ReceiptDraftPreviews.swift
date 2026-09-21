@@ -45,7 +45,11 @@
                             description: "ZIRONING BOARD", amount: "15.00", quantity: nil,
                             unitNote: nil),
                     ],
-                    unreadableNotes: []
+                    unreadableNotes: [],
+                    taxIncluded: false,
+                    discountIncluded: false,
+                    surchargeIncluded: false,
+                    shippingIncluded: false
                 ),
                 failures: []
             )

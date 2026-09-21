@@ -67,7 +67,9 @@ extension ReceiptDraftTests {
         let extracted = ExtractedReceipt(
             merchantName: "ALDI", address: nil, purchasedOn: nil, purchasedAt: nil,
             currency: "AUD", total: "42.03", tax: "3.82", discounts: ["1.00", "0.50"],
-            surcharges: ["0.03"], shipping: nil, lines: [], unreadableNotes: [])
+            surcharges: ["0.03"], shipping: nil, lines: [], unreadableNotes: [],
+            taxIncluded: false, discountIncluded: false, surchargeIncluded: false,
+            shippingIncluded: false)
 
         let draft = ReceiptDraft.fake(extracted)
 

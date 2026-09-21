@@ -80,7 +80,11 @@
                     description: "Free range eggs 12pk", amount: "9.20", quantity: nil,
                     unitNote: nil),
             ],
-            unreadableNotes: ["The line under the eggs is torn away."]
+            unreadableNotes: ["The line under the eggs is torn away."],
+            taxIncluded: false,
+            discountIncluded: false,
+            surchargeIncluded: false,
+            shippingIncluded: false
         )
 
         static let failures = [
