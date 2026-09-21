@@ -32,6 +32,7 @@ pub fn build_router(state: AppState) -> Router {
         .route("/health", get(health))
         .route("/openapi", get(openapi_document))
         .merge(crate::entities::router())
+        .merge(crate::entities::addresses_routes::router())
         .merge(crate::search::router())
         .with_state(state)
 }
