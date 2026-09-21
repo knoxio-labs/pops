@@ -57,7 +57,7 @@ public struct BFMPurchasesRepository: PurchasesRepository {
         }
         return Purchase(
             id: wire.id,
-            merchant: Self.merchant(from: wire.merchantName),
+            merchant: Self.merchant(from: wire.merchant, printed: wire.merchantName),
             orderedOn: orderedOn,
             total: MoneyAmount(minorUnits: wire.totalCents, currencyCode: wire.currency),
             itemCount: wire.itemCount,
@@ -66,19 +66,39 @@ public struct BFMPurchasesRepository: PurchasesRepository {
         )
     }
 
-    /// The mobile surface sends `merchantName` and nothing else — not
-    /// `merchantEntityId`, and not the entity's own name — so this can never
-    /// answer ``MerchantIdentity/entity``, and says so rather than guessing.
-    ///
-    /// The consequence is visible on screen: a purchase the pillar *did*
-    /// resolve to a contacts entity still shows the till's wording here,
-    /// because the name worth reading never crossed the wire. Widening it is
-    /// POPS-3634.
-    private static func merchant(from name: String?) -> MerchantIdentity {
-        guard let name, !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+    /// `printed` is the wire's deprecated `merchantName` field — the till's
+    /// own wording, kept for one release alongside `merchant` (POPS-4317
+    /// tracks its removal) — and is read here for exactly the case the old,
+    /// two-case guess could never answer: an entity resolution names the
+    /// contacts entity, not what the receipt printed, so `printed` is the
+    /// only place that wording still comes from.
+    private static func merchant(
+        from wire: ListPurchase.MerchantPayload, printed: String?
+    ) -> MerchantIdentity {
+        let printed = Self.nonBlank(printed)
+        switch wire {
+        case .case1(let entity):
+            // A resolved entity with neither its own name nor a printed one
+            // is a row `identifyMerchant` never produces in practice — an
+            // entity link always survives beside the label that created it —
+            // so the fallback exists for type-safety, not a case seen live.
+            return .entity(
+                id: entity.entityId,
+                name: entity.name.flatMap(Self.nonBlank) ?? printed ?? entity.entityId,
+                printed: printed ?? entity.entityId
+            )
+        case .case2(let named):
+            return .printed(named.name)
+        case .case3:
             return .unattributed
         }
-        return .printed(name)
+    }
+
+    private static func nonBlank(_ value: String?) -> String? {
+        guard let value, !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return nil
+        }
+        return value
     }
 
     private static func day(from raw: String, in timeZone: TimeZone) -> Date? {

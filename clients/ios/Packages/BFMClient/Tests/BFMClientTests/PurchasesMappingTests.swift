@@ -12,7 +12,8 @@ internal struct PurchasesMappingTests {
             StubTransport(
                 status: .ok,
                 json: """
-                    {"data":[{"id":"purchase-1","merchantName":"Kmart","orderedOn":"2026-08-20",\
+                    {"data":[{"id":"purchase-1","merchant":{"resolution":"name","name":"Kmart"},\
+                    "merchantName":"Kmart","orderedOn":"2026-08-20",\
                     "totalCents":1999,"currency":"AUD","itemCount":3,"receiptUri":"pops://purchases/receipt/abc",\
                     "status":"awaiting_settlement"}],"nextCursor":null}
                     """
@@ -30,18 +31,19 @@ internal struct PurchasesMappingTests {
         )
     }
 
-    /// `GET /mobile/purchases` sends one nullable merchant string and no
-    /// entity id, so a purchase the pillar resolved to a contacts entity is
-    /// indistinguishable here from one it never matched — both arrive as
-    /// ``MerchantIdentity/printed``. That is the gap POPS-3634 closes, and
-    /// this test is what will fail when it does.
-    @Test("a resolved merchant still arrives as a printed label, because the wire carries no id")
-    func resolutionCannotCrossTheWire() async throws {
+    /// The gap POPS-3634 closed: `merchant` now carries the three-way
+    /// resolution, so a purchase the pillar matched to a contacts entity
+    /// shows THAT entity's name — not the till's wording, which survives
+    /// separately as `printed`.
+    @Test("a resolved merchant arrives as the entity's own name, printed wording kept alongside")
+    func resolvedMerchantCrossesTheWire() async throws {
         let repository = try BFMPurchasesRepository.stubbed(
             StubTransport(
                 status: .ok,
                 json: """
-                    {"data":[{"id":"purchase-2","merchantName":"K mart","orderedOn":"2026-08-20",\
+                    {"data":[{"id":"purchase-2",\
+                    "merchant":{"resolution":"entity","entityId":"ent-1","name":"Kmart"},\
+                    "merchantName":"K mart","orderedOn":"2026-08-20",\
                     "totalCents":3000,"currency":"AUD","itemCount":3,"receiptUri":null,\
                     "status":"linked"}],"nextCursor":null}
                     """
@@ -49,9 +51,32 @@ internal struct PurchasesMappingTests {
         )
 
         let purchase = try #require(try await repository.purchases(after: nil).purchases.first)
-        #expect(purchase.merchant == .printed("K mart"))
-        #expect(purchase.merchant.isUnverified)
+        #expect(purchase.merchant == .entity(id: "ent-1", name: "Kmart", printed: "K mart"))
+        #expect(purchase.merchant.displayName == "Kmart")
+        #expect(!purchase.merchant.isUnverified)
         #expect(purchase.status == .linked)
+    }
+
+    /// A batched contacts lookup can fail to name an entity it still
+    /// resolved — `name` comes back `null` — and the row falls back to the
+    /// till's own wording rather than showing a blank.
+    @Test("an entity resolved with no name falls back to the printed wording")
+    func resolvedMerchantWithNoNameFallsBackToPrinted() async throws {
+        let repository = try BFMPurchasesRepository.stubbed(
+            StubTransport(
+                status: .ok,
+                json: """
+                    {"data":[{"id":"purchase-5",\
+                    "merchant":{"resolution":"entity","entityId":"ent-1","name":null},\
+                    "merchantName":"K mart","orderedOn":"2026-08-20",\
+                    "totalCents":3000,"currency":"AUD","itemCount":3,"receiptUri":null,\
+                    "status":"linked"}],"nextCursor":null}
+                    """
+            )
+        )
+
+        let purchase = try #require(try await repository.purchases(after: nil).purchases.first)
+        #expect(purchase.merchant == .entity(id: "ent-1", name: "K mart", printed: "K mart"))
     }
 
     @Test("a row with no merchant is unattributed rather than an empty name")
@@ -60,7 +85,8 @@ internal struct PurchasesMappingTests {
             StubTransport(
                 status: .ok,
                 json: """
-                    {"data":[{"id":"purchase-3","merchantName":null,"orderedOn":"2026-08-20",\
+                    {"data":[{"id":"purchase-3","merchant":{"resolution":"unattributed"},\
+                    "merchantName":null,"orderedOn":"2026-08-20",\
                     "totalCents":2280,"currency":"AUD","itemCount":2,"receiptUri":null,\
                     "status":"awaiting_settlement"}],"nextCursor":null}
                     """
@@ -72,15 +98,20 @@ internal struct PurchasesMappingTests {
         #expect(purchase.merchant.displayName == nil)
     }
 
-    /// A merchant name that is present but blank is the same fact as no
-    /// merchant, and drawing it would put an empty gap where a name goes.
-    @Test("a blank merchant name is unattributed, not a name made of spaces")
-    func blankMerchantIsUnattributed() async throws {
+    /// A blank printed wording is the same fact as no wording, so the last
+    /// resort — an entity resolved with no name from either source — falls
+    /// back to the id rather than a name made of spaces. Never seen live
+    /// (see `merchant(from:printed:)`'s docstring), but the fallback chain is
+    /// still typed, so it is still tested.
+    @Test("an entity with no name from either source falls back to the id, not a blank")
+    func entityWithNoNameAnywhereFallsBackToId() async throws {
         let repository = try BFMPurchasesRepository.stubbed(
             StubTransport(
                 status: .ok,
                 json: """
-                    {"data":[{"id":"purchase-4","merchantName":"   ","orderedOn":"2026-08-20",\
+                    {"data":[{"id":"purchase-4",\
+                    "merchant":{"resolution":"entity","entityId":"ent-9","name":null},\
+                    "merchantName":"   ","orderedOn":"2026-08-20",\
                     "totalCents":100,"currency":"AUD","itemCount":1,"receiptUri":null,\
                     "status":"ignored"}],"nextCursor":null}
                     """
@@ -88,7 +119,7 @@ internal struct PurchasesMappingTests {
         )
 
         let purchase = try #require(try await repository.purchases(after: nil).purchases.first)
-        #expect(purchase.merchant == .unattributed)
+        #expect(purchase.merchant == .entity(id: "ent-9", name: "ent-9", printed: "ent-9"))
     }
 }
 
