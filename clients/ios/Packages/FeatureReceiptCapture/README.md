@@ -73,11 +73,10 @@ A page that is not a drawable image — the contract admits PDF and plain text �
 
 One scan is one receipt and one call. `VNDocumentCameraViewController` collects several pages into a single `VNDocumentCameraScan`; every page of that scan becomes an ordered `ReceiptPart`, and the whole set goes to `ReceiptCaptureRepository.capture(_:)` once. Several photographs of one piece of paper are never several receipts — `ReceiptPart`'s own documentation says so, and the BFM's upload body says the same thing from the other side.
 
-Three consequences follow, and each is enforced on the handset rather than discovered from a rejection:
+Two consequences follow, and each is enforced on the handset rather than discovered from a rejection:
 
-- **At most `ReceiptPart.maxPerReceipt` pages.** The BFM refuses more. A longer scan is refused here, with the count, before any bytes are sent.
 - **All of it or none of it.** If a page cannot be encoded, the whole scan is refused. A receipt short a page still adds up to _a_ total, just not the printed one, so a short upload would come back as a confident wrong reading.
-- **Pages are bounded before they are sent.** `ReceiptPageBudget` caps a page's longest edge and its JPEG quality, so eight full-resolution photographs are not what somebody standing in a shop tries to upload.
+- **Pages are bounded before they are sent.** `ReceiptPageBudget` caps a page's longest edge and its JPEG quality, so a full-resolution photograph is not what somebody standing in a shop tries to upload. There is no cap on how many pages one scan may carry — ADR-052 (`docs/architecture/adr-052-receipt-part-count-ceiling.md`) found the byte-size limit already the tighter, real bound.
 
 ## Why the camera is presented modally and never inside a navigation stack
 

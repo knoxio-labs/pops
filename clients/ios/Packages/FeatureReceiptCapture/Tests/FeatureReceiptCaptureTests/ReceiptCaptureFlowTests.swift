@@ -197,50 +197,21 @@ internal struct ReceiptCaptureFlowTests {
         #expect(model.problem == .unpreparedPages)
     }
 
-    /// The BFM refuses more than ``ReceiptPart/maxPerReceipt`` parts outright.
-    /// Catching it here is what turns an opaque rejection — paid for over
-    /// however many megabytes — into a sentence saying what to do instead.
-    @Test("a scan longer than the wire limit is refused before it is sent")
-    func tooManyPagesAreRefusedOnDevice() {
+    /// No ceiling on page count (ADR-052): a long shop is not told to stop
+    /// partway through. This would fail against the pre-change code, which
+    /// refused anything past the old eight-page wire limit.
+    @Test("a scan far longer than the old wire limit is still a receipt")
+    func aVeryLongScanIsAccepted() {
         let model = Self.model(camera: StubCameraAuthorization(standing: .authorized))
-        let overLong = ReceiptPart.maxPerReceipt + 1
+        let long = 50
 
-        model.didCapture(Self.pages(overLong), from: overLong)
-
-        #expect(model.state == .ready)
-        #expect(model.problem == .tooManyPages(overLong))
-    }
-
-    /// The precedence the model's own doc comment claims: too-many-pages is
-    /// checked before a page that could not be prepared. A scan can only ever
-    /// show this ordering when both are true at once — one condition alone
-    /// tells you nothing about which came first — so this is the one input
-    /// that exercises it. `aDroppedPageRefusesTheReceipt` and
-    /// `tooManyPagesAreRefusedOnDevice` each isolate a single condition and
-    /// would stay green if the two guards were swapped.
-    @Test("a scan that is both over the limit and short a page is refused for its length")
-    func tooManyPagesTakesPrecedenceOverAnUnpreparedPage() {
-        let model = Self.model(camera: StubCameraAuthorization(standing: .authorized))
-        let overLong = ReceiptPart.maxPerReceipt + 1
-
-        model.didCapture(Self.pages(overLong - 1), from: overLong)
-
-        #expect(model.state == .ready)
-        #expect(model.problem == .tooManyPages(overLong))
-    }
-
-    @Test("exactly the wire limit is still a receipt")
-    func theLimitItselfIsAccepted() {
-        let model = Self.model(camera: StubCameraAuthorization(standing: .authorized))
-        let atLimit = ReceiptPart.maxPerReceipt
-
-        model.didCapture(Self.pages(atLimit), from: atLimit)
+        model.didCapture(Self.pages(long), from: long)
 
         guard case .reading(let submission) = model.state else {
-            Issue.record("a scan at the limit was refused: \(String(describing: model.problem))")
+            Issue.record("a long scan was refused: \(String(describing: model.problem))")
             return
         }
-        #expect(submission.parts.count == atLimit)
+        #expect(submission.parts.count == long)
     }
 
     @Test("starting a capture clears the last complaint")

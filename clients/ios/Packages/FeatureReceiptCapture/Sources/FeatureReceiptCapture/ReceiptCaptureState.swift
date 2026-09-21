@@ -56,7 +56,4 @@ public enum ReceiptCaptureProblem: Hashable, Sendable {
     /// still adds up to a total, just not to the one printed on the paper, and
     /// the reading that came back would be wrong in a way nobody could see.
     case unpreparedPages
-    /// More pages than one receipt may be sent as. Carries the count, because
-    /// "you took eleven" is what makes the limit actionable.
-    case tooManyPages(Int)
 }

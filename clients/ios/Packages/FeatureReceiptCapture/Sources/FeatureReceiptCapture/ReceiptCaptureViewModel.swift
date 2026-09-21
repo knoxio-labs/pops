@@ -152,17 +152,14 @@ extension ReceiptCaptureViewModel {
 
     /// Which problem, if any, stops these pages being a receipt.
     ///
-    /// Ordered by what the person can act on. Too many pages is checked before
-    /// a preparation failure because it is the one with a clear next move, and
-    /// a scan long enough to be refused is likely to have a page or two that
-    /// also failed to encode — reporting the encode would send somebody to
-    /// retake a receipt that would be refused again for its length.
+    /// No ceiling on how many pages a scan may carry (ADR-052) — the server's
+    /// own body-size limit is the only real bound, and it is enforced there,
+    /// not here.
     private static func refusal(
         for parts: [ReceiptPart],
         from pageCount: Int
     ) -> ReceiptCaptureProblem? {
         guard pageCount > 0 else { return .noPages }
-        guard pageCount <= ReceiptPart.maxPerReceipt else { return .tooManyPages(pageCount) }
         guard parts.count == pageCount else { return .unpreparedPages }
         return nil
     }

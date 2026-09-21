@@ -64,10 +64,6 @@ internal enum ReceiptCaptureCopy {
             return
                 "One of those photos couldn't be prepared, and a receipt missing a page "
                 + "would be read wrong. Photograph the whole receipt again."
-        case .tooManyPages(let count):
-            return
-                "That's \(count) photos, and a receipt can be sent as at most "
-                + "\(ReceiptPart.maxPerReceipt). Photograph it again in fewer, larger pieces."
         }
     }
 }

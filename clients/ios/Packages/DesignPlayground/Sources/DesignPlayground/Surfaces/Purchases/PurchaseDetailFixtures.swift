@@ -4,9 +4,11 @@ import Foundation
 /// Saved purchases for the detail, shaped like what the archive holds.
 @MainActor
 internal enum PurchaseDetailFixtures {
+    /// The count is arbitrary: enough variety that cycling through them
+    /// does not look like one photograph repeated.
     private static let sheets: [Data] =
         ReceiptPlaygroundPaper
-        .pages(ReceiptPart.maxPerReceipt)
+        .pages(8)
         .map(\.data)
 
     /// When the edited fixtures were changed: two days after the history's
