@@ -21,7 +21,7 @@ import SwiftUI
 ///
 /// ## Ledger's structure, the home's rows
 ///
-/// One run, newest first, cut by month under a pinned glass header carrying
+/// One run, newest first, cut by month under a pinned, flat header carrying
 /// the month's total. The rows and their panels are the home's, which are
 /// Inventory's, so a purchase reads the same wherever it is found.
 internal struct PurchasesArchiveView: View {
@@ -96,22 +96,16 @@ internal struct PurchasesArchiveView: View {
         .fixedSize()
     }
 
+    /// Inventory's section label, flat and muted, on the page's own ground so
+    /// rows scrolling under a pinned header do not show through it.
     private func header(_ month: ArchiveMonth) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: PopsSpacing.sm) {
-            Text(PurchasesPresentation.month(month.month).uppercased())
-                .font(.popsSectionLabel)
-                .foregroundStyle(Color.popsMutedForeground)
-                .accessibilityAddTraits(.isHeader)
-            Spacer(minLength: PopsSpacing.sm)
-            Text(total(month))
-                .font(.popsCaption.weight(.semibold))
-                .monospacedDigit()
-                .foregroundStyle(Color.popsForeground)
-                .lineLimit(1)
-        }
-        .padding(.horizontal, PopsSpacing.md)
+        InventoryLocationSectionHeader(
+            title: PurchasesPresentation.month(month.month).uppercased(),
+            trailing: total(month)
+        )
         .padding(.vertical, PopsSpacing.sm)
-        .playgroundGlass(in: Capsule())
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.popsBackground)
     }
 
     /// Every currency the month holds, side by side and never added together.
@@ -183,12 +177,16 @@ internal struct PurchasesArchiveView: View {
 internal struct PurchasesArchiveSkeleton: View {
     internal let rows: Int
     @ScaledMetric(relativeTo: .body) private var rowHeight = PopsSize.touchTarget
-    @ScaledMetric(relativeTo: .body) private var headerHeight = PopsSize.touchTarget * 0.75
+    @ScaledMetric(relativeTo: .body) private var headerHeight = PopsSpacing.md
 
     internal var body: some View {
         VStack(spacing: PopsSpacing.sm) {
             if rows > 2 {
-                Capsule().fill(Color.popsSurface).frame(height: headerHeight)
+                Capsule()
+                    .fill(Color.popsSurface)
+                    .frame(width: PopsSize.touchTarget * 2, height: headerHeight)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, PopsSpacing.md)
             }
             ForEach(0..<rows, id: \.self) { _ in
                 RoundedRectangle(cornerRadius: PopsRadius.control, style: .continuous)
