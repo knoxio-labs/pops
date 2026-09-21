@@ -32,6 +32,7 @@ function line(overrides: Partial<PurchaseLine['item']> = {}): PurchaseLine {
       imageUrl: null,
       kind: null,
       lineTotalCents: 4995,
+      listPrice: null,
       merchantCategory: null,
       merchantCondition: null,
       name: 'Dosing funnel 58mm',

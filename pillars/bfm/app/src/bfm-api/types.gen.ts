@@ -2159,6 +2159,8 @@ export type MobilePurchasesCreateManualPurchaseData = {
     idempotencyKey: string;
     items: Array<{
       lineTotalCents: number;
+      listPriceAsserted?: boolean;
+      listPriceCents?: number | null;
       name: string;
       notes: Array<string>;
       quantity?: number | null;
@@ -2324,6 +2326,8 @@ export type MobilePurchasesSaveReceiptDraftData = {
     idempotencyKey: string;
     items: Array<{
       lineTotalCents: number;
+      listPriceAsserted?: boolean;
+      listPriceCents?: number | null;
       name: string;
       notes: Array<string>;
       quantity?: number | null;
@@ -2602,6 +2606,8 @@ export type MobilePurchasesExtractReceiptResponses = {
           }>;
           items: Array<{
             lineTotalCents: number;
+            listPriceAsserted?: boolean;
+            listPriceCents?: number | null;
             name: string;
             notes: Array<string>;
             quantity?: number | null;
