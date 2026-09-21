@@ -6,6 +6,7 @@
  */
 import {
   attachDocument,
+  countPurchases,
   createPurchase,
   deletePurchase,
   eraseCaptureLocation,
@@ -66,6 +67,11 @@ export function makePurchaseHandlers(
         beforeOrderedAt: keyset.beforeOrderedAt,
         beforeId: keyset.beforeId,
       });
+      // total is computed once, on the first page of a query, not on every
+      // page — a COUNT(*) on every scroll tick is a wasted table scan the
+      // client already has the answer to from page one (POPS-3710).
+      const total =
+        keyset.beforeOrderedAt === undefined ? countPurchases(db, scope.scope) : undefined;
       return {
         status: 200 as const,
         body: {
@@ -74,6 +80,7 @@ export function makePurchaseHandlers(
             itemCount: row.itemCount,
             receiptUri: row.receiptUri,
           })),
+          ...(total === undefined ? {} : { total }),
         },
       };
     },

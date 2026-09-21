@@ -7,6 +7,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { openTempDb, seedAmazonSource } from '../../db/__tests__/helpers.js';
+import { setPurchaseStatus } from '../../db/index.js';
 import {
   createPurchasesApiApp,
   JSON_BODY_LIMIT_BYTES,
@@ -461,6 +462,46 @@ describe('GET /purchases', () => {
         '/purchases?beforeOrderedAt=2026-02-30T00:00:00.000Z&beforeId=some-id'
       );
       expect(res.status).toBe(400);
+    });
+
+    it('answers a total on the first page of a query', async () => {
+      await seedThree();
+
+      const res = await requestOn(app).get('/purchases?limit=2');
+      expect(res.status).toBe(200);
+      expect(res.body.total).toBe(3);
+    });
+
+    it('omits the total on a later page', async () => {
+      const seeded = await seedThree();
+
+      const first = await requestOn(app).get('/purchases?limit=2');
+      const anchor = first.body.items[1];
+      const second = await requestOn(app).get(
+        `/purchases?limit=2&beforeOrderedAt=${encodeURIComponent(String(anchor.orderedAt))}&beforeId=${String(anchor.id)}`
+      );
+      expect(second.status).toBe(200);
+      expect(second.body.items.map((row: { id: string }) => row.id)).toEqual([seeded[2]?.id]);
+      expect(second.body).not.toHaveProperty('total');
+    });
+
+    it('counts the whole filtered scope, not the page', async () => {
+      await requestOn(app)
+        .post('/purchases')
+        .send({ ...minimalOrder, sourceOrderId: 'unsettled-1', checksum: 'unsettled-1' });
+      await requestOn(app)
+        .post('/purchases')
+        .send({ ...minimalOrder, sourceOrderId: 'unsettled-2', checksum: 'unsettled-2' });
+      const linked = await requestOn(app)
+        .post('/purchases')
+        .send({ ...minimalOrder, sourceOrderId: 'linked-1', checksum: 'linked-1' });
+      expect(linked.status).toBe(201);
+      setPurchaseStatus(opened.db, linked.body.purchase.id as string, 'linked');
+
+      const res = await requestOn(app).get('/purchases?statuses=awaiting_settlement&limit=1');
+      expect(res.status).toBe(200);
+      expect(res.body.items).toHaveLength(1);
+      expect(res.body.total).toBe(2);
     });
   });
 });

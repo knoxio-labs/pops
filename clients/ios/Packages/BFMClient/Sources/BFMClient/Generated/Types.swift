@@ -126,6 +126,11 @@ internal protocol APIProtocol: Sendable {
     /// - Remark: HTTP `GET /mobile/purchases/receipts/{sha256}/thumbnail`.
     /// - Remark: Generated from `#/paths//mobile/purchases/receipts/{sha256}/thumbnail/get(mobilePurchases.getReceiptThumbnail)`.
     func mobilePurchases_getReceiptThumbnail(_ input: Operations.MobilePurchases_getReceiptThumbnail.Input) async throws -> Operations.MobilePurchases_getReceiptThumbnail.Output
+    /// The home screen figures for one calendar month
+    ///
+    /// - Remark: HTTP `GET /mobile/purchases/summary`.
+    /// - Remark: Generated from `#/paths//mobile/purchases/summary/get(mobilePurchases.getMonthSummary)`.
+    func mobilePurchases_getMonthSummary(_ input: Operations.MobilePurchases_getMonthSummary.Input) async throws -> Operations.MobilePurchases_getMonthSummary.Output
     /// The fuller record behind one list row, with its lines
     ///
     /// - Remark: HTTP `GET /mobile/purchases/{id}`.
@@ -428,6 +433,19 @@ extension APIProtocol {
     ) async throws -> Operations.MobilePurchases_getReceiptThumbnail.Output {
         try await mobilePurchases_getReceiptThumbnail(Operations.MobilePurchases_getReceiptThumbnail.Input(
             path: path,
+            headers: headers
+        ))
+    }
+    /// The home screen figures for one calendar month
+    ///
+    /// - Remark: HTTP `GET /mobile/purchases/summary`.
+    /// - Remark: Generated from `#/paths//mobile/purchases/summary/get(mobilePurchases.getMonthSummary)`.
+    internal func mobilePurchases_getMonthSummary(
+        query: Operations.MobilePurchases_getMonthSummary.Input.Query,
+        headers: Operations.MobilePurchases_getMonthSummary.Input.Headers = .init()
+    ) async throws -> Operations.MobilePurchases_getMonthSummary.Output {
+        try await mobilePurchases_getMonthSummary(Operations.MobilePurchases_getMonthSummary.Input(
+            query: query,
             headers: headers
         ))
     }
@@ -20576,17 +20594,26 @@ internal enum Operations {
                 internal var limit: Swift.Int?
                 /// - Remark: Generated from `#/paths/mobile/purchases/GET/query/cursor`.
                 internal var cursor: Swift.String?
+                /// - Remark: Generated from `#/paths/mobile/purchases/GET/query/status`.
+                internal enum StatusPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                    case unsettled = "unsettled"
+                }
+                /// - Remark: Generated from `#/paths/mobile/purchases/GET/query/status`.
+                internal var status: Operations.MobilePurchases_listPurchases.Input.Query.StatusPayload?
                 /// Creates a new `Query`.
                 ///
                 /// - Parameters:
                 ///   - limit:
                 ///   - cursor:
+                ///   - status:
                 internal init(
                     limit: Swift.Int? = nil,
-                    cursor: Swift.String? = nil
+                    cursor: Swift.String? = nil,
+                    status: Operations.MobilePurchases_listPurchases.Input.Query.StatusPayload? = nil
                 ) {
                     self.limit = limit
                     self.cursor = cursor
+                    self.status = status
                 }
             }
             internal var query: Operations.MobilePurchases_listPurchases.Input.Query
@@ -20731,21 +20758,27 @@ internal enum Operations {
                         internal var data: Operations.MobilePurchases_listPurchases.Output.Ok.Body.JsonPayload.DataPayload
                         /// - Remark: Generated from `#/paths/mobile/purchases/GET/responses/200/content/json/nextCursor`.
                         internal var nextCursor: Swift.String?
+                        /// - Remark: Generated from `#/paths/mobile/purchases/GET/responses/200/content/json/total`.
+                        internal var total: Swift.Int?
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
                         ///   - data:
                         ///   - nextCursor:
+                        ///   - total:
                         internal init(
                             data: Operations.MobilePurchases_listPurchases.Output.Ok.Body.JsonPayload.DataPayload,
-                            nextCursor: Swift.String? = nil
+                            nextCursor: Swift.String? = nil,
+                            total: Swift.Int? = nil
                         ) {
                             self.data = data
                             self.nextCursor = nextCursor
+                            self.total = total
                         }
                         internal enum CodingKeys: String, CodingKey {
                             case data
                             case nextCursor
+                            case total
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
                             let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -20757,9 +20790,14 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .nextCursor
                             )
+                            self.total = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .total
+                            )
                             try decoder.ensureNoAdditionalProperties(knownKeys: [
                                 "data",
-                                "nextCursor"
+                                "nextCursor",
+                                "total"
                             ])
                         }
                     }
@@ -28288,6 +28326,1118 @@ internal enum Operations {
             /// - Throws: An error if `self` is not `.serviceUnavailable`.
             /// - SeeAlso: `.serviceUnavailable`.
             internal var serviceUnavailable: Operations.MobilePurchases_getReceiptThumbnail.Output.ServiceUnavailable {
+                get throws {
+                    switch self {
+                    case let .serviceUnavailable(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "serviceUnavailable",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        internal enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            internal init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            internal var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            internal static var allCases: [Self] {
+                [
+                    .json
+                ]
+            }
+        }
+    }
+    /// The home screen figures for one calendar month
+    ///
+    /// - Remark: HTTP `GET /mobile/purchases/summary`.
+    /// - Remark: Generated from `#/paths//mobile/purchases/summary/get(mobilePurchases.getMonthSummary)`.
+    internal enum MobilePurchases_getMonthSummary {
+        internal static let id: Swift.String = "mobilePurchases.getMonthSummary"
+        internal struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/query`.
+            internal struct Query: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/query/month`.
+                internal var month: Swift.String
+                /// Creates a new `Query`.
+                ///
+                /// - Parameters:
+                ///   - month:
+                internal init(month: Swift.String) {
+                    self.month = month
+                }
+            }
+            internal var query: Operations.MobilePurchases_getMonthSummary.Input.Query
+            /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/header`.
+            internal struct Headers: Sendable, Hashable {
+                internal var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.MobilePurchases_getMonthSummary.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - accept:
+                internal init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.MobilePurchases_getMonthSummary.AcceptableContentType>] = .defaultValues()) {
+                    self.accept = accept
+                }
+            }
+            internal var headers: Operations.MobilePurchases_getMonthSummary.Input.Headers
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - query:
+            ///   - headers:
+            internal init(
+                query: Operations.MobilePurchases_getMonthSummary.Input.Query,
+                headers: Operations.MobilePurchases_getMonthSummary.Input.Headers = .init()
+            ) {
+                self.query = query
+                self.headers = headers
+            }
+        }
+        internal enum Output: Sendable, Hashable {
+            internal struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/200/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/200/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/200/content/json/MerchantLeadersPayload`.
+                        internal struct MerchantLeadersPayloadPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/200/content/json/MerchantLeadersPayload/currency`.
+                            internal var currency: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/200/content/json/MerchantLeadersPayload/merchantName`.
+                            internal var merchantName: Swift.String?
+                            /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/200/content/json/MerchantLeadersPayload/netSpendCents`.
+                            internal var netSpendCents: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/200/content/json/MerchantLeadersPayload/orderCount`.
+                            internal var orderCount: Swift.Int
+                            /// Creates a new `MerchantLeadersPayloadPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - currency:
+                            ///   - merchantName:
+                            ///   - netSpendCents:
+                            ///   - orderCount:
+                            internal init(
+                                currency: Swift.String,
+                                merchantName: Swift.String? = nil,
+                                netSpendCents: Swift.Int,
+                                orderCount: Swift.Int
+                            ) {
+                                self.currency = currency
+                                self.merchantName = merchantName
+                                self.netSpendCents = netSpendCents
+                                self.orderCount = orderCount
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case currency
+                                case merchantName
+                                case netSpendCents
+                                case orderCount
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.currency = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .currency
+                                )
+                                self.merchantName = try container.decodeIfPresent(
+                                    Swift.String.self,
+                                    forKey: .merchantName
+                                )
+                                self.netSpendCents = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .netSpendCents
+                                )
+                                self.orderCount = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .orderCount
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "currency",
+                                    "merchantName",
+                                    "netSpendCents",
+                                    "orderCount"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/200/content/json/merchantLeaders`.
+                        internal typealias MerchantLeadersPayload = [Operations.MobilePurchases_getMonthSummary.Output.Ok.Body.JsonPayload.MerchantLeadersPayloadPayload]
+                        /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/200/content/json/merchantLeaders`.
+                        internal var merchantLeaders: Operations.MobilePurchases_getMonthSummary.Output.Ok.Body.JsonPayload.MerchantLeadersPayload
+                        /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/200/content/json/month`.
+                        internal var month: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/200/content/json/PreviousMonthTotalsPayload`.
+                        internal struct PreviousMonthTotalsPayloadPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/200/content/json/PreviousMonthTotalsPayload/currency`.
+                            internal var currency: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/200/content/json/PreviousMonthTotalsPayload/netSpendCents`.
+                            internal var netSpendCents: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/200/content/json/PreviousMonthTotalsPayload/orderCount`.
+                            internal var orderCount: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/200/content/json/PreviousMonthTotalsPayload/totalCents`.
+                            internal var totalCents: Swift.Int
+                            /// Creates a new `PreviousMonthTotalsPayloadPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - currency:
+                            ///   - netSpendCents:
+                            ///   - orderCount:
+                            ///   - totalCents:
+                            internal init(
+                                currency: Swift.String,
+                                netSpendCents: Swift.Int,
+                                orderCount: Swift.Int,
+                                totalCents: Swift.Int
+                            ) {
+                                self.currency = currency
+                                self.netSpendCents = netSpendCents
+                                self.orderCount = orderCount
+                                self.totalCents = totalCents
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case currency
+                                case netSpendCents
+                                case orderCount
+                                case totalCents
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.currency = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .currency
+                                )
+                                self.netSpendCents = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .netSpendCents
+                                )
+                                self.orderCount = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .orderCount
+                                )
+                                self.totalCents = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .totalCents
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "currency",
+                                    "netSpendCents",
+                                    "orderCount",
+                                    "totalCents"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/200/content/json/previousMonthTotals`.
+                        internal typealias PreviousMonthTotalsPayload = [Operations.MobilePurchases_getMonthSummary.Output.Ok.Body.JsonPayload.PreviousMonthTotalsPayloadPayload]
+                        /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/200/content/json/previousMonthTotals`.
+                        internal var previousMonthTotals: Operations.MobilePurchases_getMonthSummary.Output.Ok.Body.JsonPayload.PreviousMonthTotalsPayload?
+                        /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/200/content/json/purchaseCount`.
+                        internal var purchaseCount: Swift.Int
+                        /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/200/content/json/TotalsPayload`.
+                        internal struct TotalsPayloadPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/200/content/json/TotalsPayload/currency`.
+                            internal var currency: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/200/content/json/TotalsPayload/netSpendCents`.
+                            internal var netSpendCents: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/200/content/json/TotalsPayload/orderCount`.
+                            internal var orderCount: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/200/content/json/TotalsPayload/totalCents`.
+                            internal var totalCents: Swift.Int
+                            /// Creates a new `TotalsPayloadPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - currency:
+                            ///   - netSpendCents:
+                            ///   - orderCount:
+                            ///   - totalCents:
+                            internal init(
+                                currency: Swift.String,
+                                netSpendCents: Swift.Int,
+                                orderCount: Swift.Int,
+                                totalCents: Swift.Int
+                            ) {
+                                self.currency = currency
+                                self.netSpendCents = netSpendCents
+                                self.orderCount = orderCount
+                                self.totalCents = totalCents
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case currency
+                                case netSpendCents
+                                case orderCount
+                                case totalCents
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.currency = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .currency
+                                )
+                                self.netSpendCents = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .netSpendCents
+                                )
+                                self.orderCount = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .orderCount
+                                )
+                                self.totalCents = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .totalCents
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "currency",
+                                    "netSpendCents",
+                                    "orderCount",
+                                    "totalCents"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/200/content/json/totals`.
+                        internal typealias TotalsPayload = [Operations.MobilePurchases_getMonthSummary.Output.Ok.Body.JsonPayload.TotalsPayloadPayload]
+                        /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/200/content/json/totals`.
+                        internal var totals: Operations.MobilePurchases_getMonthSummary.Output.Ok.Body.JsonPayload.TotalsPayload
+                        /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/200/content/json/unmatchedCount`.
+                        internal var unmatchedCount: Swift.Int
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - merchantLeaders:
+                        ///   - month:
+                        ///   - previousMonthTotals:
+                        ///   - purchaseCount:
+                        ///   - totals:
+                        ///   - unmatchedCount:
+                        internal init(
+                            merchantLeaders: Operations.MobilePurchases_getMonthSummary.Output.Ok.Body.JsonPayload.MerchantLeadersPayload,
+                            month: Swift.String,
+                            previousMonthTotals: Operations.MobilePurchases_getMonthSummary.Output.Ok.Body.JsonPayload.PreviousMonthTotalsPayload? = nil,
+                            purchaseCount: Swift.Int,
+                            totals: Operations.MobilePurchases_getMonthSummary.Output.Ok.Body.JsonPayload.TotalsPayload,
+                            unmatchedCount: Swift.Int
+                        ) {
+                            self.merchantLeaders = merchantLeaders
+                            self.month = month
+                            self.previousMonthTotals = previousMonthTotals
+                            self.purchaseCount = purchaseCount
+                            self.totals = totals
+                            self.unmatchedCount = unmatchedCount
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case merchantLeaders
+                            case month
+                            case previousMonthTotals
+                            case purchaseCount
+                            case totals
+                            case unmatchedCount
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.merchantLeaders = try container.decode(
+                                Operations.MobilePurchases_getMonthSummary.Output.Ok.Body.JsonPayload.MerchantLeadersPayload.self,
+                                forKey: .merchantLeaders
+                            )
+                            self.month = try container.decode(
+                                Swift.String.self,
+                                forKey: .month
+                            )
+                            self.previousMonthTotals = try container.decodeIfPresent(
+                                Operations.MobilePurchases_getMonthSummary.Output.Ok.Body.JsonPayload.PreviousMonthTotalsPayload.self,
+                                forKey: .previousMonthTotals
+                            )
+                            self.purchaseCount = try container.decode(
+                                Swift.Int.self,
+                                forKey: .purchaseCount
+                            )
+                            self.totals = try container.decode(
+                                Operations.MobilePurchases_getMonthSummary.Output.Ok.Body.JsonPayload.TotalsPayload.self,
+                                forKey: .totals
+                            )
+                            self.unmatchedCount = try container.decode(
+                                Swift.Int.self,
+                                forKey: .unmatchedCount
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "merchantLeaders",
+                                "month",
+                                "previousMonthTotals",
+                                "purchaseCount",
+                                "totals",
+                                "unmatchedCount"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/200/content/application\/json`.
+                    case json(Operations.MobilePurchases_getMonthSummary.Output.Ok.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobilePurchases_getMonthSummary.Output.Ok.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobilePurchases_getMonthSummary.Output.Ok.Body
+                /// Creates a new `Ok`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobilePurchases_getMonthSummary.Output.Ok.Body) {
+                    self.body = body
+                }
+            }
+            /// 200
+            ///
+            /// - Remark: Generated from `#/paths//mobile/purchases/summary/get(mobilePurchases.getMonthSummary)/responses/200`.
+            ///
+            /// HTTP response code: `200 ok`.
+            case ok(Operations.MobilePurchases_getMonthSummary.Output.Ok)
+            /// The associated value of the enum case if `self` is `.ok`.
+            ///
+            /// - Throws: An error if `self` is not `.ok`.
+            /// - SeeAlso: `.ok`.
+            internal var ok: Operations.MobilePurchases_getMonthSummary.Output.Ok {
+                get throws {
+                    switch self {
+                    case let .ok(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/400/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/400/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/400/content/json/code`.
+                        internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case invalidCursor = "invalid_cursor"
+                            case invalidRequest = "invalid_request"
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/400/content/json/code`.
+                        internal var code: Operations.MobilePurchases_getMonthSummary.Output.BadRequest.Body.JsonPayload.CodePayload
+                        /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/400/content/json/message`.
+                        internal var message: Swift.String
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - message:
+                        internal init(
+                            code: Operations.MobilePurchases_getMonthSummary.Output.BadRequest.Body.JsonPayload.CodePayload,
+                            message: Swift.String
+                        ) {
+                            self.code = code
+                            self.message = message
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case message
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Operations.MobilePurchases_getMonthSummary.Output.BadRequest.Body.JsonPayload.CodePayload.self,
+                                forKey: .code
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "message"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/400/content/application\/json`.
+                    case json(Operations.MobilePurchases_getMonthSummary.Output.BadRequest.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobilePurchases_getMonthSummary.Output.BadRequest.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobilePurchases_getMonthSummary.Output.BadRequest.Body
+                /// Creates a new `BadRequest`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobilePurchases_getMonthSummary.Output.BadRequest.Body) {
+                    self.body = body
+                }
+            }
+            /// 400
+            ///
+            /// - Remark: Generated from `#/paths//mobile/purchases/summary/get(mobilePurchases.getMonthSummary)/responses/400`.
+            ///
+            /// HTTP response code: `400 badRequest`.
+            case badRequest(Operations.MobilePurchases_getMonthSummary.Output.BadRequest)
+            /// The associated value of the enum case if `self` is `.badRequest`.
+            ///
+            /// - Throws: An error if `self` is not `.badRequest`.
+            /// - SeeAlso: `.badRequest`.
+            internal var badRequest: Operations.MobilePurchases_getMonthSummary.Output.BadRequest {
+                get throws {
+                    switch self {
+                    case let .badRequest(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "badRequest",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct Unauthorized: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/401/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/401/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/401/content/json/code`.
+                        internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case invalidToken = "invalid_token"
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/401/content/json/code`.
+                        internal var code: Operations.MobilePurchases_getMonthSummary.Output.Unauthorized.Body.JsonPayload.CodePayload
+                        /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/401/content/json/message`.
+                        internal var message: Swift.String
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - message:
+                        internal init(
+                            code: Operations.MobilePurchases_getMonthSummary.Output.Unauthorized.Body.JsonPayload.CodePayload,
+                            message: Swift.String
+                        ) {
+                            self.code = code
+                            self.message = message
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case message
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Operations.MobilePurchases_getMonthSummary.Output.Unauthorized.Body.JsonPayload.CodePayload.self,
+                                forKey: .code
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "message"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/401/content/application\/json`.
+                    case json(Operations.MobilePurchases_getMonthSummary.Output.Unauthorized.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobilePurchases_getMonthSummary.Output.Unauthorized.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobilePurchases_getMonthSummary.Output.Unauthorized.Body
+                /// Creates a new `Unauthorized`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobilePurchases_getMonthSummary.Output.Unauthorized.Body) {
+                    self.body = body
+                }
+            }
+            /// 401
+            ///
+            /// - Remark: Generated from `#/paths//mobile/purchases/summary/get(mobilePurchases.getMonthSummary)/responses/401`.
+            ///
+            /// HTTP response code: `401 unauthorized`.
+            case unauthorized(Operations.MobilePurchases_getMonthSummary.Output.Unauthorized)
+            /// The associated value of the enum case if `self` is `.unauthorized`.
+            ///
+            /// - Throws: An error if `self` is not `.unauthorized`.
+            /// - SeeAlso: `.unauthorized`.
+            internal var unauthorized: Operations.MobilePurchases_getMonthSummary.Output.Unauthorized {
+                get throws {
+                    switch self {
+                    case let .unauthorized(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "unauthorized",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct Forbidden: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/403/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/403/content/json`.
+                    internal enum JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/403/content/json/case1`.
+                        internal struct Case1Payload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/403/content/json/case1/code`.
+                            internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case deviceRevoked = "device_revoked"
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/403/content/json/case1/code`.
+                            internal var code: Operations.MobilePurchases_getMonthSummary.Output.Forbidden.Body.JsonPayload.Case1Payload.CodePayload
+                            /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/403/content/json/case1/message`.
+                            internal var message: Swift.String
+                            /// Creates a new `Case1Payload`.
+                            ///
+                            /// - Parameters:
+                            ///   - code:
+                            ///   - message:
+                            internal init(
+                                code: Operations.MobilePurchases_getMonthSummary.Output.Forbidden.Body.JsonPayload.Case1Payload.CodePayload,
+                                message: Swift.String
+                            ) {
+                                self.code = code
+                                self.message = message
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case code
+                                case message
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.code = try container.decode(
+                                    Operations.MobilePurchases_getMonthSummary.Output.Forbidden.Body.JsonPayload.Case1Payload.CodePayload.self,
+                                    forKey: .code
+                                )
+                                self.message = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .message
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "code",
+                                    "message"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/403/content/json/case1`.
+                        case case1(Operations.MobilePurchases_getMonthSummary.Output.Forbidden.Body.JsonPayload.Case1Payload)
+                        /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/403/content/json/case2`.
+                        internal struct Case2Payload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/403/content/json/case2/capability`.
+                            internal var capability: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/403/content/json/case2/code`.
+                            internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case capabilityNotGranted = "capability_not_granted"
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/403/content/json/case2/code`.
+                            internal var code: Operations.MobilePurchases_getMonthSummary.Output.Forbidden.Body.JsonPayload.Case2Payload.CodePayload
+                            /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/403/content/json/case2/message`.
+                            internal var message: Swift.String
+                            /// Creates a new `Case2Payload`.
+                            ///
+                            /// - Parameters:
+                            ///   - capability:
+                            ///   - code:
+                            ///   - message:
+                            internal init(
+                                capability: Swift.String,
+                                code: Operations.MobilePurchases_getMonthSummary.Output.Forbidden.Body.JsonPayload.Case2Payload.CodePayload,
+                                message: Swift.String
+                            ) {
+                                self.capability = capability
+                                self.code = code
+                                self.message = message
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case capability
+                                case code
+                                case message
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.capability = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .capability
+                                )
+                                self.code = try container.decode(
+                                    Operations.MobilePurchases_getMonthSummary.Output.Forbidden.Body.JsonPayload.Case2Payload.CodePayload.self,
+                                    forKey: .code
+                                )
+                                self.message = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .message
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "capability",
+                                    "code",
+                                    "message"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/403/content/json/case2`.
+                        case case2(Operations.MobilePurchases_getMonthSummary.Output.Forbidden.Body.JsonPayload.Case2Payload)
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            var errors: [any Swift.Error] = []
+                            do {
+                                self = .case1(try .init(from: decoder))
+                                return
+                            } catch {
+                                errors.append(error)
+                            }
+                            do {
+                                self = .case2(try .init(from: decoder))
+                                return
+                            } catch {
+                                errors.append(error)
+                            }
+                            throw Swift.DecodingError.failedToDecodeOneOfSchema(
+                                type: Self.self,
+                                codingPath: decoder.codingPath,
+                                errors: errors
+                            )
+                        }
+                        internal func encode(to encoder: any Swift.Encoder) throws {
+                            switch self {
+                            case let .case1(value):
+                                try value.encode(to: encoder)
+                            case let .case2(value):
+                                try value.encode(to: encoder)
+                            }
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/403/content/application\/json`.
+                    case json(Operations.MobilePurchases_getMonthSummary.Output.Forbidden.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobilePurchases_getMonthSummary.Output.Forbidden.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobilePurchases_getMonthSummary.Output.Forbidden.Body
+                /// Creates a new `Forbidden`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobilePurchases_getMonthSummary.Output.Forbidden.Body) {
+                    self.body = body
+                }
+            }
+            /// 403
+            ///
+            /// - Remark: Generated from `#/paths//mobile/purchases/summary/get(mobilePurchases.getMonthSummary)/responses/403`.
+            ///
+            /// HTTP response code: `403 forbidden`.
+            case forbidden(Operations.MobilePurchases_getMonthSummary.Output.Forbidden)
+            /// The associated value of the enum case if `self` is `.forbidden`.
+            ///
+            /// - Throws: An error if `self` is not `.forbidden`.
+            /// - SeeAlso: `.forbidden`.
+            internal var forbidden: Operations.MobilePurchases_getMonthSummary.Output.Forbidden {
+                get throws {
+                    switch self {
+                    case let .forbidden(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "forbidden",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct TooManyRequests: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/429/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/429/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/429/content/json/code`.
+                        internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case rateLimited = "rate_limited"
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/429/content/json/code`.
+                        internal var code: Operations.MobilePurchases_getMonthSummary.Output.TooManyRequests.Body.JsonPayload.CodePayload
+                        /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/429/content/json/message`.
+                        internal var message: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/429/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - message:
+                        ///   - retryAfterSeconds:
+                        internal init(
+                            code: Operations.MobilePurchases_getMonthSummary.Output.TooManyRequests.Body.JsonPayload.CodePayload,
+                            message: Swift.String,
+                            retryAfterSeconds: Swift.Int
+                        ) {
+                            self.code = code
+                            self.message = message
+                            self.retryAfterSeconds = retryAfterSeconds
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case message
+                            case retryAfterSeconds
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Operations.MobilePurchases_getMonthSummary.Output.TooManyRequests.Body.JsonPayload.CodePayload.self,
+                                forKey: .code
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            self.retryAfterSeconds = try container.decode(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "message",
+                                "retryAfterSeconds"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/429/content/application\/json`.
+                    case json(Operations.MobilePurchases_getMonthSummary.Output.TooManyRequests.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobilePurchases_getMonthSummary.Output.TooManyRequests.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobilePurchases_getMonthSummary.Output.TooManyRequests.Body
+                /// Creates a new `TooManyRequests`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobilePurchases_getMonthSummary.Output.TooManyRequests.Body) {
+                    self.body = body
+                }
+            }
+            /// 429
+            ///
+            /// - Remark: Generated from `#/paths//mobile/purchases/summary/get(mobilePurchases.getMonthSummary)/responses/429`.
+            ///
+            /// HTTP response code: `429 tooManyRequests`.
+            case tooManyRequests(Operations.MobilePurchases_getMonthSummary.Output.TooManyRequests)
+            /// The associated value of the enum case if `self` is `.tooManyRequests`.
+            ///
+            /// - Throws: An error if `self` is not `.tooManyRequests`.
+            /// - SeeAlso: `.tooManyRequests`.
+            internal var tooManyRequests: Operations.MobilePurchases_getMonthSummary.Output.TooManyRequests {
+                get throws {
+                    switch self {
+                    case let .tooManyRequests(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "tooManyRequests",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct BadGateway: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/502/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/502/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/502/content/json/code`.
+                        internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case upstreamUnavailable = "upstream_unavailable"
+                            case upstreamDegraded = "upstream_degraded"
+                            case upstreamContractMismatch = "upstream_contract_mismatch"
+                            case upstreamMisconfigured = "upstream_misconfigured"
+                            case upstreamInvalidRequest = "upstream_invalid_request"
+                            case upstreamConflict = "upstream_conflict"
+                            case upstreamUnsupportedMedia = "upstream_unsupported_media"
+                            case notFound = "not_found"
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/502/content/json/code`.
+                        internal var code: Operations.MobilePurchases_getMonthSummary.Output.BadGateway.Body.JsonPayload.CodePayload
+                        /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/502/content/json/message`.
+                        internal var message: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/502/content/json/pillar`.
+                        internal var pillar: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/502/content/json/retryable`.
+                        internal var retryable: Swift.Bool
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - message:
+                        ///   - pillar:
+                        ///   - retryable:
+                        internal init(
+                            code: Operations.MobilePurchases_getMonthSummary.Output.BadGateway.Body.JsonPayload.CodePayload,
+                            message: Swift.String,
+                            pillar: Swift.String,
+                            retryable: Swift.Bool
+                        ) {
+                            self.code = code
+                            self.message = message
+                            self.pillar = pillar
+                            self.retryable = retryable
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case message
+                            case pillar
+                            case retryable
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Operations.MobilePurchases_getMonthSummary.Output.BadGateway.Body.JsonPayload.CodePayload.self,
+                                forKey: .code
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            self.pillar = try container.decode(
+                                Swift.String.self,
+                                forKey: .pillar
+                            )
+                            self.retryable = try container.decode(
+                                Swift.Bool.self,
+                                forKey: .retryable
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "message",
+                                "pillar",
+                                "retryable"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/502/content/application\/json`.
+                    case json(Operations.MobilePurchases_getMonthSummary.Output.BadGateway.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobilePurchases_getMonthSummary.Output.BadGateway.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobilePurchases_getMonthSummary.Output.BadGateway.Body
+                /// Creates a new `BadGateway`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobilePurchases_getMonthSummary.Output.BadGateway.Body) {
+                    self.body = body
+                }
+            }
+            /// 502
+            ///
+            /// - Remark: Generated from `#/paths//mobile/purchases/summary/get(mobilePurchases.getMonthSummary)/responses/502`.
+            ///
+            /// HTTP response code: `502 badGateway`.
+            case badGateway(Operations.MobilePurchases_getMonthSummary.Output.BadGateway)
+            /// The associated value of the enum case if `self` is `.badGateway`.
+            ///
+            /// - Throws: An error if `self` is not `.badGateway`.
+            /// - SeeAlso: `.badGateway`.
+            internal var badGateway: Operations.MobilePurchases_getMonthSummary.Output.BadGateway {
+                get throws {
+                    switch self {
+                    case let .badGateway(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "badGateway",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct ServiceUnavailable: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/503/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/503/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/503/content/json/code`.
+                        internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case upstreamUnavailable = "upstream_unavailable"
+                            case upstreamDegraded = "upstream_degraded"
+                            case upstreamContractMismatch = "upstream_contract_mismatch"
+                            case upstreamMisconfigured = "upstream_misconfigured"
+                            case upstreamInvalidRequest = "upstream_invalid_request"
+                            case upstreamConflict = "upstream_conflict"
+                            case upstreamUnsupportedMedia = "upstream_unsupported_media"
+                            case notFound = "not_found"
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/503/content/json/code`.
+                        internal var code: Operations.MobilePurchases_getMonthSummary.Output.ServiceUnavailable.Body.JsonPayload.CodePayload
+                        /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/503/content/json/message`.
+                        internal var message: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/503/content/json/pillar`.
+                        internal var pillar: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/503/content/json/retryable`.
+                        internal var retryable: Swift.Bool
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - message:
+                        ///   - pillar:
+                        ///   - retryable:
+                        internal init(
+                            code: Operations.MobilePurchases_getMonthSummary.Output.ServiceUnavailable.Body.JsonPayload.CodePayload,
+                            message: Swift.String,
+                            pillar: Swift.String,
+                            retryable: Swift.Bool
+                        ) {
+                            self.code = code
+                            self.message = message
+                            self.pillar = pillar
+                            self.retryable = retryable
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case message
+                            case pillar
+                            case retryable
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Operations.MobilePurchases_getMonthSummary.Output.ServiceUnavailable.Body.JsonPayload.CodePayload.self,
+                                forKey: .code
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            self.pillar = try container.decode(
+                                Swift.String.self,
+                                forKey: .pillar
+                            )
+                            self.retryable = try container.decode(
+                                Swift.Bool.self,
+                                forKey: .retryable
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "message",
+                                "pillar",
+                                "retryable"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/purchases/summary/GET/responses/503/content/application\/json`.
+                    case json(Operations.MobilePurchases_getMonthSummary.Output.ServiceUnavailable.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobilePurchases_getMonthSummary.Output.ServiceUnavailable.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobilePurchases_getMonthSummary.Output.ServiceUnavailable.Body
+                /// Creates a new `ServiceUnavailable`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobilePurchases_getMonthSummary.Output.ServiceUnavailable.Body) {
+                    self.body = body
+                }
+            }
+            /// 503
+            ///
+            /// - Remark: Generated from `#/paths//mobile/purchases/summary/get(mobilePurchases.getMonthSummary)/responses/503`.
+            ///
+            /// HTTP response code: `503 serviceUnavailable`.
+            case serviceUnavailable(Operations.MobilePurchases_getMonthSummary.Output.ServiceUnavailable)
+            /// The associated value of the enum case if `self` is `.serviceUnavailable`.
+            ///
+            /// - Throws: An error if `self` is not `.serviceUnavailable`.
+            /// - SeeAlso: `.serviceUnavailable`.
+            internal var serviceUnavailable: Operations.MobilePurchases_getMonthSummary.Output.ServiceUnavailable {
                 get throws {
                     switch self {
                     case let .serviceUnavailable(response):

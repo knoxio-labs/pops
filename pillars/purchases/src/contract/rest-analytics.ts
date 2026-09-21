@@ -434,6 +434,38 @@ export const ProductLeaderboardQuerySchema = MerchantSpendQuerySchema.extend({
   minOrderCount: z.coerce.number().int().min(1).optional(),
 });
 
+/** One merchant's spend in one currency, ranked for the home screen. */
+export const MonthMerchantLeaderSchema = z.object({
+  merchant: MerchantIdentitySchema,
+  currency: CurrencySchema,
+  netSpendCents: CentsSchema,
+  orderCount: z.int().min(0),
+});
+
+/**
+ * The home screen's figures for one calendar month, in the owner's
+ * timezone (`Australia/Sydney` — see `month-window.ts`).
+ *
+ * `totals` is never a single cross-currency figure, for the reason
+ * {@link MerchantSpendRollupSchema.shape.totals} is not one. `previousMonthTotals`
+ * is `null` rather than `[]` when the previous month has no orders at all, so
+ * a consumer can tell "nothing to compare against" apart from "spent
+ * nothing" without inspecting `purchaseCount` on a second request.
+ */
+export const MonthSummarySchema = z.object({
+  month: z.string(),
+  totals: z.array(CurrencySpendSchema),
+  purchaseCount: z.int().min(0),
+  previousMonthTotals: z.array(CurrencySpendSchema).nullable(),
+  unmatchedCount: z.int().min(0),
+  merchantLeaders: z.array(MonthMerchantLeaderSchema),
+});
+
+/** `YYYY-MM`, checked as a real calendar month rather than only the shape. */
+export const MonthSummaryQuerySchema = z.object({
+  month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/u, 'month must be YYYY-MM'),
+});
+
 export const purchasesAnalyticsContract = c.router({
   merchantSpend: {
     method: 'GET',
@@ -459,5 +491,15 @@ export const purchasesAnalyticsContract = c.router({
     },
     summary:
       'Repeat purchases per product — cadence, unit-price history, and the identity basis each group was formed on',
+  },
+  monthSummary: {
+    method: 'GET',
+    path: '/analytics/month-summary',
+    query: MonthSummaryQuerySchema,
+    responses: {
+      200: MonthSummarySchema,
+      400: ErrorBodySchema,
+    },
+    summary: 'The home screen figures for one calendar month, in the owner’s timezone',
   },
 });

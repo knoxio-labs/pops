@@ -566,3 +566,68 @@ describe('purchases half-broken, seen from the phone', () => {
     expect(res.body.code).toBe('upstream_contract_mismatch');
   });
 });
+
+describe('the unsettled filter and total', () => {
+  it('filters to the unsettled pair', async () => {
+    const { app, token } = openWithRows([
+      purchasesRow({ id: 'pur-1', status: 'awaiting_settlement' }),
+      purchasesRow({ id: 'pur-2', status: 'linked', orderedAt: '2026-08-12T02:15:00.000Z' }),
+      purchasesRow({ id: 'pur-3', status: 'partial', orderedAt: '2026-08-11T02:15:00.000Z' }),
+    ]);
+
+    const res = await list(app, token, '?status=unsettled');
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.map((row: { id: string }) => row.id)).toEqual(['pur-1', 'pur-3']);
+  });
+
+  it('reports a total that reflects the whole filtered scope, not the page', async () => {
+    const { app, token } = openWithRows([
+      purchasesRow({ id: 'pur-1', status: 'awaiting_settlement' }),
+      purchasesRow({
+        id: 'pur-2',
+        status: 'partial',
+        orderedAt: '2026-08-12T02:15:00.000Z',
+      }),
+      purchasesRow({
+        id: 'pur-3',
+        status: 'awaiting_settlement',
+        orderedAt: '2026-08-11T02:15:00.000Z',
+      }),
+    ]);
+
+    const res = await list(app, token, '?status=unsettled&limit=1');
+
+    expect(res.status).toBe(200);
+    expect(res.body.data).toHaveLength(1);
+    expect(res.body.total).toBe(3);
+  });
+
+  it('omits the total (as null) on a later page', async () => {
+    const { app, token } = openWithRows([
+      purchasesRow({ id: 'pur-1' }),
+      purchasesRow({ id: 'pur-2', orderedAt: '2026-08-12T02:15:00.000Z' }),
+    ]);
+
+    const first = await list(app, token, '?limit=1');
+    expect(first.body.total).toBe(2);
+
+    const second = await list(app, token, `?limit=1&cursor=${String(first.body.nextCursor)}`);
+
+    expect(second.status).toBe(200);
+    expect(second.body.total).toBeNull();
+  });
+
+  it('the home count ignores status entirely when none is sent', async () => {
+    const { app, token } = openWithRows([
+      purchasesRow({ id: 'pur-1', status: 'awaiting_settlement' }),
+      purchasesRow({ id: 'pur-2', status: 'linked', orderedAt: '2026-08-12T02:15:00.000Z' }),
+      purchasesRow({ id: 'pur-3', status: 'ignored', orderedAt: '2026-08-11T02:15:00.000Z' }),
+    ]);
+
+    const res = await list(app, token);
+
+    expect(res.status).toBe(200);
+    expect(res.body.total).toBe(3);
+  });
+});

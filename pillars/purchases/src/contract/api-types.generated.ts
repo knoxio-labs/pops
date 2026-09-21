@@ -20,6 +20,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/analytics/month-summary': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** The home screen figures for one calendar month, in the owner’s timezone */
+    get: operations['analytics.monthSummary'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/analytics/product-leaderboard': {
     parameters: {
       query?: never;
@@ -640,6 +657,97 @@ export interface operations {
       };
     };
   };
+  'analytics.monthSummary': {
+    parameters: {
+      query: {
+        month: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            merchantLeaders: {
+              currency: string;
+              merchant:
+                | {
+                    entityId: string;
+                    name: string | null;
+                    /** @enum {string} */
+                    resolution: 'entity';
+                  }
+                | {
+                    /** @enum {string|null} */
+                    entityId: null;
+                    name: string;
+                    /** @enum {string} */
+                    resolution: 'name';
+                  }
+                | {
+                    /** @enum {string|null} */
+                    entityId: null;
+                    /** @enum {string|null} */
+                    name: null;
+                    /** @enum {string} */
+                    resolution: 'unattributed';
+                  };
+              netSpendCents: number;
+              orderCount: number;
+            }[];
+            month: string;
+            previousMonthTotals:
+              | {
+                  accounting: {
+                    awaitingImportCents: number;
+                    matchedCents: number;
+                    netSpendCents: number;
+                    refundedCents: number;
+                    residualCents: number;
+                    totalCents: number;
+                  };
+                  currency: string;
+                  orderCount: number;
+                }[]
+              | null;
+            purchaseCount: number;
+            totals: {
+              accounting: {
+                awaitingImportCents: number;
+                matchedCents: number;
+                netSpendCents: number;
+                refundedCents: number;
+                residualCents: number;
+                totalCents: number;
+              };
+              currency: string;
+              orderCount: number;
+            }[];
+            unmatchedCount: number;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            message: string;
+          };
+        };
+      };
+    };
+  };
   'analytics.productLeaderboard': {
     parameters: {
       query?: {
@@ -1187,6 +1295,7 @@ export interface operations {
               totalCents: number;
               updatedAt: string;
             }[];
+            total?: number;
           };
         };
       };

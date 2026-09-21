@@ -24,6 +24,8 @@ import { encodePurchasesCursor, type PurchasesPageCursor } from './list-cursor.j
 import {
   PurchasesDetailResponseSchema,
   PurchasesListResponseSchema,
+  PurchasesMonthSummaryResponseSchema,
+  toMobileMonthSummary,
   toMobilePurchase,
   toMobilePurchaseDetail,
   type PurchasesListRow,
@@ -39,6 +41,7 @@ import type {
   MobileSaveReceiptDraftBody,
 } from '../../contract/receipt-draft.js';
 import type {
+  MobileMonthSummary,
   MobilePurchaseDetail,
   MobilePurchasesPage,
   MobileReceiptBytes,
@@ -73,6 +76,7 @@ export type PurchasesReceiptRouter = {
       limit?: number;
       beforeOrderedAt?: string;
       beforeId?: string;
+      statuses?: string[];
     }) => Promise<unknown>;
     get: (input: { id: string }) => Promise<unknown>;
   };
@@ -92,11 +96,20 @@ export type PurchasesReceiptBytesRouter = {
   };
 };
 
+/** The `analytics.*` sub-router bfm reads the month summary through. */
+export type PurchasesAnalyticsRouter = {
+  analytics: {
+    monthSummary: (input: { month: string }) => Promise<unknown>;
+  };
+};
+
 export interface ListPurchasesRequest {
   /** Rows to return. The caller has already clamped this to the contract's cap. */
   readonly limit: number;
   /** Where the previous page stopped, or `null` for the first page. */
   readonly cursor: PurchasesPageCursor | null;
+  /** Raw purchases-pillar status strings. A dumb proxy — no policy here. */
+  readonly statuses?: readonly string[];
 }
 
 export interface MobilePurchasesClient {
@@ -112,6 +125,7 @@ export interface MobilePurchasesClient {
   getPurchase(id: string): Promise<GatewayOutcome<MobilePurchaseDetail>>;
   getReceipt(sha256: string): Promise<GatewayOutcome<MobileReceiptBytes>>;
   getReceiptThumbnail(sha256: string): Promise<GatewayOutcome<MobileReceiptBytes>>;
+  getMonthSummary(month: string): Promise<GatewayOutcome<MobileMonthSummary>>;
 }
 
 export function createMobilePurchasesClient(gateway: PillarGateway): MobilePurchasesClient {
@@ -138,7 +152,7 @@ export function createMobilePurchasesClient(gateway: PillarGateway): MobilePurch
       );
       if (!isGatewayOk(page)) return page;
 
-      return { kind: 'ok', value: toPage(page.value.items, request.limit) };
+      return { kind: 'ok', value: toPage(page.value.items, request.limit, page.value.total) };
     },
 
     async getPurchase(id: string) {
@@ -168,6 +182,23 @@ export function createMobilePurchasesClient(gateway: PillarGateway): MobilePurch
       return fetchReceiptBytes(gateway, 'receipt.thumbnail', (handle) =>
         handle.receipt.thumbnail({ sha256 })
       );
+    },
+
+    async getMonthSummary(month: string) {
+      const outcome = await gateway.call<PurchasesAnalyticsRouter, unknown>(
+        PURCHASES_PILLAR_ID,
+        (handle) => handle.analytics.monthSummary({ month })
+      );
+
+      const summary = parseOrMismatch(
+        PURCHASES_PILLAR_ID,
+        outcome,
+        PurchasesMonthSummaryResponseSchema,
+        'analytics.monthSummary'
+      );
+      if (!isGatewayOk(summary)) return summary;
+
+      return { kind: 'ok', value: toMobileMonthSummary(summary.value) };
     },
   };
 }
@@ -206,11 +237,13 @@ function toListInput(request: ListPurchasesRequest): {
   limit: number;
   beforeOrderedAt?: string;
   beforeId?: string;
+  statuses?: string[];
 } {
   return {
     limit: request.limit + 1,
     beforeOrderedAt: request.cursor?.orderedAt,
     beforeId: request.cursor?.id,
+    statuses: request.statuses === undefined ? undefined : [...request.statuses],
   };
 }
 
@@ -221,7 +254,11 @@ function toListInput(request: ListPurchasesRequest): {
  * would anchor the next page one row too far forward, since the app never saw
  * it and could not have served it.
  */
-function toPage(rows: readonly PurchasesListRow[], limit: number): MobilePurchasesPage {
+function toPage(
+  rows: readonly PurchasesListRow[],
+  limit: number,
+  total: number | undefined
+): MobilePurchasesPage {
   const hasMore = rows.length > limit;
   const served = hasMore ? rows.slice(0, limit) : rows;
   const last = served.at(-1);
@@ -232,5 +269,6 @@ function toPage(rows: readonly PurchasesListRow[], limit: number): MobilePurchas
       hasMore && last !== undefined
         ? encodePurchasesCursor({ orderedAt: last.orderedAt, id: last.id })
         : null,
+    total: total ?? null,
   };
 }
