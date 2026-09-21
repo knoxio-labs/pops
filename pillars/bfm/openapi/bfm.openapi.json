@@ -5976,6 +5976,15 @@
                           "minimum": -9007199254740991,
                           "type": "integer"
                         },
+                        "listPriceAsserted": {
+                          "type": "boolean"
+                        },
+                        "listPriceCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "nullable": true,
+                          "type": "integer"
+                        },
                         "name": {
                           "minLength": 1,
                           "type": "string"
@@ -6520,6 +6529,15 @@
                         "lineTotalCents": {
                           "maximum": 9007199254740991,
                           "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "listPriceAsserted": {
+                          "type": "boolean"
+                        },
+                        "listPriceCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "nullable": true,
                           "type": "integer"
                         },
                         "name": {
@@ -7139,6 +7157,15 @@
                                   "lineTotalCents": {
                                     "maximum": 9007199254740991,
                                     "minimum": -9007199254740991,
+                                    "type": "integer"
+                                  },
+                                  "listPriceAsserted": {
+                                    "type": "boolean"
+                                  },
+                                  "listPriceCents": {
+                                    "maximum": 9007199254740991,
+                                    "minimum": -9007199254740991,
+                                    "nullable": true,
                                     "type": "integer"
                                   },
                                   "name": {

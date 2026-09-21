@@ -72,6 +72,7 @@ describe('extractReceipt', () => {
         unitPriceCents: 1250,
         lineTotalCents: 1250,
         notes: [],
+        listPriceCents: null,
       },
     ]);
   });
@@ -218,6 +219,30 @@ describe('saveReceiptDraft', () => {
     const [saved] = fake.saved as { taxIncluded?: unknown; shippingIncluded?: unknown }[];
     expect(saved?.taxIncluded).toBe(true);
     expect(saved?.shippingIncluded).toBe(true);
+  });
+
+  it('forwards a line’s list price and its assertion unchanged', async () => {
+    const fake = createPurchasesDraftFake(purchasesDraft(), purchasesPurchaseDetail());
+    await clientOver(fake.factory).saveReceiptDraft({
+      ...SAVE_BODY,
+      items: [
+        {
+          name: 'Timber Pine DAR 42x19',
+          quantity: null,
+          unitPriceCents: 1250,
+          lineTotalCents: 1250,
+          notes: [],
+          listPriceCents: 1500,
+          listPriceAsserted: true,
+        },
+      ],
+    });
+
+    const [saved] = fake.saved as {
+      items: { listPriceCents?: unknown; listPriceAsserted?: unknown }[];
+    }[];
+    expect(saved?.items[0]?.listPriceCents).toBe(1500);
+    expect(saved?.items[0]?.listPriceAsserted).toBe(true);
   });
 });
 

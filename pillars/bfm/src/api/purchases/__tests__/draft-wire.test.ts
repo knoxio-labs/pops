@@ -53,3 +53,25 @@ describe('toMobileExtractOutcome — adjustment basis', () => {
     expect(mapped.draft.shippingIncluded).toBeNull();
   });
 });
+
+describe('toMobileExtractOutcome — list price', () => {
+  it('forwards a stated list price per line', () => {
+    const mapped = toMobileExtractOutcome(
+      outcome({
+        items: [{ name: 'A', unitPriceCents: 350, lineTotalCents: 350, listPriceCents: 550 }],
+      })
+    );
+
+    if (mapped.kind !== 'draft') throw new Error('expected a draft outcome');
+    expect(mapped.draft.items[0]?.listPriceCents).toBe(550);
+  });
+
+  it('maps an absent list price to null', () => {
+    const mapped = toMobileExtractOutcome(
+      outcome({ items: [{ name: 'A', unitPriceCents: 350, lineTotalCents: 350 }] })
+    );
+
+    if (mapped.kind !== 'draft') throw new Error('expected a draft outcome');
+    expect(mapped.draft.items[0]?.listPriceCents).toBeNull();
+  });
+});

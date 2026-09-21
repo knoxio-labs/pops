@@ -56,6 +56,14 @@ export const MobileDraftLineSchema = z.object({
   unitPriceCents: z.number().int(),
   lineTotalCents: z.number().int(),
   notes: z.array(z.string()),
+  /** What the line would have cost at the merchant's normal price. Never itself the assertion. */
+  listPriceCents: z.number().int().nullable().optional(),
+  /**
+   * True when the reviewer confirmed or edited this figure before saving.
+   * On the extract response this is always false/absent — a fresh reading
+   * is never asserted.
+   */
+  listPriceAsserted: z.boolean().optional(),
 });
 
 export type MobileDraftLine = z.infer<typeof MobileDraftLineSchema>;
