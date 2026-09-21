@@ -482,6 +482,12 @@ export const BFM_ROUTES = [
     handlerFile: 'pillars/bfm/src/api/rest/mobile-inventory-media-handlers.ts',
     handlerKey: 'getMedia',
   },
+  {
+    method: 'get',
+    path: '/mobile/contacts/merchants/search',
+    handlerFile: 'pillars/bfm/src/api/rest/mobile-contacts-handlers.ts',
+    handlerKey: 'searchMerchants',
+  },
 ];
 
 /** Empty today: every field on every known bfm route is read. @type {AllowlistEntry[]} */

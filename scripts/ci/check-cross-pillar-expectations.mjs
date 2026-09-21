@@ -390,6 +390,40 @@ export const EXPECTATIONS = [
   {
     consumer: 'bfm',
     producer: 'contacts',
+    operationId: 'entities.list',
+    path: '/entities',
+    method: 'get',
+    // The merchant search/create-conflict-resolution leg (POPS-3753): a free
+    // text query and a page cap, both of which this guard can pin.
+    query: ['search', 'limit'],
+    usedBy: 'pillars/bfm/src/api/contacts/client.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'contacts',
+    operationId: 'entities.get',
+    path: '/entities/{id}',
+    method: 'get',
+    // One merchant by id, for a draft that arrives already matched
+    // (POPS-3753). The id is the whole request.
+    query: [],
+    pathParams: ['id'],
+    usedBy: 'pillars/bfm/src/api/contacts/client.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'contacts',
+    operationId: 'entities.create',
+    path: '/entities',
+    method: 'post',
+    // The body (`{ name }`) is not modelled here; there is no query or path
+    // param to pin (POPS-3753).
+    query: [],
+    usedBy: 'pillars/bfm/src/api/contacts/client.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'contacts',
     operationId: 'entities.addresses.list',
     path: '/entities/{id}/addresses',
     method: 'get',
