@@ -21918,6 +21918,10 @@ internal enum Operations {
                     internal struct ItemsPayloadPayload: Codable, Hashable, Sendable {
                         /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/requestBody/json/ItemsPayload/lineTotalCents`.
                         internal var lineTotalCents: Swift.Int
+                        /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/requestBody/json/ItemsPayload/listPriceAsserted`.
+                        internal var listPriceAsserted: Swift.Bool?
+                        /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/requestBody/json/ItemsPayload/listPriceCents`.
+                        internal var listPriceCents: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/requestBody/json/ItemsPayload/name`.
                         internal var name: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/requestBody/json/ItemsPayload/notes`.
@@ -21930,18 +21934,24 @@ internal enum Operations {
                         ///
                         /// - Parameters:
                         ///   - lineTotalCents:
+                        ///   - listPriceAsserted:
+                        ///   - listPriceCents:
                         ///   - name:
                         ///   - notes:
                         ///   - quantity:
                         ///   - unitPriceCents:
                         internal init(
                             lineTotalCents: Swift.Int,
+                            listPriceAsserted: Swift.Bool? = nil,
+                            listPriceCents: Swift.Int? = nil,
                             name: Swift.String,
                             notes: [Swift.String],
                             quantity: Swift.Int? = nil,
                             unitPriceCents: Swift.Int
                         ) {
                             self.lineTotalCents = lineTotalCents
+                            self.listPriceAsserted = listPriceAsserted
+                            self.listPriceCents = listPriceCents
                             self.name = name
                             self.notes = notes
                             self.quantity = quantity
@@ -21949,6 +21959,8 @@ internal enum Operations {
                         }
                         internal enum CodingKeys: String, CodingKey {
                             case lineTotalCents
+                            case listPriceAsserted
+                            case listPriceCents
                             case name
                             case notes
                             case quantity
@@ -21959,6 +21971,14 @@ internal enum Operations {
                             self.lineTotalCents = try container.decode(
                                 Swift.Int.self,
                                 forKey: .lineTotalCents
+                            )
+                            self.listPriceAsserted = try container.decodeIfPresent(
+                                Swift.Bool.self,
+                                forKey: .listPriceAsserted
+                            )
+                            self.listPriceCents = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .listPriceCents
                             )
                             self.name = try container.decode(
                                 Swift.String.self,
@@ -21978,6 +21998,8 @@ internal enum Operations {
                             )
                             try decoder.ensureNoAdditionalProperties(knownKeys: [
                                 "lineTotalCents",
+                                "listPriceAsserted",
+                                "listPriceCents",
                                 "name",
                                 "notes",
                                 "quantity",
@@ -23605,6 +23627,10 @@ internal enum Operations {
                     internal struct ItemsPayloadPayload: Codable, Hashable, Sendable {
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/ItemsPayload/lineTotalCents`.
                         internal var lineTotalCents: Swift.Int
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/ItemsPayload/listPriceAsserted`.
+                        internal var listPriceAsserted: Swift.Bool?
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/ItemsPayload/listPriceCents`.
+                        internal var listPriceCents: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/ItemsPayload/name`.
                         internal var name: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/ItemsPayload/notes`.
@@ -23617,18 +23643,24 @@ internal enum Operations {
                         ///
                         /// - Parameters:
                         ///   - lineTotalCents:
+                        ///   - listPriceAsserted:
+                        ///   - listPriceCents:
                         ///   - name:
                         ///   - notes:
                         ///   - quantity:
                         ///   - unitPriceCents:
                         internal init(
                             lineTotalCents: Swift.Int,
+                            listPriceAsserted: Swift.Bool? = nil,
+                            listPriceCents: Swift.Int? = nil,
                             name: Swift.String,
                             notes: [Swift.String],
                             quantity: Swift.Int? = nil,
                             unitPriceCents: Swift.Int
                         ) {
                             self.lineTotalCents = lineTotalCents
+                            self.listPriceAsserted = listPriceAsserted
+                            self.listPriceCents = listPriceCents
                             self.name = name
                             self.notes = notes
                             self.quantity = quantity
@@ -23636,6 +23668,8 @@ internal enum Operations {
                         }
                         internal enum CodingKeys: String, CodingKey {
                             case lineTotalCents
+                            case listPriceAsserted
+                            case listPriceCents
                             case name
                             case notes
                             case quantity
@@ -23646,6 +23680,14 @@ internal enum Operations {
                             self.lineTotalCents = try container.decode(
                                 Swift.Int.self,
                                 forKey: .lineTotalCents
+                            )
+                            self.listPriceAsserted = try container.decodeIfPresent(
+                                Swift.Bool.self,
+                                forKey: .listPriceAsserted
+                            )
+                            self.listPriceCents = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .listPriceCents
                             )
                             self.name = try container.decode(
                                 Swift.String.self,
@@ -23665,6 +23707,8 @@ internal enum Operations {
                             )
                             try decoder.ensureNoAdditionalProperties(knownKeys: [
                                 "lineTotalCents",
+                                "listPriceAsserted",
+                                "listPriceCents",
                                 "name",
                                 "notes",
                                 "quantity",
@@ -25498,6 +25542,10 @@ internal enum Operations {
                                 internal struct ItemsPayloadPayload: Codable, Hashable, Sendable {
                                     /// - Remark: Generated from `#/paths/mobile/purchases/receipts/extract/POST/responses/200/content/json/case1/draft/ItemsPayload/lineTotalCents`.
                                     internal var lineTotalCents: Swift.Int
+                                    /// - Remark: Generated from `#/paths/mobile/purchases/receipts/extract/POST/responses/200/content/json/case1/draft/ItemsPayload/listPriceAsserted`.
+                                    internal var listPriceAsserted: Swift.Bool?
+                                    /// - Remark: Generated from `#/paths/mobile/purchases/receipts/extract/POST/responses/200/content/json/case1/draft/ItemsPayload/listPriceCents`.
+                                    internal var listPriceCents: Swift.Int?
                                     /// - Remark: Generated from `#/paths/mobile/purchases/receipts/extract/POST/responses/200/content/json/case1/draft/ItemsPayload/name`.
                                     internal var name: Swift.String
                                     /// - Remark: Generated from `#/paths/mobile/purchases/receipts/extract/POST/responses/200/content/json/case1/draft/ItemsPayload/notes`.
@@ -25510,18 +25558,24 @@ internal enum Operations {
                                     ///
                                     /// - Parameters:
                                     ///   - lineTotalCents:
+                                    ///   - listPriceAsserted:
+                                    ///   - listPriceCents:
                                     ///   - name:
                                     ///   - notes:
                                     ///   - quantity:
                                     ///   - unitPriceCents:
                                     internal init(
                                         lineTotalCents: Swift.Int,
+                                        listPriceAsserted: Swift.Bool? = nil,
+                                        listPriceCents: Swift.Int? = nil,
                                         name: Swift.String,
                                         notes: [Swift.String],
                                         quantity: Swift.Int? = nil,
                                         unitPriceCents: Swift.Int
                                     ) {
                                         self.lineTotalCents = lineTotalCents
+                                        self.listPriceAsserted = listPriceAsserted
+                                        self.listPriceCents = listPriceCents
                                         self.name = name
                                         self.notes = notes
                                         self.quantity = quantity
@@ -25529,6 +25583,8 @@ internal enum Operations {
                                     }
                                     internal enum CodingKeys: String, CodingKey {
                                         case lineTotalCents
+                                        case listPriceAsserted
+                                        case listPriceCents
                                         case name
                                         case notes
                                         case quantity
@@ -25539,6 +25595,14 @@ internal enum Operations {
                                         self.lineTotalCents = try container.decode(
                                             Swift.Int.self,
                                             forKey: .lineTotalCents
+                                        )
+                                        self.listPriceAsserted = try container.decodeIfPresent(
+                                            Swift.Bool.self,
+                                            forKey: .listPriceAsserted
+                                        )
+                                        self.listPriceCents = try container.decodeIfPresent(
+                                            Swift.Int.self,
+                                            forKey: .listPriceCents
                                         )
                                         self.name = try container.decode(
                                             Swift.String.self,
@@ -25558,6 +25622,8 @@ internal enum Operations {
                                         )
                                         try decoder.ensureNoAdditionalProperties(knownKeys: [
                                             "lineTotalCents",
+                                            "listPriceAsserted",
+                                            "listPriceCents",
                                             "name",
                                             "notes",
                                             "quantity",

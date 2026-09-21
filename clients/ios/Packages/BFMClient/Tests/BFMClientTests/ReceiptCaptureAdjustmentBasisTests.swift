@@ -92,3 +92,58 @@ internal struct ReceiptCaptureAdjustmentBasisTests {
         #expect(reading.extracted.shippingIncluded == false)
     }
 }
+
+/// The list-price field on a line, forwarded on both the request and the
+/// response side (POPS-3652).
+@Suite("BFMReceiptCaptureRepository — list price")
+internal struct ReceiptCaptureListPriceTests {
+    @Test("saveDraftItem forwards a line's list price and its assertion")
+    func saveDraftItemForwardsListPrice() {
+        let line = ReceiptSaveLine.fake(listPriceCents: 550, listPriceAsserted: true)
+
+        let item = BFMReceiptCaptureRepository.saveDraftItem(from: line)
+
+        #expect(item.listPriceCents == 550)
+        #expect(item.listPriceAsserted == true)
+    }
+
+    @Test("manualItem forwards a line's list price and its assertion")
+    func manualItemForwardsListPrice() {
+        let line = ReceiptSaveLine.fake(listPriceCents: 550, listPriceAsserted: true)
+
+        let item = BFMReceiptCaptureRepository.manualItem(from: line)
+
+        #expect(item.listPriceCents == 550)
+        #expect(item.listPriceAsserted == true)
+    }
+
+    @Test("extract maps a wire list price into a formatted printed amount")
+    func extractCarriesListPrice() async throws {
+        let items = """
+            [{"name":"Timber Pine DAR 42x19","quantity":null,"unitPriceCents":350,\
+            "lineTotalCents":350,"notes":[],"listPriceCents":550}]
+            """
+        let outcome = try await extractReceipt(
+            json: ReceiptCaptureWire.draft(taxIncluded: true, shippingIncluded: true, items: items)
+        )
+
+        guard case .draft(let reading) = outcome else {
+            Issue.record("expected .draft, got \(outcome)")
+            return
+        }
+        #expect(reading.extracted.taxIncluded == true)
+        #expect(reading.extracted.shippingIncluded == true)
+        #expect(reading.extracted.lines.first?.listAmount == "5.50")
+    }
+
+    @Test("a wire list price of null maps to nil, never a fabricated $0.00")
+    func extractMapsNullListPriceToNil() async throws {
+        let outcome = try await extractReceipt(json: ReceiptCaptureWire.draft())
+
+        guard case .draft(let reading) = outcome else {
+            Issue.record("expected .draft, got \(outcome)")
+            return
+        }
+        #expect(reading.extracted.lines.first?.listAmount == nil)
+    }
+}

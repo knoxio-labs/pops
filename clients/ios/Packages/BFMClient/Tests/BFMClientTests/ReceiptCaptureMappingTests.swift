@@ -109,7 +109,7 @@ internal struct ReceiptCaptureMappingTests {
             reading.extracted.lines == [
                 ExtractedReceiptLine(
                     description: "Timber Pine DAR 42x19", amount: "12.50", quantity: nil,
-                    unitNote: nil)
+                    unitNote: nil, listAmount: nil)
             ])
     }
 

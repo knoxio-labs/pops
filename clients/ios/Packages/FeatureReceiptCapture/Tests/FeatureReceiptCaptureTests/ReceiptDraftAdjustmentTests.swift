@@ -192,6 +192,16 @@ internal struct ReceiptDraftAdjustmentTests {
         }
     }
 
+    @Test("a list price the reading stated arrives filled in and unedited")
+    func listPriceArrivesFromTheReading() {
+        let draft = ReceiptDraft.fake(.withListPriceAndShipping())
+
+        let line = draft.lines.first
+        #expect(line?.listPrice.value == "5.50")
+        #expect(line?.listPrice.wasExtracted == true)
+        #expect(line?.isEdited == false)
+    }
+
     @Test("typing a list price is an edit, and does not touch what was paid")
     func listPriceIsAnEdit() {
         var draft = ReceiptDraft.fake(tillNames)

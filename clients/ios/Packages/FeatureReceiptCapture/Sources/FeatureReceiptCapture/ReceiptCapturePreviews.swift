@@ -70,15 +70,16 @@
             lines: [
                 ExtractedReceiptLine(
                     description: "Full cream milk 2L", amount: "4.50", quantity: 2,
-                    unitNote: nil),
+                    unitNote: nil, listAmount: nil),
                 ExtractedReceiptLine(
-                    description: "Sourdough loaf", amount: "6.00", quantity: nil, unitNote: nil),
+                    description: "Sourdough loaf", amount: "6.00", quantity: nil, unitNote: nil,
+                    listAmount: nil),
                 ExtractedReceiptLine(
                     description: "Royal gala apples", amount: "7.84", quantity: nil,
-                    unitNote: "$4.90/kg"),
+                    unitNote: "$4.90/kg", listAmount: nil),
                 ExtractedReceiptLine(
                     description: "Free range eggs 12pk", amount: "9.20", quantity: nil,
-                    unitNote: nil),
+                    unitNote: nil, listAmount: nil),
             ],
             unreadableNotes: ["The line under the eggs is torn away."],
             taxIncluded: false,

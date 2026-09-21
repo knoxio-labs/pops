@@ -33,10 +33,12 @@ extension ExtractedReceiptLine {
         description: String = "Fake item",
         amount: String = "10.00",
         quantity: Int? = nil,
-        unitNote: String? = nil
+        unitNote: String? = nil,
+        listAmount: String? = nil
     ) -> ExtractedReceiptLine {
         ExtractedReceiptLine(
-            description: description, amount: amount, quantity: quantity, unitNote: unitNote)
+            description: description, amount: amount, quantity: quantity, unitNote: unitNote,
+            listAmount: listAmount)
     }
 }
 

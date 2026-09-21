@@ -90,13 +90,30 @@ extension ReceiptDraft {
             throw ReceiptDraftSaveError.unparseableAmount
         }
         let quantity = Int(line.quantity.value.trimmingCharacters(in: .whitespaces))
+        // Unlike `amount`, this figure is checked against nothing — POPS-3652
+        // deliberately trusts a stated `amount` and a stated `listPrice` at
+        // different confidence, so an unparseable list price does not block
+        // the whole save the way an unparseable amount does. It is simply
+        // dropped: `nil` is a state this field already carries honestly for
+        // "nothing here", so losing an unreadable entry silently is not a
+        // worse outcome than losing nothing.
+        let listPriceCents =
+            line.listPrice.isEmpty ? nil : ReceiptMoneyText.cents(from: line.listPrice.value)
+        // The same idiom `ReceiptDraft.isEdited` already applies to every
+        // other field: a value the model read and the reader left untouched
+        // stays proposed; a value the reader typed fresh or edited is
+        // asserted. `!wasExtracted` covers a line added by hand, where there
+        // is nothing to have left untouched.
+        let listPriceAsserted = line.listPrice.isEdited || !line.listPrice.wasExtracted
         return ReceiptSaveLine(
             name: line.description.value,
             quantity: quantity,
             unitPriceCents: quantity.map { $0 > 0 ? lineTotalCents / $0 : lineTotalCents }
                 ?? lineTotalCents,
             lineTotalCents: lineTotalCents,
-            notes: line.unitNote.isEmpty ? [] : [line.unitNote.value]
+            notes: line.unitNote.isEmpty ? [] : [line.unitNote.value],
+            listPriceCents: listPriceCents,
+            listPriceAsserted: listPriceCents == nil ? false : listPriceAsserted
         )
     }
 

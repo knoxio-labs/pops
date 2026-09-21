@@ -22,13 +22,13 @@ extension ExtractedReceipt {
             lines: [
                 ExtractedReceiptLine(
                     description: "ZCHEETOS C&B BALLS", amount: "4.00", quantity: nil,
-                    unitNote: nil),
+                    unitNote: nil, listAmount: nil),
                 ExtractedReceiptLine(
                     description: "ZSOFT TCH BLK TRAY", amount: "12.00", quantity: 1,
-                    unitNote: nil),
+                    unitNote: nil, listAmount: nil),
                 ExtractedReceiptLine(
                     description: "ZIRONING BOARD", amount: "15.00", quantity: nil,
-                    unitNote: "$15.00 ea"),
+                    unitNote: "$15.00 ea", listAmount: nil),
             ],
             unreadableNotes: [],
             taxIncluded: false,
@@ -59,10 +59,10 @@ extension ExtractedReceipt {
             lines: [
                 ExtractedReceiptLine(
                     description: "HEATTECH SOCKS 3P", amount: "19.90", quantity: 2,
-                    unitNote: nil),
+                    unitNote: nil, listAmount: nil),
                 ExtractedReceiptLine(
                     description: "AIRISM CREW NECK T", amount: "70.00", quantity: 1,
-                    unitNote: nil),
+                    unitNote: nil, listAmount: nil),
             ],
             unreadableNotes: [],
             taxIncluded: true,
@@ -86,15 +86,42 @@ extension ExtractedReceipt {
             shipping: nil,
             lines: [
                 ExtractedReceiptLine(
-                    description: "", amount: "8.00", quantity: nil, unitNote: nil),
+                    description: "", amount: "8.00", quantity: nil, unitNote: nil, listAmount: nil),
                 ExtractedReceiptLine(
-                    description: "", amount: "4.00", quantity: nil, unitNote: nil),
+                    description: "", amount: "4.00", quantity: nil, unitNote: nil, listAmount: nil),
             ],
             unreadableNotes: [],
             taxIncluded: false,
             discountIncluded: false,
             surchargeIncluded: false,
             shippingIncluded: false
+        )
+    }
+
+    /// A reading with one line carrying a `WAS` price, and shipping stated as
+    /// included — the two facts POPS-3652 threads through to the form.
+    internal static func withListPriceAndShipping() -> ExtractedReceipt {
+        ExtractedReceipt(
+            merchantName: "Woolworths",
+            address: nil,
+            purchasedOn: "2026-08-20",
+            purchasedAt: "17:42",
+            currency: "AUD",
+            total: "3.50",
+            tax: nil,
+            discounts: [],
+            surcharges: [],
+            shipping: nil,
+            lines: [
+                ExtractedReceiptLine(
+                    description: "Cheese Slices", amount: "3.50", quantity: nil, unitNote: nil,
+                    listAmount: "5.50")
+            ],
+            unreadableNotes: [],
+            taxIncluded: false,
+            discountIncluded: false,
+            surchargeIncluded: false,
+            shippingIncluded: true
         )
     }
 }

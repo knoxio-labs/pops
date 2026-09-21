@@ -14,12 +14,19 @@ public struct ExtractedReceiptLine: Hashable, Sendable {
     public let quantity: Int?
     /// `$4.50/kg`, `2 @ $3.00` — whatever qualifies the price, verbatim.
     public let unitNote: String?
+    /// The merchant's normal price, printed beside a promotional one — a
+    /// `WAS $5.50` beside a `$3.50` that was charged. `nil` when the receipt
+    /// states no such second price for this line.
+    public let listAmount: String?
 
-    public init(description: String, amount: String, quantity: Int?, unitNote: String?) {
+    public init(
+        description: String, amount: String, quantity: Int?, unitNote: String?, listAmount: String?
+    ) {
         self.description = description
         self.amount = amount
         self.quantity = quantity
         self.unitNote = unitNote
+        self.listAmount = listAmount
     }
 }
 
