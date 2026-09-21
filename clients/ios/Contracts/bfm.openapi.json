@@ -5604,6 +5604,53 @@
                             "minimum": 0,
                             "type": "integer"
                           },
+                          "merchant": {
+                            "oneOf": [
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "entityId": {
+                                    "type": "string"
+                                  },
+                                  "name": {
+                                    "nullable": true,
+                                    "type": "string"
+                                  },
+                                  "resolution": {
+                                    "enum": ["entity"],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["resolution", "entityId", "name"],
+                                "type": "object"
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "name": {
+                                    "type": "string"
+                                  },
+                                  "resolution": {
+                                    "enum": ["name"],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["resolution", "name"],
+                                "type": "object"
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "resolution": {
+                                    "enum": ["unattributed"],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["resolution"],
+                                "type": "object"
+                              }
+                            ]
+                          },
                           "merchantName": {
                             "nullable": true,
                             "type": "string"
@@ -5626,6 +5673,7 @@
                         },
                         "required": [
                           "id",
+                          "merchant",
                           "merchantName",
                           "totalCents",
                           "currency",
@@ -6050,6 +6098,53 @@
                       },
                       "type": "array"
                     },
+                    "merchant": {
+                      "oneOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "entityId": {
+                              "type": "string"
+                            },
+                            "name": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "resolution": {
+                              "enum": ["entity"],
+                              "type": "string"
+                            }
+                          },
+                          "required": ["resolution", "entityId", "name"],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "name": {
+                              "type": "string"
+                            },
+                            "resolution": {
+                              "enum": ["name"],
+                              "type": "string"
+                            }
+                          },
+                          "required": ["resolution", "name"],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "resolution": {
+                              "enum": ["unattributed"],
+                              "type": "string"
+                            }
+                          },
+                          "required": ["resolution"],
+                          "type": "object"
+                        }
+                      ]
+                    },
                     "merchantName": {
                       "nullable": true,
                       "type": "string"
@@ -6098,6 +6193,7 @@
                   },
                   "required": [
                     "id",
+                    "merchant",
                     "merchantName",
                     "totalCents",
                     "currency",
@@ -6533,6 +6629,53 @@
                       },
                       "type": "array"
                     },
+                    "merchant": {
+                      "oneOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "entityId": {
+                              "type": "string"
+                            },
+                            "name": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "resolution": {
+                              "enum": ["entity"],
+                              "type": "string"
+                            }
+                          },
+                          "required": ["resolution", "entityId", "name"],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "name": {
+                              "type": "string"
+                            },
+                            "resolution": {
+                              "enum": ["name"],
+                              "type": "string"
+                            }
+                          },
+                          "required": ["resolution", "name"],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "resolution": {
+                              "enum": ["unattributed"],
+                              "type": "string"
+                            }
+                          },
+                          "required": ["resolution"],
+                          "type": "object"
+                        }
+                      ]
+                    },
                     "merchantName": {
                       "nullable": true,
                       "type": "string"
@@ -6581,6 +6724,7 @@
                   },
                   "required": [
                     "id",
+                    "merchant",
                     "merchantName",
                     "totalCents",
                     "currency",
@@ -8279,6 +8423,53 @@
                       },
                       "type": "array"
                     },
+                    "merchant": {
+                      "oneOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "entityId": {
+                              "type": "string"
+                            },
+                            "name": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "resolution": {
+                              "enum": ["entity"],
+                              "type": "string"
+                            }
+                          },
+                          "required": ["resolution", "entityId", "name"],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "name": {
+                              "type": "string"
+                            },
+                            "resolution": {
+                              "enum": ["name"],
+                              "type": "string"
+                            }
+                          },
+                          "required": ["resolution", "name"],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "resolution": {
+                              "enum": ["unattributed"],
+                              "type": "string"
+                            }
+                          },
+                          "required": ["resolution"],
+                          "type": "object"
+                        }
+                      ]
+                    },
                     "merchantName": {
                       "nullable": true,
                       "type": "string"
@@ -8327,6 +8518,7 @@
                   },
                   "required": [
                     "id",
+                    "merchant",
                     "merchantName",
                     "totalCents",
                     "currency",
