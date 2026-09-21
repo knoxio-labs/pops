@@ -158,7 +158,13 @@ internal enum PurchaseEditDraft {
                     quantity: $0.quantity > 1 ? $0.quantity : nil,
                     unitNote: nil)
             },
-            unreadableNotes: []
+            unreadableNotes: [],
+            // A saved purchase's adjustments sit on top of its lines: the
+            // detail's lines and adjustments add up to its total.
+            taxIncluded: false,
+            discountIncluded: false,
+            surchargeIncluded: false,
+            shippingIncluded: false
         )
         return presentation.draft(extracted: extracted, failures: [], matchedMerchantID: entityID)
     }
