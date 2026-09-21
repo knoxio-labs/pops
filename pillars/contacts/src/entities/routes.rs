@@ -139,12 +139,22 @@ pub struct MessageResponse {
     pub message: String,
 }
 
-/// `POST /entities/lookup` body — reserved for a future field selector; an
-/// empty body fetches the default match columns.
+/// Hard cap on how many ids `POST /entities/lookup` will filter by in one
+/// call (POPS-3925). A caller with more ids than this splits the request —
+/// the route answers a 400 naming the cap rather than silently truncating,
+/// which would resolve some of the caller's ids to nothing without saying so.
+const MAX_LOOKUP_IDS: usize = 500;
+
+/// `POST /entities/lookup` body. `fields` is reserved for a future field
+/// selector. `ids`, when present and non-empty, narrows the match set to
+/// those ids (POPS-3925) instead of the whole contact set; omitted or empty
+/// keeps the original "answer everything" behaviour existing callers rely on.
 #[derive(Debug, Clone, Default, Deserialize, ToSchema)]
 pub struct LookupBody {
     #[serde(default)]
     pub fields: Option<Vec<String>>,
+    #[serde(default)]
+    pub ids: Option<Vec<String>>,
 }
 
 /// `POST /entities/lookup` response — the whole contact set's match columns in
@@ -622,14 +632,31 @@ pub async fn delete_one(
     path = "/entities/lookup",
     operation_id = "entities.lookup",
     request_body = LookupBody,
-    responses((status = 200, description = "Bulk match columns", body = LookupResponse))
+    responses(
+        (status = 200, description = "Bulk match columns, optionally narrowed by ids", body = LookupResponse),
+        (status = 400, description = "More ids than the lookup cap allows", body = crate::api::ErrorBody)
+    )
 )]
 pub async fn lookup(
     State(state): State<AppState>,
     body: Option<Json<LookupBody>>,
 ) -> Result<Json<LookupResponse>, ApiError> {
-    let _ = body;
-    let rows = repo::lookup_bulk(&state.pool).await.map_err(db_error)?;
+    let ids = body.and_then(|Json(body)| body.ids).unwrap_or_default();
+
+    let rows = if ids.is_empty() {
+        repo::lookup_bulk(&state.pool).await.map_err(db_error)?
+    } else {
+        if ids.len() > MAX_LOOKUP_IDS {
+            return Err(ApiError::bad_request(format!(
+                "Too many ids requested: {} exceeds the cap of {MAX_LOOKUP_IDS}",
+                ids.len()
+            )));
+        }
+        repo::lookup_by_ids(&state.pool, &ids)
+            .await
+            .map_err(db_error)?
+    };
+
     Ok(Json(LookupResponse {
         entities: rows.into_iter().map(EntityLookup::from).collect(),
         fetched_at: now_rfc3339(),
@@ -671,6 +698,18 @@ fn repo_not_found(err: repo::RepoError, id: &str) -> ApiError {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn lookup_body_defaults_ids_to_absent() {
+        let body: LookupBody = serde_json::from_str("{}").unwrap();
+        assert_eq!(body.ids, None);
+    }
+
+    #[test]
+    fn lookup_body_reads_ids() {
+        let body: LookupBody = serde_json::from_str(r#"{"ids": ["a", "b"]}"#).unwrap();
+        assert_eq!(body.ids, Some(vec!["a".to_string(), "b".to_string()]));
+    }
 
     #[test]
     fn rejects_unknown_type() {
