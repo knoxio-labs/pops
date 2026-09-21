@@ -110,7 +110,7 @@ internal struct CatalogTests {
         let areas = Catalog.areas
         #expect(Set(areas).count == areas.count)
         #expect(
-            areas.prefix(5) == ["shell", "transactions", "purchases", "receipts", "inventory"]
+            areas.prefix(5) == ["shell", "transactions", "purchases", "inventory", "search"]
         )
     }
 }

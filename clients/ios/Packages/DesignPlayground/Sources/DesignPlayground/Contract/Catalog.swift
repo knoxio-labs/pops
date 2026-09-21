@@ -42,13 +42,11 @@ internal enum Catalog {
     static let surfaces: [DesignSurface] =
         ShellSurfaces.surfaces
         + TransactionsSurfaces.surfaces
-        + PurchasesSurfaces.surfaces
         + [PurchasesHomeSurface.surface]
         + [PurchasesArchiveSurface.surface]
         + PurchaseCaptureSurfaces.surfaces
         + [PurchaseHandEntrySurface.surface]
         + [PurchaseDetailSurfaces.surface]
-        + ReceiptSurfaces.surfaces
         + InventorySurfaces.surfaces
         + InventorySearchSurfaces.surfaces
         + InventoryContainerSurfaces.surfaces

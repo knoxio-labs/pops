@@ -188,17 +188,4 @@ internal enum PurchaseReviewSurfaces {
             },
         ]
     }
-
-    /// A batch whose first reading the gate complained about, and a clean one
-    /// behind it — the shape the `review-complaint-density` experiment is
-    /// argued over. Both variants get the same two, because a complaint shown
-    /// against different receipts is not a comparison.
-    internal static let complaintEntries: [ReviewEntry] = [
-        entry(
-            "e1",
-            extracted: ReceiptPlaygroundFixtures.hardwareExtracted,
-            failures: ReceiptPlaygroundFixtures.hardwareFailures,
-            status: needsReview),
-        entry("e2", extracted: ReceiptPlaygroundFixtures.tillNamesExtracted),
-    ]
 }

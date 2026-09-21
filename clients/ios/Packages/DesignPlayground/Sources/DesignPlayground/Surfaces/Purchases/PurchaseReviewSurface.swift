@@ -52,7 +52,6 @@ internal struct ReviewEntry: Identifiable {
 /// that stops partway.
 internal struct PurchaseReviewSurface: View {
     internal let entries: [ReviewEntry]
-    internal let complaints: ReceiptDraftView.ComplaintStyle
     internal let merchants: [ReceiptMerchantChoice]
 
     @Environment(\.dismiss) private var dismiss
@@ -68,17 +67,13 @@ internal struct PurchaseReviewSurface: View {
     /// Purchases an earlier attempt created, and which have left the batch.
     @State private var written: Int
 
-    /// `complaints` defaults to what `review-complaint-density` decided; the
-    /// experiment's own variants pass the others.
     internal init(
         entries: [ReviewEntry],
-        complaints: ReceiptDraftView.ComplaintStyle = .hintsOnly,
         merchants: [ReceiptMerchantChoice] = PurchaseMerchantFixtures.all,
         saving: ReviewSaving = .idle,
         written: Int = 0
     ) {
         self.entries = entries
-        self.complaints = complaints
         self.merchants = merchants
         _drafts = State(
             initialValue: Dictionary(uniqueKeysWithValues: entries.map { ($0.id, $0.draft) }))
@@ -162,7 +157,7 @@ internal struct PurchaseReviewSurface: View {
             // the bar already says where you are.
             subtitle: entry.origin == .unreadable ? "Nothing could be read off this one." : nil,
             status: entry.status,
-            complaints: complaints,
+            complaints: .hintsOnly,
             merchants: merchants,
             parts: entry.parts
         )

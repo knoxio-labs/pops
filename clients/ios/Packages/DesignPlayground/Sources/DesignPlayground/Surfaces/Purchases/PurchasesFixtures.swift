@@ -61,9 +61,7 @@ internal enum PurchasesFixtures {
 
     private static func aud(_ cents: Int) -> MoneyAmount { Fixtures.money(cents) }
 
-    /// The five the playground shipped with, kept because
-    /// ``PurchasesSurfaces`` reviews the list's own states against them and a
-    /// short set is easier to reason about than a long one.
+    /// The first five of ``history``.
     static let all: [Purchase] = Array(history.prefix(5))
 
     /// A history long enough to scroll, spanning three calendar months so a
