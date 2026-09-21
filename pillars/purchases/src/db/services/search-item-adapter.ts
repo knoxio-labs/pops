@@ -32,7 +32,10 @@ export type ItemRow = Pick<
   | 'lineTotalCents'
   | 'refundedCents'
 > &
-  Pick<PurchaseRow, 'orderedAt' | 'orderedAtOffsetMinutes' | 'currency' | 'merchantEntityName'>;
+  Pick<
+    PurchaseRow,
+    'orderedAt' | 'orderedAtOffsetMinutes' | 'currency' | 'merchantEntityName' | 'status'
+  >;
 
 export function itemRows(
   db: PurchasesDb,
@@ -58,6 +61,7 @@ export function itemRows(
       orderedAtOffsetMinutes: purchases.orderedAtOffsetMinutes,
       currency: purchases.currency,
       merchantEntityName: purchases.merchantEntityName,
+      status: purchases.status,
     })
     .from(purchaseItems)
     .innerJoin(purchases, eq(purchaseItems.purchaseId, purchases.id))
@@ -113,6 +117,16 @@ export function itemCandidate(
         orderedAtOffsetMinutes: row.orderedAtOffsetMinutes,
         currency: row.currency,
         merchantEntityName: row.merchantEntityName,
+        // The order's own reconciliation status, carried onto the line: a
+        // line hit is opened alongside its order and a consumer narrowing
+        // search results by status needs it on every hit, not only the
+        // order-adapter's own.
+        status: row.status,
+        // The tag that matched the query text, independent of whether it was
+        // this row's BEST match — a consumer highlighting what matched needs
+        // the literal substring, and `matchField` alone only names which
+        // field won, never what was found there.
+        matchedTag: taggedItemIds.get(row.id) ?? null,
       },
     },
   };

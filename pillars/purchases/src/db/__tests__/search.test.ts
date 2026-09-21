@@ -501,6 +501,26 @@ describe('matching an item tag', () => {
     expect(hits[0]?.matchField).toBe('tag');
   });
 
+  it('carries the matched tag in data even when a stronger field wins the match', () => {
+    const id = orderWithItems('a', 'Amazon', [{ name: 'snack', sku: null }]);
+    tagItem(id, 'snack', ['snacktastic']);
+
+    const hit = searchPurchases(opened.db, 'snack').find((h) => h.uri.includes('/purchase-item/'));
+
+    // `name` scores an exact match; the tag only contains the query text, so
+    // `name` wins the field — but the tag still carries in `data`.
+    expect(hit?.matchField).toBe('name');
+    expect(hit?.data['matchedTag']).toBe('snacktastic');
+  });
+
+  it('carries a null matchedTag when no tag on the line matched the query', () => {
+    orderWithItems('a', 'Amazon', [{ name: 'Dosing funnel' }]);
+
+    const hit = searchPurchases(opened.db, 'dosing').find((h) => h.uri.includes('/purchase-item/'));
+
+    expect(hit?.data['matchedTag']).toBeNull();
+  });
+
   it('scores by whichever field matches strongest, an exact tag over a contains name', () => {
     const id = orderWithItems('a', 'Amazon', [{ name: 'A snacking board', sku: null }]);
     tagItem(id, 'A snacking board', ['snack']);
@@ -531,6 +551,17 @@ describe('orderedAtOffsetMinutes on a hit', () => {
     const hit = searchPurchases(opened.db, 'dosing').find((h) => h.uri.includes('/purchase-item/'));
 
     expect(hit?.data['orderedAtOffsetMinutes']).toBeNull();
+  });
+});
+
+describe('an item hit carries its order status', () => {
+  it('reflects the order it belongs to, not a default', () => {
+    const id = orderWithItems('a', 'Amazon', [{ name: 'Dosing funnel' }]);
+    setPurchaseStatus(opened.db, id, 'linked');
+
+    const hit = searchPurchases(opened.db, 'dosing').find((h) => h.uri.includes('/purchase-item/'));
+
+    expect(hit?.data['status']).toBe('linked');
   });
 });
 
