@@ -16,6 +16,7 @@ extension BFMReceiptCaptureRepository {
             capture: captureWire(payload.fields.capture),
             currency: payload.fields.currency,
             discountCents: payload.fields.discountCents,
+            discountIncluded: payload.fields.discountIncluded,
             documents: payload.documents.map {
                 SaveReceiptDraftDocument(documentUri: $0.documentUri, kind: .receipt)
             },
@@ -24,8 +25,11 @@ extension BFMReceiptCaptureRepository {
             merchantName: payload.fields.merchantName,
             orderedAt: payload.fields.orderedAt,
             shippingCents: payload.fields.shippingCents,
+            shippingIncluded: payload.fields.shippingIncluded,
             surchargeCents: payload.fields.surchargeCents,
+            surchargeIncluded: payload.fields.surchargeIncluded,
             taxCents: payload.fields.taxCents,
+            taxIncluded: payload.fields.taxIncluded,
             totalCents: payload.fields.totalCents
         )
     }
@@ -37,13 +41,17 @@ extension BFMReceiptCaptureRepository {
             capture: manualCaptureWire(payload.fields.capture),
             currency: payload.fields.currency,
             discountCents: payload.fields.discountCents,
+            discountIncluded: payload.fields.discountIncluded,
             idempotencyKey: payload.fields.idempotencyKey,
             items: payload.fields.items.map(manualItem(from:)),
             merchantName: payload.fields.merchantName,
             orderedAt: payload.fields.orderedAt,
             shippingCents: payload.fields.shippingCents,
+            shippingIncluded: payload.fields.shippingIncluded,
             surchargeCents: payload.fields.surchargeCents,
+            surchargeIncluded: payload.fields.surchargeIncluded,
             taxCents: payload.fields.taxCents,
+            taxIncluded: payload.fields.taxIncluded,
             totalCents: payload.fields.totalCents
         )
     }

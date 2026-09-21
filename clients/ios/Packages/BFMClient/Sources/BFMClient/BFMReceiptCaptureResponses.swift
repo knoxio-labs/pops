@@ -48,7 +48,11 @@ extension BFMReceiptCaptureRepository {
             shipping: wire.shippingCents == 0
                 ? nil : ReceiptMoneyText.string(fromCents: wire.shippingCents),
             lines: wire.items.map(line(from:)),
-            unreadableNotes: []
+            unreadableNotes: [],
+            taxIncluded: wire.taxIncluded ?? false,
+            discountIncluded: wire.discountIncluded ?? false,
+            surchargeIncluded: wire.surchargeIncluded ?? false,
+            shippingIncluded: wire.shippingIncluded ?? false
         )
     }
 

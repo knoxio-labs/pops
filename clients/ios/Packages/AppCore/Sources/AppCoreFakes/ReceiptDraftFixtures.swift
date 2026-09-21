@@ -30,6 +30,10 @@ extension ReceiptPurchaseDraftFields {
         surchargeCents: Int? = nil,
         shippingCents: Int? = nil,
         discountCents: Int? = nil,
+        taxIncluded: Bool = false,
+        discountIncluded: Bool = false,
+        surchargeIncluded: Bool = false,
+        shippingIncluded: Bool = false,
         items: [ReceiptSaveLine] = [ReceiptSaveLine.fake()],
         capture: ReceiptCaptureFacts? = nil,
         idempotencyKey: String = "fake-idempotency-key"
@@ -43,6 +47,10 @@ extension ReceiptPurchaseDraftFields {
             surchargeCents: surchargeCents,
             shippingCents: shippingCents,
             discountCents: discountCents,
+            taxIncluded: taxIncluded,
+            discountIncluded: discountIncluded,
+            surchargeIncluded: surchargeIncluded,
+            shippingIncluded: shippingIncluded,
             items: items,
             capture: capture,
             idempotencyKey: idempotencyKey

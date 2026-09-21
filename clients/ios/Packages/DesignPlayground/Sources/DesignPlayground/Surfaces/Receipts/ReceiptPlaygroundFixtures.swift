@@ -33,7 +33,11 @@ internal enum ReceiptPlaygroundFixtures {
             ExtractedReceiptLine(
                 description: "ZIRONING BOARD", amount: "15.00", quantity: nil, unitNote: nil),
         ],
-        unreadableNotes: []
+        unreadableNotes: [],
+        taxIncluded: false,
+        discountIncluded: false,
+        surchargeIncluded: false,
+        shippingIncluded: false
     )
 
     /// A repeated line ("Reusable bag" twice), plus a torn corner over one
@@ -63,7 +67,11 @@ internal enum ReceiptPlaygroundFixtures {
                 description: "Royal gala apples", amount: "7.84", quantity: nil,
                 unitNote: "$4.90/kg"),
         ],
-        unreadableNotes: ["The line under the apples is torn away."]
+        unreadableNotes: ["The line under the apples is torn away."],
+        taxIncluded: false,
+        discountIncluded: false,
+        surchargeIncluded: false,
+        shippingIncluded: false
     )
 
     /// A negative line with nothing marking it as a refund, a tax rate the
@@ -88,7 +96,11 @@ internal enum ReceiptPlaygroundFixtures {
             ExtractedReceiptLine(
                 description: "Loyalty adjustment", amount: "-30.60", quantity: nil, unitNote: nil),
         ],
-        unreadableNotes: ["The bottom edge is torn, hiding any lines below the drill bits."]
+        unreadableNotes: ["The bottom edge is torn, hiding any lines below the drill bits."],
+        taxIncluded: false,
+        discountIncluded: false,
+        surchargeIncluded: false,
+        shippingIncluded: false
     )
 
     internal static let hardwareFailures: [ReceiptGateFailure] = [
@@ -125,7 +137,11 @@ internal enum ReceiptPlaygroundFixtures {
         surcharges: [],
         shipping: nil,
         lines: [],
-        unreadableNotes: ["Every item line is handwritten and none of it could be parsed."]
+        unreadableNotes: ["Every item line is handwritten and none of it could be parsed."],
+        taxIncluded: false,
+        discountIncluded: false,
+        surchargeIncluded: false,
+        shippingIncluded: false
     )
 
     internal static let noLinesFailures: [ReceiptGateFailure] = [
