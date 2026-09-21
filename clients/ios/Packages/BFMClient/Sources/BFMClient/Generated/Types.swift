@@ -36,6 +36,16 @@ internal protocol APIProtocol: Sendable {
     /// - Remark: HTTP `GET /mobile/bootstrap`.
     /// - Remark: Generated from `#/paths//mobile/bootstrap/get(mobile.bootstrap)`.
     func mobile_bootstrap(_ input: Operations.Mobile_bootstrap.Input) async throws -> Operations.Mobile_bootstrap.Output
+    /// Every address recorded against one merchant, for the review screen's address picker
+    ///
+    /// - Remark: HTTP `GET /mobile/contacts/merchants/{id}/addresses`.
+    /// - Remark: Generated from `#/paths//mobile/contacts/merchants/{id}/addresses/get(mobileContacts.getMerchantAddresses)`.
+    func mobileContacts_getMerchantAddresses(_ input: Operations.MobileContacts_getMerchantAddresses.Input) async throws -> Operations.MobileContacts_getMerchantAddresses.Output
+    /// Record a new address for one merchant, typed by the reviewer
+    ///
+    /// - Remark: HTTP `POST /mobile/contacts/merchants/{id}/addresses`.
+    /// - Remark: Generated from `#/paths//mobile/contacts/merchants/{id}/addresses/post(mobileContacts.createMerchantAddress)`.
+    func mobileContacts_createMerchantAddress(_ input: Operations.MobileContacts_createMerchantAddress.Input) async throws -> Operations.MobileContacts_createMerchantAddress.Output
     /// Every account this device can read, active and archived alike
     ///
     /// - Remark: HTTP `GET /mobile/finance/accounts`.
@@ -207,6 +217,34 @@ extension APIProtocol {
     /// - Remark: Generated from `#/paths//mobile/bootstrap/get(mobile.bootstrap)`.
     internal func mobile_bootstrap(headers: Operations.Mobile_bootstrap.Input.Headers = .init()) async throws -> Operations.Mobile_bootstrap.Output {
         try await mobile_bootstrap(Operations.Mobile_bootstrap.Input(headers: headers))
+    }
+    /// Every address recorded against one merchant, for the review screen's address picker
+    ///
+    /// - Remark: HTTP `GET /mobile/contacts/merchants/{id}/addresses`.
+    /// - Remark: Generated from `#/paths//mobile/contacts/merchants/{id}/addresses/get(mobileContacts.getMerchantAddresses)`.
+    internal func mobileContacts_getMerchantAddresses(
+        path: Operations.MobileContacts_getMerchantAddresses.Input.Path,
+        headers: Operations.MobileContacts_getMerchantAddresses.Input.Headers = .init()
+    ) async throws -> Operations.MobileContacts_getMerchantAddresses.Output {
+        try await mobileContacts_getMerchantAddresses(Operations.MobileContacts_getMerchantAddresses.Input(
+            path: path,
+            headers: headers
+        ))
+    }
+    /// Record a new address for one merchant, typed by the reviewer
+    ///
+    /// - Remark: HTTP `POST /mobile/contacts/merchants/{id}/addresses`.
+    /// - Remark: Generated from `#/paths//mobile/contacts/merchants/{id}/addresses/post(mobileContacts.createMerchantAddress)`.
+    internal func mobileContacts_createMerchantAddress(
+        path: Operations.MobileContacts_createMerchantAddress.Input.Path,
+        headers: Operations.MobileContacts_createMerchantAddress.Input.Headers = .init(),
+        body: Operations.MobileContacts_createMerchantAddress.Input.Body? = nil
+    ) async throws -> Operations.MobileContacts_createMerchantAddress.Output {
+        try await mobileContacts_createMerchantAddress(Operations.MobileContacts_createMerchantAddress.Input(
+            path: path,
+            headers: headers,
+            body: body
+        ))
     }
     /// Every account this device can read, active and archived alike
     ///
@@ -2901,6 +2939,2075 @@ internal enum Operations {
                     default:
                         try throwUnexpectedResponseStatus(
                             expectedStatus: "tooManyRequests",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        internal enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            internal init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            internal var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            internal static var allCases: [Self] {
+                [
+                    .json
+                ]
+            }
+        }
+    }
+    /// Every address recorded against one merchant, for the review screen's address picker
+    ///
+    /// - Remark: HTTP `GET /mobile/contacts/merchants/{id}/addresses`.
+    /// - Remark: Generated from `#/paths//mobile/contacts/merchants/{id}/addresses/get(mobileContacts.getMerchantAddresses)`.
+    internal enum MobileContacts_getMerchantAddresses {
+        internal static let id: Swift.String = "mobileContacts.getMerchantAddresses"
+        internal struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/path`.
+            internal struct Path: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/path/id`.
+                internal var id: Swift.String
+                /// Creates a new `Path`.
+                ///
+                /// - Parameters:
+                ///   - id:
+                internal init(id: Swift.String) {
+                    self.id = id
+                }
+            }
+            internal var path: Operations.MobileContacts_getMerchantAddresses.Input.Path
+            /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/header`.
+            internal struct Headers: Sendable, Hashable {
+                internal var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.MobileContacts_getMerchantAddresses.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - accept:
+                internal init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.MobileContacts_getMerchantAddresses.AcceptableContentType>] = .defaultValues()) {
+                    self.accept = accept
+                }
+            }
+            internal var headers: Operations.MobileContacts_getMerchantAddresses.Input.Headers
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - path:
+            ///   - headers:
+            internal init(
+                path: Operations.MobileContacts_getMerchantAddresses.Input.Path,
+                headers: Operations.MobileContacts_getMerchantAddresses.Input.Headers = .init()
+            ) {
+                self.path = path
+                self.headers = headers
+            }
+        }
+        internal enum Output: Sendable, Hashable {
+            internal struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/200/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/200/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/200/content/json/DataPayload`.
+                        internal struct DataPayloadPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/200/content/json/DataPayload/id`.
+                            internal var id: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/200/content/json/DataPayload/value`.
+                            internal var value: Swift.String
+                            /// Creates a new `DataPayloadPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - id:
+                            ///   - value:
+                            internal init(
+                                id: Swift.String,
+                                value: Swift.String
+                            ) {
+                                self.id = id
+                                self.value = value
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case id
+                                case value
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.id = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .id
+                                )
+                                self.value = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .value
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "id",
+                                    "value"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/200/content/json/data`.
+                        internal typealias DataPayload = [Operations.MobileContacts_getMerchantAddresses.Output.Ok.Body.JsonPayload.DataPayloadPayload]
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/200/content/json/data`.
+                        internal var data: Operations.MobileContacts_getMerchantAddresses.Output.Ok.Body.JsonPayload.DataPayload
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - data:
+                        internal init(data: Operations.MobileContacts_getMerchantAddresses.Output.Ok.Body.JsonPayload.DataPayload) {
+                            self.data = data
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case data
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.data = try container.decode(
+                                Operations.MobileContacts_getMerchantAddresses.Output.Ok.Body.JsonPayload.DataPayload.self,
+                                forKey: .data
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "data"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/200/content/application\/json`.
+                    case json(Operations.MobileContacts_getMerchantAddresses.Output.Ok.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileContacts_getMerchantAddresses.Output.Ok.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileContacts_getMerchantAddresses.Output.Ok.Body
+                /// Creates a new `Ok`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileContacts_getMerchantAddresses.Output.Ok.Body) {
+                    self.body = body
+                }
+            }
+            /// 200
+            ///
+            /// - Remark: Generated from `#/paths//mobile/contacts/merchants/{id}/addresses/get(mobileContacts.getMerchantAddresses)/responses/200`.
+            ///
+            /// HTTP response code: `200 ok`.
+            case ok(Operations.MobileContacts_getMerchantAddresses.Output.Ok)
+            /// The associated value of the enum case if `self` is `.ok`.
+            ///
+            /// - Throws: An error if `self` is not `.ok`.
+            /// - SeeAlso: `.ok`.
+            internal var ok: Operations.MobileContacts_getMerchantAddresses.Output.Ok {
+                get throws {
+                    switch self {
+                    case let .ok(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/400/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/400/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/400/content/json/code`.
+                        internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case invalidCursor = "invalid_cursor"
+                            case invalidRequest = "invalid_request"
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/400/content/json/code`.
+                        internal var code: Operations.MobileContacts_getMerchantAddresses.Output.BadRequest.Body.JsonPayload.CodePayload
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/400/content/json/message`.
+                        internal var message: Swift.String
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - message:
+                        internal init(
+                            code: Operations.MobileContacts_getMerchantAddresses.Output.BadRequest.Body.JsonPayload.CodePayload,
+                            message: Swift.String
+                        ) {
+                            self.code = code
+                            self.message = message
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case message
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Operations.MobileContacts_getMerchantAddresses.Output.BadRequest.Body.JsonPayload.CodePayload.self,
+                                forKey: .code
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "message"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/400/content/application\/json`.
+                    case json(Operations.MobileContacts_getMerchantAddresses.Output.BadRequest.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileContacts_getMerchantAddresses.Output.BadRequest.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileContacts_getMerchantAddresses.Output.BadRequest.Body
+                /// Creates a new `BadRequest`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileContacts_getMerchantAddresses.Output.BadRequest.Body) {
+                    self.body = body
+                }
+            }
+            /// 400
+            ///
+            /// - Remark: Generated from `#/paths//mobile/contacts/merchants/{id}/addresses/get(mobileContacts.getMerchantAddresses)/responses/400`.
+            ///
+            /// HTTP response code: `400 badRequest`.
+            case badRequest(Operations.MobileContacts_getMerchantAddresses.Output.BadRequest)
+            /// The associated value of the enum case if `self` is `.badRequest`.
+            ///
+            /// - Throws: An error if `self` is not `.badRequest`.
+            /// - SeeAlso: `.badRequest`.
+            internal var badRequest: Operations.MobileContacts_getMerchantAddresses.Output.BadRequest {
+                get throws {
+                    switch self {
+                    case let .badRequest(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "badRequest",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct Unauthorized: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/401/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/401/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/401/content/json/code`.
+                        internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case invalidToken = "invalid_token"
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/401/content/json/code`.
+                        internal var code: Operations.MobileContacts_getMerchantAddresses.Output.Unauthorized.Body.JsonPayload.CodePayload
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/401/content/json/message`.
+                        internal var message: Swift.String
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - message:
+                        internal init(
+                            code: Operations.MobileContacts_getMerchantAddresses.Output.Unauthorized.Body.JsonPayload.CodePayload,
+                            message: Swift.String
+                        ) {
+                            self.code = code
+                            self.message = message
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case message
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Operations.MobileContacts_getMerchantAddresses.Output.Unauthorized.Body.JsonPayload.CodePayload.self,
+                                forKey: .code
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "message"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/401/content/application\/json`.
+                    case json(Operations.MobileContacts_getMerchantAddresses.Output.Unauthorized.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileContacts_getMerchantAddresses.Output.Unauthorized.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileContacts_getMerchantAddresses.Output.Unauthorized.Body
+                /// Creates a new `Unauthorized`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileContacts_getMerchantAddresses.Output.Unauthorized.Body) {
+                    self.body = body
+                }
+            }
+            /// 401
+            ///
+            /// - Remark: Generated from `#/paths//mobile/contacts/merchants/{id}/addresses/get(mobileContacts.getMerchantAddresses)/responses/401`.
+            ///
+            /// HTTP response code: `401 unauthorized`.
+            case unauthorized(Operations.MobileContacts_getMerchantAddresses.Output.Unauthorized)
+            /// The associated value of the enum case if `self` is `.unauthorized`.
+            ///
+            /// - Throws: An error if `self` is not `.unauthorized`.
+            /// - SeeAlso: `.unauthorized`.
+            internal var unauthorized: Operations.MobileContacts_getMerchantAddresses.Output.Unauthorized {
+                get throws {
+                    switch self {
+                    case let .unauthorized(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "unauthorized",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct Forbidden: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/403/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/403/content/json`.
+                    internal enum JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/403/content/json/case1`.
+                        internal struct Case1Payload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/403/content/json/case1/code`.
+                            internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case deviceRevoked = "device_revoked"
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/403/content/json/case1/code`.
+                            internal var code: Operations.MobileContacts_getMerchantAddresses.Output.Forbidden.Body.JsonPayload.Case1Payload.CodePayload
+                            /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/403/content/json/case1/message`.
+                            internal var message: Swift.String
+                            /// Creates a new `Case1Payload`.
+                            ///
+                            /// - Parameters:
+                            ///   - code:
+                            ///   - message:
+                            internal init(
+                                code: Operations.MobileContacts_getMerchantAddresses.Output.Forbidden.Body.JsonPayload.Case1Payload.CodePayload,
+                                message: Swift.String
+                            ) {
+                                self.code = code
+                                self.message = message
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case code
+                                case message
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.code = try container.decode(
+                                    Operations.MobileContacts_getMerchantAddresses.Output.Forbidden.Body.JsonPayload.Case1Payload.CodePayload.self,
+                                    forKey: .code
+                                )
+                                self.message = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .message
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "code",
+                                    "message"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/403/content/json/case1`.
+                        case case1(Operations.MobileContacts_getMerchantAddresses.Output.Forbidden.Body.JsonPayload.Case1Payload)
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/403/content/json/case2`.
+                        internal struct Case2Payload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/403/content/json/case2/capability`.
+                            internal var capability: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/403/content/json/case2/code`.
+                            internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case capabilityNotGranted = "capability_not_granted"
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/403/content/json/case2/code`.
+                            internal var code: Operations.MobileContacts_getMerchantAddresses.Output.Forbidden.Body.JsonPayload.Case2Payload.CodePayload
+                            /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/403/content/json/case2/message`.
+                            internal var message: Swift.String
+                            /// Creates a new `Case2Payload`.
+                            ///
+                            /// - Parameters:
+                            ///   - capability:
+                            ///   - code:
+                            ///   - message:
+                            internal init(
+                                capability: Swift.String,
+                                code: Operations.MobileContacts_getMerchantAddresses.Output.Forbidden.Body.JsonPayload.Case2Payload.CodePayload,
+                                message: Swift.String
+                            ) {
+                                self.capability = capability
+                                self.code = code
+                                self.message = message
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case capability
+                                case code
+                                case message
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.capability = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .capability
+                                )
+                                self.code = try container.decode(
+                                    Operations.MobileContacts_getMerchantAddresses.Output.Forbidden.Body.JsonPayload.Case2Payload.CodePayload.self,
+                                    forKey: .code
+                                )
+                                self.message = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .message
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "capability",
+                                    "code",
+                                    "message"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/403/content/json/case2`.
+                        case case2(Operations.MobileContacts_getMerchantAddresses.Output.Forbidden.Body.JsonPayload.Case2Payload)
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            var errors: [any Swift.Error] = []
+                            do {
+                                self = .case1(try .init(from: decoder))
+                                return
+                            } catch {
+                                errors.append(error)
+                            }
+                            do {
+                                self = .case2(try .init(from: decoder))
+                                return
+                            } catch {
+                                errors.append(error)
+                            }
+                            throw Swift.DecodingError.failedToDecodeOneOfSchema(
+                                type: Self.self,
+                                codingPath: decoder.codingPath,
+                                errors: errors
+                            )
+                        }
+                        internal func encode(to encoder: any Swift.Encoder) throws {
+                            switch self {
+                            case let .case1(value):
+                                try value.encode(to: encoder)
+                            case let .case2(value):
+                                try value.encode(to: encoder)
+                            }
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/403/content/application\/json`.
+                    case json(Operations.MobileContacts_getMerchantAddresses.Output.Forbidden.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileContacts_getMerchantAddresses.Output.Forbidden.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileContacts_getMerchantAddresses.Output.Forbidden.Body
+                /// Creates a new `Forbidden`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileContacts_getMerchantAddresses.Output.Forbidden.Body) {
+                    self.body = body
+                }
+            }
+            /// 403
+            ///
+            /// - Remark: Generated from `#/paths//mobile/contacts/merchants/{id}/addresses/get(mobileContacts.getMerchantAddresses)/responses/403`.
+            ///
+            /// HTTP response code: `403 forbidden`.
+            case forbidden(Operations.MobileContacts_getMerchantAddresses.Output.Forbidden)
+            /// The associated value of the enum case if `self` is `.forbidden`.
+            ///
+            /// - Throws: An error if `self` is not `.forbidden`.
+            /// - SeeAlso: `.forbidden`.
+            internal var forbidden: Operations.MobileContacts_getMerchantAddresses.Output.Forbidden {
+                get throws {
+                    switch self {
+                    case let .forbidden(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "forbidden",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct NotFound: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/404/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/404/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/404/content/json/code`.
+                        internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case upstreamUnavailable = "upstream_unavailable"
+                            case upstreamDegraded = "upstream_degraded"
+                            case upstreamContractMismatch = "upstream_contract_mismatch"
+                            case upstreamMisconfigured = "upstream_misconfigured"
+                            case upstreamInvalidRequest = "upstream_invalid_request"
+                            case upstreamConflict = "upstream_conflict"
+                            case upstreamUnsupportedMedia = "upstream_unsupported_media"
+                            case notFound = "not_found"
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/404/content/json/code`.
+                        internal var code: Operations.MobileContacts_getMerchantAddresses.Output.NotFound.Body.JsonPayload.CodePayload
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/404/content/json/message`.
+                        internal var message: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/404/content/json/pillar`.
+                        internal var pillar: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/404/content/json/retryable`.
+                        internal var retryable: Swift.Bool
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - message:
+                        ///   - pillar:
+                        ///   - retryable:
+                        internal init(
+                            code: Operations.MobileContacts_getMerchantAddresses.Output.NotFound.Body.JsonPayload.CodePayload,
+                            message: Swift.String,
+                            pillar: Swift.String,
+                            retryable: Swift.Bool
+                        ) {
+                            self.code = code
+                            self.message = message
+                            self.pillar = pillar
+                            self.retryable = retryable
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case message
+                            case pillar
+                            case retryable
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Operations.MobileContacts_getMerchantAddresses.Output.NotFound.Body.JsonPayload.CodePayload.self,
+                                forKey: .code
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            self.pillar = try container.decode(
+                                Swift.String.self,
+                                forKey: .pillar
+                            )
+                            self.retryable = try container.decode(
+                                Swift.Bool.self,
+                                forKey: .retryable
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "message",
+                                "pillar",
+                                "retryable"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/404/content/application\/json`.
+                    case json(Operations.MobileContacts_getMerchantAddresses.Output.NotFound.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileContacts_getMerchantAddresses.Output.NotFound.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileContacts_getMerchantAddresses.Output.NotFound.Body
+                /// Creates a new `NotFound`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileContacts_getMerchantAddresses.Output.NotFound.Body) {
+                    self.body = body
+                }
+            }
+            /// 404
+            ///
+            /// - Remark: Generated from `#/paths//mobile/contacts/merchants/{id}/addresses/get(mobileContacts.getMerchantAddresses)/responses/404`.
+            ///
+            /// HTTP response code: `404 notFound`.
+            case notFound(Operations.MobileContacts_getMerchantAddresses.Output.NotFound)
+            /// The associated value of the enum case if `self` is `.notFound`.
+            ///
+            /// - Throws: An error if `self` is not `.notFound`.
+            /// - SeeAlso: `.notFound`.
+            internal var notFound: Operations.MobileContacts_getMerchantAddresses.Output.NotFound {
+                get throws {
+                    switch self {
+                    case let .notFound(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "notFound",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct TooManyRequests: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/429/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/429/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/429/content/json/code`.
+                        internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case rateLimited = "rate_limited"
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/429/content/json/code`.
+                        internal var code: Operations.MobileContacts_getMerchantAddresses.Output.TooManyRequests.Body.JsonPayload.CodePayload
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/429/content/json/message`.
+                        internal var message: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/429/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - message:
+                        ///   - retryAfterSeconds:
+                        internal init(
+                            code: Operations.MobileContacts_getMerchantAddresses.Output.TooManyRequests.Body.JsonPayload.CodePayload,
+                            message: Swift.String,
+                            retryAfterSeconds: Swift.Int
+                        ) {
+                            self.code = code
+                            self.message = message
+                            self.retryAfterSeconds = retryAfterSeconds
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case message
+                            case retryAfterSeconds
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Operations.MobileContacts_getMerchantAddresses.Output.TooManyRequests.Body.JsonPayload.CodePayload.self,
+                                forKey: .code
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            self.retryAfterSeconds = try container.decode(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "message",
+                                "retryAfterSeconds"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/429/content/application\/json`.
+                    case json(Operations.MobileContacts_getMerchantAddresses.Output.TooManyRequests.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileContacts_getMerchantAddresses.Output.TooManyRequests.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileContacts_getMerchantAddresses.Output.TooManyRequests.Body
+                /// Creates a new `TooManyRequests`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileContacts_getMerchantAddresses.Output.TooManyRequests.Body) {
+                    self.body = body
+                }
+            }
+            /// 429
+            ///
+            /// - Remark: Generated from `#/paths//mobile/contacts/merchants/{id}/addresses/get(mobileContacts.getMerchantAddresses)/responses/429`.
+            ///
+            /// HTTP response code: `429 tooManyRequests`.
+            case tooManyRequests(Operations.MobileContacts_getMerchantAddresses.Output.TooManyRequests)
+            /// The associated value of the enum case if `self` is `.tooManyRequests`.
+            ///
+            /// - Throws: An error if `self` is not `.tooManyRequests`.
+            /// - SeeAlso: `.tooManyRequests`.
+            internal var tooManyRequests: Operations.MobileContacts_getMerchantAddresses.Output.TooManyRequests {
+                get throws {
+                    switch self {
+                    case let .tooManyRequests(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "tooManyRequests",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct BadGateway: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/502/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/502/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/502/content/json/code`.
+                        internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case upstreamUnavailable = "upstream_unavailable"
+                            case upstreamDegraded = "upstream_degraded"
+                            case upstreamContractMismatch = "upstream_contract_mismatch"
+                            case upstreamMisconfigured = "upstream_misconfigured"
+                            case upstreamInvalidRequest = "upstream_invalid_request"
+                            case upstreamConflict = "upstream_conflict"
+                            case upstreamUnsupportedMedia = "upstream_unsupported_media"
+                            case notFound = "not_found"
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/502/content/json/code`.
+                        internal var code: Operations.MobileContacts_getMerchantAddresses.Output.BadGateway.Body.JsonPayload.CodePayload
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/502/content/json/message`.
+                        internal var message: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/502/content/json/pillar`.
+                        internal var pillar: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/502/content/json/retryable`.
+                        internal var retryable: Swift.Bool
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - message:
+                        ///   - pillar:
+                        ///   - retryable:
+                        internal init(
+                            code: Operations.MobileContacts_getMerchantAddresses.Output.BadGateway.Body.JsonPayload.CodePayload,
+                            message: Swift.String,
+                            pillar: Swift.String,
+                            retryable: Swift.Bool
+                        ) {
+                            self.code = code
+                            self.message = message
+                            self.pillar = pillar
+                            self.retryable = retryable
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case message
+                            case pillar
+                            case retryable
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Operations.MobileContacts_getMerchantAddresses.Output.BadGateway.Body.JsonPayload.CodePayload.self,
+                                forKey: .code
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            self.pillar = try container.decode(
+                                Swift.String.self,
+                                forKey: .pillar
+                            )
+                            self.retryable = try container.decode(
+                                Swift.Bool.self,
+                                forKey: .retryable
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "message",
+                                "pillar",
+                                "retryable"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/502/content/application\/json`.
+                    case json(Operations.MobileContacts_getMerchantAddresses.Output.BadGateway.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileContacts_getMerchantAddresses.Output.BadGateway.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileContacts_getMerchantAddresses.Output.BadGateway.Body
+                /// Creates a new `BadGateway`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileContacts_getMerchantAddresses.Output.BadGateway.Body) {
+                    self.body = body
+                }
+            }
+            /// 502
+            ///
+            /// - Remark: Generated from `#/paths//mobile/contacts/merchants/{id}/addresses/get(mobileContacts.getMerchantAddresses)/responses/502`.
+            ///
+            /// HTTP response code: `502 badGateway`.
+            case badGateway(Operations.MobileContacts_getMerchantAddresses.Output.BadGateway)
+            /// The associated value of the enum case if `self` is `.badGateway`.
+            ///
+            /// - Throws: An error if `self` is not `.badGateway`.
+            /// - SeeAlso: `.badGateway`.
+            internal var badGateway: Operations.MobileContacts_getMerchantAddresses.Output.BadGateway {
+                get throws {
+                    switch self {
+                    case let .badGateway(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "badGateway",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct ServiceUnavailable: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/503/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/503/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/503/content/json/code`.
+                        internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case upstreamUnavailable = "upstream_unavailable"
+                            case upstreamDegraded = "upstream_degraded"
+                            case upstreamContractMismatch = "upstream_contract_mismatch"
+                            case upstreamMisconfigured = "upstream_misconfigured"
+                            case upstreamInvalidRequest = "upstream_invalid_request"
+                            case upstreamConflict = "upstream_conflict"
+                            case upstreamUnsupportedMedia = "upstream_unsupported_media"
+                            case notFound = "not_found"
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/503/content/json/code`.
+                        internal var code: Operations.MobileContacts_getMerchantAddresses.Output.ServiceUnavailable.Body.JsonPayload.CodePayload
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/503/content/json/message`.
+                        internal var message: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/503/content/json/pillar`.
+                        internal var pillar: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/503/content/json/retryable`.
+                        internal var retryable: Swift.Bool
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - message:
+                        ///   - pillar:
+                        ///   - retryable:
+                        internal init(
+                            code: Operations.MobileContacts_getMerchantAddresses.Output.ServiceUnavailable.Body.JsonPayload.CodePayload,
+                            message: Swift.String,
+                            pillar: Swift.String,
+                            retryable: Swift.Bool
+                        ) {
+                            self.code = code
+                            self.message = message
+                            self.pillar = pillar
+                            self.retryable = retryable
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case message
+                            case pillar
+                            case retryable
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Operations.MobileContacts_getMerchantAddresses.Output.ServiceUnavailable.Body.JsonPayload.CodePayload.self,
+                                forKey: .code
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            self.pillar = try container.decode(
+                                Swift.String.self,
+                                forKey: .pillar
+                            )
+                            self.retryable = try container.decode(
+                                Swift.Bool.self,
+                                forKey: .retryable
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "message",
+                                "pillar",
+                                "retryable"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/GET/responses/503/content/application\/json`.
+                    case json(Operations.MobileContacts_getMerchantAddresses.Output.ServiceUnavailable.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileContacts_getMerchantAddresses.Output.ServiceUnavailable.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileContacts_getMerchantAddresses.Output.ServiceUnavailable.Body
+                /// Creates a new `ServiceUnavailable`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileContacts_getMerchantAddresses.Output.ServiceUnavailable.Body) {
+                    self.body = body
+                }
+            }
+            /// 503
+            ///
+            /// - Remark: Generated from `#/paths//mobile/contacts/merchants/{id}/addresses/get(mobileContacts.getMerchantAddresses)/responses/503`.
+            ///
+            /// HTTP response code: `503 serviceUnavailable`.
+            case serviceUnavailable(Operations.MobileContacts_getMerchantAddresses.Output.ServiceUnavailable)
+            /// The associated value of the enum case if `self` is `.serviceUnavailable`.
+            ///
+            /// - Throws: An error if `self` is not `.serviceUnavailable`.
+            /// - SeeAlso: `.serviceUnavailable`.
+            internal var serviceUnavailable: Operations.MobileContacts_getMerchantAddresses.Output.ServiceUnavailable {
+                get throws {
+                    switch self {
+                    case let .serviceUnavailable(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "serviceUnavailable",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        internal enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            internal init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            internal var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            internal static var allCases: [Self] {
+                [
+                    .json
+                ]
+            }
+        }
+    }
+    /// Record a new address for one merchant, typed by the reviewer
+    ///
+    /// - Remark: HTTP `POST /mobile/contacts/merchants/{id}/addresses`.
+    /// - Remark: Generated from `#/paths//mobile/contacts/merchants/{id}/addresses/post(mobileContacts.createMerchantAddress)`.
+    internal enum MobileContacts_createMerchantAddress {
+        internal static let id: Swift.String = "mobileContacts.createMerchantAddress"
+        internal struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/path`.
+            internal struct Path: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/path/id`.
+                internal var id: Swift.String
+                /// Creates a new `Path`.
+                ///
+                /// - Parameters:
+                ///   - id:
+                internal init(id: Swift.String) {
+                    self.id = id
+                }
+            }
+            internal var path: Operations.MobileContacts_createMerchantAddress.Input.Path
+            /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/header`.
+            internal struct Headers: Sendable, Hashable {
+                internal var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.MobileContacts_createMerchantAddress.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - accept:
+                internal init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.MobileContacts_createMerchantAddress.AcceptableContentType>] = .defaultValues()) {
+                    self.accept = accept
+                }
+            }
+            internal var headers: Operations.MobileContacts_createMerchantAddress.Input.Headers
+            /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/requestBody`.
+            internal enum Body: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/requestBody/json`.
+                internal struct JsonPayload: Codable, Hashable, Sendable {
+                    /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/requestBody/json/value`.
+                    internal var value: Swift.String
+                    /// Creates a new `JsonPayload`.
+                    ///
+                    /// - Parameters:
+                    ///   - value:
+                    internal init(value: Swift.String) {
+                        self.value = value
+                    }
+                    internal enum CodingKeys: String, CodingKey {
+                        case value
+                    }
+                    internal init(from decoder: any Swift.Decoder) throws {
+                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                        self.value = try container.decode(
+                            Swift.String.self,
+                            forKey: .value
+                        )
+                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                            "value"
+                        ])
+                    }
+                }
+                /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/requestBody/content/application\/json`.
+                case json(Operations.MobileContacts_createMerchantAddress.Input.Body.JsonPayload)
+            }
+            internal var body: Operations.MobileContacts_createMerchantAddress.Input.Body?
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - path:
+            ///   - headers:
+            ///   - body:
+            internal init(
+                path: Operations.MobileContacts_createMerchantAddress.Input.Path,
+                headers: Operations.MobileContacts_createMerchantAddress.Input.Headers = .init(),
+                body: Operations.MobileContacts_createMerchantAddress.Input.Body? = nil
+            ) {
+                self.path = path
+                self.headers = headers
+                self.body = body
+            }
+        }
+        internal enum Output: Sendable, Hashable {
+            internal struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/200/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/200/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/200/content/json/id`.
+                        internal var id: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/200/content/json/value`.
+                        internal var value: Swift.String
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - id:
+                        ///   - value:
+                        internal init(
+                            id: Swift.String,
+                            value: Swift.String
+                        ) {
+                            self.id = id
+                            self.value = value
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case id
+                            case value
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.id = try container.decode(
+                                Swift.String.self,
+                                forKey: .id
+                            )
+                            self.value = try container.decode(
+                                Swift.String.self,
+                                forKey: .value
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "id",
+                                "value"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/200/content/application\/json`.
+                    case json(Operations.MobileContacts_createMerchantAddress.Output.Ok.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileContacts_createMerchantAddress.Output.Ok.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileContacts_createMerchantAddress.Output.Ok.Body
+                /// Creates a new `Ok`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileContacts_createMerchantAddress.Output.Ok.Body) {
+                    self.body = body
+                }
+            }
+            /// 200
+            ///
+            /// - Remark: Generated from `#/paths//mobile/contacts/merchants/{id}/addresses/post(mobileContacts.createMerchantAddress)/responses/200`.
+            ///
+            /// HTTP response code: `200 ok`.
+            case ok(Operations.MobileContacts_createMerchantAddress.Output.Ok)
+            /// The associated value of the enum case if `self` is `.ok`.
+            ///
+            /// - Throws: An error if `self` is not `.ok`.
+            /// - SeeAlso: `.ok`.
+            internal var ok: Operations.MobileContacts_createMerchantAddress.Output.Ok {
+                get throws {
+                    switch self {
+                    case let .ok(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/400/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/400/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/400/content/json/code`.
+                        internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case invalidCursor = "invalid_cursor"
+                            case invalidRequest = "invalid_request"
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/400/content/json/code`.
+                        internal var code: Operations.MobileContacts_createMerchantAddress.Output.BadRequest.Body.JsonPayload.CodePayload
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/400/content/json/message`.
+                        internal var message: Swift.String
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - message:
+                        internal init(
+                            code: Operations.MobileContacts_createMerchantAddress.Output.BadRequest.Body.JsonPayload.CodePayload,
+                            message: Swift.String
+                        ) {
+                            self.code = code
+                            self.message = message
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case message
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Operations.MobileContacts_createMerchantAddress.Output.BadRequest.Body.JsonPayload.CodePayload.self,
+                                forKey: .code
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "message"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/400/content/application\/json`.
+                    case json(Operations.MobileContacts_createMerchantAddress.Output.BadRequest.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileContacts_createMerchantAddress.Output.BadRequest.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileContacts_createMerchantAddress.Output.BadRequest.Body
+                /// Creates a new `BadRequest`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileContacts_createMerchantAddress.Output.BadRequest.Body) {
+                    self.body = body
+                }
+            }
+            /// 400
+            ///
+            /// - Remark: Generated from `#/paths//mobile/contacts/merchants/{id}/addresses/post(mobileContacts.createMerchantAddress)/responses/400`.
+            ///
+            /// HTTP response code: `400 badRequest`.
+            case badRequest(Operations.MobileContacts_createMerchantAddress.Output.BadRequest)
+            /// The associated value of the enum case if `self` is `.badRequest`.
+            ///
+            /// - Throws: An error if `self` is not `.badRequest`.
+            /// - SeeAlso: `.badRequest`.
+            internal var badRequest: Operations.MobileContacts_createMerchantAddress.Output.BadRequest {
+                get throws {
+                    switch self {
+                    case let .badRequest(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "badRequest",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct Unauthorized: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/401/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/401/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/401/content/json/code`.
+                        internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case invalidToken = "invalid_token"
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/401/content/json/code`.
+                        internal var code: Operations.MobileContacts_createMerchantAddress.Output.Unauthorized.Body.JsonPayload.CodePayload
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/401/content/json/message`.
+                        internal var message: Swift.String
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - message:
+                        internal init(
+                            code: Operations.MobileContacts_createMerchantAddress.Output.Unauthorized.Body.JsonPayload.CodePayload,
+                            message: Swift.String
+                        ) {
+                            self.code = code
+                            self.message = message
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case message
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Operations.MobileContacts_createMerchantAddress.Output.Unauthorized.Body.JsonPayload.CodePayload.self,
+                                forKey: .code
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "message"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/401/content/application\/json`.
+                    case json(Operations.MobileContacts_createMerchantAddress.Output.Unauthorized.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileContacts_createMerchantAddress.Output.Unauthorized.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileContacts_createMerchantAddress.Output.Unauthorized.Body
+                /// Creates a new `Unauthorized`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileContacts_createMerchantAddress.Output.Unauthorized.Body) {
+                    self.body = body
+                }
+            }
+            /// 401
+            ///
+            /// - Remark: Generated from `#/paths//mobile/contacts/merchants/{id}/addresses/post(mobileContacts.createMerchantAddress)/responses/401`.
+            ///
+            /// HTTP response code: `401 unauthorized`.
+            case unauthorized(Operations.MobileContacts_createMerchantAddress.Output.Unauthorized)
+            /// The associated value of the enum case if `self` is `.unauthorized`.
+            ///
+            /// - Throws: An error if `self` is not `.unauthorized`.
+            /// - SeeAlso: `.unauthorized`.
+            internal var unauthorized: Operations.MobileContacts_createMerchantAddress.Output.Unauthorized {
+                get throws {
+                    switch self {
+                    case let .unauthorized(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "unauthorized",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct Forbidden: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/403/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/403/content/json`.
+                    internal enum JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/403/content/json/case1`.
+                        internal struct Case1Payload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/403/content/json/case1/code`.
+                            internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case deviceRevoked = "device_revoked"
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/403/content/json/case1/code`.
+                            internal var code: Operations.MobileContacts_createMerchantAddress.Output.Forbidden.Body.JsonPayload.Case1Payload.CodePayload
+                            /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/403/content/json/case1/message`.
+                            internal var message: Swift.String
+                            /// Creates a new `Case1Payload`.
+                            ///
+                            /// - Parameters:
+                            ///   - code:
+                            ///   - message:
+                            internal init(
+                                code: Operations.MobileContacts_createMerchantAddress.Output.Forbidden.Body.JsonPayload.Case1Payload.CodePayload,
+                                message: Swift.String
+                            ) {
+                                self.code = code
+                                self.message = message
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case code
+                                case message
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.code = try container.decode(
+                                    Operations.MobileContacts_createMerchantAddress.Output.Forbidden.Body.JsonPayload.Case1Payload.CodePayload.self,
+                                    forKey: .code
+                                )
+                                self.message = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .message
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "code",
+                                    "message"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/403/content/json/case1`.
+                        case case1(Operations.MobileContacts_createMerchantAddress.Output.Forbidden.Body.JsonPayload.Case1Payload)
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/403/content/json/case2`.
+                        internal struct Case2Payload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/403/content/json/case2/capability`.
+                            internal var capability: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/403/content/json/case2/code`.
+                            internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case capabilityNotGranted = "capability_not_granted"
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/403/content/json/case2/code`.
+                            internal var code: Operations.MobileContacts_createMerchantAddress.Output.Forbidden.Body.JsonPayload.Case2Payload.CodePayload
+                            /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/403/content/json/case2/message`.
+                            internal var message: Swift.String
+                            /// Creates a new `Case2Payload`.
+                            ///
+                            /// - Parameters:
+                            ///   - capability:
+                            ///   - code:
+                            ///   - message:
+                            internal init(
+                                capability: Swift.String,
+                                code: Operations.MobileContacts_createMerchantAddress.Output.Forbidden.Body.JsonPayload.Case2Payload.CodePayload,
+                                message: Swift.String
+                            ) {
+                                self.capability = capability
+                                self.code = code
+                                self.message = message
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case capability
+                                case code
+                                case message
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.capability = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .capability
+                                )
+                                self.code = try container.decode(
+                                    Operations.MobileContacts_createMerchantAddress.Output.Forbidden.Body.JsonPayload.Case2Payload.CodePayload.self,
+                                    forKey: .code
+                                )
+                                self.message = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .message
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "capability",
+                                    "code",
+                                    "message"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/403/content/json/case2`.
+                        case case2(Operations.MobileContacts_createMerchantAddress.Output.Forbidden.Body.JsonPayload.Case2Payload)
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            var errors: [any Swift.Error] = []
+                            do {
+                                self = .case1(try .init(from: decoder))
+                                return
+                            } catch {
+                                errors.append(error)
+                            }
+                            do {
+                                self = .case2(try .init(from: decoder))
+                                return
+                            } catch {
+                                errors.append(error)
+                            }
+                            throw Swift.DecodingError.failedToDecodeOneOfSchema(
+                                type: Self.self,
+                                codingPath: decoder.codingPath,
+                                errors: errors
+                            )
+                        }
+                        internal func encode(to encoder: any Swift.Encoder) throws {
+                            switch self {
+                            case let .case1(value):
+                                try value.encode(to: encoder)
+                            case let .case2(value):
+                                try value.encode(to: encoder)
+                            }
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/403/content/application\/json`.
+                    case json(Operations.MobileContacts_createMerchantAddress.Output.Forbidden.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileContacts_createMerchantAddress.Output.Forbidden.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileContacts_createMerchantAddress.Output.Forbidden.Body
+                /// Creates a new `Forbidden`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileContacts_createMerchantAddress.Output.Forbidden.Body) {
+                    self.body = body
+                }
+            }
+            /// 403
+            ///
+            /// - Remark: Generated from `#/paths//mobile/contacts/merchants/{id}/addresses/post(mobileContacts.createMerchantAddress)/responses/403`.
+            ///
+            /// HTTP response code: `403 forbidden`.
+            case forbidden(Operations.MobileContacts_createMerchantAddress.Output.Forbidden)
+            /// The associated value of the enum case if `self` is `.forbidden`.
+            ///
+            /// - Throws: An error if `self` is not `.forbidden`.
+            /// - SeeAlso: `.forbidden`.
+            internal var forbidden: Operations.MobileContacts_createMerchantAddress.Output.Forbidden {
+                get throws {
+                    switch self {
+                    case let .forbidden(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "forbidden",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct NotFound: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/404/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/404/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/404/content/json/code`.
+                        internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case upstreamUnavailable = "upstream_unavailable"
+                            case upstreamDegraded = "upstream_degraded"
+                            case upstreamContractMismatch = "upstream_contract_mismatch"
+                            case upstreamMisconfigured = "upstream_misconfigured"
+                            case upstreamInvalidRequest = "upstream_invalid_request"
+                            case upstreamConflict = "upstream_conflict"
+                            case upstreamUnsupportedMedia = "upstream_unsupported_media"
+                            case notFound = "not_found"
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/404/content/json/code`.
+                        internal var code: Operations.MobileContacts_createMerchantAddress.Output.NotFound.Body.JsonPayload.CodePayload
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/404/content/json/message`.
+                        internal var message: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/404/content/json/pillar`.
+                        internal var pillar: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/404/content/json/retryable`.
+                        internal var retryable: Swift.Bool
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - message:
+                        ///   - pillar:
+                        ///   - retryable:
+                        internal init(
+                            code: Operations.MobileContacts_createMerchantAddress.Output.NotFound.Body.JsonPayload.CodePayload,
+                            message: Swift.String,
+                            pillar: Swift.String,
+                            retryable: Swift.Bool
+                        ) {
+                            self.code = code
+                            self.message = message
+                            self.pillar = pillar
+                            self.retryable = retryable
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case message
+                            case pillar
+                            case retryable
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Operations.MobileContacts_createMerchantAddress.Output.NotFound.Body.JsonPayload.CodePayload.self,
+                                forKey: .code
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            self.pillar = try container.decode(
+                                Swift.String.self,
+                                forKey: .pillar
+                            )
+                            self.retryable = try container.decode(
+                                Swift.Bool.self,
+                                forKey: .retryable
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "message",
+                                "pillar",
+                                "retryable"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/404/content/application\/json`.
+                    case json(Operations.MobileContacts_createMerchantAddress.Output.NotFound.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileContacts_createMerchantAddress.Output.NotFound.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileContacts_createMerchantAddress.Output.NotFound.Body
+                /// Creates a new `NotFound`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileContacts_createMerchantAddress.Output.NotFound.Body) {
+                    self.body = body
+                }
+            }
+            /// 404
+            ///
+            /// - Remark: Generated from `#/paths//mobile/contacts/merchants/{id}/addresses/post(mobileContacts.createMerchantAddress)/responses/404`.
+            ///
+            /// HTTP response code: `404 notFound`.
+            case notFound(Operations.MobileContacts_createMerchantAddress.Output.NotFound)
+            /// The associated value of the enum case if `self` is `.notFound`.
+            ///
+            /// - Throws: An error if `self` is not `.notFound`.
+            /// - SeeAlso: `.notFound`.
+            internal var notFound: Operations.MobileContacts_createMerchantAddress.Output.NotFound {
+                get throws {
+                    switch self {
+                    case let .notFound(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "notFound",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct TooManyRequests: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/429/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/429/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/429/content/json/code`.
+                        internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case rateLimited = "rate_limited"
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/429/content/json/code`.
+                        internal var code: Operations.MobileContacts_createMerchantAddress.Output.TooManyRequests.Body.JsonPayload.CodePayload
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/429/content/json/message`.
+                        internal var message: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/429/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - message:
+                        ///   - retryAfterSeconds:
+                        internal init(
+                            code: Operations.MobileContacts_createMerchantAddress.Output.TooManyRequests.Body.JsonPayload.CodePayload,
+                            message: Swift.String,
+                            retryAfterSeconds: Swift.Int
+                        ) {
+                            self.code = code
+                            self.message = message
+                            self.retryAfterSeconds = retryAfterSeconds
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case message
+                            case retryAfterSeconds
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Operations.MobileContacts_createMerchantAddress.Output.TooManyRequests.Body.JsonPayload.CodePayload.self,
+                                forKey: .code
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            self.retryAfterSeconds = try container.decode(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "message",
+                                "retryAfterSeconds"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/429/content/application\/json`.
+                    case json(Operations.MobileContacts_createMerchantAddress.Output.TooManyRequests.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileContacts_createMerchantAddress.Output.TooManyRequests.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileContacts_createMerchantAddress.Output.TooManyRequests.Body
+                /// Creates a new `TooManyRequests`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileContacts_createMerchantAddress.Output.TooManyRequests.Body) {
+                    self.body = body
+                }
+            }
+            /// 429
+            ///
+            /// - Remark: Generated from `#/paths//mobile/contacts/merchants/{id}/addresses/post(mobileContacts.createMerchantAddress)/responses/429`.
+            ///
+            /// HTTP response code: `429 tooManyRequests`.
+            case tooManyRequests(Operations.MobileContacts_createMerchantAddress.Output.TooManyRequests)
+            /// The associated value of the enum case if `self` is `.tooManyRequests`.
+            ///
+            /// - Throws: An error if `self` is not `.tooManyRequests`.
+            /// - SeeAlso: `.tooManyRequests`.
+            internal var tooManyRequests: Operations.MobileContacts_createMerchantAddress.Output.TooManyRequests {
+                get throws {
+                    switch self {
+                    case let .tooManyRequests(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "tooManyRequests",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct BadGateway: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/502/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/502/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/502/content/json/code`.
+                        internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case upstreamUnavailable = "upstream_unavailable"
+                            case upstreamDegraded = "upstream_degraded"
+                            case upstreamContractMismatch = "upstream_contract_mismatch"
+                            case upstreamMisconfigured = "upstream_misconfigured"
+                            case upstreamInvalidRequest = "upstream_invalid_request"
+                            case upstreamConflict = "upstream_conflict"
+                            case upstreamUnsupportedMedia = "upstream_unsupported_media"
+                            case notFound = "not_found"
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/502/content/json/code`.
+                        internal var code: Operations.MobileContacts_createMerchantAddress.Output.BadGateway.Body.JsonPayload.CodePayload
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/502/content/json/message`.
+                        internal var message: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/502/content/json/pillar`.
+                        internal var pillar: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/502/content/json/retryable`.
+                        internal var retryable: Swift.Bool
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - message:
+                        ///   - pillar:
+                        ///   - retryable:
+                        internal init(
+                            code: Operations.MobileContacts_createMerchantAddress.Output.BadGateway.Body.JsonPayload.CodePayload,
+                            message: Swift.String,
+                            pillar: Swift.String,
+                            retryable: Swift.Bool
+                        ) {
+                            self.code = code
+                            self.message = message
+                            self.pillar = pillar
+                            self.retryable = retryable
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case message
+                            case pillar
+                            case retryable
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Operations.MobileContacts_createMerchantAddress.Output.BadGateway.Body.JsonPayload.CodePayload.self,
+                                forKey: .code
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            self.pillar = try container.decode(
+                                Swift.String.self,
+                                forKey: .pillar
+                            )
+                            self.retryable = try container.decode(
+                                Swift.Bool.self,
+                                forKey: .retryable
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "message",
+                                "pillar",
+                                "retryable"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/502/content/application\/json`.
+                    case json(Operations.MobileContacts_createMerchantAddress.Output.BadGateway.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileContacts_createMerchantAddress.Output.BadGateway.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileContacts_createMerchantAddress.Output.BadGateway.Body
+                /// Creates a new `BadGateway`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileContacts_createMerchantAddress.Output.BadGateway.Body) {
+                    self.body = body
+                }
+            }
+            /// 502
+            ///
+            /// - Remark: Generated from `#/paths//mobile/contacts/merchants/{id}/addresses/post(mobileContacts.createMerchantAddress)/responses/502`.
+            ///
+            /// HTTP response code: `502 badGateway`.
+            case badGateway(Operations.MobileContacts_createMerchantAddress.Output.BadGateway)
+            /// The associated value of the enum case if `self` is `.badGateway`.
+            ///
+            /// - Throws: An error if `self` is not `.badGateway`.
+            /// - SeeAlso: `.badGateway`.
+            internal var badGateway: Operations.MobileContacts_createMerchantAddress.Output.BadGateway {
+                get throws {
+                    switch self {
+                    case let .badGateway(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "badGateway",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct ServiceUnavailable: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/503/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/503/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/503/content/json/code`.
+                        internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case upstreamUnavailable = "upstream_unavailable"
+                            case upstreamDegraded = "upstream_degraded"
+                            case upstreamContractMismatch = "upstream_contract_mismatch"
+                            case upstreamMisconfigured = "upstream_misconfigured"
+                            case upstreamInvalidRequest = "upstream_invalid_request"
+                            case upstreamConflict = "upstream_conflict"
+                            case upstreamUnsupportedMedia = "upstream_unsupported_media"
+                            case notFound = "not_found"
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/503/content/json/code`.
+                        internal var code: Operations.MobileContacts_createMerchantAddress.Output.ServiceUnavailable.Body.JsonPayload.CodePayload
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/503/content/json/message`.
+                        internal var message: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/503/content/json/pillar`.
+                        internal var pillar: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/503/content/json/retryable`.
+                        internal var retryable: Swift.Bool
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - message:
+                        ///   - pillar:
+                        ///   - retryable:
+                        internal init(
+                            code: Operations.MobileContacts_createMerchantAddress.Output.ServiceUnavailable.Body.JsonPayload.CodePayload,
+                            message: Swift.String,
+                            pillar: Swift.String,
+                            retryable: Swift.Bool
+                        ) {
+                            self.code = code
+                            self.message = message
+                            self.pillar = pillar
+                            self.retryable = retryable
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case message
+                            case pillar
+                            case retryable
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Operations.MobileContacts_createMerchantAddress.Output.ServiceUnavailable.Body.JsonPayload.CodePayload.self,
+                                forKey: .code
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            self.pillar = try container.decode(
+                                Swift.String.self,
+                                forKey: .pillar
+                            )
+                            self.retryable = try container.decode(
+                                Swift.Bool.self,
+                                forKey: .retryable
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "message",
+                                "pillar",
+                                "retryable"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/contacts/merchants/{id}/addresses/POST/responses/503/content/application\/json`.
+                    case json(Operations.MobileContacts_createMerchantAddress.Output.ServiceUnavailable.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileContacts_createMerchantAddress.Output.ServiceUnavailable.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileContacts_createMerchantAddress.Output.ServiceUnavailable.Body
+                /// Creates a new `ServiceUnavailable`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileContacts_createMerchantAddress.Output.ServiceUnavailable.Body) {
+                    self.body = body
+                }
+            }
+            /// 503
+            ///
+            /// - Remark: Generated from `#/paths//mobile/contacts/merchants/{id}/addresses/post(mobileContacts.createMerchantAddress)/responses/503`.
+            ///
+            /// HTTP response code: `503 serviceUnavailable`.
+            case serviceUnavailable(Operations.MobileContacts_createMerchantAddress.Output.ServiceUnavailable)
+            /// The associated value of the enum case if `self` is `.serviceUnavailable`.
+            ///
+            /// - Throws: An error if `self` is not `.serviceUnavailable`.
+            /// - SeeAlso: `.serviceUnavailable`.
+            internal var serviceUnavailable: Operations.MobileContacts_createMerchantAddress.Output.ServiceUnavailable {
+                get throws {
+                    switch self {
+                    case let .serviceUnavailable(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "serviceUnavailable",
                             response: self
                         )
                     }
@@ -22011,6 +24118,12 @@ internal enum Operations {
                     internal typealias ItemsPayload = [Operations.MobilePurchases_createManualPurchase.Input.Body.JsonPayload.ItemsPayloadPayload]
                     /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/requestBody/json/items`.
                     internal var items: Operations.MobilePurchases_createManualPurchase.Input.Body.JsonPayload.ItemsPayload
+                    /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/requestBody/json/merchantAddressId`.
+                    internal var merchantAddressId: Swift.String?
+                    /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/requestBody/json/merchantAddressName`.
+                    internal var merchantAddressName: Swift.String?
+                    /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/requestBody/json/merchantEntityId`.
+                    internal var merchantEntityId: Swift.String?
                     /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/requestBody/json/merchantName`.
                     internal var merchantName: Swift.String?
                     /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/requestBody/json/orderedAt`.
@@ -22040,6 +24153,9 @@ internal enum Operations {
                     ///   - discountIncluded:
                     ///   - idempotencyKey:
                     ///   - items:
+                    ///   - merchantAddressId:
+                    ///   - merchantAddressName:
+                    ///   - merchantEntityId:
                     ///   - merchantName:
                     ///   - orderedAt:
                     ///   - orderedAtOffsetMinutes:
@@ -22057,6 +24173,9 @@ internal enum Operations {
                         discountIncluded: Swift.Bool? = nil,
                         idempotencyKey: Swift.String,
                         items: Operations.MobilePurchases_createManualPurchase.Input.Body.JsonPayload.ItemsPayload,
+                        merchantAddressId: Swift.String? = nil,
+                        merchantAddressName: Swift.String? = nil,
+                        merchantEntityId: Swift.String? = nil,
                         merchantName: Swift.String? = nil,
                         orderedAt: Swift.String,
                         orderedAtOffsetMinutes: Swift.Int? = nil,
@@ -22074,6 +24193,9 @@ internal enum Operations {
                         self.discountIncluded = discountIncluded
                         self.idempotencyKey = idempotencyKey
                         self.items = items
+                        self.merchantAddressId = merchantAddressId
+                        self.merchantAddressName = merchantAddressName
+                        self.merchantEntityId = merchantEntityId
                         self.merchantName = merchantName
                         self.orderedAt = orderedAt
                         self.orderedAtOffsetMinutes = orderedAtOffsetMinutes
@@ -22092,6 +24214,9 @@ internal enum Operations {
                         case discountIncluded
                         case idempotencyKey
                         case items
+                        case merchantAddressId
+                        case merchantAddressName
+                        case merchantEntityId
                         case merchantName
                         case orderedAt
                         case orderedAtOffsetMinutes
@@ -22128,6 +24253,18 @@ internal enum Operations {
                         self.items = try container.decode(
                             Operations.MobilePurchases_createManualPurchase.Input.Body.JsonPayload.ItemsPayload.self,
                             forKey: .items
+                        )
+                        self.merchantAddressId = try container.decodeIfPresent(
+                            Swift.String.self,
+                            forKey: .merchantAddressId
+                        )
+                        self.merchantAddressName = try container.decodeIfPresent(
+                            Swift.String.self,
+                            forKey: .merchantAddressName
+                        )
+                        self.merchantEntityId = try container.decodeIfPresent(
+                            Swift.String.self,
+                            forKey: .merchantEntityId
                         )
                         self.merchantName = try container.decodeIfPresent(
                             Swift.String.self,
@@ -22176,6 +24313,9 @@ internal enum Operations {
                             "discountIncluded",
                             "idempotencyKey",
                             "items",
+                            "merchantAddressId",
+                            "merchantAddressName",
+                            "merchantEntityId",
                             "merchantName",
                             "orderedAt",
                             "orderedAtOffsetMinutes",
@@ -23720,6 +25860,12 @@ internal enum Operations {
                     internal typealias ItemsPayload = [Operations.MobilePurchases_saveReceiptDraft.Input.Body.JsonPayload.ItemsPayloadPayload]
                     /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/items`.
                     internal var items: Operations.MobilePurchases_saveReceiptDraft.Input.Body.JsonPayload.ItemsPayload
+                    /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/merchantAddressId`.
+                    internal var merchantAddressId: Swift.String?
+                    /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/merchantAddressName`.
+                    internal var merchantAddressName: Swift.String?
+                    /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/merchantEntityId`.
+                    internal var merchantEntityId: Swift.String?
                     /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/merchantName`.
                     internal var merchantName: Swift.String?
                     /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/orderedAt`.
@@ -23750,6 +25896,9 @@ internal enum Operations {
                     ///   - documents:
                     ///   - idempotencyKey:
                     ///   - items:
+                    ///   - merchantAddressId:
+                    ///   - merchantAddressName:
+                    ///   - merchantEntityId:
                     ///   - merchantName:
                     ///   - orderedAt:
                     ///   - orderedAtOffsetMinutes:
@@ -23768,6 +25917,9 @@ internal enum Operations {
                         documents: Operations.MobilePurchases_saveReceiptDraft.Input.Body.JsonPayload.DocumentsPayload,
                         idempotencyKey: Swift.String,
                         items: Operations.MobilePurchases_saveReceiptDraft.Input.Body.JsonPayload.ItemsPayload,
+                        merchantAddressId: Swift.String? = nil,
+                        merchantAddressName: Swift.String? = nil,
+                        merchantEntityId: Swift.String? = nil,
                         merchantName: Swift.String? = nil,
                         orderedAt: Swift.String,
                         orderedAtOffsetMinutes: Swift.Int? = nil,
@@ -23786,6 +25938,9 @@ internal enum Operations {
                         self.documents = documents
                         self.idempotencyKey = idempotencyKey
                         self.items = items
+                        self.merchantAddressId = merchantAddressId
+                        self.merchantAddressName = merchantAddressName
+                        self.merchantEntityId = merchantEntityId
                         self.merchantName = merchantName
                         self.orderedAt = orderedAt
                         self.orderedAtOffsetMinutes = orderedAtOffsetMinutes
@@ -23805,6 +25960,9 @@ internal enum Operations {
                         case documents
                         case idempotencyKey
                         case items
+                        case merchantAddressId
+                        case merchantAddressName
+                        case merchantEntityId
                         case merchantName
                         case orderedAt
                         case orderedAtOffsetMinutes
@@ -23845,6 +26003,18 @@ internal enum Operations {
                         self.items = try container.decode(
                             Operations.MobilePurchases_saveReceiptDraft.Input.Body.JsonPayload.ItemsPayload.self,
                             forKey: .items
+                        )
+                        self.merchantAddressId = try container.decodeIfPresent(
+                            Swift.String.self,
+                            forKey: .merchantAddressId
+                        )
+                        self.merchantAddressName = try container.decodeIfPresent(
+                            Swift.String.self,
+                            forKey: .merchantAddressName
+                        )
+                        self.merchantEntityId = try container.decodeIfPresent(
+                            Swift.String.self,
+                            forKey: .merchantEntityId
                         )
                         self.merchantName = try container.decodeIfPresent(
                             Swift.String.self,
@@ -23894,6 +26064,9 @@ internal enum Operations {
                             "documents",
                             "idempotencyKey",
                             "items",
+                            "merchantAddressId",
+                            "merchantAddressName",
+                            "merchantEntityId",
                             "merchantName",
                             "orderedAt",
                             "orderedAtOffsetMinutes",
@@ -25635,6 +27808,8 @@ internal enum Operations {
                                 internal typealias ItemsPayload = [Operations.MobilePurchases_extractReceipt.Output.Ok.Body.JsonPayload.Case1Payload.DraftPayload.ItemsPayloadPayload]
                                 /// - Remark: Generated from `#/paths/mobile/purchases/receipts/extract/POST/responses/200/content/json/case1/draft/items`.
                                 internal var items: Operations.MobilePurchases_extractReceipt.Output.Ok.Body.JsonPayload.Case1Payload.DraftPayload.ItemsPayload
+                                /// - Remark: Generated from `#/paths/mobile/purchases/receipts/extract/POST/responses/200/content/json/case1/draft/merchantAddressName`.
+                                internal var merchantAddressName: Swift.String?
                                 /// - Remark: Generated from `#/paths/mobile/purchases/receipts/extract/POST/responses/200/content/json/case1/draft/merchantName`.
                                 internal var merchantName: Swift.String?
                                 /// - Remark: Generated from `#/paths/mobile/purchases/receipts/extract/POST/responses/200/content/json/case1/draft/orderedAt`.
@@ -25666,6 +27841,7 @@ internal enum Operations {
                                 ///   - discountIncluded:
                                 ///   - documents:
                                 ///   - items:
+                                ///   - merchantAddressName:
                                 ///   - merchantName:
                                 ///   - orderedAt:
                                 ///   - orderedAtOffsetMinutes:
@@ -25684,6 +27860,7 @@ internal enum Operations {
                                     discountIncluded: Swift.Bool? = nil,
                                     documents: Operations.MobilePurchases_extractReceipt.Output.Ok.Body.JsonPayload.Case1Payload.DraftPayload.DocumentsPayload,
                                     items: Operations.MobilePurchases_extractReceipt.Output.Ok.Body.JsonPayload.Case1Payload.DraftPayload.ItemsPayload,
+                                    merchantAddressName: Swift.String? = nil,
                                     merchantName: Swift.String? = nil,
                                     orderedAt: Swift.String,
                                     orderedAtOffsetMinutes: Swift.Int? = nil,
@@ -25702,6 +27879,7 @@ internal enum Operations {
                                     self.discountIncluded = discountIncluded
                                     self.documents = documents
                                     self.items = items
+                                    self.merchantAddressName = merchantAddressName
                                     self.merchantName = merchantName
                                     self.orderedAt = orderedAt
                                     self.orderedAtOffsetMinutes = orderedAtOffsetMinutes
@@ -25721,6 +27899,7 @@ internal enum Operations {
                                     case discountIncluded
                                     case documents
                                     case items
+                                    case merchantAddressName
                                     case merchantName
                                     case orderedAt
                                     case orderedAtOffsetMinutes
@@ -25758,6 +27937,10 @@ internal enum Operations {
                                     self.items = try container.decode(
                                         Operations.MobilePurchases_extractReceipt.Output.Ok.Body.JsonPayload.Case1Payload.DraftPayload.ItemsPayload.self,
                                         forKey: .items
+                                    )
+                                    self.merchantAddressName = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .merchantAddressName
                                     )
                                     self.merchantName = try container.decodeIfPresent(
                                         Swift.String.self,
@@ -25810,6 +27993,7 @@ internal enum Operations {
                                         "discountIncluded",
                                         "documents",
                                         "items",
+                                        "merchantAddressName",
                                         "merchantName",
                                         "orderedAt",
                                         "orderedAtOffsetMinutes",
