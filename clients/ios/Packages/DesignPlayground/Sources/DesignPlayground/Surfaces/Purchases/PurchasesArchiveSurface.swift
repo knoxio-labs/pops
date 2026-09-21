@@ -18,6 +18,9 @@ internal enum PurchasesArchiveSurface {
             DesignState.standard {
                 PurchasesArchiveView(loaded: firstPage)
             },
+            DesignState("first-page-loading", "Nothing loaded yet") {
+                PurchasesArchiveView(loaded: [])
+            },
             DesignState("everything", "Every page loaded") {
                 PurchasesArchiveView(loaded: PurchasesFixtures.history, paging: .end)
             },

@@ -16,7 +16,7 @@ internal struct PurchaseHeroWash: View {
 
     internal var body: some View {
         RadialGradient(
-            colors: [Color.popsAccent.opacity(0.55), Color.popsAccent.opacity(0)],
+            colors: [Color.popsPurchases.opacity(0.55), Color.popsPurchases.opacity(0)],
             center: .topTrailing,
             startRadius: PopsSpacing.zero,
             endRadius: radius

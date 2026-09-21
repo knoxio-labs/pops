@@ -41,6 +41,13 @@ extension Color {
     /// highlighted, and a stale or failed state by its glyph, never by amber
     /// alone.
     public static let popsInventory = Color(popsToken: "popsInventory")
+
+    /// Purchases' own colour: the capture control, the selected Purchases tab,
+    /// the wash behind the month's figure and a just-saved row.
+    ///
+    /// A violet so it is not mistaken for ``popsAccent``'s links in the same
+    /// list, nor for any of the status hues a purchase's settlement is told in.
+    public static let popsPurchases = Color(popsToken: "popsPurchases")
 }
 
 extension Color {
