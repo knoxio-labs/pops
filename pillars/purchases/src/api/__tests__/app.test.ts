@@ -566,6 +566,53 @@ describe('GET /items', () => {
   });
 });
 
+describe('GET /items/tags', () => {
+  it('answers empty rather than an error when nothing is tagged', async () => {
+    const res = await requestOn(app).get('/items/tags');
+    expect(res.status).toBe(200);
+    expect(res.body.tags).toEqual([]);
+  });
+
+  it('lists the tags in use, most-used first', async () => {
+    await requestOn(app).post('/purchases').send(fullOrder);
+    for (let i = 0; i < 2; i++) {
+      await requestOn(app)
+        .post('/purchases')
+        .send({
+          ...minimalOrder,
+          sourceOrderId: `bulk-${String(i)}`,
+          checksum: `bulk-${String(i)}`,
+          items: [
+            {
+              ref: 'bag',
+              name: `Bag ${String(i)}`,
+              unitPriceCents: 100,
+              lineTotalCents: 100,
+              tags: ['coffee'],
+            },
+          ],
+        });
+    }
+
+    const res = await requestOn(app).get('/items/tags');
+
+    expect(res.status).toBe(200);
+    expect(res.body.tags[0]).toBe('coffee');
+    // `fullOrder` also tags a line `coffee` — three lines against that tag,
+    // one against whatever else `fullOrder` carries.
+    expect(res.body.tags).toContain('coffee');
+  });
+
+  // This route is a literal sibling of `/items` — declared adjacent in the
+  // contract precisely so it is never shadowed by a dynamic `:id` segment
+  // the way rest-tag-rules.ts documents for a different pair of routes.
+  it("is not swallowed by GET /items' own tag query param", async () => {
+    const res = await requestOn(app).get('/items/tags');
+    expect(res.status).toBe(200);
+    expect(res.body).not.toHaveProperty('items');
+  });
+});
+
 describe('PATCH /purchases/:id/items/:itemId', () => {
   async function seedLine(): Promise<{ purchaseId: string; itemId: string }> {
     const created = await requestOn(app).post('/purchases').send(fullOrder);

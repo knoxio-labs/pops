@@ -56,3 +56,27 @@ export function listItemsByTag(
 
   return { rows, total: totalRow?.total ?? 0 };
 }
+
+/** How many distinct tags {@link listTagVocabulary} will ever return. */
+export const TAG_VOCABULARY_LIMIT = 100;
+
+/**
+ * The distinct item tags in use, most-used first, so a caller offering a
+ * "browse by tag" checklist can order it the way a chooser expects rather
+ * than alphabetically. A tag used once is as legitimate a choice as one used
+ * a thousand times, so nothing here drops the tail — it is capped, not
+ * filtered.
+ */
+export function listTagVocabulary(
+  db: PurchasesDb,
+  limit = TAG_VOCABULARY_LIMIT
+): readonly string[] {
+  return db
+    .select({ tag: purchaseItemTags.tag })
+    .from(purchaseItemTags)
+    .groupBy(purchaseItemTags.tag)
+    .orderBy(desc(count()), asc(purchaseItemTags.tag))
+    .limit(limit)
+    .all()
+    .map((row) => row.tag);
+}

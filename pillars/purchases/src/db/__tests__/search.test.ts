@@ -10,7 +10,14 @@ import { beforeEach, afterEach, describe, expect, it } from 'vitest';
 
 import { buildPurchasesManifest } from '../../api/manifest.js';
 import { isWellFormedSku } from '../../contract/constants.js';
-import { createPurchase, searchPurchases, setPurchaseStatus, upsertSource } from '../index.js';
+import {
+  confirmItemClassification,
+  createPurchase,
+  getPurchase,
+  searchPurchases,
+  setPurchaseStatus,
+  upsertSource,
+} from '../index.js';
 import { amazonOrder, openTempDb, seedAmazonSource } from './helpers.js';
 
 import type { ProductIdentity } from '../../contract/types/purchase.js';
@@ -38,6 +45,14 @@ afterEach(() => {
 function identityFor(sku: string | null | undefined): ProductIdentity | null {
   if (sku == null) return null;
   return { value: sku, scheme: isWellFormedSku('asin', sku) ? 'asin' : 'merchant' };
+}
+
+/** Tags the first item of `purchaseId` whose name is `itemName`. */
+function tagItem(purchaseId: string, itemName: string, tags: readonly string[]): void {
+  const detail = getPurchase(opened.db, purchaseId);
+  const item = detail?.items.find((candidate) => candidate.item.name === itemName);
+  if (item === undefined) throw new Error(`no item named '${itemName}' on ${purchaseId}`);
+  confirmItemClassification(opened.db, purchaseId, item.item.id, { tags });
 }
 
 function orderWithItems(
@@ -471,5 +486,111 @@ describe('the orders a scope narrows to', () => {
     orderFrom('amazon', 'a', 'Vevor grinder');
 
     expect(searchPurchases(opened.db, 'vevor', { sources: ['woolworths'] })).toEqual([]);
+  });
+});
+
+describe('matching an item tag', () => {
+  it('returns an item as a hit on its tag alone, even when name and sku do not match', () => {
+    const id = orderWithItems('a', 'Amazon', [{ name: 'Unrelated widget', sku: null }]);
+    tagItem(id, 'Unrelated widget', ['snack']);
+
+    const hits = searchPurchases(opened.db, 'snack');
+
+    expect(hits).toHaveLength(1);
+    expect(hits[0]?.uri).toContain('/purchase-item/');
+    expect(hits[0]?.matchField).toBe('tag');
+  });
+
+  it('scores by whichever field matches strongest, an exact tag over a contains name', () => {
+    const id = orderWithItems('a', 'Amazon', [{ name: 'A snacking board', sku: null }]);
+    tagItem(id, 'A snacking board', ['snack']);
+
+    const hits = searchPurchases(opened.db, 'snack').filter((hit) =>
+      hit.uri.includes('/purchase-item/')
+    );
+
+    expect(hits).toHaveLength(1);
+    expect(hits[0]?.matchField).toBe('tag');
+    expect(hits[0]?.matchType).toBe('exact');
+  });
+});
+
+describe('orderedAtOffsetMinutes on a hit', () => {
+  it('carries the stored offset on an order hit', () => {
+    const id = orderWithItems('a', 'Vevor supplies', []);
+    opened.raw.prepare(`UPDATE purchases SET ordered_at_offset_minutes = 600 WHERE id = ?`).run(id);
+
+    const hit = searchPurchases(opened.db, 'vevor').find((h) => h.uri.includes('/purchase/'));
+
+    expect(hit?.data['orderedAtOffsetMinutes']).toBe(600);
+  });
+
+  it('carries null for a row written before the column existed', () => {
+    orderWithItems('a', 'Amazon', [{ name: 'Dosing funnel' }]);
+
+    const hit = searchPurchases(opened.db, 'dosing').find((h) => h.uri.includes('/purchase-item/'));
+
+    expect(hit?.data['orderedAtOffsetMinutes']).toBeNull();
+  });
+});
+
+/**
+ * The `tags` filter narrows on a line's own column, not an order column.
+ * Every assertion names an order or item that must NOT come back, so an
+ * ignored filter fails rather than passing by luck — same discipline as the
+ * scope describe block above.
+ */
+describe('the tags filter', () => {
+  it('matches an item carrying any of the chosen tags, narrowing among items the text also matches', () => {
+    const id = orderWithItems('a', 'Amazon', [
+      { name: 'Snack mix', sku: null },
+      { name: 'Snack bar', sku: null },
+    ]);
+    tagItem(id, 'Snack mix', ['snack']);
+
+    const hits = searchPurchases(opened.db, 'snack', { tags: ['snack'] });
+    const itemHits = hits.filter((hit) => hit.uri.includes('/purchase-item/'));
+
+    expect(itemHits).toHaveLength(1);
+    expect(itemHits[0]?.data['name']).toBe('Snack mix');
+  });
+
+  it('matches the purchase through a tagged line, not just a top-level tag', () => {
+    const tagged = orderWithItems('a', 'Amazon', [{ name: 'Trail mix', sku: null }]);
+    tagItem(tagged, 'Trail mix', ['snack']);
+    const untagged = orderWithItems('b', 'Amazon', [{ name: 'Trail mix knockoff', sku: null }]);
+
+    const hits = searchPurchases(opened.db, 'amazon', { tags: ['snack'] });
+    const orderUris = hits.filter((hit) => hit.uri.includes('/purchase/')).map((hit) => hit.uri);
+
+    expect(orderUris).toContain(`pops:purchases/purchase/${tagged}`);
+    expect(orderUris).not.toContain(`pops:purchases/purchase/${untagged}`);
+  });
+
+  it('matches on any of several chosen tags, not their intersection', () => {
+    const snackOrder = orderWithItems('a', 'Amazon', [{ name: 'Trail mix', sku: null }]);
+    tagItem(snackOrder, 'Trail mix', ['snack']);
+    const drinkOrder = orderWithItems('b', 'Amazon', [{ name: 'Iced tea', sku: null }]);
+    tagItem(drinkOrder, 'Iced tea', ['drink']);
+
+    const hits = searchPurchases(opened.db, 'amazon', { tags: ['snack', 'drink'] });
+    const orderUris = hits.filter((hit) => hit.uri.includes('/purchase/')).map((hit) => hit.uri);
+
+    expect(orderUris).toContain(`pops:purchases/purchase/${snackOrder}`);
+    expect(orderUris).toContain(`pops:purchases/purchase/${drinkOrder}`);
+  });
+
+  it('leaves the answer unchanged when no tags are chosen', () => {
+    orderWithItems('a', 'Amazon', [{ name: 'Trail mix', sku: null }]);
+
+    expect(searchPurchases(opened.db, 'amazon', { tags: [] })).toEqual(
+      searchPurchases(opened.db, 'amazon')
+    );
+  });
+
+  it('answers nothing rather than everything when no line carries the chosen tag', () => {
+    orderWithItems('a', 'Amazon', [{ name: 'Trail mix', sku: null }]);
+
+    expect(searchPurchases(opened.db, 'amazon', { tags: ['nonexistent-tag'] })).toEqual([]);
   });
 });

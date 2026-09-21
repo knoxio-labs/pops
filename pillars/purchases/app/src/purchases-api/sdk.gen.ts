@@ -63,6 +63,8 @@ import type {
   PurchasePatchItemData,
   PurchasePatchItemErrors,
   PurchasePatchItemResponses,
+  PurchaseTagVocabularyData,
+  PurchaseTagVocabularyResponses,
   ReceiptExtractData,
   ReceiptExtractErrors,
   ReceiptExtractResponses,
@@ -178,6 +180,17 @@ export const purchaseItemsByTag = <ThrowOnError extends boolean = false>(
 ): RequestResult<PurchaseItemsByTagResponses, unknown, ThrowOnError> =>
   (options.client ?? client).get<PurchaseItemsByTagResponses, unknown, ThrowOnError>({
     url: '/items',
+    ...options,
+  });
+
+/**
+ * List the distinct item tags in use, most-used first
+ */
+export const purchaseTagVocabulary = <ThrowOnError extends boolean = false>(
+  options?: Options<PurchaseTagVocabularyData, ThrowOnError>
+): RequestResult<PurchaseTagVocabularyResponses, unknown, ThrowOnError> =>
+  (options?.client ?? client).get<PurchaseTagVocabularyResponses, unknown, ThrowOnError>({
+    url: '/items/tags',
     ...options,
   });
 

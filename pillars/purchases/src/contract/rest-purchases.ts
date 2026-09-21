@@ -25,6 +25,7 @@ import {
   PaginationMetaSchema,
   PatchItemBodySchema,
 } from './rest-schemas.js';
+import { ItemTagSchema } from './schemas/item.js';
 import { PurchaseDetailSchema, PurchaseItemDetailSchema } from './schemas/purchase-detail.js';
 import {
   IsoTimestampSchema,
@@ -268,5 +269,14 @@ export const purchasesPurchaseContract = c.router({
       200: z.object({ items: z.array(TaggedItemSchema), pagination: PaginationMetaSchema }),
     },
     summary: 'Page through lines carrying an item tag, newest first',
+  },
+  /** The tag vocabulary in use, most-used first — feeds a "browse by tag" chooser. */
+  tagVocabulary: {
+    method: 'GET',
+    path: '/items/tags',
+    responses: {
+      200: z.object({ tags: z.array(ItemTagSchema) }),
+    },
+    summary: 'List the distinct item tags in use, most-used first',
   },
 });
