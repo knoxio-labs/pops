@@ -189,7 +189,7 @@ internal struct PurchaseStagingGrid: View {
             Button("Camera", systemImage: "camera") {
                 add("Scan \(added + 1)", media: .jpeg)
             }
-            Button("Photo Library", systemImage: "photo.on.rectangle") {
+            Button("Photo library", systemImage: "photo.on.rectangle") {
                 add("IMG_48\(31 + added).HEIC", media: .jpeg)
             }
             Button("Files", systemImage: "folder") {

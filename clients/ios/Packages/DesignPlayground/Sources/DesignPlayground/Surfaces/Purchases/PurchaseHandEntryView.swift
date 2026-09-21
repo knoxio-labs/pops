@@ -81,7 +81,7 @@ internal struct PurchaseHandEntryView: View {
 
     private var more: some View {
         Menu {
-            Button("Save and Add Another", systemImage: "plus.square.on.square") {
+            Button("Save and add another", systemImage: "plus.square.on.square") {
                 commit {
                     saved += 1
                     draft = Self.drafts.blankDraft(after: draft)
