@@ -17,13 +17,14 @@ internal struct InventoryCentredLine: View {
     }
 }
 
-/// A tall dashed outline in Inventory's colour: the one control on a screen
+/// A tall dashed outline in the screen's accent: the one control on a screen
 /// with nothing in it yet.
 internal struct InventoryDashedActionButton: View {
     internal let title: String
     internal let symbol: String
     internal let action: () -> Void
     @ScaledMetric(relativeTo: .body) private var height = PopsSize.touchTarget * 3
+    @Environment(\.inventoryAccent) private var accent
 
     private var shape: RoundedRectangle {
         RoundedRectangle(cornerRadius: PopsRadius.card, style: .continuous)
@@ -37,12 +38,12 @@ internal struct InventoryDashedActionButton: View {
                 Text(title)
                     .font(.popsHeadline)
             }
-            .foregroundStyle(Color.popsInventory)
+            .foregroundStyle(accent)
             .frame(maxWidth: .infinity, minHeight: height)
-            .background(Color.popsInventory.opacity(0.08), in: shape)
+            .background(accent.opacity(0.08), in: shape)
             .overlay {
                 shape.strokeBorder(
-                    Color.popsInventory,
+                    accent,
                     style: StrokeStyle(
                         lineWidth: PopsBorder.emphasis, dash: [PopsSpacing.sm, PopsSpacing.xs]))
             }

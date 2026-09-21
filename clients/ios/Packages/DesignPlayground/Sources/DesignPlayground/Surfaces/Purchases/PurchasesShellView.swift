@@ -7,11 +7,10 @@ import SwiftUI
 ///
 /// **The bottom edge is the whole design here**, and it is drawn by the system
 /// rather than by this file. `Tab(role: .search)` puts a magnifier in its own
-/// capsule beside the tab bar, collapses the bar to a single glyph when it is
-/// tapped, and expands a field into the space the bar gave up — which is the
-/// arrangement the Slack screenshots show, because Slack is matching the same
-/// iOS 26 pattern. Drawing our own row of capsules would be reimplementing
-/// that, badly, and losing the minimize-on-scroll behaviour with it.
+/// capsule beside the tab bar, and it opens the one universal search every
+/// shell shares, `search/root`. Drawing our own row of capsules would be
+/// reimplementing that, badly, and losing the minimize-on-scroll behaviour
+/// with it.
 ///
 /// So the only thing this file places by hand is the capture control, and it
 /// sits above the search capsule rather than beside it. Three things want this
@@ -24,27 +23,12 @@ internal struct PurchasesShellView: View {
     internal let purchases: [Purchase]
     internal var highlighted: String?
 
-    @State private var query: String
-    @State private var searching: Bool
-    @State private var selected: Int
+    @State private var selected = Self.purchasesTab
     @State private var typing = false
 
-    internal init(
-        purchases: [Purchase],
-        query: String = "",
-        searching: Bool = false,
-        highlighted: String? = nil
-    ) {
+    internal init(purchases: [Purchase], highlighted: String? = nil) {
         self.purchases = purchases
         self.highlighted = highlighted
-        _query = State(initialValue: query)
-        _searching = State(initialValue: searching)
-        // The search field lives on the search tab, so a state that pins it
-        // open has to start on that tab. Defaulting to Purchases meant every
-        // staged search state drew the Purchases tab instead — five states
-        // that were pixel-identical to the standard one, which is how it was
-        // noticed.
-        _selected = State(initialValue: searching ? Self.searchTab : Self.purchasesTab)
     }
 
     private static let purchasesTab = 1
@@ -62,16 +46,7 @@ internal struct PurchasesShellView: View {
                 otherTab("Accounts")
             }
             Tab(value: Self.searchTab, role: .search) {
-                NavigationStack {
-                    PurchasesSearchResults(purchases: purchases, query: query)
-                        .navigationTitle("Search")
-                        .playgroundTitleDisplay(large: false)
-                }
-                .playgroundSearchable(
-                    text: $query,
-                    isPresented: $searching,
-                    prompt: "Merchants, items and tags"
-                )
+                UniversalSearchTab(stage: UniversalSearchStage())
             }
         }
         .playgroundMinimizingTabBar()

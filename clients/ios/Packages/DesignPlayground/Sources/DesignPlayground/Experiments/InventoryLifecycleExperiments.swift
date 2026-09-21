@@ -67,7 +67,7 @@ internal enum InventoryLifecycleExperiments {
     @MainActor private static let inactiveSearchVisibility = DesignExperiment(
         id: "inventory-lifecycle-search-visibility",
         question: "Does an ordinary search turn up discarded, retired and lost items?",
-        subject: InventorySearchSurfaces.searchID,
+        subject: UniversalSearchSurfaces.rootID,
         status: .decided(
             variant: "hidden",
             rationale: decidedOn
@@ -77,7 +77,7 @@ internal enum InventoryLifecycleExperiments {
             DesignVariant(
                 id: "hidden", title: "Hidden until asked for",
                 note: "The filter sheet's Include inactive is the way in.",
-                surface: InventorySearchSurfaces.search)
+                surface: UniversalSearchSurfaces.root)
         ]
     )
 

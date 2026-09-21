@@ -4,7 +4,7 @@ import SwiftUI
 internal struct InventoryShellView: View {
     internal let fixture: InventoryDashboardFixture
     /// Opens the shell on the search tab, staged as given.
-    internal var search: InventorySearchStage?
+    internal var search: UniversalSearchStage?
 
     @State private var selected: Int
 
@@ -12,7 +12,7 @@ internal struct InventoryShellView: View {
     private static let searchTab = 4
     private let scanDiameter: CGFloat = 60
 
-    internal init(fixture: InventoryDashboardFixture, search: InventorySearchStage? = nil) {
+    internal init(fixture: InventoryDashboardFixture, search: UniversalSearchStage? = nil) {
         self.fixture = fixture
         self.search = search
         _selected = State(initialValue: search == nil ? Self.inventoryTab : Self.searchTab)
@@ -33,19 +33,15 @@ internal struct InventoryShellView: View {
                 otherTab("Accounts")
             }
             Tab(value: Self.searchTab, role: .search) {
-                NavigationStack {
-                    InventorySearchScreen(stage: searchStage)
-                }
+                UniversalSearchTab(stage: searchStage)
             }
         }
         .playgroundMinimizingTabBar()
     }
 
-    private var searchStage: InventorySearchStage {
+    private var searchStage: UniversalSearchStage {
         if let search { return search }
-        var stage = InventorySearchStage()
-        if fixture.isFirstRun { stage.phase = .firstLaunch }
-        return stage
+        return fixture.isFirstRun ? .firstLaunch : UniversalSearchStage()
     }
 
     private var inventory: some View {

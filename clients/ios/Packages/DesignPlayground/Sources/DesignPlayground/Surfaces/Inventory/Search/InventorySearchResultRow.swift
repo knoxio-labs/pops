@@ -51,12 +51,13 @@ internal struct InventoryRecordMark: View {
     }
 }
 
-/// A name with every occurrence of the query drawn in amber.
+/// A name with every occurrence of the query drawn in the screen's accent.
 internal struct InventoryHighlightedName: View {
     internal let name: String
     internal let query: String
     internal var isMuted = false
     internal var isStruck = false
+    @Environment(\.inventoryAccent) private var accent
 
     internal var body: some View {
         Text(attributed)
@@ -72,7 +73,7 @@ internal struct InventoryHighlightedName: View {
             let lower = AttributedString.Index(range.lowerBound, within: text)
             let upper = AttributedString.Index(range.upperBound, within: text)
             if let lower, let upper {
-                text[lower..<upper].foregroundColor = Color.popsInventory
+                text[lower..<upper].foregroundColor = accent
             }
         }
         return text

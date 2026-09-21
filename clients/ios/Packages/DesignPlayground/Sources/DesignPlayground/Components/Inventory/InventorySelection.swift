@@ -58,12 +58,13 @@ extension EnvironmentValues {
 
 /// A row's leading mark, the photo or the kind glyph. Inside a selectable
 /// row it is the tap target that selects the row, and it flips to an empty
-/// circle or an amber checkmark while the list is selecting. Anywhere else it
+/// circle or an accent checkmark while the list is selecting. Anywhere else it
 /// is the mark, untouched.
 internal struct InventorySelectableMark<Mark: View>: View {
     private let mark: Mark
     @Environment(\.inventorySelectableRow) private var row
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.inventoryAccent) private var accent
     @ScaledMetric(relativeTo: .body) private var size = PopsSize.touchTarget
 
     internal init(@ViewBuilder mark: () -> Mark) {
@@ -89,7 +90,7 @@ internal struct InventorySelectableMark<Mark: View>: View {
                 Image(systemName: row.isSelected ? "checkmark.circle.fill" : "circle")
                     .font(.popsTitle)
                     .foregroundStyle(
-                        row.isSelected ? Color.popsInventory : Color.popsMutedForeground
+                        row.isSelected ? accent : Color.popsMutedForeground
                     )
                     .contentTransition(.symbolEffect(.replace))
                     .transition(transition)
@@ -111,7 +112,7 @@ internal struct InventorySelectableMark<Mark: View>: View {
 
 extension View {
     /// Makes this row selectable in `selection`: its leading mark selects
-    /// it, a selected row takes an amber tint, and while the list is
+    /// it, a selected row takes the accent tint, and while the list is
     /// selecting a tap anywhere on the row toggles it instead of opening it.
     /// A nil `id` leaves the row as it is.
     internal func inventorySelectable(
@@ -211,8 +212,7 @@ extension View {
                     let bottom =
                         row.maxY + rowOutset >= proxy.size.height - reach
                         ? proxy.size.height : row.maxY + rowOutset + PopsBorder.hairline
-                    Rectangle()
-                        .fill(Color.popsInventory.opacity(0.14))
+                    InventorySelectionFill()
                         .frame(width: proxy.size.width, height: max(bottom - top, PopsSpacing.zero))
                         .offset(y: top)
                 }
@@ -226,6 +226,7 @@ private struct InventorySelectionBarModifier: ViewModifier {
     @Binding var selection: InventorySelection
     let all: [String]
     let actions: [InventorySelectionAction]
+    @Environment(\.inventoryAccent) private var accent
 
     func body(content: Content) -> some View {
         content
@@ -233,13 +234,13 @@ private struct InventorySelectionBarModifier: ViewModifier {
                 if selection.isSelecting {
                     ToolbarItem(placement: .cancellationAction) {
                         Button("Cancel") { selection.deselectAll() }
-                            .tint(.popsInventory)
+                            .tint(accent)
                     }
                     ToolbarItem(placement: .primaryAction) {
                         Button(selection.isAllSelected(all) ? "Deselect all" : "Select all") {
                             selection.toggleAll(all)
                         }
-                        .tint(.popsInventory)
+                        .tint(accent)
                     }
                     ToolbarItemGroup(placement: .inventoryBottomBar) { leadingAction }
                     ToolbarItem(placement: .inventoryBottomBar) { count }
@@ -284,7 +285,7 @@ private struct InventorySelectionBarModifier: ViewModifier {
                 action.symbol.image
             }
         }
-        .tint(.popsInventory)
+        .tint(accent)
         .accessibilityLabel(action.title)
     }
 }
@@ -312,5 +313,15 @@ extension ToolbarContent {
         #else
             self
         #endif
+    }
+}
+
+/// A selected row's tint, drawn as a view because the preference closure
+/// that places it cannot read the environment itself.
+private struct InventorySelectionFill: View {
+    @Environment(\.inventoryAccent) private var accent
+
+    var body: some View {
+        Rectangle().fill(accent.opacity(0.14))
     }
 }

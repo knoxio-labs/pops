@@ -1,8 +1,8 @@
 import DesignSystem
 import SwiftUI
 
-/// The sheet the filter circle opens: one native form, a menu row per
-/// filter, the inactive switch, and the sort when the list has one.
+/// The sheet the Items browser's filter circle opens: one native form, the
+/// sort, then Inventory's filter fields.
 internal struct InventorySearchFilterSheet: View {
     @Binding internal var filter: InventorySearchFilter
     internal var sort: Binding<InventoryItemSort>?
@@ -19,33 +19,7 @@ internal struct InventorySearchFilterSheet: View {
                         }
                     }
                 }
-                Section {
-                    Picker("Placement", selection: $filter.placement) {
-                        ForEach(InventoryPlacementFilter.allCases) { Text($0.title).tag($0) }
-                    }
-                    Picker("Container", selection: $filter.containerState) {
-                        ForEach(InventoryContainerStateFilter.allCases) {
-                            Text($0.title).tag($0)
-                        }
-                    }
-                    Picker("Type", selection: $filter.typeName) {
-                        Text("Any").tag(String?.none)
-                        ForEach(types, id: \.self) { Text($0).tag(String?.some($0)) }
-                    }
-                    Picker("Quantity", selection: $filter.quantity) {
-                        ForEach(InventoryQuantityFilter.allCases) { Text($0.title).tag($0) }
-                    }
-                    Picker("Missing", selection: $filter.missing) {
-                        ForEach(InventoryMissingFilter.allCases) { Text($0.title).tag($0) }
-                    }
-                    Picker("Sync", selection: $filter.sync) {
-                        ForEach(InventorySyncFilter.allCases) { Text($0.title).tag($0) }
-                    }
-                }
-                .pickerStyle(.menu)
-                Section {
-                    Toggle("Include inactive", isOn: $filter.includesInactive)
-                }
+                InventorySearchFilterFields(filter: $filter, types: types)
             }
             .playgroundInsetGroupedList()
             .navigationTitle("Filters")
@@ -62,5 +36,52 @@ internal struct InventorySearchFilterSheet: View {
         }
         .tint(.popsInventory)
         .presentationDetents([.large])
+    }
+}
+
+/// Inventory's filters as form sections: a menu row per filter, then the
+/// inactive switch. Shared by the Items browser's sheet and the universal
+/// search's, which heads them with the pillar.
+internal struct InventorySearchFilterFields<Header: View>: View {
+    @Binding internal var filter: InventorySearchFilter
+    internal let types: [String]
+    @ViewBuilder internal let header: () -> Header
+
+    internal var body: some View {
+        Section {
+            Picker("Placement", selection: $filter.placement) {
+                ForEach(InventoryPlacementFilter.allCases) { Text($0.title).tag($0) }
+            }
+            Picker("Container", selection: $filter.containerState) {
+                ForEach(InventoryContainerStateFilter.allCases) {
+                    Text($0.title).tag($0)
+                }
+            }
+            Picker("Type", selection: $filter.typeName) {
+                Text("Any").tag(String?.none)
+                ForEach(types, id: \.self) { Text($0).tag(String?.some($0)) }
+            }
+            Picker("Quantity", selection: $filter.quantity) {
+                ForEach(InventoryQuantityFilter.allCases) { Text($0.title).tag($0) }
+            }
+            Picker("Missing", selection: $filter.missing) {
+                ForEach(InventoryMissingFilter.allCases) { Text($0.title).tag($0) }
+            }
+            Picker("Sync", selection: $filter.sync) {
+                ForEach(InventorySyncFilter.allCases) { Text($0.title).tag($0) }
+            }
+        } header: {
+            header()
+        }
+        .pickerStyle(.menu)
+        Section {
+            Toggle("Include inactive", isOn: $filter.includesInactive)
+        }
+    }
+}
+
+extension InventorySearchFilterFields where Header == EmptyView {
+    internal init(filter: Binding<InventorySearchFilter>, types: [String]) {
+        self.init(filter: filter, types: types) { EmptyView() }
     }
 }

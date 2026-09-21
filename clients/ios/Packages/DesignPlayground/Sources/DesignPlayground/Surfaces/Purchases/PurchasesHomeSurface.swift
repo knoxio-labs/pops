@@ -29,37 +29,12 @@ internal enum PurchasesHomeSurface {
             DesignState.standard {
                 PurchasesShellView(purchases: PurchasesFixtures.history)
             },
-            // The searching states pin the field open rather than asking a
-            // reviewer to tap into it, because what is being reviewed is the
-            // collapsed bar and the expanded field together — a state that
-            // exists for about a second on the way in.
             // Where a save lands. The row is marked where its date puts it
             // rather than lifted to the top — a purchase's place in the
             // history is when it happened, not when it was saved.
             DesignState("just-saved", "Just after saving a capture") {
                 PurchasesShellView(
                     purchases: PurchasesFixtures.history, highlighted: "pur-tongli")
-            },
-            DesignState("searching-empty", "Searching, nothing typed") {
-                PurchasesShellView(purchases: PurchasesFixtures.history, searching: true)
-            },
-            DesignState("searching-merchant", "Searching a merchant") {
-                PurchasesShellView(
-                    purchases: PurchasesFixtures.history, query: "wool", searching: true)
-            },
-            // `drill` matches no merchant and one line, which is the case the
-            // whole item half of the search exists for.
-            DesignState("searching-item", "Searching a product") {
-                PurchasesShellView(
-                    purchases: PurchasesFixtures.history, query: "drill", searching: true)
-            },
-            DesignState("searching-tag", "Searching a tag") {
-                PurchasesShellView(
-                    purchases: PurchasesFixtures.history, query: "grocery", searching: true)
-            },
-            DesignState("searching-nothing", "Searching, no matches") {
-                PurchasesShellView(
-                    purchases: PurchasesFixtures.history, query: "zzzz", searching: true)
             },
             DesignState("empty", "No purchases yet") {
                 PurchasesShellView(purchases: [])
