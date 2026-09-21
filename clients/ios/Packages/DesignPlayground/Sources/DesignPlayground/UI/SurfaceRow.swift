@@ -15,6 +15,11 @@ internal struct SurfaceRow: View {
             Text(surface.title)
                 .font(.popsHeadline)
                 .foregroundStyle(Color.popsForeground)
+            // The route is what launch arguments, comments and review notes
+            // name a surface by, so the browser has to show it.
+            Text(surface.id.description)
+                .font(.popsCaption.monospaced())
+                .foregroundStyle(Color.popsMutedForeground)
             if let synopsis = surface.synopsis {
                 Text(synopsis)
                     .font(.popsSubheadline)
