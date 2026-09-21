@@ -190,6 +190,12 @@ export const ROUTES = [
   },
   {
     method: 'get',
+    path: '/analytics/month-summary',
+    handlerFile: 'pillars/purchases/src/api/rest/analytics-handlers.ts',
+    handlerKey: 'monthSummary',
+  },
+  {
+    method: 'get',
     path: '/items',
     handlerFile: 'pillars/purchases/src/api/rest/purchase-handlers.ts',
     handlerKey: 'itemsByTag',
@@ -419,7 +425,7 @@ export const CEREBRUM_ALLOWLIST = [];
 export const BFM_OPENAPI_REL_PATH = 'pillars/bfm/openapi/bfm.openapi.json';
 
 /**
- * Only 5 routes carry query fields today — below every other pillar's floor,
+ * Only 6 routes carry query fields today — below every other pillar's floor,
  * but bfm's mobile surface is deliberately thin (POPS-1369): a device-gated
  * passthrough onto finance/purchases/inventory, not a domain of its own. The
  * floor still catches a collapse to 0.
@@ -445,6 +451,12 @@ export const BFM_ROUTES = [
     path: '/mobile/purchases',
     handlerFile: 'pillars/bfm/src/api/rest/mobile-purchases-handlers.ts',
     handlerKey: 'listPurchases',
+  },
+  {
+    method: 'get',
+    path: '/mobile/purchases/summary',
+    handlerFile: 'pillars/bfm/src/api/rest/mobile-purchases-handlers.ts',
+    handlerKey: 'getMonthSummary',
   },
   {
     method: 'get',

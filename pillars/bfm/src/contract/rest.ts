@@ -65,6 +65,7 @@ import { MobileReceiptUploadBodySchema as MobileReceiptExtractBodySchema } from 
 import {
   HealthResponseSchema,
   MobileBootstrapResponseSchema,
+  MobileMonthSummarySchema,
   MobilePayloadTooLargeErrorSchema,
   MobilePurchaseDetailSchema,
   MobilePurchasesPageSchema,
@@ -101,6 +102,12 @@ const mobilePurchasesContract = c.router({
        * unmodified and must never construct one.
        */
       cursor: z.string().optional(),
+      /**
+       * bfm's own concept, not the purchases pillar's raw status vocabulary
+       * — mapped to the raw `awaiting_settlement`/`partial` pair in
+       * mobile-purchases-handlers.ts.
+       */
+      status: z.enum(['unsettled']).optional(),
     }),
     responses: {
       200: MobilePurchasesPageSchema,
@@ -109,6 +116,25 @@ const mobilePurchasesContract = c.router({
       ...MOBILE_UPSTREAM_RESPONSES,
     },
     summary: 'One cursor-paginated page of purchase list rows',
+    metadata: requires('purchases.read'),
+  },
+  // Declared ahead of `getPurchase` on purpose: both are GET at this depth,
+  // and a literal segment must be registered before the `:id` route it would
+  // otherwise be swallowed by.
+  getMonthSummary: {
+    method: 'GET',
+    path: '/mobile/purchases/summary',
+    query: z.object({
+      /** `YYYY-MM`, in the owner's timezone (`purchases` states which one). */
+      month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/u, 'month must be YYYY-MM'),
+    }),
+    responses: {
+      200: MobileMonthSummarySchema,
+      ...MOBILE_REQUEST_RESPONSES,
+      ...MOBILE_PERIMETER_RESPONSES,
+      ...MOBILE_UPSTREAM_RESPONSES,
+    },
+    summary: 'The home screen figures for one calendar month',
     metadata: requires('purchases.read'),
   },
   getPurchase: {

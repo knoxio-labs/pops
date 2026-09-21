@@ -39,6 +39,9 @@ export interface MobilePurchasesHandlerDeps {
  */
 const DEFAULT_PAGE_LIMIT = 25;
 
+/** bfm's own definition of "unsettled" for the mobile surface. */
+const UNSETTLED_STATUSES = ['awaiting_settlement', 'partial'] as const;
+
 export function makeMobilePurchasesHandlers(deps: MobilePurchasesHandlerDeps) {
   return {
     listPurchases: async ({ query }: Req['listPurchases']) => {
@@ -53,9 +56,11 @@ export function makeMobilePurchasesHandlers(deps: MobilePurchasesHandlerDeps) {
         };
       }
 
+      const statuses = query.status === 'unsettled' ? UNSETTLED_STATUSES : undefined;
       const outcome = await deps.purchases.listPurchases({
         limit: query.limit ?? DEFAULT_PAGE_LIMIT,
         cursor,
+        statuses,
       });
 
       // Not an empty page. An empty page says "you have bought nothing",
@@ -63,6 +68,13 @@ export function makeMobilePurchasesHandlers(deps: MobilePurchasesHandlerDeps) {
       // a 404 from purchases cannot escape as a status this route never
       // declared.
       if (!isGatewayOk(outcome)) return toCollectionUpstreamErrorResponse(outcome);
+
+      return { status: 200 as const, body: outcome.value };
+    },
+
+    getMonthSummary: async ({ query }: Req['getMonthSummary']) => {
+      const outcome = await deps.purchases.getMonthSummary(query.month);
+      if (!isGatewayOk(outcome)) return toUpstreamErrorResponse(outcome);
 
       return { status: 200 as const, body: outcome.value };
     },

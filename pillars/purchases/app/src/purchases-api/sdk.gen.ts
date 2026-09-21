@@ -7,6 +7,9 @@ import type {
   AnalyticsMerchantSpendData,
   AnalyticsMerchantSpendErrors,
   AnalyticsMerchantSpendResponses,
+  AnalyticsMonthSummaryData,
+  AnalyticsMonthSummaryErrors,
+  AnalyticsMonthSummaryResponses,
   AnalyticsProductLeaderboardData,
   AnalyticsProductLeaderboardErrors,
   AnalyticsProductLeaderboardResponses,
@@ -138,6 +141,18 @@ export const analyticsMerchantSpend = <ThrowOnError extends boolean = false>(
     AnalyticsMerchantSpendErrors,
     ThrowOnError
   >({ url: '/analytics/merchant-spend', ...options });
+
+/**
+ * The home screen figures for one calendar month, in the owner’s timezone
+ */
+export const analyticsMonthSummary = <ThrowOnError extends boolean = false>(
+  options: Options<AnalyticsMonthSummaryData, ThrowOnError>
+): RequestResult<AnalyticsMonthSummaryResponses, AnalyticsMonthSummaryErrors, ThrowOnError> =>
+  (options.client ?? client).get<
+    AnalyticsMonthSummaryResponses,
+    AnalyticsMonthSummaryErrors,
+    ThrowOnError
+  >({ url: '/analytics/month-summary', ...options });
 
 /**
  * Repeat purchases per product — cadence, unit-price history, and the identity basis each group was formed on

@@ -71,6 +71,7 @@ export interface PurchasesListCall {
   limit?: number;
   beforeOrderedAt?: string;
   beforeId?: string;
+  statuses?: string[];
 }
 
 export interface PurchasesReadFake {
@@ -96,6 +97,10 @@ function readListCall(input: unknown): PurchasesListCall {
         : undefined,
     beforeId:
       'beforeId' in input && typeof input.beforeId === 'string' ? input.beforeId : undefined,
+    statuses:
+      'statuses' in input && Array.isArray(input.statuses)
+        ? input.statuses.filter((s): s is string => typeof s === 'string')
+        : undefined,
   };
 }
 
@@ -148,16 +153,19 @@ export function createPurchasesReadFake(
   const list = (rawInput: unknown): Promise<CallResult<unknown>> => {
     const input = readListCall(rawInput);
     listCalls.push(input);
-    const ordered = [...rows].sort(compareRows);
+    const { beforeOrderedAt, beforeId, statuses } = input;
+    const scoped =
+      statuses !== undefined ? rows.filter((row) => statuses.includes(row.status)) : rows;
+    const ordered = scoped.toSorted(compareRows);
     const limit = input.limit ?? 100;
-    const { beforeOrderedAt, beforeId } = input;
     const afterAnchor =
       beforeOrderedAt !== undefined && beforeId !== undefined
         ? ordered.filter((row) => isPastAnchor(row, beforeOrderedAt, beforeId))
         : ordered;
+    const total = beforeOrderedAt === undefined ? afterAnchor.length : undefined;
     return Promise.resolve({
       kind: 'ok',
-      value: { items: afterAnchor.slice(0, limit) },
+      value: { items: afterAnchor.slice(0, limit), total },
     });
   };
 

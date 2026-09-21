@@ -6,19 +6,21 @@
  * this only widens the service layer's `readonly` arrays into the mutable
  * ones ts-rest's response types expect.
  */
-import { rankProductPurchases, rollUpMerchantSpend } from '../../db/index.js';
+import { monthSummary, rankProductPurchases, rollUpMerchantSpend } from '../../db/index.js';
 import { resolvePurchaseScope } from './purchase-scope.js';
 
 import type { z } from 'zod';
 
 import type {
   MerchantSpendQuerySchema,
+  MonthSummaryQuerySchema,
   ProductLeaderboardQuerySchema,
 } from '../../contract/rest-analytics.js';
 import type { PurchasesDb } from '../../db/index.js';
 
 type MerchantSpendQuery = z.infer<typeof MerchantSpendQuerySchema>;
 type ProductLeaderboardQuery = z.infer<typeof ProductLeaderboardQuerySchema>;
+type MonthSummaryQuery = z.infer<typeof MonthSummaryQuerySchema>;
 
 export function makeAnalyticsHandlers(db: PurchasesDb) {
   return {
@@ -55,6 +57,25 @@ export function makeAnalyticsHandlers(db: PurchasesDb) {
             merchants: entry.merchants.map((merchant) => ({ ...merchant })),
           })),
           coverage: { ...leaderboard.coverage },
+        },
+      };
+    },
+
+    monthSummary: async ({ query }: { query: MonthSummaryQuery }) => {
+      const summary = monthSummary(db, query.month);
+
+      return {
+        status: 200 as const,
+        body: {
+          month: summary.month,
+          totals: summary.totals.map((entry) => ({ ...entry })),
+          purchaseCount: summary.purchaseCount,
+          previousMonthTotals:
+            summary.previousMonthTotals === null
+              ? null
+              : summary.previousMonthTotals.map((entry) => ({ ...entry })),
+          unmatchedCount: summary.unmatchedCount,
+          merchantLeaders: summary.merchantLeaders.map((entry) => ({ ...entry })),
         },
       };
     },

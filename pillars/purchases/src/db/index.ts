@@ -34,6 +34,8 @@ export {
   type PurchaseScopeFilter,
 } from './services/purchase-reads.js';
 
+export { countPurchases } from './services/purchase-count.js';
+
 export {
   listItemsByTag,
   type TaggedItem,
@@ -63,6 +65,14 @@ export {
   type MerchantSpend,
   type MerchantSpendRollup,
 } from './services/merchant-spend.js';
+
+export {
+  monthSummary,
+  type MonthMerchantLeader,
+  type MonthSummary,
+} from './services/month-summary.js';
+
+export { monthBounds, previousMonthKey, type MonthBounds } from './services/month-window.js';
 
 export {
   identifyProduct,

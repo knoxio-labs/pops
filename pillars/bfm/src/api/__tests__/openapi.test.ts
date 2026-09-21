@@ -152,6 +152,7 @@ describe('GET /openapi', () => {
       '/mobile/purchases/receipts/extract',
       '/mobile/purchases/receipts/{sha256}',
       '/mobile/purchases/receipts/{sha256}/thumbnail',
+      '/mobile/purchases/summary',
       '/mobile/purchases/{id}',
     ]);
   });

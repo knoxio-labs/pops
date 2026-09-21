@@ -60,6 +60,9 @@ import type {
   MobilePurchasesExtractReceiptData,
   MobilePurchasesExtractReceiptErrors,
   MobilePurchasesExtractReceiptResponses,
+  MobilePurchasesGetMonthSummaryData,
+  MobilePurchasesGetMonthSummaryErrors,
+  MobilePurchasesGetMonthSummaryResponses,
   MobilePurchasesGetPurchaseData,
   MobilePurchasesGetPurchaseErrors,
   MobilePurchasesGetPurchaseResponses,
@@ -472,6 +475,22 @@ export const mobilePurchasesGetReceiptThumbnail = <ThrowOnError extends boolean 
     MobilePurchasesGetReceiptThumbnailErrors,
     ThrowOnError
   >({ url: '/mobile/purchases/receipts/{sha256}/thumbnail', ...options });
+
+/**
+ * The home screen figures for one calendar month
+ */
+export const mobilePurchasesGetMonthSummary = <ThrowOnError extends boolean = false>(
+  options: Options<MobilePurchasesGetMonthSummaryData, ThrowOnError>
+): RequestResult<
+  MobilePurchasesGetMonthSummaryResponses,
+  MobilePurchasesGetMonthSummaryErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    MobilePurchasesGetMonthSummaryResponses,
+    MobilePurchasesGetMonthSummaryErrors,
+    ThrowOnError
+  >({ url: '/mobile/purchases/summary', ...options });
 
 /**
  * The fuller record behind one list row, with its lines
