@@ -7,7 +7,8 @@ internal enum UniversalSearchSurfaces {
     internal static let root = DesignSurface(
         id: rootID,
         title: "Search",
-        synopsis: "One search tab: a scope chip per migrated pillar, each answering in its own section.",
+        synopsis:
+            "One search tab: a scope chip per migrated pillar, each answering in its own section.",
         chrome: .bare,
         states: [
             state("recents", "Recents", UniversalSearchStage()),

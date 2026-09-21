@@ -42,7 +42,8 @@ internal struct InventoryDestinationView: View {
             InventoryItemsBrowserView(registersDestinations: false)
         case .search:
             UniversalSearchScreen(
-                stage: UniversalSearchStage(scope: .pillar(.inventory)), registersDestinations: false)
+                stage: UniversalSearchStage(scope: .pillar(.inventory)),
+                registersDestinations: false)
         case .containers:
             InventoryContainerBrowserView(profiles: InventoryContainerFixtures.all)
         case .locations:

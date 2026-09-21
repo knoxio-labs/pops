@@ -11,7 +11,7 @@ internal enum SearchRoute: Hashable {
 /// A purchases hit in Inventory's row idiom: mark, highlighted name over one
 /// detail line, the amount, the chevron. A purchase leads with its merchant's
 /// mark; a line leads with the barcode glyph and names the order it is on.
-/// What matched, when it is not the name, shows as a badge, the way
+/// What matched, when it is not the name, shows on a line of its own, the way
 /// Inventory shows a matched code.
 internal struct PurchaseSearchRow: View {
     internal let hit: PurchaseSearchHit
@@ -24,13 +24,14 @@ internal struct PurchaseSearchRow: View {
                 mark
                 VStack(alignment: .leading, spacing: PopsSpacing.xs) {
                     InventoryHighlightedName(
-                        name: hit.name.isEmpty ? PurchasesPresentation.merchant(hit.order) : hit.name,
+                        name: hit.name.isEmpty
+                            ? PurchasesPresentation.merchant(hit.order) : hit.name,
                         query: query)
                     Text(detail)
                         .font(.popsCaption)
                         .foregroundStyle(Color.popsMutedForeground)
                         .fixedSize(horizontal: false, vertical: true)
-                    badge
+                    matchLine
                 }
                 Spacer(minLength: PopsSpacing.sm)
                 Text(amount.formatted())
@@ -77,38 +78,35 @@ internal struct PurchaseSearchRow: View {
         }
     }
 
-    @ViewBuilder private var badge: some View {
+    @ViewBuilder private var matchLine: some View {
         switch hit {
         case .purchase(_, let printed?):
-            PurchaseMatchBadge(symbol: "receipt", text: printed, query: query)
+            PurchaseMatchLine(symbol: "receipt", text: printed, query: query)
         case .line(_, _, let tag?):
-            PurchaseMatchBadge(symbol: "tag", text: tag, query: query)
+            PurchaseMatchLine(symbol: "tag", text: tag, query: query)
         case .purchase, .line:
             EmptyView()
         }
     }
 }
 
-/// The wording a hit matched on when it is not the row's name: the till's
+/// The wording a hit matched on when it is not the row's name, the till's
 /// merchant line, or a tag, with the query highlighted in it.
-private struct PurchaseMatchBadge: View {
+private struct PurchaseMatchLine: View {
     let symbol: String
     let text: String
     let query: String
     @Environment(\.inventoryAccent) private var accent
 
     var body: some View {
-        HStack(spacing: PopsSpacing.xs) {
+        HStack(alignment: .firstTextBaseline, spacing: PopsSpacing.xs) {
             Image(systemName: symbol)
                 .font(.popsCaption)
                 .foregroundStyle(Color.popsMutedForeground)
             Text(highlighted)
                 .font(.popsCaption)
-                .lineLimit(1)
+                .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(.horizontal, PopsSpacing.sm)
-        .padding(.vertical, PopsSpacing.xs)
-        .background(Color.popsMutedForeground.opacity(0.12), in: .capsule)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Matched \(text)")
     }

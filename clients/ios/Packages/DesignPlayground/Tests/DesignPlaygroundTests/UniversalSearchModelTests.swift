@@ -5,11 +5,18 @@ import Testing
 @Suite("Universal search")
 @MainActor
 internal struct UniversalSearchModelTests {
-    private func results(_ section: SearchSection?) -> (rows: Int, total: Int, query: String, refining: Bool)? {
+    private struct Shown {
+        let rows: Int
+        let total: Int
+        let query: String
+        let refining: Bool
+    }
+
+    private func results(_ section: SearchSection?) -> Shown? {
         guard case .results(let rows, let total, let query, let refining) = section?.content else {
             return nil
         }
-        return (rows.count, total, query, refining)
+        return Shown(rows: rows.count, total: total, query: query, refining: refining)
     }
 
     private func section(_ model: UniversalSearchModel, _ pillar: SearchPillar) -> SearchSection? {
@@ -86,7 +93,8 @@ internal struct UniversalSearchModelTests {
         #expect(empty.chipStatus(for: .inventory) == .none)
         #expect(empty.chipStatus(for: .purchases) == .offline)
 
-        let asking = UniversalSearchModel(query: "tool", answers: [.purchases: .pending(previous: nil)])
+        let asking = UniversalSearchModel(
+            query: "tool", answers: [.purchases: .pending(previous: nil)])
         #expect(asking.chipStatus(for: .purchases) == .pending)
     }
 

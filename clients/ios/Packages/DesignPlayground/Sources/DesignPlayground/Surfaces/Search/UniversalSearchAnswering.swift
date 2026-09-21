@@ -14,13 +14,16 @@ extension UniversalSearchScreen {
             case .offline, .notOnPhone:
                 continue
             case .current:
-                answers[pillar] = isEmpty || pillar.answersOnDevice
+                answers[pillar] =
+                    isEmpty || pillar.answersOnDevice
                     ? .current : .pending(previous: previous)
             case .pending(let earlier):
-                answers[pillar] = isEmpty || pillar.answersOnDevice
+                answers[pillar] =
+                    isEmpty || pillar.answersOnDevice
                     ? .current : .pending(previous: earlier)
             case .failed:
-                answers[pillar] = isEmpty || pillar.answersOnDevice
+                answers[pillar] =
+                    isEmpty || pillar.answersOnDevice
                     ? .current : .pending(previous: nil)
             }
         }

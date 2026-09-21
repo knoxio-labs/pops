@@ -14,7 +14,9 @@ internal struct SearchScopeBar: View {
         ScrollView(.horizontal) {
             PlaygroundGlassGroup(spacing: PopsSpacing.sm) {
                 HStack(spacing: PopsSpacing.sm) {
-                    SearchScopeChip(title: "All", symbol: nil, status: .none, isSelected: scope == .all) {
+                    SearchScopeChip(
+                        title: "All", symbol: nil, status: .none, isSelected: scope == .all
+                    ) {
                         scope = .all
                     }
                     ForEach(SearchPillar.allCases) { pillar in
@@ -28,6 +30,7 @@ internal struct SearchScopeBar: View {
                 }
             }
         }
+        .scrollClipDisabled()
         .scrollIndicators(.hidden)
         .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
         .inventoryMotion(value: scope)
@@ -40,7 +43,8 @@ private struct SearchScopeChip: View {
     let status: SearchChipStatus
     let isSelected: Bool
     let action: () -> Void
-    @ScaledMetric(relativeTo: .subheadline) private var height = PopsSize.touchTarget - PopsSpacing.sm
+    @ScaledMetric(relativeTo: .subheadline) private var height =
+        PopsSize.touchTarget - PopsSpacing.sm
 
     private var ink: Color { isSelected ? Color.popsBackground : Color.popsForeground }
 
@@ -73,7 +77,6 @@ private struct SearchScopeChip: View {
 private struct SearchChipStatusView: View {
     let status: SearchChipStatus
     let isSelected: Bool
-    @ScaledMetric(relativeTo: .caption) private var pendingWidth = PopsSpacing.lg
 
     var body: some View {
         switch status {
@@ -86,10 +89,7 @@ private struct SearchChipStatusView: View {
                 .opacity(0.7)
                 .contentTransition(.numericText(value: Double(count)))
         case .pending:
-            Capsule()
-                .fill(Color.popsMutedForeground.opacity(0.3))
-                .frame(width: pendingWidth, height: PopsSpacing.sm)
-                .popsShimmer()
+            SearchCountShimmer()
         case .failed:
             glyph("exclamationmark.triangle.fill", tone: .popsWarning)
         case .offline:
@@ -103,6 +103,19 @@ private struct SearchChipStatusView: View {
         Image(systemName: name)
             .font(.popsCaption.weight(.semibold))
             .foregroundStyle(isSelected ? Color.popsBackground : tone)
+    }
+}
+
+/// Where a count will be once a pillar answers: a short bar that shimmers.
+internal struct SearchCountShimmer: View {
+    @ScaledMetric(relativeTo: .caption) private var width = PopsSpacing.lg
+
+    internal var body: some View {
+        Capsule()
+            .fill(Color.popsMutedForeground.opacity(0.3))
+            .frame(width: width, height: PopsSpacing.sm)
+            .popsShimmer()
+            .accessibilityLabel("Searching")
     }
 }
 

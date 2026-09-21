@@ -64,7 +64,8 @@ internal struct PurchasesSearchEngineTests {
     @Test("a line whose order is not in the answer is dropped")
     func orphanLine() {
         let stray = line("stray", "missing", "OZITO DRILL")
-        #expect(PurchasesSearchEngine.search("drill", purchases: [bunnings], lines: [stray]).isEmpty)
+        #expect(
+            PurchasesSearchEngine.search("drill", purchases: [bunnings], lines: [stray]).isEmpty)
     }
 
     @Test("a name starting with the query ranks above one containing it, then other facets")
@@ -104,7 +105,8 @@ internal struct PurchasesSearchEngineTests {
 
     @Test("a till's multi-line name reads as one line")
     func oneLine() {
-        #expect(PurchasesSearchEngine.oneLine("YUA001\n Home Decor \nPrice: open")
-            == "YUA001 · Home Decor · Price: open")
+        #expect(
+            PurchasesSearchEngine.oneLine("YUA001\n Home Decor \nPrice: open")
+                == "YUA001 · Home Decor · Price: open")
     }
 }

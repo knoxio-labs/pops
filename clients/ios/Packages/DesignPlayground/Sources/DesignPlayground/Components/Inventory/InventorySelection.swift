@@ -315,13 +315,3 @@ extension ToolbarContent {
         #endif
     }
 }
-
-/// A selected row's tint, drawn as a view because the preference closure
-/// that places it cannot read the environment itself.
-private struct InventorySelectionFill: View {
-    @Environment(\.inventoryAccent) private var accent
-
-    var body: some View {
-        Rectangle().fill(accent.opacity(0.14))
-    }
-}

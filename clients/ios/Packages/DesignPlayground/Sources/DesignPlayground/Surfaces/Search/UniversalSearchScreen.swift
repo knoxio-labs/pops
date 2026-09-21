@@ -90,7 +90,8 @@ internal struct UniversalSearchScreen: View {
         .environment(\.inventoryAccent, .popsAccent)
         .tint(.popsAccent)
         .inventoryRecordSelectionBar(
-            $edits, selection: $selection, all: selectableIDs, moving: $moving, offer: $offer)
+            $edits, selection: $selection, all: selectableIDs, moving: $moving, offer: $offer
+        )
         .inventoryRecordActions($edits, selection: $selection, moving: $moving, offer: $offer)
     }
 

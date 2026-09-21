@@ -32,8 +32,9 @@ internal struct SearchSectionView: View {
 
     @ViewBuilder private var header: some View {
         if isScoped {
-            if case .results(_, let total, _, _) = section.content {
-                InventoryLocationSectionHeader(title: "Results", trailing: "\(total)")
+            if case .results(_, let total, _, let isRefining) = section.content {
+                InventoryLocationSectionHeader(
+                    title: "Results", trailing: isRefining ? nil : "\(total)")
             }
         } else {
             SearchPillarHeader(pillar: section.pillar, content: section.content) {
@@ -68,7 +69,8 @@ internal struct SearchSectionView: View {
                 symbol: section.pillar.symbol, tone: .popsMutedForeground,
                 text: "Not on this phone yet",
                 action: SearchStatusAction(
-                    symbol: InventorySymbol.update.system, label: "Download", perform: actions.download))
+                    symbol: InventorySymbol.update.system, label: "Download",
+                    perform: actions.download))
         }
     }
 
@@ -103,8 +105,10 @@ private struct SearchPillarHeader: View {
     }
 
     @ViewBuilder private var trailing: some View {
-        if case .results(let rows, let total, _, _) = content {
-            if total > rows.count {
+        if case .results(let rows, let total, _, let isRefining) = content {
+            if isRefining {
+                SearchCountShimmer()
+            } else if total > rows.count {
                 Button(action: showAll) {
                     HStack(spacing: PopsSpacing.xs) {
                         Text("\(total)")

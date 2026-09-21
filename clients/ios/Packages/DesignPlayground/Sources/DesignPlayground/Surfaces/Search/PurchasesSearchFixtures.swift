@@ -46,8 +46,11 @@ internal enum PurchasesSearchFixtures {
         status: .linked)
 
     internal static let items: [PurchaseItemHit] = [
-        line("itm-drill", "pur-bunnings", "OZITO 18V CORDLESS DRILL DRIVER KIT", 1, 9_900, ["tool"]),
-        line("itm-screws", "pur-bunnings", "BUGLE BATTEN SCREW 14G X 75MM 25PK", 2, 2_850, ["hardware"]),
+        line(
+            "itm-drill", "pur-bunnings", "OZITO 18V CORDLESS DRILL DRIVER KIT", 1, 9_900, ["tool"]),
+        line(
+            "itm-screws", "pur-bunnings", "BUGLE BATTEN SCREW 14G X 75MM 25PK", 2, 2_850,
+            ["hardware"]),
         line("itm-drops", "pur-salvos", "3129-1-PP\nC&H Fruits Drops*", 1, 500),
         line(
             "itm-decor", "pur-salvos",
@@ -55,7 +58,9 @@ internal enum PurchasesSearchFixtures {
         line("itm-bag", "pur-salvos", "3000-1-PP\nReusable Bag Regular*\nSIZE: Regular", 1, 100),
         line("itm-milk", "pur-woolworths", "WW FULL CREAM MILK 2L", 2, 672, ["grocery", "dairy"]),
         line("itm-eggs", "pur-woolworths", "WOOLWORTHS FREE RANGE EGGS 12PK", 1, 750, ["grocery"]),
-        line("itm-berries", "pur-woolworths", "DRISCOLLS BLUEBERRIES 125G", 1, 550, ["grocery", "fruit"]),
+        line(
+            "itm-berries", "pur-woolworths", "DRISCOLLS BLUEBERRIES 125G", 1, 550,
+            ["grocery", "fruit"]),
         line("itm-noodles", "pur-tongli", "SHOU DAO HAND PULLED NOODLE 1KG", 1, 890, ["grocery"]),
         line("itm-sauce", "pur-tongli", "LEE KUM KEE CHIU CHOW CHILLI OIL", 1, 680, ["grocery"]),
         line("itm-lamp", "pur-kmart", "ANKO LED DESK LAMP", 1, 1_500, ["lighting"]),
