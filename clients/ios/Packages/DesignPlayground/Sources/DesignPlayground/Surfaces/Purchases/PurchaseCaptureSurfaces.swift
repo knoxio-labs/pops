@@ -1,17 +1,17 @@
 import AppCore
+import DesignSystem
 import Foundation
 
 /// The capture flow, from what was picked to what was read.
 ///
-/// The flow decided on 2026-09-12: the capture control offers four inputs —
-/// the camera, the photo library, a file, and nothing at all — and every one
+/// The flow decided on 2026-09-12: the capture control offers four inputs,
+/// the camera, the photo library, a file, and nothing at all, and every one
 /// of them lands on the same pre-filled form, which is saved, and the save is
 /// what ingests. The camera and the two pickers are system UI and are not
 /// designed here; what is designed is what happens either side of them.
 ///
-/// The form itself is not restaged. `receipts/draft` already reviews it, and
-/// POPS-2455 was cancelled precisely so there would be one form rather than a
-/// receipt-filled one and a manual one that drift apart.
+/// Staging, reading and review are one sheet over the purchase history, each
+/// pushed onto the last, and each commits from its navigation bar.
 @MainActor
 internal enum PurchaseCaptureSurfaces {
     internal static let surfaces: [DesignSurface] = [
@@ -28,6 +28,17 @@ internal enum PurchaseCaptureSurfaces {
             bytes: media == .pdf || media == .plainText ? nil : paper(index)
         )
     }
+
+    internal static let pageRatio: CGFloat = PopsSize.pageHeight / PopsSize.pageWidth
+
+    /// What a staged receipt reads back as when staging's Read is pressed in
+    /// the playground, in turn.
+    internal static let readOutcomes: [ReceiptReading.Outcome] = [
+        .read(merchant: "Bunnings", total: Fixtures.money(15_600), lines: 7),
+        .read(merchant: "Woolworths", total: Fixtures.money(11_847), lines: 23),
+        .read(merchant: "Monster Sushi", total: Fixtures.money(1_609), lines: 1),
+        .unreadable(reason: "No total on the page."),
+    ]
 
     private static let sheets: [Data] =
         ReceiptPlaygroundPaper
@@ -47,8 +58,14 @@ internal enum PurchaseCaptureSurfaces {
         title: "Staging",
         synopsis:
             "What was picked, as a grid. Drag one onto another to make them one receipt.",
-        chrome: .navigation,
-        states: [
+        chrome: .sheet,
+        sheetDetents: .large,
+        states: stagingStates,
+        backdrop: { PurchaseCaptureBackdrop() }
+    )
+
+    private static var stagingStates: [DesignState] {
+        [
             DesignState.standard {
                 PurchaseStagingGrid(receipts: [
                     receipt("r1", [page(0, "IMG_4821.HEIC")]),
@@ -60,8 +77,8 @@ internal enum PurchaseCaptureSurfaces {
             DesignState("single", "One photograph") {
                 PurchaseStagingGrid(receipts: [receipt("r1", [page(0, "IMG_4821.HEIC")])])
             },
-            // What the camera produces: a scan is already one receipt, so this
-            // is the state a person reaches without ever touching Combine.
+            // What the camera produces: a scan arrives already grouped, so
+            // this is the state a person reaches without dragging anything.
             DesignState("scan", "A three-page scan") {
                 PurchaseStagingGrid(receipts: [
                     receipt(
@@ -85,15 +102,26 @@ internal enum PurchaseCaptureSurfaces {
                     receipt("r3", [page(2, "order-confirmation.txt", media: .plainText)]),
                 ])
             },
+            // Every page deleted in the viewer: Read holds, and the Add tile
+            // is the whole of the loose area.
+            DesignState("empty", "Everything removed") {
+                PurchaseStagingGrid(receipts: [])
+            },
         ]
-    )
+    }
 
     static let reading = DesignSurface(
         id: SurfaceID(area: "purchases", slug: "reading"),
         title: "Reading",
         synopsis: "Each staged receipt reporting what the model made of it, as it lands.",
-        chrome: .navigation,
-        states: [
+        chrome: .sheet,
+        sheetDetents: .large,
+        states: readingStates,
+        backdrop: { PurchaseCaptureBackdrop() }
+    )
+
+    private static var readingStates: [DesignState] {
+        [
             // The state the screen exists for: some done, one in flight, one
             // still waiting, and a result already readable on the finished
             // rows.
@@ -110,6 +138,21 @@ internal enum PurchaseCaptureSurfaces {
                     reading("k3", [page(2, "IMG_4823.HEIC")], .reading),
                     reading("k4", [page(3, "IMG_4824.HEIC")], .queued),
                 ])
+            },
+            // The same batch, landing one beat at a time, so the rows can be
+            // watched arriving and Review enabling when the last one does.
+            DesignState("live", "Landing as it reads") {
+                PurchaseProcessingSurface(
+                    readings: [
+                        reading("k1", [page(0, "IMG_4821.HEIC")], .reading),
+                        reading("k2", [page(1, "IMG_4822.HEIC")], .queued),
+                        reading("k3", [page(2, "IMG_4823.HEIC")], .queued),
+                        reading("k4", [page(3, "IMG_4824.HEIC")], .queued),
+                    ],
+                    landing: [
+                        "k1": readOutcomes[0], "k2": readOutcomes[1], "k3": readOutcomes[3],
+                        "k4": readOutcomes[2],
+                    ])
             },
             DesignState("single", "One receipt, in flight") {
                 PurchaseProcessingSurface(readings: [
@@ -138,7 +181,7 @@ internal enum PurchaseCaptureSurfaces {
                     reading(
                         "k2", [page(1, "IMG_4822.HEIC")],
                         .unreadable(
-                            reason: "The total could not be found on the page.")),
+                            reason: "No total on the page.")),
                     reading(
                         "k3", [page(2, "IMG_4823.HEIC")],
                         .read(
@@ -166,15 +209,15 @@ internal enum PurchaseCaptureSurfaces {
                     reading(
                         "k1", [page(0, "IMG_4821.HEIC")],
                         .unreadable(
-                            reason: "The page is too blurred to read.")),
+                            reason: "Too blurred to read.")),
                     reading(
                         "k2", [page(1, "IMG_4822.HEIC")],
                         .unreadable(
-                            reason: "The total could not be found on the page.")),
+                            reason: "No total on the page.")),
                 ])
             },
         ]
-    )
+    }
 
     private static func reading(
         _ id: String, _ pages: [StagedPage], _ outcome: ReceiptReading.Outcome

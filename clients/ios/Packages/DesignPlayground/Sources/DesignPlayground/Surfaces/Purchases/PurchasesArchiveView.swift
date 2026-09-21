@@ -2,38 +2,33 @@ import AppCore
 import DesignSystem
 import SwiftUI
 
-/// Every purchase, by month: what `All N purchases` opens, and what the
-/// unmatched strip opens with the scope already set.
+/// Every purchase, by month: what the home's All tile opens, and what its
+/// Unmatched tile opens with the scope already set.
 ///
 /// ## One screen, two ways in
 ///
-/// The unmatched strip and `All N` lead to one list at two scopes, not to two
-/// screens. `Inbox` was the unmatched purchases on a screen of their own, with
-/// the two answers as buttons, and it was rejected because bfm proxies no
-/// reconcile route: there is nothing for those buttons to do. A screen of
-/// unmatched rows that cannot act on them is this list filtered, so that is
-/// what it is. The day reconcile reaches the phone, the unmatched scope is
-/// where its actions go.
+/// Both tiles lead to one list at two scopes, not to two screens. `Inbox` was
+/// the unmatched purchases on a screen of their own, with the two answers as
+/// buttons, and it was rejected because bfm proxies no reconcile route: there
+/// is nothing for those buttons to do. The day reconcile reaches the phone,
+/// the unmatched scope is where its actions go.
 ///
 /// ## It pages, and the bottom is where that is said
 ///
-/// Loading, a failure with a retry, or the end. Only the failure is drawn as
-/// an error, because it is the only one that is.
+/// Shimmering rows while the next page loads, a failure with a retry, or the
+/// end. Only the failure is drawn as an error, because it is the only one
+/// that is.
 ///
-/// ## Ledger's structure, the digest's material
+/// ## Ledger's structure, the home's rows
 ///
-/// `Ledger` answered the archive well and lost the home because it said
-/// nothing about the tab's other three jobs. This is that answer where it
-/// belongs: one run, newest first, cut by month under a pinned header. The
-/// headers and containers are glass so the push from the digest does not
-/// arrive somewhere flatter than where it left.
+/// One run, newest first, cut by month under a pinned, flat header carrying
+/// the month's total. The rows and their panels are the home's, which are
+/// Inventory's, so a purchase reads the same wherever it is found.
 internal struct PurchasesArchiveView: View {
     internal let loaded: [Purchase]
 
     @State private var paging: ArchivePaging
     @State private var scope: ArchiveScope
-
-    private let markSize: CGFloat = 34
 
     internal init(
         loaded: [Purchase], paging: ArchivePaging = .loading, scope: ArchiveScope = .all
@@ -52,17 +47,34 @@ internal struct PurchasesArchiveView: View {
             LazyVStack(
                 alignment: .leading, spacing: PopsSpacing.lg, pinnedViews: [.sectionHeaders]
             ) {
-                if months.isEmpty { nothingInScope }
+                if loaded.isEmpty && paging == .loading {
+                    PurchasesArchiveSkeleton(rows: 6)
+                } else if months.isEmpty && paging == .end {
+                    nothingInScope
+                }
                 ForEach(months) { month in
                     Section {
-                        rows(month.purchases)
+                        PurchaseRowsPanel(rows: month.purchases) { purchase in
+                            NavigationLink {
+                                PurchaseDetailSurface(
+                                    detail: PurchaseDetailSurfaces.sample(for: purchase))
+                            } label: {
+                                PurchaseRowLabel(
+                                    purchase: purchase,
+                                    badge: PurchasesArchive.showsBadge(purchase, in: scope))
+                            }
+                            .buttonStyle(.plain)
+                        }
                     } header: {
                         header(month)
                     }
                 }
-                footer
+                if !loaded.isEmpty && !(months.isEmpty && paging == .end) { footer }
             }
-            .padding(PopsSpacing.lg)
+            .inventoryMotion(value: scope)
+            .inventoryMotion(value: paging)
+            .padding(.horizontal, PopsSpacing.lg)
+            .padding(.bottom, PopsSpacing.xl)
         }
         .background(Color.popsBackground)
         .navigationTitle(scope == .all ? "All purchases" : "Unmatched")
@@ -84,21 +96,16 @@ internal struct PurchasesArchiveView: View {
         .fixedSize()
     }
 
+    /// Inventory's section label, flat and muted, on the page's own ground so
+    /// rows scrolling under a pinned header do not show through it.
     private func header(_ month: ArchiveMonth) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: PopsSpacing.sm) {
-            Text(PurchasesPresentation.month(month.month).uppercased())
-                .font(.popsSectionLabel)
-                .foregroundStyle(Color.popsMutedForeground)
-            Spacer(minLength: PopsSpacing.sm)
-            Text(total(month))
-                .font(.popsCaption)
-                .monospacedDigit()
-                .foregroundStyle(Color.popsForeground)
-                .lineLimit(1)
-        }
-        .padding(.horizontal, PopsSpacing.md)
+        InventoryLocationSectionHeader(
+            title: PurchasesPresentation.month(month.month).uppercased(),
+            trailing: total(month)
+        )
         .padding(.vertical, PopsSpacing.sm)
-        .playgroundGlass(in: Capsule())
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.popsBackground)
     }
 
     /// Every currency the month holds, side by side and never added together.
@@ -108,90 +115,50 @@ internal struct PurchasesArchiveView: View {
         return month.isIncomplete ? "\(joined) so far" : joined
     }
 
-    private func rows(_ purchases: [Purchase]) -> some View {
-        VStack(spacing: PopsSpacing.zero) {
-            ForEach(purchases) { purchase in
-                NavigationLink {
-                    PurchaseDetailSurface(detail: PurchaseDetailSurfaces.sample(for: purchase))
-                } label: {
-                    row(purchase)
-                }
-                .buttonStyle(.plain)
-                if purchase.id != purchases.last?.id {
-                    PopsDivider()
-                        .padding(.leading, markSize + PopsSpacing.md)
-                }
-            }
-        }
-        .padding(.horizontal, PopsSpacing.md)
-        .playgroundGlass(in: RoundedRectangle(cornerRadius: PopsRadius.card))
-    }
-
-    private func row(_ purchase: Purchase) -> some View {
-        HStack(spacing: PopsSpacing.md) {
-            PurchaseMark(purchase: purchase, size: markSize)
-            VStack(alignment: .leading, spacing: PopsSpacing.xs) {
-                Text(PurchasesPresentation.merchant(purchase))
-                    .font(.popsSubheadline)
-                    .foregroundStyle(
-                        PurchasesPresentation.isUnattributed(purchase)
-                            ? Color.popsMutedForeground : Color.popsForeground
-                    )
-                    .lineLimit(2)
-                HStack(spacing: PopsSpacing.sm) {
-                    Text(PurchasesPresentation.day(purchase))
-                        .font(.popsCaption)
-                        .foregroundStyle(Color.popsMutedForeground)
-                    if PurchasesArchive.showsBadge(purchase, in: scope) {
-                        PurchaseStatusBadge(status: purchase.status)
-                    }
-                }
-            }
-            Spacer(minLength: PopsSpacing.sm)
-            Text(purchase.total.formatted())
-                .font(.popsSubheadline)
-                .monospacedDigit()
-                .foregroundStyle(Color.popsForeground)
-                .lineLimit(1)
-                .layoutPriority(1)
-        }
-        .padding(.vertical, PopsSpacing.md)
-        .contentShape(.rect)
-    }
-
     private var nothingInScope: some View {
-        Text(scope == .all ? "No purchases yet" : "Nothing unmatched")
-            .font(.popsSubheadline)
-            .foregroundStyle(Color.popsMutedForeground)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, PopsSpacing.xl)
+        Group {
+            if scope == .all {
+                ContentUnavailableView(
+                    "No purchases", systemImage: "receipt",
+                    description: Text("Receipts you capture land here."))
+            } else {
+                ContentUnavailableView {
+                    Label {
+                        Text("Nothing unmatched")
+                    } icon: {
+                        Image(systemName: "checkmark.seal")
+                            .foregroundStyle(Color.popsSuccess)
+                    }
+                } description: {
+                    Text("Every purchase is matched in finance.")
+                }
+            }
+        }
+        .containerRelativeFrame(.vertical, alignment: .center) { length, _ in length * 0.8 }
+        .transition(.opacity)
     }
 
     @ViewBuilder private var footer: some View {
         switch paging {
         case .loading:
-            HStack(spacing: PopsSpacing.sm) {
-                ProgressView()
-                Text("Loading earlier purchases")
-                    .font(.popsCaption)
-                    .foregroundStyle(Color.popsMutedForeground)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, PopsSpacing.md)
+            PurchasesArchiveSkeleton(rows: 2)
+                .accessibilityLabel("Loading earlier purchases")
         case .failed:
             VStack(spacing: PopsSpacing.sm) {
                 Label(
                     "Couldn't load earlier purchases",
                     systemImage: "exclamationmark.triangle.fill"
                 )
-                .font(.popsCaption)
+                .font(.popsSubheadline)
                 .foregroundStyle(Color.popsDestructive)
                 Button("Try again") { paging = .loading }
-                    .font(.popsSubheadline)
+                    .font(.popsHeadline)
                     .playgroundGlassButton()
+                    .tint(.popsPurchases)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, PopsSpacing.md)
+            .transition(.opacity)
         case .end:
             if let oldest = PurchasesPresentation.byMonth(loaded).last?.month {
                 Text("Everything since \(PurchasesPresentation.month(oldest))")
@@ -201,5 +168,35 @@ internal struct PurchasesArchiveView: View {
                     .padding(.vertical, PopsSpacing.md)
             }
         }
+    }
+}
+
+/// Rows of the archive before they arrive: a month header and its rows as
+/// blank shapes, shimmering. Stands in for the first page and, shorter, for
+/// the next one at the bottom of the list.
+internal struct PurchasesArchiveSkeleton: View {
+    internal let rows: Int
+    @ScaledMetric(relativeTo: .body) private var rowHeight = PopsSize.touchTarget
+    @ScaledMetric(relativeTo: .body) private var headerHeight = PopsSpacing.md
+
+    internal var body: some View {
+        VStack(spacing: PopsSpacing.sm) {
+            if rows > 2 {
+                Capsule()
+                    .fill(Color.popsSurface)
+                    .frame(width: PopsSize.touchTarget * 2, height: headerHeight)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, PopsSpacing.md)
+            }
+            ForEach(0..<rows, id: \.self) { _ in
+                RoundedRectangle(cornerRadius: PopsRadius.control, style: .continuous)
+                    .fill(Color.popsSurface)
+                    .frame(height: rowHeight)
+            }
+        }
+        .popsShimmer()
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Loading purchases")
+        .transition(.opacity)
     }
 }

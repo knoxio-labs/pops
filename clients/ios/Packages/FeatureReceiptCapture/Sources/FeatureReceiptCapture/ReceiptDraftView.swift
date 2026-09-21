@@ -29,8 +29,10 @@ import SwiftUI
 /// survives it; building a confirm-before-save flow that squeezed inside the
 /// current rule is the shape that would have to be thrown away.
 public struct ReceiptDraftView: View {
-    @State private var draft: ReceiptDraft
+    @State private var ownDraft: ReceiptDraft
+    private let hostDraft: Binding<ReceiptDraft>?
 
+    private let opened: ReceiptDraft
     private let title: String?
     private let subtitle: String?
     private let status: Status?
@@ -39,48 +41,32 @@ public struct ReceiptDraftView: View {
     private let merchants: [ReceiptMerchantChoice]
     private let secondaryAction: SecondaryAction?
     private let addAnother: AddAnother?
+    private let lock: ReceiptDraftLock?
+    private let commit: ReceiptDraftCommit
+    private let onChange: ((ReceiptDraft) -> Void)?
     private let isSaving: Bool
     private let save: ((ReceiptDraft) -> Void)?
 
-    /// - Parameters:
-    ///   - draft: pre-filled, and live from the first frame. There is no
-    ///     second state in which it becomes editable.
-    ///   - title: the screen's own name, in ``Font/popsLargeTitle``.
-    ///   - subtitle: what the reader is being asked to do, in a sentence.
-    ///   - status: the outcome that produced this reading, when one did.
-    ///     Absent for a hand-entered purchase — nothing has happened to
-    ///     report.
-    ///   - parts: the pages this was read off, drawn above the fields. Empty
-    ///     when there is no receipt.
-    ///   - secondaryAction: the other thing that can be done here, at the
-    ///     standard weight beside the prominent Save.
-    ///   - save: called with the draft as it stands.
-    /// - Parameters:
-    ///   - title: the screen's own name, and `nil` when it has none. A form
-    ///     embedded in a flow that already says where you are — the review
-    ///     step's `2 of 3` — would otherwise carry a second heading under the
-    ///     first, saying less.
-    ///   - save: `nil` omits the action bar entirely, for the same reason: a
-    ///     form inside a batch is not the thing that saves, and two Save
-    ///     buttons on one screen is one of them lying about what it does.
-    ///   - addAnother: a second save beside Save that keeps the form open for
-    ///     the next purchase, under the same rule Save is.
-    ///   - isSaving: a save is in flight. Both saves hold, so a second tap
-    ///     cannot create a second purchase.
-    public init(
-        draft: ReceiptDraft,
-        title: String? = nil,
-        subtitle: String? = nil,
-        status: Status? = nil,
-        complaints: ComplaintStyle = .banner,
-        merchants: [ReceiptMerchantChoice] = [],
-        parts: [ReceiptPart] = [],
-        secondaryAction: SecondaryAction? = nil,
-        addAnother: AddAnother? = nil,
-        isSaving: Bool = false,
-        save: ((ReceiptDraft) -> Void)? = nil
+    private init(
+        owned draft: ReceiptDraft,
+        host: Binding<ReceiptDraft>?,
+        title: String?,
+        subtitle: String?,
+        status: Status?,
+        complaints: ComplaintStyle,
+        merchants: [ReceiptMerchantChoice],
+        parts: [ReceiptPart],
+        secondaryAction: SecondaryAction?,
+        addAnother: AddAnother?,
+        lock: ReceiptDraftLock?,
+        commit: ReceiptDraftCommit,
+        onChange: ((ReceiptDraft) -> Void)?,
+        isSaving: Bool,
+        save: ((ReceiptDraft) -> Void)?
     ) {
-        _draft = State(wrappedValue: draft)
+        _ownDraft = State(wrappedValue: draft)
+        hostDraft = host
+        opened = draft
         self.title = title
         self.subtitle = subtitle
         self.status = status
@@ -89,6 +75,9 @@ public struct ReceiptDraftView: View {
         self.parts = parts
         self.secondaryAction = secondaryAction
         self.addAnother = addAnother
+        self.lock = lock
+        self.commit = commit
+        self.onChange = onChange
         self.isSaving = isSaving
         self.save = save
     }
@@ -159,6 +148,11 @@ public struct ReceiptDraftView: View {
         }
     }
 
+    private var draft: ReceiptDraft { hostDraft?.wrappedValue ?? ownDraft }
+
+    /// Whichever draft this form edits: the host's when it was given one.
+    internal var editing: Binding<ReceiptDraft> { hostDraft ?? $ownDraft }
+
     public var body: some View {
         ScrollView {
             content
@@ -170,7 +164,13 @@ public struct ReceiptDraftView: View {
         .accessibilityIdentifier(ReceiptDraftAccessibility.form)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.popsBackground)
-        .safeAreaInset(edge: .bottom) { if save != nil { actions } }
+        .safeAreaInset(edge: .bottom) { if save != nil && commit == .actionBar { actions } }
+        .toolbar {
+            if save != nil && commit == .navigationBar {
+                ToolbarItem(placement: .confirmationAction) { navigationSave }
+            }
+        }
+        .onChange(of: draft) { _, next in onChange?(next) }
         // A tap outside a field puts the keyboard away, which it did not do
         // before: a form this long is mostly scrolling, and a keyboard that
         // only closes on Return is a keyboard covering half the receipt.
@@ -185,7 +185,8 @@ public struct ReceiptDraftView: View {
             if !parts.isEmpty { ReceiptPagesView(parts: parts) }
             if complaints != .belowForm { complaint }
             if title != nil || subtitle != nil { heading }
-            ReceiptDraftForm(draft: $draft, merchants: merchants)
+            if let lock { ReceiptDraftLockNotice(lock: lock) }
+            ReceiptDraftForm(draft: editing, merchants: merchants, lock: lock)
             if complaints == .belowForm { complaint }
         }
     }
@@ -247,9 +248,25 @@ public struct ReceiptDraftView: View {
     }
 
     /// Whether either save can be pressed. Held while one is in flight, which
-    /// is half of what stops a double tap creating two purchases.
-    internal static func canSave(_ draft: ReceiptDraft, isSaving: Bool) -> Bool {
+    /// is half of what stops a double tap creating two purchases. Public so a
+    /// host committing from its own navigation bar gates on the same rule.
+    public static func canSave(_ draft: ReceiptDraft, isSaving: Bool) -> Bool {
         draft.isSaveable && !isSaving
+    }
+
+    /// The same rule, plus the navigation bar's: there has to be something
+    /// new to write.
+    internal static func canSave(
+        _ draft: ReceiptDraft, isSaving: Bool, changedFrom opened: ReceiptDraft
+    ) -> Bool {
+        canSave(draft, isSaving: isSaving) && draft != opened
+    }
+
+    private var navigationSave: some View {
+        Button(isSaving ? ReceiptDraftCopy.saving : ReceiptDraftCopy.saveInBar) { save?(draft) }
+            .disabled(!Self.canSave(draft, isSaving: isSaving, changedFrom: opened))
+            .accessibilityIdentifier(ReceiptDraftAccessibility.saveButton)
+            .receiptDraftProminentBarButton()
     }
 
     /// Save is the prominent one; whatever else can be done here sits beside
@@ -275,54 +292,96 @@ public struct ReceiptDraftView: View {
     }
 }
 
-/// The gate's complaint as one line, opening on a tap.
-///
-/// Closed, it gives the screen back to the form and still says there is
-/// something to know. Open, it says the same thing the banner does. The bet is
-/// that a person who has read the complaint once does not need it occupying
-/// the top of every subsequent receipt in the batch.
-internal struct CollapsedComplaint: View {
-    internal let status: ReceiptDraftView.Status
+extension ReceiptDraftView {
+    /// - Parameters:
+    ///   - draft: pre-filled, and live from the first frame. There is no
+    ///     second state in which it becomes editable.
+    ///   - title: the screen's own name, in ``Font/popsLargeTitle``.
+    ///   - subtitle: what the reader is being asked to do, in a sentence.
+    ///   - status: the outcome that produced this reading, when one did.
+    ///     Absent for a hand-entered purchase — nothing has happened to
+    ///     report.
+    ///   - parts: the pages this was read off, drawn above the fields. Empty
+    ///     when there is no receipt.
+    ///   - secondaryAction: the other thing that can be done here, at the
+    ///     standard weight beside the prominent Save.
+    ///   - save: called with the draft as it stands.
+    /// - Parameters:
+    ///   - title: the screen's own name, and `nil` when it has none. A form
+    ///     embedded in a flow that already says where you are — the review
+    ///     step's `2 of 3` — would otherwise carry a second heading under the
+    ///     first, saying less.
+    ///   - save: `nil` omits the action bar entirely, for the same reason: a
+    ///     form inside a batch is not the thing that saves, and two Save
+    ///     buttons on one screen is one of them lying about what it does.
+    ///   - addAnother: a second save beside Save that keeps the form open for
+    ///     the next purchase, under the same rule Save is.
+    ///   - isSaving: a save is in flight. Both saves hold, so a second tap
+    ///     cannot create a second purchase.
+    ///   - lock: fields of a saved purchase shown read-only, and why. `nil`
+    ///     leaves every field editable, as a reading always is.
+    ///   - commit: where Save is drawn. See ``ReceiptDraftCommit``.
+    ///   - onChange: called with the draft after every edit, so a host that
+    ///     owns the cancel can tell whether leaving loses anything.
+    public init(
+        draft: ReceiptDraft,
+        title: String? = nil,
+        subtitle: String? = nil,
+        status: Status? = nil,
+        complaints: ComplaintStyle = .banner,
+        merchants: [ReceiptMerchantChoice] = [],
+        parts: [ReceiptPart] = [],
+        secondaryAction: SecondaryAction? = nil,
+        addAnother: AddAnother? = nil,
+        lock: ReceiptDraftLock? = nil,
+        commit: ReceiptDraftCommit = .actionBar,
+        onChange: ((ReceiptDraft) -> Void)? = nil,
+        isSaving: Bool = false,
+        save: ((ReceiptDraft) -> Void)? = nil
+    ) {
+        self.init(
+            owned: draft, host: nil, title: title, subtitle: subtitle, status: status,
+            complaints: complaints, merchants: merchants, parts: parts,
+            secondaryAction: secondaryAction, addAnother: addAnother, lock: lock,
+            commit: commit, onChange: onChange, isSaving: isSaving, save: save)
+    }
 
-    @State private var open = false
+    /// The same form over a draft the host owns, for a host that commits from
+    /// its own navigation bar and so has to read the draft's validity as it
+    /// changes, or that pages between several drafts and must keep each one's
+    /// edits when it is off screen. Every other parameter is the owned form's.
+    public init(
+        draft: Binding<ReceiptDraft>,
+        title: String? = nil,
+        subtitle: String? = nil,
+        status: Status? = nil,
+        complaints: ComplaintStyle = .banner,
+        merchants: [ReceiptMerchantChoice] = [],
+        parts: [ReceiptPart] = [],
+        secondaryAction: SecondaryAction? = nil,
+        addAnother: AddAnother? = nil,
+        isSaving: Bool = false,
+        save: ((ReceiptDraft) -> Void)? = nil
+    ) {
+        self.init(
+            owned: draft.wrappedValue, host: draft, title: title, subtitle: subtitle,
+            status: status, complaints: complaints, merchants: merchants, parts: parts,
+            secondaryAction: secondaryAction, addAnother: addAnother, lock: nil,
+            commit: .actionBar, onChange: nil, isSaving: isSaving, save: save)
+    }
+}
 
-    internal var body: some View {
-        Button {
-            open.toggle()
-        } label: {
-            VStack(alignment: .leading, spacing: PopsSpacing.sm) {
-                HStack(spacing: PopsSpacing.sm) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.popsCaption)
-                        .foregroundStyle(status.tone.color)
-                    Text(status.heading)
-                        .font(.popsSubheadline)
-                        .fontWeight(.medium)
-                        .foregroundStyle(Color.popsForeground)
-                    Spacer(minLength: PopsSpacing.sm)
-                    Image(systemName: open ? "chevron.up" : "chevron.down")
-                        .font(.popsCaption)
-                        .foregroundStyle(Color.popsMutedForeground)
-                }
-                if open {
-                    Text(status.message)
-                        .font(.popsSubheadline)
-                        .foregroundStyle(Color.popsMutedForeground)
-                        .fixedSize(horizontal: false, vertical: true)
-                    if let caption = status.caption {
-                        Text(caption)
-                            .font(.popsCaption)
-                            .foregroundStyle(Color.popsMutedForeground)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(PopsSpacing.md)
-            .background(
-                status.tone.color.opacity(0.12), in: .rect(cornerRadius: PopsRadius.control))
-        }
-        .buttonStyle(.plain)
-        .animation(.snappy(duration: 0.2), value: open)
+extension View {
+    /// The commit in a sheet's bar, drawn as the platform's prominent glass so
+    /// it reads as the sheet's one call to action. The glass style is
+    /// iOS-only; the host toolchain that runs this package's tests stands in
+    /// with the bordered prominent one.
+    @ViewBuilder
+    fileprivate func receiptDraftProminentBarButton() -> some View {
+        #if os(iOS)
+            buttonStyle(.glassProminent)
+        #else
+            buttonStyle(.borderedProminent)
+        #endif
     }
 }

@@ -8,17 +8,33 @@ extension ReceiptDraftForm {
     /// flatness this surface was built to leave behind.
     internal var identity: some View {
         section(ReceiptDraftCopy.identitySection) {
-            merchantField
+            if lock?.locks(.merchant) == true {
+                ReceiptDraftLockedRow(label: ReceiptDraftCopy.merchantLabel, value: merchantName)
+            } else {
+                merchantField
+            }
             if !draft.online { addressField }
             onlineToggle
-            PopsTextField(
-                ReceiptDraftCopy.dateLabel,
-                placeholder: ReceiptDraftCopy.datePlaceholder,
-                text: $draft.date.value,
-                note: hint(.date)
-            )
-            .accessibilityIdentifier(ReceiptDraftAccessibility.date)
+            if lock?.locks(.date) == true {
+                ReceiptDraftLockedRow(label: ReceiptDraftCopy.dateLabel, value: draft.date.value)
+            } else {
+                PopsTextField(
+                    ReceiptDraftCopy.dateLabel,
+                    placeholder: ReceiptDraftCopy.datePlaceholder,
+                    text: $draft.date.value,
+                    note: hint(.date)
+                )
+                .accessibilityIdentifier(ReceiptDraftAccessibility.date)
+            }
         }
+    }
+
+    /// The merchant as the purchase holds it: the entity's name when it has
+    /// one, the till's wording when it does not.
+    private var merchantName: String {
+        if let created = draft.merchantResolution.createdValue { return created }
+        let id = draft.merchantResolution.entityID
+        return merchants.first { $0.id == id }?.name ?? draft.printedMerchant.value
     }
 
     /// A select, not a field.
@@ -117,6 +133,5 @@ extension ReceiptDraftForm {
                 }
             }
         }
-        .tint(Color.popsAccent)
     }
 }

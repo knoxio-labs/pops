@@ -95,7 +95,7 @@ internal enum InventorySyncSurfaces {
                 InventoryOfflineStage {
                     InventoryShellView(
                         fixture: InventoryFixtures.packing,
-                        search: InventorySearchStage(
+                        search: .offline(
                             query: "ca", staleIDs: InventorySearchFixtures.offlineStale))
                 }
             },

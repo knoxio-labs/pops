@@ -11,16 +11,6 @@ import AppCore
 /// have caught the row that keys on the wrong thing and disappears under
 /// `ForEach`.
 internal enum ReceiptPlaygroundFixtures {
-    internal static let purchase = ReceiptPurchase(
-        id: "pur_2AK9X7QM3M0V6ZB1TYRD",
-        merchantName: "Woolworths Metro",
-        total: MoneyAmount(minorUnits: 8423, currencyCode: "AUD"),
-        orderedAt: "2026-08-19T09:14:00.000Z",
-        itemCount: 12
-    )
-
-    internal static let unreadableReason = "The image is too blurred for any line to be read."
-
     /// A clean read worth improving rather than fixing: the arithmetic
     /// balances, and the names are exactly what the till printed. The case
     /// `ReceiptDraftView` exists for, per this package's own README.
@@ -75,23 +65,6 @@ internal enum ReceiptPlaygroundFixtures {
         ],
         unreadableNotes: ["The line under the apples is torn away."]
     )
-
-    /// Legible enough to total, unreadable enough to fail on both ends: the
-    /// printed total is smudged, and the sum the visible lines and
-    /// adjustments come to disagrees with it anyway.
-    internal static let typicalFailures: [ReceiptGateFailure] = [
-        ReceiptGateFailure(
-            kind: .unreadableTotal,
-            detail: "The printed total is smudged and could not be read with confidence",
-            deltaCents: nil),
-        ReceiptGateFailure(
-            kind: .sumMismatch,
-            detail: "Lines and adjustments came to 81.73 against a printed 84.23",
-            deltaCents: -250),
-        ReceiptGateFailure(
-            kind: .unreadableLine, detail: "One line below the apples could not be read",
-            deltaCents: nil),
-    ]
 
     /// A negative line with nothing marking it as a refund, a tax rate the
     /// paper does not settle, a torn edge, and a gate code this build has no

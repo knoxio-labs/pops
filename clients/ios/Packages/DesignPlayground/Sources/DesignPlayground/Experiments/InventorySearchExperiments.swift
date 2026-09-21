@@ -9,7 +9,7 @@ internal enum InventorySearchExperiments {
         question:
             "Do results read as sections by kind, or as one list ranked by relevance, and, if "
             + "grouped, does a container (an item, ADR-001) count once or twice?",
-        subject: InventorySearchSurfaces.searchID,
+        subject: UniversalSearchSurfaces.rootID,
         status: .decided(
             variant: "ranked",
             rationale:
@@ -22,7 +22,7 @@ internal enum InventorySearchExperiments {
                 id: "ranked",
                 title: "One ranked list",
                 note: "No headers. Kind is read off the row's own mark, not a section.",
-                surface: InventorySearchSurfaces.search)
+                surface: UniversalSearchSurfaces.root)
         ]
     )
 
@@ -31,7 +31,7 @@ internal enum InventorySearchExperiments {
         question:
             "When a filter is active, does it show as a removable chip above the results, or only "
             + "inside the sheet that set it?",
-        subject: InventorySearchSurfaces.searchID,
+        subject: UniversalSearchSurfaces.rootID,
         status: .decided(
             variant: "sheet-only",
             rationale:
@@ -45,7 +45,7 @@ internal enum InventorySearchExperiments {
                 title: "Sheet only",
                 note:
                     "Nothing above the list but the filter circle itself, amber while a filter is on.",
-                surface: InventorySearchSurfaces.search)
+                surface: UniversalSearchSurfaces.root)
         ]
     )
 }

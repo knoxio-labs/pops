@@ -127,6 +127,10 @@ internal struct ChromeHost<Content: View, Inspector: View>: View {
                         .playgroundTitleDisplay(large: false)
                 }
                 .surfaceEnvironment(settings)
+                // The stage's own identity does not reach in here: a sheet
+                // that stays presented across a state swap keeps its content,
+                // and with it every `@State` seeded from the previous state.
+                .id(settings.stateID)
                 inspector
             }
             .presentationDetents(sheetDetents.detents)

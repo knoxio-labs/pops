@@ -1,41 +1,7 @@
-/// POPS-3982's surfaces: Search in the tab shell, the Items browser, and the
-/// shared scanner.
+/// The Items browser and the shared scanner. Search itself is the universal
+/// search tab, `search/root`.
 @MainActor
 internal enum InventorySearchSurfaces {
-    internal static let searchID = SurfaceID(area: "inventory", slug: "search")
-
-    internal static let search = DesignSurface(
-        id: searchID,
-        title: "Search",
-        synopsis: "The search tab: recents, then one ranked list as you type.",
-        chrome: .bare,
-        states: [
-            searchState("empty", "Recents", InventorySearchStage()),
-            searchState("typing", "Results", InventorySearchStage(query: "gar")),
-            searchState("code", "Matched by code", InventorySearchStage(query: "b4")),
-            searchState("no-results", "No results", InventorySearchStage(query: "xylophone")),
-            searchState(
-                "filtered", "Filtered",
-                InventorySearchStage(
-                    query: "gar", filter: InventorySearchFilter(placement: .contained))),
-            searchState(
-                "filter-sheet", "Filter sheet",
-                InventorySearchStage(
-                    query: "gar", filter: InventorySearchFilter(placement: .contained),
-                    showsFilters: true)),
-            searchState(
-                "inactive", "Including inactive",
-                InventorySearchStage(
-                    query: "o", filter: InventorySearchFilter(includesInactive: true))),
-            searchState(
-                "offline", "Offline, some stale",
-                InventorySearchStage(query: "ca", staleIDs: InventorySearchFixtures.offlineStale)),
-            searchState("loading", "Loading", InventorySearchStage(query: "gar", phase: .loading)),
-            searchState(
-                "first-launch", "First launch", InventorySearchStage(phase: .firstLaunch)),
-        ]
-    )
-
     internal static let items = DesignSurface(
         id: SurfaceID(area: "inventory", slug: "items"),
         title: "Items",
@@ -86,15 +52,7 @@ internal enum InventorySearchSurfaces {
         ]
     )
 
-    internal static let surfaces: [DesignSurface] = [search, items, scan]
-
-    private static func searchState(
-        _ id: String, _ title: String, _ stage: InventorySearchStage
-    ) -> DesignState {
-        DesignState(id, title) {
-            InventoryShellView(fixture: InventoryFixtures.packing, search: stage)
-        }
-    }
+    internal static let surfaces: [DesignSurface] = [items, scan]
 
     private static func scanState(
         _ id: String, _ title: String, _ phase: InventoryScanPhase

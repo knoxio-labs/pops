@@ -97,6 +97,13 @@ internal struct StagedReceipts: Hashable {
         receipts.append(contentsOf: taken.map { StagedReceipt(id: "r-\($0.id)", pages: [$0]) })
     }
 
+    /// A page picked after staging opened arrives on its own, like every
+    /// page picked from a library: grouping is the gesture, not the default.
+    internal mutating func add(_ page: StagedPage) {
+        guard !everyPage.contains(where: { $0.id == page.id }) else { return }
+        receipts.append(StagedReceipt(id: "r-\(page.id)", pages: [page]))
+    }
+
     internal mutating func delete(_ id: String) {
         _ = take([id])
     }

@@ -25,6 +25,9 @@ internal struct ReceiptDraftForm: View {
     /// what this form did before pickers and what it must still do on a
     /// device that cannot reach contacts.
     internal var merchants: [ReceiptMerchantChoice] = []
+    /// Fields a saved purchase holds read-only. `nil` for a reading, which is
+    /// editable everywhere.
+    internal var lock: ReceiptDraftLock?
 
     internal var body: some View {
         VStack(alignment: .leading, spacing: PopsSpacing.lg) {
@@ -95,8 +98,15 @@ extension ReceiptDraftForm {
                     .foregroundStyle(hint.tone.color)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
-            PopsButton(ReceiptDraftCopy.addItem) { draft.addLine() }
-                .accessibilityIdentifier(ReceiptDraftAccessibility.addItem)
+            Button {
+                draft.addLine()
+            } label: {
+                Label(ReceiptDraftCopy.addItem, systemImage: "plus")
+                    .font(.popsSubheadline)
+                    .foregroundStyle(.tint)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityIdentifier(ReceiptDraftAccessibility.addItem)
         }
     }
 }
@@ -122,18 +132,27 @@ extension ReceiptDraftForm {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             if !draft.adjustments.isEmpty { PopsDivider() }
-            PopsTextField(
-                ReceiptDraftCopy.totalLabel,
-                placeholder: ReceiptDraftCopy.amountPlaceholder,
-                text: $draft.total.value,
-                font: .popsAmount,
-                alignment: .trailing,
-                keyboard: .decimal,
-                note: totalNote
-            )
-            .accessibilityIdentifier(ReceiptDraftAccessibility.total)
+            if lock?.locks(.total) == true {
+                ReceiptDraftLockedRow(
+                    label: ReceiptDraftCopy.totalLabel, value: draft.total.value, font: .popsAmount)
+            } else {
+                totalField
+            }
             reconciliation
         }
+    }
+
+    private var totalField: some View {
+        PopsTextField(
+            ReceiptDraftCopy.totalLabel,
+            placeholder: ReceiptDraftCopy.amountPlaceholder,
+            text: $draft.total.value,
+            font: .popsAmount,
+            alignment: .trailing,
+            keyboard: .decimal,
+            note: totalNote
+        )
+        .accessibilityIdentifier(ReceiptDraftAccessibility.total)
     }
 
     /// The figure, and whether it is already inside the line prices.
@@ -156,7 +175,6 @@ extension ReceiptDraftForm {
                 Toggle(ReceiptDraftCopy.includedLabel, isOn: adjustment.isIncluded)
                     .font(.popsCaption)
                     .foregroundStyle(Color.popsMutedForeground)
-                    .tint(Color.popsAccent)
                 // Only a row the reader added can be taken away. One the model
                 // read is a fact about the paper, and removing it would be
                 // editing the reading rather than correcting it — emptying the
@@ -188,7 +206,7 @@ extension ReceiptDraftForm {
         } label: {
             Label(ReceiptDraftCopy.addAdjustment, systemImage: "plus")
                 .font(.popsSubheadline)
-                .foregroundStyle(Color.popsAccent)
+                .foregroundStyle(.tint)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }

@@ -1,22 +1,26 @@
 import DesignSystem
 import SwiftUI
 
-/// The empty search: past queries as a compact list that swipes away, and
-/// what was scanned lately as small photo tiles.
-internal struct InventoryRecentSearches: View {
-    @Binding internal var queries: [String]
+/// The empty search: past queries as a compact list that swipes away, each
+/// with its pillar's glyph when it was searched in one, and, while Inventory
+/// is in scope, what was scanned lately as small photo tiles.
+internal struct SearchRecents: View {
+    @Binding internal var recents: [SearchRecent]
+    internal let scope: SearchScope
     internal let scanned: [InventorySearchRecord]
-    internal let onSelect: (String) -> Void
+    internal let onSelect: (SearchRecent) -> Void
     @State private var swiping: String?
+
+    private var shown: [SearchRecent] {
+        recents.filter { $0.shows(in: scope) }
+    }
 
     internal var body: some View {
         VStack(alignment: .leading, spacing: PopsSpacing.lg) {
-            if !queries.isEmpty {
+            if !shown.isEmpty {
                 VStack(alignment: .leading, spacing: PopsSpacing.xs) {
                     InventoryLocationSectionHeader(title: "Recent")
-                    InventoryLocationPanel(rows: queries.map(RecentQuery.init)) { recent in
-                        row(recent.query)
-                    }
+                    InventoryLocationPanel(rows: shown) { row($0) }
                 }
                 .transition(.opacity)
             }
@@ -27,45 +31,48 @@ internal struct InventoryRecentSearches: View {
                         ForEach(scanned) { InventoryScannedTile(record: $0) }
                     }
                 }
+                .transition(.opacity)
             }
         }
-        .inventoryMotion(value: queries)
+        .inventoryMotion(value: shown)
     }
 
-    private func row(_ query: String) -> some View {
+    private func row(_ recent: SearchRecent) -> some View {
         Button {
-            onSelect(query)
+            onSelect(recent)
         } label: {
             HStack(spacing: PopsSpacing.md) {
                 InventorySymbol.activity.image
                     .font(.popsSubheadline)
                     .foregroundStyle(Color.popsMutedForeground)
-                Text(query)
+                Text(recent.query)
                     .font(.popsBody)
                     .foregroundStyle(Color.popsForeground)
                 Spacer(minLength: PopsSpacing.sm)
+                if case .pillar(let pillar) = recent.scope {
+                    Image(systemName: pillar.symbol)
+                        .font(.popsSubheadline)
+                        .foregroundStyle(Color.popsMutedForeground)
+                        .accessibilityLabel("In \(pillar.title)")
+                }
             }
             .padding(.vertical, PopsSpacing.sm)
             .contentShape(.rect)
         }
         .buttonStyle(.plain)
-        .inventoryGroundedSwipeRow(isActive: swiping == query)
+        .accessibilityElement(children: .combine)
+        .inventoryGroundedSwipeRow(isActive: swiping == recent.id)
         .inventoryGroundedSwipeActions(
             edge: .trailing,
-            onPresentationChanged: { swiping = $0 ? query : nil },
+            onPresentationChanged: { swiping = $0 ? recent.id : nil },
             actions: {
                 Button(role: .destructive) {
-                    queries.removeAll { $0 == query }
+                    recents.removeAll { $0.id == recent.id }
                 } label: {
                     Label("Remove", systemImage: InventorySymbol.discard.system)
                 }
             })
     }
-}
-
-private struct RecentQuery: Identifiable {
-    let query: String
-    var id: String { query }
 }
 
 /// One recently scanned thing: its photo, and its name under it.

@@ -29,7 +29,7 @@ internal enum PurchasesFixtures {
     /// 2026-09-12, the day this set was written. Every row is placed relative
     /// to it so the months keep their boundaries and the newest row stays
     /// newest, rather than the set ageing into one undifferentiated block.
-    private static let reference = Date(timeIntervalSince1970: 1_789_257_600)
+    internal static let reference = Date(timeIntervalSince1970: 1_789_257_600)
 
     private static func daysAgo(_ days: Int) -> Date {
         reference.addingTimeInterval(TimeInterval(-days * 86_400))
@@ -61,9 +61,7 @@ internal enum PurchasesFixtures {
 
     private static func aud(_ cents: Int) -> MoneyAmount { Fixtures.money(cents) }
 
-    /// The five the playground shipped with, kept because
-    /// ``PurchasesSurfaces`` reviews the list's own states against them and a
-    /// short set is easier to reason about than a long one.
+    /// The first five of ``history``.
     static let all: [Purchase] = Array(history.prefix(5))
 
     /// A history long enough to scroll, spanning three calendar months so a
