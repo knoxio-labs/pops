@@ -262,7 +262,7 @@ async function getPurchase(
   );
   if (!isGatewayOk(detail)) return detail;
 
-  const entityId = detail.value.purchase.merchantEntityId;
+  const entityId = detail.value.purchase.merchantEntityId ?? null;
   const mergedNames = await resolveMergedNames(contacts, entityId === null ? [] : [entityId]);
 
   return { kind: 'ok', value: toMobilePurchaseDetail(detail.value, mergedNames) };

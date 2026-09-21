@@ -7,7 +7,7 @@
  * which mobile one, what a request bfm sends looks like, and what happens
  * to a response bfm cannot read.
  */
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   createPurchasesDraftFake,
@@ -23,6 +23,7 @@ import {
 import { type MobileContactsClient } from '../../contacts/client.js';
 import { createPillarGateway, isGatewayOk } from '../../pillars/gateway.js';
 import { createMobilePurchasesClient } from '../client.js';
+import { CONTACTS_LOOKUP_TIMEOUT_MS } from '../list-page.js';
 
 import type { CallResult } from '@pops/pillar-sdk/server';
 
@@ -326,5 +327,153 @@ describe('merchant identity batching', () => {
       name: 'Kmart',
     });
     expect(spy.calls).toEqual([['ent-1']]);
+  });
+
+  // scripts/ios-e2e/purchases-stub.mjs answers a manually-created purchase
+  // without a `merchantEntityId` key at all — not `null`, absent — and the
+  // iOS UI-flow lane's manual-entry flow 502'd against this pillar's own
+  // requirement that the key be present. Reproduced directly against the
+  // wire, not through `purchasesDetail`'s fixture builder, which always sets
+  // the key: this is the one case that has to omit it.
+  it('does not fail the response when purchases omits merchantEntityId entirely', async () => {
+    const detail: CallResult<unknown> = {
+      kind: 'ok',
+      value: {
+        purchase: {
+          id: 'pur-1',
+          source: 'manual',
+          merchantEntityName: 'Corner Store',
+          totalCents: 500,
+          subtotalCents: 500,
+          taxCents: 0,
+          shippingCents: 0,
+          discountCents: 0,
+          surchargeCents: 0,
+          currency: 'AUD',
+          orderedAt: '2026-08-13T02:15:00.000Z',
+          orderedAtOffsetMinutes: 600,
+          status: 'linked',
+        },
+        items: [],
+        documents: [],
+      },
+    };
+    const readFake = createPurchasesReadFake([], { 'pur-1': detail });
+
+    const outcome = await clientOver(readFake.factory).getPurchase('pur-1');
+
+    expect(isGatewayOk(outcome)).toBe(true);
+    if (!isGatewayOk(outcome)) return;
+    expect(outcome.value.merchant).toEqual({ resolution: 'name', name: 'Corner Store' });
+  });
+});
+
+describe('a contacts outage never fails the purchases response', () => {
+  it('degrades to an unnamed entity when contacts is unreachable', async () => {
+    const readFake = createPurchasesReadFake([
+      purchasesRow({ id: 'pur-1', merchantEntityId: 'ent-1', merchantEntityName: 'K mart' }),
+    ]);
+    const downContacts: MobileContactsClient = {
+      lookupEntities: () =>
+        Promise.resolve({ kind: 'unavailable', pillar: 'contacts', status: 503 }),
+    };
+
+    const outcome = await clientOver(readFake.factory, downContacts).listPurchases({
+      limit: 10,
+      cursor: null,
+    });
+
+    expect(isGatewayOk(outcome)).toBe(true);
+    if (!isGatewayOk(outcome)) return;
+    expect(outcome.value.data[0]?.merchant).toEqual({
+      resolution: 'entity',
+      entityId: 'ent-1',
+      name: null,
+    });
+  });
+
+  it('degrades to an unnamed entity when contacts answers a shape this pillar cannot read', async () => {
+    const readFake = createPurchasesReadFake([
+      purchasesRow({ id: 'pur-1', merchantEntityId: 'ent-1', merchantEntityName: 'K mart' }),
+    ]);
+    const erroringContacts: MobileContactsClient = {
+      lookupEntities: () =>
+        Promise.resolve({ kind: 'contract-mismatch', pillar: 'contacts', status: 502 }),
+    };
+
+    const outcome = await clientOver(readFake.factory, erroringContacts).listPurchases({
+      limit: 10,
+      cursor: null,
+    });
+
+    expect(isGatewayOk(outcome)).toBe(true);
+    if (!isGatewayOk(outcome)) return;
+    expect(outcome.value.data[0]?.merchant).toEqual({
+      resolution: 'entity',
+      entityId: 'ent-1',
+      name: null,
+    });
+  });
+
+  describe('a contacts call that never answers', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('degrades to an unnamed entity on its own timeout, not the SDK’s 30s call timeout', async () => {
+      const readFake = createPurchasesReadFake([
+        purchasesRow({ id: 'pur-1', merchantEntityId: 'ent-1', merchantEntityName: 'K mart' }),
+      ]);
+      // Never resolves on its own — only `resolveMergedNames`'s own bound
+      // (`CONTACTS_LOOKUP_TIMEOUT_MS`) can end this call. If that bound were
+      // missing, this test would hang until the suite's own timeout instead
+      // of failing cleanly, which is why it is asserted below rather than
+      // just trusted to pass.
+      const hungContacts: MobileContactsClient = {
+        lookupEntities: () => new Promise(() => undefined),
+      };
+
+      const pending = clientOver(readFake.factory, hungContacts).listPurchases({
+        limit: 10,
+        cursor: null,
+      });
+
+      await vi.advanceTimersByTimeAsync(CONTACTS_LOOKUP_TIMEOUT_MS);
+      const outcome = await pending;
+
+      expect(isGatewayOk(outcome)).toBe(true);
+      if (!isGatewayOk(outcome)) return;
+      expect(outcome.value.data[0]?.merchant).toEqual({
+        resolution: 'entity',
+        entityId: 'ent-1',
+        name: null,
+      });
+    });
+  });
+
+  it('degrades to an unnamed entity rather than crashing the request when the client throws', async () => {
+    const readFake = createPurchasesReadFake([
+      purchasesRow({ id: 'pur-1', merchantEntityId: 'ent-1', merchantEntityName: 'K mart' }),
+    ]);
+    const throwingContacts: MobileContactsClient = {
+      lookupEntities: () => Promise.reject(new Error('boom')),
+    };
+
+    const outcome = await clientOver(readFake.factory, throwingContacts).listPurchases({
+      limit: 10,
+      cursor: null,
+    });
+
+    expect(isGatewayOk(outcome)).toBe(true);
+    if (!isGatewayOk(outcome)) return;
+    expect(outcome.value.data[0]?.merchant).toEqual({
+      resolution: 'entity',
+      entityId: 'ent-1',
+      name: null,
+    });
   });
 });

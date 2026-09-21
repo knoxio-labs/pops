@@ -8,7 +8,12 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { toMobilePurchase, toMobilePurchaseDetail } from '../list-wire.js';
+import {
+  PurchasesDetailResponseSchema,
+  PurchasesListRowSchema,
+  toMobilePurchase,
+  toMobilePurchaseDetail,
+} from '../list-wire.js';
 
 import type { PurchasesDetailResponse, PurchasesListRow } from '../list-wire.js';
 
@@ -104,6 +109,44 @@ describe('toMobilePurchase merchant identity', () => {
     const mobile = toMobilePurchase(row, mergedNames);
 
     expect(mobile.merchant).toEqual({ resolution: 'entity', entityId: 'ent-1', name: null });
+  });
+});
+
+describe('merchantEntityId absent, not just null (POPS-3634 regression)', () => {
+  // The stub bfm's iOS UI-flow lane runs against (scripts/ios-e2e/purchases-stub.mjs)
+  // answers a manually-created purchase without a `merchantEntityId` key at
+  // all, not with an explicit `null` — the same shape an older or partial
+  // producer build could send. Requiring the key turned that into a `502`
+  // for the whole page; both schemas below have to keep parsing it.
+  it('PurchasesListRowSchema accepts a row with no merchantEntityId key', () => {
+    const { merchantEntityId: _omitted, ...rowWithoutEntityId } = BASE_ROW;
+
+    const result = PurchasesListRowSchema.safeParse(rowWithoutEntityId);
+
+    expect(result.success).toBe(true);
+  });
+
+  it('PurchasesDetailResponseSchema accepts a purchase with no merchantEntityId key', () => {
+    const { merchantEntityId: _omitted, ...purchaseWithoutEntityId } = BASE_DETAIL.purchase;
+
+    const result = PurchasesDetailResponseSchema.safeParse({
+      ...BASE_DETAIL,
+      purchase: purchaseWithoutEntityId,
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it('toMobilePurchase reads an absent merchantEntityId the same as null', () => {
+    const { merchantEntityId: _omitted, ...rowWithoutEntityId } = BASE_ROW;
+    const parsed = PurchasesListRowSchema.parse({
+      ...rowWithoutEntityId,
+      merchantEntityName: 'Corner Store',
+    });
+
+    const mobile = toMobilePurchase(parsed, new Map());
+
+    expect(mobile.merchant).toEqual({ resolution: 'name', name: 'Corner Store' });
   });
 });
 
