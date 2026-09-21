@@ -129,4 +129,23 @@ internal struct StagedReceiptsTests {
         #expect(Set(receipts.everyPage.map(\.id)) == ["a", "b", "c"])
         #expect(receipts.everyPage.count == 3)
     }
+
+    @Test("a page picked after staging opened arrives as a receipt of its own")
+    func addArrivesLoose() {
+        var receipts = staged(["r1": ["a", "b"]])
+
+        receipts.add(page("c"))
+
+        #expect(shape(receipts) == [["a", "b"], ["c"]])
+        #expect(receipts.loose.map(\.id) == ["c"])
+    }
+
+    @Test("adding a page that is already staged does not stage it twice")
+    func addIgnoresARepeat() {
+        var receipts = staged(["r1": ["a", "b"]])
+
+        receipts.add(page("b"))
+
+        #expect(shape(receipts) == [["a", "b"]])
+    }
 }

@@ -11,7 +11,9 @@ import SwiftUI
 internal struct StagedPageTile: View {
     internal let page: StagedPage
     internal let width: CGFloat
-    internal let caption: String
+    /// The file's name under the picture, or nil inside a receipt's
+    /// platter, where the order of the pages is what tells them apart.
+    internal let caption: String?
     internal let isTarget: Bool
     internal let onTap: () -> Void
     internal let drop: PageDropDelegate
@@ -24,19 +26,21 @@ internal struct StagedPageTile: View {
     internal var body: some View {
         VStack(spacing: PopsSpacing.xs) {
             picture
-            Text(caption)
-                .font(.popsCaption)
-                .foregroundStyle(Color.popsMutedForeground)
-                .lineLimit(1)
-                .truncationMode(.middle)
-                .frame(width: width)
+            if let caption {
+                Text(caption)
+                    .font(.popsCaption)
+                    .foregroundStyle(Color.popsMutedForeground)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
+                    .frame(width: width)
+            }
         }
         .contentShape(.rect)
         .onTapGesture(perform: onTap)
         .draggable(page.id) { lifted }
         .onDrop(of: [.plainText], delegate: drop)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(caption)
+        .accessibilityLabel(page.label)
         .accessibilityAddTraits(.isButton)
     }
 
@@ -45,7 +49,7 @@ internal struct StagedPageTile: View {
             .frame(width: width, height: width * ratio)
             .scaleEffect(isTarget ? targetScale : 1)
             .background { StagedDropWell(active: isTarget) }
-            .animation(.snappy(duration: 0.18), value: isTarget)
+            .inventoryMotion(value: isTarget)
     }
 
     /// What rides under the finger. Opaque, because the system composites a

@@ -2,97 +2,132 @@ import DesignSystem
 import FeatureReceiptCapture
 import SwiftUI
 
-/// A purchase typed by hand: one at a time, with Save and add another.
+/// A purchase typed by hand: a sheet that commits from its navigation bar.
+///
+/// Cancel leads, Save trails and is enabled by the draft being saveable, and
+/// there is no bar of buttons under the form. The shipped form stacked two
+/// full-width actions over the keyboard; this is the answer to that.
 ///
 /// ## Not the review pager
 ///
 /// A batch exists because paper is read together and has to be checked
-/// together. A purchase typed by hand is not read, so it has no reason to wait
-/// for others, and every save writes at once. Holding several typed drafts to
-/// save as one would put the most expensive work in the flow at the most
-/// risk: one Cancel, or one failure halfway, would take all of it.
+/// together. A typed purchase is not read, so it has no reason to wait for
+/// others, and every save writes at once.
 ///
 /// ## Save and add another
 ///
-/// Saves this purchase and opens a fresh form that keeps the date and the
-/// currency. What has been saved so far is counted above the form, so a run of
-/// purchases has a tally without anywhere to page to.
+/// In the overflow menu beside Save rather than as a second button. One
+/// prominent commit is what the bar is for, and the overflow is where iOS
+/// keeps the other things a screen can do. It saves, then opens a fresh form
+/// that keeps the date and the currency; the count saved so far is the
+/// title's subtitle, so a run of purchases has a tally without a row of its
+/// own.
 internal struct PurchaseHandEntryView: View {
     private static let drafts = ReceiptDraftPresentation()
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var draft: ReceiptDraft
+    @State private var opened: ReceiptDraft
     @State private var saved: Int
     @State private var formID = 0
     @State private var cancelling = false
-    private let isSaving: Bool
-    private let failure: String?
+    @State private var isSaving: Bool
+    @State private var failure: String?
 
     internal init(
         draft: ReceiptDraft? = nil, saved: Int = 0, isSaving: Bool = false, failure: String? = nil
     ) {
-        _draft = State(initialValue: draft ?? Self.drafts.blankDraft(currency: Fixtures.aud))
+        let start = draft ?? Self.drafts.blankDraft(currency: Fixtures.aud)
+        _draft = State(initialValue: start)
+        _opened = State(initialValue: start)
         _saved = State(initialValue: saved)
-        self.isSaving = isSaving
-        self.failure = failure
+        _isSaving = State(initialValue: isSaving)
+        _failure = State(initialValue: failure)
     }
+
+    private var canSave: Bool { ReceiptDraftView.canSave(draft, isSaving: isSaving) }
 
     internal var body: some View {
-        ReceiptDraftView(
-            draft: draft,
-            // A failed save keeps what was typed and says why. This is the
-            // only danger tone on the screen, because it is the only error.
-            status: failure.map {
-                ReceiptDraftView.Status(tone: .danger, heading: "Not saved", message: $0)
-            },
-            complaints: .hintsOnly,
-            merchants: PurchaseMerchantFixtures.all,
-            addAnother: ReceiptDraftView.AddAnother { typed in
-                saved += 1
-                draft = Self.drafts.blankDraft(after: typed)
-                formID += 1
-            },
-            isSaving: isSaving
-        ) { _ in
-            dismiss()
+        ZStack {
+            ReceiptDraftView(
+                draft: $draft, complaints: .hintsOnly, merchants: PurchaseMerchantFixtures.all
+            )
+            .id(formID)
+            .disabled(isSaving)
+            .transition(reduceMotion ? .opacity : .push(from: .trailing))
         }
-        // The form keeps its own copy of the draft, so a fresh blank one only
-        // takes when the form is a new view.
-        .id(formID)
+        .safeAreaInset(edge: .top, spacing: PopsSpacing.zero) {
+            if let failure { PurchaseSaveNotice(reason: failure) }
+        }
         .navigationTitle("New purchase")
+        .navigationSubtitle(saved > 0 ? ReviewSaving.saved(saved) : "")
         .playgroundTitleDisplay(large: false)
         .playgroundLeadingBarItem { cancel }
-        .safeAreaInset(edge: .top) {
-            if saved > 0 {
-                ReviewSavedTally(saved: saved)
-                    .padding(.top, PopsSpacing.sm)
+        .playgroundTrailingBarItem { save }
+        .playgroundTrailingBarItem { more }
+        .inventoryMotion(value: formID)
+        .inventoryMotion(value: failure)
+        .tint(.popsAccent)
+    }
+
+    private var save: some View {
+        Button(isSaving ? "Saving" : "Save") {
+            commit { dismiss() }
+        }
+        .playgroundProminentGlassButton()
+        .disabled(!canSave)
+    }
+
+    private var more: some View {
+        Menu {
+            Button("Save and Add Another", systemImage: "plus.square.on.square") {
+                commit {
+                    saved += 1
+                    draft = Self.drafts.blankDraft(after: draft)
+                    opened = draft
+                    formID += 1
+                }
             }
+            .disabled(!canSave)
+        } label: {
+            Image(systemName: "ellipsis")
+        }
+        .disabled(isSaving)
+        .accessibilityLabel("More")
+    }
+
+    /// One write, and what happens once it lands. A stand-in for the call, so
+    /// saving can be watched rather than only staged.
+    private func commit(then landed: @escaping () -> Void) {
+        failure = nil
+        isSaving = true
+        Task {
+            try? await Task.sleep(for: InventoryMotion.stagedBeat)
+            isSaving = false
+            landed()
         }
     }
 
-    /// Always asks, and says what stays. The build asks only when something
-    /// has been typed; the form does not publish its live edits to a host, so
-    /// the playground cannot tell.
+    /// Asks only when something has been typed since the form opened, and says
+    /// what stays.
     private var cancel: some View {
-        Button {
-            cancelling = true
-        } label: {
-            Image(systemName: "xmark")
+        Button("Cancel") {
+            if draft == opened { dismiss() } else { cancelling = true }
         }
         .disabled(isSaving)
-        .accessibilityLabel("Cancel")
         .confirmationDialog(
             "Discard this purchase?", isPresented: $cancelling, titleVisibility: .visible
         ) {
             Button("Discard", role: .destructive) { dismiss() }
             Button("Keep typing", role: .cancel) {}
         } message: {
-            Text(saved == 0 ? "Nothing has been saved yet." : ReviewSaving.alreadySaved(saved))
+            Text(saved == 0 ? "Nothing is saved yet." : ReviewSaving.alreadySaved(saved))
         }
     }
 }
 
-/// Typing purchases with no receipt, as its own screen.
+/// Typing purchases with no receipt, as its own sheet.
 @MainActor
 internal enum PurchaseHandEntrySurface {
     private static let drafts = ReceiptDraftPresentation()
@@ -101,19 +136,25 @@ internal enum PurchaseHandEntrySurface {
     /// is a reading underneath, because the playground has no other way to
     /// fill one; what is on screen is what a typed purchase would show.
     private static var filled: ReceiptDraft {
-        drafts.draft(extracted: ReceiptPlaygroundFixtures.tillNamesExtracted, failures: [])
+        drafts.draft(
+            extracted: ReceiptPlaygroundFixtures.tillNamesExtracted, failures: [],
+            matchedMerchantID: "ent-kmart")
     }
 
     static let surface = DesignSurface(
         id: SurfaceID(area: "purchases", slug: "hand-entry"),
         title: "New purchase",
-        synopsis: "A purchase with no receipt, typed one at a time, with Save and add another.",
-        chrome: .navigation,
+        synopsis: "A purchase with no receipt, in a sheet that saves from its bar.",
+        chrome: .sheet,
+        sheetDetents: .large,
         states: [
-            // No pages, no sentence, and not one red rule: nothing is missing
-            // from a form nobody has started.
+            // Nothing is missing from a form nobody has started, so nothing
+            // says so; Save is simply not yet enabled.
             DesignState("typed", "Entered by hand") {
                 PurchaseHandEntryView()
+            },
+            DesignState("typed-filled", "Filled in, ready to save") {
+                PurchaseHandEntryView(draft: filled)
             },
             // Two saved with Save and add another. The date came with the
             // form; nothing else did, and nothing is named as missing.
@@ -123,10 +164,13 @@ internal enum PurchaseHandEntrySurface {
             DesignState("typed-saving", "Saving") {
                 PurchaseHandEntryView(draft: filled, isSaving: true)
             },
+            // What was typed is still there. Save keeps its name: nothing was
+            // written, so pressing it again can only create this one.
             DesignState("typed-save-failed", "Not saved, what was typed kept") {
                 PurchaseHandEntryView(
-                    draft: filled, failure: "No connection, so nothing was saved.")
+                    draft: filled, failure: "No connection. Nothing was saved.")
             },
-        ]
+        ],
+        backdrop: { PurchaseCaptureBackdrop() }
     )
 }

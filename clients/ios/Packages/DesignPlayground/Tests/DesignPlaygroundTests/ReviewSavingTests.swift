@@ -66,4 +66,44 @@ internal struct ReviewSavingTests {
         #expect(!ReviewSaving.saving(done: 1).blocksSave)
         #expect(!ReviewSaving.idle.blocksSave)
     }
+
+    /// A retry resends the one that was refused. Calling it Save would read
+    /// as another batch; calling a refusal no retry can pass Try again would
+    /// offer a button that cannot work.
+    @Test("Save reads Try again only after a refusal a retry can pass")
+    func theSaveTitleNamesARetry() {
+        #expect(ReviewSaving.idle.saveTitle(count: 3) == "Save all 3")
+        #expect(ReviewSaving.idle.saveTitle(count: 1) == "Save")
+        #expect(
+            ReviewSaving.failed(id: "e3", reason: "r", retryable: true).saveTitle(count: 1)
+                == "Try again")
+        #expect(
+            ReviewSaving.failed(id: "e2", reason: "r", retryable: false).saveTitle(count: 2)
+                == "Save all 2")
+    }
+
+    @Test("a flagged reading holds Save until it has been on screen")
+    func anUnseenFlagHolds() {
+        let all: Set<String> = ["e1", "e2", "e3"]
+
+        #expect(
+            ReviewBatch.holding(["e1", "e2", "e3"], flagged: ["e2"], seen: ["e1"], saveable: all)
+                == ["e2"])
+        #expect(
+            ReviewBatch.holding(
+                ["e1", "e2", "e3"], flagged: ["e2"], seen: ["e1", "e2"], saveable: all
+            ).isEmpty)
+    }
+
+    /// A clean reading is approved by saving; only a draft that cannot be
+    /// saved as it stands holds, seen or not.
+    @Test("an unsaveable draft holds Save whether or not it was seen")
+    func anUnsaveableDraftHolds() {
+        #expect(
+            ReviewBatch.holding(
+                ["e1", "e2"], flagged: [], seen: ["e1", "e2"], saveable: ["e1"]) == ["e2"])
+        #expect(
+            ReviewBatch.holding(["e1", "e2"], flagged: [], seen: [], saveable: ["e1", "e2"])
+                .isEmpty)
+    }
 }
