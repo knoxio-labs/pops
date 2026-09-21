@@ -53,18 +53,6 @@ internal enum PurchasesPresentation {
         }
     }
 
-    /// Why a row is still open, said in a sentence rather than a status word.
-    /// Only the two unsettled states have one; the rest are answers, not
-    /// questions.
-    static func reason(for purchase: Purchase) -> String? {
-        if isUnattributed(purchase) { return "No merchant was recognised on this receipt." }
-        switch purchase.status {
-        case .awaitingSettlement: return "No transaction in finance explains this yet."
-        case .partial: return "Part of this is explained. The rest is not."
-        case .linked, .settledCash, .ignored, .unrecognised: return nil
-        }
-    }
-
     static func tone(for status: PurchaseSettlement) -> Color {
         switch status {
         case .awaitingSettlement, .partial: Color.popsWarning
@@ -106,28 +94,6 @@ internal enum PurchasesPresentation {
             .map { MoneyAmount(minorUnits: $0.value, currencyCode: $0.key) }
             .sorted { $0.minorUnits > $1.minorUnits }
     }
-
-    /// Merchants by what was spent at them, in one currency, largest first.
-    /// Rows the pillar could not attribute are left out rather than pooled
-    /// under one heading: "unattributed" is not a merchant, and a leaderboard
-    /// that ranks it alongside real ones invents a shop.
-    static func topMerchants(
-        _ purchases: [Purchase], currency: String, limit: Int
-    ) -> [(name: String, total: MoneyAmount)] {
-        var byMerchant: [String: Int] = [:]
-        for purchase in purchases
-        where purchase.total.currencyCode == currency && !isUnattributed(purchase) {
-            byMerchant[merchant(purchase), default: 0] += purchase.total.minorUnits
-        }
-        return
-            byMerchant
-            .map {
-                (name: $0.key, total: MoneyAmount(minorUnits: $0.value, currencyCode: currency))
-            }
-            .sorted { $0.total.minorUnits > $1.total.minorUnits }
-            .prefix(limit)
-            .map { $0 }
-    }
 }
 
 /// The figures a finished digest wants beside its totals — a comparison, a
@@ -162,33 +128,6 @@ extension PurchasesPresentation {
         purchases
             .filter { $0.total.currencyCode == currency }
             .reduce(0) { $0 + $1.total.minorUnits }
-    }
-
-    /// A merchant's share of the currency's spend, 0...1, for a bar that has
-    /// to be drawn at some width.
-    static func share(_ amount: MoneyAmount, of total: Int) -> Double {
-        guard total > 0 else { return 0 }
-        return min(max(Double(amount.minorUnits) / Double(total), 0), 1)
-    }
-
-    /// How much of the history is answered — the count, not the money, because
-    /// the money is in currencies that do not add up and the count always
-    /// does.
-    static func accounted(_ purchases: [Purchase]) -> (settled: Int, total: Int) {
-        (settled: purchases.filter { !$0.status.isUnsettled }.count, total: purchases.count)
-    }
-
-    /// The last `limit` months, oldest first, as one figure each in a single
-    /// currency — the shape a trend strip draws. Oldest first because a bar
-    /// chart of time reads left to right, while ``byMonth`` is newest first
-    /// because a list does not.
-    static func trend(
-        _ purchases: [Purchase], currency: String, limit: Int
-    ) -> [(month: Date, minorUnits: Int)] {
-        byMonth(purchases)
-            .prefix(limit)
-            .map { (month: $0.month, minorUnits: total($0.purchases, in: currency)) }
-            .reversed()
     }
 
     static func shortMonth(_ date: Date) -> String {
@@ -272,71 +211,5 @@ internal struct PurchaseStatusBadge: View {
             .padding(.vertical, PopsSpacing.xs)
             .background(tone.opacity(0.14), in: .rect(cornerRadius: PopsRadius.control))
             .lineLimit(1)
-    }
-}
-
-/// A purchase at its smallest useful size: mark, name, day, amount.
-///
-/// Shared across the digest-finish variants because the row is not what those
-/// variants disagree about — they disagree about what contains it. A row
-/// redrawn three ways would put three changes in front of a reviewer asked to
-/// judge one.
-internal struct PurchaseCompactRow: View {
-    internal let purchase: Purchase
-    internal var markSize: CGFloat = 30
-
-    internal var body: some View {
-        HStack(spacing: PopsSpacing.md) {
-            PurchaseMark(purchase: purchase, size: markSize)
-            VStack(alignment: .leading, spacing: PopsSpacing.xs) {
-                Text(PurchasesPresentation.merchant(purchase))
-                    .font(.popsSubheadline)
-                    .foregroundStyle(
-                        PurchasesPresentation.isUnattributed(purchase)
-                            ? Color.popsMutedForeground : Color.popsForeground
-                    )
-                    .lineLimit(1)
-                Text(PurchasesPresentation.day(purchase))
-                    .font(.popsCaption)
-                    .foregroundStyle(Color.popsMutedForeground)
-            }
-            Spacer(minLength: PopsSpacing.sm)
-            Text(purchase.total.formatted())
-                .font(.popsSubheadline)
-                .monospacedDigit()
-                .foregroundStyle(Color.popsForeground)
-                .lineLimit(1)
-                .layoutPriority(1)
-        }
-        .padding(.vertical, PopsSpacing.sm)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(
-            """
-            \(PurchasesPresentation.merchant(purchase)), \
-            \(purchase.total.formatted()), \
-            \(PurchasesPresentation.day(purchase))
-            """
-        )
-    }
-}
-
-/// A section's name, set above what it introduces, with an optional note on
-/// the right for the thing the section is qualified by — a currency, a count.
-internal struct DigestSectionLabel: View {
-    internal let title: String
-    internal var note: String?
-
-    internal var body: some View {
-        HStack(spacing: PopsSpacing.sm) {
-            Text(title.uppercased())
-                .font(.popsSectionLabel)
-                .foregroundStyle(Color.popsMutedForeground)
-            Spacer(minLength: PopsSpacing.sm)
-            if let note {
-                Text(note)
-                    .font(.popsCaption)
-                    .foregroundStyle(Color.popsMutedForeground)
-            }
-        }
     }
 }

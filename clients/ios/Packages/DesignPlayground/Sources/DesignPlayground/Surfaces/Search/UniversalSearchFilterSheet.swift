@@ -1,4 +1,3 @@
-import DesignSystem
 import SwiftUI
 
 /// The sheet the universal search's filter circle opens: one native form

@@ -1,5 +1,4 @@
 import AppCore
-import Foundation
 
 /// A saved purchase: its content in the conditions the archive holds, every
 /// way the fetch can go, and editing it.

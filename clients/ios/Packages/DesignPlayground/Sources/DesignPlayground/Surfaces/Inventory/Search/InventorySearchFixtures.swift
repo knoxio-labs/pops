@@ -10,8 +10,6 @@ internal enum InventorySearchFixtures {
     internal static let types: [String] =
         Array(Set(records.compactMap(\.item.typeName))).sorted()
 
-    internal static let recentQueries = ["screws", "router", "office 04", "hdmi"]
-
     internal static let recentlyScanned: [InventorySearchRecord] =
         ["kitchen-12", "screws", "television", "router"].compactMap { id in
             records.first { $0.id == id }
