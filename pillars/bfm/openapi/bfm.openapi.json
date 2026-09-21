@@ -5958,6 +5958,10 @@
                     "minimum": -9007199254740991,
                     "type": "integer"
                   },
+                  "discountIncluded": {
+                    "nullable": true,
+                    "type": "boolean"
+                  },
                   "idempotencyKey": {
                     "maxLength": 200,
                     "minLength": 1,
@@ -6019,15 +6023,27 @@
                     "minimum": -9007199254740991,
                     "type": "integer"
                   },
+                  "shippingIncluded": {
+                    "nullable": true,
+                    "type": "boolean"
+                  },
                   "surchargeCents": {
                     "maximum": 9007199254740991,
                     "minimum": -9007199254740991,
                     "type": "integer"
                   },
+                  "surchargeIncluded": {
+                    "nullable": true,
+                    "type": "boolean"
+                  },
                   "taxCents": {
                     "maximum": 9007199254740991,
                     "minimum": -9007199254740991,
                     "type": "integer"
+                  },
+                  "taxIncluded": {
+                    "nullable": true,
+                    "type": "boolean"
                   },
                   "totalCents": {
                     "maximum": 9007199254740991,
@@ -6470,6 +6486,10 @@
                     "minimum": -9007199254740991,
                     "type": "integer"
                   },
+                  "discountIncluded": {
+                    "nullable": true,
+                    "type": "boolean"
+                  },
                   "documents": {
                     "items": {
                       "additionalProperties": false,
@@ -6549,15 +6569,27 @@
                     "minimum": -9007199254740991,
                     "type": "integer"
                   },
+                  "shippingIncluded": {
+                    "nullable": true,
+                    "type": "boolean"
+                  },
                   "surchargeCents": {
                     "maximum": 9007199254740991,
                     "minimum": -9007199254740991,
                     "type": "integer"
                   },
+                  "surchargeIncluded": {
+                    "nullable": true,
+                    "type": "boolean"
+                  },
                   "taxCents": {
                     "maximum": 9007199254740991,
                     "minimum": -9007199254740991,
                     "type": "integer"
+                  },
+                  "taxIncluded": {
+                    "nullable": true,
+                    "type": "boolean"
                   },
                   "totalCents": {
                     "maximum": 9007199254740991,
@@ -7079,6 +7111,10 @@
                               "minimum": -9007199254740991,
                               "type": "integer"
                             },
+                            "discountIncluded": {
+                              "nullable": true,
+                              "type": "boolean"
+                            },
                             "documents": {
                               "items": {
                                 "additionalProperties": false,
@@ -7151,6 +7187,10 @@
                               "minimum": -9007199254740991,
                               "type": "integer"
                             },
+                            "shippingIncluded": {
+                              "nullable": true,
+                              "type": "boolean"
+                            },
                             "subtotalCents": {
                               "maximum": 9007199254740991,
                               "minimum": -9007199254740991,
@@ -7161,10 +7201,18 @@
                               "minimum": -9007199254740991,
                               "type": "integer"
                             },
+                            "surchargeIncluded": {
+                              "nullable": true,
+                              "type": "boolean"
+                            },
                             "taxCents": {
                               "maximum": 9007199254740991,
                               "minimum": -9007199254740991,
                               "type": "integer"
+                            },
+                            "taxIncluded": {
+                              "nullable": true,
+                              "type": "boolean"
                             },
                             "totalCents": {
                               "maximum": 9007199254740991,
@@ -7183,6 +7231,10 @@
                             "surchargeCents",
                             "shippingCents",
                             "discountCents",
+                            "taxIncluded",
+                            "discountIncluded",
+                            "surchargeIncluded",
+                            "shippingIncluded",
                             "items",
                             "documents",
                             "capture"

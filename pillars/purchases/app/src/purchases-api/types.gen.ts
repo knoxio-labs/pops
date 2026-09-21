@@ -648,6 +648,7 @@ export type PurchaseListResponses = {
       createdAt: string;
       currency: string;
       discountCents: number;
+      discountIncluded: boolean | null;
       id: string;
       ingestMethod: 'email' | 'export' | 'upload' | 'manual';
       itemCount: number;
@@ -660,12 +661,15 @@ export type PurchaseListResponses = {
       receiptUri: string | null;
       settlementMode: 'card' | 'cash' | 'unknown';
       shippingCents: number;
+      shippingIncluded: boolean | null;
       source: string;
       sourceOrderId: string | null;
       status: 'awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored';
       subtotalCents: number;
       surchargeCents: number;
+      surchargeIncluded: boolean | null;
       taxCents: number;
+      taxIncluded: boolean | null;
       totalCents: number;
       updatedAt: string;
     }>;
@@ -707,6 +711,7 @@ export type PurchaseCreateData = {
     checksum: string;
     currency: string;
     discountCents?: number;
+    discountIncluded?: boolean | null;
     documents?: Array<{
       documentUri: string;
       kind?: 'tax_invoice' | 'receipt' | 'order_confirmation' | 'delivery_photo' | 'other';
@@ -758,12 +763,15 @@ export type PurchaseCreateData = {
       trackingNumber?: string | null;
     }>;
     shippingCents?: number;
+    shippingIncluded?: boolean | null;
     source: string;
     sourceOrderId?: string | null;
     subtotalCents?: number;
     surchargeCents?: number;
+    surchargeIncluded?: boolean | null;
     tags?: Array<string>;
     taxCents?: number;
+    taxIncluded?: boolean | null;
     totalCents: number;
   };
   path?: never;
@@ -898,6 +906,7 @@ export type PurchaseCreateResponses = {
       createdAt: string;
       currency: string;
       discountCents: number;
+      discountIncluded: boolean | null;
       id: string;
       ingestMethod: 'email' | 'export' | 'upload' | 'manual';
       merchantEntityId: string | null;
@@ -908,12 +917,15 @@ export type PurchaseCreateResponses = {
       rawRef: string | null;
       settlementMode: 'card' | 'cash' | 'unknown';
       shippingCents: number;
+      shippingIncluded: boolean | null;
       source: string;
       sourceOrderId: string | null;
       status: 'awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored';
       subtotalCents: number;
       surchargeCents: number;
+      surchargeIncluded: boolean | null;
       taxCents: number;
+      taxIncluded: boolean | null;
       totalCents: number;
       updatedAt: string;
     };
@@ -968,6 +980,7 @@ export type PurchaseCreateManualData = {
     }>;
     currency: string;
     discountCents?: number;
+    discountIncluded?: boolean | null;
     documents?: Array<{
       documentUri: string;
       kind?: 'tax_invoice' | 'receipt' | 'order_confirmation' | 'delivery_photo' | 'other';
@@ -1019,10 +1032,13 @@ export type PurchaseCreateManualData = {
       trackingNumber?: string | null;
     }>;
     shippingCents?: number;
+    shippingIncluded?: boolean | null;
     subtotalCents?: number;
     surchargeCents?: number;
+    surchargeIncluded?: boolean | null;
     tags?: Array<string>;
     taxCents?: number;
+    taxIncluded?: boolean | null;
     totalCents: number;
   };
   path?: never;
@@ -1158,6 +1174,7 @@ export type PurchaseCreateManualResponses = {
       createdAt: string;
       currency: string;
       discountCents: number;
+      discountIncluded: boolean | null;
       id: string;
       ingestMethod: 'email' | 'export' | 'upload' | 'manual';
       merchantEntityId: string | null;
@@ -1168,12 +1185,15 @@ export type PurchaseCreateManualResponses = {
       rawRef: string | null;
       settlementMode: 'card' | 'cash' | 'unknown';
       shippingCents: number;
+      shippingIncluded: boolean | null;
       source: string;
       sourceOrderId: string | null;
       status: 'awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored';
       subtotalCents: number;
       surchargeCents: number;
+      surchargeIncluded: boolean | null;
       taxCents: number;
+      taxIncluded: boolean | null;
       totalCents: number;
       updatedAt: string;
     };
@@ -1364,6 +1384,7 @@ export type PurchaseGetResponses = {
       createdAt: string;
       currency: string;
       discountCents: number;
+      discountIncluded: boolean | null;
       id: string;
       ingestMethod: 'email' | 'export' | 'upload' | 'manual';
       merchantEntityId: string | null;
@@ -1374,12 +1395,15 @@ export type PurchaseGetResponses = {
       rawRef: string | null;
       settlementMode: 'card' | 'cash' | 'unknown';
       shippingCents: number;
+      shippingIncluded: boolean | null;
       source: string;
       sourceOrderId: string | null;
       status: 'awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored';
       subtotalCents: number;
       surchargeCents: number;
+      surchargeIncluded: boolean | null;
       taxCents: number;
+      taxIncluded: boolean | null;
       totalCents: number;
       updatedAt: string;
     };
@@ -1920,6 +1944,7 @@ export type ReceiptUploadResponses = {
             createdAt: string;
             currency: string;
             discountCents: number;
+            discountIncluded: boolean | null;
             id: string;
             ingestMethod: 'email' | 'export' | 'upload' | 'manual';
             merchantEntityId: string | null;
@@ -1930,12 +1955,15 @@ export type ReceiptUploadResponses = {
             rawRef: string | null;
             settlementMode: 'card' | 'cash' | 'unknown';
             shippingCents: number;
+            shippingIncluded: boolean | null;
             source: string;
             sourceOrderId: string | null;
             status: 'awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored';
             subtotalCents: number;
             surchargeCents: number;
+            surchargeIncluded: boolean | null;
             taxCents: number;
+            taxIncluded: boolean | null;
             totalCents: number;
             updatedAt: string;
           };
@@ -2032,6 +2060,7 @@ export type ReceiptSaveDraftData = {
     }>;
     currency: string;
     discountCents?: number;
+    discountIncluded?: boolean | null;
     documents: Array<{
       documentUri: string;
       kind?: 'tax_invoice' | 'receipt' | 'order_confirmation' | 'delivery_photo' | 'other';
@@ -2083,10 +2112,13 @@ export type ReceiptSaveDraftData = {
       trackingNumber?: string | null;
     }>;
     shippingCents?: number;
+    shippingIncluded?: boolean | null;
     subtotalCents?: number;
     surchargeCents?: number;
+    surchargeIncluded?: boolean | null;
     tags?: Array<string>;
     taxCents?: number;
+    taxIncluded?: boolean | null;
     totalCents: number;
   };
   path?: never;
@@ -2221,6 +2253,7 @@ export type ReceiptSaveDraftResponses = {
       createdAt: string;
       currency: string;
       discountCents: number;
+      discountIncluded: boolean | null;
       id: string;
       ingestMethod: 'email' | 'export' | 'upload' | 'manual';
       merchantEntityId: string | null;
@@ -2231,12 +2264,15 @@ export type ReceiptSaveDraftResponses = {
       rawRef: string | null;
       settlementMode: 'card' | 'cash' | 'unknown';
       shippingCents: number;
+      shippingIncluded: boolean | null;
       source: string;
       sourceOrderId: string | null;
       status: 'awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored';
       subtotalCents: number;
       surchargeCents: number;
+      surchargeIncluded: boolean | null;
       taxCents: number;
+      taxIncluded: boolean | null;
       totalCents: number;
       updatedAt: string;
     };
@@ -2348,6 +2384,7 @@ export type ReceiptExtractResponses = {
           }>;
           currency: string;
           discountCents?: number;
+          discountIncluded?: boolean | null;
           documents?: Array<{
             documentUri: string;
             kind?: 'tax_invoice' | 'receipt' | 'order_confirmation' | 'delivery_photo' | 'other';
@@ -2398,10 +2435,13 @@ export type ReceiptExtractResponses = {
             trackingNumber?: string | null;
           }>;
           shippingCents?: number;
+          shippingIncluded?: boolean | null;
           subtotalCents?: number;
           surchargeCents?: number;
+          surchargeIncluded?: boolean | null;
           tags?: Array<string>;
           taxCents?: number;
+          taxIncluded?: boolean | null;
           totalCents: number;
         };
         failures: Array<{
@@ -2619,6 +2659,7 @@ export type ReconcileLinksResponses = {
         createdAt: string;
         currency: string;
         discountCents: number;
+        discountIncluded: boolean | null;
         id: string;
         ingestMethod: 'email' | 'export' | 'upload' | 'manual';
         merchantEntityId: string | null;
@@ -2629,12 +2670,15 @@ export type ReconcileLinksResponses = {
         rawRef: string | null;
         settlementMode: 'card' | 'cash' | 'unknown';
         shippingCents: number;
+        shippingIncluded: boolean | null;
         source: string;
         sourceOrderId: string | null;
         status: 'awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored';
         subtotalCents: number;
         surchargeCents: number;
+        surchargeIncluded: boolean | null;
         taxCents: number;
+        taxIncluded: boolean | null;
         totalCents: number;
         updatedAt: string;
       };

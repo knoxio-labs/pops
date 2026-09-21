@@ -21910,6 +21910,8 @@ internal enum Operations {
                     internal var currency: Swift.String
                     /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/requestBody/json/discountCents`.
                     internal var discountCents: Swift.Int?
+                    /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/requestBody/json/discountIncluded`.
+                    internal var discountIncluded: Swift.Bool?
                     /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/requestBody/json/idempotencyKey`.
                     internal var idempotencyKey: Swift.String
                     /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/requestBody/json/ItemsPayload`.
@@ -21995,10 +21997,16 @@ internal enum Operations {
                     internal var orderedAtOffsetMinutes: Swift.Int?
                     /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/requestBody/json/shippingCents`.
                     internal var shippingCents: Swift.Int?
+                    /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/requestBody/json/shippingIncluded`.
+                    internal var shippingIncluded: Swift.Bool?
                     /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/requestBody/json/surchargeCents`.
                     internal var surchargeCents: Swift.Int?
+                    /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/requestBody/json/surchargeIncluded`.
+                    internal var surchargeIncluded: Swift.Bool?
                     /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/requestBody/json/taxCents`.
                     internal var taxCents: Swift.Int?
+                    /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/requestBody/json/taxIncluded`.
+                    internal var taxIncluded: Swift.Bool?
                     /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/requestBody/json/totalCents`.
                     internal var totalCents: Swift.Int
                     /// Creates a new `JsonPayload`.
@@ -22007,54 +22015,70 @@ internal enum Operations {
                     ///   - capture:
                     ///   - currency:
                     ///   - discountCents:
+                    ///   - discountIncluded:
                     ///   - idempotencyKey:
                     ///   - items:
                     ///   - merchantName:
                     ///   - orderedAt:
                     ///   - orderedAtOffsetMinutes:
                     ///   - shippingCents:
+                    ///   - shippingIncluded:
                     ///   - surchargeCents:
+                    ///   - surchargeIncluded:
                     ///   - taxCents:
+                    ///   - taxIncluded:
                     ///   - totalCents:
                     internal init(
                         capture: Operations.MobilePurchases_createManualPurchase.Input.Body.JsonPayload.CapturePayload? = nil,
                         currency: Swift.String,
                         discountCents: Swift.Int? = nil,
+                        discountIncluded: Swift.Bool? = nil,
                         idempotencyKey: Swift.String,
                         items: Operations.MobilePurchases_createManualPurchase.Input.Body.JsonPayload.ItemsPayload,
                         merchantName: Swift.String? = nil,
                         orderedAt: Swift.String,
                         orderedAtOffsetMinutes: Swift.Int? = nil,
                         shippingCents: Swift.Int? = nil,
+                        shippingIncluded: Swift.Bool? = nil,
                         surchargeCents: Swift.Int? = nil,
+                        surchargeIncluded: Swift.Bool? = nil,
                         taxCents: Swift.Int? = nil,
+                        taxIncluded: Swift.Bool? = nil,
                         totalCents: Swift.Int
                     ) {
                         self.capture = capture
                         self.currency = currency
                         self.discountCents = discountCents
+                        self.discountIncluded = discountIncluded
                         self.idempotencyKey = idempotencyKey
                         self.items = items
                         self.merchantName = merchantName
                         self.orderedAt = orderedAt
                         self.orderedAtOffsetMinutes = orderedAtOffsetMinutes
                         self.shippingCents = shippingCents
+                        self.shippingIncluded = shippingIncluded
                         self.surchargeCents = surchargeCents
+                        self.surchargeIncluded = surchargeIncluded
                         self.taxCents = taxCents
+                        self.taxIncluded = taxIncluded
                         self.totalCents = totalCents
                     }
                     internal enum CodingKeys: String, CodingKey {
                         case capture
                         case currency
                         case discountCents
+                        case discountIncluded
                         case idempotencyKey
                         case items
                         case merchantName
                         case orderedAt
                         case orderedAtOffsetMinutes
                         case shippingCents
+                        case shippingIncluded
                         case surchargeCents
+                        case surchargeIncluded
                         case taxCents
+                        case taxIncluded
                         case totalCents
                     }
                     internal init(from decoder: any Swift.Decoder) throws {
@@ -22070,6 +22094,10 @@ internal enum Operations {
                         self.discountCents = try container.decodeIfPresent(
                             Swift.Int.self,
                             forKey: .discountCents
+                        )
+                        self.discountIncluded = try container.decodeIfPresent(
+                            Swift.Bool.self,
+                            forKey: .discountIncluded
                         )
                         self.idempotencyKey = try container.decode(
                             Swift.String.self,
@@ -22095,13 +22123,25 @@ internal enum Operations {
                             Swift.Int.self,
                             forKey: .shippingCents
                         )
+                        self.shippingIncluded = try container.decodeIfPresent(
+                            Swift.Bool.self,
+                            forKey: .shippingIncluded
+                        )
                         self.surchargeCents = try container.decodeIfPresent(
                             Swift.Int.self,
                             forKey: .surchargeCents
                         )
+                        self.surchargeIncluded = try container.decodeIfPresent(
+                            Swift.Bool.self,
+                            forKey: .surchargeIncluded
+                        )
                         self.taxCents = try container.decodeIfPresent(
                             Swift.Int.self,
                             forKey: .taxCents
+                        )
+                        self.taxIncluded = try container.decodeIfPresent(
+                            Swift.Bool.self,
+                            forKey: .taxIncluded
                         )
                         self.totalCents = try container.decode(
                             Swift.Int.self,
@@ -22111,14 +22151,18 @@ internal enum Operations {
                             "capture",
                             "currency",
                             "discountCents",
+                            "discountIncluded",
                             "idempotencyKey",
                             "items",
                             "merchantName",
                             "orderedAt",
                             "orderedAtOffsetMinutes",
                             "shippingCents",
+                            "shippingIncluded",
                             "surchargeCents",
+                            "surchargeIncluded",
                             "taxCents",
+                            "taxIncluded",
                             "totalCents"
                         ])
                     }
@@ -23507,6 +23551,8 @@ internal enum Operations {
                     internal var currency: Swift.String
                     /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/discountCents`.
                     internal var discountCents: Swift.Int?
+                    /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/discountIncluded`.
+                    internal var discountIncluded: Swift.Bool?
                     /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/DocumentsPayload`.
                     internal struct DocumentsPayloadPayload: Codable, Hashable, Sendable {
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/DocumentsPayload/documentUri`.
@@ -23638,10 +23684,16 @@ internal enum Operations {
                     internal var orderedAtOffsetMinutes: Swift.Int?
                     /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/shippingCents`.
                     internal var shippingCents: Swift.Int?
+                    /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/shippingIncluded`.
+                    internal var shippingIncluded: Swift.Bool?
                     /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/surchargeCents`.
                     internal var surchargeCents: Swift.Int?
+                    /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/surchargeIncluded`.
+                    internal var surchargeIncluded: Swift.Bool?
                     /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/taxCents`.
                     internal var taxCents: Swift.Int?
+                    /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/taxIncluded`.
+                    internal var taxIncluded: Swift.Bool?
                     /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/requestBody/json/totalCents`.
                     internal var totalCents: Swift.Int
                     /// Creates a new `JsonPayload`.
@@ -23650,6 +23702,7 @@ internal enum Operations {
                     ///   - capture:
                     ///   - currency:
                     ///   - discountCents:
+                    ///   - discountIncluded:
                     ///   - documents:
                     ///   - idempotencyKey:
                     ///   - items:
@@ -23657,13 +23710,17 @@ internal enum Operations {
                     ///   - orderedAt:
                     ///   - orderedAtOffsetMinutes:
                     ///   - shippingCents:
+                    ///   - shippingIncluded:
                     ///   - surchargeCents:
+                    ///   - surchargeIncluded:
                     ///   - taxCents:
+                    ///   - taxIncluded:
                     ///   - totalCents:
                     internal init(
                         capture: Operations.MobilePurchases_saveReceiptDraft.Input.Body.JsonPayload.CapturePayload? = nil,
                         currency: Swift.String,
                         discountCents: Swift.Int? = nil,
+                        discountIncluded: Swift.Bool? = nil,
                         documents: Operations.MobilePurchases_saveReceiptDraft.Input.Body.JsonPayload.DocumentsPayload,
                         idempotencyKey: Swift.String,
                         items: Operations.MobilePurchases_saveReceiptDraft.Input.Body.JsonPayload.ItemsPayload,
@@ -23671,13 +23728,17 @@ internal enum Operations {
                         orderedAt: Swift.String,
                         orderedAtOffsetMinutes: Swift.Int? = nil,
                         shippingCents: Swift.Int? = nil,
+                        shippingIncluded: Swift.Bool? = nil,
                         surchargeCents: Swift.Int? = nil,
+                        surchargeIncluded: Swift.Bool? = nil,
                         taxCents: Swift.Int? = nil,
+                        taxIncluded: Swift.Bool? = nil,
                         totalCents: Swift.Int
                     ) {
                         self.capture = capture
                         self.currency = currency
                         self.discountCents = discountCents
+                        self.discountIncluded = discountIncluded
                         self.documents = documents
                         self.idempotencyKey = idempotencyKey
                         self.items = items
@@ -23685,14 +23746,18 @@ internal enum Operations {
                         self.orderedAt = orderedAt
                         self.orderedAtOffsetMinutes = orderedAtOffsetMinutes
                         self.shippingCents = shippingCents
+                        self.shippingIncluded = shippingIncluded
                         self.surchargeCents = surchargeCents
+                        self.surchargeIncluded = surchargeIncluded
                         self.taxCents = taxCents
+                        self.taxIncluded = taxIncluded
                         self.totalCents = totalCents
                     }
                     internal enum CodingKeys: String, CodingKey {
                         case capture
                         case currency
                         case discountCents
+                        case discountIncluded
                         case documents
                         case idempotencyKey
                         case items
@@ -23700,8 +23765,11 @@ internal enum Operations {
                         case orderedAt
                         case orderedAtOffsetMinutes
                         case shippingCents
+                        case shippingIncluded
                         case surchargeCents
+                        case surchargeIncluded
                         case taxCents
+                        case taxIncluded
                         case totalCents
                     }
                     internal init(from decoder: any Swift.Decoder) throws {
@@ -23717,6 +23785,10 @@ internal enum Operations {
                         self.discountCents = try container.decodeIfPresent(
                             Swift.Int.self,
                             forKey: .discountCents
+                        )
+                        self.discountIncluded = try container.decodeIfPresent(
+                            Swift.Bool.self,
+                            forKey: .discountIncluded
                         )
                         self.documents = try container.decode(
                             Operations.MobilePurchases_saveReceiptDraft.Input.Body.JsonPayload.DocumentsPayload.self,
@@ -23746,13 +23818,25 @@ internal enum Operations {
                             Swift.Int.self,
                             forKey: .shippingCents
                         )
+                        self.shippingIncluded = try container.decodeIfPresent(
+                            Swift.Bool.self,
+                            forKey: .shippingIncluded
+                        )
                         self.surchargeCents = try container.decodeIfPresent(
                             Swift.Int.self,
                             forKey: .surchargeCents
                         )
+                        self.surchargeIncluded = try container.decodeIfPresent(
+                            Swift.Bool.self,
+                            forKey: .surchargeIncluded
+                        )
                         self.taxCents = try container.decodeIfPresent(
                             Swift.Int.self,
                             forKey: .taxCents
+                        )
+                        self.taxIncluded = try container.decodeIfPresent(
+                            Swift.Bool.self,
+                            forKey: .taxIncluded
                         )
                         self.totalCents = try container.decode(
                             Swift.Int.self,
@@ -23762,6 +23846,7 @@ internal enum Operations {
                             "capture",
                             "currency",
                             "discountCents",
+                            "discountIncluded",
                             "documents",
                             "idempotencyKey",
                             "items",
@@ -23769,8 +23854,11 @@ internal enum Operations {
                             "orderedAt",
                             "orderedAtOffsetMinutes",
                             "shippingCents",
+                            "shippingIncluded",
                             "surchargeCents",
+                            "surchargeIncluded",
                             "taxCents",
+                            "taxIncluded",
                             "totalCents"
                         ])
                     }
@@ -25358,6 +25446,8 @@ internal enum Operations {
                                 internal var currency: Swift.String
                                 /// - Remark: Generated from `#/paths/mobile/purchases/receipts/extract/POST/responses/200/content/json/case1/draft/discountCents`.
                                 internal var discountCents: Swift.Int
+                                /// - Remark: Generated from `#/paths/mobile/purchases/receipts/extract/POST/responses/200/content/json/case1/draft/discountIncluded`.
+                                internal var discountIncluded: Swift.Bool?
                                 /// - Remark: Generated from `#/paths/mobile/purchases/receipts/extract/POST/responses/200/content/json/case1/draft/DocumentsPayload`.
                                 internal struct DocumentsPayloadPayload: Codable, Hashable, Sendable {
                                     /// - Remark: Generated from `#/paths/mobile/purchases/receipts/extract/POST/responses/200/content/json/case1/draft/DocumentsPayload/documentUri`.
@@ -25487,12 +25577,18 @@ internal enum Operations {
                                 internal var orderedAtOffsetMinutes: Swift.Int?
                                 /// - Remark: Generated from `#/paths/mobile/purchases/receipts/extract/POST/responses/200/content/json/case1/draft/shippingCents`.
                                 internal var shippingCents: Swift.Int
+                                /// - Remark: Generated from `#/paths/mobile/purchases/receipts/extract/POST/responses/200/content/json/case1/draft/shippingIncluded`.
+                                internal var shippingIncluded: Swift.Bool?
                                 /// - Remark: Generated from `#/paths/mobile/purchases/receipts/extract/POST/responses/200/content/json/case1/draft/subtotalCents`.
                                 internal var subtotalCents: Swift.Int
                                 /// - Remark: Generated from `#/paths/mobile/purchases/receipts/extract/POST/responses/200/content/json/case1/draft/surchargeCents`.
                                 internal var surchargeCents: Swift.Int
+                                /// - Remark: Generated from `#/paths/mobile/purchases/receipts/extract/POST/responses/200/content/json/case1/draft/surchargeIncluded`.
+                                internal var surchargeIncluded: Swift.Bool?
                                 /// - Remark: Generated from `#/paths/mobile/purchases/receipts/extract/POST/responses/200/content/json/case1/draft/taxCents`.
                                 internal var taxCents: Swift.Int
+                                /// - Remark: Generated from `#/paths/mobile/purchases/receipts/extract/POST/responses/200/content/json/case1/draft/taxIncluded`.
+                                internal var taxIncluded: Swift.Bool?
                                 /// - Remark: Generated from `#/paths/mobile/purchases/receipts/extract/POST/responses/200/content/json/case1/draft/totalCents`.
                                 internal var totalCents: Swift.Int
                                 /// Creates a new `DraftPayload`.
@@ -25501,58 +25597,74 @@ internal enum Operations {
                                 ///   - capture:
                                 ///   - currency:
                                 ///   - discountCents:
+                                ///   - discountIncluded:
                                 ///   - documents:
                                 ///   - items:
                                 ///   - merchantName:
                                 ///   - orderedAt:
                                 ///   - orderedAtOffsetMinutes:
                                 ///   - shippingCents:
+                                ///   - shippingIncluded:
                                 ///   - subtotalCents:
                                 ///   - surchargeCents:
+                                ///   - surchargeIncluded:
                                 ///   - taxCents:
+                                ///   - taxIncluded:
                                 ///   - totalCents:
                                 internal init(
                                     capture: Operations.MobilePurchases_extractReceipt.Output.Ok.Body.JsonPayload.Case1Payload.DraftPayload.CapturePayload? = nil,
                                     currency: Swift.String,
                                     discountCents: Swift.Int,
+                                    discountIncluded: Swift.Bool? = nil,
                                     documents: Operations.MobilePurchases_extractReceipt.Output.Ok.Body.JsonPayload.Case1Payload.DraftPayload.DocumentsPayload,
                                     items: Operations.MobilePurchases_extractReceipt.Output.Ok.Body.JsonPayload.Case1Payload.DraftPayload.ItemsPayload,
                                     merchantName: Swift.String? = nil,
                                     orderedAt: Swift.String,
                                     orderedAtOffsetMinutes: Swift.Int? = nil,
                                     shippingCents: Swift.Int,
+                                    shippingIncluded: Swift.Bool? = nil,
                                     subtotalCents: Swift.Int,
                                     surchargeCents: Swift.Int,
+                                    surchargeIncluded: Swift.Bool? = nil,
                                     taxCents: Swift.Int,
+                                    taxIncluded: Swift.Bool? = nil,
                                     totalCents: Swift.Int
                                 ) {
                                     self.capture = capture
                                     self.currency = currency
                                     self.discountCents = discountCents
+                                    self.discountIncluded = discountIncluded
                                     self.documents = documents
                                     self.items = items
                                     self.merchantName = merchantName
                                     self.orderedAt = orderedAt
                                     self.orderedAtOffsetMinutes = orderedAtOffsetMinutes
                                     self.shippingCents = shippingCents
+                                    self.shippingIncluded = shippingIncluded
                                     self.subtotalCents = subtotalCents
                                     self.surchargeCents = surchargeCents
+                                    self.surchargeIncluded = surchargeIncluded
                                     self.taxCents = taxCents
+                                    self.taxIncluded = taxIncluded
                                     self.totalCents = totalCents
                                 }
                                 internal enum CodingKeys: String, CodingKey {
                                     case capture
                                     case currency
                                     case discountCents
+                                    case discountIncluded
                                     case documents
                                     case items
                                     case merchantName
                                     case orderedAt
                                     case orderedAtOffsetMinutes
                                     case shippingCents
+                                    case shippingIncluded
                                     case subtotalCents
                                     case surchargeCents
+                                    case surchargeIncluded
                                     case taxCents
+                                    case taxIncluded
                                     case totalCents
                                 }
                                 internal init(from decoder: any Swift.Decoder) throws {
@@ -25568,6 +25680,10 @@ internal enum Operations {
                                     self.discountCents = try container.decode(
                                         Swift.Int.self,
                                         forKey: .discountCents
+                                    )
+                                    self.discountIncluded = try container.decodeIfPresent(
+                                        Swift.Bool.self,
+                                        forKey: .discountIncluded
                                     )
                                     self.documents = try container.decode(
                                         Operations.MobilePurchases_extractReceipt.Output.Ok.Body.JsonPayload.Case1Payload.DraftPayload.DocumentsPayload.self,
@@ -25593,6 +25709,10 @@ internal enum Operations {
                                         Swift.Int.self,
                                         forKey: .shippingCents
                                     )
+                                    self.shippingIncluded = try container.decodeIfPresent(
+                                        Swift.Bool.self,
+                                        forKey: .shippingIncluded
+                                    )
                                     self.subtotalCents = try container.decode(
                                         Swift.Int.self,
                                         forKey: .subtotalCents
@@ -25601,9 +25721,17 @@ internal enum Operations {
                                         Swift.Int.self,
                                         forKey: .surchargeCents
                                     )
+                                    self.surchargeIncluded = try container.decodeIfPresent(
+                                        Swift.Bool.self,
+                                        forKey: .surchargeIncluded
+                                    )
                                     self.taxCents = try container.decode(
                                         Swift.Int.self,
                                         forKey: .taxCents
+                                    )
+                                    self.taxIncluded = try container.decodeIfPresent(
+                                        Swift.Bool.self,
+                                        forKey: .taxIncluded
                                     )
                                     self.totalCents = try container.decode(
                                         Swift.Int.self,
@@ -25613,15 +25741,19 @@ internal enum Operations {
                                         "capture",
                                         "currency",
                                         "discountCents",
+                                        "discountIncluded",
                                         "documents",
                                         "items",
                                         "merchantName",
                                         "orderedAt",
                                         "orderedAtOffsetMinutes",
                                         "shippingCents",
+                                        "shippingIncluded",
                                         "subtotalCents",
                                         "surchargeCents",
+                                        "surchargeIncluded",
                                         "taxCents",
+                                        "taxIncluded",
                                         "totalCents"
                                     ])
                                 }
