@@ -31,6 +31,7 @@ import SwiftUI
 public struct ReceiptDraftView: View {
     @State private var draft: ReceiptDraft
 
+    private let opened: ReceiptDraft
     private let title: String?
     private let subtitle: String?
     private let status: Status?
@@ -39,6 +40,9 @@ public struct ReceiptDraftView: View {
     private let merchants: [ReceiptMerchantChoice]
     private let secondaryAction: SecondaryAction?
     private let addAnother: AddAnother?
+    private let lock: ReceiptDraftLock?
+    private let commit: ReceiptDraftCommit
+    private let onChange: ((ReceiptDraft) -> Void)?
     private let isSaving: Bool
     private let save: ((ReceiptDraft) -> Void)?
 
@@ -67,6 +71,11 @@ public struct ReceiptDraftView: View {
     ///     the next purchase, under the same rule Save is.
     ///   - isSaving: a save is in flight. Both saves hold, so a second tap
     ///     cannot create a second purchase.
+    ///   - lock: fields of a saved purchase shown read-only, and why. `nil`
+    ///     leaves every field editable, as a reading always is.
+    ///   - commit: where Save is drawn. See ``ReceiptDraftCommit``.
+    ///   - onChange: called with the draft after every edit, so a host that
+    ///     owns the cancel can tell whether leaving loses anything.
     public init(
         draft: ReceiptDraft,
         title: String? = nil,
@@ -77,10 +86,14 @@ public struct ReceiptDraftView: View {
         parts: [ReceiptPart] = [],
         secondaryAction: SecondaryAction? = nil,
         addAnother: AddAnother? = nil,
+        lock: ReceiptDraftLock? = nil,
+        commit: ReceiptDraftCommit = .actionBar,
+        onChange: ((ReceiptDraft) -> Void)? = nil,
         isSaving: Bool = false,
         save: ((ReceiptDraft) -> Void)? = nil
     ) {
         _draft = State(wrappedValue: draft)
+        opened = draft
         self.title = title
         self.subtitle = subtitle
         self.status = status
@@ -89,6 +102,9 @@ public struct ReceiptDraftView: View {
         self.parts = parts
         self.secondaryAction = secondaryAction
         self.addAnother = addAnother
+        self.lock = lock
+        self.commit = commit
+        self.onChange = onChange
         self.isSaving = isSaving
         self.save = save
     }
@@ -170,7 +186,13 @@ public struct ReceiptDraftView: View {
         .accessibilityIdentifier(ReceiptDraftAccessibility.form)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.popsBackground)
-        .safeAreaInset(edge: .bottom) { if save != nil { actions } }
+        .safeAreaInset(edge: .bottom) { if save != nil && commit == .actionBar { actions } }
+        .toolbar {
+            if save != nil && commit == .navigationBar {
+                ToolbarItem(placement: .confirmationAction) { navigationSave }
+            }
+        }
+        .onChange(of: draft) { _, next in onChange?(next) }
         // A tap outside a field puts the keyboard away, which it did not do
         // before: a form this long is mostly scrolling, and a keyboard that
         // only closes on Return is a keyboard covering half the receipt.
@@ -185,7 +207,8 @@ public struct ReceiptDraftView: View {
             if !parts.isEmpty { ReceiptPagesView(parts: parts) }
             if complaints != .belowForm { complaint }
             if title != nil || subtitle != nil { heading }
-            ReceiptDraftForm(draft: $draft, merchants: merchants)
+            if let lock { ReceiptDraftLockNotice(lock: lock) }
+            ReceiptDraftForm(draft: $draft, merchants: merchants, lock: lock)
             if complaints == .belowForm { complaint }
         }
     }
@@ -250,6 +273,20 @@ public struct ReceiptDraftView: View {
     /// is half of what stops a double tap creating two purchases.
     internal static func canSave(_ draft: ReceiptDraft, isSaving: Bool) -> Bool {
         draft.isSaveable && !isSaving
+    }
+
+    /// The same rule, plus the navigation bar's: there has to be something
+    /// new to write.
+    internal static func canSave(
+        _ draft: ReceiptDraft, isSaving: Bool, changedFrom opened: ReceiptDraft
+    ) -> Bool {
+        canSave(draft, isSaving: isSaving) && draft != opened
+    }
+
+    private var navigationSave: some View {
+        Button(isSaving ? ReceiptDraftCopy.saving : ReceiptDraftCopy.saveInBar) { save?(draft) }
+            .disabled(!Self.canSave(draft, isSaving: isSaving, changedFrom: opened))
+            .accessibilityIdentifier(ReceiptDraftAccessibility.saveButton)
     }
 
     /// Save is the prominent one; whatever else can be done here sits beside
