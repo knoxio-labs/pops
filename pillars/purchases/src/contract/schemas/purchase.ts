@@ -80,6 +80,15 @@ export const PurchaseSchema = z.object({
   shippingCents: NonNegativeCentsSchema,
   taxCents: NonNegativeCentsSchema,
   discountCents: NonNegativeCentsSchema,
+  /**
+   * Whether each adjustment is already folded into the line prices
+   * (`true`) or sits on top of them (`false`). Null means not stated — a
+   * stored row always has a value, even if that value is null.
+   */
+  taxIncluded: z.boolean().nullable(),
+  discountIncluded: z.boolean().nullable(),
+  surchargeIncluded: z.boolean().nullable(),
+  shippingIncluded: z.boolean().nullable(),
   totalCents: CentsSchema,
   merchantEntityId: z.string().nullable(),
   merchantEntityName: z.string().nullable(),

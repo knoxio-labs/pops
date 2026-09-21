@@ -14,6 +14,7 @@ import {
   createPurchase,
   deleteSource,
   DuplicatePurchaseError,
+  getPurchase,
   getSource,
   listSources,
   PurchaseNotFoundError,
@@ -310,5 +311,32 @@ describe('timestamp format', () => {
       }[]
     ).map((r) => r.id);
     expect(order).toEqual([firstId, 'written-second']);
+  });
+});
+
+describe('adjustment basis columns', () => {
+  it('reads back null on every flag when the caller states none of them', () => {
+    const id = createPurchase(opened.db, amazonOrder());
+    const detail = getPurchase(opened.db, id);
+
+    expect(detail?.purchase.taxIncluded).toBeNull();
+    expect(detail?.purchase.discountIncluded).toBeNull();
+    expect(detail?.purchase.surchargeIncluded).toBeNull();
+    expect(detail?.purchase.shippingIncluded).toBeNull();
+  });
+
+  it('persists and reads back a stated basis for each flag', () => {
+    const id = createPurchase(
+      opened.db,
+      amazonOrder({ taxIncluded: true, discountIncluded: false, shippingIncluded: true })
+    );
+    const detail = getPurchase(opened.db, id);
+
+    expect(detail?.purchase.taxIncluded).toBe(true);
+    expect(detail?.purchase.discountIncluded).toBe(false);
+    expect(detail?.purchase.shippingIncluded).toBe(true);
+    // Not supplied — must not be coerced to false, or an adapter that never
+    // learned to state it would falsely claim "not included".
+    expect(detail?.purchase.surchargeIncluded).toBeNull();
   });
 });

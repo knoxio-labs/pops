@@ -240,6 +240,17 @@ export const CreatePurchaseBodySchema = z.object({
   taxCents: NonNegativeCentsSchema.optional(),
   surchargeCents: NonNegativeCentsSchema.optional(),
   discountCents: NonNegativeCentsSchema.optional(),
+  /**
+   * Whether each adjustment is already folded into the line prices
+   * (`true`) or sits on top of them (`false`). Nullable and optional: only
+   * a reading or reviewer that stated a basis knows one, and omitting it
+   * leaves the order's basis "not stated" rather than falsely "not
+   * included".
+   */
+  taxIncluded: z.boolean().nullable().optional(),
+  discountIncluded: z.boolean().nullable().optional(),
+  surchargeIncluded: z.boolean().nullable().optional(),
+  shippingIncluded: z.boolean().nullable().optional(),
   totalCents: CentsSchema,
   merchantEntityId: z.string().nullable().optional(),
   merchantEntityName: z.string().nullable().optional(),

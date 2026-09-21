@@ -110,6 +110,28 @@ export const purchases = sqliteTable(
      */
     totalCents: integer('total_cents').notNull(),
 
+    /**
+     * Whether each adjustment is already folded into the line prices
+     * (`true`) or sits on top of them (`false`) — Australian receipts print
+     * both conventions and a reading cannot always tell which it found.
+     *
+     * Decided 2026-09-14: shipping's included basis is stored exactly like
+     * tax, discount and surcharge — four independent nullable booleans (one
+     * per adjustment kind, shipping included), not one enum, because that
+     * is the existing idiom for this table (see `promotionalPrice` /
+     * `gstApplicable` on `purchase_items` and `orderedAtOffsetMinutes`
+     * above) and each of tax/discount/surcharge/shipping can independently
+     * be inside or on top of the line prices.
+     *
+     * NULL means not stated — every adapter that predates these columns,
+     * and every adapter that never learns to state it. `true`/`false` means
+     * the reading or reviewer explicitly said so.
+     */
+    taxIncluded: integer('tax_included', { mode: 'boolean' }),
+    discountIncluded: integer('discount_included', { mode: 'boolean' }),
+    surchargeIncluded: integer('surcharge_included', { mode: 'boolean' }),
+    shippingIncluded: integer('shipping_included', { mode: 'boolean' }),
+
     merchantEntityId: text('merchant_entity_id'),
     merchantEntityName: text('merchant_entity_name'),
 

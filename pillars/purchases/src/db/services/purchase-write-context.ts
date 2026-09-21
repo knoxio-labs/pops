@@ -64,6 +64,10 @@ interface ComponentCents {
   readonly taxCents: number;
   readonly surchargeCents: number;
   readonly discountCents: number;
+  readonly taxIncluded: boolean | null;
+  readonly discountIncluded: boolean | null;
+  readonly surchargeIncluded: boolean | null;
+  readonly shippingIncluded: boolean | null;
 }
 
 export function componentCents(input: CreatePurchaseInput): ComponentCents {
@@ -73,5 +77,11 @@ export function componentCents(input: CreatePurchaseInput): ComponentCents {
     taxCents: input.taxCents ?? 0,
     surchargeCents: input.surchargeCents ?? 0,
     discountCents: input.discountCents ?? 0,
+    // `?? null`, not `?? false`: an adapter that never learned to state a
+    // basis must produce "unknown", not a false claim of "not included".
+    taxIncluded: input.taxIncluded ?? null,
+    discountIncluded: input.discountIncluded ?? null,
+    surchargeIncluded: input.surchargeIncluded ?? null,
+    shippingIncluded: input.shippingIncluded ?? null,
   };
 }
