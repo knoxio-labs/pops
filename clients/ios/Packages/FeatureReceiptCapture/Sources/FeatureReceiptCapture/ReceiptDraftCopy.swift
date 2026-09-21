@@ -30,6 +30,8 @@ public enum ReceiptDraftCopy {
         "The items below don't sum to the printed total. Check them against the receipt "
         + "before saving."
     internal static let saveAndAddAnother = "Save and add another"
+    /// A bar button is a verb on its own; the object is the sheet's title.
+    internal static let saveInBar = "Save"
     internal static let saving = "Saving"
 
     // MARK: sections
@@ -51,6 +53,7 @@ public enum ReceiptDraftCopy {
     internal static let datePlaceholder = "As printed on the receipt"
     internal static let totalLabel = ReceiptResultCopy.FieldLabel.total
     internal static let amountPlaceholder = "0.00"
+    internal static let lockedValue = "Locked"
 
     internal static let itemDescriptionPlaceholder = "What it was"
     internal static let itemQuantityLabel = "Qty"
