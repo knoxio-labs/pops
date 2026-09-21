@@ -42,6 +42,18 @@ describe('monthBounds', () => {
     expect(bounds.from.startsWith('2026-11-30')).toBe(true);
     expect(bounds.to.startsWith('2026-12-31')).toBe(true);
   });
+
+  it('rejects a month string with no month component at all', () => {
+    expect(() => monthBounds('2026')).toThrow('not a YYYY-MM month');
+  });
+
+  it('rejects month 00, which no calendar has', () => {
+    expect(() => monthBounds('2026-00')).toThrow('not a YYYY-MM month');
+  });
+
+  it('rejects month 13, which no calendar has', () => {
+    expect(() => monthBounds('2026-13')).toThrow('not a YYYY-MM month');
+  });
 });
 
 describe('previousMonthKey', () => {

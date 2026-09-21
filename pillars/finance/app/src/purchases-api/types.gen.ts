@@ -88,6 +88,87 @@ export type AnalyticsMerchantSpendResponses = {
 export type AnalyticsMerchantSpendResponse =
   AnalyticsMerchantSpendResponses[keyof AnalyticsMerchantSpendResponses];
 
+export type AnalyticsMonthSummaryData = {
+  body?: never;
+  path?: never;
+  query: {
+    month: string;
+  };
+  url: '/analytics/month-summary';
+};
+
+export type AnalyticsMonthSummaryErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+  };
+};
+
+export type AnalyticsMonthSummaryError =
+  AnalyticsMonthSummaryErrors[keyof AnalyticsMonthSummaryErrors];
+
+export type AnalyticsMonthSummaryResponses = {
+  /**
+   * 200
+   */
+  200: {
+    merchantLeaders: Array<{
+      currency: string;
+      merchant:
+        | {
+            entityId: string;
+            name: string | null;
+            resolution: 'entity';
+          }
+        | {
+            entityId: null;
+            name: string;
+            resolution: 'name';
+          }
+        | {
+            entityId: null;
+            name: null;
+            resolution: 'unattributed';
+          };
+      netSpendCents: number;
+      orderCount: number;
+    }>;
+    month: string;
+    previousMonthTotals: Array<{
+      accounting: {
+        awaitingImportCents: number;
+        matchedCents: number;
+        netSpendCents: number;
+        refundedCents: number;
+        residualCents: number;
+        totalCents: number;
+      };
+      currency: string;
+      orderCount: number;
+    }> | null;
+    purchaseCount: number;
+    totals: Array<{
+      accounting: {
+        awaitingImportCents: number;
+        matchedCents: number;
+        netSpendCents: number;
+        refundedCents: number;
+        residualCents: number;
+        totalCents: number;
+      };
+      currency: string;
+      orderCount: number;
+    }>;
+    unmatchedCount: number;
+  };
+};
+
+export type AnalyticsMonthSummaryResponse =
+  AnalyticsMonthSummaryResponses[keyof AnalyticsMonthSummaryResponses];
+
 export type AnalyticsProductLeaderboardData = {
   body?: never;
   path?: never;
@@ -588,6 +669,7 @@ export type PurchaseListResponses = {
       totalCents: number;
       updatedAt: string;
     }>;
+    total?: number;
   };
 };
 

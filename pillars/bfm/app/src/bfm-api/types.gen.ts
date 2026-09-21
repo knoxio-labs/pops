@@ -2023,6 +2023,7 @@ export type MobilePurchasesListPurchasesData = {
   query?: {
     limit?: number;
     cursor?: string;
+    status?: 'unsettled';
   };
   url: '/mobile/purchases';
 };
@@ -2118,6 +2119,7 @@ export type MobilePurchasesListPurchasesResponses = {
       totalCents: number;
     }>;
     nextCursor: string | null;
+    total?: number | null;
   };
 };
 
@@ -2833,6 +2835,122 @@ export type MobilePurchasesGetReceiptThumbnailResponses = {
 
 export type MobilePurchasesGetReceiptThumbnailResponse =
   MobilePurchasesGetReceiptThumbnailResponses[keyof MobilePurchasesGetReceiptThumbnailResponses];
+
+export type MobilePurchasesGetMonthSummaryData = {
+  body?: never;
+  path?: never;
+  query: {
+    month: string;
+  };
+  url: '/mobile/purchases/summary';
+};
+
+export type MobilePurchasesGetMonthSummaryErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code: 'invalid_cursor' | 'invalid_request';
+    message: string;
+  };
+  /**
+   * 401
+   */
+  401: {
+    code: 'invalid_token';
+    message: string;
+  };
+  /**
+   * 403
+   */
+  403:
+    | {
+        code: 'device_revoked';
+        message: string;
+      }
+    | {
+        capability: string;
+        code: 'capability_not_granted';
+        message: string;
+      };
+  /**
+   * 429
+   */
+  429: {
+    code: 'rate_limited';
+    message: string;
+    retryAfterSeconds: number;
+  };
+  /**
+   * 502
+   */
+  502: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'upstream_unsupported_media'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'upstream_unsupported_media'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+};
+
+export type MobilePurchasesGetMonthSummaryError =
+  MobilePurchasesGetMonthSummaryErrors[keyof MobilePurchasesGetMonthSummaryErrors];
+
+export type MobilePurchasesGetMonthSummaryResponses = {
+  /**
+   * 200
+   */
+  200: {
+    merchantLeaders: Array<{
+      currency: string;
+      merchantName: string | null;
+      netSpendCents: number;
+      orderCount: number;
+    }>;
+    month: string;
+    previousMonthTotals: Array<{
+      currency: string;
+      netSpendCents: number;
+      orderCount: number;
+      totalCents: number;
+    }> | null;
+    purchaseCount: number;
+    totals: Array<{
+      currency: string;
+      netSpendCents: number;
+      orderCount: number;
+      totalCents: number;
+    }>;
+    unmatchedCount: number;
+  };
+};
+
+export type MobilePurchasesGetMonthSummaryResponse =
+  MobilePurchasesGetMonthSummaryResponses[keyof MobilePurchasesGetMonthSummaryResponses];
 
 export type MobilePurchasesGetPurchaseData = {
   body?: never;

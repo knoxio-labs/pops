@@ -114,4 +114,25 @@ describe('monthSummary', () => {
     expect(august.purchaseCount).toBe(1);
     expect(august.totals[0]?.accounting.totalCents).toBe(222);
   });
+
+  it('caps the merchant leaderboard per currency rather than listing every merchant', () => {
+    for (let i = 0; i < 6; i += 1) {
+      createPurchase(
+        opened.db,
+        order({
+          orderedAt: '2026-08-10T01:00:00Z',
+          merchantEntityName: `Merchant ${String(i)}`,
+          // Distinct totals so the sixth-ranked merchant is unambiguous.
+          totalCents: 1000 - i * 10,
+        })
+      );
+    }
+
+    const summary = monthSummary(opened.db, '2026-08');
+
+    expect(summary.merchantLeaders).toHaveLength(5);
+    expect(summary.merchantLeaders.map((leader) => leader.merchant.name)).not.toContain(
+      'Merchant 5'
+    );
+  });
 });

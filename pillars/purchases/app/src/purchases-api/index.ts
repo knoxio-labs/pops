@@ -2,6 +2,7 @@
 
 export {
   analyticsMerchantSpend,
+  analyticsMonthSummary,
   analyticsProductLeaderboard,
   type Options,
   productDelete,
@@ -46,6 +47,11 @@ export type {
   AnalyticsMerchantSpendErrors,
   AnalyticsMerchantSpendResponse,
   AnalyticsMerchantSpendResponses,
+  AnalyticsMonthSummaryData,
+  AnalyticsMonthSummaryError,
+  AnalyticsMonthSummaryErrors,
+  AnalyticsMonthSummaryResponse,
+  AnalyticsMonthSummaryResponses,
   AnalyticsProductLeaderboardData,
   AnalyticsProductLeaderboardError,
   AnalyticsProductLeaderboardErrors,

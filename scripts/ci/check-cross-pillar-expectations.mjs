@@ -362,6 +362,16 @@ export const EXPECTATIONS = [
   },
   {
     consumer: 'bfm',
+    producer: 'purchases',
+    operationId: 'analytics.monthSummary',
+    path: '/analytics/month-summary',
+    method: 'get',
+    // The one figure the phone's home screen asks for: which calendar month.
+    query: ['month'],
+    usedBy: 'pillars/bfm/src/api/purchases/client.ts',
+  },
+  {
+    consumer: 'bfm',
     producer: 'inventory',
     operationId: 'sync.snapshot',
     path: '/sync/snapshot',

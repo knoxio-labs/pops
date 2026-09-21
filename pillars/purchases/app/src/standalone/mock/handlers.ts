@@ -87,6 +87,27 @@ export const handlers: Readonly<Record<OperationKey, MockHandler>> = {
 
   // ── Analytics ────────────────────────────────────────────────────────────
   'GET /analytics/merchant-spend': ok(MERCHANT_SPEND),
+  'GET /analytics/month-summary': ok({
+    month: '2026-08',
+    totals: [
+      {
+        currency: 'AUD',
+        orderCount: 1,
+        accounting: {
+          totalCents: 5678,
+          matchedCents: 5678,
+          awaitingImportCents: 0,
+          residualCents: 0,
+          refundedCents: 0,
+          netSpendCents: 5678,
+        },
+      },
+    ],
+    purchaseCount: 1,
+    previousMonthTotals: null,
+    unmatchedCount: 1,
+    merchantLeaders: [],
+  }),
   'GET /analytics/product-leaderboard': ok({
     minOrderCount: 1,
     products: [],
