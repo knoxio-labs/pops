@@ -130,10 +130,9 @@ internal struct PurchaseDetailSurface: View {
     }
 }
 
-/// The purchases family's one tint, held in one place. `popsAccent` until the
-/// family has a token of its own.
+/// The purchases family's one tint, held in one place.
 internal enum PurchaseDetailTint {
-    internal static let color = Color.popsAccent
+    internal static let color = Color.popsPurchases
     /// How long a staged network round trip takes, so its motion is visible.
     internal static let beat = Duration.milliseconds(900)
 }

@@ -132,7 +132,7 @@ internal struct PurchaseReviewSurface: View {
         .playgroundBottomBar { bottomBar }
         .inventoryMotion(value: saving)
         .inventoryMotion(value: current?.id)
-        .tint(.popsAccent)
+        .tint(.popsPurchases)
     }
 
     private var title: String {

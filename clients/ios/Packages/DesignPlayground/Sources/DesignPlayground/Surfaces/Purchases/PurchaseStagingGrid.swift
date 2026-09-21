@@ -95,7 +95,7 @@ internal struct PurchaseStagingGrid: View {
         }
         .inventoryMotion(value: staged)
         .inventoryMotion(value: targeted)
-        .tint(.popsAccent)
+        .tint(.popsPurchases)
     }
 
     private var title: String {
@@ -172,7 +172,7 @@ internal struct PurchaseStagingGrid: View {
         .contentShape(.rect)
         .background(
             RoundedRectangle(cornerRadius: PopsRadius.card * 2)
-                .fill(Color.popsAccent.opacity(targeted == .loose ? 0.16 : 0))
+                .fill(Color.popsPurchases.opacity(targeted == .loose ? 0.16 : 0))
         )
         .onDrop(
             of: [.plainText],

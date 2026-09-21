@@ -68,7 +68,7 @@ internal struct PurchaseHandEntryView: View {
         .playgroundTrailingBarItem { more }
         .inventoryMotion(value: formID)
         .inventoryMotion(value: failure)
-        .tint(.popsAccent)
+        .tint(.popsPurchases)
     }
 
     private var save: some View {

@@ -91,7 +91,7 @@ internal struct PurchaseProcessingSurface: View {
         }
         .inventoryMotion(InventoryMotion.smooth, value: readings)
         .task { await play() }
-        .tint(.popsAccent)
+        .tint(.popsPurchases)
     }
 
     /// Settles the reading in flight, starts the next queued one, and waits a

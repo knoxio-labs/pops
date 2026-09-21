@@ -73,7 +73,7 @@ internal struct StagedDropWell: View {
 
     internal var body: some View {
         RoundedRectangle(cornerRadius: PopsRadius.card)
-            .fill(Color.popsAccent.opacity(active ? 0.3 : 0))
+            .fill(Color.popsPurchases.opacity(active ? 0.3 : 0))
             .padding(-PopsSpacing.sm)
     }
 }
