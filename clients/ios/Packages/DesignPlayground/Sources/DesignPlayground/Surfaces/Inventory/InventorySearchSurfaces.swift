@@ -1,5 +1,5 @@
-/// POPS-3982's surfaces: the Items browser and the shared scanner. Search
-/// itself is the universal search tab, `search/root`.
+/// The Items browser and the shared scanner. Search itself is the universal
+/// search tab, `search/root`.
 @MainActor
 internal enum InventorySearchSurfaces {
     internal static let items = DesignSurface(
