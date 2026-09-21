@@ -56,6 +56,7 @@ internal struct PurchasesHomeFailureView: View {
             if let action = failure.action {
                 Button(action.title) { onAction(action) }
                     .font(.popsHeadline)
+                    .foregroundStyle(Color.popsBackground)
                     .playgroundProminentGlassButton()
                     .tint(.popsPurchases)
             }
@@ -81,6 +82,7 @@ internal struct PurchasesHomeEmptyView: View {
         } actions: {
             Button("Scan a receipt", systemImage: "doc.viewfinder", action: onScan)
                 .font(.popsHeadline)
+                .foregroundStyle(Color.popsBackground)
                 .playgroundProminentGlassButton()
                 .tint(.popsPurchases)
         }

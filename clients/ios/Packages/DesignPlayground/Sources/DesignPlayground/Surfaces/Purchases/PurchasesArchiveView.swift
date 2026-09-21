@@ -69,7 +69,7 @@ internal struct PurchasesArchiveView: View {
                         header(month)
                     }
                 }
-                if !loaded.isEmpty { footer }
+                if !loaded.isEmpty && !(months.isEmpty && paging == .end) { footer }
             }
             .inventoryMotion(value: scope)
             .inventoryMotion(value: paging)
@@ -140,6 +140,7 @@ internal struct PurchasesArchiveView: View {
                 }
             }
         }
+        .containerRelativeFrame(.vertical, alignment: .center) { length, _ in length * 0.8 }
         .transition(.opacity)
     }
 
