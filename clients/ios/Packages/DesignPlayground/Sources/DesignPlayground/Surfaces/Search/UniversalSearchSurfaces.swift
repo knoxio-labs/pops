@@ -1,3 +1,5 @@
+import SwiftUI
+
 /// The one search tab, staged in the shell that carries every migrated
 /// pillar, in every state it can be looked at in.
 @MainActor
@@ -57,6 +59,22 @@ internal enum UniversalSearchSurfaces {
                     query: "w", scope: .pillar(.purchases),
                     purchasesFilter: PurchasesSearchFilter(tags: ["grocery", "dairy"]),
                     showsFilters: true)),
+            DesignState("tags-searching", "Tags, searching") {
+                NavigationStack {
+                    PurchasesTagPicker(
+                        selection: .constant(["grocery"]), tags: PurchasesSearchFixtures.tagsInUse,
+                        query: "r")
+                }
+                .tint(SearchPillar.purchases.tint)
+            },
+            DesignState("tags-no-match", "Tags, nothing matches") {
+                NavigationStack {
+                    PurchasesTagPicker(
+                        selection: .constant([]), tags: PurchasesSearchFixtures.tagsInUse,
+                        query: "garden")
+                }
+                .tint(SearchPillar.purchases.tint)
+            },
             state(
                 "inactive", "Including inactive",
                 UniversalSearchStage(

@@ -146,6 +146,14 @@ internal struct PurchasesSearchEngineTests {
         #expect(Set(tags.map(\.tag)).count == tags.count)
     }
 
+    @Test("searching tags keeps those whose name holds the query, in order, ignoring case")
+    func tagSearch() {
+        let tags = [(tag: "grocery", count: 5), (tag: "tool", count: 3), (tag: "Dairy", count: 1)]
+        #expect(PurchasesTagPicker.matching(tags, "R").map(\.tag) == ["grocery", "Dairy"])
+        #expect(PurchasesTagPicker.matching(tags, "  ").map(\.tag) == ["grocery", "tool", "Dairy"])
+        #expect(PurchasesTagPicker.matching(tags, "garden").isEmpty)
+    }
+
     @Test("a till's multi-line name reads as one line")
     func oneLine() {
         #expect(

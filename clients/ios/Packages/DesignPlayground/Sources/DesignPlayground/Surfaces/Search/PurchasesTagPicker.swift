@@ -8,16 +8,37 @@ import SwiftUI
 internal struct PurchasesTagPicker: View {
     @Binding internal var selection: Set<String>
     internal let tags: [(tag: String, count: Int)]
+    @State private var query: String
+
+    internal init(
+        selection: Binding<Set<String>>, tags: [(tag: String, count: Int)], query: String = ""
+    ) {
+        _selection = selection
+        self.tags = tags
+        _query = State(initialValue: query)
+    }
+
+    private var shown: [(tag: String, count: Int)] { Self.matching(tags, query) }
+    private var isSearching: Bool { !query.trimmingCharacters(in: .whitespaces).isEmpty }
 
     internal var body: some View {
         List {
-            Section {
-                row(title: "Any", count: nil, isOn: selection.isEmpty) { selection = [] }
+            // Any clears the choice rather than naming a tag, so it has
+            // nothing to match and steps aside while a query narrows the list.
+            if !isSearching {
+                Section {
+                    row(title: "Any", count: nil, isOn: selection.isEmpty) { selection = [] }
+                }
             }
-            Section {
-                ForEach(tags, id: \.tag) { entry in
-                    row(title: entry.tag, count: entry.count, isOn: selection.contains(entry.tag)) {
-                        toggle(entry.tag)
+            if !shown.isEmpty {
+                Section {
+                    ForEach(shown, id: \.tag) { entry in
+                        row(
+                            title: entry.tag, count: entry.count,
+                            isOn: selection.contains(entry.tag)
+                        ) {
+                            toggle(entry.tag)
+                        }
                     }
                 }
             }
@@ -25,7 +46,22 @@ internal struct PurchasesTagPicker: View {
         .playgroundInsetGroupedList()
         .navigationTitle("Tags")
         .playgroundTitleDisplay(large: false)
+        .overlay {
+            if shown.isEmpty { ContentUnavailableView("No tags match", systemImage: "tag.slash") }
+        }
+        .playgroundPinnedSearchable(text: $query, prompt: "Tags")
         .inventoryMotion(value: selection)
+        .inventoryMotion(value: query)
+    }
+
+    /// The tags whose name holds the query, case-insensitively, in the order
+    /// given. A blank query keeps every tag.
+    nonisolated internal static func matching(
+        _ tags: [(tag: String, count: Int)], _ query: String
+    ) -> [(tag: String, count: Int)] {
+        let trimmed = query.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return tags }
+        return tags.filter { $0.tag.localizedCaseInsensitiveContains(trimmed) }
     }
 
     private func row(
