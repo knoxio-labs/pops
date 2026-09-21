@@ -4,6 +4,12 @@ import { client } from './client.gen';
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import type {
+  EntitiesAddressesCreateData,
+  EntitiesAddressesCreateErrors,
+  EntitiesAddressesCreateResponses,
+  EntitiesAddressesListData,
+  EntitiesAddressesListErrors,
+  EntitiesAddressesListResponses,
   EntitiesCreateData,
   EntitiesCreateErrors,
   EntitiesCreateResponses,
@@ -132,6 +138,31 @@ export const entitiesUpdate = <ThrowOnError extends boolean = false>(
 ): RequestResult<EntitiesUpdateResponses, EntitiesUpdateErrors, ThrowOnError> =>
   (options.client ?? client).patch<EntitiesUpdateResponses, EntitiesUpdateErrors, ThrowOnError>({
     url: '/entities/{id}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+export const entitiesAddressesList = <ThrowOnError extends boolean = false>(
+  options: Options<EntitiesAddressesListData, ThrowOnError>
+): RequestResult<EntitiesAddressesListResponses, EntitiesAddressesListErrors, ThrowOnError> =>
+  (options.client ?? client).get<
+    EntitiesAddressesListResponses,
+    EntitiesAddressesListErrors,
+    ThrowOnError
+  >({ url: '/entities/{id}/addresses', ...options });
+
+export const entitiesAddressesCreate = <ThrowOnError extends boolean = false>(
+  options: Options<EntitiesAddressesCreateData, ThrowOnError>
+): RequestResult<EntitiesAddressesCreateResponses, EntitiesAddressesCreateErrors, ThrowOnError> =>
+  (options.client ?? client).post<
+    EntitiesAddressesCreateResponses,
+    EntitiesAddressesCreateErrors,
+    ThrowOnError
+  >({
+    url: '/entities/{id}/addresses',
     ...options,
     headers: {
       'Content-Type': 'application/json',
