@@ -13,6 +13,7 @@ import { createSecretKey, type KeyObject } from 'node:crypto';
 
 import { openTempDb } from '../../db/__tests__/helpers.js';
 import { createBfmApiApp, type CreateBfmApiAppOptions } from '../app.js';
+import { createMobileContactsClient } from '../contacts/client.js';
 import { createMobileFinanceClient } from '../finance/client.js';
 import { createMobileInventoryClient } from '../inventory/client.js';
 import { createMobileInventoryMediaClient } from '../inventory/media-client.js';
@@ -29,6 +30,7 @@ import type { PairingRateLimitOptions } from '../auth/pairing-rate-limit.js';
 import type { ReceiptRateLimitOptions } from '../auth/receipt-rate-limit.js';
 import type { RefreshChallengeStore } from '../auth/refresh-challenge.js';
 import type { RefreshRateLimitOptions } from '../auth/refresh-rate-limit.js';
+import type { MobileContactsClient } from '../contacts/client.js';
 import type { MobileFinanceClient } from '../finance/client.js';
 import type { MobileInventoryClient } from '../inventory/client.js';
 import type { MobileInventoryMediaClient } from '../inventory/media-client.js';
@@ -108,6 +110,11 @@ export interface TestAppOptions {
    * `finance`, to a client over a gateway whose handle factory throws.
    */
   purchases?: MobilePurchasesClient;
+  /**
+   * Where the `/mobile/contacts/*` routes get their data. Defaults, like
+   * `finance`, to a client over a gateway whose handle factory throws.
+   */
+  contacts?: MobileContactsClient;
   /**
    * Where the `/mobile/inventory/*` routes get their data. Defaults, like
    * `finance`, to a client over a gateway whose handle factory throws.
@@ -200,6 +207,8 @@ export function createTestApp(options: TestAppOptions = {}): TestApp {
     purchases:
       options.purchases ??
       createMobilePurchasesClient(createPillarGateway(unreachableHandleFactory)),
+    contacts:
+      options.contacts ?? createMobileContactsClient(createPillarGateway(unreachableHandleFactory)),
     inventory:
       options.inventory ??
       createMobileInventoryClient(createPillarGateway(unreachableHandleFactory)),

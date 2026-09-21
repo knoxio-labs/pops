@@ -301,6 +301,18 @@ export const MobileReceiptBytesSchema = z.object({
 
 export type MobileReceiptBytes = z.infer<typeof MobileReceiptBytesSchema>;
 
+/** One of a merchant's recorded addresses (ADR-053) — what the address picker draws. */
+export const MobileAddressSchema = z.object({
+  id: z.string(),
+  value: z.string(),
+});
+
+export type MobileAddress = z.infer<typeof MobileAddressSchema>;
+
+export const MobileAddressListSchema = z.object({
+  data: z.array(MobileAddressSchema),
+});
+
 /**
  * One receipt, in order, top to bottom. Several photographs of one piece of
  * paper are one upload and one purchase, not several receipts.

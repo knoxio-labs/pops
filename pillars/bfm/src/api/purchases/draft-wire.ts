@@ -42,6 +42,7 @@ const PurchasesDraftDocumentSchema = z.object({
 /** `purchases`' `ReceiptDraftSchema` — the fields a reviewer can edit. */
 const PurchasesReceiptDraftSchema = z.object({
   merchantEntityName: z.string().nullable().optional(),
+  merchantAddressName: z.string().nullable().optional(),
   orderedAt: z.string(),
   orderedAtOffsetMinutes: z.number().int().nullable().optional(),
   currency: z.string(),
@@ -147,6 +148,7 @@ export function toMobileExtractOutcome(outcome: PurchasesExtractOutcome): Mobile
     })),
     draft: {
       merchantName: draft.merchantEntityName ?? null,
+      merchantAddressName: draft.merchantAddressName ?? null,
       orderedAt: draft.orderedAt,
       orderedAtOffsetMinutes: draft.orderedAtOffsetMinutes ?? null,
       currency: draft.currency,

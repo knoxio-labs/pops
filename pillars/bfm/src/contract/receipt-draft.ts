@@ -84,6 +84,17 @@ export type MobileDraftDocument = z.infer<typeof MobileDraftDocumentSchema>;
  */
 const MobileDraftPurchaseFieldsSchema = z.object({
   merchantName: z.string().nullable(),
+  /**
+   * A merchant the reviewer resolved to a contacts entity — a server
+   * proposal they confirmed, or their own pick from search. `null`/absent
+   * sends {@link merchantName} as free text instead, the fallback path
+   * (ADR-053, POPS-4326).
+   */
+  merchantEntityId: z.string().nullable().optional(),
+  /** The contacts address chosen for this purchase, if any (ADR-053). */
+  merchantAddressId: z.string().nullable().optional(),
+  /** The address as printed, kept alongside {@link merchantAddressId} for display (ADR-053). */
+  merchantAddressName: z.string().nullable().optional(),
   /** ISO-8601 with an offset — the date and time the reviewer confirmed. */
   orderedAt: z.string(),
   /**
@@ -133,6 +144,8 @@ export type MobileSaveReceiptDraftBody = z.infer<typeof MobileSaveReceiptDraftBo
 /** The draft `receipt.extract` answers — not yet anything the phone may keep unedited. */
 export const MobileReceiptDraftSchema = z.object({
   merchantName: z.string().nullable(),
+  /** The branch address as printed, kept beside the resolved merchant (ADR-053). */
+  merchantAddressName: z.string().nullable(),
   orderedAt: z.string(),
   /** The offset the instant above was resolved against. See the save body. */
   orderedAtOffsetMinutes: z.number().int().nullable(),

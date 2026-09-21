@@ -76,3 +76,21 @@ describe('toMobileExtractOutcome — list price', () => {
     expect(mapped.draft.items[0]?.listPriceCents).toBeNull();
   });
 });
+
+describe('toMobileExtractOutcome — the branch address (ADR-053)', () => {
+  it('forwards a stated merchantAddressName', () => {
+    const mapped = toMobileExtractOutcome(
+      outcome({ merchantAddressName: '12 Example St, Sydney' })
+    );
+
+    if (mapped.kind !== 'draft') throw new Error('expected a draft outcome');
+    expect(mapped.draft.merchantAddressName).toBe('12 Example St, Sydney');
+  });
+
+  it('maps an absent merchantAddressName to null', () => {
+    const mapped = toMobileExtractOutcome(outcome());
+
+    if (mapped.kind !== 'draft') throw new Error('expected a draft outcome');
+    expect(mapped.draft.merchantAddressName).toBeNull();
+  });
+});

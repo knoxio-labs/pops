@@ -49,6 +49,12 @@ function contactsSpy(names: ReadonlyMap<string, string> = new Map()): {
         calls.push(ids);
         return Promise.resolve({ kind: 'ok', value: names });
       },
+      getMerchantAddresses: () => {
+        throw new Error('not exercised by this suite');
+      },
+      createMerchantAddress: () => {
+        throw new Error('not exercised by this suite');
+      },
     },
   };
 }
@@ -281,6 +287,25 @@ describe('saveReceiptDraft', () => {
     expect(saved?.items[0]?.listPriceCents).toBe(1500);
     expect(saved?.items[0]?.listPriceAsserted).toBe(true);
   });
+
+  it('forwards a resolved merchant and address unchanged (ADR-053, POPS-4326)', async () => {
+    const fake = createPurchasesDraftFake(purchasesDraft(), purchasesPurchaseDetail());
+    await clientOver(fake.factory).saveReceiptDraft({
+      ...SAVE_BODY,
+      merchantEntityId: 'entity-1',
+      merchantAddressId: 'addr-1',
+      merchantAddressName: '12 Example St, Sydney',
+    });
+
+    const [saved] = fake.saved as {
+      merchantEntityId?: unknown;
+      merchantAddressId?: unknown;
+      merchantAddressName?: unknown;
+    }[];
+    expect(saved?.merchantEntityId).toBe('entity-1');
+    expect(saved?.merchantAddressId).toBe('addr-1');
+    expect(saved?.merchantAddressName).toBe('12 Example St, Sydney');
+  });
 });
 
 const MANUAL_BODY = {
@@ -369,6 +394,12 @@ describe('merchant identity batching', () => {
     const downContacts: MobileContactsClient = {
       lookupEntities: () =>
         Promise.resolve({ kind: 'unavailable', pillar: 'contacts', status: 503 }),
+      getMerchantAddresses: () => {
+        throw new Error('not exercised by this suite');
+      },
+      createMerchantAddress: () => {
+        throw new Error('not exercised by this suite');
+      },
     };
 
     const outcome = await clientOver(readFake.factory, downContacts).listPurchases({
