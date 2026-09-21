@@ -103,6 +103,49 @@ internal struct PurchasesSearchEngineTests {
         #expect(!PurchasesStatusFilter.matched.matches(.unrecognised("refunded")))
     }
 
+    @Test("a tag keeps only the lines carrying it and the purchases holding one")
+    func tagFilterNarrows() {
+        let aldi = purchase("aldi", .printed("ALDI"))
+        let drill = line("drill", "bunnings", "BUNNINGS 18V DRILL", tags: ["tool"])
+        let screws = line("screws", "bunnings", "BUNNINGS SCREWS", tags: ["hardware"])
+        let milk = line("milk", "aldi", "ALDI MILK", tags: ["grocery"])
+        let filter = PurchasesSearchFilter(tags: ["tool"])
+        let hits = PurchasesSearchEngine.search(
+            "b", purchases: [bunnings, aldi], lines: [drill, screws, milk], filter: filter)
+        #expect(Set(hits.map(\.id)) == ["purchase-bunnings", "line-drill"])
+    }
+
+    @Test("several tags match a line carrying any one of them")
+    func tagFilterIsAnyOf() {
+        let drill = line("drill", "bunnings", "BUNNINGS 18V DRILL", tags: ["tool"])
+        let screws = line("screws", "bunnings", "BUNNINGS SCREWS", tags: ["hardware"])
+        let untagged = line("bag", "bunnings", "BUNNINGS BAG")
+        let filter = PurchasesSearchFilter(kind: .lines, tags: ["tool", "hardware"])
+        let hits = PurchasesSearchEngine.search(
+            "bunnings", purchases: [bunnings], lines: [drill, screws, untagged], filter: filter)
+        #expect(Set(hits.map(\.id)) == ["line-drill", "line-screws"])
+    }
+
+    @Test("a purchase with no line carrying a chosen tag drops out even when its merchant matches")
+    func tagFilterDropsUntaggedPurchase() {
+        let bag = line("bag", "bunnings", "BUNNINGS BAG")
+        let filter = PurchasesSearchFilter(tags: ["tool"])
+        let hits = PurchasesSearchEngine.search(
+            "bunnings", purchases: [bunnings], lines: [bag], filter: filter)
+        #expect(hits.isEmpty)
+        #expect(filter.isActive)
+        #expect(filter.tagSummary == "tool")
+        #expect(PurchasesSearchFilter().tagSummary == nil)
+    }
+
+    @Test("the tags in use are counted and ordered most used first")
+    func tagsInUse() {
+        let tags = PurchasesSearchFixtures.tagsInUse
+        #expect(tags.first?.tag == "grocery")
+        #expect(tags.map(\.count) == tags.map(\.count).sorted(by: >))
+        #expect(Set(tags.map(\.tag)).count == tags.count)
+    }
+
     @Test("a till's multi-line name reads as one line")
     func oneLine() {
         #expect(

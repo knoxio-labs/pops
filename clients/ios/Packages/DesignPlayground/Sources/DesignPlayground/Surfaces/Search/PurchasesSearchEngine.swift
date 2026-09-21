@@ -82,13 +82,25 @@ internal enum PurchasesStatusFilter: String, CaseIterable, Identifiable {
 internal struct PurchasesSearchFilter: Equatable {
     internal var kind = PurchasesKindFilter.any
     internal var status = PurchasesStatusFilter.any
+    /// Lines carrying any of these, and the purchases holding such a line.
+    /// Empty means any tag, or none.
+    internal var tags: Set<String> = []
 
     internal var isActive: Bool { self != PurchasesSearchFilter() }
 
     internal var summary: String {
-        [kind == .any ? nil : kind.title, status == .any ? nil : status.title]
+        [kind == .any ? nil : kind.title, status == .any ? nil : status.title, tagSummary]
             .compactMap(\.self)
             .joined(separator: ", ")
+    }
+
+    /// The chosen tags in the order a reader scans them, or nil when none are.
+    internal var tagSummary: String? {
+        tags.isEmpty ? nil : tags.sorted().joined(separator: ", ")
+    }
+
+    internal func carries(_ line: PurchaseItemHit) -> Bool {
+        tags.isEmpty || !tags.isDisjoint(with: line.tags)
     }
 }
 
@@ -109,11 +121,15 @@ internal enum PurchasesSearchEngine {
     ) -> [PurchaseSearchHit] {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return [] }
-        let orders = purchases.filter { filter.status.matches($0.status) }
+        let tagged = lines.filter(filter.carries)
+        let taggedOrders = Set(tagged.map(\.purchaseID))
+        let orders = purchases.filter {
+            filter.status.matches($0.status) && (filter.tags.isEmpty || taggedOrders.contains($0.id))
+        }
         let purchaseHits =
             filter.kind == .lines ? [] : orders.compactMap { purchaseHit($0, trimmed) }
         let lineHits =
-            filter.kind == .purchases ? [] : lines.compactMap { lineHit($0, trimmed, orders) }
+            filter.kind == .purchases ? [] : tagged.compactMap { lineHit($0, trimmed, orders) }
         return rank(trimmed, purchaseHits + lineHits)
     }
 

@@ -47,6 +47,17 @@ internal enum UniversalSearchSurfaces {
                     query: "tool", inventoryFilter: InventorySearchFilter(placement: .contained),
                     showsFilters: true)),
             state(
+                "filtered-tags", "Purchases narrowed to a tag",
+                UniversalSearchStage(
+                    query: "18v", scope: .pillar(.purchases),
+                    purchasesFilter: PurchasesSearchFilter(tags: ["tool"]))),
+            state(
+                "filter-sheet-tags", "Filter sheet with tags chosen",
+                UniversalSearchStage(
+                    query: "w", scope: .pillar(.purchases),
+                    purchasesFilter: PurchasesSearchFilter(tags: ["grocery", "dairy"]),
+                    showsFilters: true)),
+            state(
                 "inactive", "Including inactive",
                 UniversalSearchStage(
                     query: "o", scope: .pillar(.inventory),
