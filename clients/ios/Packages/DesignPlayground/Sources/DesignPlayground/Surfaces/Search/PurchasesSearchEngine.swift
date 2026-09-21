@@ -124,7 +124,8 @@ internal enum PurchasesSearchEngine {
         let tagged = lines.filter(filter.carries)
         let taggedOrders = Set(tagged.map(\.purchaseID))
         let orders = purchases.filter {
-            filter.status.matches($0.status) && (filter.tags.isEmpty || taggedOrders.contains($0.id))
+            filter.status.matches($0.status)
+                && (filter.tags.isEmpty || taggedOrders.contains($0.id))
         }
         let purchaseHits =
             filter.kind == .lines ? [] : orders.compactMap { purchaseHit($0, trimmed) }
