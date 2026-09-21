@@ -111,6 +111,8 @@ function purchaseDetail(overrides: Partial<PurchaseDetail['purchase']> = {}): Pu
       ingestMethod: 'upload',
       merchantEntityId: null,
       merchantEntityName: 'Woolworths',
+      merchantAddressId: null,
+      merchantAddressName: null,
       orderedAt: '2026-08-12T09:30:00.000Z',
       // A photographed receipt: the ingest resolves the offset it printed
       // under and stores it, so this fixture carries one where the export

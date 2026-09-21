@@ -2115,6 +2115,14 @@
                             "minimum": 0,
                             "type": "integer"
                           },
+                          "merchantAddressId": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "merchantAddressName": {
+                            "nullable": true,
+                            "type": "string"
+                          },
                           "merchantEntityId": {
                             "nullable": true,
                             "type": "string"
@@ -2229,6 +2237,8 @@
                           "totalCents",
                           "merchantEntityId",
                           "merchantEntityName",
+                          "merchantAddressId",
+                          "merchantAddressName",
                           "settlementMode",
                           "paymentHint",
                           "rawRef",
@@ -2593,6 +2603,14 @@
                       "type": "object"
                     },
                     "type": "array"
+                  },
+                  "merchantAddressId": {
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "merchantAddressName": {
+                    "nullable": true,
+                    "type": "string"
                   },
                   "merchantEntityId": {
                     "nullable": true,
@@ -3293,6 +3311,14 @@
                           "enum": ["email", "export", "upload", "manual"],
                           "type": "string"
                         },
+                        "merchantAddressId": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "merchantAddressName": {
+                          "nullable": true,
+                          "type": "string"
+                        },
                         "merchantEntityId": {
                           "nullable": true,
                           "type": "string"
@@ -3402,6 +3428,8 @@
                         "totalCents",
                         "merchantEntityId",
                         "merchantEntityName",
+                        "merchantAddressId",
+                        "merchantAddressName",
                         "settlementMode",
                         "paymentHint",
                         "rawRef",
@@ -3864,6 +3892,14 @@
                     },
                     "minItems": 1,
                     "type": "array"
+                  },
+                  "merchantAddressId": {
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "merchantAddressName": {
+                    "nullable": true,
+                    "type": "string"
                   },
                   "merchantEntityId": {
                     "nullable": true,
@@ -4549,6 +4585,14 @@
                           "enum": ["email", "export", "upload", "manual"],
                           "type": "string"
                         },
+                        "merchantAddressId": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "merchantAddressName": {
+                          "nullable": true,
+                          "type": "string"
+                        },
                         "merchantEntityId": {
                           "nullable": true,
                           "type": "string"
@@ -4658,6 +4702,8 @@
                         "totalCents",
                         "merchantEntityId",
                         "merchantEntityName",
+                        "merchantAddressId",
+                        "merchantAddressName",
                         "settlementMode",
                         "paymentHint",
                         "rawRef",
@@ -5445,6 +5491,14 @@
                           "enum": ["email", "export", "upload", "manual"],
                           "type": "string"
                         },
+                        "merchantAddressId": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "merchantAddressName": {
+                          "nullable": true,
+                          "type": "string"
+                        },
                         "merchantEntityId": {
                           "nullable": true,
                           "type": "string"
@@ -5554,6 +5608,8 @@
                         "totalCents",
                         "merchantEntityId",
                         "merchantEntityName",
+                        "merchantAddressId",
+                        "merchantAddressName",
                         "settlementMode",
                         "paymentHint",
                         "rawRef",
@@ -7361,6 +7417,14 @@
                                   "enum": ["email", "export", "upload", "manual"],
                                   "type": "string"
                                 },
+                                "merchantAddressId": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "merchantAddressName": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
                                 "merchantEntityId": {
                                   "nullable": true,
                                   "type": "string"
@@ -7470,6 +7534,8 @@
                                 "totalCents",
                                 "merchantEntityId",
                                 "merchantEntityName",
+                                "merchantAddressId",
+                                "merchantAddressName",
                                 "settlementMode",
                                 "paymentHint",
                                 "rawRef",
@@ -8163,6 +8229,14 @@
                     "minItems": 1,
                     "type": "array"
                   },
+                  "merchantAddressId": {
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "merchantAddressName": {
+                    "nullable": true,
+                    "type": "string"
+                  },
                   "merchantEntityId": {
                     "nullable": true,
                     "type": "string"
@@ -8854,6 +8928,14 @@
                           "enum": ["email", "export", "upload", "manual"],
                           "type": "string"
                         },
+                        "merchantAddressId": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "merchantAddressName": {
+                          "nullable": true,
+                          "type": "string"
+                        },
                         "merchantEntityId": {
                           "nullable": true,
                           "type": "string"
@@ -8963,6 +9045,8 @@
                         "totalCents",
                         "merchantEntityId",
                         "merchantEntityName",
+                        "merchantAddressId",
+                        "merchantAddressName",
                         "settlementMode",
                         "paymentHint",
                         "rawRef",
@@ -9498,6 +9582,14 @@
                                 "type": "object"
                               },
                               "type": "array"
+                            },
+                            "merchantAddressId": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "merchantAddressName": {
+                              "nullable": true,
+                              "type": "string"
                             },
                             "merchantEntityId": {
                               "nullable": true,
@@ -10282,6 +10374,14 @@
                                 "enum": ["email", "export", "upload", "manual"],
                                 "type": "string"
                               },
+                              "merchantAddressId": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "merchantAddressName": {
+                                "nullable": true,
+                                "type": "string"
+                              },
                               "merchantEntityId": {
                                 "nullable": true,
                                 "type": "string"
@@ -10391,6 +10491,8 @@
                               "totalCents",
                               "merchantEntityId",
                               "merchantEntityName",
+                              "merchantAddressId",
+                              "merchantAddressName",
                               "settlementMode",
                               "paymentHint",
                               "rawRef",

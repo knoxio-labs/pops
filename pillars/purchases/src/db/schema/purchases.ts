@@ -135,6 +135,15 @@ export const purchases = sqliteTable(
     merchantEntityId: text('merchant_entity_id'),
     merchantEntityName: text('merchant_entity_name'),
 
+    /**
+     * The branch this purchase was made at, referencing a contacts
+     * `entity_addresses` row by id (ADR-053). No FK — purchases never
+     * depends on contacts' schema directly, mirroring `merchantEntityId`.
+     */
+    merchantAddressId: text('merchant_address_id'),
+    /** The printed address, kept verbatim beside {@link merchantAddressId} the way `merchantEntityName` is kept beside `merchantEntityId` — see ADR-053. */
+    merchantAddressName: text('merchant_address_name'),
+
     settlementMode: text('settlement_mode', { enum: SETTLEMENT_MODES })
       .notNull()
       .default('unknown'),

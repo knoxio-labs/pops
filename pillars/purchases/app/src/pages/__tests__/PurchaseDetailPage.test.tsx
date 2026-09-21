@@ -76,6 +76,8 @@ function detail(overrides: Partial<PurchaseDetail> = {}): PurchaseDetail {
       id: 'order-1',
       ingestMethod: 'export',
       merchantEntityId: null,
+      merchantAddressId: null,
+      merchantAddressName: null,
       merchantEntityName: 'Amazon',
       orderedAt: '2026-08-12T09:30:00.000Z',
       // An export states an instant and no place, so there is no offset to

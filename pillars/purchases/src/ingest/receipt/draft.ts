@@ -68,6 +68,8 @@ function toWireItem(item: CreateItemInput): CreateItemInput & {
  */
 export interface ReceiptDraftFields {
   readonly merchantEntityName: string | null;
+  /** The branch address as printed, kept beside the resolved id (ADR-053) — see {@link shapeReceiptDraft}. */
+  readonly merchantAddressName: string | null;
   readonly orderedAt: string;
   readonly orderedAtOffsetMinutes: number | null;
   readonly currency: string;
@@ -161,6 +163,7 @@ export function shapeReceiptDraft(
 
   return {
     merchantEntityName: extracted.merchantName,
+    merchantAddressName: extracted.address,
     orderedAt,
     orderedAtOffsetMinutes: offsetAt(orderedAt, capture.timeReference),
     currency: resolvedCurrency.currency,

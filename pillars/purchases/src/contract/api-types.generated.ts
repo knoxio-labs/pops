@@ -1280,6 +1280,8 @@ export interface operations {
               /** @enum {string} */
               ingestMethod: 'email' | 'export' | 'upload' | 'manual';
               itemCount: number;
+              merchantAddressId: string | null;
+              merchantAddressName: string | null;
               merchantEntityId: string | null;
               merchantEntityName: string | null;
               orderedAt: string;
@@ -1403,6 +1405,8 @@ export interface operations {
             }[];
             url?: string | null;
           }[];
+          merchantAddressId?: string | null;
+          merchantAddressName?: string | null;
           merchantEntityId?: string | null;
           merchantEntityName?: string | null;
           orderedAt: string;
@@ -1561,6 +1565,8 @@ export interface operations {
               id: string;
               /** @enum {string} */
               ingestMethod: 'email' | 'export' | 'upload' | 'manual';
+              merchantAddressId: string | null;
+              merchantAddressName: string | null;
               merchantEntityId: string | null;
               merchantEntityName: string | null;
               orderedAt: string;
@@ -1708,6 +1714,8 @@ export interface operations {
             }[];
             url?: string | null;
           }[];
+          merchantAddressId?: string | null;
+          merchantAddressName?: string | null;
           merchantEntityId?: string | null;
           merchantEntityName?: string | null;
           orderedAt: string;
@@ -1864,6 +1872,8 @@ export interface operations {
               id: string;
               /** @enum {string} */
               ingestMethod: 'email' | 'export' | 'upload' | 'manual';
+              merchantAddressId: string | null;
+              merchantAddressName: string | null;
               merchantEntityId: string | null;
               merchantEntityName: string | null;
               orderedAt: string;
@@ -2066,6 +2076,8 @@ export interface operations {
               id: string;
               /** @enum {string} */
               ingestMethod: 'email' | 'export' | 'upload' | 'manual';
+              merchantAddressId: string | null;
+              merchantAddressName: string | null;
               merchantEntityId: string | null;
               merchantEntityName: string | null;
               orderedAt: string;
@@ -2746,6 +2758,8 @@ export interface operations {
                     id: string;
                     /** @enum {string} */
                     ingestMethod: 'email' | 'export' | 'upload' | 'manual';
+                    merchantAddressId: string | null;
+                    merchantAddressName: string | null;
                     merchantEntityId: string | null;
                     merchantEntityName: string | null;
                     orderedAt: string;
@@ -2963,6 +2977,8 @@ export interface operations {
             }[];
             url?: string | null;
           }[];
+          merchantAddressId?: string | null;
+          merchantAddressName?: string | null;
           merchantEntityId?: string | null;
           merchantEntityName?: string | null;
           orderedAt: string;
@@ -3119,6 +3135,8 @@ export interface operations {
               id: string;
               /** @enum {string} */
               ingestMethod: 'email' | 'export' | 'upload' | 'manual';
+              merchantAddressId: string | null;
+              merchantAddressName: string | null;
               merchantEntityId: string | null;
               merchantEntityName: string | null;
               orderedAt: string;
@@ -3303,6 +3321,8 @@ export interface operations {
                     }[];
                     url?: string | null;
                   }[];
+                  merchantAddressId?: string | null;
+                  merchantAddressName?: string | null;
                   merchantEntityId?: string | null;
                   merchantEntityName?: string | null;
                   orderedAt: string;
@@ -3630,6 +3650,8 @@ export interface operations {
                 id: string;
                 /** @enum {string} */
                 ingestMethod: 'email' | 'export' | 'upload' | 'manual';
+                merchantAddressId: string | null;
+                merchantAddressName: string | null;
                 merchantEntityId: string | null;
                 merchantEntityName: string | null;
                 orderedAt: string;
