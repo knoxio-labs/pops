@@ -3,6 +3,7 @@ import Testing
 @testable import FeatureReceiptCapture
 
 @Suite("Editing a saved purchase from the navigation bar")
+@MainActor
 internal struct ReceiptDraftLockTests {
     @Test("Save in the bar holds until the draft differs from the one it opened on")
     func barSaveNeedsAChange() {
