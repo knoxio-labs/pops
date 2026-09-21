@@ -1,3 +1,6 @@
+import DesignSystem
+import SwiftUI
+
 /// A pillar the universal search asks, in tab-bar order.
 ///
 /// Only pillars that have moved to the iOS standard are here. The next one
@@ -23,6 +26,15 @@ internal enum SearchPillar: String, CaseIterable, Identifiable, Hashable {
         switch self {
         case .purchases: "cart"
         case .inventory: "shippingbox"
+        }
+    }
+
+    /// The pillar's own tint, so its chip, section and rows carry the colour
+    /// its tab does.
+    internal var tint: Color {
+        switch self {
+        case .purchases: .popsPurchases
+        case .inventory: .popsInventory
         }
     }
 
@@ -53,6 +65,14 @@ internal enum SearchScope: Hashable {
         switch self {
         case .all: SearchPillar.allCases
         case .pillar(let pillar): [pillar]
+        }
+    }
+
+    /// All belongs to no pillar, so it keeps the app's own accent.
+    internal var tint: Color {
+        switch self {
+        case .all: .popsAccent
+        case .pillar(let pillar): pillar.tint
         }
     }
 

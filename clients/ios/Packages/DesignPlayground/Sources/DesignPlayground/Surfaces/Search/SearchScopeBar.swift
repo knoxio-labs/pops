@@ -15,14 +15,15 @@ internal struct SearchScopeBar: View {
             PlaygroundGlassGroup(spacing: PopsSpacing.sm) {
                 HStack(spacing: PopsSpacing.sm) {
                     SearchScopeChip(
-                        title: "All", symbol: nil, status: .none, isSelected: scope == .all
+                        title: "All", symbol: nil, tint: SearchScope.all.tint, status: .none,
+                        isSelected: scope == .all
                     ) {
                         scope = .all
                     }
                     ForEach(SearchPillar.allCases) { pillar in
                         SearchScopeChip(
-                            title: pillar.title, symbol: pillar.symbol, status: status(pillar),
-                            isSelected: scope == .pillar(pillar)
+                            title: pillar.title, symbol: pillar.symbol, tint: pillar.tint,
+                            status: status(pillar), isSelected: scope == .pillar(pillar)
                         ) {
                             scope = .pillar(pillar)
                         }
@@ -40,6 +41,7 @@ internal struct SearchScopeBar: View {
 private struct SearchScopeChip: View {
     let title: String
     let symbol: String?
+    let tint: Color
     let status: SearchChipStatus
     let isSelected: Bool
     let action: () -> Void
@@ -63,7 +65,7 @@ private struct SearchScopeChip: View {
             .padding(.horizontal, PopsSpacing.md)
             .frame(minHeight: height)
             .background {
-                if isSelected { Capsule().fill(Color.popsAccent) }
+                if isSelected { Capsule().fill(tint) }
             }
             .playgroundGlass(in: Capsule())
             .contentShape(Capsule())

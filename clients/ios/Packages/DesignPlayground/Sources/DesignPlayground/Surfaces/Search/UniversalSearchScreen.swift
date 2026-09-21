@@ -15,8 +15,10 @@ private struct SearchScanRequest: Identifiable {
 /// can fail or be offline while another answers: Inventory from the replica
 /// on the phone, at once; Purchases from the network, after a beat.
 ///
-/// One tint for the whole screen, the app's accent, which is why Inventory's
-/// shared parts here read their colour from `inventoryAccent`.
+/// The tint follows the scope: a pillar's own colour when scoped to it, the
+/// app's accent in All, where each section carries its pillar's colour. That
+/// is why Inventory's shared parts here read their colour from
+/// `inventoryAccent`.
 internal struct UniversalSearchScreen: View {
     internal let staleIDs: Set<String>
     internal var registersDestinations = true
@@ -87,8 +89,8 @@ internal struct UniversalSearchScreen: View {
             InventoryScanView()
         }
         .onChange(of: query) { previous, _ in requery(after: previous) }
-        .environment(\.inventoryAccent, .popsAccent)
-        .tint(.popsAccent)
+        .environment(\.inventoryAccent, scope.tint)
+        .tint(scope.tint)
         .inventoryRecordSelectionBar(
             $edits, selection: $selection, all: selectableIDs, moving: $moving, offer: $offer
         )

@@ -98,8 +98,15 @@ extension ReceiptDraftForm {
                     .foregroundStyle(hint.tone.color)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
-            PopsButton(ReceiptDraftCopy.addItem) { draft.addLine() }
-                .accessibilityIdentifier(ReceiptDraftAccessibility.addItem)
+            Button {
+                draft.addLine()
+            } label: {
+                Label(ReceiptDraftCopy.addItem, systemImage: "plus")
+                    .font(.popsSubheadline)
+                    .foregroundStyle(.tint)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityIdentifier(ReceiptDraftAccessibility.addItem)
         }
     }
 }
@@ -168,7 +175,6 @@ extension ReceiptDraftForm {
                 Toggle(ReceiptDraftCopy.includedLabel, isOn: adjustment.isIncluded)
                     .font(.popsCaption)
                     .foregroundStyle(Color.popsMutedForeground)
-                    .tint(Color.popsAccent)
                 // Only a row the reader added can be taken away. One the model
                 // read is a fact about the paper, and removing it would be
                 // editing the reading rather than correcting it — emptying the
@@ -200,7 +206,7 @@ extension ReceiptDraftForm {
         } label: {
             Label(ReceiptDraftCopy.addAdjustment, systemImage: "plus")
                 .font(.popsSubheadline)
-                .foregroundStyle(Color.popsAccent)
+                .foregroundStyle(.tint)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }

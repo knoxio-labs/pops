@@ -251,7 +251,7 @@ internal struct ReceiptDraftRecordSheet: View {
                 if record.id == selected {
                     Image(systemName: "checkmark")
                         .font(.popsCaption)
-                        .foregroundStyle(Color.popsAccent)
+                        .foregroundStyle(.tint)
                 }
             }
         }

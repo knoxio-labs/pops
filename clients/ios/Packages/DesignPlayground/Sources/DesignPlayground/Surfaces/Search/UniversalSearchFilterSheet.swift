@@ -46,7 +46,7 @@ internal struct UniversalSearchFilterSheet: View {
             .inventoryMotion(value: inventory)
             .inventoryMotion(value: purchases)
         }
-        .tint(.popsAccent)
+        .tint(scope.tint)
         .presentationDetents([.large])
     }
 

@@ -133,6 +133,5 @@ extension ReceiptDraftForm {
                 }
             }
         }
-        .tint(Color.popsAccent)
     }
 }

@@ -27,6 +27,8 @@ internal struct SearchSectionView: View {
             header
             content
         }
+        .environment(\.inventoryAccent, section.pillar.tint)
+        .tint(section.pillar.tint)
         .transition(.opacity)
     }
 
@@ -116,7 +118,7 @@ private struct SearchPillarHeader: View {
                         Image(systemName: "chevron.forward")
                     }
                     .font(.popsCaption.weight(.semibold))
-                    .foregroundStyle(Color.popsAccent)
+                    .foregroundStyle(.tint)
                     .frame(minHeight: PopsSize.touchTarget / 2)
                     .contentShape(.rect)
                 }
@@ -164,7 +166,7 @@ internal struct SearchStatusRow: View {
                     Button(action: action.perform) {
                         Image(systemName: action.symbol)
                             .font(.popsBody.weight(.semibold))
-                            .foregroundStyle(Color.popsAccent)
+                            .foregroundStyle(.tint)
                             .frame(width: size, height: size)
                             .playgroundGlass(in: Circle())
                             .contentShape(Circle())
