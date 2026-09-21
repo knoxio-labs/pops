@@ -62,11 +62,7 @@ const OrderedAtOffsetSchema = z.int().min(-840).max(840).nullable().optional();
 export const PurchasesListRowSchema = z.object({
   id: z.string(),
   source: z.string(),
-  /**
-   * A resolved `contacts` entity, when `purchases` has one. Operative data —
-   * see `toMerchantIdentity`'s docstring for how it and `merchantEntityName`
-   * combine into the mobile `merchant` field.
-   */
+  /** A resolved `contacts` entity, when `purchases` has one. See `merchant-identity.ts`. */
   merchantEntityId: z.string().nullable(),
   merchantEntityName: z.string().nullable(),
   totalCents: z.number().int(),
