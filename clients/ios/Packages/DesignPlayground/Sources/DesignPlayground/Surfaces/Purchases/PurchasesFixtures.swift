@@ -29,7 +29,7 @@ internal enum PurchasesFixtures {
     /// 2026-09-12, the day this set was written. Every row is placed relative
     /// to it so the months keep their boundaries and the newest row stays
     /// newest, rather than the set ageing into one undifferentiated block.
-    private static let reference = Date(timeIntervalSince1970: 1_789_257_600)
+    internal static let reference = Date(timeIntervalSince1970: 1_789_257_600)
 
     private static func daysAgo(_ days: Int) -> Date {
         reference.addingTimeInterval(TimeInterval(-days * 86_400))

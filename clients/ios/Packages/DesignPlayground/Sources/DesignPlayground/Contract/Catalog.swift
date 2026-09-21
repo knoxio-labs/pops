@@ -59,6 +59,7 @@ internal enum Catalog {
         + InventoryRetrievalSurfaces.surfaces
         + InventoryLifecycleSurfaces.surfaces
         + InventoryLocationSurfaces.surfaces
+        + UniversalSearchSurfaces.surfaces
         + AccountsSurfaces.surfaces
         + PairingSurfaces.surfaces
 

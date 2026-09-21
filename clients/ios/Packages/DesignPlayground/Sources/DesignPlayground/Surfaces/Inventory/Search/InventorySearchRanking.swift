@@ -46,7 +46,10 @@ internal enum InventorySearchRanking {
             .map(\.element)
     }
 
-    private static func tier(_ name: String, _ query: String) -> Int {
+    /// A name's rank against the query: 0 when it starts with it, 1 when it
+    /// contains it, 2 otherwise. Every pillar's search ranks by this, so a
+    /// result list reads best-first the same way whichever pillar answered.
+    internal static func tier(_ name: String, _ query: String) -> Int {
         guard !query.isEmpty else { return 2 }
         if name.range(of: query, options: [.caseInsensitive, .anchored]) != nil { return 0 }
         return name.localizedCaseInsensitiveContains(query) ? 1 : 2

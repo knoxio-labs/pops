@@ -21,6 +21,7 @@ internal struct InventorySearchBar<FilterOptions: View>: View {
     internal var scan: (() -> Void)?
     @ViewBuilder internal let filterOptions: () -> FilterOptions
     @ScaledMetric(relativeTo: .body) private var height = PopsSize.touchTarget
+    @Environment(\.inventoryAccent) private var accent
 
     internal var body: some View {
         PlaygroundGlassGroup(spacing: PopsSpacing.sm) {
@@ -46,7 +47,7 @@ internal struct InventorySearchBar<FilterOptions: View>: View {
             TextField(prompt, text: $query)
                 .submitLabel(.search)
                 .autocorrectionDisabled()
-                .tint(.popsInventory)
+                .tint(accent)
             trailingButton
         }
         .font(.popsBody)
@@ -62,7 +63,7 @@ internal struct InventorySearchBar<FilterOptions: View>: View {
         if query.isEmpty, let scan {
             Button(action: scan) {
                 InventorySymbol.scan.image
-                    .foregroundStyle(Color.popsInventory)
+                    .foregroundStyle(accent)
                     .padding(.horizontal, PopsSpacing.xs)
                     .frame(minHeight: height)
                     .contentShape(Rectangle())
@@ -74,7 +75,7 @@ internal struct InventorySearchBar<FilterOptions: View>: View {
             Button {
             } label: {
                 InventorySymbol.dictate.image
-                    .foregroundStyle(Color.popsInventory)
+                    .foregroundStyle(accent)
                     .padding(.horizontal, PopsSpacing.xs)
                     .frame(minHeight: height)
                     .contentShape(Rectangle())
@@ -136,11 +137,11 @@ internal struct InventorySearchBar<FilterOptions: View>: View {
     private func circle(filled: Bool, @ViewBuilder glyph: () -> some View) -> some View {
         glyph()
             .font(.popsBody.weight(.semibold))
-            .foregroundStyle(filled ? Color.popsBackground : Color.popsInventory)
+            .foregroundStyle(filled ? Color.popsBackground : accent)
             .frame(width: height, height: height)
             .background {
                 if filled {
-                    Circle().fill(Color.popsInventory)
+                    Circle().fill(accent)
                 }
             }
             .playgroundGlass(in: Circle())

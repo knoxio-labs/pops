@@ -20,12 +20,13 @@ internal struct InventoryUndoOffer: Identifiable, Equatable {
 internal struct InventoryUndoCapsule: View {
     internal let offer: InventoryUndoOffer
     internal let onUndo: () -> Void
+    @Environment(\.inventoryAccent) private var accent
 
     internal var body: some View {
         HStack(spacing: PopsSpacing.md) {
             offer.symbol.image
                 .font(.popsSubheadline.weight(.semibold))
-                .foregroundStyle(Color.popsInventory)
+                .foregroundStyle(accent)
                 .accessibilityHidden(true)
             Text(offer.message)
                 .font(.popsSubheadline)
@@ -34,7 +35,7 @@ internal struct InventoryUndoCapsule: View {
             Spacer(minLength: PopsSpacing.sm)
             Button("Undo", action: onUndo)
                 .font(.popsSubheadline.weight(.semibold))
-                .foregroundStyle(Color.popsInventory)
+                .foregroundStyle(accent)
                 .frame(minHeight: PopsSize.touchTarget)
         }
         .padding(.leading, PopsSpacing.lg)
