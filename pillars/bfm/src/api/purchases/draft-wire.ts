@@ -50,6 +50,10 @@ const PurchasesReceiptDraftSchema = z.object({
   surchargeCents: z.number().int().optional(),
   shippingCents: z.number().int().optional(),
   discountCents: z.number().int().optional(),
+  taxIncluded: z.boolean().nullable().optional(),
+  discountIncluded: z.boolean().nullable().optional(),
+  surchargeIncluded: z.boolean().nullable().optional(),
+  shippingIncluded: z.boolean().nullable().optional(),
   items: z.array(PurchasesDraftLineSchema),
   documents: z.array(PurchasesDraftDocumentSchema).optional(),
   capture: PurchasesResolvedCaptureSchema.optional(),
@@ -100,6 +104,28 @@ function toMobileCapture(
   };
 }
 
+type PurchasesDraft = z.infer<typeof PurchasesReceiptDraftSchema>;
+
+/**
+ * Whether each adjustment is already folded into the line prices. An
+ * omitted flag maps to `null` ("not stated"), never to a fabricated
+ * `false` — the mobile shape always states a definite verdict, and "not
+ * stated" is a definite verdict too.
+ */
+function toMobileBasis(draft: PurchasesDraft): {
+  taxIncluded: boolean | null;
+  discountIncluded: boolean | null;
+  surchargeIncluded: boolean | null;
+  shippingIncluded: boolean | null;
+} {
+  return {
+    taxIncluded: draft.taxIncluded ?? null,
+    discountIncluded: draft.discountIncluded ?? null,
+    surchargeIncluded: draft.surchargeIncluded ?? null,
+    shippingIncluded: draft.shippingIncluded ?? null,
+  };
+}
+
 /** purchases' extract outcome → the mobile one. Field-for-field; no arithmetic. */
 export function toMobileExtractOutcome(outcome: PurchasesExtractOutcome): MobileExtractOutcome {
   if (outcome.kind === 'unreadable') {
@@ -127,6 +153,7 @@ export function toMobileExtractOutcome(outcome: PurchasesExtractOutcome): Mobile
       surchargeCents: draft.surchargeCents ?? 0,
       shippingCents: draft.shippingCents ?? 0,
       discountCents: draft.discountCents ?? 0,
+      ...toMobileBasis(draft),
       items: draft.items.map((item) => ({
         name: item.name,
         quantity: item.quantity ?? null,

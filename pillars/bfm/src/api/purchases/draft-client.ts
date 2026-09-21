@@ -70,6 +70,10 @@ interface DraftWireBody {
   readonly surchargeCents: number | undefined;
   readonly shippingCents: number | undefined;
   readonly discountCents: number | undefined;
+  readonly taxIncluded: boolean | null | undefined;
+  readonly discountIncluded: boolean | null | undefined;
+  readonly surchargeIncluded: boolean | null | undefined;
+  readonly shippingIncluded: boolean | null | undefined;
   readonly items: readonly DraftWireItem[];
   readonly capture: MobileSaveReceiptDraftBody['capture'];
   readonly idempotencyKey: string;
@@ -88,6 +92,10 @@ function toDraftWireBody(
     surchargeCents: body.surchargeCents,
     shippingCents: body.shippingCents,
     discountCents: body.discountCents,
+    taxIncluded: body.taxIncluded,
+    discountIncluded: body.discountIncluded,
+    surchargeIncluded: body.surchargeIncluded,
+    shippingIncluded: body.shippingIncluded,
     items: body.items.map((item) => ({
       name: item.name,
       quantity: item.quantity ?? undefined,
