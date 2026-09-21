@@ -31,14 +31,32 @@ export function ensureDraftSource(db: PurchasesDb, source: UpsertSourceInput): v
 }
 
 /**
+ * Read a purchase back in the same shape a fresh write returns, or throw.
+ *
+ * Shared by the write path below and by a handler answering a replayed
+ * idempotency key with the purchase it already created: both need "this id,
+ * as a detail" and neither should re-derive what counts as a missing row.
+ */
+export function readDraftPurchaseDetail(db: PurchasesDb, id: string): PurchaseDetail {
+  const detail = getPurchase(db, id);
+  if (detail === undefined) {
+    throw new Error(`purchase ${id} could not be read back`);
+  }
+  return detail;
+}
+
+/**
  * Persist a `CreatePurchaseInput` already shaped by the caller and read the
  * written row back, or map the refusal.
  *
  * The idempotency key travels as both `checksum` and `sourceOrderId` on
  * `input` (the caller's job, not this function's) — `createPurchase`
  * already refuses a repeat of either as a 409 inside one transaction, so a
- * retried save is rejected rather than duplicated, and a save that fails
- * partway writes nothing.
+ * race that reaches this call after the handler's own idempotency check
+ * still cannot duplicate a row, and a save that fails partway writes
+ * nothing. The handler-level check is what turns an *intentional* replay
+ * into a 200 before this function is ever reached; this 409 remains the
+ * backstop for two requests racing each other.
  */
 export function persistDraftPurchase(db: PurchasesDb, input: CreatePurchaseInput): DraftPersisted {
   let id: string;
@@ -53,9 +71,5 @@ export function persistDraftPurchase(db: PurchasesDb, input: CreatePurchaseInput
     throw error;
   }
 
-  const detail = getPurchase(db, id);
-  if (detail === undefined) {
-    throw new Error(`createPurchase returned id ${id} but it could not be read back`);
-  }
-  return { kind: 'written', detail };
+  return { kind: 'written', detail: readDraftPurchaseDetail(db, id) };
 }

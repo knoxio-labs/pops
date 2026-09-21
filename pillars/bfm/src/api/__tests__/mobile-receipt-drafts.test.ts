@@ -280,6 +280,22 @@ describe('saveReceiptDraft', () => {
     expect(fake.saved[0]).toMatchObject({ orderedAtOffsetMinutes: 600 });
   });
 
+  it('passes a replayed save straight through as 200 with the same purchase', async () => {
+    const { app, token, fake } = openWith(
+      purchasesDraft(),
+      purchasesPurchaseDetail({ id: 'pur-9' })
+    );
+
+    const first = await post(app, token, SAVE_DRAFT_PATH, SAVE_BODY);
+    expect(first.status).toBe(200);
+    expect(first.body.id).toBe('pur-9');
+
+    const second = await post(app, token, SAVE_DRAFT_PATH, SAVE_BODY);
+    expect(second.status).toBe(200);
+    expect(second.body.id).toBe('pur-9');
+    expect(fake.saved).toHaveLength(2);
+  });
+
   it('reports a producer conflict as the code the app can switch on', async () => {
     const conflict: CallResult<unknown> = {
       kind: 'conflict',
@@ -357,5 +373,32 @@ describe('createManualPurchase', () => {
     expect(fake.created).toHaveLength(1);
     const [line] = (fake.created[0] as { items: Array<{ quantity?: unknown }> }).items;
     expect(line?.quantity).toBeUndefined();
+  });
+
+  it('passes a replayed manual save straight through as 200 with the same purchase', async () => {
+    const { app, token, fake } = openWith(
+      purchasesDraft(),
+      purchasesPurchaseDetail({ id: 'pur-manual-1', source: 'manual' }),
+      ['session.read', 'purchases.write']
+    );
+    const body = {
+      merchantName: 'Corner Store',
+      orderedAt: '2026-08-01T09:00:00+10:00',
+      currency: 'AUD',
+      totalCents: 500,
+      items: [
+        { name: 'Coffee', quantity: null, unitPriceCents: 500, lineTotalCents: 500, notes: [] },
+      ],
+      idempotencyKey: 'manual-1',
+    };
+
+    const first = await post(app, token, MANUAL_PATH, body);
+    expect(first.status).toBe(200);
+    expect(first.body.id).toBe('pur-manual-1');
+
+    const second = await post(app, token, MANUAL_PATH, body);
+    expect(second.status).toBe(200);
+    expect(second.body.id).toBe('pur-manual-1');
+    expect(fake.created).toHaveLength(2);
   });
 });

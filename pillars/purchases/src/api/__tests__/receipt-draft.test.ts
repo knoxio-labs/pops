@@ -225,13 +225,27 @@ describe('POST /receipts/draft', () => {
     expect(response.status).toBe(400);
   });
 
-  it('refuses the same idempotency key twice — a retry, not a twin', async () => {
+  it('replays the same idempotency key as the purchase it already created, not a twin', async () => {
     const app = appWith(saying(GOOD_READING));
     const first = await saveDraft(app);
     expect(first.status).toBe(200);
 
     const second = await saveDraft(app);
+    expect(second.status).toBe(200);
+    expect(second.body.purchase.id).toBe(first.body.purchase.id);
+
+    const list = await requestOn(app).get('/purchases');
+    expect(list.body.items).toHaveLength(1);
+  });
+
+  it('still refuses a different idempotency key on the same receipt', async () => {
+    const app = appWith(saying(GOOD_READING));
+    const first = await saveDraft(app);
+    expect(first.status).toBe(200);
+
+    const second = await saveDraft(app, { idempotencyKey: 'draft-key-2' });
     expect(second.status).toBe(409);
+    expect(second.body.code).toBe('ALREADY_IMPORTED');
 
     const list = await requestOn(app).get('/purchases');
     expect(list.body.items).toHaveLength(1);
@@ -278,13 +292,30 @@ describe('POST /purchases/manual', () => {
     expect(response.body.code).toBe('INCONSISTENT_TOTAL');
   });
 
-  it('refuses a repeated idempotency key', async () => {
+  it('replays a repeated idempotency key as the purchase it already created', async () => {
     const app = appWith(null);
     const first = await createManual(app);
     expect(first.status).toBe(200);
 
     const second = await createManual(app);
-    expect(second.status).toBe(409);
+    expect(second.status).toBe(200);
+    expect(second.body.purchase.id).toBe(first.body.purchase.id);
+
+    const list = await requestOn(app).get('/purchases');
+    expect(list.body.items).toHaveLength(1);
+  });
+
+  it('writes a second purchase for a new key after a manual save', async () => {
+    const app = appWith(null);
+    const first = await createManual(app);
+    expect(first.status).toBe(200);
+
+    const second = await createManual(app, { idempotencyKey: 'manual-key-2' });
+    expect(second.status).toBe(200);
+    expect(second.body.purchase.id).not.toBe(first.body.purchase.id);
+
+    const list = await requestOn(app).get('/purchases');
+    expect(list.body.items).toHaveLength(2);
   });
 
   it('works with no vision model configured — manual entry never calls one', async () => {

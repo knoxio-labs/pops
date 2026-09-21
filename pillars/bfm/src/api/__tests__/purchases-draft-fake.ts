@@ -23,10 +23,24 @@ export interface PurchasesDraftFake {
   created: unknown[];
 }
 
+/** An idempotency key, read off whatever shape the caller sent. */
+function idempotencyKeyOf(input: unknown): string | undefined {
+  if (typeof input !== 'object' || input === null) return undefined;
+  const key = (input as { idempotencyKey?: unknown }).idempotencyKey;
+  return typeof key === 'string' ? key : undefined;
+}
+
 /**
  * A purchases whose `receipt.extract` answers `extractResult`, whose
  * `receipt.saveDraft` and `purchase.createManual` both answer
  * `writeResult`.
+ *
+ * A key `saveDraft` or `createManual` has already answered `ok` for is
+ * replayed as that same `ok` result — mirroring the producer's own replay
+ * behaviour (`close-out/3646-replay-returns-purchase-server`) — rather than
+ * re-evaluating `writeResult`, so a test can pass a `conflict` fixture and
+ * still assert that a *repeat* of an already-succeeded key comes back `200`
+ * instead of that conflict.
  */
 export function createPurchasesDraftFake(
   extractResult: CallResult<unknown>,
@@ -35,19 +49,29 @@ export function createPurchasesDraftFake(
   const extracted: unknown[] = [];
   const saved: unknown[] = [];
   const created: unknown[] = [];
+  const answeredKeys = new Map<string, CallResult<unknown>>();
 
   const extract = (input: unknown): Promise<CallResult<unknown>> => {
     extracted.push(input);
     return Promise.resolve(extractResult);
   };
-  const saveDraft = (input: unknown): Promise<CallResult<unknown>> => {
-    saved.push(input);
-    return Promise.resolve(writeResult);
-  };
-  const createManual = (input: unknown): Promise<CallResult<unknown>> => {
-    created.push(input);
-    return Promise.resolve(writeResult);
-  };
+
+  const replayable =
+    (log: unknown[]) =>
+    (input: unknown): Promise<CallResult<unknown>> => {
+      log.push(input);
+      const key = idempotencyKeyOf(input);
+      const already = key === undefined ? undefined : answeredKeys.get(key);
+      if (already !== undefined) return Promise.resolve(already);
+
+      if (key !== undefined && writeResult.kind === 'ok') {
+        answeredKeys.set(key, writeResult);
+      }
+      return Promise.resolve(writeResult);
+    };
+
+  const saveDraft = replayable(saved);
+  const createManual = replayable(created);
 
   return {
     factory: <TRouter>() =>
