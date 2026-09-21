@@ -35,22 +35,6 @@ settings:
     POPS_BUNDLE_ID_SUFFIX_testflight: ''
     POPS_APPICON_SUFFIX_local: Local
     POPS_APPICON_SUFFIX_testflight: ''
-    # And which certificate signs it. Xcode's default for an app target is a
-    # development identity in every configuration, including Release — so the
-    # TestFlight archive asked automatic signing for an *Apple Development*
-    # certificate and an iOS App Development profile, which on an ephemeral
-    # runner means minting a new certificate on every run until the account
-    # hits its cap and every upload fails at signing (POPS-4221). The shipped
-    # flavour names a distribution identity instead: that one is cloud-managed,
-    # so `-allowProvisioningUpdates` fetches the account's existing certificate
-    # rather than creating one. A local device install still signs for
-    # development, which is the only identity a phone will launch.
-    #
-    # `:default=` rather than a bare lookup: an unrecognised flavour would
-    # otherwise resolve to an EMPTY identity, and an empty CODE_SIGN_IDENTITY
-    # is not an error — it is ad-hoc signing.
-    POPS_CODE_SIGN_IDENTITY_local: Apple Development
-    POPS_CODE_SIGN_IDENTITY_testflight: Apple Distribution
   configs:
     # Debug builds one architecture — the one the machine will actually run.
     # Without this the simulator ARCHS are `arm64 x86_64` and every Debug build
@@ -197,7 +181,6 @@ targets:
         TARGETED_DEVICE_FAMILY: '1'
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon$(POPS_APPICON_SUFFIX_$(POPS_FLAVOR))
         CODE_SIGN_STYLE: Automatic
-        CODE_SIGN_IDENTITY: $(POPS_CODE_SIGN_IDENTITY_$(POPS_FLAVOR):default=Apple Development)
       configs:
         # Read through App/Info.plist, which is the only way to reach a key Xcode's
         # INFOPLIST_KEY_ allowlist does not cover.
@@ -321,4 +304,3 @@ targets:
         CURRENT_PROJECT_VERSION: '0'
         TARGETED_DEVICE_FAMILY: '1'
         CODE_SIGN_STYLE: Automatic
-        CODE_SIGN_IDENTITY: $(POPS_CODE_SIGN_IDENTITY_$(POPS_FLAVOR):default=Apple Development)

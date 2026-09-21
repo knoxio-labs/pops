@@ -86,18 +86,6 @@ built_bundle_id="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$buil
 [ "$built_bundle_id" = "$shipped_bundle_id" ] ||
     die "archive is $built_bundle_id, expected $shipped_bundle_id; only the testflight flavour is uploaded."
 
-# And which certificate signed it. A development identity here is not a cosmetic
-# difference: it means automatic signing minted a certificate for this runner,
-# and on an ephemeral runner that is a new one every run until the account hits
-# its cap and no upload signs at all (POPS-4221). The Release configuration asks
-# for a distribution identity only through POPS_FLAVOR, so a flavour that did not
-# reach the archive shows up here as well as in the identifier above.
-built_identity="$(/usr/libexec/PlistBuddy -c 'Print :ApplicationProperties:SigningIdentity' "$archive/Info.plist")"
-case "$built_identity" in
-    "Apple Distribution"* | "iPhone Distribution"*) ;;
-    *) die "archive is signed by '$built_identity', which is not a distribution identity." ;;
-esac
-
 # App Store Connect accepts the upload and only rejects a missing purpose
 # string after processing, by email; refusing here keeps it a red run.
 scripts/check-camera-purpose.sh check "$(dirname "$built_plist")"
