@@ -104,6 +104,61 @@ describe('confirming a kind', () => {
   });
 });
 
+describe('writing a list price', () => {
+  it('persists an asserted list price with a confirmation', () => {
+    const purchaseId = createPurchase(
+      opened.db,
+      amazonOrder({
+        checksum: 'list-price-asserted',
+        sourceOrderId: 'list-price-asserted',
+        items: [
+          {
+            name: 'x',
+            unitPriceCents: 350,
+            lineTotalCents: 350,
+            listPriceCents: 550,
+            listPriceAsserted: true,
+          },
+        ],
+      })
+    );
+    const item = getPurchase(opened.db, purchaseId)?.items[0]?.item;
+    expect(item?.listPriceCents).toBe(550);
+    expect(item?.listPriceConfirmedAt).not.toBeNull();
+  });
+
+  it('persists a proposed list price with no confirmation when unasserted', () => {
+    const purchaseId = createPurchase(
+      opened.db,
+      amazonOrder({
+        checksum: 'list-price-proposed',
+        sourceOrderId: 'list-price-proposed',
+        items: [{ name: 'x', unitPriceCents: 350, lineTotalCents: 350, listPriceCents: 550 }],
+      })
+    );
+    const item = getPurchase(opened.db, purchaseId)?.items[0]?.item;
+    expect(item?.listPriceCents).toBe(550);
+    expect(item?.listPriceConfirmedAt).toBeNull();
+  });
+
+  it('never confirms a list price that was never stated, even if the caller says asserted', () => {
+    // Proves the null-price guard actually runs, not just the happy path —
+    // and that the DB CHECK is never hit by this write path, since the
+    // insert goes through `createPurchase`, not a raw INSERT.
+    const purchaseId = createPurchase(
+      opened.db,
+      amazonOrder({
+        checksum: 'list-price-absent',
+        sourceOrderId: 'list-price-absent',
+        items: [{ name: 'x', unitPriceCents: 350, lineTotalCents: 350, listPriceAsserted: true }],
+      })
+    );
+    const item = getPurchase(opened.db, purchaseId)?.items[0]?.item;
+    expect(item?.listPriceCents).toBeNull();
+    expect(item?.listPriceConfirmedAt).toBeNull();
+  });
+});
+
 describe('confirming tags', () => {
   it('writes them asserted, so a reader can tell them from proposals', () => {
     const { purchaseId, itemId } = seedLine();

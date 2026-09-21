@@ -62,6 +62,10 @@ export interface CreateItemInput {
   readonly lineTotalCents: number;
   readonly allocatedShippingCents?: number;
   readonly allocatedAdjustmentCents?: number;
+  /** What the line would have cost at the merchant's normal price. Never itself an assertion. */
+  readonly listPriceCents?: number | null;
+  /** True when a human vouched for {@link listPriceCents}; false/undefined means a bare reading. */
+  readonly listPriceAsserted?: boolean;
   readonly merchantCategory?: string | null;
   /** Amazon's `Product Condition`, verbatim. Not a category. */
   readonly merchantCondition?: string | null;

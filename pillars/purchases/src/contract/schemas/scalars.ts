@@ -201,6 +201,26 @@ export function popsUri(pillar: string, type: string, id: string): string {
 export const FINANCE_TRANSACTION_URI = popsUriPattern('finance', 'transaction');
 
 /**
+ * Adapter-local wiring handle, unique within one create call and never
+ * persisted. It exists only so a line or charge can point at a delivery
+ * the payload has not been given ids for yet.
+ */
+export const RefSchema = z.string().trim().min(1);
+
+/**
+ * A string that must carry at least one non-whitespace character and is
+ * handed on exactly as it arrived.
+ *
+ * The distinction from `z.string().trim().min(1)` is that `.trim()` is a
+ * transform, so the value the handler writes is not the value the caller
+ * sent. That is fine for a wiring handle and wrong for anything documented
+ * as verbatim.
+ */
+export const NonBlankTextSchema = z
+  .string()
+  .regex(/\S/u, 'expected at least one non-whitespace character');
+
+/**
  * A `pops://finance/transaction/<id>` reference specifically.
  *
  * Narrower than {@link PopsUriSchema}, and deliberately narrower than the

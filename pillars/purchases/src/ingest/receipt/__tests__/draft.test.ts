@@ -46,8 +46,8 @@ const receipt = (over: Partial<ExtractedReceipt> = {}): ExtractedReceipt =>
     tax: null,
     discounts: [],
     lines: [
-      { description: 'Timber Pine DAR 42x19', amount: '$12.50' },
-      { description: 'Screws Bugle 8g 65mm', amount: '$15.00' },
+      { description: 'Timber Pine DAR 42x19', amount: '$12.50', listAmount: null },
+      { description: 'Screws Bugle 8g 65mm', amount: '$15.00', listAmount: null },
     ],
     unreadable: [],
     ...over,
@@ -164,8 +164,8 @@ describe('shapeReceiptDraft — what the reading could not settle', () => {
   it('drops a line whose amount will not parse, keeping the ones that will', () => {
     const { draft } = shape({
       lines: [
-        { description: 'Timber Pine DAR 42x19', amount: '$12.50' },
-        { description: 'Smudged', amount: 'illegible' },
+        { description: 'Timber Pine DAR 42x19', amount: '$12.50', listAmount: null },
+        { description: 'Smudged', amount: 'illegible', listAmount: null },
       ],
     });
 

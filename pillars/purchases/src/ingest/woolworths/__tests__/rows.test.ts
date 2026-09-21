@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { groupReceiptRows, parseAmountCents, type ReceiptRow } from '../rows.js';
+import { groupReceiptRows, parseAmountCents, parseWasPrice, type ReceiptRow } from '../rows.js';
 
 /**
  * The rows of a real Everyday Rewards receipt, verbatim from the
@@ -85,6 +85,7 @@ describe('single-item receipts', () => {
         notes: [],
         gstApplicable: true,
         promotional: false,
+        listPriceCents: null,
       },
     ]);
   });
@@ -173,6 +174,36 @@ describe('the prefix characters', () => {
     const [gst] = groupReceiptRows([{ prefixChar: '#', description: 'B', amount: '1.00' }]).items;
     expect(promo).toMatchObject({ promotional: true, gstApplicable: false });
     expect(gst).toMatchObject({ promotional: false, gstApplicable: true });
+  });
+});
+
+describe('recovering a WAS price', () => {
+  it('reads a leading WAS note as the list price', () => {
+    expect(parseWasPrice(['WAS $5.50'])).toBe(550);
+  });
+
+  it('does not mistake a reduction wording for a stated normal price', () => {
+    // Anchored to the start: "PRICE REDUCED BY $7.26 each" states a saving,
+    // not a price, and over-matching it would invent a list price the
+    // receipt never printed.
+    expect(parseWasPrice(['PRICE REDUCED BY $7.26 each'])).toBeNull();
+  });
+
+  it('finds the one WAS note among several', () => {
+    expect(parseWasPrice(['MEMBER PRICE', 'WAS $12.00', 'SAVE $2.00'])).toBe(1200);
+  });
+
+  it('threads a WAS note through to the grouped item', () => {
+    const [item] = groupReceiptRows([
+      { description: 'Cheese Slices', amount: '3.50' },
+      { description: 'WAS $5.50', amount: '' },
+    ]).items;
+    expect(item?.listPriceCents).toBe(550);
+  });
+
+  it('leaves the grouped item at null when no WAS note is present', () => {
+    const [item] = groupReceiptRows([{ description: 'Ordinary Item', amount: '3.50' }]).items;
+    expect(item?.listPriceCents).toBeNull();
   });
 });
 
