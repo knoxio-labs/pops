@@ -30,11 +30,16 @@ import {
   toMobileMonthSummary,
   toMobilePurchaseDetail,
 } from './list-wire.js';
+import { search, tagVocabulary, type SearchPurchasesRequest } from './search-client.js';
 import { PurchasesReceiptBytesSchema } from './wire.js';
 
 import type { CallResult, PillarHandle } from '@pops/pillar-sdk/server';
 
 import type { MobileCaptureMetadata } from '../../contract/capture.js';
+import type {
+  MobilePurchaseSearchResponse,
+  MobilePurchaseTagsResponse,
+} from '../../contract/mobile-purchases-schemas.js';
 import type {
   MobileCreateManualPurchaseBody,
   MobileExtractOutcome,
@@ -126,6 +131,8 @@ export interface MobilePurchasesClient {
   getReceipt(sha256: string): Promise<GatewayOutcome<MobileReceiptBytes>>;
   getReceiptThumbnail(sha256: string): Promise<GatewayOutcome<MobileReceiptBytes>>;
   getMonthSummary(month: string): Promise<GatewayOutcome<MobileMonthSummary>>;
+  search(request: SearchPurchasesRequest): Promise<GatewayOutcome<MobilePurchaseSearchResponse>>;
+  tagVocabulary(): Promise<GatewayOutcome<MobilePurchaseTagsResponse>>;
 }
 
 export function createMobilePurchasesClient(
@@ -168,6 +175,9 @@ export function createMobilePurchasesClient(
 
       return { kind: 'ok', value: toMobileMonthSummary(summary.value) };
     },
+
+    search: (request) => search(gateway, request),
+    tagVocabulary: () => tagVocabulary(gateway),
   };
 }
 

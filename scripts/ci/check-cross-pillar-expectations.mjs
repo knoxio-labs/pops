@@ -377,6 +377,30 @@ export const EXPECTATIONS = [
   },
   {
     consumer: 'bfm',
+    producer: 'purchases',
+    operationId: 'search.search',
+    path: '/search',
+    method: 'post',
+    // The whole request is the body: query text plus the structured filters
+    // status/tags forward as (POPS-3645/POPS-4308/POPS-4274). This guard does
+    // not model bodies; what it pins is that the mobile search box's own
+    // endpoint still exists as a POST on this path.
+    query: [],
+    usedBy: 'pillars/bfm/src/api/purchases/search-client.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'purchases',
+    operationId: 'purchase.tagVocabulary',
+    path: '/items/tags',
+    method: 'get',
+    // No query: the whole vocabulary, capped and ordered on the producer's
+    // side (POPS-3754/POPS-3758).
+    query: [],
+    usedBy: 'pillars/bfm/src/api/purchases/search-client.ts',
+  },
+  {
+    consumer: 'bfm',
     producer: 'contacts',
     operationId: 'entities.lookup',
     path: '/entities/lookup',
