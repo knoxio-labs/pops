@@ -57,6 +57,12 @@ internal struct UniversalSearchFilterSheet: View {
             Picker("Status", selection: $purchases.status) {
                 ForEach(PurchasesStatusFilter.allCases) { Text($0.title).tag($0) }
             }
+            NavigationLink {
+                PurchasesTagPicker(
+                    selection: $purchases.tags, tags: PurchasesSearchFixtures.tagsInUse)
+            } label: {
+                LabeledContent("Tags", value: purchases.tagSummary ?? "Any")
+            }
         } header: {
             header(.purchases)
         }

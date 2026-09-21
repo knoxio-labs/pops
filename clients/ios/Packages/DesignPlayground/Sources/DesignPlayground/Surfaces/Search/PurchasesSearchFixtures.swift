@@ -70,6 +70,14 @@ internal enum PurchasesSearchFixtures {
         line("itm-tape", "pur-totaltools", "STANLEY FATMAX TAPE 8M", 1, 7_000, ["tool"]),
     ]
 
+    /// Every tag a line carries, with how many lines carry it, most used
+    /// first: what the tag filter offers.
+    internal static let tagsInUse: [(tag: String, count: Int)] = {
+        let counts = items.flatMap(\.tags).reduce(into: [String: Int]()) { $0[$1, default: 0] += 1 }
+        return counts.map { (tag: $0.key, count: $0.value) }
+            .sorted { $0.count == $1.count ? $0.tag < $1.tag : $0.count > $1.count }
+    }()
+
     internal static func purchase(id: String) -> Purchase? {
         purchases.first { $0.id == id }
     }

@@ -74,6 +74,17 @@ extension View {
     /// can pin the field open with a query already in it. The binding form is
     /// iOS-only.
     @ViewBuilder
+    /// A search field that stays in the navigation bar rather than hiding
+    /// until pulled down: for a pushed list whose only job is to be filtered.
+    func playgroundPinnedSearchable(text: Binding<String>, prompt: String) -> some View {
+        #if os(iOS)
+            searchable(
+                text: text, placement: .navigationBarDrawer(displayMode: .always), prompt: prompt)
+        #else
+            searchable(text: text, prompt: prompt)
+        #endif
+    }
+
     func playgroundSearchable(
         text: Binding<String>, isPresented: Binding<Bool>, prompt: String
     ) -> some View {
