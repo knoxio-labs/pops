@@ -59,7 +59,7 @@ internal struct PurchasesHomeView: View {
         .background(Color.popsBackground)
         .safeAreaInset(edge: .bottom, alignment: .trailing) {
             if case .loaded = phase {
-                captureControl
+                captureControls
             }
         }
         .sheet(item: $capturing) { source in
@@ -91,28 +91,49 @@ internal struct PurchasesHomeView: View {
 }
 
 extension PurchasesHomeView {
-    /// The capture control: Inventory's Scan circle, carrying this family's
-    /// tint, opening the four ways a purchase comes in.
+    /// Add and Scan at the foot of the home, in the order and chrome of
+    /// Inventory's dashboard: Add is the neutral glass menu, Scan is the one
+    /// tinted control, because scanning is what this tab is opened for most.
     ///
     /// A `Menu` rather than a confirmation dialog because an action sheet's
-    /// entries cannot carry a glyph, and a `Menu` is what the system reaches
-    /// for when one control offers several ways to do one thing. The two
-    /// pickers are separate entries because the system's own pickers are.
-    private var captureControl: some View {
+    /// entries cannot carry a glyph. The two pickers are separate entries
+    /// because the system's own pickers are.
+    private var captureControls: some View {
+        HStack(spacing: PopsSpacing.md) {
+            addControl
+            scanControl
+        }
+        .padding(.trailing, PopsSpacing.xl)
+        .padding(.bottom, PopsSpacing.lg)
+    }
+
+    private var addControl: some View {
         Menu {
-            ForEach(PurchaseCaptureSource.allCases) { source in
+            ForEach(PurchaseCaptureSource.added) { source in
                 Button(source.title, systemImage: source.symbol) { capturing = source }
             }
         } label: {
             Image(systemName: "plus")
                 .font(.popsTitle)
-                .foregroundStyle(Color.popsPurchases)
+                .foregroundStyle(Color.popsForeground)
                 .frame(width: captureDiameter, height: captureDiameter)
         }
         .playgroundGlass(in: Circle())
-        .padding(.trailing, PopsSpacing.xl)
-        .padding(.bottom, PopsSpacing.lg)
         .accessibilityLabel("Add a purchase")
+    }
+
+    private var scanControl: some View {
+        Button {
+            capturing = .scan
+        } label: {
+            Image(systemName: PurchaseCaptureSource.scan.symbol)
+                .font(.popsTitle)
+                .foregroundStyle(Color.popsPurchases)
+                .frame(width: captureDiameter, height: captureDiameter)
+        }
+        .buttonStyle(.plain)
+        .playgroundGlass(in: Circle())
+        .accessibilityLabel(PurchaseCaptureSource.scan.title)
     }
 
     private func act(on action: PurchasesHomeFailureAction) {
@@ -180,6 +201,10 @@ internal enum PurchaseCaptureSource: String, CaseIterable, Identifiable {
     case photos
     case file
     case hand
+
+    /// What the Add menu offers: everything but scanning, which has its own
+    /// control beside it.
+    internal static let added: [PurchaseCaptureSource] = [.photos, .file, .hand]
 
     internal var id: String { rawValue }
 
