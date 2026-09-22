@@ -97,6 +97,10 @@ The legacy `/items` and `/locations` routes keep their request and response
 shapes over the new tables (`containerId` is `containing_item_id`, `assetId`
 is `code`, `type` is `legacy_type`). The `/containers` routes are gone.
 
+The served type catalogue includes a `book` type with page-count length,
+genre, binding/format type, and ISBN fields. ISBN is type-specific metadata;
+it does not reuse the legacy product-model column.
+
 ## Registration
 
 On boot, when `POPS_REGISTRY_ENABLED=true`, the server calls `bootstrapPillar`

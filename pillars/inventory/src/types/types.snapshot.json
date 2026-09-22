@@ -1,5 +1,5 @@
 {
-  "version": "b4055cb0ef1217a20d20f36a5934fbdb6ec716ae7792397fbeb4cbc0bfab7bd7",
+  "version": "f70f59ddb5f8191a287c58a06ef5beee11401127f09b84a6ab4b05d1d59c6a37",
   "units": [
     {
       "symbol": "cm",
@@ -53,6 +53,90 @@
     }
   ],
   "types": [
+    {
+      "key": "book",
+      "name": "Book",
+      "capabilities": [],
+      "fields": [
+        {
+          "key": "Genre",
+          "label": "Genre",
+          "kind": "choice",
+          "choices": [
+            "Art",
+            "Biography & memoir",
+            "Business & economics",
+            "Children's",
+            "Classics",
+            "Comics & graphic novels",
+            "Cookbooks",
+            "Crafts & hobbies",
+            "Decorative",
+            "Education",
+            "Fantasy",
+            "Fiction",
+            "Gardening",
+            "Health & wellness",
+            "History",
+            "Home & design",
+            "Horror",
+            "Humor",
+            "Literary fiction",
+            "Mystery & crime",
+            "Non-fiction",
+            "Philosophy",
+            "Poetry",
+            "Politics",
+            "Reference",
+            "Religion & spirituality",
+            "Romance",
+            "Science",
+            "Science fiction",
+            "Self-help",
+            "Social sciences",
+            "Sports",
+            "Technology",
+            "Thriller",
+            "Travel",
+            "True crime",
+            "Young adult"
+          ],
+          "highlighted": true
+        },
+        {
+          "key": "ISBN",
+          "label": "ISBN",
+          "kind": "text",
+          "hint": "ISBN-10 or ISBN-13"
+        },
+        {
+          "key": "Length",
+          "label": "Length",
+          "kind": "text",
+          "hint": "Page count",
+          "highlighted": true
+        },
+        {
+          "key": "Type",
+          "label": "Type",
+          "kind": "choice",
+          "choices": [
+            "Paperback",
+            "Hardcover",
+            "Mass-market paperback",
+            "Trade paperback",
+            "Board book",
+            "Spiral-bound",
+            "Leather-bound",
+            "Library binding",
+            "Other"
+          ],
+          "hint": "The book format or binding",
+          "highlighted": true
+        }
+      ],
+      "legacyLabels": ["Book", "Books"]
+    },
     {
       "key": "bulb",
       "name": "Light bulb",

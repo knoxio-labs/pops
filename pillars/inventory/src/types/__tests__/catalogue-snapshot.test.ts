@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { INVENTORY_TYPES } from '../catalogue.js';
+import { typeFieldsSchema } from '../define-type.js';
 import {
   findIncompatibilities,
   projectCatalogue,
@@ -28,13 +29,13 @@ describe('the committed types.snapshot.json', () => {
   });
 });
 
-describe('the six initial types', () => {
+describe('the inventory types', () => {
   const byKey = new Map(INVENTORY_TYPES.map((type) => [type.key, type]));
 
   it('gives storage_box and furniture the containment capability, and no other type', () => {
     expect(byKey.get('storage_box')?.capabilities).toEqual(['containment']);
     expect(byKey.get('furniture')?.capabilities).toEqual(['containment']);
-    for (const key of ['cable', 'charger', 'bulb', 'tape']) {
+    for (const key of ['book', 'cable', 'charger', 'bulb', 'tape']) {
       expect(byKey.get(key)?.capabilities).toEqual([]);
     }
   });
@@ -52,5 +53,38 @@ describe('the six initial types', () => {
     expect(highlightedKeysOf('storage_box')).toEqual(['Capacity', 'Load limit'].toSorted());
     expect(highlightedKeysOf('tape')).toEqual(['Width', 'Length'].toSorted());
     expect(highlightedKeysOf('furniture')).toEqual(['Footprint', 'Material'].toSorted());
+    expect(highlightedKeysOf('book')).toEqual(['Genre', 'Length', 'Type']);
+  });
+
+  it('defines the book fields and their accepted values', () => {
+    const book = byKey.get('book');
+    expect(book).toBeDefined();
+    if (!book) throw new Error('book type is missing');
+
+    expect(book.legacyLabels).toEqual(['Book', 'Books']);
+    expect(book.fields.map((field) => field.key)).toEqual(['Length', 'Genre', 'Type', 'ISBN']);
+    expect(book.fields.find((field) => field.key === 'Length')).toMatchObject({
+      kind: 'text',
+      hint: 'Page count',
+    });
+    expect(book.fields.find((field) => field.key === 'Genre')?.choices).toContain('Decorative');
+    expect(book.fields.find((field) => field.key === 'Genre')?.choices?.length).toBeGreaterThan(30);
+    expect(book.fields.find((field) => field.key === 'Type')?.choices).toEqual(
+      expect.arrayContaining(['Paperback', 'Hardcover', 'Board book', 'Leather-bound'])
+    );
+    expect(book.fields.find((field) => field.key === 'ISBN')).toMatchObject({
+      kind: 'text',
+      hint: 'ISBN-10 or ISBN-13',
+    });
+
+    expect(
+      typeFieldsSchema(book).safeParse({
+        Length: '320',
+        Genre: 'Decorative',
+        Type: 'Hardcover',
+        ISBN: '978-0-14-103614-4',
+      }).success
+    ).toBe(true);
+    expect(typeFieldsSchema(book).safeParse({ Genre: 'Wallpaper' }).success).toBe(false);
   });
 });
