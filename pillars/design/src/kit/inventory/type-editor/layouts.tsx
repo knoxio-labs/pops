@@ -19,7 +19,8 @@ function canPublish(mode: TypeEditorMode): boolean {
     mode !== 'key-collision' &&
     mode !== 'archive' &&
     mode !== 'stale' &&
-    mode !== 'destructive'
+    mode !== 'destructive' &&
+    mode !== 'migration'
   );
 }
 
