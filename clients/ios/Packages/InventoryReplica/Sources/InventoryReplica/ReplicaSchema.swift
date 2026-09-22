@@ -21,9 +21,10 @@ internal enum ReplicaSchema {
     /// repairs opened on the ones the server would not take, with what was
     /// already resolved (`registerRepairs(in:)` creates those two), and the
     /// record of the photos it staged, whose bytes the unsent attaches need.
-    static let preservedTableNames = [
-        mutationLogTableName, repairTableName, resolvedEntryTableName, mediaTableName,
-    ]
+    static let preservedTableNames =
+        [
+            mutationLogTableName, repairTableName, resolvedEntryTableName, mediaTableName,
+        ] + catalogueTables
 
     /// Opens (or creates) the on-disk replica at `path` and brings it to the
     /// current schema, in WAL journal mode with `synchronous = FULL` so a
@@ -56,8 +57,10 @@ internal enum ReplicaSchema {
     /// Copies every table in ``preservedTableNames`` that exists out to a
     /// sibling file, erases the database, migrates it from empty, then copies
     /// them back in. The copy goes through a second on-disk database (via
-    /// `ATTACH`) rather than reading rows into memory, so the preserved
-    /// tables' own columns never have to be known here.
+    /// `ATTACH`) rather than reading rows into memory. Restore names the
+    /// columns shared by the old and rebuilt schemas, so a newly added column
+    /// receives its declared default when the migration that introduced it
+    /// was the migration that failed.
     private static func fallBackToFreshSnapshot(
         _ queue: DatabaseQueue, at path: String, using migrator: DatabaseMigrator
     ) throws {
@@ -83,8 +86,16 @@ internal enum ReplicaSchema {
         try queue.writeWithoutTransaction { db in
             try db.execute(sql: "ATTACH DATABASE ? AS fallback_backup", arguments: [backupPath])
             for table in kept where try db.tableExists(table) {
+                let rebuiltColumns = try fallbackColumnNames(in: "main", table: table, db: db)
+                let backupColumns = Set(
+                    try fallbackColumnNames(in: "fallback_backup", table: table, db: db))
+                let sharedColumns = rebuiltColumns.filter(backupColumns.contains)
+                guard !sharedColumns.isEmpty else { continue }
+                let columns = sharedColumns.joined(separator: ", ")
                 try db.execute(
-                    sql: "INSERT INTO main.\(table) SELECT * FROM fallback_backup.\(table)")
+                    sql:
+                        "INSERT INTO main.\(table) (\(columns)) SELECT \(columns) FROM fallback_backup.\(table)"
+                )
             }
             try db.execute(sql: "DETACH DATABASE fallback_backup")
         }
@@ -116,6 +127,7 @@ internal enum ReplicaSchema {
         registerRepairs(in: &migrator)
         registerMedia(in: &migrator)
         registerTypeArrivals(in: &migrator)
+        registerCataloguePersistence(in: &migrator)
         return migrator
     }
 
@@ -238,4 +250,12 @@ internal enum ReplicaSchema {
             tokenize = 'trigram'
         )
         """
+}
+
+private func fallbackColumnNames(in schema: String, table: String, db: Database) throws
+    -> [String]
+{
+    try Row.fetchAll(db, sql: "PRAGMA \(schema).table_info(\(table))").map {
+        try $0.decode(String.self, forColumn: "name")
+    }
 }

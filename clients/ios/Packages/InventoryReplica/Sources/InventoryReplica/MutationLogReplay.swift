@@ -95,6 +95,8 @@ internal enum MutationLogReplay {
         guard try exists(ref, in: "\(layer)_base", db) else {
             if ref.kind == "item" {
                 try db.execute(
+                    sql: "DELETE FROM item_field_value WHERE item_id = ?", arguments: [ref.id])
+                try db.execute(
                     sql: "DELETE FROM item_fts WHERE rowid = (SELECT rowid FROM item WHERE id = ?)",
                     arguments: [ref.id])
             }
@@ -109,6 +111,9 @@ internal enum MutationLogReplay {
                 INSERT INTO \(layer) (\(list)) SELECT \(list) FROM \(layer)_base WHERE id = ?
                 ON CONFLICT(id) DO UPDATE SET \(assignments)
                 """, arguments: [ref.id])
+        if ref.kind == "item" {
+            try Protocol2FieldValueRows.copyBaseToView(itemId: ref.id, in: db)
+        }
         if ref.kind == "item", let item = try ReplicaQueries.storedItem(id: ref.id, in: db) {
             try ReplicaSearchIndex.index(SearchDocument(item), catalogue: catalogue, in: db)
         }

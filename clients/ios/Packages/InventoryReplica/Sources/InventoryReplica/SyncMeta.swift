@@ -18,10 +18,17 @@ public struct InventoryReplicaSyncPosition: Hashable, Sendable {
     public let announcedCatalogueVersion: String?
     /// The version of the catalogue actually stored, if any.
     public let storedCatalogueVersion: String?
+    /// Integer catalogue revision announced by protocol 2, when in use.
+    public let announcedCatalogueRevision: Int?
+    /// The announced protocol-2 revision when its immutable snapshot is present locally.
+    public let storedCatalogueRevision: Int?
 
     /// Whether the server has named a catalogue this replica does not hold,
     /// which is the signal to fetch `GET /types` again.
     public var needsCatalogue: Bool {
+        if let announcedCatalogueRevision {
+            return announcedCatalogueRevision != storedCatalogueRevision
+        }
         guard let announcedCatalogueVersion else { return false }
         return announcedCatalogueVersion != storedCatalogueVersion
     }
@@ -33,6 +40,7 @@ internal struct SyncMeta {
     var since: Int?
     var catalogue: String?
     var catalogueVersion: String?
+    var catalogueRevision: Int?
     var lastRefreshAt: Date?
     var snapshotCursor: String?
     var snapshotTotal: Int
@@ -46,7 +54,8 @@ internal struct SyncMeta {
     /// server's.
     func startingOver() -> SyncMeta {
         SyncMeta(
-            catalogue: catalogue, snapshotTotal: 0, snapshotRows: 0, typeArrivals: typeArrivals)
+            catalogue: catalogue, catalogueRevision: catalogueRevision, snapshotTotal: 0,
+            snapshotRows: 0, typeArrivals: typeArrivals)
     }
 
     static func read(_ db: Database) throws -> SyncMeta {
@@ -57,6 +66,7 @@ internal struct SyncMeta {
             epoch: try row.decode(forColumn: "epoch"), since: try row.decode(forColumn: "since"),
             catalogue: try row.decode(forColumn: "catalogue"),
             catalogueVersion: try row.decode(forColumn: "catalogue_version"),
+            catalogueRevision: try row.decode(forColumn: "catalogue_revision"),
             lastRefreshAt: try date(row, "last_refresh_at"),
             snapshotCursor: try row.decode(forColumn: "snapshot_cursor"),
             snapshotTotal: try row.decode(forColumn: "snapshot_total"),
@@ -69,12 +79,14 @@ internal struct SyncMeta {
         try db.execute(
             sql: """
                 UPDATE sync_meta SET epoch = ?, since = ?, catalogue = ?, catalogue_version = ?,
+                    catalogue_revision = ?,
                     last_refresh_at = ?, snapshot_cursor = ?, snapshot_total = ?, snapshot_rows = ?,
                     type_arrivals = ?
                 WHERE id = 1
                 """,
             arguments: [
-                epoch, since, catalogue, catalogueVersion, lastRefreshAt.map(storedDate),
+                epoch, since, catalogue, catalogueVersion, catalogueRevision,
+                lastRefreshAt.map(storedDate),
                 snapshotCursor, snapshotTotal, snapshotRows, try StoredJSON.encode(typeArrivals),
             ])
     }
@@ -83,11 +95,18 @@ internal struct SyncMeta {
         try catalogue.map { try StoredJSON.decode(StoredCatalogue.self, from: $0).domainValue() }
     }
 
-    func position() throws -> InventoryReplicaSyncPosition {
-        InventoryReplicaSyncPosition(
+    func position(in db: Database) throws -> InventoryReplicaSyncPosition {
+        let storedRevision = try catalogueRevision.flatMap { revision in
+            try Int.fetchOne(
+                db, sql: "SELECT revision FROM catalogue_revision WHERE revision = ?",
+                arguments: [revision])
+        }
+        return InventoryReplicaSyncPosition(
             epoch: epoch, since: since, snapshotCursor: snapshotCursor,
             announcedCatalogueVersion: catalogueVersion,
-            storedCatalogueVersion: try storedCatalogue()?.version)
+            storedCatalogueVersion: try storedCatalogue()?.version,
+            announcedCatalogueRevision: catalogueRevision,
+            storedCatalogueRevision: storedRevision)
     }
 
     /// Per ADR-002's per-replica state machine, as far as stored facts can

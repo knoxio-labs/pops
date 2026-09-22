@@ -12,6 +12,14 @@ A capability more than one feature needs also lives here, for the same reason a 
 
 `RepositoryError` is shared across every repository seam rather than given a per-feature copy — the failure modes a screen renders around (the pillar is down, the session is gone, the response does not match this build) do not change shape with the domain behind the call.
 
+## Inventory protocol 2 values
+
+`InventoryProtocol2.swift` is the phone's transport-independent vocabulary for revisioned inventory catalogues and item field values. Catalogue type, field and option ids remain stable across immutable revisions; item values carry the exact revision and field id that define them. The primitive vocabulary is closed, and decimal, date, date-time and URL values use validating wrappers so a non-canonical wire value cannot enter the replica as an ordinary `String`.
+
+References retain their target kind and id even when the target is missing or deleted. Availability is separate from value identity: a computed value may be unavailable with its reason preserved, while an unresolved reference is still a reference. Ordered multi-values are arrays rather than sets, so duplicate values and decimal scale survive a download and relaunch.
+
+The existing flattened item properties remain the protocol-1 compatibility surface. Protocol-2 catalogue and field values are additional fields on the same domain model so a distributed client can read either generation while rollout is in progress.
+
 Fakes ship beside the protocols, as a separate `AppCoreFakes` product, so a feature's tests never stub a URL protocol and a shipping target cannot link them by accident. `Auth` follows the same split with `AuthTestSupport`; `ModuleBoundaryTests` discovers every such module by name rather than listing them, so the next one is guarded on arrival.
 
 ## The composition root

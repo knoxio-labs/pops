@@ -77,6 +77,8 @@ internal struct ReplicaOnDiskStorageTests {
 
         var broken = Self.standInMigrator()
         broken.registerMigration("v2_needs_clean_state") { db in
+            try db.execute(
+                sql: "ALTER TABLE mutation_log ADD COLUMN revision INTEGER NOT NULL DEFAULT 1")
             if try db.tableExists("poison") { throw StandInMigrationFailure() }
         }
 
@@ -87,6 +89,9 @@ internal struct ReplicaOnDiskStorageTests {
         }
         #expect(rows.map { $0["id"] as String } == ["m1", "m2"])
         #expect(rows.map { $0["payload"] as String } == ["queued-1", "queued-2"])
+        #expect(
+            try reopened.read { try Int.fetchAll($0, sql: "SELECT revision FROM mutation_log") }
+                == [1, 1])
         #expect(
             try reopened.read { try String.fetchAll($0, sql: "SELECT payload FROM repair") }
                 == ["conflict"])

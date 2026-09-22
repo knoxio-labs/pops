@@ -182,7 +182,8 @@ internal enum RepairSettlement {
         LogEntry(
             localSeq: nil, mutationId: id, entity: entry.entity,
             command: .command(.restoreDeletedItem(id: entry.entity.id)), dependsOn: [],
-            baseRevision: nil, state: .queued, outcome: nil, settlesAtSeq: nil, touched: [],
+            baseRevision: nil, catalogueRevision: entry.catalogueRevision, state: .queued,
+            outcome: nil, settlesAtSeq: nil, touched: [],
             change: nil, attempts: 0, createdAt: storedDate(time), lastAttemptAt: nil)
     }
 }
@@ -193,7 +194,8 @@ extension LogEntry {
     func requeued(as mutationId: String, command: LoggedCommand) -> LogEntry {
         LogEntry(
             localSeq: localSeq, mutationId: mutationId, entity: entity, command: command,
-            dependsOn: dependsOn, baseRevision: baseRevision, state: .queued, outcome: nil,
+            dependsOn: dependsOn, baseRevision: baseRevision,
+            catalogueRevision: catalogueRevision, state: .queued, outcome: nil,
             settlesAtSeq: nil, touched: [], change: nil, attempts: 0, createdAt: createdAt,
             lastAttemptAt: nil)
     }

@@ -68,7 +68,8 @@ public final class OnlineInventoryStore: InventoryStore, Sendable {
     public func perform(_ command: InventoryCommand) async throws -> InventoryReceipt {
         let mutation = InventoryOutboundMutation(
             mutationId: mintMutationId(), command: command,
-            baseRevision: try baseRevision(for: command), dependsOn: [], clientTime: now())
+            baseRevision: try baseRevision(for: command), dependsOn: [], clientTime: now(),
+            catalogueRevision: try replica.syncPosition().storedCatalogueRevision ?? 1)
         let outcome = try await submit(mutation)
         guard case .applied(let revision, let seq, _) = outcome else {
             throw Self.failure(for: outcome)

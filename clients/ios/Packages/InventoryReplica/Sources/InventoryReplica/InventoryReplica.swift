@@ -129,7 +129,7 @@ public final class InventoryReplica: Sendable {
 
     /// Where the next snapshot or feed request should start.
     public func syncPosition() throws -> InventoryReplicaSyncPosition {
-        try database.read { try SyncMeta.read($0).position() }
+        try database.read { db in try SyncMeta.read(db).position(in: db) }
     }
 
     /// Stores one snapshot page. The last page (no `nextCursor`) completes
