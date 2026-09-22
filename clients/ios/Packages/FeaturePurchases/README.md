@@ -119,6 +119,11 @@ row's pulse collapses to a static skeleton when Reduce Motion is enabled.
 
 `ReceiptDraftView` is a reading — or a blank purchase — as something the reader may change: the pages above (empty for a manual entry), the outcome's status header, then the same groups in the same order — who and when, the items in a column, what adjusts them, the total in `popsAmount` — with every value in a `PopsTextField` instead of a `Text`. The bar's prominent action is Save; whichever the entry point's own "start again" action is sits beside it at the standard weight, which is what `PopsButtonProminence` exists for. A host that commits from its own navigation bar passes no `save`, so there is no bar, and hands the form a `Binding` to its draft so it can gate its Save on `ReceiptDraftView.canSave` as the reader types.
 
+Merchant and address record sheets debounce searches and ask their caller for matches, rather than
+filtering a preloaded catalogue. An already resolved record remains visible before the first query;
+an empty unresolved sheet prompts for a query without making a request. Cancelling an older search
+prevents its late result from replacing the latest answer.
+
 Three rules hold the form together, and each is a value a test asserts rather than a thing the view happens to do:
 
 **There is no locked state, no confirmed state and no edit mode.** Nothing in `ReceiptDraft` can express "this field may not be changed". That absence is the design: most edits are not corrections. `ZCHEETOS C&B BALLS` is exactly what the till printed and exactly what nobody calls it, and a form that gated editing on the extractor's confidence would refuse the commonest reason to open it. What the gate complained about is carried as a hint against the field it names — `ReceiptDraftField` — and a hint is a prompt to look, never a lock.

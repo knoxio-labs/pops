@@ -31,7 +31,8 @@ internal struct ReceiptDraftRecordSelect: View {
     @Binding internal var resolution: RecordResolution
     /// What the till printed. Shown under the value when the two differ.
     internal let printed: String
-    internal let records: [ReceiptDraftRecord]
+    internal let resolvedName: String?
+    internal let search: (String) async -> [ReceiptDraftRecord]
     internal let symbol: String
     internal let placeholder: String
     internal let createTitle: String
@@ -41,8 +42,12 @@ internal struct ReceiptDraftRecordSelect: View {
 
     private var chosen: String? {
         if let value = resolution.createdValue { return value }
-        guard let id = resolution.entityID else { return nil }
-        return records.first { $0.id == id }?.name
+        return resolution.entityID == nil ? nil : resolvedName
+    }
+
+    private var selectedPreview: ReceiptDraftRecord? {
+        guard let id = resolution.entityID, let resolvedName else { return nil }
+        return ReceiptDraftRecord(id: id, name: resolvedName)
     }
 
     internal var body: some View {
@@ -63,7 +68,8 @@ internal struct ReceiptDraftRecordSelect: View {
         .sheet(isPresented: $choosing) {
             ReceiptDraftRecordSheet(
                 title: label,
-                records: records,
+                search: search,
+                selectedPreview: selectedPreview,
                 selected: resolution.entityID,
                 symbol: symbol,
                 seed: printed,
@@ -150,127 +156,6 @@ internal struct ReceiptDraftRecordSelect: View {
                 .foregroundStyle(Color.popsMutedForeground)
                 .lineLimit(2)
                 .frame(maxWidth: .infinity, alignment: .leading)
-        }
-    }
-}
-
-/// The records, searchable, with a way to add one.
-///
-/// Search is the primary control rather than a refinement: there will be
-/// hundreds of merchants, and a list that long rendered in one column with no
-/// way to narrow it is a list somebody reads rather than one somebody finds
-/// something in.
-///
-/// The create row is seeded with what the till printed, because that is
-/// overwhelmingly what the new record should be called and retyping it is the
-/// tax a form charges for the machine not having recognised something. It is
-/// editable, because a till's wording is frequently not what anybody calls
-/// the shop.
-internal struct ReceiptDraftRecordSheet: View {
-    internal let title: String
-    internal let records: [ReceiptDraftRecord]
-    internal let selected: String?
-    internal let symbol: String
-    internal let seed: String
-    internal let createTitle: String
-    internal let onChoose: (ReceiptDraftRecord) -> Void
-    internal let onCreate: (String) -> Void
-
-    @Environment(\.dismiss) private var dismiss
-    @State private var query = ""
-    @State private var newName: String
-
-    internal init(
-        title: String,
-        records: [ReceiptDraftRecord],
-        selected: String?,
-        symbol: String,
-        seed: String,
-        createTitle: String,
-        onChoose: @escaping (ReceiptDraftRecord) -> Void,
-        onCreate: @escaping (String) -> Void
-    ) {
-        self.title = title
-        self.records = records
-        self.selected = selected
-        self.symbol = symbol
-        self.seed = seed
-        self.createTitle = createTitle
-        self.onChoose = onChoose
-        self.onCreate = onCreate
-        _newName = State(initialValue: seed.trimmingCharacters(in: .whitespacesAndNewlines))
-    }
-
-    private var matches: [ReceiptDraftRecord] {
-        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return records }
-        return records.filter { $0.name.localizedCaseInsensitiveContains(trimmed) }
-    }
-
-    private var creatable: String {
-        newName.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    internal var body: some View {
-        NavigationStack {
-            List {
-                if records.isEmpty {
-                    Text(ReceiptDraftCopy.nothingOnFile)
-                        .font(.popsSubheadline)
-                        .foregroundStyle(Color.popsMutedForeground)
-                } else if matches.isEmpty {
-                    Text(ReceiptDraftCopy.noMatches)
-                        .font(.popsSubheadline)
-                        .foregroundStyle(Color.popsMutedForeground)
-                } else {
-                    ForEach(matches) { record in
-                        row(record)
-                    }
-                }
-                create
-            }
-            .navigationTitle(title)
-            .searchable(text: $query, prompt: ReceiptDraftCopy.searchChoices)
-            .toolbar {
-                ToolbarItem {
-                    Button(ReceiptDraftCopy.cancelChoosing) { dismiss() }
-                }
-            }
-        }
-    }
-
-    private func row(_ record: ReceiptDraftRecord) -> some View {
-        Button {
-            onChoose(record)
-        } label: {
-            HStack(spacing: PopsSpacing.md) {
-                Label(record.name, systemImage: symbol)
-                    .font(.popsBody)
-                    .foregroundStyle(Color.popsForeground)
-                Spacer(minLength: PopsSpacing.sm)
-                if record.id == selected {
-                    Image(systemName: "checkmark")
-                        .font(.popsCaption)
-                        .foregroundStyle(.tint)
-                }
-            }
-        }
-    }
-
-    private var create: some View {
-        Section(createTitle) {
-            PopsTextField(
-                placeholder: ReceiptDraftCopy.newRecordPlaceholder,
-                text: $newName
-            )
-            .accessibilityIdentifier(ReceiptDraftAccessibility.newRecordName)
-            Button {
-                onCreate(creatable)
-            } label: {
-                Label(ReceiptDraftCopy.createRecord(creatable), systemImage: "plus.circle")
-            }
-            .disabled(creatable.isEmpty)
-            .accessibilityIdentifier(ReceiptDraftAccessibility.createRecord)
         }
     }
 }

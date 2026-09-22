@@ -47,11 +47,13 @@ extension ReceiptDraftForm {
     /// nothing can be reconciled or totalled against. Every route through
     /// this control ends at an entity — matched, chosen, or created.
     private var merchantField: some View {
-        ReceiptDraftRecordSelect(
+        let records = merchants.map { ReceiptDraftRecord(id: $0.id, name: $0.name) }
+        return ReceiptDraftRecordSelect(
             label: ReceiptDraftCopy.merchantLabel,
             resolution: merchantBinding,
             printed: draft.printedMerchant.value,
-            records: merchants.map { ReceiptDraftRecord(id: $0.id, name: $0.name) },
+            resolvedName: merchants.first { $0.id == draft.merchantResolution.entityID }?.name,
+            search: { query in Self.matches(records, query: query) },
             symbol: "building.2",
             placeholder: ReceiptDraftCopy.merchantPlaceholderSelect,
             createTitle: ReceiptDraftCopy.createMerchantSection,
@@ -105,17 +107,28 @@ extension ReceiptDraftForm {
     /// address in contacts is not a help.
     private var addressField: some View {
         let known = merchants.first { $0.id == draft.merchantResolution.entityID }?.addresses ?? []
+        let records = known.map { ReceiptDraftRecord(id: $0.id, name: $0.value) }
         return ReceiptDraftRecordSelect(
             label: ReceiptDraftCopy.addressLabel,
             resolution: $draft.addressResolution,
             printed: draft.printedAddress.value,
-            records: known.map { ReceiptDraftRecord(id: $0.id, name: $0.value) },
+            resolvedName: known.first { $0.id == draft.addressResolution.entityID }?.value,
+            search: { query in Self.matches(records, query: query) },
             symbol: "mappin.and.ellipse",
             placeholder: ReceiptDraftCopy.addressPlaceholderSelect,
             createTitle: ReceiptDraftCopy.createAddressSection,
             note: hint(.address)
         )
         .accessibilityIdentifier(ReceiptDraftAccessibility.address)
+    }
+
+    private static func matches(
+        _ records: [ReceiptDraftRecord],
+        query: String
+    ) -> [ReceiptDraftRecord] {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return [] }
+        return records.filter { $0.name.localizedCaseInsensitiveContains(trimmed) }
     }
 
     /// Removes the address field rather than disabling it. A field that is
