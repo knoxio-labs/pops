@@ -59,6 +59,85 @@ public struct BFMPurchasesRepository: PurchasesRepository {
         }
     }
 
+    public func monthSummary(for month: Date) async throws -> PurchasesMonthSummary {
+        let output: GetMonthSummary.Output
+        do {
+            output = try await client.generated.mobilePurchases_getMonthSummary(
+                query: .init(month: Self.month(from: month, in: timeZone()))
+            )
+        } catch let error as ClientError {
+            throw BFMRepositoryFailure.failure(error, operation: GetMonthSummary.id)
+        }
+
+        switch output {
+        case .ok(let ok):
+            return Self.summary(from: try ok.body.json)
+        case .badRequest:
+            throw RepositoryError.transport("\(GetMonthSummary.id): invalid request")
+        case .unauthorized, .forbidden:
+            throw RepositoryError.unauthorized
+        case .tooManyRequests:
+            throw RepositoryError.transport("\(GetMonthSummary.id): rate limited")
+        case .badGateway(let upstream):
+            throw BFMRepositoryFailure.upstreamFailure(
+                try upstream.body.json.code.rawValue, operation: GetMonthSummary.id)
+        case .serviceUnavailable(let upstream):
+            throw BFMRepositoryFailure.upstreamFailure(
+                try upstream.body.json.code.rawValue, operation: GetMonthSummary.id)
+        case .undocumented(let statusCode, _):
+            throw RepositoryError.transport(
+                "\(GetMonthSummary.id): undocumented status \(statusCode)"
+            )
+        }
+    }
+
+    private static func summary(
+        from payload: GetMonthSummary.Output.Ok.Body.JsonPayload
+    ) -> PurchasesMonthSummary {
+        PurchasesMonthSummary(
+            totals: payload.totals.map { total in
+                currencyTotal(
+                    totalCents: total.totalCents,
+                    netSpendCents: total.netSpendCents,
+                    currency: total.currency,
+                    orderCount: total.orderCount)
+            },
+            purchaseCount: payload.purchaseCount,
+            previousMonthTotals: payload.previousMonthTotals?.map { total in
+                currencyTotal(
+                    totalCents: total.totalCents,
+                    netSpendCents: total.netSpendCents,
+                    currency: total.currency,
+                    orderCount: total.orderCount)
+            },
+            unmatchedCount: payload.unmatchedCount,
+            merchantLeaders: payload.merchantLeaders.map { leader in
+                PurchasesMerchantLeader(
+                    merchantName: leader.merchantName,
+                    netSpend: MoneyAmount(
+                        minorUnits: leader.netSpendCents,
+                        currencyCode: leader.currency),
+                    orderCount: leader.orderCount)
+            })
+    }
+
+    private static func currencyTotal(
+        totalCents: Int, netSpendCents: Int, currency: String, orderCount: Int
+    ) -> PurchasesCurrencyTotal {
+        PurchasesCurrencyTotal(
+            total: MoneyAmount(minorUnits: totalCents, currencyCode: currency),
+            netSpend: MoneyAmount(minorUnits: netSpendCents, currencyCode: currency),
+            orderCount: orderCount
+        )
+    }
+
+    private static func month(from date: Date, in timeZone: TimeZone) -> String {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        let components = calendar.dateComponents([.year, .month], from: date)
+        return String(format: "%04d-%02d", components.year ?? 0, components.month ?? 0)
+    }
+
     private func purchase(from wire: ListPurchase) throws -> Purchase {
         guard let orderedOn = Self.day(from: wire.orderedOn, in: timeZone()) else {
             throw RepositoryError.contractMismatch
@@ -123,3 +202,4 @@ public struct BFMPurchasesRepository: PurchasesRepository {
 
 private typealias ListPurchases = Operations.MobilePurchases_listPurchases
 private typealias ListPurchase = ListPurchases.Output.Ok.Body.JsonPayload.DataPayloadPayload
+private typealias GetMonthSummary = Operations.MobilePurchases_getMonthSummary

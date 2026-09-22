@@ -87,6 +87,8 @@ The mapping from wire to domain is the whole of it, and each leg is somewhere a 
 
 `BFMPurchasesRepository` maps `PurchaseStatusFilter.unsettled` to the generated `status=unsettled` query and omits the query for `.all`. The wire's optional `total` becomes `PurchasePage.totalCount`: present when the BFM includes the first-page count and absent otherwise.
 
+The same repository maps `GET /mobile/purchases/summary` into `PurchasesMonthSummary`. Currency groups remain separate, an absent previous month remains `nil`, and merchant leaders keep only the aggregate facts supplied by the route: optional name, currency, net spend, and order count.
+
 ### Receipt capture
 
 `POST /mobile/purchases/receipts` answers with one of three outcomes, and every one of them is a `200` — the BFM's own contract treats "purchases read this receipt and could not reconcile it" as an answer, not a failure. Only a call that never got that far throws.

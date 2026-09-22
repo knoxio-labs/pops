@@ -1,4 +1,5 @@
 import AppCore
+import Foundation
 
 /// A ``PurchasesRepository`` backed by an array, with server-shaped paging and failures.
 public actor InMemoryPurchasesRepository: PurchasesRepository {
@@ -9,6 +10,7 @@ public actor InMemoryPurchasesRepository: PurchasesRepository {
     private var failures: [Int: RepositoryError] = [:]
     private var mintedCursors: [String: CursorRecord] = [:]
     private var nextCursorID = 0
+    private let summary: PurchasesMonthSummary
 
     private struct CursorRecord {
         let offset: Int
@@ -16,9 +18,14 @@ public actor InMemoryPurchasesRepository: PurchasesRepository {
     }
 
     /// Creates a repository whose pages contain at most `pageSize` purchases.
-    public init(rows: [Purchase] = [], pageSize: Int = 5) {
+    public init(
+        rows: [Purchase] = [],
+        pageSize: Int = 5,
+        summary: PurchasesMonthSummary = .empty
+    ) {
         self.rows = rows
         self.pageSize = max(1, pageSize)
+        self.summary = summary
     }
 
     /// Replaces the rows and invalidates cursors minted for the previous list.
@@ -59,6 +66,12 @@ public actor InMemoryPurchasesRepository: PurchasesRepository {
         return PurchasePage(
             purchases: Array(filteredRows[start..<end]), nextCursor: nextCursor,
             totalCount: totalCount)
+    }
+
+    public func monthSummary(for month: Date) async throws -> PurchasesMonthSummary {
+        callCount += 1
+        if let failure = failures[callCount] { throw failure }
+        return summary
     }
 
     private func offset(
