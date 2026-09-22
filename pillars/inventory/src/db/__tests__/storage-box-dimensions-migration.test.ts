@@ -67,9 +67,20 @@ afterEach(() => {
 
 describe('0016_storage_box_dimensions', () => {
   it('removes only the superseded footprint and records the catalogue migration', () => {
-    const item = opened.raw
-      .prepare(`SELECT fields, revision, seq FROM items WHERE id = 'box'`)
-      .get() as { fields: string; revision: number; seq: number };
+    const item = opened.raw.prepare(`SELECT revision, seq FROM items WHERE id = 'box'`).get() as {
+      revision: number;
+      seq: number;
+    };
+    const values = opened.raw
+      .prepare(
+        `SELECT f.key, v.value_json
+         FROM item_field_values v
+         JOIN item_type_fields f
+           ON f.revision = v.catalogue_revision AND f.id = v.field_id
+         WHERE v.item_id = 'box'
+         ORDER BY f.key`
+      )
+      .all() as { key: string; value_json: string }[];
     const event = opened.raw
       .prepare(
         `SELECT seq, before, after, actor_kind, actor_id
@@ -83,11 +94,11 @@ describe('0016_storage_box_dimensions', () => {
       actor_id: string;
     };
 
-    expect(JSON.parse(item.fields)).toEqual({
-      Capacity: { value: 52, unit: 'L' },
-      'Load limit': { value: 30, unit: 'kg' },
-      Stackable: true,
-    });
+    expect(values.map(({ key, value_json }) => [key, JSON.parse(value_json)])).toEqual([
+      ['Capacity', { amount: '52', unit: 'L' }],
+      ['Load limit', { amount: '30', unit: 'kg' }],
+      ['Stackable', true],
+    ]);
     expect(item.revision).toBe(2);
     expect(item.seq).toBe(event.seq);
     expect(JSON.parse(event.before)).toHaveProperty('fields.Footprint', '600 x 400 x 320');

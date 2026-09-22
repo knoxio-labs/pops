@@ -84,8 +84,7 @@ export const itemSetCode = defineOp({
           name: row.name,
           code: args.code,
           note: row.note,
-          typeKey: row.typeKey,
-          fields: row.fields,
+          typeId: row.typeId,
           externalIds: row.externalIds,
         });
       },

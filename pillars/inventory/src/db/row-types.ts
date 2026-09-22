@@ -10,6 +10,9 @@ import type {
   fixtures,
   itemConnections,
   itemDocuments,
+  itemFieldValues,
+  itemTypeFields,
+  itemTypes,
   itemFixtureConnections,
   itemPhotos,
   items,
@@ -25,6 +28,12 @@ export type FixtureRow = typeof fixtures.$inferSelect;
 export type FixtureInsert = typeof fixtures.$inferInsert;
 export type ItemRow = typeof items.$inferSelect;
 export type ItemInsert = typeof items.$inferInsert;
+export type ItemFieldValueRow = typeof itemFieldValues.$inferSelect;
+export type ItemFieldValueInsert = typeof itemFieldValues.$inferInsert;
+export type ItemTypeRow = typeof itemTypes.$inferSelect;
+export type ItemTypeInsert = typeof itemTypes.$inferInsert;
+export type ItemTypeFieldRow = typeof itemTypeFields.$inferSelect;
+export type ItemTypeFieldInsert = typeof itemTypeFields.$inferInsert;
 export type ItemConnectionRow = typeof itemConnections.$inferSelect;
 export type ItemConnectionInsert = typeof itemConnections.$inferInsert;
 export type ItemDocumentRow = typeof itemDocuments.$inferSelect;

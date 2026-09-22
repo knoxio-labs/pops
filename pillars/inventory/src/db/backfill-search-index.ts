@@ -19,8 +19,7 @@ function loadSearchableItems(db: InventoryDb): SearchableItem[] {
       name: items.name,
       code: items.code,
       note: items.note,
-      typeKey: items.typeKey,
-      fields: items.fields,
+      typeId: items.typeId,
       externalIds: items.externalIds,
     })
     .from(items)

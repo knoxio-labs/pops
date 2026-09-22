@@ -1,12 +1,13 @@
 import { and, eq, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 
+import { resolveProtocol1Type } from '../../catalogue/index.js';
 import { items } from '../../db/index.js';
-import { findType, typeFieldsSchema } from '../../types/index.js';
 import { requireItem, type CommandDb, type FieldValues } from './entities.js';
 import { CommandRejected } from './errors.js';
 import { itemFieldsBlobSchema } from './item-fields.js';
 import { defineOp } from './op.js';
+import { assertProtocol1Fields } from './protocol-1-fields.js';
 import { upsertSearchIndex } from './search-index.js';
 
 const changeTypeArgs = z.object({ typeKey: z.string().min(1), fields: itemFieldsBlobSchema });
@@ -50,18 +51,16 @@ export const itemChangeType = defineOp({
   args: changeTypeArgs,
   plan(ctx, target, args) {
     const row = requireItem(target);
-    const type = findType(args.typeKey);
+    const type = resolveProtocol1Type(ctx.db, args.typeKey);
     if (!type) throw new CommandRejected('type_unknown', `unknown type ${args.typeKey}`);
-    if (!typeFieldsSchema(type).safeParse(args.fields).success) {
-      throw new CommandRejected('invalid', `fields do not fit type ${type.key}`);
-    }
+    assertProtocol1Fields(ctx.db, type.id, args.fields);
     const willContain = type.capabilities.includes('containment');
     if (row.isContainer === 1 && !willContain && hasActiveContents(ctx.db, row.id)) {
       throw new CommandRejected('has_contents', `item ${row.id} still holds active contents`);
     }
 
     const changes: FieldValues = {
-      typeKey: args.typeKey,
+      typeKey: type.key,
       fields: args.fields,
       isContainer: willContain,
       access: willContain ? (row.access ?? 'open') : null,
@@ -77,8 +76,7 @@ export const itemChangeType = defineOp({
           name: row.name,
           code: row.code,
           note: row.note,
-          typeKey: args.typeKey,
-          fields: JSON.stringify(args.fields),
+          typeId: type.id,
           externalIds: row.externalIds,
         });
       },

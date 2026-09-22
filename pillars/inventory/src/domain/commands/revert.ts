@@ -1,13 +1,22 @@
 import { z } from 'zod';
 
 import { conflictSinceSeq } from './conflicts.js';
-import { isWritableField, type CommandDb, type FieldValues } from './entities.js';
+import { isWritableField, loadEntity, type CommandDb, type FieldValues } from './entities.js';
 import { CommandConflict, CommandRejected } from './errors.js';
 import { loadEvent, type DomainEvent } from './events.js';
 import { defineOp } from './op.js';
+import { upsertSearchIndex } from './search-index.js';
 
 /** Event kinds that bring an entity into being; undoing one is a deletion, not a revert. */
 const IRREVERSIBLE_KINDS: ReadonlySet<string> = new Set(['created', 'split_from', 'split_into']);
+const INDEXED_ITEM_FIELDS: ReadonlySet<string> = new Set([
+  'name',
+  'code',
+  'note',
+  'typeKey',
+  'fields',
+  'externalIds',
+]);
 
 const revertArgs = z.object({ seq: z.number().int().min(1) });
 
@@ -72,6 +81,23 @@ export const eventRevert = defineOp({
 
     const conflict = conflictSinceSeq(ctx.db, target, event.seq, restored);
     if (conflict) throw new CommandConflict(conflict);
-    return { eventKind: 'reverted', changes: restored, compensatesSeq: event.seq };
+    return {
+      eventKind: 'reverted',
+      changes: restored,
+      compensatesSeq: event.seq,
+      effects(effectContext) {
+        if (
+          event.entityKind !== 'item' ||
+          !event.fields.some((field) => INDEXED_ITEM_FIELDS.has(field))
+        ) {
+          return;
+        }
+        const entity = loadEntity(effectContext.db, 'item', event.entityId);
+        if (!entity || entity.kind !== 'item') {
+          throw new CommandRejected('target_missing', `item ${event.entityId} does not exist`);
+        }
+        upsertSearchIndex(effectContext.db, entity.row);
+      },
+    };
   },
 });

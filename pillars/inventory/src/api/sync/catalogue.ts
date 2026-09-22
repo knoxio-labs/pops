@@ -1,31 +1,26 @@
-import { INVENTORY_TYPES, projectCatalogue } from '../../types/index.js';
+import { projectProtocol1Catalogue } from '../../catalogue/index.js';
 
 import type { z } from 'zod';
 
 import type { CatalogueDescriptorSchema } from '../../contract/rest-sync.js';
+import type { CommandDb } from '../../domain/commands/index.js';
 
-/** The catalogue descriptor on the wire. */
+/** The protocol-1 catalogue descriptor on the wire. */
 export type CatalogueWire = z.infer<typeof CatalogueDescriptorSchema>;
 
-function toWire(): CatalogueWire {
-  const descriptor = projectCatalogue(INVENTORY_TYPES);
+/** Project persisted catalogue revision 1 into the temporary protocol-1 descriptor. */
+export function readProtocol1Catalogue(db: CommandDb): CatalogueWire {
+  const descriptor = projectProtocol1Catalogue(db);
   return {
     version: descriptor.version,
     units: descriptor.units.map((unit) => ({ ...unit })),
     types: descriptor.types.map((type) => ({
-      key: type.key,
-      name: type.name,
+      ...type,
       capabilities: [...type.capabilities],
+      legacyLabels: [...type.legacyLabels],
       fields: type.fields.map(({ choices, ...field }) =>
         choices === undefined ? field : { ...field, choices: [...choices] }
       ),
-      legacyLabels: [...type.legacyLabels],
     })),
   };
 }
-
-/**
- * The catalogue this build serves. Types are code, so it cannot change while
- * the process runs; projected once at load.
- */
-export const CATALOGUE: CatalogueWire = toWire();

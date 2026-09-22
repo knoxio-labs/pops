@@ -93,6 +93,28 @@ describe('item.create', () => {
     expect(h.item(id)).toMatchObject({ isContainer: 1, access: 'open' });
   });
 
+  it.each([
+    ['mm', 100, 10],
+    ['cm', 1, 1],
+    ['m', 1, 100],
+  ] as const)(
+    'converts protocol-1 length values from %s to the persisted fixed unit',
+    (unit, value, expected) => {
+      const id = randomUUID();
+      const outcome = h.run(
+        mutation(
+          'item.create',
+          id,
+          createArgs({ typeKey: 'storage_box', fields: { Width: { value, unit } } }),
+          { baseRevision: null }
+        )
+      );
+
+      expect(outcome).toMatchObject({ status: 'applied' });
+      expect(h.fields(id)).toEqual({ Width: { value: expected, unit: 'cm' } });
+    }
+  );
+
   it('rejects fields that do not fit the declared type', () => {
     const id = randomUUID();
     const outcome = h.run(

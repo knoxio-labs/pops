@@ -13,6 +13,8 @@ import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 
+import { registerPersistedItemTypesMigrationFunctions } from './migrations/persisted-item-types-bootstrap.js';
+
 import type { InventoryDb } from './services/internal.js';
 
 /** An in-memory migrated database: the drizzle handle and the raw connection. */
@@ -26,6 +28,7 @@ export function openMigratedMemoryDb(): MigratedMemoryDb {
   const migrationsFolder = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'migrations');
   const raw = new Database(':memory:');
   raw.pragma('foreign_keys = ON');
+  registerPersistedItemTypesMigrationFunctions(raw);
   const db = drizzle(raw);
   migrate(db, { migrationsFolder });
   return { db, raw };

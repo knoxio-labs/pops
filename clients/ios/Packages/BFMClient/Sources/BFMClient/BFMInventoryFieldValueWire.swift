@@ -1,9 +1,8 @@
 import AppCore
 import OpenAPIRuntime
 
-/// Decoding and encoding a custom field's raw wire value
-/// (`pillars/inventory/src/types/values.ts`'s six shapes), by JSON shape
-/// alone.
+/// Decoding and encoding a protocol-1 custom field's raw wire value, by JSON
+/// shape alone.
 ///
 /// `text`, `choice` and `link` all serialise as a bare JSON string and are
 /// not distinguishable without the catalogue's own field-kind declaration for

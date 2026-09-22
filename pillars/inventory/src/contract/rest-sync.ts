@@ -22,9 +22,6 @@
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
 
-import { TYPE_CAPABILITIES } from '../types/define-type.js';
-import { DIMENSIONS } from '../types/units.js';
-import { FIELD_KINDS } from '../types/values.js';
 import { ErrorBodySchema, NonEmptyString } from './rest-schemas.js';
 import {
   SyncEventSchema,
@@ -35,6 +32,19 @@ import {
 } from './rest-sync-schemas.js';
 
 const c = initContract();
+
+const PROTOCOL_1_FIELD_KINDS = ['text', 'choice', 'flag', 'measurement', 'range', 'link'] as const;
+const PROTOCOL_1_DIMENSIONS = [
+  'length',
+  'mass',
+  'volume',
+  'power',
+  'voltage',
+  'data-rate',
+  'brightness',
+  'colour-temperature',
+] as const;
+const PROTOCOL_1_TYPE_CAPABILITIES = ['containment'] as const;
 
 /** The protocol header every sync route requires, lower-cased as Express reads it. */
 export const PROTOCOL_HEADER = 'pops-inventory-protocol';
@@ -126,10 +136,10 @@ export const inventorySyncContract = c.router({
 const CatalogueFieldSchema = z.object({
   key: z.string(),
   label: z.string(),
-  kind: z.enum(FIELD_KINDS),
+  kind: z.enum(PROTOCOL_1_FIELD_KINDS),
   hint: z.string().optional(),
   choices: z.array(z.string()).optional(),
-  dimension: z.enum(DIMENSIONS).optional(),
+  dimension: z.enum(PROTOCOL_1_DIMENSIONS).optional(),
   unit: z.string().optional(),
   highlighted: z.boolean().optional(),
   required: z.boolean().optional(),
@@ -139,13 +149,17 @@ const CatalogueFieldSchema = z.object({
 export const CatalogueDescriptorSchema = z.object({
   version: z.string(),
   units: z.array(
-    z.object({ symbol: z.string(), dimension: z.enum(DIMENSIONS), multiplier: z.number() })
+    z.object({
+      symbol: z.string(),
+      dimension: z.enum(PROTOCOL_1_DIMENSIONS),
+      multiplier: z.number(),
+    })
   ),
   types: z.array(
     z.object({
       key: z.string(),
       name: z.string(),
-      capabilities: z.array(z.enum(TYPE_CAPABILITIES)),
+      capabilities: z.array(z.enum(PROTOCOL_1_TYPE_CAPABILITIES)),
       fields: z.array(CatalogueFieldSchema),
       legacyLabels: z.array(z.string()),
     })

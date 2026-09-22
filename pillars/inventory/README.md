@@ -90,8 +90,9 @@ one draft and publication atomically validates and promotes it. IDs and keys are
 permanent, while labels and ordering can change. `items.type_id` and
 `item_field_values.field_id` use those stable IDs, and every item value records
 the catalogue revision that validated it. Published snapshots and catalogue
-audit events are append-only. Until POPS-4356 lands, the current `src/types`
-module remains the bootstrap source rather than a second supported model.
+audit events are append-only. Migration `0017_persisted_item_types` imported the
+seven built-ins as revision 1; the persisted catalogue is now the only runtime
+authority.
 
 The primitive vocabulary is closed: short and long text, integer, exact decimal,
 boolean, enum, fixed-unit measurement, date, date-time, HTTPS URL and item or
@@ -353,8 +354,9 @@ itself.
 ## Bootstrap catalogue
 
 POPS-4356 adds migration `0017_persisted_item_types`, which imports the current
-`cable`, `charger`, `bulb`, `tape`, `storage_box` and `furniture` definitions as
-catalogue revision 1 with deterministic IDs and unchanged type keys. It rewrites
+`cable`, `charger`, `bulb`, `tape`, `storage_box`, `furniture` and `book`
+definitions as catalogue revision 1 with deterministic IDs and unchanged type
+keys. It rewrites
 the existing fields blob into the value table only after descriptor parity and
 every value validates; any unknown key or invalid value aborts the transaction.
 There is no dual-write interval and no fallback to code definitions after

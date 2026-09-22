@@ -43,8 +43,7 @@ export type AccessState = (typeof ACCESS_STATES)[number];
  * - a previous placement is remembered only while in hand, with exactly one
  *   previous reference and no foreign key (the target may be tombstoned);
  * - `access` is set exactly when `is_container = 1`, `is_full` only then;
- * - `quantity >= 1`, `revision >= 1`, `fields` a JSON object and
- *   `external_ids` a JSON array.
+ * - `quantity >= 1`, `revision >= 1`, and `external_ids` a JSON array.
  *
  * `is_container` is derived from the item's type and never written by a
  * client. `seq` is the `events.seq` of the last event that changed the row and
@@ -60,8 +59,7 @@ export const items = sqliteTable(
   {
     id: text('id').primaryKey(),
     name: text('name').notNull(),
-    typeKey: text('type_key'),
-    fields: text('fields').notNull().default('{}'),
+    typeId: text('type_id'),
     note: text('note'),
     code: text('code'),
     externalIds: text('external_ids').notNull().default('[]'),
@@ -137,7 +135,7 @@ export const items = sqliteTable(
     index('items_seq').on(table.seq),
     index('items_location').on(table.locationId),
     index('items_containing').on(table.containingItemId),
-    index('items_type').on(table.typeKey),
+    index('items_type').on(table.typeId),
     index('items_lifecycle').on(table.lifecycle),
     index('items_name').on(table.name),
     index('items_in_hand')
@@ -177,10 +175,6 @@ export const items = sqliteTable(
     check(
       'ck_items_is_full',
       sql`${table.isFull} IS NULL OR (${table.isContainer} = 1 AND ${table.isFull} IN (0, 1))`
-    ),
-    check(
-      'ck_items_fields',
-      sql`json_valid(${table.fields}) AND json_type(${table.fields}) = 'object'`
     ),
     check(
       'ck_items_external_ids',

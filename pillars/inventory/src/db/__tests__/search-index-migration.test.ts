@@ -32,7 +32,6 @@ import { stageMigrationsThrough } from '@pops/pillar-sdk/db';
 import { makeClient } from '../../api/__tests__/test-utils.js';
 import { createInventoryApiApp } from '../../api/app.js';
 import { openInventoryDb } from '../open-inventory-db.js';
-import { items } from '../schema.js';
 import { MIGRATIONS_DIR } from './migrated-db.js';
 
 import type { OpenedInventoryDb } from '../open-inventory-db.js';
@@ -59,22 +58,21 @@ function seedItems(rows: readonly SeedItem[]): void {
   });
   const raw = new Database(dbPath);
   raw.pragma('foreign_keys = ON');
-  const db = drizzle(raw);
-  migrate(db, { migrationsFolder: staged });
+  migrate(drizzle(raw), { migrationsFolder: staged });
 
   for (const row of rows) {
-    db.insert(items)
-      .values({
-        id: row.id,
-        name: row.name,
-        code: row.code ?? null,
-        typeKey: row.typeKey ?? null,
-        fields: JSON.stringify(row.fields ?? {}),
-        placementKind: 'hand',
-        lastEditedTime: '2026-01-01T00:00:00Z',
-        seq: row.seq,
-      })
-      .run();
+    raw
+      .prepare(
+        `INSERT INTO items (id, name, code, type_key, fields, placement_kind, last_edited_time, seq) VALUES (?, ?, ?, ?, ?, 'hand', '2026-01-01T00:00:00Z', ?)`
+      )
+      .run(
+        row.id,
+        row.name,
+        row.code ?? null,
+        row.typeKey ?? null,
+        JSON.stringify(row.fields ?? {}),
+        row.seq
+      );
   }
   raw.close();
 }

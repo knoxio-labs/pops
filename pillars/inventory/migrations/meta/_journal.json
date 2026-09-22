@@ -85,6 +85,13 @@
       "when": 1781650200010,
       "tag": "0016_storage_box_dimensions",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1790000000000,
+      "tag": "0017_persisted_item_types",
+      "breakpoints": true
     }
   ]
 }

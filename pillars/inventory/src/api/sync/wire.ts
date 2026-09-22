@@ -1,7 +1,18 @@
 import { and, asc, inArray, isNotNull } from 'drizzle-orm';
 import { z } from 'zod';
 
-import { itemDocuments, itemPhotos, type ItemRow, type LocationRow } from '../../db/index.js';
+import {
+  loadProtocol1Fields,
+  resolveProtocol1TypeById,
+  type Protocol1Fields,
+} from '../../catalogue/index.js';
+import {
+  itemDocuments,
+  itemPhotos,
+  items,
+  type ItemRow,
+  type LocationRow,
+} from '../../db/index.js';
 import {
   externalIdsSchema,
   readPlacement,
@@ -27,6 +38,10 @@ const fieldsBlobSchema = z.record(z.string(), jsonValueSchema);
 
 /** What a page needs about its items beyond their own rows. */
 export interface ItemExtras {
+  /** Protocol-1 field projection per item, loaded in the page's read transaction. */
+  readonly fields: ReadonlyMap<string, Protocol1Fields>;
+  /** Protocol-1 type key per item, loaded from the same published catalogue snapshot. */
+  readonly typeKeys: ReadonlyMap<string, string | null>;
   /** Content-addressed photos per item, in position order. Legacy file-only photos are left out. */
   readonly photos: ReadonlyMap<string, SyncPhoto[]>;
   /** Titles of each linked Paperless document, per item. */
@@ -43,10 +58,23 @@ function append<T>(map: Map<string, T[]>, key: string, value: T): void {
 
 /** Load photos and document links for `ids`, in the caller's (read) transaction. */
 export function loadItemExtras(db: CommandDb, ids: readonly string[]): ItemExtras {
+  const fields = new Map<string, Protocol1Fields>();
+  const typeKeys = new Map<string, string | null>();
   const photos = new Map<string, SyncPhoto[]>();
   const documentTitles = new Map<string, string[]>();
   const linked = new Set<string>();
-  if (ids.length === 0) return { photos, documentTitles, linked };
+  if (ids.length === 0) return { fields, typeKeys, photos, documentTitles, linked };
+
+  const itemTypes = db
+    .select({ id: items.id, typeId: items.typeId })
+    .from(items)
+    .where(inArray(items.id, [...ids]))
+    .all();
+  for (const item of itemTypes) {
+    fields.set(item.id, loadProtocol1Fields(db, item.id));
+    const type = item.typeId === null ? null : resolveProtocol1TypeById(db, item.typeId);
+    typeKeys.set(item.id, type?.key ?? null);
+  }
 
   const photoRows = db
     .select()
@@ -70,7 +98,7 @@ export function loadItemExtras(db: CommandDb, ids: readonly string[]): ItemExtra
     linked.add(row.itemId);
     if (row.title !== null) append(documentTitles, row.itemId, row.title);
   }
-  return { photos, documentTitles, linked };
+  return { fields, typeKeys, photos, documentTitles, linked };
 }
 
 /**
@@ -114,9 +142,9 @@ export function toSyncItem(row: ItemRow, extras: ItemExtras, available: boolean)
     revision: row.revision,
     seq: row.seq,
     name: row.name,
-    typeKey: row.typeKey,
+    typeKey: extras.typeKeys.get(row.id) ?? null,
     legacyType: row.legacyType,
-    fields: fieldsBlobSchema.parse(JSON.parse(row.fields)),
+    fields: fieldsBlobSchema.parse(extras.fields.get(row.id) ?? {}),
     note: row.note,
     code: row.code,
     externalIds: externalIdsSchema.parse(JSON.parse(row.externalIds)),

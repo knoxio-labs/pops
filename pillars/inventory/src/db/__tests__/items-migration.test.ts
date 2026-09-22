@@ -348,7 +348,11 @@ describe('0012_items_single_identity on a populated database', () => {
 
   it('types every container storage_box, closes sealed and moved ones, opens the rest', () => {
     const rows = all<{ id: string; type_key: string; access: string; is_full: number | null }>(
-      `SELECT id, type_key, access, is_full FROM items WHERE is_container = 1 ORDER BY id`
+      `SELECT i.id, t.key AS type_key, i.access, i.is_full
+       FROM items i
+       JOIN item_types t ON t.revision = 1 AND t.id = i.type_id
+       WHERE i.is_container = 1
+       ORDER BY i.id`
     );
     expect(rows).toEqual([
       { id: 'c-moved', type_key: 'storage_box', access: 'closed', is_full: null },
@@ -410,26 +414,25 @@ describe('0012_items_single_identity on a populated database', () => {
   it('leaves items untyped, not containers, with the old type as legacy_type and an empty code as none', () => {
     expect(
       all(
-        `SELECT id, type_key, legacy_type, is_container, access, fields, external_ids, code FROM items WHERE id IN ('i-drill', 'i-loose') ORDER BY id`
+        `SELECT id, type_id, legacy_type, is_container, access, external_ids, code
+         FROM items WHERE id IN ('i-drill', 'i-loose') ORDER BY id`
       )
     ).toEqual([
       {
         id: 'i-drill',
-        type_key: null,
+        type_id: null,
         legacy_type: 'Tools',
         is_container: 0,
         access: null,
-        fields: '{}',
         external_ids: '[]',
         code: 'TV01',
       },
       {
         id: 'i-loose',
-        type_key: null,
+        type_id: null,
         legacy_type: null,
         is_container: 0,
         access: null,
-        fields: '{}',
         external_ids: '[]',
         code: null,
       },

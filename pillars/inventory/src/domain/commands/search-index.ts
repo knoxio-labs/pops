@@ -1,33 +1,30 @@
 /**
  * `items_fts` maintenance (Inventory ADR-002 D9). The command layer keeps the
  * index current itself, rather than with triggers, because the type label
- * comes from code (`findType`), not from a column a trigger could read
- * (migration `0013_items_fts`).
+ * and field values live in the persisted catalogue/value store rather than
+ * columns a trigger can read (migration `0013_items_fts`).
  */
 import { sql } from 'drizzle-orm';
 
-import { findType } from '../../types/index.js';
+import { loadProtocol1Fields, resolveProtocol1TypeById } from '../../catalogue/index.js';
 
 import type { ItemRow } from '../../db/row-types.js';
-import type { FieldDefinition } from '../../types/index.js';
 import type { CommandDb } from './entities.js';
 
 /** The columns of an item row `items_fts` is built from. */
 export type SearchableItem = Pick<
   ItemRow,
-  'id' | 'name' | 'code' | 'note' | 'typeKey' | 'fields' | 'externalIds'
+  'id' | 'name' | 'code' | 'note' | 'typeId' | 'externalIds'
 >;
 
-const TEXTUAL_KINDS: ReadonlySet<FieldDefinition['kind']> = new Set(['text', 'choice', 'link']);
-
 /** The type's textual field values, space-joined, for the free-text column. */
-function fieldText(row: SearchableItem): string {
-  const type = row.typeKey ? findType(row.typeKey) : undefined;
+function fieldText(db: CommandDb, row: SearchableItem): string {
+  if (row.typeId === null) return '';
+  const type = resolveProtocol1TypeById(db, row.typeId);
   if (!type) return '';
-  const fields = JSON.parse(row.fields) as Record<string, unknown>;
+  const fields = loadProtocol1Fields(db, row.id);
   const parts: string[] = [];
   for (const field of type.fields) {
-    if (!TEXTUAL_KINDS.has(field.kind)) continue;
     const value = fields[field.key];
     if (typeof value === 'string' && value.length > 0) parts.push(value);
   }
@@ -47,13 +44,13 @@ function externalIdsText(row: SearchableItem): string {
  * `item.changeType`, `item.setCode`, `item.split`).
  */
 export function upsertSearchIndex(db: CommandDb, row: SearchableItem): void {
-  const type = row.typeKey ? findType(row.typeKey) : undefined;
+  const type = row.typeId === null ? null : resolveProtocol1TypeById(db, row.typeId);
   db.run(sql`delete from items_fts where id = ${row.id}`);
   db.run(sql`
     insert into items_fts (id, name, code, note, type_label, field_text, external_ids)
     values (
       ${row.id}, ${row.name}, ${row.code ?? ''}, ${row.note ?? ''},
-      ${type?.name ?? ''}, ${fieldText(row)}, ${externalIdsText(row)}
+      ${type?.label ?? ''}, ${fieldText(db, row)}, ${externalIdsText(row)}
     )
   `);
 }
@@ -64,9 +61,8 @@ export function removeFromSearchIndex(db: CommandDb, id: string): void {
 }
 
 /**
- * Rebuild `items_fts` from scratch against `rows`. Boot wiring (rebuilding
- * when `catalogue_version` changes) belongs to the sync layer (A5) that
- * knows the served catalogue's version; this is the primitive it will call.
+ * Rebuild `items_fts` from scratch against `rows` using the current persisted
+ * catalogue and values.
  */
 export function rebuildSearchIndex(db: CommandDb, rows: readonly SearchableItem[]): void {
   db.run(sql`delete from items_fts`);

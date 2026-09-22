@@ -69,7 +69,7 @@ export function makeInventoryRestHandlers(deps: {
     web: makeWebHandlers({ db, documents }),
     settings: makeSettingsHandlers(db),
     sync: makeSyncHandlers({ db, documents, verify: deps.serviceAccountVerifier }),
-    types: makeTypesHandlers(),
+    types: makeTypesHandlers(db),
     codes: makeCodesHandlers(db, ai),
   });
 }

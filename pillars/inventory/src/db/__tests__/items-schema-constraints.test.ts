@@ -137,8 +137,6 @@ describe('items CHECK constraints', () => {
     ['a container without access', { is_container: 1 }, 'ck_items_access'],
     ['an unknown access state', { is_container: 1, access: 'sealed' }, 'ck_items_access'],
     ['fullness on a non-container', { is_full: 0 }, 'ck_items_is_full'],
-    ['non-object fields', { fields: '[]' }, 'ck_items_fields'],
-    ['malformed fields JSON', { fields: '{' }, 'ck_items_fields'],
     ['non-array external ids', { external_ids: '{}' }, 'ck_items_external_ids'],
     ['a zero revision', { revision: 0 }, 'ck_items_revision'],
   ])('refuses %s', (_label, overrides, constraint) => {
@@ -247,6 +245,61 @@ describe('events', () => {
 
   it('refuses to compensate an event that does not exist', () => {
     expect(() => insertEvent({ kind: 'reverted', compensates_seq: 99 })).toThrow(/FOREIGN KEY/);
+  });
+});
+
+describe('catalogue snapshot immutability', () => {
+  beforeEach(() => {
+    raw
+      .prepare(
+        `INSERT INTO catalogue_revisions
+           (revision, base_revision, status, minimum_protocol, created_actor_kind, created_at)
+         VALUES (2, 1, 'draft', 1, 'migration', 'now')`
+      )
+      .run();
+    raw
+      .prepare(
+        `INSERT INTO item_types
+           (revision, id, key, label, sort_order, capabilities_json, legacy_labels_json, presentation_json)
+         VALUES (2, 'draft-type', 'draft_type', 'Draft type', 0, '[]', '[]', '{}')`
+      )
+      .run();
+    raw
+      .prepare(
+        `INSERT INTO item_type_fields
+           (revision, id, type_id, key, label, sort_order, kind, cardinality, required,
+            storage, reference_kinds_json, reference_type_ids_json, allow_override,
+            presentation_json)
+         VALUES (2, 'draft-field', 'draft-type', 'State', 'State', 0, 'enum', 'one', 0,
+                 'stored', '[]', '[]', 0, '{}')`
+      )
+      .run();
+    raw
+      .prepare(
+        `INSERT INTO field_enum_options
+           (revision, id, field_id, key, label, sort_order)
+         VALUES (2, 'draft-option', 'draft-field', 'ready', 'Ready', 0)`
+      )
+      .run();
+    raw
+      .prepare(
+        `INSERT INTO catalogue_compatibility
+           (from_revision, to_revision, classification, affected_ids_json)
+         VALUES (1, 2, 'compatible', '[]')`
+      )
+      .run();
+  });
+
+  it.each([
+    ['type', `UPDATE item_types SET revision = 1 WHERE id = 'draft-type'`],
+    ['field', `UPDATE item_type_fields SET revision = 1 WHERE id = 'draft-field'`],
+    ['option', `UPDATE field_enum_options SET revision = 1 WHERE id = 'draft-option'`],
+    [
+      'compatibility proof',
+      `UPDATE catalogue_compatibility SET to_revision = 1 WHERE to_revision = 2`,
+    ],
+  ])('refuses moving a draft %s into a published snapshot', (_label, statement) => {
+    expect(() => raw.prepare(statement).run()).toThrow(/terminal catalogue/);
   });
 });
 

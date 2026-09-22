@@ -6,6 +6,7 @@
  */
 import { sql } from 'drizzle-orm';
 
+import { replaceItemFieldValues, resolveProtocol1Type } from '../../catalogue/index.js';
 import { items, locations, type InventoryDb } from '../../db/index.js';
 
 import type { Mutation } from './envelope.js';
@@ -62,27 +63,49 @@ function seedLocations(db: InventoryDb, seeds: readonly SeedLocation[]): void {
   }
 }
 
-function seedItems(db: InventoryDb, seeds: readonly SeedItem[]): void {
-  for (const item of seeds) {
-    db.insert(items)
-      .values({
-        id: item.id,
-        name: item.name,
-        placementKind: item.placement.kind,
-        locationId: item.placement.kind === 'location' ? item.placement.locationId : null,
-        containingItemId: item.placement.kind === 'container' ? item.placement.itemId : null,
-        isContainer: item.isContainer ? 1 : 0,
-        access: item.isContainer ? (item.access ?? 'open') : null,
-        quantity: item.quantity ?? 1,
-        code: item.code ?? null,
-        typeKey: item.typeKey ?? null,
-        fields: JSON.stringify(item.fields ?? {}),
-        deletedAt: item.deletedAt ?? null,
-        lastEditedTime: VECTOR_CLOCK,
-        seq: 0,
-      })
-      .run();
+function vectorPlacement(item: SeedItem): {
+  locationId: string | null;
+  containingItemId: string | null;
+} {
+  if (item.placement.kind === 'location') {
+    return { locationId: item.placement.locationId, containingItemId: null };
   }
+  if (item.placement.kind === 'container') {
+    return { locationId: null, containingItemId: item.placement.itemId };
+  }
+  return { locationId: null, containingItemId: null };
+}
+
+function seedItem(db: InventoryDb, item: SeedItem): void {
+  const type = item.typeKey ? resolveProtocol1Type(db, item.typeKey) : null;
+  db.insert(items)
+    .values({
+      id: item.id,
+      name: item.name,
+      placementKind: item.placement.kind,
+      ...vectorPlacement(item),
+      isContainer: item.isContainer ? 1 : 0,
+      access: item.isContainer ? (item.access ?? 'open') : null,
+      quantity: item.quantity ?? 1,
+      code: item.code ?? null,
+      typeId: type?.id ?? null,
+      deletedAt: item.deletedAt ?? null,
+      lastEditedTime: VECTOR_CLOCK,
+      seq: 0,
+    })
+    .run();
+  if (!type) return;
+  replaceItemFieldValues(db, {
+    itemId: item.id,
+    typeId: type.id,
+    fields: item.fields ?? {},
+    catalogueRevision: type.revision,
+    now: VECTOR_CLOCK,
+  });
+}
+
+function seedItems(db: InventoryDb, seeds: readonly SeedItem[]): void {
+  for (const item of seeds) seedItem(db, item);
 }
 
 function seedMedia(db: InventoryDb, hashes: readonly string[]): void {

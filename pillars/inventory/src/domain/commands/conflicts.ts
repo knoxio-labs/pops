@@ -19,10 +19,23 @@ export function sameValue(a: JsonValue, b: JsonValue): boolean {
 }
 
 /** The fields of `changes` whose intended value differs from the entity's current one. */
-export function diffAgainst(entity: LoadedEntity, changes: FieldValues): FieldValues {
+export function diffAgainst(
+  db: CommandDb,
+  entity: LoadedEntity,
+  changes: FieldValues
+): FieldValues {
   const diff: FieldValues = {};
+  const requestedType = changes['typeKey'];
+  const typeChanged =
+    entity.kind === 'item' &&
+    requestedType !== undefined &&
+    !sameValue(requestedType, currentValue(db, entity, 'typeKey'));
   for (const [field, value] of Object.entries(changes)) {
-    if (!sameValue(value, currentValue(entity, field))) diff[field] = value;
+    if (field === 'fields' && typeChanged) {
+      diff[field] = value;
+      continue;
+    }
+    if (!sameValue(value, currentValue(db, entity, field))) diff[field] = value;
   }
   return diff;
 }
@@ -59,7 +72,7 @@ export function checkRevision(
   for (const [field, mine] of Object.entries(changes)) {
     const winner = lastTouching(later, field);
     if (!winner) continue;
-    const theirs = currentValue(entity, field);
+    const theirs = currentValue(db, entity, field);
     if (sameValue(mine, theirs)) {
       converged = true;
       continue;
@@ -99,7 +112,7 @@ export function conflictSinceSeq(
       kind: 'field',
       field,
       mine,
-      theirs: currentValue(entity, field),
+      theirs: currentValue(db, entity, field),
       source: sourceOf(winner),
       at: winner.serverTime,
       currentRevision: entity.row.revision,

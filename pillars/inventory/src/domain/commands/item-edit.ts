@@ -1,13 +1,15 @@
 import { z } from 'zod';
 
-import { findType, typeFieldsSchema } from '../../types/index.js';
+import { loadProtocol1Fields, resolveProtocol1TypeById } from '../../catalogue/index.js';
 import { requireItem, type FieldValues } from './entities.js';
 import { CommandRejected } from './errors.js';
 import { externalIdsSchema, normalizeNote } from './item-fields.js';
 import { legacyItemPatchSchema } from './legacy-item-fields.js';
 import { defineOp } from './op.js';
+import { assertProtocol1Fields, protocol1FieldsAsJson } from './protocol-1-fields.js';
 import { upsertSearchIndex } from './search-index.js';
 
+import type { CommandDb } from './entities.js';
 import type { JsonValue } from './outcome.js';
 
 /** `null` deletes the key on the merged blob; anything else sets it. */
@@ -59,17 +61,19 @@ export function mergeFieldsPatch(
  * blob is returned as-is: it was valid when it was written.
  */
 function resolveNextFields(
-  row: { readonly typeKey: string | null; readonly fields: string },
+  db: CommandDb,
+  row: { readonly id: string; readonly typeId: string | null },
   patch: Record<string, JsonValue | null> | undefined
 ): Record<string, JsonValue> {
-  const current = JSON.parse(row.fields) as Record<string, JsonValue>;
+  const current = protocol1FieldsAsJson(loadProtocol1Fields(db, row.id));
   if (patch === undefined) return current;
   const next = mergeFieldsPatch(current, patch);
-  const type = row.typeKey ? findType(row.typeKey) : undefined;
+  const type = row.typeId ? resolveProtocol1TypeById(db, row.typeId) : undefined;
+  if (row.typeId !== null && type === null) {
+    throw new CommandRejected('type_unknown', `unknown type ${row.typeId}`);
+  }
   if (type) {
-    if (!typeFieldsSchema(type).safeParse(next).success) {
-      throw new CommandRejected('invalid', `fields do not fit type ${type.key}`);
-    }
+    assertProtocol1Fields(db, type.id, next);
   } else if (Object.keys(next).length > 0) {
     throw new CommandRejected('invalid', 'an untyped item cannot carry fields');
   }
@@ -93,12 +97,12 @@ export const itemEdit = defineOp({
   entity: 'item',
   revisionCheck: 'base',
   args: editArgs,
-  plan(_ctx, target, args) {
+  plan(ctx, target, args) {
     const row = requireItem(target);
     const nextName = args.name ?? row.name;
     const nextNote = args.note !== undefined ? args.note : row.note;
     const nextExternalIds = args.externalIds ?? (JSON.parse(row.externalIds) as JsonValue);
-    const nextFields = resolveNextFields(row, args.fields);
+    const nextFields = resolveNextFields(ctx.db, row, args.fields);
 
     const changes: FieldValues = {};
     if (args.name !== undefined) changes['name'] = args.name;
@@ -120,8 +124,7 @@ export const itemEdit = defineOp({
           name: nextName,
           code: row.code,
           note: nextNote,
-          typeKey: row.typeKey,
-          fields: JSON.stringify(nextFields),
+          typeId: row.typeId,
           externalIds: JSON.stringify(nextExternalIds),
         });
       },

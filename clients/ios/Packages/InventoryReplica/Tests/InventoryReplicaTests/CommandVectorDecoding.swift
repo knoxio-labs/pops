@@ -11,8 +11,8 @@ internal enum CommandVectorDecoding {
 
     static let clock = Date(timeIntervalSinceReferenceDate: 800_000_000)
 
-    /// The server's own catalogue as far as the vectors reach: `bulb` and
-    /// its `Fitting` choice (`pillars/inventory/src/types/templates/bulb.ts`).
+    /// The server's revision-1 catalogue as far as the vectors reach: `bulb`
+    /// and its `Fitting` choice.
     static let catalogue = InventoryCatalogue(
         version: "vectors", units: [],
         types: [

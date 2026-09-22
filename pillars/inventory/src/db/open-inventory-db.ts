@@ -16,6 +16,7 @@ import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import { withPreMigrationBackup } from '@pops/pillar-sdk/db';
 
 import { rebuildSearchIndexFromItems } from './backfill-search-index.js';
+import { registerPersistedItemTypesMigrationFunctions } from './migrations/persisted-item-types-bootstrap.js';
 
 import type { InventoryDb } from './services/internal.js';
 
@@ -99,6 +100,7 @@ export function openInventoryDb(path: string): OpenedInventoryDb {
   raw.pragma('journal_mode = WAL');
   raw.pragma('foreign_keys = ON');
   raw.pragma('busy_timeout = 5000');
+  registerPersistedItemTypesMigrationFunctions(raw);
   const db = drizzle(raw) as InventoryDb;
   const migrations = migrationsDir();
   try {
