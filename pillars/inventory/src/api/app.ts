@@ -26,6 +26,7 @@ import { inventoryContract } from '../contract/rest.js';
 import { createInventoryFilesRouter } from './files/router.js';
 import { type InventoryApiDeps, makeRequestHandler } from './handlers.js';
 import { createInventoryMediaRouter } from './media/router.js';
+import { createInventoryIdentityMiddleware } from './middleware/identity.js';
 import { createServiceAccountScopeMiddleware } from './middleware/service-account-scope.js';
 import { getInventoryImagesDir } from './modules/photos/paths.js';
 import { makeInventoryRestHandlers } from './rest/handlers.js';
@@ -88,6 +89,7 @@ export function createInventoryApiApp(deps: InventoryApiDeps): Express {
   // contract route and every declared raw route is covered.
   const serviceAccountVerifier =
     deps.serviceAccountVerifier ?? createRegistryServiceAccountVerifier();
+  app.use(createInventoryIdentityMiddleware(serviceAccountVerifier, deps.identityResolver));
   app.use(createServiceAccountScopeMiddleware(serviceAccountVerifier));
   app.use(
     createProtocolGate(inventorySyncProtocolRouters, () => readMinProtocol(deps.inventoryDb.db))

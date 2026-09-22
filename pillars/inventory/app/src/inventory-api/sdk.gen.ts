@@ -177,6 +177,24 @@ import type {
   TypesCatalogueData,
   TypesCatalogueErrors,
   TypesCatalogueResponses,
+  TypesManageAbandonDraftData,
+  TypesManageAbandonDraftErrors,
+  TypesManageAbandonDraftResponses,
+  TypesManageCreateDraftData,
+  TypesManageCreateDraftErrors,
+  TypesManageCreateDraftResponses,
+  TypesManagePatchDraftData,
+  TypesManagePatchDraftErrors,
+  TypesManagePatchDraftResponses,
+  TypesManagePublishDraftData,
+  TypesManagePublishDraftErrors,
+  TypesManagePublishDraftResponses,
+  TypesReadAuditData,
+  TypesReadAuditErrors,
+  TypesReadAuditResponses,
+  TypesReadCatalogueData,
+  TypesReadCatalogueErrors,
+  TypesReadCatalogueResponses,
   WebGetData,
   WebGetErrors,
   WebGetResponses,
@@ -1020,6 +1038,105 @@ export const syncSnapshot = <ThrowOnError extends boolean = false>(
   (options.client ?? client).get<SyncSnapshotResponses, SyncSnapshotErrors, ThrowOnError>({
     url: '/sync/snapshot',
     ...options,
+  });
+
+/**
+ * Read the current or an exact immutable type catalogue revision
+ */
+export const typesReadCatalogue = <ThrowOnError extends boolean = false>(
+  options?: Options<TypesReadCatalogueData, ThrowOnError>
+): RequestResult<TypesReadCatalogueResponses, TypesReadCatalogueErrors, ThrowOnError> =>
+  (options?.client ?? client).get<
+    TypesReadCatalogueResponses,
+    TypesReadCatalogueErrors,
+    ThrowOnError
+  >({ url: '/type-catalogue', ...options });
+
+/**
+ * Read catalogue publication and abandonment audit events newest first
+ */
+export const typesReadAudit = <ThrowOnError extends boolean = false>(
+  options: Options<TypesReadAuditData, ThrowOnError>
+): RequestResult<TypesReadAuditResponses, TypesReadAuditErrors, ThrowOnError> =>
+  (options.client ?? client).get<TypesReadAuditResponses, TypesReadAuditErrors, ThrowOnError>({
+    url: '/type-catalogue/audit',
+    ...options,
+  });
+
+/**
+ * Create the one editable draft from the current published catalogue
+ */
+export const typesManageCreateDraft = <ThrowOnError extends boolean = false>(
+  options?: Options<TypesManageCreateDraftData, ThrowOnError>
+): RequestResult<TypesManageCreateDraftResponses, TypesManageCreateDraftErrors, ThrowOnError> =>
+  (options?.client ?? client).post<
+    TypesManageCreateDraftResponses,
+    TypesManageCreateDraftErrors,
+    ThrowOnError
+  >({
+    url: '/type-catalogue/drafts',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
+
+/**
+ * Apply validated operations to a draft and preview publication compatibility
+ */
+export const typesManagePatchDraft = <ThrowOnError extends boolean = false>(
+  options: Options<TypesManagePatchDraftData, ThrowOnError>
+): RequestResult<TypesManagePatchDraftResponses, TypesManagePatchDraftErrors, ThrowOnError> =>
+  (options.client ?? client).patch<
+    TypesManagePatchDraftResponses,
+    TypesManagePatchDraftErrors,
+    ThrowOnError
+  >({
+    url: '/type-catalogue/drafts/{revision}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Abandon a draft without deleting its attempt from history
+ */
+export const typesManageAbandonDraft = <ThrowOnError extends boolean = false>(
+  options: Options<TypesManageAbandonDraftData, ThrowOnError>
+): RequestResult<TypesManageAbandonDraftResponses, TypesManageAbandonDraftErrors, ThrowOnError> =>
+  (options.client ?? client).post<
+    TypesManageAbandonDraftResponses,
+    TypesManageAbandonDraftErrors,
+    ThrowOnError
+  >({
+    url: '/type-catalogue/drafts/{revision}/abandon',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Publish a validated draft atomically, including any named value migration
+ */
+export const typesManagePublishDraft = <ThrowOnError extends boolean = false>(
+  options: Options<TypesManagePublishDraftData, ThrowOnError>
+): RequestResult<TypesManagePublishDraftResponses, TypesManagePublishDraftErrors, ThrowOnError> =>
+  (options.client ?? client).post<
+    TypesManagePublishDraftResponses,
+    TypesManagePublishDraftErrors,
+    ThrowOnError
+  >({
+    url: '/type-catalogue/drafts/{revision}/publish',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
   });
 
 /**

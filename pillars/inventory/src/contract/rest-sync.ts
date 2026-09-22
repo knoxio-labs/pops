@@ -8,7 +8,7 @@
  * derives three grants from their keys: `inventory.sync`, `inventory.types`
  * and `inventory.codes`.
  *
- * Every route requires `Pops-Inventory-Protocol: <n>`; a missing header or one
+ * Every sync route requires `Pops-Inventory-Protocol: <n>`; a missing header or one
  * below the server's minimum is `426 client_too_old`. `POST /sync/mutations`
  * also reads `Pops-Actor: device:<deviceId>;label=<percent-encoded label>`,
  * honoured only from a caller whose service account holds `inventory.sync`;
@@ -22,6 +22,7 @@
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
 
+import { inventoryCatalogueContract } from './rest-catalogue.js';
 import { ErrorBodySchema, NonEmptyString } from './rest-schemas.js';
 import {
   SyncEventSchema,
@@ -174,6 +175,7 @@ export const inventoryTypesContract = c.router({
     responses: { 200: CatalogueDescriptorSchema, 304: c.noBody(), ...SYNC_ERRORS },
     summary: 'The type catalogue; `ETag` is its version, and a matching `If-None-Match` is 304',
   },
+  ...inventoryCatalogueContract,
 });
 
 export const inventoryCodesContract = c.router({
@@ -201,6 +203,6 @@ export const inventoryCodesContract = c.router({
  */
 export const inventorySyncProtocolRouters = {
   sync: inventorySyncContract,
-  types: inventoryTypesContract,
+  types: { catalogue: inventoryTypesContract.catalogue },
   codes: inventoryCodesContract,
 };

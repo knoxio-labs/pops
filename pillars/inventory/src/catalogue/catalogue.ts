@@ -4,24 +4,16 @@
  * This module deliberately has no dependency on `src/types`: after the
  * bootstrap migration, the SQLite snapshot is the sole catalogue authority.
  */
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, inArray } from 'drizzle-orm';
 
 import { catalogueRevisions, fieldEnumOptions, itemTypeFields, itemTypes } from '../db/schema.js';
-import {
-  asCardinality,
-  asPrimitiveKind,
-  asReferenceKinds,
-  asStorage,
-} from './catalogue-field-shape.js';
-import { parseObject, parseStringArray } from './catalogue-json.js';
+import { materializeType } from './catalogue-materialize.js';
 
 import type { CommandDb } from '../db/command-db.js';
 import type {
   PersistedCatalogue,
   PersistedCatalogueRevision,
-  PersistedEnumOption,
   PersistedItemType,
-  PersistedItemTypeField,
   PersistedTypeLookup,
 } from './catalogue-types.js';
 export { CatalogueDataError } from './catalogue-error.js';
@@ -48,100 +40,29 @@ function asRevision(row: typeof catalogueRevisions.$inferSelect): PersistedCatal
   };
 }
 
-function loadRevision(db: CommandDb, revision?: number): PersistedCatalogueRevision | null {
+function loadRevision(
+  db: CommandDb,
+  revision: number | undefined,
+  statuses: readonly ('draft' | 'published' | 'abandoned')[]
+): typeof catalogueRevisions.$inferSelect | undefined {
+  const statusFilter =
+    statuses.length === 0 ? undefined : inArray(catalogueRevisions.status, [...statuses]);
+  const query = db.select().from(catalogueRevisions);
+  const filtered = statusFilter === undefined ? query : query.where(statusFilter);
   const row =
     revision === undefined
-      ? db
-          .select()
-          .from(catalogueRevisions)
-          .where(eq(catalogueRevisions.status, 'published'))
-          .orderBy(desc(catalogueRevisions.revision))
-          .limit(1)
-          .get()
+      ? filtered.orderBy(desc(catalogueRevisions.revision)).limit(1).get()
       : db
           .select()
           .from(catalogueRevisions)
           .where(
             and(
               eq(catalogueRevisions.revision, revision),
-              eq(catalogueRevisions.status, 'published')
+              ...(statusFilter === undefined ? [] : [statusFilter])
             )
           )
           .get();
-  return row ? asRevision(row) : null;
-}
-
-function materializeField(
-  field: typeof itemTypeFields.$inferSelect,
-  optionRows: readonly (typeof fieldEnumOptions.$inferSelect)[]
-): PersistedItemTypeField {
-  const enumOptions = optionRows
-    .filter((option) => option.fieldId === field.id)
-    .map((option): PersistedEnumOption => ({
-      id: option.id,
-      key: option.key,
-      label: option.label,
-      sortOrder: option.sortOrder,
-      archivedAt: option.archivedAt,
-    }))
-    .toSorted(
-      (left, right) => left.sortOrder - right.sortOrder || left.key.localeCompare(right.key)
-    );
-  const enumOptionIds = new Set(enumOptions.map((option) => option.id));
-  const archivedEnumOptionIds = new Set(
-    enumOptions.filter((option) => option.archivedAt !== null).map((option) => option.id)
-  );
-  return {
-    id: field.id,
-    typeId: field.typeId,
-    key: field.key,
-    label: field.label,
-    help: field.help,
-    sortOrder: field.sortOrder,
-    kind: asPrimitiveKind(field.kind, field.id),
-    cardinality: asCardinality(field.cardinality, field.id),
-    required: field.required === 1,
-    storage: asStorage(field.storage, field.id),
-    fixedUnit: field.fixedUnit,
-    referenceKinds: asReferenceKinds(field.referenceKindsJson, field.id),
-    referenceTypeIds: new Set(
-      parseStringArray(field.referenceTypeIdsJson, `field ${field.id} reference type ids`)
-    ),
-    expressionVersion: field.expressionVersion,
-    expressionJson: field.expressionJson,
-    allowOverride: field.allowOverride === 1,
-    presentation: parseObject(field.presentationJson, `field ${field.id} presentation`),
-    archivedAt: field.archivedAt,
-    enumOptionIds,
-    archivedEnumOptionIds,
-    enumOptions,
-  };
-}
-
-function materializeType(
-  typeRow: typeof itemTypes.$inferSelect,
-  fieldRows: readonly (typeof itemTypeFields.$inferSelect)[],
-  optionRows: readonly (typeof fieldEnumOptions.$inferSelect)[]
-): PersistedItemType {
-  const fields = fieldRows
-    .filter((field) => field.typeId === typeRow.id)
-    .map((field) => materializeField(field, optionRows))
-    .toSorted(
-      (left, right) => left.sortOrder - right.sortOrder || left.key.localeCompare(right.key)
-    );
-  return {
-    revision: typeRow.revision,
-    id: typeRow.id,
-    key: typeRow.key,
-    label: typeRow.label,
-    description: typeRow.description,
-    sortOrder: typeRow.sortOrder,
-    capabilities: parseStringArray(typeRow.capabilitiesJson, `type ${typeRow.id} capabilities`),
-    legacyLabels: parseStringArray(typeRow.legacyLabelsJson, `type ${typeRow.id} legacy labels`),
-    presentation: parseObject(typeRow.presentationJson, `type ${typeRow.id} presentation`),
-    archivedAt: typeRow.archivedAt,
-    fields,
-  };
+  return row;
 }
 
 /**
@@ -153,7 +74,20 @@ export function loadPublishedCatalogue(
   db: CommandDb,
   revision?: number
 ): PersistedCatalogue | null {
-  const loadedRevision = loadRevision(db, revision);
+  return loadCatalogue(db, revision, ['published']);
+}
+
+/**
+ * Loads a complete persisted catalogue snapshot in one of the requested
+ * lifecycle states. Drafts are used only by the authoring API; published
+ * snapshots remain the only runtime authority for item reads.
+ */
+export function loadCatalogue(
+  db: CommandDb,
+  revision: number | undefined,
+  statuses: readonly ('draft' | 'published' | 'abandoned')[]
+): PersistedCatalogue | null {
+  const loadedRevision = loadRevision(db, revision, statuses);
   if (!loadedRevision) return null;
   const typeRows = db
     .select()
@@ -171,7 +105,7 @@ export function loadPublishedCatalogue(
     .where(eq(fieldEnumOptions.revision, loadedRevision.revision))
     .all();
   return {
-    revision: loadedRevision,
+    revision: asRevision(loadedRevision),
     types: typeRows
       .map((type) => materializeType(type, fieldRows, optionRows))
       .toSorted(

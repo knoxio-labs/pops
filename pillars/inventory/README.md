@@ -220,6 +220,11 @@ the gate above derives three grants: `inventory.sync` (`GET /sync/snapshot`,
 - Catalogue authoring does not pass through bfm. Inventory exposes a shared
   owner-only draft/publish surface for MCP and the web editor; bfm relays only
   immutable catalogue reads.
+- `GET /type-catalogue` and `GET /type-catalogue/audit` require a Cloudflare
+  Access owner session or a service account granted `inventory.types.read`.
+  Draft creation, patching, publication and abandonment require the owner
+  session or `inventory.types.manage`. A catalogue revision is never mutable
+  after publication; stale base revisions answer `409`.
 - Events carry `before`/`after` keyed by wire field. A move records both
   `placement` and `previousPlacement`, each in the item row's placement
   shape (`{ kind: 'location', locationId }`, `{ kind: 'container', itemId }`,

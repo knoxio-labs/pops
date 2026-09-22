@@ -12,6 +12,7 @@ import type { PillarRegistryEntry } from '@pops/types';
 import type { OpenedInventoryDb } from '../db/index.js';
 import type { AiClient } from './ai/client.js';
 import type { DocumentsClient } from './documents/client.js';
+import type { InventoryIdentityResolver } from './middleware/identity.js';
 
 export interface InventoryApiDeps {
   /** Open handle to the inventory pillar's SQLite. */
@@ -43,6 +44,8 @@ export interface InventoryApiDeps {
    * registry. See `middleware/service-account-scope.ts`.
    */
   serviceAccountVerifier?: ServiceAccountVerifier;
+  /** Resolves owner and service-account identity for the catalogue authoring API. */
+  identityResolver?: InventoryIdentityResolver;
 }
 
 export interface HealthResponse {

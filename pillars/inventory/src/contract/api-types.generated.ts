@@ -801,6 +801,108 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/type-catalogue': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Read the current or an exact immutable type catalogue revision */
+    get: operations['types.read.catalogue'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/type-catalogue/audit': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Read catalogue publication and abandonment audit events newest first */
+    get: operations['types.read.audit'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/type-catalogue/drafts': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Create the one editable draft from the current published catalogue */
+    post: operations['types.manage.createDraft'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/type-catalogue/drafts/{revision}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Apply validated operations to a draft and preview publication compatibility */
+    patch: operations['types.manage.patchDraft'];
+    trace?: never;
+  };
+  '/type-catalogue/drafts/{revision}/abandon': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Abandon a draft without deleting its attempt from history */
+    post: operations['types.manage.abandonDraft'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/type-catalogue/drafts/{revision}/publish': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Publish a validated draft atomically, including any named value migration */
+    post: operations['types.manage.publishDraft'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/types': {
     parameters: {
       query?: never;
@@ -5177,6 +5279,1170 @@ export interface operations {
         content: {
           'application/json': {
             code?: string;
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'types.read.catalogue': {
+    parameters: {
+      query?: {
+        revision?: number;
+      };
+      header?: {
+        'if-none-match'?: string;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            revision: {
+              abandoned: {
+                actor: {
+                  id: string | null;
+                  /** @enum {string} */
+                  kind: 'web' | 'service' | 'migration';
+                  label: string | null;
+                };
+                at: string;
+              } | null;
+              baseRevision: number | null;
+              created: {
+                actor: {
+                  id: string | null;
+                  /** @enum {string} */
+                  kind: 'web' | 'service' | 'migration';
+                  label: string | null;
+                };
+                at: string;
+              };
+              minimumProtocol: number;
+              published: {
+                actor: {
+                  id: string | null;
+                  /** @enum {string} */
+                  kind: 'web' | 'service' | 'migration';
+                  label: string | null;
+                };
+                at: string;
+                note: string | null;
+              } | null;
+              revision: number;
+              /** @enum {string} */
+              status: 'draft' | 'published' | 'abandoned';
+            };
+            types: {
+              archivedAt: string | null;
+              capabilities: string[];
+              description: string | null;
+              fields: {
+                allowOverride: boolean;
+                archivedAt: string | null;
+                /** @enum {string} */
+                cardinality: 'one' | 'many';
+                enumOptions: {
+                  archivedAt: string | null;
+                  /** Format: uuid */
+                  id: string;
+                  key: string;
+                  label: string;
+                  sortOrder: number;
+                }[];
+                expression: unknown;
+                expressionVersion: number | null;
+                fixedUnit: string | null;
+                help: string | null;
+                /** Format: uuid */
+                id: string;
+                key: string;
+                /** @enum {string} */
+                kind:
+                  | 'short_text'
+                  | 'long_text'
+                  | 'integer'
+                  | 'decimal'
+                  | 'boolean'
+                  | 'enum'
+                  | 'measurement'
+                  | 'date'
+                  | 'date_time'
+                  | 'url'
+                  | 'reference';
+                label: string;
+                presentation: {
+                  [key: string]: unknown;
+                };
+                referenceKinds: ('item' | 'location')[];
+                referenceTypeIds: string[];
+                required: boolean;
+                sortOrder: number;
+                /** @enum {string} */
+                storage: 'stored' | 'computed';
+                /** Format: uuid */
+                typeId: string;
+              }[];
+              /** Format: uuid */
+              id: string;
+              key: string;
+              label: string;
+              legacyLabels: string[];
+              presentation: {
+                [key: string]: unknown;
+              };
+              revision: number;
+              sortOrder: number;
+            }[];
+          };
+        };
+      };
+      /** @description 304 */
+      304: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            issues?: {
+              code: string;
+              definitionId: string | null;
+              message: string;
+              path: string;
+            }[];
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            issues?: {
+              code: string;
+              definitionId: string | null;
+              message: string;
+              path: string;
+            }[];
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'types.read.audit': {
+    parameters: {
+      query: {
+        before?: number;
+        limit: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            events: {
+              actor: {
+                id: string | null;
+                /** @enum {string} */
+                kind: 'web' | 'service' | 'migration';
+                label: string | null;
+              };
+              affectedItems: number;
+              after: {
+                [key: string]: unknown;
+              };
+              before: {
+                [key: string]: unknown;
+              };
+              id: number;
+              /** @enum {string} */
+              kind: 'published' | 'abandoned';
+              migrationName: string | null;
+              revision: number;
+              serverTime: string;
+            }[];
+            nextBefore: number | null;
+          };
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            issues?: {
+              code: string;
+              definitionId: string | null;
+              message: string;
+              path: string;
+            }[];
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'types.manage.createDraft': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          baseRevision: number;
+        };
+      };
+    };
+    responses: {
+      /** @description 201 */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            revision: {
+              abandoned: {
+                actor: {
+                  id: string | null;
+                  /** @enum {string} */
+                  kind: 'web' | 'service' | 'migration';
+                  label: string | null;
+                };
+                at: string;
+              } | null;
+              baseRevision: number | null;
+              created: {
+                actor: {
+                  id: string | null;
+                  /** @enum {string} */
+                  kind: 'web' | 'service' | 'migration';
+                  label: string | null;
+                };
+                at: string;
+              };
+              minimumProtocol: number;
+              published: {
+                actor: {
+                  id: string | null;
+                  /** @enum {string} */
+                  kind: 'web' | 'service' | 'migration';
+                  label: string | null;
+                };
+                at: string;
+                note: string | null;
+              } | null;
+              revision: number;
+              /** @enum {string} */
+              status: 'draft' | 'published' | 'abandoned';
+            };
+            types: {
+              archivedAt: string | null;
+              capabilities: string[];
+              description: string | null;
+              fields: {
+                allowOverride: boolean;
+                archivedAt: string | null;
+                /** @enum {string} */
+                cardinality: 'one' | 'many';
+                enumOptions: {
+                  archivedAt: string | null;
+                  /** Format: uuid */
+                  id: string;
+                  key: string;
+                  label: string;
+                  sortOrder: number;
+                }[];
+                expression: unknown;
+                expressionVersion: number | null;
+                fixedUnit: string | null;
+                help: string | null;
+                /** Format: uuid */
+                id: string;
+                key: string;
+                /** @enum {string} */
+                kind:
+                  | 'short_text'
+                  | 'long_text'
+                  | 'integer'
+                  | 'decimal'
+                  | 'boolean'
+                  | 'enum'
+                  | 'measurement'
+                  | 'date'
+                  | 'date_time'
+                  | 'url'
+                  | 'reference';
+                label: string;
+                presentation: {
+                  [key: string]: unknown;
+                };
+                referenceKinds: ('item' | 'location')[];
+                referenceTypeIds: string[];
+                required: boolean;
+                sortOrder: number;
+                /** @enum {string} */
+                storage: 'stored' | 'computed';
+                /** Format: uuid */
+                typeId: string;
+              }[];
+              /** Format: uuid */
+              id: string;
+              key: string;
+              label: string;
+              legacyLabels: string[];
+              presentation: {
+                [key: string]: unknown;
+              };
+              revision: number;
+              sortOrder: number;
+            }[];
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            issues?: {
+              code: string;
+              definitionId: string | null;
+              message: string;
+              path: string;
+            }[];
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            issues?: {
+              code: string;
+              definitionId: string | null;
+              message: string;
+              path: string;
+            }[];
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            issues?: {
+              code: string;
+              definitionId: string | null;
+              message: string;
+              path: string;
+            }[];
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'types.manage.patchDraft': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        revision: number;
+      };
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          baseRevision: number;
+          operations: (
+            | {
+                archivedAt?: string | null;
+                capabilities?: string[];
+                description?: string | null;
+                /** Format: uuid */
+                id?: string;
+                key?: string;
+                /** @enum {string} */
+                kind: 'put_type';
+                label?: string;
+                legacyLabels?: string[];
+                presentation?: {
+                  [key: string]: unknown;
+                };
+                sortOrder?: number;
+              }
+            | {
+                allowOverride?: boolean;
+                archivedAt?: string | null;
+                /** @enum {string} */
+                cardinality?: 'one' | 'many';
+                expression?: unknown;
+                expressionVersion?: number | null;
+                /** @enum {string} */
+                fieldKind?:
+                  | 'short_text'
+                  | 'long_text'
+                  | 'integer'
+                  | 'decimal'
+                  | 'boolean'
+                  | 'enum'
+                  | 'measurement'
+                  | 'date'
+                  | 'date_time'
+                  | 'url'
+                  | 'reference';
+                fixedUnit?: string | null;
+                help?: string | null;
+                /** Format: uuid */
+                id?: string;
+                key?: string;
+                /** @enum {string} */
+                kind: 'put_field';
+                label?: string;
+                presentation?: {
+                  [key: string]: unknown;
+                };
+                referenceKinds?: ('item' | 'location')[];
+                referenceTypeIds?: string[];
+                required?: boolean;
+                sortOrder?: number;
+                /** @enum {string} */
+                storage?: 'stored' | 'computed';
+                /** Format: uuid */
+                typeId: string;
+              }
+            | {
+                archivedAt?: string | null;
+                /** Format: uuid */
+                fieldId: string;
+                /** Format: uuid */
+                id?: string;
+                key?: string;
+                /** @enum {string} */
+                kind: 'put_enum_option';
+                label?: string;
+                sortOrder?: number;
+              }
+            | {
+                /** Format: uuid */
+                id: string;
+                /** @enum {string} */
+                kind: 'archive_type' | 'archive_field' | 'archive_enum_option';
+              }
+            | {
+                /** @enum {string} */
+                definition: 'type' | 'field' | 'enum_option';
+                ids: string[];
+                /** @enum {string} */
+                kind: 'reorder';
+                /** Format: uuid */
+                parentId?: string | null;
+              }
+          )[];
+        };
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            compatibility: {
+              affectedIds: string[];
+              changes: {
+                /** @enum {string} */
+                classification:
+                  | 'compatible'
+                  | 'protocol_gated'
+                  | 'migration_required'
+                  | 'forbidden';
+                code: string;
+                definitionId: string;
+              }[];
+              /** @enum {string} */
+              classification: 'compatible' | 'protocol_gated' | 'migration_required' | 'forbidden';
+            };
+            draft: {
+              revision: {
+                abandoned: {
+                  actor: {
+                    id: string | null;
+                    /** @enum {string} */
+                    kind: 'web' | 'service' | 'migration';
+                    label: string | null;
+                  };
+                  at: string;
+                } | null;
+                baseRevision: number | null;
+                created: {
+                  actor: {
+                    id: string | null;
+                    /** @enum {string} */
+                    kind: 'web' | 'service' | 'migration';
+                    label: string | null;
+                  };
+                  at: string;
+                };
+                minimumProtocol: number;
+                published: {
+                  actor: {
+                    id: string | null;
+                    /** @enum {string} */
+                    kind: 'web' | 'service' | 'migration';
+                    label: string | null;
+                  };
+                  at: string;
+                  note: string | null;
+                } | null;
+                revision: number;
+                /** @enum {string} */
+                status: 'draft' | 'published' | 'abandoned';
+              };
+              types: {
+                archivedAt: string | null;
+                capabilities: string[];
+                description: string | null;
+                fields: {
+                  allowOverride: boolean;
+                  archivedAt: string | null;
+                  /** @enum {string} */
+                  cardinality: 'one' | 'many';
+                  enumOptions: {
+                    archivedAt: string | null;
+                    /** Format: uuid */
+                    id: string;
+                    key: string;
+                    label: string;
+                    sortOrder: number;
+                  }[];
+                  expression: unknown;
+                  expressionVersion: number | null;
+                  fixedUnit: string | null;
+                  help: string | null;
+                  /** Format: uuid */
+                  id: string;
+                  key: string;
+                  /** @enum {string} */
+                  kind:
+                    | 'short_text'
+                    | 'long_text'
+                    | 'integer'
+                    | 'decimal'
+                    | 'boolean'
+                    | 'enum'
+                    | 'measurement'
+                    | 'date'
+                    | 'date_time'
+                    | 'url'
+                    | 'reference';
+                  label: string;
+                  presentation: {
+                    [key: string]: unknown;
+                  };
+                  referenceKinds: ('item' | 'location')[];
+                  referenceTypeIds: string[];
+                  required: boolean;
+                  sortOrder: number;
+                  /** @enum {string} */
+                  storage: 'stored' | 'computed';
+                  /** Format: uuid */
+                  typeId: string;
+                }[];
+                /** Format: uuid */
+                id: string;
+                key: string;
+                label: string;
+                legacyLabels: string[];
+                presentation: {
+                  [key: string]: unknown;
+                };
+                revision: number;
+                sortOrder: number;
+              }[];
+            };
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            issues?: {
+              code: string;
+              definitionId: string | null;
+              message: string;
+              path: string;
+            }[];
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            issues?: {
+              code: string;
+              definitionId: string | null;
+              message: string;
+              path: string;
+            }[];
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            issues?: {
+              code: string;
+              definitionId: string | null;
+              message: string;
+              path: string;
+            }[];
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            issues?: {
+              code: string;
+              definitionId: string | null;
+              message: string;
+              path: string;
+            }[];
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'types.manage.abandonDraft': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        revision: number;
+      };
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          baseRevision: number;
+        };
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            revision: {
+              abandoned: {
+                actor: {
+                  id: string | null;
+                  /** @enum {string} */
+                  kind: 'web' | 'service' | 'migration';
+                  label: string | null;
+                };
+                at: string;
+              } | null;
+              baseRevision: number | null;
+              created: {
+                actor: {
+                  id: string | null;
+                  /** @enum {string} */
+                  kind: 'web' | 'service' | 'migration';
+                  label: string | null;
+                };
+                at: string;
+              };
+              minimumProtocol: number;
+              published: {
+                actor: {
+                  id: string | null;
+                  /** @enum {string} */
+                  kind: 'web' | 'service' | 'migration';
+                  label: string | null;
+                };
+                at: string;
+                note: string | null;
+              } | null;
+              revision: number;
+              /** @enum {string} */
+              status: 'draft' | 'published' | 'abandoned';
+            };
+            types: {
+              archivedAt: string | null;
+              capabilities: string[];
+              description: string | null;
+              fields: {
+                allowOverride: boolean;
+                archivedAt: string | null;
+                /** @enum {string} */
+                cardinality: 'one' | 'many';
+                enumOptions: {
+                  archivedAt: string | null;
+                  /** Format: uuid */
+                  id: string;
+                  key: string;
+                  label: string;
+                  sortOrder: number;
+                }[];
+                expression: unknown;
+                expressionVersion: number | null;
+                fixedUnit: string | null;
+                help: string | null;
+                /** Format: uuid */
+                id: string;
+                key: string;
+                /** @enum {string} */
+                kind:
+                  | 'short_text'
+                  | 'long_text'
+                  | 'integer'
+                  | 'decimal'
+                  | 'boolean'
+                  | 'enum'
+                  | 'measurement'
+                  | 'date'
+                  | 'date_time'
+                  | 'url'
+                  | 'reference';
+                label: string;
+                presentation: {
+                  [key: string]: unknown;
+                };
+                referenceKinds: ('item' | 'location')[];
+                referenceTypeIds: string[];
+                required: boolean;
+                sortOrder: number;
+                /** @enum {string} */
+                storage: 'stored' | 'computed';
+                /** Format: uuid */
+                typeId: string;
+              }[];
+              /** Format: uuid */
+              id: string;
+              key: string;
+              label: string;
+              legacyLabels: string[];
+              presentation: {
+                [key: string]: unknown;
+              };
+              revision: number;
+              sortOrder: number;
+            }[];
+          };
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            issues?: {
+              code: string;
+              definitionId: string | null;
+              message: string;
+              path: string;
+            }[];
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            issues?: {
+              code: string;
+              definitionId: string | null;
+              message: string;
+              path: string;
+            }[];
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            issues?: {
+              code: string;
+              definitionId: string | null;
+              message: string;
+              path: string;
+            }[];
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'types.manage.publishDraft': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        revision: number;
+      };
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          baseRevision: number;
+          migration?: {
+            affectedFieldIds: string[];
+            affectedTypeIds: string[];
+            fromRevision: number;
+            name: string;
+            steps: (
+              | {
+                  /** Format: uuid */
+                  fromFieldId: string;
+                  /** @enum {string} */
+                  kind: 'copy';
+                  /** Format: uuid */
+                  toFieldId: string;
+                }
+              | {
+                  /** Format: uuid */
+                  fieldId: string;
+                  /** @enum {string} */
+                  kind: 'set_default';
+                  values: unknown[];
+                }
+              | {
+                  /** Format: uuid */
+                  fieldId: string;
+                  /** @enum {string} */
+                  kind: 'map_enum';
+                  optionIds: {
+                    [key: string]: string;
+                  };
+                }
+              | {
+                  factor: string;
+                  /** Format: uuid */
+                  fromFieldId: string;
+                  /** @enum {string} */
+                  kind: 'convert_decimal';
+                  /** Format: uuid */
+                  toFieldId: string;
+                }
+              | {
+                  /** Format: uuid */
+                  fieldId: string;
+                  /** Format: uuid */
+                  fromTargetId: string;
+                  /** @enum {string} */
+                  kind: 'replace_reference';
+                  /** @enum {string} */
+                  targetKind: 'item' | 'location';
+                  /** Format: uuid */
+                  toTargetId: string;
+                }
+              | {
+                  /** Format: uuid */
+                  fieldId: string;
+                  /** @enum {string} */
+                  kind: 'drop_value';
+                }
+            )[];
+            toRevision: number;
+          };
+          migrationName?: string;
+          minimumProtocol?: number;
+          note?: string | null;
+        };
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            revision: {
+              abandoned: {
+                actor: {
+                  id: string | null;
+                  /** @enum {string} */
+                  kind: 'web' | 'service' | 'migration';
+                  label: string | null;
+                };
+                at: string;
+              } | null;
+              baseRevision: number | null;
+              created: {
+                actor: {
+                  id: string | null;
+                  /** @enum {string} */
+                  kind: 'web' | 'service' | 'migration';
+                  label: string | null;
+                };
+                at: string;
+              };
+              minimumProtocol: number;
+              published: {
+                actor: {
+                  id: string | null;
+                  /** @enum {string} */
+                  kind: 'web' | 'service' | 'migration';
+                  label: string | null;
+                };
+                at: string;
+                note: string | null;
+              } | null;
+              revision: number;
+              /** @enum {string} */
+              status: 'draft' | 'published' | 'abandoned';
+            };
+            types: {
+              archivedAt: string | null;
+              capabilities: string[];
+              description: string | null;
+              fields: {
+                allowOverride: boolean;
+                archivedAt: string | null;
+                /** @enum {string} */
+                cardinality: 'one' | 'many';
+                enumOptions: {
+                  archivedAt: string | null;
+                  /** Format: uuid */
+                  id: string;
+                  key: string;
+                  label: string;
+                  sortOrder: number;
+                }[];
+                expression: unknown;
+                expressionVersion: number | null;
+                fixedUnit: string | null;
+                help: string | null;
+                /** Format: uuid */
+                id: string;
+                key: string;
+                /** @enum {string} */
+                kind:
+                  | 'short_text'
+                  | 'long_text'
+                  | 'integer'
+                  | 'decimal'
+                  | 'boolean'
+                  | 'enum'
+                  | 'measurement'
+                  | 'date'
+                  | 'date_time'
+                  | 'url'
+                  | 'reference';
+                label: string;
+                presentation: {
+                  [key: string]: unknown;
+                };
+                referenceKinds: ('item' | 'location')[];
+                referenceTypeIds: string[];
+                required: boolean;
+                sortOrder: number;
+                /** @enum {string} */
+                storage: 'stored' | 'computed';
+                /** Format: uuid */
+                typeId: string;
+              }[];
+              /** Format: uuid */
+              id: string;
+              key: string;
+              label: string;
+              legacyLabels: string[];
+              presentation: {
+                [key: string]: unknown;
+              };
+              revision: number;
+              sortOrder: number;
+            }[];
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            issues?: {
+              code: string;
+              definitionId: string | null;
+              message: string;
+              path: string;
+            }[];
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            issues?: {
+              code: string;
+              definitionId: string | null;
+              message: string;
+              path: string;
+            }[];
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            issues?: {
+              code: string;
+              definitionId: string | null;
+              message: string;
+              path: string;
+            }[];
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            issues?: {
+              code: string;
+              definitionId: string | null;
+              message: string;
+              path: string;
+            }[];
             message: string;
             messageKey?: string;
           };
