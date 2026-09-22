@@ -93,7 +93,7 @@ internal struct PurchaseStagingGrid: View {
     private var readButton: some View {
         Button("Read", action: onRead)
             .popsProminentGlassButton()
-            .disabled(model.isEmpty)
+            .disabled(!model.canRead)
             .accessibilityIdentifier(PurchaseStagingAccessibility.read)
     }
 

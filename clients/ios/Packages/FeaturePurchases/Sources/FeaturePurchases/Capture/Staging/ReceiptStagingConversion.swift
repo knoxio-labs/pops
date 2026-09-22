@@ -6,7 +6,7 @@ import Foundation
 #endif
 
 internal enum ReceiptStagingConversion {
-    internal enum Failure: Hashable, Sendable {
+    internal enum Failure: Error, Hashable, Sendable {
         case unreadable
         case unsupportedType
     }
