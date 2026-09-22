@@ -10,6 +10,7 @@ public struct AppDependencies: Sendable {
     public let reachability: any ReachabilityWitness
     public let receiptCapture: any ReceiptCaptureRepository
     public let purchases: any PurchasesRepository
+    public let merchants: any MerchantDirectoryRepository
     public let accounts: any AccountsRepository
     public let inventory: any InventoryStore
 
@@ -19,6 +20,7 @@ public struct AppDependencies: Sendable {
         reachability: any ReachabilityWitness,
         receiptCapture: any ReceiptCaptureRepository,
         purchases: any PurchasesRepository,
+        merchants: any MerchantDirectoryRepository,
         accounts: any AccountsRepository,
         // Defaulted, unlike every other seam here: `inventory` (POPS-4049) is
         // the newest one, and every existing composition root and preview
@@ -33,6 +35,7 @@ public struct AppDependencies: Sendable {
         self.reachability = reachability
         self.receiptCapture = receiptCapture
         self.purchases = purchases
+        self.merchants = merchants
         self.accounts = accounts
         self.inventory = inventory
     }
@@ -48,6 +51,7 @@ public struct AppDependencies: Sendable {
         reachability: UnboundReachabilityWitness(),
         receiptCapture: UnboundReceiptCaptureRepository(),
         purchases: UnboundPurchasesRepository(),
+        merchants: UnboundMerchantDirectoryRepository(),
         accounts: UnboundAccountsRepository(),
         inventory: UnboundInventoryStore()
     )

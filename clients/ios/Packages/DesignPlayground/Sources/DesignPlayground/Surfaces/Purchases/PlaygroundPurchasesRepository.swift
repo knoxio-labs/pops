@@ -67,6 +67,7 @@ internal func playgroundPurchasesDependencies(
         reachability: AppDependencies.unbound.reachability,
         receiptCapture: AppDependencies.unbound.receiptCapture,
         purchases: PlaygroundPurchasesRepository(rows: rows, failure: failure, hangs: hangs),
+        merchants: AppDependencies.unbound.merchants,
         accounts: AppDependencies.unbound.accounts
     )
 }

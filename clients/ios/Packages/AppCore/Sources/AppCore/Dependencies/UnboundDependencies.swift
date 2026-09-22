@@ -68,6 +68,31 @@ internal struct UnboundPurchasesRepository: PurchasesRepository {
     }
 }
 
+internal struct UnboundMerchantDirectoryRepository: MerchantDirectoryRepository {
+    func search(_ query: String) async throws -> [MerchantDirectoryEntry] {
+        throw RepositoryError.dependencyNotBound
+    }
+
+    func get(_ id: String) async throws -> MerchantDirectoryEntry? {
+        throw RepositoryError.dependencyNotBound
+    }
+
+    func create(name: String) async throws -> MerchantDirectoryEntry {
+        throw RepositoryError.dependencyNotBound
+    }
+
+    func addresses(forMerchant id: String) async throws -> [MerchantAddressEntry] {
+        throw RepositoryError.dependencyNotBound
+    }
+
+    func createAddress(
+        forMerchant id: String,
+        value: String
+    ) async throws -> MerchantAddressEntry {
+        throw RepositoryError.dependencyNotBound
+    }
+}
+
 internal struct UnboundAccountsRepository: AccountsRepository {
     func accounts() async throws -> [Account] {
         throw RepositoryError.dependencyNotBound

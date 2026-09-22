@@ -45,6 +45,8 @@ Purchase details keep their ordered receipt URI list separate from the list row'
 
 `App/` is the only place a protocol is bound to a concrete type. Nothing else constructs an implementation and nothing else learns which one it got — that is what makes swapping a transport, or running a whole feature against fakes, a change in one file rather than in every screen.
 
+`AppDependencies.merchants` binds the merchant directory alongside purchases. The unbound container fails merchant reads with `dependencyNotBound`; a paired device receives the BFM implementation.
+
 ## The shell
 
 `AppShellModel` is the root's whole decision surface, and it lives here rather than in `App/` for the reason every view model does: a decision expressed as a value is a test, and a decision expressed as a view hierarchy is something someone relaunches a simulator to check. `RootDestination` is what the root view switches on — `launching`, `pairing(RevocationReason?)`, `content(FeatureSurface)` — and the view maps each case to a screen and decides nothing else.

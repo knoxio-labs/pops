@@ -50,6 +50,7 @@ internal struct CompositionRootTests {
         #expect(bound.pairing is BFMDevicePairingService)
         #expect(bound.receiptCapture is BFMReceiptCaptureRepository)
         #expect(bound.purchases is BFMPurchasesRepository)
+        #expect(bound.merchants is BFMMerchantDirectoryRepository)
         // `accounts` is here for exactly the reason `receiptCapture` is: it was
         // the seam left unbound with a comment explaining why, and the comment
         // outlived the reason (POPS-2848).
@@ -67,11 +68,15 @@ internal struct CompositionRootTests {
         #expect(unpaired.pairing is BFMDevicePairingService)
         #expect(!(unpaired.transactions is BFMTransactionsRepository))
         #expect(!(unpaired.receiptCapture is BFMReceiptCaptureRepository))
+        #expect(!(unpaired.merchants is BFMMerchantDirectoryRepository))
         await #expect(throws: RepositoryError.dependencyNotBound) {
             try await unpaired.transactions.transactions(after: nil)
         }
         await #expect(throws: RepositoryError.dependencyNotBound) {
             _ = try await unpaired.receiptCapture.extract([])
+        }
+        await #expect(throws: RepositoryError.dependencyNotBound) {
+            _ = try await unpaired.merchants.search("shop")
         }
     }
 

@@ -202,6 +202,7 @@
                 receiptCapture: PreviewReceiptCaptureRepository(
                     extraction: extraction, write: write, neverAnswers: neverAnswers),
                 purchases: AppDependencies.unbound.purchases,
+                merchants: AppDependencies.unbound.merchants,
                 accounts: AppDependencies.unbound.accounts
             )
         )
