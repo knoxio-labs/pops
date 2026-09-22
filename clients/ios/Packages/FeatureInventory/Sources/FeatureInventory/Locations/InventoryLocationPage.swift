@@ -31,7 +31,7 @@ internal struct InventoryLocationPage: View {
             }
         }
         .navigationTitle(placeName)
-        .inventoryTitleDisplay(large: false)
+        .popsTitleDisplay(large: false)
         .toolbar {
             ToolbarItem(placement: .principal) {
                 Label {

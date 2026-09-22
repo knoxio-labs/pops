@@ -78,4 +78,20 @@ internal struct InventoryPrimitiveAdoptionTests {
             "\(name) is still declared in \(declarations.map(\.lastPathComponent).joined(separator: ", "))"
         )
     }
+
+    @Test(
+        "deleted local modifiers are not referenced",
+        arguments: ["inventoryMotion", "inventoryCollapsingTitle", "inventoryTitleDisplay"]
+    )
+    func deletedModifierIsNotReferenced(name: String) throws {
+        let references = Self.sourceFiles.filter { file in
+            guard let source = try? String(contentsOf: file, encoding: .utf8) else { return false }
+            return source.contains(".\(name)(")
+        }
+
+        #expect(
+            references.isEmpty,
+            "\(name) is still referenced in \(references.map(\.lastPathComponent).joined(separator: ", "))"
+        )
+    }
 }
