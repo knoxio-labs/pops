@@ -144,6 +144,8 @@ capture overlays. Staging, reading, and review share one large sheet and navigat
 uses its own non-dismissible sheet. The document scanner remains a full-screen system controller,
 while photo and file selections return through the staging intake. Empty cancellation reports no
 completion, and camera refusals offer Settings only when the system permission can be changed there.
+Review and hand entry map merchant and address choices from the bound merchant directory, returning
+an empty result when that optional catalogue request fails so capture itself remains usable.
 
 `ReceiptCaptureView`'s ready state offers two actions side by side: photograph a receipt, or "Add a purchase" with no camera involved. Both land on `ReceiptResultView` over a `ReceiptResultViewModel`, and both save through the same `save(_:)`, which reads `ReceiptResultState` to decide which BFM call to make:
 

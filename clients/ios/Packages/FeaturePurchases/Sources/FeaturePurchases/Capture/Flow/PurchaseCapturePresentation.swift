@@ -28,6 +28,7 @@ extension View {
 internal struct PurchaseCapturePresentationModifier: ViewModifier {
     @State private var flow: PurchaseCaptureFlow
     private let isAvailable: Bool
+    private let merchantDirectory: PurchaseCaptureMerchantDirectory
 
     internal init(
         dependencies: AppDependencies,
@@ -37,11 +38,17 @@ internal struct PurchaseCapturePresentationModifier: ViewModifier {
         _flow = State(
             initialValue: PurchaseCaptureFlow(dependencies: dependencies, onSaved: onSaved))
         self.isAvailable = isAvailable
+        merchantDirectory = PurchaseCaptureMerchantDirectory(repository: dependencies.merchants)
     }
 
-    internal init(flow: PurchaseCaptureFlow, isAvailable: Bool) {
+    internal init(
+        flow: PurchaseCaptureFlow,
+        isAvailable: Bool,
+        merchantDirectory: PurchaseCaptureMerchantDirectory
+    ) {
         _flow = State(initialValue: flow)
         self.isAvailable = isAvailable
+        self.merchantDirectory = merchantDirectory
     }
 
     internal var presenter: PurchaseCapturePresenter {
@@ -85,10 +92,10 @@ internal struct PurchaseCapturePresentationModifier: ViewModifier {
                 if let handEntry = flow.handEntry {
                     PurchaseHandEntryView(
                         model: handEntry,
-                        searchMerchants: { _ in [] },
-                        merchantPreview: { _ in nil },
-                        addressesForMerchant: { _ in [] },
-                        addressPreview: { _, _ in nil },
+                        searchMerchants: merchantDirectory.search,
+                        merchantPreview: merchantDirectory.merchant,
+                        addressesForMerchant: merchantDirectory.addresses,
+                        addressPreview: merchantDirectory.address,
                         onFinished: { flow.finish(savedIDs: $0) })
                 }
             }
@@ -130,10 +137,10 @@ internal struct PurchaseCapturePresentationModifier: ViewModifier {
             if let review = flow.review {
                 PurchaseReviewView(
                     model: review,
-                    searchMerchants: { _ in [] },
-                    merchantPreview: { _ in nil },
-                    addressesForMerchant: { _ in [] },
-                    addressPreview: { _, _ in nil },
+                    searchMerchants: merchantDirectory.search,
+                    merchantPreview: merchantDirectory.merchant,
+                    addressesForMerchant: merchantDirectory.addresses,
+                    addressPreview: merchantDirectory.address,
                     onCancel: flow.cancel,
                     onFinished: { flow.finish(savedIDs: $0) })
             }
