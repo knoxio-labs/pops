@@ -62,14 +62,13 @@ internal struct ContentView: View {
         surface.available.contains(FeatureInventory.feature)
     }
 
-    /// Every available feature, in the BFM's order, plus Inventory's search
-    /// sibling when Inventory is one of them.
+    /// Primary features, More, and Inventory's separate search tab.
     ///
     /// Zero gets the explanation below. Exactly one fills the screen outright
     /// — the shipped single-feature look, unchanged, because a tab bar with
     /// one tab is chrome nobody asked for — unless that one feature is
     /// Inventory, whose search sibling makes it two. Two or more (with or
-    /// without that sibling) get a `TabView`, one tab per feature.
+    /// without that sibling) get a `TabView`, grouping secondary features under More.
     ///
     /// The `TabView` is given its selection rather than left to track one on
     /// its own. Left alone, it dropped back to the first tab whenever a tab's
@@ -86,12 +85,21 @@ internal struct ContentView: View {
             screen(for: surface.available[0])
         default:
             TabView(selection: selection) {
-                ForEach(surface.available, id: \.self) { feature in
+                ForEach(Self.primaryFeatures(for: surface.available), id: \.self) { feature in
                     Tab(
                         RootCopy.name(of: feature), systemImage: RootCopy.symbol(for: feature),
                         value: feature
                     ) {
                         screen(for: feature)
+                    }
+                }
+                if !Self.moreFeatures(for: surface.available).isEmpty {
+                    Tab(RootCopy.more, systemImage: "ellipsis", value: Self.moreTab) {
+                        MoreFeaturesView(
+                            features: Self.moreFeatures(for: surface.available)
+                        ) { feature in
+                            screen(for: feature)
+                        }
                     }
                 }
                 if hasInventorySearch {
@@ -118,15 +126,6 @@ internal struct ContentView: View {
     /// `nonisolated` because it is pure, for the reason ``shownFeature`` is.
     nonisolated internal static func tabTint(for shown: MobileFeature) -> Color? {
         shown == FeatureInventory.feature ? .popsInventory : nil
-    }
-
-    /// Every tab the switcher shows, in order: the BFM's features, then
-    /// Inventory's search sibling when Inventory is one of them. The selection
-    /// is checked against this rather than the features alone, or choosing
-    /// the search tab would read as a feature the BFM no longer offers and
-    /// bounce back to the first tab.
-    nonisolated internal static func tabs(for available: [MobileFeature]) -> [MobileFeature] {
-        available.contains(FeatureInventory.feature) ? available + [inventorySearchTab] : available
     }
 
     private var selection: Binding<MobileFeature> {

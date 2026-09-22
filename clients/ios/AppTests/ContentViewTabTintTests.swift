@@ -40,7 +40,7 @@ internal struct ContentViewTabTintTests {
     @Test("the amber is never the tint while another tab is the one shown")
     func amberFollowsTheSelection() {
         let tabs = ContentView.tabs(for: [Self.transactions, FeatureInventory.feature])
-        let shown = ContentView.shownFeature(chosen: Self.transactions, available: tabs)
+        let shown = ContentView.shownFeature(chosen: ContentView.moreTab, available: tabs)
         #expect(ContentView.tabTint(for: shown) == nil)
         let inventoryShown = ContentView.shownFeature(
             chosen: FeatureInventory.feature, available: tabs)
