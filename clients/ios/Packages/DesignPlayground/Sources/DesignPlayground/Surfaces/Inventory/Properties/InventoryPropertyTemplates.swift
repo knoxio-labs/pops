@@ -61,8 +61,14 @@ internal enum InventoryPropertyTemplates {
         name: "Storage box",
         fields: [
             InventoryTemplateField("Capacity", "Measurement", unit: "L", highlighted: true),
+            InventoryTemplateField("Width", "Measurement", unit: "cm"),
+            InventoryTemplateField("Height", "Measurement", unit: "cm"),
+            InventoryTemplateField("Depth", "Measurement", unit: "cm"),
             InventoryTemplateField("Load limit", "Measurement", unit: "kg", highlighted: true),
-            InventoryTemplateField("Footprint", "Text", hint: "Outside, in millimetres"),
+            InventoryTemplateField(
+                "Duty rating", "Choice",
+                choices: ["Light", "Standard", "Heavy Duty", "Extra Heavy Duty"],
+                highlighted: true),
             InventoryTemplateField("Stackable", "Yes or no"),
         ]
     )

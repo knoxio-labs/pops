@@ -3,7 +3,11 @@
 internal enum InventoryContainerFixtures {
     private static let boxFields = [
         InventoryDetailField(key: "Capacity", value: "52 L"),
+        InventoryDetailField(key: "Width", value: "60 cm"),
+        InventoryDetailField(key: "Height", value: "32 cm"),
+        InventoryDetailField(key: "Depth", value: "40 cm"),
         InventoryDetailField(key: "Load limit", value: "20 kg"),
+        InventoryDetailField(key: "Duty rating", value: "Heavy Duty"),
         InventoryDetailField(key: "Stackable", value: "Yes"),
     ]
 

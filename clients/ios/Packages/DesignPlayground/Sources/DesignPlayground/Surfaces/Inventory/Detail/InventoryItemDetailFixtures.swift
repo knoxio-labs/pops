@@ -89,7 +89,11 @@ internal enum InventoryItemDetailFixtures {
         ],
         fields: [
             InventoryDetailField(key: "Capacity", value: "52 L"),
+            InventoryDetailField(key: "Width", value: "60 cm"),
+            InventoryDetailField(key: "Height", value: "32 cm"),
+            InventoryDetailField(key: "Depth", value: "40 cm"),
             InventoryDetailField(key: "Load limit", value: "20 kg"),
+            InventoryDetailField(key: "Duty rating", value: "Heavy Duty"),
             InventoryDetailField(key: "Stackable", value: "Yes"),
         ],
         containerSummary: InventoryContainerSummary(itemCount: 12, containerCount: 0),
@@ -207,7 +211,11 @@ internal enum InventoryItemDetailFixtures {
         ],
         fields: [
             InventoryDetailField(key: "Capacity", value: "32 L"),
+            InventoryDetailField(key: "Width", value: "45 cm"),
+            InventoryDetailField(key: "Height", value: "28 cm"),
+            InventoryDetailField(key: "Depth", value: "35 cm"),
             InventoryDetailField(key: "Load limit", value: "12 kg"),
+            InventoryDetailField(key: "Duty rating", value: "Standard"),
         ],
         containerSummary: InventoryContainerSummary(itemCount: 6, containerCount: 0)
     )
