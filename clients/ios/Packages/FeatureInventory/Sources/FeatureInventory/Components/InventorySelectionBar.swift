@@ -67,7 +67,7 @@ private struct InventorySelectionBarModifier: ViewModifier {
             .fixedSize()
             .padding(.horizontal, PopsSpacing.lg)
             .padding(.vertical, PopsSpacing.sm)
-            .inventoryGlass(in: Capsule())
+            .popsGlass(in: Capsule())
     }
 
     @ViewBuilder private var trailingActions: some View {

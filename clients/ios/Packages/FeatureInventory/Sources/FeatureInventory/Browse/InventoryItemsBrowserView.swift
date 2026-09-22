@@ -42,31 +42,32 @@ internal struct InventoryItemsBrowserView: View {
     private func content(_ catalogue: InventoryItemsCatalogue) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: PopsSpacing.lg) {
-                InventoryPageTitle(title: "Items")
+                PopsPageTitle(title: "Items")
                 if let offline = model.offlineLine {
                     InventoryLocationNoticeLine(
                         symbol: InventorySymbol.offline.system, tint: .popsWarning, text: offline)
                 }
                 if catalogue.records.isEmpty {
-                    InventoryDashedActionButton(
-                        title: "Add an item", symbol: InventorySymbol.item.system
+                    PopsDashedActionButton(
+                        title: "Add an item", symbol: InventorySymbol.item.system,
+                        tint: .popsInventory
                     ) { itemForm?(.create(placement: nil)) }
-                    .inventoryFadeIn()
+                    .popsFadeIn()
                 } else {
                     InventoryCountTiles(tiles: model.tiles)
                     searchBar
                     list
                 }
             }
-            .inventoryMotion(value: model.filter)
-            .inventoryMotion(value: model.sort)
-            .inventoryMotion(value: model.query)
+            .popsMotion(value: model.filter)
+            .popsMotion(value: model.sort)
+            .popsMotion(value: model.query)
             .padding(.horizontal, PopsSpacing.lg)
             .padding(.bottom, PopsSpacing.xxl)
         }
         .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
         .scrollDismissesKeyboard(.immediately)
-        .inventoryCollapsingTitle("Items")
+        .popsCollapsingTitle("Items")
         .background(Color.popsBackground)
         .sheet(isPresented: $showingFilters) {
             InventorySearchFilterSheet(
@@ -77,28 +78,29 @@ internal struct InventoryItemsBrowserView: View {
     }
 
     private var searchBar: some View {
-        InventorySearchBar(
+        PopsSearchBar(
             query: $model.query,
+            tint: .popsInventory,
             prompt: "Search items",
             isFiltered: model.filter.isActive || model.sort != .recent,
             filterSummary: model.filter.summary,
             onFilter: { showingFilters = true },
-            add: InventorySearchBarAdd(label: "New item") { itemForm?(.create(placement: nil)) })
+            add: PopsSearchBarAdd(label: "New item") { itemForm?(.create(placement: nil)) })
     }
 
     @ViewBuilder private var list: some View {
         let sections = model.sections
         if sections.isEmpty {
-            InventoryCentredLine(
+            PopsCentredLine(
                 text: model.query.isEmpty
                     ? "No items with these filters"
                     : "No items match \u{201C}\(model.query)\u{201D}")
         } else {
             ForEach(sections) { section in
                 VStack(alignment: .leading, spacing: PopsSpacing.xs) {
-                    InventoryLocationSectionHeader(
+                    PopsSectionHeader(
                         title: section.title, trailing: "\(section.records.count)")
-                    InventoryLocationPanel(rows: section.records) { record in
+                    InventorySelectionPanel(rows: section.records) { record in
                         NavigationLink(
                             value: InventoryRoute.record(
                                 id: record.id, isContainer: record.isContainer)
@@ -124,20 +126,20 @@ internal struct InventoryItemsBrowserSkeleton: View {
     internal var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: PopsSpacing.lg) {
-                InventoryPageTitle(title: "Items")
+                PopsPageTitle(title: "Items")
                 VStack(alignment: .leading, spacing: PopsSpacing.lg) {
                     InventoryCountTilesSkeleton(count: 4)
                     Capsule().fill(Color.popsSurface).frame(height: fieldHeight)
                 }
                 .popsShimmer()
-                InventoryLocationListSkeleton(rows: 8)
+                PopsListSkeleton(rows: 8)
             }
             .padding(.horizontal, PopsSpacing.lg)
         }
         .scrollDisabled(true)
         .background(Color.popsBackground)
         .navigationTitle("Items")
-        .inventoryTitleDisplay(large: false)
+        .popsTitleDisplay(large: false)
         .toolbar {
             ToolbarItem(placement: .principal) { Text("Items").hidden() }
         }

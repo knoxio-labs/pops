@@ -14,8 +14,8 @@ internal struct InventoryRecentSearches: View {
         VStack(alignment: .leading, spacing: PopsSpacing.lg) {
             if !queries.isEmpty {
                 VStack(alignment: .leading, spacing: PopsSpacing.xs) {
-                    InventoryLocationSectionHeader(title: "Recent")
-                    InventoryLocationPanel(rows: queries.map(RecentQuery.init)) { recent in
+                    PopsSectionHeader(title: "Recent")
+                    InventorySelectionPanel(rows: queries.map(RecentQuery.init)) { recent in
                         row(recent.query)
                     }
                 }
@@ -23,14 +23,14 @@ internal struct InventoryRecentSearches: View {
             }
             if !scanned.isEmpty {
                 VStack(alignment: .leading, spacing: PopsSpacing.xs) {
-                    InventoryLocationSectionHeader(title: "Recently scanned")
+                    PopsSectionHeader(title: "Recently scanned")
                     HStack(alignment: .top, spacing: PopsSpacing.sm) {
                         ForEach(scanned) { InventoryScannedTile(record: $0, loadPhoto: loadPhoto) }
                     }
                 }
             }
         }
-        .inventoryMotion(value: queries)
+        .popsMotion(value: queries)
     }
 
     private func row(_ query: String) -> some View {
@@ -50,8 +50,8 @@ internal struct InventoryRecentSearches: View {
             .contentShape(.rect)
         }
         .buttonStyle(.plain)
-        .inventoryGroundedSwipeRow(isActive: swiping == query)
-        .inventoryGroundedSwipeActions(
+        .popsGroundedSwipeRow(isActive: swiping == query)
+        .popsGroundedSwipeActions(
             edge: .trailing,
             onPresentationChanged: { swiping = $0 ? query : nil },
             actions: {

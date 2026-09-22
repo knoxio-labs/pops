@@ -18,7 +18,7 @@ internal struct InventoryLocationSections: View {
     internal var body: some View {
         VStack(alignment: .leading, spacing: PopsSpacing.lg) {
             if place.isEmpty, children.isEmpty {
-                InventoryLocationEmptyLine(text: "Nothing here yet")
+                PopsEmptyLine(text: "Nothing here yet")
             }
             if !children.isEmpty { placesSection }
             if !place.isEmpty, !directRows.isEmpty { directSection }
@@ -28,8 +28,8 @@ internal struct InventoryLocationSections: View {
 
     private var placesSection: some View {
         VStack(alignment: .leading, spacing: PopsSpacing.xs) {
-            InventoryLocationSectionHeader(title: "Places", trailing: "\(children.count)")
-            InventoryLocationPanel(rows: children) { child in
+            PopsSectionHeader(title: "Places", trailing: "\(children.count)")
+            InventorySelectionPanel(rows: children) { child in
                 NavigationLink(value: InventoryRoute.place(child.id)) {
                     InventoryLocationRowLabel(place: child, tree: tree)
                 }
@@ -47,8 +47,8 @@ internal struct InventoryLocationSections: View {
         let containers = rows.filter(\.isContainer).count
         let tally = InventoryPlaceTally(containers: containers, items: rows.count - containers)
         return VStack(alignment: .leading, spacing: PopsSpacing.xs) {
-            InventoryLocationSectionHeader(title: "Directly here", trailing: tally.summary)
-            InventoryLocationPanel(rows: rows) { row in
+            PopsSectionHeader(title: "Directly here", trailing: tally.summary)
+            InventorySelectionPanel(rows: rows) { row in
                 Group {
                     switch row {
                     case .container(let container): containerRow(container)
@@ -63,7 +63,7 @@ internal struct InventoryLocationSections: View {
     private var insideSection: some View {
         let count = filledContainers.reduce(0) { $0 + $1.contents.count }
         return VStack(alignment: .leading, spacing: PopsSpacing.xs) {
-            InventoryLocationSectionHeader(
+            PopsSectionHeader(
                 title: "Inside containers here",
                 trailing: InventoryPlaceTally(items: count).summary)
             VStack(alignment: .leading, spacing: PopsSpacing.sm) {

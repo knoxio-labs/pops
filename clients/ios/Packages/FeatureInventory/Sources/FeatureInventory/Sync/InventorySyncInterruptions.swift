@@ -165,7 +165,7 @@ internal struct InventoryBlockingSheet: View {
                     .font(.popsHeadline)
                     .frame(maxWidth: .infinity, minHeight: PopsSize.touchTarget)
             }
-            .inventoryProminentGlassButton()
+            .popsProminentGlassButton()
         }
         .padding(PopsSpacing.xl)
         .frame(maxWidth: .infinity, maxHeight: .infinity)

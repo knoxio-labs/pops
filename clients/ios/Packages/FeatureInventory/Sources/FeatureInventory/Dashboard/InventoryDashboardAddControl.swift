@@ -40,7 +40,7 @@ internal struct InventoryDashboardAddControl: View {
                 .foregroundStyle(Color.popsForeground)
                 .frame(width: diameter, height: diameter)
         }
-        .inventoryGlass(in: Circle())
+        .popsGlass(in: Circle())
         .accessibilityLabel("Add")
         .inventoryLocationCreateSheet(isPresented: $creatingPlace, runner: runner)
     }

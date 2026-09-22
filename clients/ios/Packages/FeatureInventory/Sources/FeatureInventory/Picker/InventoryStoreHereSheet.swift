@@ -63,7 +63,7 @@ private struct InventoryStoreHereRoot: View {
             }
         }
         .transition(.opacity.combined(with: .move(edge: .trailing)))
-        .inventoryMotion(InventoryMotion.smooth, value: step)
+        .popsMotion(PopsMotion.smooth, value: step)
     }
 }
 
@@ -82,7 +82,7 @@ internal struct InventoryStoreHereChoice: View {
         .padding(.horizontal, PopsSpacing.lg)
         .frame(maxHeight: .infinity, alignment: .top)
         .navigationTitle("Store in \(targetName)")
-        .inventoryTitleDisplay(large: false)
+        .popsTitleDisplay(large: false)
         .inventoryLeadingBarItem {
             Button("Cancel") { dismiss() }
         }
@@ -122,7 +122,7 @@ internal struct InventoryStoreExistingPicker: View {
         List {
             switch model.candidates.phase {
             case .loading:
-                InventoryLocationListSkeleton(rows: 6)
+                PopsListSkeleton(rows: 6)
             case .unavailable:
                 Text(InventoryCopy.unavailable)
                     .foregroundStyle(Color.popsMutedForeground)
@@ -131,11 +131,11 @@ internal struct InventoryStoreExistingPicker: View {
             }
         }
         .inventoryInsetGroupedList()
-        .inventoryMotion(value: model.selected)
+        .popsMotion(value: model.selected)
         .inventorySearchable(text: $model.query, isPresented: $searching, prompt: "Search items")
         .task(id: model.query) { await model.observe() }
         .navigationTitle("Store in \(model.target.name)")
-        .inventoryTitleDisplay(large: false)
+        .popsTitleDisplay(large: false)
         .inventoryLeadingBarItem {
             Button("Cancel") { dismiss() }
         }
@@ -171,8 +171,8 @@ internal struct InventoryStoreExistingPicker: View {
             Text(model.selected.isEmpty ? "Store" : "Store \(model.selected.count)")
                 .contentTransition(.numericText(value: Double(model.selected.count)))
         }
-        .inventoryMotion(value: model.selected)
-        .inventoryProminentGlassButton()
+        .popsMotion(value: model.selected)
+        .popsProminentGlassButton()
         .tint(.popsInventory)
         .disabled(model.selected.isEmpty)
     }

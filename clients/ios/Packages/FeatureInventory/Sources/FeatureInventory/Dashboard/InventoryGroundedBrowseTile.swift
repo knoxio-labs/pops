@@ -34,7 +34,7 @@ internal struct InventoryGroundedBrowseTile: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(PopsSpacing.md)
-            .inventoryGlass(in: RoundedRectangle(cornerRadius: PopsRadius.card))
+            .popsGlass(in: RoundedRectangle(cornerRadius: PopsRadius.card))
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)

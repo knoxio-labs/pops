@@ -64,13 +64,13 @@ internal struct InventoryDashboardView: View {
                     }
                 }
             }
-            .inventoryMotion(value: dashboard.openContainers.map(\.id))
-            .inventoryMotion(value: dashboard.inHand.map(\.id))
-            .inventoryMotion(value: dashboard.recentWork.map(\.id))
+            .popsMotion(value: dashboard.openContainers.map(\.id))
+            .popsMotion(value: dashboard.inHand.map(\.id))
+            .popsMotion(value: dashboard.recentWork.map(\.id))
             .padding(.horizontal, PopsSpacing.lg)
             .padding(.bottom, PopsSpacing.xxl)
         }
-        .inventoryGroundedSwipeActionsContainer()
+        .popsGroundedSwipeActionsContainer()
         .background(Color.popsBackground)
         .refreshable { await model.refresh() }
     }

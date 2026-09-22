@@ -27,7 +27,7 @@ internal struct InventoryCountTiles: View {
             ForEach(tiles) { tile($0) }
         }
         .fixedSize(horizontal: false, vertical: true)
-        .inventoryMotion(value: tiles)
+        .popsMotion(value: tiles)
     }
 
     private func tile(_ tile: InventoryCountTile) -> some View {
@@ -47,7 +47,7 @@ internal struct InventoryCountTiles: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding(PopsSpacing.sm)
-        .inventoryGlass(in: RoundedRectangle(cornerRadius: PopsRadius.card))
+        .popsGlass(in: RoundedRectangle(cornerRadius: PopsRadius.card))
         .accessibilityElement(children: .combine)
     }
 }

@@ -72,7 +72,7 @@ internal struct InventoryItemDetailHeader: View {
             InventoryChipFlow(spacing: PopsSpacing.xs) {
                 ForEach(marks) { InventoryStateBadge(mark: $0) }
             }
-            .inventoryFadeIn()
+            .popsFadeIn()
         }
     }
 }

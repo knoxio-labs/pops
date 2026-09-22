@@ -6,6 +6,10 @@ Inventory on the phone. `InventoryFlowView` is the Inventory tab: it owns the ta
 
 The package depends on `AppCore` and `DesignSystem` only, and reads and writes through `AppCore`'s `InventoryStore`. `ModuleBoundaryTests` in `AppCore` holds that line.
 
+## Shared visual primitives
+
+List panels, divided rows, section labels, quiet lines, notices, skeletons, page titles, motion, search controls, glass groups, prominent glass actions, dashed actions and grounded swipe behavior come from `DesignSystem`. Inventory supplies `.popsInventory` to the shared controls that take a feature tint. It keeps its selection decoration between `popsPanelInsets()` and `popsPanelGround()`; `InventorySelectionPanel` combines that decoration with `PopsDividedRows`. Promoting these primitives preserves each modifier's order and appearance.
+
 ## One query per screen
 
 The dashboard observes a single `InventoryQuery` built from several of the store's reads (`InventoryDashboardReader.swift`), not one stream per section. Every section therefore comes from the same state: putting something back removes it from In hand and adds it to its container's count in the same frame, and a write never has to patch the screen by hand. The view model's only state of its own is which receipt an Undo capsule reverses and the last write that failed.
@@ -52,4 +56,4 @@ Move, from any of the three, and from the dashboard's own In hand section, goes 
 
 ## Deduplication
 
-Search, Browse and In hand share the row, list-panel, motion, symbol and platform-glass components the containers and locations screens already draw from (`Components/`), rather than each carrying its own copy: a screen that needs a new one of these adds it there, not beside itself.
+Search, Browse and In hand share Inventory-specific rows, selection panels and symbols through `Components/`. Their search, motion, glass and empty-state controls come from `DesignSystem`, so another feature can use the same behavior with its own tint instead of importing Inventory.

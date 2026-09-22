@@ -8,10 +8,11 @@ internal struct InventoryFirstLaunchPrompt: View {
 
     internal var body: some View {
         VStack(spacing: PopsSpacing.lg) {
-            InventoryCentredLine(text: "Nothing on this phone yet")
-            InventoryDashedActionButton(
-                title: "Download", symbol: InventorySymbol.update.system, action: download)
+            PopsCentredLine(text: "Nothing on this phone yet")
+            PopsDashedActionButton(
+                title: "Download", symbol: InventorySymbol.update.system,
+                tint: .popsInventory, action: download)
         }
-        .inventoryFadeIn()
+        .popsFadeIn()
     }
 }

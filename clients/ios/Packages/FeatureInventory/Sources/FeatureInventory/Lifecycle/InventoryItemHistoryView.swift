@@ -44,23 +44,23 @@ internal struct InventoryItemHistoryView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: PopsSpacing.lg) {
                 VStack(alignment: .leading, spacing: PopsSpacing.xs) {
-                    InventoryPageTitle(title: title) { filterMenu }
+                    PopsPageTitle(title: title) { filterMenu }
                     Text(name)
                         .font(.popsSubheadline)
                         .foregroundStyle(Color.popsMutedForeground)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 if isLoading {
-                    InventoryLocationListSkeleton(rows: 8)
+                    PopsListSkeleton(rows: 8)
                 } else {
                     months
                 }
             }
-            .inventoryMotion(value: kind)
+            .popsMotion(value: kind)
             .padding(.horizontal, PopsSpacing.lg)
             .padding(.bottom, PopsSpacing.xxl)
         }
-        .inventoryCollapsingTitle(title)
+        .popsCollapsingTitle(title)
         .background(Color.popsBackground)
         .tint(.popsInventory)
         .sheet(item: $viewing) { entry in
@@ -76,13 +76,13 @@ internal struct InventoryItemHistoryView: View {
     @ViewBuilder private var months: some View {
         let groups = InventoryHistoryMonth.group(shown)
         if groups.isEmpty {
-            InventoryCentredLine(text: kind.map { "No \($0.title.lowercased())" } ?? "No history")
+            PopsCentredLine(text: kind.map { "No \($0.title.lowercased())" } ?? "No history")
         } else {
             ForEach(groups) { month in
                 VStack(alignment: .leading, spacing: PopsSpacing.xs) {
-                    InventoryLocationSectionHeader(
+                    PopsSectionHeader(
                         title: month.title, trailing: "\(month.entries.count)")
-                    InventoryLocationPanel(rows: month.entries) { entry in
+                    InventorySelectionPanel(rows: month.entries) { entry in
                         Button {
                             viewing = entry
                         } label: {
@@ -117,9 +117,9 @@ internal struct InventoryItemHistoryView: View {
                 .background {
                     if kind != nil { Circle().fill(Color.popsInventory) }
                 }
-                .inventoryGlass(in: Circle())
+                .popsGlass(in: Circle())
                 .contentShape(Circle())
-                .inventoryMotion(value: kind)
+                .popsMotion(value: kind)
         }
         .accessibilityLabel("Filter")
         .accessibilityValue(kind?.title ?? "Everything")

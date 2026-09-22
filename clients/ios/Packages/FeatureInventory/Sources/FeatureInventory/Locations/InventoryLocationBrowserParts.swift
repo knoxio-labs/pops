@@ -21,8 +21,9 @@ internal struct InventoryAddPlaceButton: View {
     internal let action: () -> Void
 
     internal var body: some View {
-        InventoryDashedActionButton(
-            title: "Add a place", symbol: InventorySymbol.location.system, action: action)
+        PopsDashedActionButton(
+            title: "Add a place", symbol: InventorySymbol.location.system,
+            tint: .popsInventory, action: action)
     }
 }
 
@@ -33,20 +34,20 @@ internal struct InventoryLocationBrowserSkeleton: View {
     internal var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: PopsSpacing.lg) {
-                InventoryPageTitle(title: "Locations")
+                PopsPageTitle(title: "Locations")
                 VStack(alignment: .leading, spacing: PopsSpacing.lg) {
                     InventoryCountTilesSkeleton(count: 3)
                     Capsule().fill(Color.popsSurface).frame(height: fieldHeight)
                 }
                 .popsShimmer()
-                InventoryLocationListSkeleton(rows: 5)
+                PopsListSkeleton(rows: 5)
             }
             .padding(.horizontal, PopsSpacing.lg)
         }
         .scrollDisabled(true)
         .background(Color.popsBackground)
         .navigationTitle("Locations")
-        .inventoryTitleDisplay(large: false)
+        .popsTitleDisplay(large: false)
         .toolbar {
             ToolbarItem(placement: .principal) { Text("Locations").hidden() }
         }

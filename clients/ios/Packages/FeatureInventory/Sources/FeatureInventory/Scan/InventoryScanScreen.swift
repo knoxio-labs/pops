@@ -44,7 +44,7 @@ internal struct InventoryScanScreen: View {
             }
         }
         .safeAreaInset(edge: .top) { controls }
-        .inventoryMotion(InventoryMotion.smooth, value: model.phase)
+        .popsMotion(PopsMotion.smooth, value: model.phase)
         .task { await model.start() }
         .onAppear { shown = true }
         .onChange(of: model.didRouteElsewhere) { _, routed in
@@ -89,7 +89,7 @@ internal struct InventoryScanScreen: View {
     }
 
     private var controls: some View {
-        InventoryGlassGroup(spacing: PopsSpacing.sm) {
+        PopsGlassGroup(spacing: PopsSpacing.sm) {
             HStack(spacing: PopsSpacing.sm) {
                 InventoryScanControl(symbol: "xmark", label: "Close") { dismiss() }
                 Spacer(minLength: PopsSpacing.sm)
@@ -113,7 +113,7 @@ internal struct InventoryScanScreen: View {
         VStack(spacing: PopsSpacing.lg) {
             InventoryScanCentredLine(text: InventoryCopy.cameraAccessOff)
             Button("Settings") { openSettings() }
-                .inventoryProminentGlassButton()
+                .popsProminentGlassButton()
         }
         .padding(.horizontal, PopsSpacing.lg)
     }
@@ -175,7 +175,7 @@ private struct InventoryScanLoadingCard: View {
         .padding(PopsSpacing.md)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.popsBackground.opacity(0.6), in: InventoryScanCard.shape)
-        .inventoryGlass(in: InventoryScanCard.shape)
+        .popsGlass(in: InventoryScanCard.shape)
     }
 }
 
@@ -193,12 +193,12 @@ private struct InventoryScanFoundCard: View {
             ) {
                 Text("Open")
             }
-            .inventoryProminentGlassButton()
+            .popsProminentGlassButton()
         }
         .padding(PopsSpacing.md)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.popsBackground.opacity(0.6), in: InventoryScanCard.shape)
-        .inventoryGlass(in: InventoryScanCard.shape)
+        .popsGlass(in: InventoryScanCard.shape)
     }
 }
 
@@ -223,7 +223,7 @@ private struct InventoryScanLineCard: View {
         .padding(PopsSpacing.md)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.popsBackground.opacity(0.6), in: InventoryScanCard.shape)
-        .inventoryGlass(in: InventoryScanCard.shape)
+        .popsGlass(in: InventoryScanCard.shape)
     }
 }
 

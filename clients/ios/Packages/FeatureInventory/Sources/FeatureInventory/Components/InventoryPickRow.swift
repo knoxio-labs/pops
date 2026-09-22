@@ -53,7 +53,7 @@ internal struct InventoryPickRow<Subtitle: View>: View {
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(isPicked ? .isSelected : [])
-        .inventoryMotion(value: isPicked)
+        .popsMotion(value: isPicked)
     }
 
     private var tick: some View {

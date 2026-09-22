@@ -93,7 +93,7 @@ internal struct InventoryDestinationPickerSheet: View {
             onCreate: create
         )
         .navigationTitle(id.flatMap { working.node($0)?.name } ?? title)
-        .inventoryTitleDisplay(large: false)
+        .popsTitleDisplay(large: false)
         .toolbar { toolbar(isRoot: id == nil) }
     }
 
@@ -110,7 +110,7 @@ internal struct InventoryDestinationPickerSheet: View {
                 onChoose(selection)
                 dismiss()
             }
-            .inventoryProminentGlassButton()
+            .popsProminentGlassButton()
             .tint(.popsInventory)
             .disabled(selection == nil)
         }

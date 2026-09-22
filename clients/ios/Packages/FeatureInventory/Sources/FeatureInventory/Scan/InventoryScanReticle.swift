@@ -15,7 +15,7 @@ internal struct InventoryScanReticle: View {
             .aspectRatio(1, contentMode: .fit)
             .containerRelativeFrame(.horizontal) { width, _ in width * 0.62 }
             .scaleEffect(found ? 0.92 : 1)
-            .inventoryMotion(InventoryMotion.smooth, value: found)
+            .popsMotion(PopsMotion.smooth, value: found)
             .accessibilityHidden(true)
     }
 }
