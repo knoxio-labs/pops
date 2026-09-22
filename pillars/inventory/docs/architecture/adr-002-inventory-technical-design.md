@@ -32,7 +32,7 @@ Each decision lists what was rejected and what it costs. Where the direction han
 | Keep `containers` and add a `kind` bridge                         | No migration of the existing table                                                                                              | Two identities for one physical thing; every action (discard, photograph, label, move) implemented twice; ADR-001 already rejected it |
 | Containment as a type field in `fields`                           | Nothing new on the row                                                                                                          | A capability changes which screens exist, which ADR-001 says a field must never do; the database could not constrain access state     |
 
-**Decision.** `containers` is removed. A container is an `items` row with `is_container = 1`. `is_container` is not writable by a client: the server sets it from the item's type, whose code definition declares `capabilities: ['containment']`. An untyped item is never a container (ADR-001: a capability is something a type grants). Access state is `open | closed` on the row. `sealed`, `moved` and `unpacked` are not states: they become history events (D4). Fullness is `is_full`, a manual yes/no owned by the containment capability rather than by any type's field list, because the approved container page shows it for every container and furniture types would otherwise each redeclare it.
+**Decision.** `containers` is removed. A container is an `items` row with `is_container = 1`. `is_container` is not writable by a client: the server sets it from the item's persisted type, whose catalogue definition declares the `containment` capability. An untyped item is never a container (ADR-001: a capability is something a type grants). Access state is `open | closed` on the row. `sealed`, `moved` and `unpacked` are not states: they become history events (D4). Fullness is `is_full`, a manual yes/no owned by the containment capability rather than by any type's field list, because the approved container page shows it for every container and furniture types would otherwise each redeclare it.
 
 **Consequences.** A type change that would remove containment from an item that still holds active contents is rejected (`has_contents`). The playground's `InventoryAccess.sealed` case has no backend counterpart and is dropped when the vocabulary moves into `AppCore`. Migrated boxes need a type: they receive `storage_box` (the playground's "Storage box" template), which is the only way an existing box stays a container under this rule.
 
@@ -80,23 +80,152 @@ Undo is a compensating event. `event.revert` inverts one event's field changes; 
 
 **Consequences.** The log grows forever; at one household's volume that is megabytes. A database restored from backup rewinds `seq`; D10 handles that with an epoch.
 
-### D5. Types are code on the server and a served catalogue on the phone
+### D5. Types are persisted, revisioned owner-authored data
 
-The direction asked for zod templates on the server and "a mirrored Swift definition generated or hand-kept". That is overturned.
+The code-defined catalogue delivered the first six types, but it makes every correction a deploy. That contradicts the product's first real entry session, where a missing type and incomplete fields were ordinary owner decisions. The earlier D5 decision is replaced in full.
 
-| Option                                                                                               | Pros                                                                                                                                                                | Cons                                                                                                                                                                                       |
-| ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Hand-kept Swift mirror                                                                               | No build tooling                                                                                                                                                    | Drift is certain and silent; a new type needs an App Store release before the phone can file one                                                                                           |
-| Swift generated from the TypeScript definitions at build time                                        | No hand drift                                                                                                                                                       | Still couples type availability to app releases; the server can accept a type an installed app cannot render; a third codegen fan-out on a lane that costs about 35 minutes per CI attempt |
-| **Types defined in TypeScript, projected to a versioned JSON descriptor served to clients (chosen)** | One definition; a server deploy ships a type to every installed phone at the next sync; the phone renders any type generically because value kinds are a closed set | Value kinds, units and capabilities become protocol vocabulary that the app must know                                                                                                      |
+| Option                                                                                                  | Pros                                                                                                                     | Cons                                                                                                                        |
+| ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| Types remain TypeScript declarations projected to JSON                                                  | The current validators and snapshot guard remain simple                                                                  | Every type edit needs code review, the merge queue and deployment; an owner cannot complete the advertised workflow         |
+| Store mutable current definitions only                                                                  | Small schema and simple reads                                                                                            | No atomic multi-row publication, no reproducible validation of an old offline write, and no trustworthy audit history       |
+| Let every client interpret arbitrary JSON Schema or executable expressions                              | Familiar authoring vocabulary and nominal flexibility                                                                    | An installed phone cannot safely execute an open language; compatibility, traversal and resource limits become unknowable   |
+| **Immutable published catalogue snapshots, edited through a persisted draft and a closed DSL (chosen)** | Owner-authored without deploys; every item and mutation names the schema that governed it; old replicas remain auditable | Full snapshots duplicate small definition rows, and all clients must implement the closed value and expression vocabularies |
 
-**Decision.** `pillars/inventory/src/types/` holds `defineType({ key, name, capabilities, fields })`. A field declares `key`, `label`, `kind` (`text | choice | flag | measurement | range | link`), `dimension` and default `unit` for measurements and ranges, `choices` for a choice, `highlighted`, and `required`. The zod validator for an item's `fields` blob is derived from its type. Values are stored as the kind requires; a measurement is `{ value, unit }` and keeps the unit it was typed in (POPS-4015); `units.ts` declares each unit's dimension and multiplier so search and comparison convert. `GET /types` serves the catalogue descriptor (types plus the unit table) with `version` = a hash of its serialisation.
+#### Identity, drafts and publication
 
-This is still "types are code, shipped by deploy" (ADR-001): nothing authors a type at runtime and nothing stores a type definition in a database row. The descriptor is a projection, like the OpenAPI file.
+Types, fields and enum options each receive a server-minted UUIDv4 `id`. The id is the identity used by values, references and expressions and never changes. Each also has an immutable, case-insensitively unique `key` for MCP, imports and readable diagnostics. `label`, help text, order and presentation hints are mutable and are never identity. Renaming "Storage box" therefore changes only its label; renaming a field or enum option cannot orphan a value.
 
-Drift is prevented in two places. A committed `types.snapshot.json` is compared in a test; a change that removes a choice, changes a dimension or removes a field fails unless it ships a registered data migration that rewrites affected values (and records `migration` events), which is the product rule "choice-list and unit changes are migrations". The value-kind, dimension and capability vocabularies are enums in the bfm contract, so the Swift generator gives the app exactly the set it understands; adding one raises the protocol minimum (D10), which the phone meets with the approved "This app is too old" interruption.
+After first publication, a type's id/key, a field's id/key/kind/cardinality/storage mode/fixed unit/reference constraint, and an option's id/key are immutable across revisions. Type capabilities may change only through a migration because they materialise core columns such as `is_container`. Labels, help, order, presentation hints and legacy labels may change in a later snapshot; `required`, expressions and archive state follow the compatibility rules below.
 
-**Consequences.** The phone validates offline against the catalogue it last downloaded; a value it accepted can be refused by a server whose catalogue has moved on, which surfaces as a `rejected` outcome (see open questions). The "type arrived" sheet (POPS-4016) triggers on a catalogue version change that adds a type; its "covers waiting items" match uses each type's optional `legacyLabels`, compared with the migrated `legacy_type` text.
+A catalogue revision is a complete immutable snapshot. The server exposes one published revision and at most one editable draft based on it. Creating a draft copies the published definition rows under a new revision id. Every draft mutation carries `baseRevision`; a stale base is `409 catalogue_conflict`. Publication runs in one `BEGIN IMMEDIATE` transaction:
+
+1. verify that the draft still names the current published revision;
+2. type-check every definition and computed expression, build the dependency graph and reject cycles or resource-limit violations;
+3. compare the draft with its base and classify every change;
+4. run any required explicit value migration and validate every affected item against the draft;
+5. mark the revision published, stamp actor/time/note, update `sync_meta.catalogue_revision`, append catalogue audit events, and commit.
+
+Clients therefore see either the previous snapshot or the complete new snapshot. Published definition rows and audit events are never updated or deleted. Abandoning a draft records `abandoned_at`; it does not erase the attempt. The response ETag is `"catalogue-<revision>"`; the integer revision, rather than a hash of mutable JSON ordering, is the sync authority.
+
+The owner-facing REST surface is command-shaped so MCP and the web editor use the same atomic boundary:
+
+| Route                                           | Body / result                                                                      |
+| ----------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `GET /type-catalogue?revision=`                 | current or exact immutable descriptor; `404 catalogue_revision_unknown`            |
+| `GET /type-catalogue/audit?before=&limit=`      | reverse-chronological publication and abandonment events                           |
+| `POST /type-catalogue/drafts`                   | `{ baseRevision }` → the new draft; conflicts if one already exists                |
+| `PATCH /type-catalogue/drafts/:revision`        | `{ baseRevision, operations[] }` → the validated draft and a compatibility preview |
+| `POST /type-catalogue/drafts/:revision/publish` | `{ baseRevision, note, migrationName? }` → the published descriptor                |
+| `POST /type-catalogue/drafts/:revision/abandon` | `{ baseRevision }` → the abandoned revision                                        |
+
+Draft operations are `put_type`, `put_field`, `put_enum_option`, `archive_type`, `archive_field`, `archive_enum_option` and `reorder`. A `put` creates when `id` is absent (the server returns its id) and updates mutable attributes when `id` is present; it cannot replace immutable attributes. Every response returns structured validation errors with the definition id, JSON path and code. Reads require `inventory.types.read`; all draft and publication commands require either a verified owner web session or a service account with `inventory.types.manage`. Bare in-network browser traffic is `401` on this sub-router even while D12 keeps `requireCredential: false` for the pillar's existing routes. bfm receives only the immutable read route and never the authoring surface.
+
+#### Field vocabulary and representations
+
+A field declares `kind`, `cardinality: 'one' | 'many'`, `required`, and either `storage: 'stored'` or a computed definition. `many` is valid for every kind except `boolean`; it is an ordered list, not a recursive value kind. A required `one` field needs one value and a required `many` field needs at least one. Optional absence is represented by no value rows and by omission on the wire; `null`, empty strings and empty `many` arrays are not stored values. Duplicate values are allowed because order and repetition can be meaningful.
+
+The closed primitive vocabulary and its canonical forms are:
+
+| Kind          | Wire value                                                                                     | Canonical SQLite `value_json`                                                                                                           |
+| ------------- | ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `short_text`  | JSON string, 1..200 Unicode scalar values                                                      | the same JSON string                                                                                                                    |
+| `long_text`   | JSON string, 1..20,000 Unicode scalar values                                                   | the same JSON string                                                                                                                    |
+| `integer`     | JSON integer in `[-9007199254740991, 9007199254740991]`                                        | canonical base-10 JSON number, no exponent                                                                                              |
+| `decimal`     | decimal string such as `"12.340"`                                                              | the same string; grammar `^(?!-0(?:\\.0+)?$)-?(?:0\|[1-9][0-9]*)(?:\\.[0-9]+)?$`, at most 18 significant digits and 9 fractional digits |
+| `boolean`     | JSON boolean                                                                                   | `true` or `false`                                                                                                                       |
+| `enum`        | `{ "optionId": "<uuid>" }`                                                                     | the same object; labels and keys are resolved from the named catalogue revision                                                         |
+| `measurement` | `{ "amount": "12.500", "unit": "kg" }`                                                         | the same object; `amount` follows `decimal`, and `unit` must equal the field's immutable fixed unit                                     |
+| `date`        | `YYYY-MM-DD`                                                                                   | the same string, Gregorian and calendar-valid                                                                                           |
+| `date_time`   | RFC 3339 UTC with exactly milliseconds, for example `2026-09-22T04:05:06.123Z`                 | the same string                                                                                                                         |
+| `url`         | absolute `https` URL string                                                                    | the same string after URL parsing and canonical percent-encoding; fragments are allowed                                                 |
+| `reference`   | write: `{ "targetKind": "item" \| "location", "targetId": "<uuid>" }`; read adds `targetState` | identity object only; no SQLite FK, so a tombstoned or not-yet-replicated target remains representable                                  |
+
+Decimal scale is data: `12.340` remains `12.340`; clients never parse it through binary floating point. Leading zeroes, a leading plus, exponent notation and negative zero are rejected. Addition and subtraction retain the greater operand scale, multiplication uses the sum of operand scales, and division must terminate within nine fractional digits. A result beyond either bound is `precision_overflow`; no layer rounds silently.
+
+A measurement field fixes both dimension and unit at definition time. A value never chooses a convertible display unit, so equality, offline validation and decimal precision do not depend on floating-point conversion. A later UI may display a converted amount, but it writes the fixed unit. Changing kind, cardinality, fixed unit, reference target constraint, or stored/computed mode is not an in-place edit: publish a replacement field with a new id and migrate explicitly.
+
+A reference definition fixes `targetKind` and, for item references, may close the target to a set of type ids. A new or edited value must resolve to a live target satisfying that constraint or is rejected as `target_missing` or `reference_type_mismatch`. Deleting a target never cascades into field values: reads add `targetState: 'resolved' | 'deleted' | 'missing' | 'unresolved'`, where `unresolved` is used only while a replica snapshot is incomplete. A complete replica with no row is `missing`; a tombstone is `deleted`. Changing an item's type is rejected when it would invalidate a live incoming constrained reference unless the catalogue publication runs an explicit reference migration. Computed traversal accepts only `resolved`; every other state is unavailable.
+
+The wire carries item values as ordered entries rather than an object keyed by mutable names:
+
+```json
+{
+  "fieldId": "a358b125-cb0c-4e74-9449-f6f8fcc9f45f",
+  "state": "value",
+  "values": ["fragile", "garage"],
+  "provenance": { "source": "stored", "catalogueRevision": 12 }
+}
+```
+
+For `one`, `values` has exactly one element; for `many`, it has one or more. SQLite stores one `item_field_values` row per element with zero-based `ordinal`. The command layer parses `value_json`, validates it against the exact published definition, then writes its canonical encoding. SQLite's JSON checks protect shape at rest; application validation owns kind-specific rules.
+
+#### Archive and compatibility rules
+
+Anything with historical use is archived, never deleted. An archived type cannot be assigned to another item, but existing items remain readable and editable. An archived field remains in descriptors and values remain readable, but forms do not offer it for new data. An archived enum option remains valid wherever already selected and is not offered for new selection. Unused draft-only definitions may be removed before publication. A published id or key is never reused.
+
+Publication classifies changes as follows:
+
+- Compatible without value migration: labels, help, order and presentation hints; adding a type; adding an optional stored field; adding an enum option; relaxing `required`; and archiving a definition while retaining its existing values as readable history.
+- Compatible for data but protocol-gated: adding a primitive kind, cardinality rule, reference target kind, expression node or provenance case that an installed client may not understand. The publication sets `minimumProtocol` to the first protocol that understands it and cannot publish until D10's rollout rule is met.
+- Requires an explicit migration: making a field required, removing or remapping values instead of merely archiving their definition, narrowing reference targets, changing a computed expression in a way that changes its declared dependencies, or replacing any immutable field characteristic.
+- Forbidden: mutating or reusing an id/key, editing a published snapshot, publishing values that fail the candidate schema, or deleting audit history.
+
+A migration is a named, version-controlled server operation from one catalogue revision to the next. It declares affected type and field ids, supports only `copy`, `set_default`, `map_enum`, `convert_decimal`, `replace_reference` and `drop_value` steps, and is dry-run against all affected rows before publication. It executes in the publication transaction, appends one ordinary item event per changed item with actor `migration`, and records counts plus the migration name on the catalogue audit event. Arbitrary SQL, JavaScript and best-effort partial rewrites are rejected. `drop_value` must be named explicitly; archive is not a euphemism for data loss.
+
+#### Computed fields and overrides
+
+A computed field has `expressionVersion: 1`, a typed expression AST, and `allowOverride`. Version 1 permits only `one` cardinality and these exact JSON node forms:
+
+```text
+{ "op": "literal", "value": <primitive wire value> }
+{ "op": "read", "path": ["<reference-field-id>"], "fieldId": "<field-id>" }
+{ "op": "negate" | "not", "value": <expression> }
+{ "op": "add" | "subtract" | "multiply" | "divide" | "concat" |
+        "equal" | "less_than" | "and" | "or",
+  "left": <expression>, "right": <expression> }
+{ "op": "if", "condition": <expression>,
+  "then": <expression>, "else": <expression> }
+```
+
+`number` means integer, decimal, or a measurement in one fixed unit. `add` and `subtract` require identical numeric kinds (and identical measurement units). `multiply` and `divide` accept integer with integer, decimal with decimal, or measurement with decimal; their result is respectively integer, decimal or the measurement kind. Integer division must be exact. There are no implicit integer/decimal or unit conversions. Integer overflow, decimal precision overflow and division by zero are evaluation errors. `and`, `or` and `if` short-circuit left-to-right. Literals use the primitive wire forms above. No node reads time, network, user identity, SQL or arbitrary code.
+
+`read` with an empty path reads another field on the same item. Each path element must name a `one` item-reference field, and publication resolves the next field against every allowed target type. A path may traverse at most two references; an AST may contain at most 128 nodes and 32 distinct dependencies. The publication graph uses `(typeId, fieldId)` nodes and includes all possible target types for reference reads. Any direct or transitive cycle rejects the whole publication, including a cycle that only appears through references.
+
+Evaluation has three results:
+
+- `value`: a canonical value of the computed field's declared kind;
+- `unavailable`: a required read is absent, a reference is absent/unresolved/tombstoned, or a dependency is itself unavailable;
+- `error`: corrupt persisted input, overflow, precision loss or division by zero.
+
+Absent values are exposed as `unavailable`, not as a magic zero, empty string or false. The wire reasons are `missing_dependency`, `reference_unresolved`, `reference_missing`, `reference_deleted` and `evaluation_error`, with the failing field id and traversed item ids. A dependency's unavailable reason propagates unchanged. Errors are logged with item, field and catalogue revision and are exposed as unavailable with reason `evaluation_error`; they do not fail the item response. Only the selected branch of `if`, and only the necessary side of a short-circuit boolean node, contributes a runtime missing dependency. Evaluation is deterministic against one item-read snapshot and the catalogue revision pinned by that response.
+
+When `allowOverride` is false, an explicit value for the computed field is invalid. When true, an override uses the same value grammar and cardinality as the computed result and wins without evaluating dependencies. Clearing an override deletes its value rows and immediately resumes evaluation; it does not copy the last computed value. Effective values expose provenance:
+
+```json
+{ "fieldId": "<uuid>", "state": "value", "values": ["48.000"],
+  "provenance": { "source": "computed", "catalogueRevision": 12,
+    "dependencies": [{ "itemId": "<uuid>", "fieldId": "<uuid>", "revision": 7 }] } }
+{ "fieldId": "<uuid>", "state": "value", "values": ["50.000"],
+  "provenance": { "source": "override", "catalogueRevision": 12 } }
+{ "fieldId": "<uuid>", "state": "unavailable", "reason": "missing_dependency",
+  "provenance": { "source": "computed", "catalogueRevision": 12 } }
+```
+
+Computed results are not stored as authority. The server and replica may cache them by `(item revision, catalogue revision, dependency revisions)` and must discard the cache when any key changes. The item event log records setting and clearing overrides; ordinary dependency changes are already visible through their own item events.
+
+#### Contract examples
+
+The following examples are normative abbreviations of the shapes above:
+
+- Scalar: `{ fieldId: voltage, state: 'value', values: ['12.000'], provenance: { source: 'stored', catalogueRevision: 12 } }` for a decimal field.
+- Multi-value: `{ fieldId: protocols, state: 'value', values: [{ optionId: usbC }, { optionId: thunderbolt4 }], ... }`; order is retained.
+- Reference: `{ fieldId: storedWith, state: 'value', values: [{ targetKind: 'item', targetId: boxId, targetState: 'deleted' }], ... }`; the deleted target leaves its id present.
+- Computed: `multiply(read([], packageCount), read([], unitPrice))` over two decimal fields produces `48.000` with `source: 'computed'` and dependency revisions.
+- Overridden: the same field with explicit override `50.000` returns `50.000` with `source: 'override'`, even when `unitPrice` is absent.
+- Cleared override: deleting that override causes the next read to evaluate again and return `48.000` with `source: 'computed'`.
+- Unavailable: after clearing the override and removing `unitPrice`, the field returns `state: 'unavailable', reason: 'missing_dependency'`; it does not return null or the old override.
+
+**Consequences.** A new type, field, option or compatible label correction needs no deployment. A new primitive or expression node still needs an app release and protocol rollout. The six current code definitions are bootstrap input for one migration only; after publication the database is the authority and `pillars/inventory/src/types/templates/` is removed. The "type arrived" sheet triggers on a published catalogue revision that adds an active type whose `legacyLabels` match `items.legacy_type`.
 
 ### D6. Every write is a command; the command layer is the only writer
 
@@ -123,15 +252,17 @@ Clients mint ids (UUIDv4, validated) for items, locations and mutations. An offl
 
 **Decision.** `items.revision` and `locations.revision` increment on every change. Every mutation carries `baseRevision` (null for a create). On mismatch the server collects the fields changed by events after `baseRevision`. If none overlap the mutation's fields, it applies. If they overlap and the resulting value equals the current value, it applies with `converged: true` (the approved "Same count on both" resolved entry). Otherwise it returns `conflict` of kind `field` with the field, this mutation's value, the current value, and the source and time of the change that won (`source` from the event actor: a device label such as "iPad", or "Server" for web and services). Placement counts as one field, so the approved "Moved on iPad too" is exactly this case.
 
+A dynamic field id is one conflict unit: replacing, reordering or clearing any member of a `many` value overlaps another change to that field. Stored values and overrides use the same field id for conflict reporting. `item.changeType` overlaps the type and every dynamic field it replaces; a dependency change on another item does not revise the computed item's row and is reconciled through dependency revisions instead.
+
 "Keep mine" re-sends the change with `baseRevision` set to the conflict's `currentRevision`. "Discard mine" drops the mutation and rebases the phone's view. Client times travel as `clientTime` and are stored on events as audit evidence only.
 
 ### D9. The sync protocol: snapshot, change feed, batched idempotent mutations, content-addressed media
 
 **Decision.** Inventory owns the protocol (`pillars/inventory/src/contract/rest-sync.ts`, sub-routers `sync` (snapshot, changes, mutations, item history), `media`, `types`, `codes`). bfm exposes it under `/mobile/inventory/*` with the capability gate, body caps and the device as actor. bfm validates both directions with `parseOrMismatch` and maps field names to the mobile contract; it adds no semantics, because revision checks and outcomes must be decided by the producer that enforces them.
 
-- **Snapshot**: pages of items, locations and photo references at a high-water `seq` S fixed by the first page. Rows changed while paging may arrive newer than S; that is safe because the phone upserts by revision and then reads the feed from S.
-- **Change feed**: every row with `seq > since`, tombstones included, ordered by `seq`, plus events after `since` so recent history is readable offline. Older history is fetched per item on demand.
-- **Mutations**: up to 50 per request, each with `mutationId`, `op`, `entityId`, `baseRevision`, `dependsOn`, `clientTime`. Each is processed in its own transaction, in array order, and its outcome is stored in `mutations` in the same transaction, so a retried batch replays stored outcomes and never applies twice. A mutation whose dependency is unknown to the server or did not apply returns `deferred` and stays queued.
+- **Snapshot**: pages of items, locations and photo references at a high-water `seq` S and `catalogueRevision` C fixed by the first page. Rows changed while paging may arrive newer than S; that is safe because the phone upserts by revision and then reads the feed from S. The first page is not applied until catalogue C is locally present.
+- **Change feed**: every row with `seq > since`, tombstones included, ordered by `seq`, plus events after `since` so recent history is readable offline. A page that advances the catalogue carries the complete new catalogue snapshot before rows validated by it. Older history is fetched per item on demand.
+- **Mutations**: up to 50 per request, each with `mutationId`, `op`, `entityId`, `baseRevision`, `catalogueRevision`, `dependsOn`, `clientTime`. Each is processed in its own transaction, in array order, and its outcome is stored in `mutations` in the same transaction, so a retried batch replays stored outcomes and never applies twice. A mutation whose dependency is unknown to the server or did not apply returns `deferred` and stays queued. An older catalogue revision is accepted only when the server's compatibility record proves that every field and value in the mutation is unchanged; otherwise the outcome is `rejected: catalogue_changed` with the current revision and the affected field ids.
 - **Media**: `PUT /media/:sha256` with the bytes; the server verifies the hash, stores `sha256[0:2]/sha256` under the images volume, and derives 256 px and 1024 px variants with `sharp`. Re-sending is naturally idempotent (the receipt-bytes precedent). `item.attachPhoto` references the hash and depends on nothing server-side; if the bytes are absent the outcome is `rejected: media_missing`, which the phone treats as "upload first, then retry".
 
 Outcomes map one to one to the phone's states, with one addition the direction lacked: `deferred`, which is "Waiting to sync". `rejected` has no approved repair screen; see open questions.
@@ -139,6 +270,10 @@ Outcomes map one to one to the phone's states, with one addition the direction l
 ### D10. Versioning and recovery
 
 **Decision.** Every `/mobile/inventory/*` request carries `Pops-Inventory-Protocol: <n>`. The server answers `426 client_too_old` below its minimum, which the phone shows as the approved blocking "This app is too old". Additive fields do not bump the protocol. Server-to-client values that may grow (lifecycle, event kind, discard reason, repair kind) are declared as strings on the wire and decoded into Swift enums with an `.unrecognised(String)` case, as `PurchaseSettlement` does, because POPS-1663 and POPS-1992 both broke installed apps with a closed enum.
+
+Protocol and catalogue revision are independent. A label edit increments only the catalogue revision; a new primitive, expression node, provenance case or other syntax an old binary cannot safely preserve requires a new protocol. The persisted value-entry and definition shapes in D5 begin at protocol 2. Publication may name a higher `minimumProtocol`, but it remains a draft until an iOS build supporting that protocol is available. Rollout order is inventory and bfm accepting the new protocol, iOS release, observed minimum supported build, server minimum increase, then catalogue publication that uses the new vocabulary. Reversing that order strands installed offline replicas.
+
+bfm passes the protocol header unchanged in both directions and never down-converts catalogue data. The server returns its current `minimumProtocol` and `catalogueRevision` on catalogue, snapshot and feed responses. An installed client that understands the protocol but lacks the named catalogue downloads that immutable snapshot before applying dependent rows. A client below the protocol minimum may keep showing its last local replica read-only, but it cannot refresh or enqueue writes.
 
 `sync_meta.epoch` is a random id served with every snapshot and feed page. A `since` above the server's maximum `seq`, or an epoch the phone does not know, yields `409 resync_required`: the phone takes a fresh snapshot and keeps its mutation log, whose client-minted ids and base revisions make replay safe. The restore runbook rotates the epoch.
 
@@ -155,6 +290,8 @@ Outcomes map one to one to the phone's states, with one addition the direction l
 - **Durability before success.** A command commits the optimistic row change and its log entry in one GRDB transaction before the view reports success. The database runs WAL with `synchronous = FULL`; WAL's default `NORMAL` can lose the last transaction on power loss, which would break "restart must not lose staged work".
 - **Data protection.** Database and media files use `FileProtectionType.completeUntilFirstUserAuthentication` so background refresh works after first unlock. The media cache directory is excluded from backup; the database is not, because it holds unsynced work.
 - **Two row layers.** `item_base` is the last server state (with revision and `seq`); `item` is the optimistic view. A feed page updates `item_base`, then rebases each affected row by replaying its pending mutations over the new base. Commands are applied locally by a Swift reducer whose behaviour is pinned to the server's by shared test vectors (`pillars/inventory/contracts/command-vectors-v1.json`, generated by the TypeScript command tests and vendored to `clients/ios/Contracts`, with the same drift guard as the refresh-message vector).
+- **Catalogue replicas.** Immutable catalogue revisions, definitions and enum options are persisted in GRDB, not flattened into Swift enums. Applying a catalogue and the first rows that name it is one transaction. Item values and queued mutations retain their catalogue revision; old revisions remain until no replica row or mutation references them. The generic editor refuses unknown primitive or expression syntax rather than dropping it on a round trip.
+- **References and computed values.** Reference ids are stored even when their targets are absent or tombstoned. The replica evaluates the same versioned AST with the same decimal library, traversal limits and shared vectors as the server. Its cache uses item, catalogue and dependency revisions and is disposable.
 - **Replay order.** Stable topological order: enqueue order, corrected so nothing precedes its dependency, as the playground's `InventoryQueue.ordered` already specifies. The drain sends batches of up to 50, holds dependents back after a failure of their dependency, and backs off exponentially from 2 s to 5 min. It runs on foreground, after each enqueue, and on an `NWPathMonitor` change to satisfied.
 - **Migrations.** `DatabaseMigrator` with append-only named migrations; a replica migration that cannot run falls back to re-snapshot while preserving the log table.
 - **Media budget.** Thumbnails for every item are kept; full-size images live in an LRU cache capped at 500 MB; photos staged on this phone are pinned until the server acknowledges them. Free space under 200 MB before staging a photo, or `SQLITE_FULL`, raises the approved "Storage full" alert.
@@ -183,6 +320,18 @@ The direction's `pops://inventory/items/<id>` is overturned: the platform gramma
 
 **Consequences.** Phase A alone does not meet the product's offline rule: an offline write in Phase A is refused with the shell's existing failed banner, which is not an approved Inventory state. Phase B must land before the first packing day, not merely before 2026-10-12.
 
+The persisted-catalogue work lands in this dependency order; items on the same numbered line may proceed together:
+
+1. POPS-4355 fixes this contract before another child invents wire semantics.
+2. POPS-4356 adds the revision tables and value store, imports the six built-ins with deterministic ids and unchanged keys, and removes code definitions only after parity tests pass.
+3. POPS-4357 exposes draft, publish, catalogue and audit APIs with owner permissions; POPS-4361 implements compatibility classification, migration execution and value validation against them.
+4. POPS-4362 adds MCP management after the API can complete the workflow without direct database access.
+5. POPS-4360 persists catalogue revisions, values, references and queued-mutation revision pins on iOS; POPS-4359 renders and edits the closed primitive vocabulary against that replica.
+6. POPS-4358 designs the web editor in the playground after the validation responses are fixed; POPS-4363 implements the decided editor.
+7. POPS-4364 adds the expression validator, evaluator, dependency cache and override commands end to end after server and iOS stored-value paths agree.
+
+The first publication is deliberately boring: it contains the existing `cable`, `charger`, `bulb`, `tape`, `storage_box` and `furniture` keys, maps every current field and choice to a deterministic UUID recorded by migration, and rewrites current `items.fields` without changing a logical value. The migration proves descriptor parity before making revision 1 visible. There is no interval where code and database catalogues can both accept writes. Protocol 1 may project revision 1 back into its old six-kind descriptor during rollout, but it cannot author a catalogue or observe any later revision; publication remains locked until protocol 2 is the server minimum.
+
 ## Data model (server)
 
 All tables live in `inventory.db`. Types are SQLite affinities; JSON columns are `TEXT` with `json_valid` checks.
@@ -193,8 +342,7 @@ All tables live in `inventory.db`. Types are SQLite affinities; JSON columns are
 | ----------------------------------------------------- | -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `id`                                                  | TEXT PK                          | UUID, client-mintable                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | `name`                                                | TEXT NOT NULL                    | from `item_name` / `containers.label`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| `type_key`                                            | TEXT NULL                        | a key in the catalogue; NULL is untyped                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| `fields`                                              | TEXT NOT NULL DEFAULT `'{}'`     | JSON object, validated by the type's zod schema in the command layer                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `type_id`                                             | TEXT NULL                        | stable UUID resolved in the current published catalogue; NULL is untyped                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | `note`                                                | TEXT NULL                        | from `notes`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | `code`                                                | TEXT NULL                        | unique `COLLATE NOCASE`; from `asset_id` / `containers.code`                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | `external_ids`                                        | TEXT NOT NULL DEFAULT `'[]'`     | JSON `[{kind, value}]`; migrated `model` / `brand` stay columns (below)                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
@@ -218,7 +366,35 @@ All tables live in `inventory.db`. Types are SQLite affinities; JSON columns are
 
 Placement CHECK: `(placement_kind = 'location' AND location_id IS NOT NULL AND containing_item_id IS NULL) OR (placement_kind = 'container' AND containing_item_id IS NOT NULL AND location_id IS NULL) OR (placement_kind = 'hand' AND location_id IS NULL AND containing_item_id IS NULL)`.
 
-Indexes: `items_seq(seq)`, `items_location(location_id)`, `items_containing(containing_item_id)`, `items_type(type_key)`, `items_lifecycle(lifecycle)`, `items_name(name)`, partial `items_in_hand(id) WHERE placement_kind = 'hand'`, partial `items_containers(id) WHERE is_container = 1`, unique `items_code(code COLLATE NOCASE)`, unique `items_source_ref(source_ref)`, `items_purchase_uri(purchase_transaction_uri)`.
+Indexes: `items_seq(seq)`, `items_location(location_id)`, `items_containing(containing_item_id)`, `items_type(type_id)`, `items_lifecycle(lifecycle)`, `items_name(name)`, partial `items_in_hand(id) WHERE placement_kind = 'hand'`, partial `items_containers(id) WHERE is_container = 1`, unique `items_code(code COLLATE NOCASE)`, unique `items_source_ref(source_ref)`, `items_purchase_uri(purchase_transaction_uri)`.
+
+### Catalogue tables
+
+`catalogue_revisions` has `revision INTEGER PRIMARY KEY AUTOINCREMENT`, `base_revision`, `status` (`draft | published | abandoned`), `minimum_protocol`, creator/publisher/abandoner actor columns, timestamps and publication note. A partial unique index permits one draft; `sync_meta.catalogue_revision` points at the current member of the immutable published history. Triggers refuse update or delete of a published row; the publisher's only status transition is draft to published.
+
+Each snapshot owns full definition rows:
+
+- `item_types(revision, id, key COLLATE NOCASE, label, description, sort_order, capabilities_json, legacy_labels_json, archived_at)`, primary key `(revision, id)` and unique `(revision, key)`;
+- `item_type_fields(revision, id, type_id, key COLLATE NOCASE, label, help, sort_order, kind, cardinality, required, storage, fixed_unit, reference_kinds_json, reference_type_ids_json, expression_version, expression_json, allow_override, archived_at)`, primary key `(revision, id)` and unique `(revision, type_id, key)`;
+- `field_enum_options(revision, id, field_id, key COLLATE NOCASE, label, sort_order, archived_at)`, primary key `(revision, id)` and unique `(revision, field_id, key)`;
+- `catalogue_compatibility(from_revision, to_revision, classification, affected_ids_json, migration_name)` records the proof used when an offline mutation names an older revision;
+- `catalogue_events(id INTEGER PRIMARY KEY AUTOINCREMENT, revision, kind, actor_kind, actor_id, actor_label, before_json, after_json, migration_name, affected_items, server_time)` is append-only by trigger.
+
+All JSON columns have `json_valid` checks. Foreign keys include the revision in their target, so a field cannot accidentally point into another snapshot. Keys and ids are compared against prior published rows during publication because a per-revision unique index alone cannot enforce immutability across time.
+
+### `item_field_values`
+
+| Column                     | Type             | Rule                                                             |
+| -------------------------- | ---------------- | ---------------------------------------------------------------- |
+| `item_id`                  | TEXT NOT NULL    | FK `items(id)` cascade                                           |
+| `field_id`                 | TEXT NOT NULL    | stable field UUID                                                |
+| `source`                   | TEXT NOT NULL    | `stored` or `override`; computed results are not authority       |
+| `ordinal`                  | INTEGER NOT NULL | zero for `one`, contiguous from zero for `many`                  |
+| `value_json`               | TEXT NOT NULL    | canonical primitive wire value, `CHECK (json_valid(value_json))` |
+| `catalogue_revision`       | INTEGER NOT NULL | definition used to validate this value                           |
+| `created_at`, `updated_at` | TEXT NOT NULL    | server clock                                                     |
+
+Primary key `(item_id, field_id, source, ordinal)`; `(catalogue_revision, field_id)` references that exact snapshot's field definition. Unique partial index `(item_id, field_id, source) WHERE ordinal = 0` does not replace command validation: the command layer enforces cardinality, contiguity, one active source, kind, required fields and archived-option rules in the same transaction as the item event. References intentionally have no target FK. Indexes cover `(field_id, value_json)` and reference target extraction for search and reverse dependency invalidation.
 
 ### `locations` (altered in place)
 
@@ -226,21 +402,21 @@ Adds `revision INTEGER NOT NULL DEFAULT 1`, `seq INTEGER NOT NULL DEFAULT 0`, `c
 
 ### `events`
 
-| Column                                  | Type                     | Rule                                                                                                                                                                                                                                                                                      |
-| --------------------------------------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `seq`                                   | INTEGER PK AUTOINCREMENT | global change sequence                                                                                                                                                                                                                                                                    |
-| `entity_kind`                           | TEXT NOT NULL            | `item`, `location`                                                                                                                                                                                                                                                                        |
-| `entity_id`                             | TEXT NOT NULL            |                                                                                                                                                                                                                                                                                           |
-| `kind`                                  | TEXT NOT NULL            | `created`, `edited`, `type_changed`, `code_set`, `moved`, `picked_up`, `put_back`, `stored`, `opened`, `closed`, `sealed`, `unpacked`, `lifecycle_changed`, `quantity_changed`, `split_from`, `split_into`, `photo_added`, `photo_removed`, `deleted`, `restored`, `reverted`, `migrated` |
-| `fields`                                | TEXT NOT NULL            | JSON array of field names touched                                                                                                                                                                                                                                                         |
-| `before`, `after`                       | TEXT NOT NULL            | JSON objects keyed by those fields                                                                                                                                                                                                                                                        |
-| `reason`                                | TEXT NULL                | discard reason                                                                                                                                                                                                                                                                            |
-| `entity_revision`                       | INTEGER NOT NULL         | revision after the event                                                                                                                                                                                                                                                                  |
-| `actor_kind`, `actor_id`, `actor_label` | TEXT                     | `device` / `web` / `service` / `migration`                                                                                                                                                                                                                                                |
-| `mutation_id`                           | TEXT NULL                |                                                                                                                                                                                                                                                                                           |
-| `compensates_seq`                       | INTEGER NULL             | FK `events(seq)`                                                                                                                                                                                                                                                                          |
-| `client_time`                           | TEXT NULL                | audit only                                                                                                                                                                                                                                                                                |
-| `server_time`                           | TEXT NOT NULL            |                                                                                                                                                                                                                                                                                           |
+| Column                                  | Type                     | Rule                                                                                                                                                                                                                                                                                                                                                  |
+| --------------------------------------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `seq`                                   | INTEGER PK AUTOINCREMENT | global change sequence                                                                                                                                                                                                                                                                                                                                |
+| `entity_kind`                           | TEXT NOT NULL            | `item`, `location`                                                                                                                                                                                                                                                                                                                                    |
+| `entity_id`                             | TEXT NOT NULL            |                                                                                                                                                                                                                                                                                                                                                       |
+| `kind`                                  | TEXT NOT NULL            | `created`, `edited`, `type_changed`, `field_values_changed`, `override_set`, `override_cleared`, `code_set`, `moved`, `picked_up`, `put_back`, `stored`, `opened`, `closed`, `sealed`, `unpacked`, `lifecycle_changed`, `quantity_changed`, `split_from`, `split_into`, `photo_added`, `photo_removed`, `deleted`, `restored`, `reverted`, `migrated` |
+| `fields`                                | TEXT NOT NULL            | JSON array of field names touched                                                                                                                                                                                                                                                                                                                     |
+| `before`, `after`                       | TEXT NOT NULL            | JSON objects keyed by those fields                                                                                                                                                                                                                                                                                                                    |
+| `reason`                                | TEXT NULL                | discard reason                                                                                                                                                                                                                                                                                                                                        |
+| `entity_revision`                       | INTEGER NOT NULL         | revision after the event                                                                                                                                                                                                                                                                                                                              |
+| `actor_kind`, `actor_id`, `actor_label` | TEXT                     | `device` / `web` / `service` / `migration`                                                                                                                                                                                                                                                                                                            |
+| `mutation_id`                           | TEXT NULL                |                                                                                                                                                                                                                                                                                                                                                       |
+| `compensates_seq`                       | INTEGER NULL             | FK `events(seq)`                                                                                                                                                                                                                                                                                                                                      |
+| `client_time`                           | TEXT NULL                | audit only                                                                                                                                                                                                                                                                                                                                            |
+| `server_time`                           | TEXT NOT NULL            |                                                                                                                                                                                                                                                                                                                                                       |
 
 Index `events_entity(entity_kind, entity_id, seq)`. Triggers `events_no_update`, `events_no_delete` raise `ABORT`.
 
@@ -254,11 +430,11 @@ Index `events_entity(entity_kind, entity_id, seq)`. Triggers `events_no_update`,
 
 ### `sync_meta`
 
-Key/value: `epoch`, `min_protocol`, `catalogue_version`.
+Key/value: `epoch`, `min_protocol`, `catalogue_revision`.
 
 ### `items_fts`
 
-FTS5 over `name`, `code`, `note`, `type_label`, `field_text`, `external_ids`, maintained by the command layer (not triggers, because the type label comes from code). Rebuilt at boot when `catalogue_version` changes.
+FTS5 over `name`, `code`, `note`, `type_label`, `field_text`, `external_ids`, maintained by the command layer. It resolves labels from the published catalogue snapshot and rebuilds after `catalogue_revision` changes.
 
 `item_uploaded_files`, `item_documents`, `item_connections` and `item_fixture_connections` keep their shapes and are rebuilt only to point at `items`. `fixtures` is untouched; ADR-001's "a fixture is an item with the wired-in capability" is not part of this design.
 
@@ -288,7 +464,7 @@ Row mapping:
 - **Container placement**: `destination_location_id ?? origin_location_id` as `location`; neither gives `hand` with no previous placement.
 - **Contained items**: `container_id` set gives `placement_kind = 'container'` and clears `location_id`. When the old `location_id` disagreed with the container's location (the state `moveContainer` could leave), the event records the discarded value in `before`.
 - **Other items**: `location_id` set gives `location`; otherwise `hand`, previous placement null (the approved "Nowhere recorded").
-- **Type and fields**: `type_key` NULL (untyped), `fields = '{}'`, old free-text `type` into `legacy_type`.
+- **Type and fields**: `type_id` NULL (untyped), no `item_field_values`, old free-text `type` into `legacy_type`. POPS-4356's follow-up migration assigns persisted types and values.
 - **Revision and history**: every migrated row gets revision 1 and one `created` event with actor `migration`.
 
 **Running it without an outage anyone would notice.** Inventory is one process over one SQLite file; there is no zero-downtime path in the strict sense and none is needed. The migration runs at container start, before the listener binds; the gateway answers 502 for the few seconds that takes, and the phone and web treat that as the existing `unavailable` state. On today's empty production database it is milliseconds. The pre-migration backup is the rollback: a failed migration leaves the transaction unapplied and the old image can be redeployed against the untouched file.
@@ -297,25 +473,33 @@ A data-only follow-up at boot (idempotent, outside SQL because it reads files) h
 
 Contract phase (Phase D): a later migration drops the Notion-era columns listed above once the web app and MCP no longer read them.
 
+### Persisted-catalogue migration
+
+POPS-4356 adds `0017_persisted_item_types` after the current `0016` migration. Deterministic UUIDv5 ids use the standard URL namespace `6ba7b811-9dad-11d1-80b4-00c04fd430c8` and full names `pops://inventory/type/<type-key>`, `pops://inventory/type/<type-key>/field/<field-key>` and `pops://inventory/type/<type-key>/field/<field-key>/option/<option-key>`, with every key UTF-8 percent-encoded. It creates catalogue revision 1 from the six code descriptors, verifies canonical descriptor parity, then rewrites each non-empty `items.fields` entry into `item_field_values` under the mapped field id. The existing type key maps to its type id and each migrated value records revision 1. Unknown type or field keys, invalid legacy values and any parity mismatch abort the transaction with a diagnostic; no value is dropped or guessed.
+
+Legacy kinds map as follows: `text` to `short_text`, `choice` to `enum` with a stable option id, `flag` to `boolean`, `link` to `url`, and `measurement` to the fixed unit already declared as that field's default. Measurements in another accepted unit are converted exactly through decimal arithmetic before storage. The sole legacy `range`, bulb `Colour temperature`, becomes two optional measurement fields keyed `Colour temperature minimum` and `Colour temperature maximum`, both fixed to kelvin; its low and high values move without numeric change. Option keys are the lowercase ASCII label with non-alphanumerics collapsed to `_`; the migration rejects a collision instead of suffixing one silently.
+
+The application version that carries this migration reads and writes only persisted definitions after the transaction commits. Protocol 1's temporary descriptor is a read projection of revision 1, not a second authority or dual write, and rejects catalogue management. Rollback uses the pre-migration backup because an older image cannot interpret the value table. The code templates and their snapshot guard are removed only in the same commit whose migration proves parity.
+
 ## Wire contract (`/mobile/inventory/*`, bfm)
 
-Every route: `requireDevice`, then `requireCapability`, the mobile rate limit, header `Pops-Inventory-Protocol: 1`. Every route declares `MOBILE_REQUEST_RESPONSES`, `MOBILE_PERIMETER_RESPONSES`, `MOBILE_UPSTREAM_RESPONSES` and `426 client_too_old`. Cursors are opaque base64url that the app echoes unmodified; a foreign cursor is `400 invalid_cursor`.
+Every route: `requireDevice`, then `requireCapability`, the mobile rate limit, header `Pops-Inventory-Protocol: <n>`. Protocol 1 is the temporary revision-1 compatibility projection; D5's persisted catalogue and value-entry shapes are protocol 2. Every route declares `MOBILE_REQUEST_RESPONSES`, `MOBILE_PERIMETER_RESPONSES`, `MOBILE_UPSTREAM_RESPONSES` and `426 client_too_old`. Cursors are opaque base64url that the app echoes unmodified; a foreign cursor is `400 invalid_cursor`.
 
-| Route                                    | Capability        | Request                                              | Response                                                                                                     |
-| ---------------------------------------- | ----------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `GET /mobile/inventory/types`            | `inventory.read`  | `If-None-Match`                                      | `200 { version, units[], types[] }` or `304`                                                                 |
-| `GET /mobile/inventory/snapshot`         | `inventory.read`  | `cursor?`, `limit` 1..500 (default 250)              | `200 { epoch, highWaterSeq, catalogueVersion, total, items[], locations[], nextCursor }`                     |
-| `GET /mobile/inventory/changes`          | `inventory.read`  | `since` (seq), `epoch`, `limit` 1..500               | `200 { epoch, items[], locations[], events[], nextSince, hasMore, catalogueVersion }`; `409 resync_required` |
-| `GET /mobile/inventory/items/:id/events` | `inventory.read`  | `cursor?`, `limit`                                   | `200 { events[], nextCursor }`; `404`                                                                        |
-| `POST /mobile/inventory/mutations`       | `inventory.write` | `{ mutations: Mutation[] }` (1..50, body cap 256 KB) | `200 { outcomes: Outcome[], highWaterSeq }`; `413`                                                           |
-| `PUT /mobile/inventory/media/:sha256`    | `inventory.write` | `image/jpeg` or `image/heic` bytes, cap 8 MB         | `201 { sha256 }` or `200 { sha256, alreadyStored: true }`; `400 hash_mismatch`; `413`; `415`                 |
-| `GET /mobile/inventory/media/:sha256`    | `inventory.read`  | `variant = thumb                                     | medium                                                                                                       | full` | bytes, `ETag: <sha256>-<variant>`; `404` |
-| `POST /mobile/inventory/codes/suggest`   | `inventory.write` | `{ name, typeKey?, stem? }`                          | `200 { suggestions: string[] }`; `503` maps to the approved `.unavailable`                                   |
+| Route                                    | Capability        | Request                                              | Response                                                                                                      |
+| ---------------------------------------- | ----------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `GET /mobile/inventory/types`            | `inventory.read`  | `revision?`, `If-None-Match`                         | `200 { revision, minimumProtocol, types[] }`, `304`, or `404 catalogue_revision_unknown`                      |
+| `GET /mobile/inventory/snapshot`         | `inventory.read`  | `cursor?`, `limit` 1..500 (default 250)              | `200 { epoch, highWaterSeq, catalogueRevision, total, items[], locations[], nextCursor }`                     |
+| `GET /mobile/inventory/changes`          | `inventory.read`  | `since` (seq), `epoch`, `limit` 1..500               | `200 { epoch, items[], locations[], events[], nextSince, hasMore, catalogueRevision }`; `409 resync_required` |
+| `GET /mobile/inventory/items/:id/events` | `inventory.read`  | `cursor?`, `limit`                                   | `200 { events[], nextCursor }`; `404`                                                                         |
+| `POST /mobile/inventory/mutations`       | `inventory.write` | `{ mutations: Mutation[] }` (1..50, body cap 256 KB) | `200 { outcomes: Outcome[], highWaterSeq }`; `413`                                                            |
+| `PUT /mobile/inventory/media/:sha256`    | `inventory.write` | `image/jpeg` or `image/heic` bytes, cap 8 MB         | `201 { sha256 }` or `200 { sha256, alreadyStored: true }`; `400 hash_mismatch`; `413`; `415`                  |
+| `GET /mobile/inventory/media/:sha256`    | `inventory.read`  | `variant = thumb                                     | medium                                                                                                        | full` | bytes, `ETag: <sha256>-<variant>`; `404` |
+| `POST /mobile/inventory/codes/suggest`   | `inventory.write` | `{ name, typeId?, stem? }`                           | `200 { suggestions: string[] }`; `503` maps to the approved `.unavailable`                                    |
 
 Shapes (camelCase on the wire; `?` is optional):
 
 ```text
-Item      { id, revision, seq, name, typeKey?, fields{}, note?, code?, externalIds[{kind,value}],
+Item      { id, revision, seq, catalogueRevision, name, typeId?, fieldValues[], note?, code?, externalIds[{kind,value}],
             quantity, lifecycle, lifecycleChangedAt?, placement, previousPlacement?,
             isContainer, access?, isFull?, photos[{sha256, caption?}],
             provenance?{merchant?, price?, purchasedOn?, warrantyExpires?, transactionUri?},
@@ -325,7 +509,7 @@ Placement { kind: 'location', locationId } | { kind: 'container', itemId } | { k
 Location  { id, revision, seq, name, parentId?, sortOrder, deletedAt? }
 Event     { seq, entityKind, entityId, kind, fields[], before{}, after{}, reason?,
             actor{kind, label}, clientTime?, serverTime, compensatesSeq?, undoable }
-Mutation  { mutationId, op, entityId, baseRevision?, dependsOn[], clientTime, args }
+Mutation  { mutationId, op, entityId, baseRevision?, catalogueRevision, dependsOn[], clientTime, args }
 Outcome   { mutationId, status: 'applied', revision, seq, converged }
         | { mutationId, status: 'conflict', kind: 'field', field, mine, theirs,
             source{kind,label}, at, currentRevision }
@@ -337,9 +521,9 @@ Outcome   { mutationId, status: 'applied', revision, seq, converged }
 
 `documentsStatus` is resolved when a snapshot or feed page is built; `unavailable` is the approved "Paperless unavailable" state and is recomputed on every refresh rather than cached as truth.
 
-Ops and their `args`: `item.create { item }`, `item.edit { name?, note?, fields? (per-key patch), externalIds? }`, `item.changeType { typeKey, fields }`, `item.setCode { code | null }`, `item.move { to: Placement, verb: 'move'|'pick_up'|'put_back'|'store' }`, `item.setAccess { access }`, `item.setFull { full }`, `item.setLifecycle { lifecycle, reason? }`, `item.setQuantity { quantity }`, `item.split { newItemId, quantity }`, `item.attachPhoto { sha256, position }`, `item.removePhoto { sha256 }`, `item.reorderPhotos { sha256s[] }`, `item.restoreDeleted {}`, `location.create { location }`, `location.rename { name }`, `location.move { parentId? }`, `location.delete {}`, `event.revert { seq }`.
+Ops and their `args`: `item.create { item }`, `item.edit { name?, note?, values?: [{ fieldId, values: Primitive[] | null }], externalIds? }`, `item.changeType { typeId, values }`, `item.setOverride { fieldId, values }`, `item.clearOverride { fieldId }`, `item.setCode { code | null }`, `item.move { to: Placement, verb: 'move'|'pick_up'|'put_back'|'store' }`, `item.setAccess { access }`, `item.setFull { full }`, `item.setLifecycle { lifecycle, reason? }`, `item.setQuantity { quantity }`, `item.split { newItemId, quantity }`, `item.attachPhoto { sha256, position }`, `item.removePhoto { sha256 }`, `item.reorderPhotos { sha256s[] }`, `item.restoreDeleted {}`, `location.create { location }`, `location.rename { name }`, `location.move { parentId? }`, `location.delete {}`, `event.revert { seq }`. Omitting a field entry leaves it unchanged; `values: null` clears an optional stored value.
 
-`rejected` reasons (closed on the server, open string on the wire): `invalid`, `type_unknown`, `cycle`, `target_missing`, `not_container`, `has_contents`, `illegal_transition`, `media_missing`.
+`rejected` reasons (closed on the server, open string on the wire): `invalid`, `type_unknown`, `catalogue_changed`, `cycle`, `target_missing`, `reference_type_mismatch`, `not_container`, `has_contents`, `illegal_transition`, `media_missing`.
 
 Idempotency: `mutationId` is the key, scoped globally (UUIDs). A replay returns the stored outcome. A replay whose `op` or `entityId` differs from the stored one is `rejected: invalid`, not a silent re-application.
 
@@ -432,7 +616,7 @@ public protocol InventoryStore: Sendable {
 
 `perform` returns when the change is durable: in Phase A after the server's `applied` outcome, in Phase B after the local commit. Views never learn which.
 
-Replica tables: `item_base`, `item`, `location_base`, `location`, `photo_ref`, `event` (feed and fetched history), `mutation_log (local_seq INTEGER PK AUTOINCREMENT, mutation_id UNIQUE, op, entity_id, args JSON, depends_on JSON, base_revision, state, outcome JSON, attempts, created_at, last_attempt_at)`, `repair (mutation_id PK, kind, payload JSON, opened_at, resolved_at, resolution)`, `resolved_entry`, `media (sha256 PK, variant, path, bytes, pinned, uploaded, last_access)`, `sync_meta (epoch, since, catalogue JSON, catalogue_version, last_refresh_at, snapshot_cursor)`, `item_fts`.
+Replica tables: `item_base`, `item`, `item_field_value_base`, `item_field_value`, `catalogue_revision`, `catalogue_type`, `catalogue_field`, `catalogue_enum_option`, `location_base`, `location`, `photo_ref`, `event` (feed and fetched history), `mutation_log (local_seq INTEGER PK AUTOINCREMENT, mutation_id UNIQUE, op, entity_id, args JSON, depends_on JSON, base_revision, catalogue_revision, state, outcome JSON, attempts, created_at, last_attempt_at)`, `repair (mutation_id PK, kind, payload JSON, opened_at, resolved_at, resolution)`, `resolved_entry`, `media (sha256 PK, variant, path, bytes, pinned, uploaded, last_access)`, `sync_meta (epoch, since, catalogue_revision, last_refresh_at, snapshot_cursor)`, `item_fts`.
 
 ## Approved state to producing state
 
@@ -480,8 +664,8 @@ Replica tables: `item_base`, `item`, `location_base`, `location`, `photo_ref`, `
 | Documents linked / none / Paperless unavailable (Item detail)                                         | `documentsStatus`                                                                                                    |
 | Photo hero, broken photo                                                                              | `photos[]`; broken when the media fetch fails and no cached variant exists                                           |
 | Item detail conflict notice                                                                           | Open repair on the item                                                                                              |
-| No type yet; Filtered to untyped (Items)                                                              | `type_key` NULL                                                                                                      |
-| New type arrived sheet, once, Not now does not return                                                 | `catalogue_version` change adding a type whose `legacyLabels` match untyped rows; shown-once flag in `sync_meta`     |
+| No type yet; Filtered to untyped (Items)                                                              | `type_id` NULL                                                                                                       |
+| New type arrived sheet, once, Not now does not return                                                 | `catalogue_revision` adding a type whose `legacyLabels` match untyped rows; shown-once flag in `sync_meta`           |
 | Scanning / resolving / found / other pillar / not a POPS code / target missing / camera denied (Scan) | `PopsURI` parse, `EntityRouter` dispatch, replica lookup (tombstoned or absent is target missing), `CameraAccess`    |
 | Search empty, filter matches nothing                                                                  | Query result empty                                                                                                   |
 
@@ -491,7 +675,7 @@ Replica tables: `item_base`, `item`, `location_base`, `location`, `photo_ref`, `
 - The phone carries a second implementation of command semantics. The shared vectors make divergence a failing test, not a support question, but only for the cases the vectors cover.
 - bfm gains its first batched, idempotent, revisioned route family. Its "mobile-shaped, not a proxy" rule bends here: the shape is the protocol's, deliberately, because the protocol's meaning is inventory's.
 - The phone gains its first on-device database and its first third-party persistence dependency.
-- A server deploy can ship a type; an app release is needed only for a new value kind, dimension or capability.
+- A catalogue publication can ship a type without a deploy; an app release is needed only for new protocol vocabulary.
 - Inventory's ADR-044 adoption can 403 the MCP account on the day it ships unless the operator widens that grant first.
 - The images volume becomes the only copy of every photo; it is not covered by `infra/litestream/inventory.yml` and must join the offsite rclone set in homelab-infra before the move.
 - Fixtures, connections and Paperless documents keep their current tables and routes; nothing here changes them beyond pointing their foreign keys at `items`.
@@ -500,7 +684,7 @@ Replica tables: `item_base`, `item`, `location_base`, `location`, `photo_ref`, `
 
 These are product-visible; the design picks a default for each so work is not blocked, and the default is named.
 
-1. **A change the server refuses outright** (a containment cycle created on two devices, a target place deleted elsewhere, a value the catalogue stopped allowing after a deploy): no approved repair kind covers it. Default: shown as a repair with the item, the one-line reason and only "Let go".
+1. **A change the server refuses outright** (a containment cycle created on two devices, a target place deleted elsewhere, a value the catalogue stopped allowing after publication): no approved repair kind covers it. Default: shown as a repair with the item, the one-line reason and only "Let go".
 2. **Discarding, losing or destroying a container that still holds things**: do the contents follow it, stay inside an inactive container, or block the action? Default: contents stay inside and remain active; the container's page shows them.
 3. **"None left"**: the quantity badge and filter exist in the approved Search screens, but no approved action can produce a zero quantity. Default: remove the badge case and the filter option.
 4. **When is the catalogue "stale"**, and does stale mark every row or only some? Default: stale after 24 hours without a complete refresh, marking every row in search results while stale.

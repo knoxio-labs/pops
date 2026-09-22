@@ -83,6 +83,29 @@ constraints refuse any other combination. `events` is the append-only history
 and sync change sequence; triggers refuse updates and deletes. `mutations`,
 `media` and `sync_meta` back the sync protocol.
 
+Inventory ADR-002's accepted catalogue model replaces application-code types
+with persisted owner-authored data. A published catalogue revision is an
+immutable complete snapshot of types, fields and enum options; edits happen in
+one draft and publication atomically validates and promotes it. IDs and keys are
+permanent, while labels and ordering can change. `items.type_id` and
+`item_field_values.field_id` use those stable IDs, and every item value records
+the catalogue revision that validated it. Published snapshots and catalogue
+audit events are append-only. Until POPS-4356 lands, the current `src/types`
+module remains the bootstrap source rather than a second supported model.
+
+The primitive vocabulary is closed: short and long text, integer, exact decimal,
+boolean, enum, fixed-unit measurement, date, date-time, HTTPS URL and item or
+location reference. Cardinality is `one` or `many` rather than an array kind.
+Decimals are strings, references retain a stable target ID even when the target
+is missing, and measurements retain the field's fixed unit. The precise wire,
+SQLite, compatibility and migration rules are Inventory ADR-002 D5.
+
+Computed fields use the bounded, versioned expression AST from D5: no SQL,
+JavaScript, clocks or network access; at most two reference hops; publication
+rejects dependency cycles. A permitted explicit override wins without evaluating
+dependencies, clearing it resumes evaluation, and every effective value tells a
+client whether it is stored, computed, overridden or unavailable.
+
 Migration `0012_items_single_identity` built this from `home_inventory` and
 `containers` and dropped both. It aborts, writing nothing, when an id or a
 case-insensitive code is held twice across the two old tables; the operator
@@ -164,6 +187,11 @@ the gate above derives three grants: `inventory.sync` (`GET /sync/snapshot`,
 - Every one of those routes needs `Pops-Inventory-Protocol: <n>`; missing or
   below `sync_meta.min_protocol` is `426 client_too_old`, checked by
   `src/api/sync/protocol.ts` ahead of the handlers.
+- Protocol and catalogue revision are independent. Catalogue, snapshot, feed and
+  mutation shapes carry `catalogueRevision`; a phone downloads an immutable
+  revision before applying rows that name it, and an offline mutation pins the
+  revision used to validate it. The server accepts that mutation only when its
+  compatibility record proves the referenced definitions unchanged.
 - The snapshot serves live items and locations in pages whose opaque cursor
   pins the high-water `seq` of the first page; the change feed then serves
   every row (tombstones included) and every event after a `seq`. A cursor or
@@ -176,6 +204,9 @@ the gate above derives three grants: `inventory.sync` (`GET /sync/snapshot`,
   phone the change is recorded against, and is believed only from a caller
   whose account holds `inventory.sync`; no key records `web`, any other key
   `service:<account>`.
+- Catalogue authoring does not pass through bfm. Inventory exposes a shared
+  owner-only draft/publish surface for MCP and the web editor; bfm relays only
+  immutable catalogue reads.
 - Events carry `before`/`after` keyed by wire field. A move records both
   `placement` and `previousPlacement`, each in the item row's placement
   shape (`{ kind: 'location', locationId }`, `{ kind: 'container', itemId }`,
@@ -295,8 +326,9 @@ hand-authored paths.
 - [ADR-002](docs/architecture/adr-002-inventory-technical-design.md) — the
   technical design for the Inventory rebuild: one item identity for items and
   containers, the placement and lifecycle model, the append-only event log, the
-  served type catalogue, the sync and conflict protocol with bfm and iOS, and the
-  phased delivery. Builds on ADR-001 for every noun used here.
+  persisted owner-authored type catalogue, exact dynamic-value and computed-field
+  semantics, the sync and conflict protocol with bfm and iOS, and the phased
+  delivery. Builds on ADR-001 for every noun used here.
 
 ## Domain docs
 
@@ -318,11 +350,19 @@ that exist:
 Everything else is documented by the file header comments in the directory
 itself.
 
-## Storage box measurements
+## Bootstrap catalogue
 
-The `storage_box` catalogue type keeps capacity in litres and load limit in
-kilograms as optional measurements. Its outside dimensions are separate
-width, height and depth measurements, each accepting millimetres, centimetres
-or metres. Duty rating is a closed choice of Light, Standard, Heavy Duty and
-Extra Heavy Duty; stackability remains a yes-or-no field. The former free-text
-Footprint field is removed by migration `0016_storage_box_dimensions`.
+POPS-4356 adds migration `0017_persisted_item_types`, which imports the current
+`cable`, `charger`, `bulb`, `tape`, `storage_box` and `furniture` definitions as
+catalogue revision 1 with deterministic IDs and unchanged type keys. It rewrites
+the existing fields blob into the value table only after descriptor parity and
+every value validates; any unknown key or invalid value aborts the transaction.
+There is no dual-write interval and no fallback to code definitions after
+publication.
+
+`storage_box` keeps capacity in litres, load limit in kilograms and outside
+width, height and depth in centimetres as their fixed persisted units. Duty
+rating remains a closed enum with stable option IDs for Light, Standard, Heavy
+Duty and Extra Heavy Duty; stackability remains boolean. Migration
+`0016_storage_box_dimensions` removed the former free-text Footprint before the
+persisted catalogue import.
