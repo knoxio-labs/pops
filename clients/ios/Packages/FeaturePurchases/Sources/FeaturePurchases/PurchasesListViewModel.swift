@@ -23,7 +23,7 @@ public final class PurchasesListViewModel {
         failure = nil
         defer { isLoading = false }
         do {
-            let page = try await repository.purchases(after: nil)
+            let page = try await repository.purchases(after: nil, statusFilter: .all)
             purchases = page.purchases
             didLoad = true
             await reachability.noteReachable()

@@ -1,4 +1,5 @@
 import AppCore
+import Foundation
 
 /// A ``PurchasesRepository`` for the stage: a fixed page, a fixed failure, or
 /// a call that never returns — never more than one of those at once.
@@ -10,7 +11,9 @@ internal struct PlaygroundPurchasesRepository: PurchasesRepository {
     let failure: RepositoryError?
     let hangs: Bool
 
-    func purchases(after cursor: String?) async throws -> PurchasePage {
+    func purchases(
+        after cursor: String?, statusFilter: PurchaseStatusFilter
+    ) async throws -> PurchasePage {
         if hangs {
             // Never answers, so the stage holds on the loading state. A
             // `Task.sleep` rather than a continuation nobody resumes, because
@@ -22,7 +25,14 @@ internal struct PlaygroundPurchasesRepository: PurchasesRepository {
         if let failure {
             throw failure
         }
-        return PurchasePage(purchases: rows, nextCursor: nil)
+        return PurchasePage(purchases: rows, nextCursor: nil, totalCount: rows.count)
+    }
+
+    func monthSummary(for month: Date) async throws -> PurchasesMonthSummary {
+        if let failure {
+            throw failure
+        }
+        return .empty
     }
 }
 

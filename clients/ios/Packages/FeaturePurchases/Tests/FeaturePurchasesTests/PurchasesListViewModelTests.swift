@@ -1,5 +1,6 @@
 import AppCore
 import AppCoreFakes
+import Foundation
 import Testing
 
 @testable import FeaturePurchases
@@ -43,7 +44,13 @@ internal struct PurchasesListViewModelTests {
 }
 
 private struct CancellingPurchasesRepository: PurchasesRepository {
-    func purchases(after cursor: String?) async throws -> PurchasePage {
+    func purchases(
+        after cursor: String?, statusFilter: PurchaseStatusFilter
+    ) async throws -> PurchasePage {
         throw CancellationError()
+    }
+
+    func monthSummary(for month: Date) async throws -> PurchasesMonthSummary {
+        .empty
     }
 }

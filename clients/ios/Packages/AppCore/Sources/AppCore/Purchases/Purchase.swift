@@ -45,6 +45,12 @@ public enum PurchaseSettlement: Hashable, Sendable {
     }
 }
 
+/// Which purchase settlements to request, mirroring the mobile wire's `status=unsettled` filter.
+public enum PurchaseStatusFilter: Hashable, Sendable {
+    case all
+    case unsettled
+}
+
 /// Who a purchase was made from, and how sure the pillar is about it.
 ///
 /// Three cases because the purchases pillar draws three, and collapsing them
@@ -121,9 +127,12 @@ public struct Purchase: Hashable, Sendable, Identifiable {
 public struct PurchasePage: Hashable, Sendable {
     public let purchases: [Purchase]
     public let nextCursor: String?
+    /// The filtered total, present only on the first page of a server response.
+    public let totalCount: Int?
 
-    public init(purchases: [Purchase], nextCursor: String?) {
+    public init(purchases: [Purchase], nextCursor: String?, totalCount: Int?) {
         self.purchases = purchases
         self.nextCursor = nextCursor
+        self.totalCount = totalCount
     }
 }
