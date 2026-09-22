@@ -83,6 +83,10 @@ The mapping from wire to domain is the whole of it, and each leg is somewhere a 
 - **Failures.** `unavailable` and `contractMismatch` do not converge. The BFM separates `upstream_unavailable` from `upstream_contract_mismatch` deliberately — "not answering" against "answered something this build cannot read" — and the list renders a different sentence and a different next action for each.
 - **A stale cursor is not a failure.** `400 invalid_cursor` says the token this app holds is not one this server issued, and the server's own instruction is to start the list again. The repository does that rather than reporting it, which keeps the rows already on screen. It cannot recurse: the restart sends no cursor, and only a cursor that was sent can be rejected.
 
+### Purchase browsing
+
+`BFMPurchasesRepository` maps `PurchaseStatusFilter.unsettled` to the generated `status=unsettled` query and omits the query for `.all`. The wire's optional `total` becomes `PurchasePage.totalCount`: present when the BFM includes the first-page count and absent otherwise.
+
 ### Receipt capture
 
 `POST /mobile/purchases/receipts` answers with one of three outcomes, and every one of them is a `200` — the BFM's own contract treats "purchases read this receipt and could not reconcile it" as an answer, not a failure. Only a call that never got that far throws.

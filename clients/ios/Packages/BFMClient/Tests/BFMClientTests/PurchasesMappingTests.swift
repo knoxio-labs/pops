@@ -6,6 +6,42 @@ import Testing
 
 @Suite("BFMPurchasesRepository mapping")
 internal struct PurchasesMappingTests {
+    @Test("the unsettled filter is sent on the purchases query")
+    func sendsUnsettledFilter() async throws {
+        let transport = StubTransport(status: .ok, json: #"{"data":[],"nextCursor":null}"#)
+        let repository = try BFMPurchasesRepository.stubbed(transport)
+
+        _ = try await repository.purchases(after: nil, statusFilter: .unsettled)
+
+        let sent = try #require(await transport.recorded.all.first)
+        #expect(sent.request.path == "/mobile/purchases?status=unsettled")
+    }
+
+    @Test("a first-page total crosses into the app page")
+    func mapsTotalCount() async throws {
+        let repository = try BFMPurchasesRepository.stubbed(
+            StubTransport(
+                status: .ok,
+                json: #"{"data":[],"nextCursor":null,"total":7}"#
+            )
+        )
+
+        let page = try await repository.purchases(after: nil, statusFilter: .all)
+
+        #expect(page.totalCount == 7)
+    }
+
+    @Test("an omitted total stays absent")
+    func absentTotalStaysAbsent() async throws {
+        let repository = try BFMPurchasesRepository.stubbed(
+            StubTransport(status: .ok, json: #"{"data":[],"nextCursor":null}"#)
+        )
+
+        let page = try await repository.purchases(after: nil, statusFilter: .all)
+
+        #expect(page.totalCount == nil)
+    }
+
     @Test("a purchase list row becomes the app's own vocabulary")
     func mapsAListRow() async throws {
         let repository = try BFMPurchasesRepository.stubbed(
@@ -20,7 +56,8 @@ internal struct PurchasesMappingTests {
             )
         )
 
-        let purchase = try #require(try await repository.purchases(after: nil).purchases.first)
+        let purchase = try #require(
+            try await repository.purchases(after: nil, statusFilter: .all).purchases.first)
         #expect(purchase.id == "purchase-1")
         #expect(purchase.merchant == .printed("Kmart"))
         #expect(purchase.total == MoneyAmount(minorUnits: 1999, currencyCode: "AUD"))
@@ -50,7 +87,8 @@ internal struct PurchasesMappingTests {
             )
         )
 
-        let purchase = try #require(try await repository.purchases(after: nil).purchases.first)
+        let purchase = try #require(
+            try await repository.purchases(after: nil, statusFilter: .all).purchases.first)
         #expect(purchase.merchant == .entity(id: "ent-1", name: "Kmart", printed: "K mart"))
         #expect(purchase.merchant.displayName == "Kmart")
         #expect(!purchase.merchant.isUnverified)
@@ -75,7 +113,8 @@ internal struct PurchasesMappingTests {
             )
         )
 
-        let purchase = try #require(try await repository.purchases(after: nil).purchases.first)
+        let purchase = try #require(
+            try await repository.purchases(after: nil, statusFilter: .all).purchases.first)
         #expect(purchase.merchant == .entity(id: "ent-1", name: "K mart", printed: "K mart"))
     }
 
@@ -93,7 +132,8 @@ internal struct PurchasesMappingTests {
             )
         )
 
-        let purchase = try #require(try await repository.purchases(after: nil).purchases.first)
+        let purchase = try #require(
+            try await repository.purchases(after: nil, statusFilter: .all).purchases.first)
         #expect(purchase.merchant == .unattributed)
         #expect(purchase.merchant.displayName == nil)
     }
@@ -118,7 +158,8 @@ internal struct PurchasesMappingTests {
             )
         )
 
-        let purchase = try #require(try await repository.purchases(after: nil).purchases.first)
+        let purchase = try #require(
+            try await repository.purchases(after: nil, statusFilter: .all).purchases.first)
         #expect(purchase.merchant == .entity(id: "ent-9", name: "ent-9", printed: "ent-9"))
     }
 }

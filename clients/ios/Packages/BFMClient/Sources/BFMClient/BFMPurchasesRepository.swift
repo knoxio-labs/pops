@@ -15,11 +15,18 @@ public struct BFMPurchasesRepository: PurchasesRepository {
         self.timeZone = timeZone
     }
 
-    public func purchases(after cursor: String?) async throws -> PurchasePage {
+    public func purchases(
+        after cursor: String?, statusFilter: PurchaseStatusFilter
+    ) async throws -> PurchasePage {
+        let status: ListPurchases.Input.Query.StatusPayload? =
+            switch statusFilter {
+            case .all: nil
+            case .unsettled: .unsettled
+            }
         let output: ListPurchases.Output
         do {
             output = try await client.generated.mobilePurchases_listPurchases(
-                query: .init(cursor: cursor)
+                query: .init(cursor: cursor, status: status)
             )
         } catch let error as ClientError {
             throw BFMRepositoryFailure.failure(error, operation: ListPurchases.id)
@@ -30,7 +37,8 @@ public struct BFMPurchasesRepository: PurchasesRepository {
             let payload = try ok.body.json
             return PurchasePage(
                 purchases: try payload.data.map { try purchase(from: $0) },
-                nextCursor: payload.nextCursor
+                nextCursor: payload.nextCursor,
+                totalCount: payload.total
             )
         case .badRequest:
             throw RepositoryError.transport("\(ListPurchases.id): invalid request")

@@ -24,6 +24,8 @@ Fakes ship beside the protocols, as a separate `AppCoreFakes` product, so a feat
 
 The in-memory transaction and purchase repositories page through opaque cursors they minted themselves, reject caller-derived and stale cursors, count calls, and can fail a chosen call. Replacing their rows invalidates every outstanding cursor so a refresh starts from the first page.
 
+`PurchasesRepository` accepts `PurchaseStatusFilter.all` or `.unsettled`; the latter mirrors the mobile wire's single status filter without exposing generated types. `PurchasePage.totalCount` is optional because the BFM supplies it only on a first page. Callers retain that first value while later pages carry `nil`. The in-memory repository filters before applying its cursor and binds every cursor to the filter that minted it.
+
 ## The composition root
 
 `App/` is the only place a protocol is bound to a concrete type. Nothing else constructs an implementation and nothing else learns which one it got — that is what makes swapping a transport, or running a whole feature against fakes, a change in one file rather than in every screen.

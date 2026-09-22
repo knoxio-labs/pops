@@ -42,7 +42,7 @@ Four decisions carry the rest of it, and each is a rule the screens landing next
 
 ### Stored purchases and the shared form
 
-The Purchases tab renders the saved-purchase list; capture and draft creation use the receipt repository. Stored receipt presentation needs the typed detail repository and UI integration tracked by POPS-3708. The mobile detail and receipt-byte routes already exist.
+The Purchases tab renders the saved-purchase list with `PurchaseStatusFilter.all`; capture and draft creation use the receipt repository. Stored receipt presentation needs the typed detail repository and UI integration tracked by POPS-3708. The mobile detail and receipt-byte routes already exist.
 
 Editing a saved purchase remains POPS-2458. There is no initialiser building a `ReceiptDraft` from a `ReceiptPurchase`: that summary carries a merchant, a total and a count, and a form pre-filled from it would present three line items as zero. Reusing the form requires the full detail model, rather than treating the summary as an editable purchase.
 

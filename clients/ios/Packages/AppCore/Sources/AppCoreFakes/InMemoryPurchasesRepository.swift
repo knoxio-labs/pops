@@ -7,7 +7,12 @@ public actor InMemoryPurchasesRepository: PurchasesRepository {
     private var rows: [Purchase]
     private let pageSize: Int
     private var failures: [Int: RepositoryError] = [:]
-    private var mintedCursors: Set<String> = []
+    private var mintedCursors: Set<MintedCursor> = []
+
+    private struct MintedCursor: Hashable {
+        let value: String
+        let statusFilter: PurchaseStatusFilter
+    }
 
     /// Creates a repository whose pages contain at most `pageSize` purchases.
     public init(rows: [Purchase] = [], pageSize: Int = 5) {
@@ -26,24 +31,40 @@ public actor InMemoryPurchasesRepository: PurchasesRepository {
         failures[call] = error
     }
 
-    public func purchases(after cursor: String?) async throws -> PurchasePage {
+    public func purchases(
+        after cursor: String?, statusFilter: PurchaseStatusFilter
+    ) async throws -> PurchasePage {
         callCount += 1
         if let failure = failures[callCount] { throw failure }
 
-        let start = try offset(for: cursor)
-        let end = min(start + pageSize, rows.count)
-        guard end < rows.count else {
-            return PurchasePage(purchases: Array(rows[start..<end]), nextCursor: nil)
+        let filteredRows = rows.filter { purchase in
+            switch statusFilter {
+            case .all: true
+            case .unsettled: purchase.status.isUnsettled
+            }
+        }
+        let start = try offset(for: cursor, statusFilter: statusFilter, count: filteredRows.count)
+        let end = min(start + pageSize, filteredRows.count)
+        let totalCount = cursor == nil ? filteredRows.count : nil
+        guard end < filteredRows.count else {
+            return PurchasePage(
+                purchases: Array(filteredRows[start..<end]), nextCursor: nil,
+                totalCount: totalCount)
         }
 
         let nextCursor = String(end)
-        mintedCursors.insert(nextCursor)
-        return PurchasePage(purchases: Array(rows[start..<end]), nextCursor: nextCursor)
+        mintedCursors.insert(MintedCursor(value: nextCursor, statusFilter: statusFilter))
+        return PurchasePage(
+            purchases: Array(filteredRows[start..<end]), nextCursor: nextCursor,
+            totalCount: totalCount)
     }
 
-    private func offset(for cursor: String?) throws -> Int {
+    private func offset(
+        for cursor: String?, statusFilter: PurchaseStatusFilter, count: Int
+    ) throws -> Int {
         guard let cursor else { return 0 }
-        guard mintedCursors.contains(cursor), let offset = Int(cursor), offset <= rows.count else {
+        let minted = MintedCursor(value: cursor, statusFilter: statusFilter)
+        guard mintedCursors.contains(minted), let offset = Int(cursor), offset <= count else {
             throw RepositoryError.contractMismatch
         }
         return offset
