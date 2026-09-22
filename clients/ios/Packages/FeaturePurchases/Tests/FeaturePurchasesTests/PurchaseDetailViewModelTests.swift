@@ -200,6 +200,48 @@ internal struct PurchaseDetailViewModelTests {
         let counts = await repository.counts()
         #expect(counts.thumbnails.isEmpty)
         #expect(counts.images.isEmpty)
+        #expect(model.receiptImages(for: .fake(receiptURIs: [])).isEmpty)
+    }
+
+    @Test("receipt viewer slots retain missing pages and replace only the selected full image")
+    func viewerSlotsPreservePageIdentity() async {
+        let firstThumbnail = ReceiptImage.fake(data: Data([1]))
+        let thirdThumbnail = ReceiptImage.fake(data: Data([3]))
+        let thirdFull = ReceiptImage.fake(data: Data([33]))
+        let detail = PurchaseDetail.fake(
+            receiptURIs: [uri("first"), uri("missing"), uri("third")])
+        let repository = DetailRepositoryDouble(
+            details: [.value(detail)],
+            thumbnails: [
+                "first": .value(firstThumbnail),
+                "missing": .failure(.unavailable),
+                "third": .value(thirdThumbnail),
+            ],
+            images: ["third": .value(thirdFull)])
+        let model = model(repository)
+        await model.load()
+
+        #expect(model.receiptImages(for: detail) == [Data([1]), Data(), Data([3])])
+
+        await model.openReceipt(at: 2)
+
+        #expect(model.receiptImages(for: detail) == [Data([1]), Data(), Data([33])])
+    }
+
+    @Test("receipt indexes outside both bounds perform no request")
+    func invalidReceiptIndexesDoNothing() async {
+        let detail = PurchaseDetail.fake(receiptURIs: [uri("only")])
+        let repository = DetailRepositoryDouble(
+            details: [.value(detail)],
+            images: ["only": .value(.fake(data: Data([1])))])
+        let model = model(repository)
+        await model.load()
+
+        await model.openReceipt(at: -1)
+        await model.openReceipt(at: 1)
+
+        #expect(await repository.counts().images.isEmpty)
+        #expect(model.openReceiptIndex == nil)
     }
 
     private func model(_ repository: DetailRepositoryDouble) -> PurchaseDetailViewModel {

@@ -17,6 +17,39 @@ internal struct PurchaseDetailRenderingTests {
         _ = try #require(Self.render(PurchaseDetailSkeleton()))
     }
 
+    @Test("loaded detail rasterises with no optional notices or receipt pages")
+    func loadedEmptyDetailRasterises() async throws {
+        let detail = PurchaseDetail.fake(receiptURIs: [], edit: nil)
+        let repository = DetailRepositoryDouble(details: [.value(detail)])
+        let dependencies = AppDependencies.fake(purchases: repository)
+        let model = PurchaseDetailViewModel(id: detail.id, dependencies: dependencies)
+        await model.load()
+
+        _ = try #require(
+            Self.render(
+                NavigationStack {
+                    PurchaseDetailPage(
+                        detail: detail,
+                        refresh: nil,
+                        model: model,
+                        dependencies: dependencies)
+                }))
+    }
+
+    @Test(
+        "every terminal and retryable error phase rasterises",
+        arguments: [
+            PurchaseDetailFailure.offline,
+            .unreachable,
+            .notFound,
+            .unauthorized,
+            .contractMismatch,
+        ])
+    func everyFailureRasterises(_ failure: PurchaseDetailFailure) throws {
+        _ = try #require(
+            Self.render(PurchaseDetailFailureView(failure: failure, retry: {})))
+    }
+
     @Test("a receipt preview changes the header", .requiresCompiledColorCatalog)
     func receiptPreviewChangesHeader() throws {
         let png = try #require(PopsTestImage.pngData())

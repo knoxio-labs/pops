@@ -82,6 +82,7 @@ internal struct PurchaseDetailHeader: View {
                 PurchaseDetailCopy.receiptLabel(pages: detail.receiptURIs.count)
             )
             .accessibilityHint("Opens the receipt")
+            .accessibilityIdentifier(PurchaseDetailAccessibility.receiptPlate)
         }
     }
 

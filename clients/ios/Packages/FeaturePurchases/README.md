@@ -48,6 +48,8 @@ The detail presentation uses the saved merchant identity, day, total, settlement
 
 An edited detail carries a purchases-tinted notice with the edit date. Original appears only when the server retained field changes; its sheet labels header fields by meaning, current lines by their present one-based position, removed lines as Removed, and fields from a newer server by their raw name. Added lines omit the nonexistent original row.
 
+The production detail loads every phase through its model, keeps failed refreshes over the saved content, and exposes live Edit and Share actions only with a loaded purchase. Its receipt plate opens the tapped page in the shared full-screen pager; each swipe requests that page's full image while missing imagery retains its placeholder and page position.
+
 Saved-purchase editing maps the full detail into the shared receipt draft while retaining every saved line identifier. Matched, partially matched, and unknown settlement states lock merchant, date, and total; line and adjustment edits remain available. A submitted update carries the complete desired line set and the detail's opaque compare-and-swap token, omits unchanged header fields, and sends no request payload when no permitted value changed. Removing a line omits it from that desired set, and an Inventory-linked line carries the exact unlink notice before removal.
 
 The edit sheet commits from the navigation bar and asks before losing a changed draft. Saving holds the form against duplicate requests; a failure keeps every field for Keep editing or Retry, while locked and stale conflicts name their different recovery paths. A confirmed save notifies the detail host once with the server's replacement and then closes.

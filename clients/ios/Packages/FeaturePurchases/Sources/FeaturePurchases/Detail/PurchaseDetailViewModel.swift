@@ -1,4 +1,5 @@
 import AppCore
+import Foundation
 import Observation
 
 internal enum PurchaseDetailFailure: Hashable, Sendable {
@@ -40,6 +41,15 @@ internal final class PurchaseDetailViewModel {
     internal private(set) var openReceiptIndex: Int?
 
     internal var receiptThumbnails: [ReceiptImage] { receiptPages.map(\.image) }
+
+    internal func receiptImages(for detail: PurchaseDetail) -> [Data] {
+        detail.receiptURIs.indices.map { index in
+            if openReceiptIndex == index, let receiptFull {
+                return receiptFull.data
+            }
+            return receiptPages.first(where: { $0.pageIndex == index })?.image.data ?? Data()
+        }
+    }
 
     private let id: Purchase.ID
     private let repository: any PurchasesRepository
