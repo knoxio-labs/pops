@@ -2,6 +2,7 @@
 export type TypeEditorMode =
   | 'list'
   | 'create'
+  | 'key-collision'
   | 'edit'
   | 'enum'
   | 'reference'

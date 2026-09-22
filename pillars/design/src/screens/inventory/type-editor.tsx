@@ -66,6 +66,7 @@ export function createTypeEditorStates(layout: TypeEditorLayout): ScreenStates {
   return {
     'type-list': () => <TypeEditor mode="list" layout={layout} />,
     create: () => <TypeEditor mode="create" layout={layout} />,
+    'key-collision': () => <TypeEditor mode="key-collision" layout={layout} />,
     edit: () => <TypeEditor mode="edit" layout={layout} />,
     archive: () => <TypeEditor mode="archive" layout={layout} />,
     'enum-options': () => <TypeEditor mode="enum" layout={layout} />,

@@ -1,17 +1,6 @@
 import { Archive, Check, Eye, Save, Settings2, Sparkles } from 'lucide-react';
 
-import {
-  Badge,
-  Button,
-  Input,
-  Label,
-  Switch,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-  Textarea,
-} from '@pops/ui';
+import { Badge, Button, Tabs, TabsContent, TabsList, TabsTrigger } from '@pops/ui';
 
 import { ComputedEditor } from './computed-editor';
 import { PrimitiveSettings } from './primitive-settings';
@@ -39,63 +28,20 @@ export function EditorHeader({ creating = false }: { creating?: boolean }) {
             : '184 items · last published revision 12'}
         </p>
       </div>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2">
+        {creating && <Badge variant="outline">Unsaved</Badge>}
         {!creating && (
           <Button variant="outline">
             <Archive className="h-4 w-4" />
             Archive
           </Button>
         )}
-        <Button>
-          <Save className="h-4 w-4" />
-          {creating ? 'Create draft' : 'Save draft'}
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-/** Editable identity and immutable-key treatment for a type draft. */
-export function TypeIdentity({ creating = false }: { creating?: boolean }) {
-  return (
-    <div className="grid gap-4 sm:grid-cols-2">
-      <div className="space-y-2">
-        <Label htmlFor="type-label">Type label</Label>
-        <Input
-          id="type-label"
-          defaultValue={creating ? '' : 'Electronics'}
-          placeholder="e.g. Musical instruments"
-          className="min-h-11"
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="type-key">Key</Label>
-        <Input
-          id="type-key"
-          defaultValue={creating ? '' : 'electronics'}
-          placeholder="musical_instruments"
-          className="min-h-11 font-mono"
-          disabled={!creating}
-        />
-      </div>
-      <div className="space-y-2 sm:col-span-2">
-        <Label htmlFor="type-description">Description</Label>
-        <Textarea
-          id="type-description"
-          defaultValue={creating ? '' : 'Powered devices, accessories and components.'}
-        />
-      </div>
-      <div className="flex min-h-11 items-start justify-between gap-4 rounded-lg border p-3 sm:col-span-2">
-        <div>
-          <Label htmlFor="containment" className="text-sm font-medium">
-            Containment capability
-          </Label>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Items of this type can contain other items. Changing this after publication requires a
-            migration.
-          </p>
-        </div>
-        <Switch id="containment" />
+        {!creating && (
+          <Button>
+            <Save className="h-4 w-4" />
+            Save draft
+          </Button>
+        )}
       </div>
     </div>
   );
