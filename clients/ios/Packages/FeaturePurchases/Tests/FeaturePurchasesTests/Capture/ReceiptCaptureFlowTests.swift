@@ -4,7 +4,7 @@ import Foundation
 import SwiftUI
 import Testing
 
-@testable import FeatureReceiptCapture
+@testable import FeaturePurchases
 
 /// The camera half of the capture screen: whether it opens, what happens when
 /// it may not, and what a finished scan becomes.

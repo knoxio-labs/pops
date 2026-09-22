@@ -1,7 +1,7 @@
 import SwiftUI
 import Testing
 
-@testable import FeatureReceiptCapture
+@testable import FeaturePurchases
 
 /// Typing purchases one after another: what the next blank form keeps, and
 /// what it must not claim.

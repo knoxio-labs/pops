@@ -1,6 +1,6 @@
 import Testing
 
-@testable import FeatureReceiptCapture
+@testable import FeaturePurchases
 
 @Suite("Editing a saved purchase from the navigation bar")
 @MainActor

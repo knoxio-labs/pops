@@ -2,7 +2,7 @@ import AppCore
 import Foundation
 import Testing
 
-@testable import FeatureReceiptCapture
+@testable import FeaturePurchases
 
 /// The words, and the pairs of them that must never converge.
 ///

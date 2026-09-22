@@ -208,7 +208,7 @@ that only a reversible refusal is offered a way to reverse it. A capture, an
 upload, and the reconciled/unreconciled/unreadable outcomes a scan produces
 still need the capture step stubbed inside the app before a flow can reach
 them, and that remains tracked rather than done here — those three outcomes
-are covered where they can be, by `FeatureReceiptCapture`'s own suites
+are covered where they can be, by `FeaturePurchases`'s own suites
 rendering each one and reading it back.
 
 Manual entry (POPS-2454) is not on the far side of that gap: it produces no

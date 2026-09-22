@@ -1,6 +1,6 @@
 import Testing
 
-@testable import FeatureReceiptCapture
+@testable import FeaturePurchases
 
 /// The name a saved purchase is sent with, now that the form points at
 /// records the save payload has no room for.
