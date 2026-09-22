@@ -120,9 +120,3 @@ internal enum PurchasesHomeFailureAction: Equatable, Sendable {
     case retry
     case pair
 }
-
-internal enum PurchasesHomeCopy {
-    internal static func time(_ date: Date) -> String {
-        date.formatted(date: .omitted, time: .shortened)
-    }
-}

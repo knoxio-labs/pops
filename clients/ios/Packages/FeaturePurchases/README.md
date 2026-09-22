@@ -52,6 +52,8 @@ Saved-purchase screens share `PurchasesPresentation` for merchant names, settlem
 
 `PurchasesHomeModel` loads that summary and the first unfiltered purchase page together. Refresh failures keep the last digest visible, while a generation counter prevents an older request from replacing a newer refresh. Capture can land complete purchases immediately or report only saved identifiers; both paths highlight every saved identifier and perform one refresh, and the identifier path never fabricates purchase rows.
 
+The home presentation reuses DesignSystem glass, spacing, type, and status primitives. Its monthly figure keeps currencies separate and omits a comparison when the server has no previous month. Archive tiles use server counts and stack vertically at accessibility Dynamic Type sizes; the Unmatched tile disappears only when the server count is zero. Loading, empty, initial failure, and retained-content refresh failure remain visibly distinct states.
+
 Editing a saved purchase remains POPS-2458. There is no initialiser building a `ReceiptDraft` from a `ReceiptPurchase`: that summary carries a merchant, a total and a count, and a form pre-filled from it would present three line items as zero. Reusing the form requires the full detail model, rather than treating the summary as an editable purchase.
 
 ### The form, and how both entry points reach it
