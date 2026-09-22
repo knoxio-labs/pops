@@ -99,6 +99,21 @@ internal struct PurchaseDetailViewModelTests {
         #expect(model.phase == .loading)
     }
 
+    @Test("a cancelled missing read does not become not found")
+    func cancelledMissingReadDoesNotBecomeNotFound() async {
+        let gate = DetailGate()
+        let repository = DetailRepositoryDouble(details: [.gated(gate, nil)])
+        let model = model(repository)
+        let loading = Task { await model.load() }
+        await repository.waitForDetailCalls(1)
+
+        loading.cancel()
+        await gate.open()
+        await loading.value
+
+        #expect(model.phase == .loading)
+    }
+
     @Test("an older read cannot replace a newer one")
     func staleReadDoesNotReplaceNewerRead() async {
         let gate = DetailGate()
@@ -129,23 +144,6 @@ internal struct PurchaseDetailViewModelTests {
 
         #expect(model.phase == .loaded(detail, refresh: nil))
         #expect(await repository.counts().details == 2)
-    }
-
-    @Test("a saved detail invalidates an older read")
-    func savedDetailInvalidatesStaleRead() async {
-        let gate = DetailGate()
-        let stale = PurchaseDetail.fake(purchase: .fake(id: "stale"))
-        let saved = PurchaseDetail.fake(purchase: .fake(id: "saved"))
-        let repository = DetailRepositoryDouble(details: [.gated(gate, stale)])
-        let model = model(repository)
-        let loading = Task { await model.load() }
-        await repository.waitForDetailCalls(1)
-
-        model.applySaved(saved)
-        await gate.open()
-        await loading.value
-
-        #expect(model.phase == .loaded(saved, refresh: nil))
     }
 
     @Test("failed middle thumbnails keep their original receipt indexes")

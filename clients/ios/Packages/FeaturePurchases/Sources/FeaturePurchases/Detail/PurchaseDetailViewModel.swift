@@ -71,11 +71,19 @@ internal final class PurchaseDetailViewModel {
     }
 
     internal func applySaved(_ detail: PurchaseDetail) {
+        let keepsReceipts =
+            if case .loaded(let current, _) = phase {
+                current.receiptURIs == detail.receiptURIs
+            } else {
+                false
+            }
         invalidateRequests()
         phase = .loaded(detail, refresh: nil)
-        receiptPages = []
-        receiptFull = nil
-        openReceiptIndex = nil
+        if !keepsReceipts {
+            receiptPages = []
+            receiptFull = nil
+            openReceiptIndex = nil
+        }
     }
 
     internal func openReceipt(at index: Int) async {
@@ -107,14 +115,14 @@ internal final class PurchaseDetailViewModel {
         detailGeneration += 1
         let requestGeneration = detailGeneration
         do {
-            guard let detail = try await repository.purchaseDetail(id: id) else {
-                guard requestGeneration == detailGeneration else { return }
-                settle(.notFound, previous: previous, isRefresh: isRefresh)
-                return
-            }
+            let detail = try await repository.purchaseDetail(id: id)
             guard requestGeneration == detailGeneration else { return }
             guard !Task.isCancelled else {
                 phase = previous
+                return
+            }
+            guard let detail else {
+                settle(.notFound, previous: previous, isRefresh: isRefresh)
                 return
             }
             fullImageGeneration += 1
