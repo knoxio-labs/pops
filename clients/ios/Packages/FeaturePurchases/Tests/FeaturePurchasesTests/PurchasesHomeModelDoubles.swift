@@ -7,6 +7,7 @@ internal let homeFailureCases: [(RepositoryError, PurchasesHomeFailure)] = [
     (.unavailable, .unavailable),
     (.unauthorized, .unauthorized),
     (.contractMismatch, .contractMismatch),
+    (.conflict("already_saved"), .conflict),
     (.transport("offline"), .transport),
     (.dependencyNotBound, .dependencyNotBound),
 ]

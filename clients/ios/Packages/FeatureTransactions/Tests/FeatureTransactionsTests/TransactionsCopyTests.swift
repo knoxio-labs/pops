@@ -17,6 +17,7 @@ internal struct TransactionsCopyTests {
         .unavailable,
         .unauthorized,
         .contractMismatch,
+        .conflict("already_saved"),
         .transport("URLError -1009"),
         .dependencyNotBound,
     ]

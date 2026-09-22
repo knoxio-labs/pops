@@ -6,6 +6,7 @@ extension PurchasesHomeFailure {
         case .unavailable: "exclamationmark.icloud"
         case .unauthorized: "person.crop.circle.badge.exclamationmark"
         case .contractMismatch: "arrow.down.app"
+        case .conflict: "arrow.trianglehead.2.clockwise.rotate.90"
         case .transport: "wifi.slash"
         case .dependencyNotBound: "powerplug"
         }
@@ -16,6 +17,7 @@ extension PurchasesHomeFailure {
         case .unavailable: "Purchases is down"
         case .unauthorized: "Session ended"
         case .contractMismatch: "Update Pops"
+        case .conflict: "Purchase changed"
         case .transport: "No connection"
         case .dependencyNotBound: "Not connected"
         }
@@ -26,6 +28,7 @@ extension PurchasesHomeFailure {
         case .unavailable: "The server didn't answer."
         case .unauthorized: "Pair this phone again to see purchases."
         case .contractMismatch: "This version can't read purchases any more."
+        case .conflict: "Something changed while this screen was open."
         case .transport: "Purchases load when you're back online."
         case .dependencyNotBound: "This build has no purchases service."
         }
@@ -35,7 +38,7 @@ extension PurchasesHomeFailure {
         switch self {
         case .unavailable, .transport: .retry
         case .unauthorized: .pair
-        case .contractMismatch, .dependencyNotBound: nil
+        case .contractMismatch, .conflict, .dependencyNotBound: nil
         }
     }
 }

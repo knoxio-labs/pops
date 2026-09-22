@@ -15,9 +15,10 @@ public enum RepositoryError: Error, Hashable, Sendable {
     /// The response did not match what this build expects. An old app meeting a
     /// newer contract lands here rather than showing half a screen.
     case contractMismatch
-    /// The write collided with state already on file. The payload preserves the server's
-    /// machine-readable reason because a locked purchase and a stale edit require different
-    /// recovery flows; retrying the same input will not resolve either one.
+    /// The write collided with something already on file: a repeated idempotency key, or a
+    /// receipt whose checksum already belongs to a purchase. The payload preserves the server's
+    /// machine-readable reason for domain-specific recovery. Retrying the same input cannot get
+    /// past a conflict, unlike a transport failure.
     case conflict(String)
     /// The request never got an answer. The payload is a diagnostic, not
     /// something to show a user.

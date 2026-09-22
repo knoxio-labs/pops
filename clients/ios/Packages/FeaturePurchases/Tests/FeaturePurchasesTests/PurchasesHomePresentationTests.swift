@@ -8,8 +8,8 @@ import Testing
 internal struct PurchasesHomePresentationTests {
     @Test("every repository failure has its own symbol and title")
     func failuresStayDistinct() {
-        #expect(Set(PurchasesHomeFailure.allCases.map(\.symbol)).count == 5)
-        #expect(Set(PurchasesHomeFailure.allCases.map(\.title)).count == 5)
+        #expect(Set(PurchasesHomeFailure.allCases.map(\.symbol)).count == 6)
+        #expect(Set(PurchasesHomeFailure.allCases.map(\.title)).count == 6)
     }
 
     @Test("failure actions only offer a step that can help")
@@ -18,7 +18,19 @@ internal struct PurchasesHomePresentationTests {
         #expect(PurchasesHomeFailure.transport.action == .retry)
         #expect(PurchasesHomeFailure.unauthorized.action == .pair)
         #expect(PurchasesHomeFailure.contractMismatch.action == nil)
+        #expect(PurchasesHomeFailure.conflict.action == nil)
         #expect(PurchasesHomeFailure.dependencyNotBound.action == nil)
+    }
+
+    @Test("conflict copy does not suggest a connection or app-version failure")
+    func conflictCopy() {
+        #expect(
+            PurchasesHomeFailure.conflict.message
+                == "Something changed while this screen was open.")
+        #expect(PurchasesHomeFailure.conflict.message != PurchasesHomeFailure.transport.message)
+        #expect(
+            PurchasesHomeFailure.conflict.message
+                != PurchasesHomeFailure.contractMismatch.message)
     }
 
     @Test("purchase count uses singular and plural copy")
