@@ -4,11 +4,13 @@ import {
   DETAIL_OPERATION_ID,
   LIST_OPERATION_ID,
   MANUAL_OPERATION_ID,
+  MONTH_SUMMARY_OPERATION_ID,
   PURCHASES_PILLAR_ID,
   UPLOAD_OPERATION_ID,
   detailRoute,
   listRoute,
   manualRoute,
+  monthSummaryRoute,
   purchasesRegistryEntry,
   readPurchasesContract,
   seededPurchases,
@@ -51,10 +53,14 @@ describe('the purchases contract this stub serves', () => {
     ).toThrow(new RegExp(`declares no ${MANUAL_OPERATION_ID}`, 'u'));
   });
 
-  it('declares the list and detail operations the bfm reads through', () => {
+  it('declares the list, detail and summary operations the bfm reads through', () => {
     const contract = readPurchasesContract();
     expect(listRoute(contract)).toEqual({ method: 'GET', path: '/purchases' });
     expect(detailRoute(contract)).toEqual({ method: 'GET', path: '/purchases/{id}' });
+    expect(monthSummaryRoute(contract)).toEqual({
+      method: 'GET',
+      path: '/analytics/month-summary',
+    });
   });
 });
 
@@ -91,10 +97,11 @@ describe('the purchases registry entry', () => {
     ]);
   });
 
-  it('names the list and detail queries it now answers', () => {
+  it('names the list, detail and summary queries it now answers', () => {
     expect(entry.manifest.routes.queries).toEqual([
       `purchases.${LIST_OPERATION_ID}`,
       `purchases.${DETAIL_OPERATION_ID}`,
+      `purchases.${MONTH_SUMMARY_OPERATION_ID}`,
     ]);
   });
 });
@@ -272,6 +279,58 @@ describe('the purchases stub', () => {
       const body = await (await fetch(`${stub.url}/purchases`)).json();
       expect(body.total).toBe(101);
       expect(body.items).toHaveLength(100);
+    } finally {
+      await stub.close();
+    }
+  });
+
+  it('serves the current and previous month figures the home screen needs', async () => {
+    const stub = await startPurchasesStub();
+    try {
+      const answered = await fetch(`${stub.url}/analytics/month-summary?month=2026-09`);
+
+      expect(answered.status).toBe(200);
+      expect(await answered.json()).toEqual({
+        month: '2026-09',
+        totals: [
+          {
+            currency: 'AUD',
+            orderCount: 1,
+            accounting: {
+              totalCents: 1250,
+              matchedCents: 0,
+              awaitingImportCents: 1250,
+              residualCents: 0,
+              refundedCents: 0,
+              netSpendCents: 1250,
+            },
+          },
+        ],
+        purchaseCount: 1,
+        previousMonthTotals: [
+          {
+            currency: 'AUD',
+            orderCount: 1,
+            accounting: {
+              totalCents: 4599,
+              matchedCents: 4599,
+              awaitingImportCents: 0,
+              residualCents: 0,
+              refundedCents: 0,
+              netSpendCents: 4599,
+            },
+          },
+        ],
+        unmatchedCount: 1,
+        merchantLeaders: [
+          {
+            merchant: { resolution: 'name', entityId: null, name: 'Corner Store' },
+            currency: 'AUD',
+            netSpendCents: 1250,
+            orderCount: 1,
+          },
+        ],
+      });
     } finally {
       await stub.close();
     }

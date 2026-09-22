@@ -1,8 +1,9 @@
 # UI-level flows
 
 The only tests in this client that exercise a screen the way somebody holding
-the phone does — everything else stops at the view model. One happy path, five
-recoveries, one second feature and Inventory, each starting from an unpaired launch:
+the phone does — everything else stops at the view model. They cover pairing,
+recoveries, receipts, purchase browsing and Inventory, each starting from an
+unpaired launch:
 
 | Flow                                            | What it proves                                                                                                                                                                                                                                                                                                     |
 | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -14,6 +15,7 @@ recoveries, one second feature and Inventory, each starting from an unpaired lau
 | `root-contract-mismatch-reads-differently.yaml` | A pillar answering something unreadable reads as a different sentence from `unavailable`, not the same one.                                                                                                                                                                                                        |
 | `receipt-capture-says-there-is-no-camera.yaml`  | A second usable feature earns a tab, and the screen behind it explains the camera it cannot open instead of offering one.                                                                                                                                                                                          |
 | `receipt-manual-entry.yaml`                     | A hand-entered purchase reaches the editable form with no camera, saves for real, and comes back as the saved result screen.                                                                                                                                                                                       |
+| `purchases-home-archive-detail.yaml`            | Purchases loads its month figure and archive counts, filters Unmatched, opens a complete detail, then pages All through its oldest month.                                                                                                                                                                          |
 | `inventory-smoke.yaml`                          | Inventory downloads from the real inventory pillar, then creates a place and an item, moves it, discards it and undoes the discard, each write landing on the phone first and draining to the pillar; then creates a place while every relayed sync request fails and sees it drain once the pillar answers again. |
 
 ## Running them
@@ -144,8 +146,10 @@ wait on and is not: it is mapped from XCUITest's `hasFocus`, the focus engine's
 notion, which reads false on a SwiftUI `TextField` that is holding the
 keyboard.
 
-The rows the flows expect come from `scripts/ios-e2e/transactions-fixture.mjs`.
-Changing a description or an account there fails them, which is the point.
+The transaction rows the flows expect come from
+`scripts/ios-e2e/transactions-fixture.mjs`. Purchase rows and month figures
+come from `scripts/ios-e2e/purchases-stub.mjs`. Changing a merchant, account or
+amount there fails the flow that reads it, which is the point.
 
 ## The seams the recovery flows throw
 
