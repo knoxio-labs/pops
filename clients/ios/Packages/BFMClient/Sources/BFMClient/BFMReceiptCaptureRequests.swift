@@ -59,6 +59,8 @@ extension BFMReceiptCaptureRepository {
     static func saveDraftItem(from line: ReceiptSaveLine) -> SaveReceiptDraftItem {
         SaveReceiptDraftItem(
             lineTotalCents: line.lineTotalCents,
+            listPriceAsserted: line.listPriceAsserted,
+            listPriceCents: line.listPriceCents,
             name: line.name,
             notes: line.notes,
             quantity: line.quantity,
@@ -69,6 +71,8 @@ extension BFMReceiptCaptureRepository {
     static func manualItem(from line: ReceiptSaveLine) -> CreateManualPurchaseItem {
         CreateManualPurchaseItem(
             lineTotalCents: line.lineTotalCents,
+            listPriceAsserted: line.listPriceAsserted,
+            listPriceCents: line.listPriceCents,
             name: line.name,
             notes: line.notes,
             quantity: line.quantity,

@@ -32,8 +32,8 @@ const receipt = (over: Partial<ExtractedReceipt> = {}): ExtractedReceipt =>
     tax: null,
     discounts: [],
     lines: [
-      { description: 'Timber Pine DAR 42x19', amount: '$12.50' },
-      { description: 'Screws Bugle 8g 65mm', amount: '$15.00' },
+      { description: 'Timber Pine DAR 42x19', amount: '$12.50', listAmount: null },
+      { description: 'Screws Bugle 8g 65mm', amount: '$15.00', listAmount: null },
     ],
     unreadable: [],
     ...over,
@@ -72,15 +72,15 @@ describe('receiptToPurchase invariants', () => {
   const refusedReadings: Record<GateFailure['kind'], ExtractedReceipt> = {
     'unreadable-total': receipt({ total: 'unreadable smudge' }),
     'unreadable-line': receipt({
-      lines: [{ description: 'Timber Pine DAR 42x19', amount: 'a smear of ink' }],
+      lines: [{ description: 'Timber Pine DAR 42x19', amount: 'a smear of ink', listAmount: null }],
     }),
     'no-lines': receipt({ total: '$0.00', lines: [] }),
     // The arithmetic agrees — 30.00 less 2.50 is the stated 27.50 — and the
     // total is money. Nothing but the verdict objects to this one.
     'negative-line': receipt({
       lines: [
-        { description: 'Timber Pine DAR 42x19', amount: '$30.00' },
-        { description: 'Member discount', amount: '-$2.50' },
+        { description: 'Timber Pine DAR 42x19', amount: '$30.00', listAmount: null },
+        { description: 'Member discount', amount: '-$2.50', listAmount: null },
       ],
     }),
     'sum-mismatch': receipt({ total: '$99.00' }),
@@ -232,8 +232,8 @@ describe('the line items', () => {
     const items = mapped({
       total: '$27.50',
       lines: [
-        { description: 'Bolt M8', amount: '$12.50', quantity: 5 },
-        { description: 'Screws Bugle 8g 65mm', amount: '$15.00' },
+        { description: 'Bolt M8', amount: '$12.50', quantity: 5, listAmount: null },
+        { description: 'Screws Bugle 8g 65mm', amount: '$15.00', listAmount: null },
       ],
     }).items;
     expect(items?.[0]).toMatchObject({ quantity: 5, lineTotalCents: 1250, unitPriceCents: 250 });
@@ -245,7 +245,12 @@ describe('the line items', () => {
     const items = mapped({
       total: '$12.50',
       lines: [
-        { description: 'Sand Washed 20kg', amount: '$12.50', unitNote: '0.202 kg NET @ $2.90/kg' },
+        {
+          description: 'Sand Washed 20kg',
+          amount: '$12.50',
+          unitNote: '0.202 kg NET @ $2.90/kg',
+          listAmount: null,
+        },
       ],
     }).items;
     expect(items?.[0]).toMatchObject({ quantity: 1, unitPriceCents: 1250 });
@@ -254,6 +259,26 @@ describe('the line items', () => {
     // classification at all.
     expect(items?.[0]?.notes).toEqual(['0.202 kg NET @ $2.90/kg']);
     expect(items?.[0]?.tags).toBeUndefined();
+  });
+
+  it('carries a stated list price, unasserted', () => {
+    const items = mapped({
+      total: '$3.50',
+      lines: [{ description: 'Bolt M8', amount: '$3.50', listAmount: '$5.50' }],
+    }).items;
+    expect(items?.[0]).toMatchObject({ listPriceCents: 550 });
+    expect(items?.[0]?.listPriceAsserted).toBeUndefined();
+  });
+
+  it('drops an unparseable list price rather than failing the whole line', () => {
+    // The figure is checked against nothing, unlike `amount`, so losing it
+    // silently is the correct failure mode.
+    const items = mapped({
+      total: '$3.50',
+      lines: [{ description: 'Bolt M8', amount: '$3.50', listAmount: 'n/a' }],
+    }).items;
+    expect(items).toHaveLength(1);
+    expect(items?.[0]?.listPriceCents).toBeNull();
   });
 });
 
@@ -537,8 +562,8 @@ describe('the checksum', () => {
       mapped({
         total: '$27.50',
         lines: [
-          { description: 'Timber Pine DAR 42x19', amount: '$12.50' },
-          { description: 'Screws Bugle 8g 65mm (corrected)', amount: '$15.00' },
+          { description: 'Timber Pine DAR 42x19', amount: '$12.50', listAmount: null },
+          { description: 'Screws Bugle 8g 65mm (corrected)', amount: '$15.00', listAmount: null },
         ],
       }).checksum
     );

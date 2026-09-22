@@ -59,6 +59,21 @@ describe('parseExtraction', () => {
     expect(() => parseExtraction('{ "total": "$1.00", }')).toThrow(ExtractionShapeError);
   });
 
+  it('carries a line listAmount through unchanged', () => {
+    const result = parseExtraction(
+      JSON.stringify({
+        ...MINIMAL_RECEIPT,
+        lines: [{ description: 'Timber', amount: '$27.50', listAmount: '5.50' }],
+      })
+    );
+    expect(result.lines[0]?.listAmount).toBe('5.50');
+  });
+
+  it('defaults a line with no listAmount to null, backward compatible with every existing fixture', () => {
+    const result = parseExtraction(JSON.stringify(MINIMAL_RECEIPT));
+    expect(result.lines[0]?.listAmount).toBeNull();
+  });
+
   it('reports every schema fault at once rather than only the first', () => {
     try {
       parseExtraction(JSON.stringify({ total: '$1.00', lines: [] }));

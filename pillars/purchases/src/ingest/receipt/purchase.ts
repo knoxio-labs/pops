@@ -99,6 +99,11 @@ export function toItem(
   // as one — but one is what it costs, and the qualifier that says
   // otherwise is kept verbatim beside it.
   const quantity = line.quantity ?? 1;
+  // Unparseable is not fatal here the way an unparseable `amount` is: the
+  // charged figure is checked against the receipt's stated total by the
+  // gate, but a list price is checked against nothing, so losing it silently
+  // is the correct failure mode rather than dropping the whole line.
+  const listPriceCents = line.listAmount == null ? null : parseAmountCents(line.listAmount, locale);
   return {
     name: line.description,
     quantity,
@@ -107,6 +112,9 @@ export function toItem(
     // Prose the receipt printed, not a classification of the product. The
     // model is never asked what the thing IS — see `extraction.ts`.
     notes: line.unitNote === undefined ? [] : [line.unitNote],
+    // A machine reading, never a human assertion at this point in the
+    // pipeline — `listPriceAsserted` is deliberately omitted.
+    listPriceCents,
   };
 }
 

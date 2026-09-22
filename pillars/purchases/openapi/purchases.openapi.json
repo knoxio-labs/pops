@@ -1255,6 +1255,24 @@
                                 "minimum": -9007199254740991,
                                 "type": "integer"
                               },
+                              "listPrice": {
+                                "additionalProperties": false,
+                                "nullable": true,
+                                "properties": {
+                                  "confirmedAt": {
+                                    "nullable": true,
+                                    "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+                                    "type": "string"
+                                  },
+                                  "valueCents": {
+                                    "maximum": 9007199254740991,
+                                    "minimum": 0,
+                                    "type": "integer"
+                                  }
+                                },
+                                "required": ["valueCents", "confirmedAt"],
+                                "type": "object"
+                              },
                               "merchantCategory": {
                                 "nullable": true,
                                 "type": "string"
@@ -1338,6 +1356,7 @@
                               "promotionalPrice",
                               "gstApplicable",
                               "kind",
+                              "listPrice",
                               "createdAt"
                             ],
                             "type": "object"
@@ -2473,6 +2492,15 @@
                           "minimum": -9007199254740991,
                           "type": "integer"
                         },
+                        "listPriceAsserted": {
+                          "type": "boolean"
+                        },
+                        "listPriceCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "nullable": true,
+                          "type": "integer"
+                        },
                         "merchantCategory": {
                           "nullable": true,
                           "type": "string"
@@ -3046,6 +3074,24 @@
                                 "minimum": -9007199254740991,
                                 "type": "integer"
                               },
+                              "listPrice": {
+                                "additionalProperties": false,
+                                "nullable": true,
+                                "properties": {
+                                  "confirmedAt": {
+                                    "nullable": true,
+                                    "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+                                    "type": "string"
+                                  },
+                                  "valueCents": {
+                                    "maximum": 9007199254740991,
+                                    "minimum": 0,
+                                    "type": "integer"
+                                  }
+                                },
+                                "required": ["valueCents", "confirmedAt"],
+                                "type": "object"
+                              },
                               "merchantCategory": {
                                 "nullable": true,
                                 "type": "string"
@@ -3129,6 +3175,7 @@
                               "promotionalPrice",
                               "gstApplicable",
                               "kind",
+                              "listPrice",
                               "createdAt"
                             ],
                             "type": "object"
@@ -3715,6 +3762,15 @@
                           "minimum": -9007199254740991,
                           "type": "integer"
                         },
+                        "listPriceAsserted": {
+                          "type": "boolean"
+                        },
+                        "listPriceCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "nullable": true,
+                          "type": "integer"
+                        },
                         "merchantCategory": {
                           "nullable": true,
                           "type": "string"
@@ -4274,6 +4330,24 @@
                                 "minimum": -9007199254740991,
                                 "type": "integer"
                               },
+                              "listPrice": {
+                                "additionalProperties": false,
+                                "nullable": true,
+                                "properties": {
+                                  "confirmedAt": {
+                                    "nullable": true,
+                                    "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+                                    "type": "string"
+                                  },
+                                  "valueCents": {
+                                    "maximum": 9007199254740991,
+                                    "minimum": 0,
+                                    "type": "integer"
+                                  }
+                                },
+                                "required": ["valueCents", "confirmedAt"],
+                                "type": "object"
+                              },
                               "merchantCategory": {
                                 "nullable": true,
                                 "type": "string"
@@ -4357,6 +4431,7 @@
                               "promotionalPrice",
                               "gstApplicable",
                               "kind",
+                              "listPrice",
                               "createdAt"
                             ],
                             "type": "object"
@@ -5151,6 +5226,24 @@
                                 "minimum": -9007199254740991,
                                 "type": "integer"
                               },
+                              "listPrice": {
+                                "additionalProperties": false,
+                                "nullable": true,
+                                "properties": {
+                                  "confirmedAt": {
+                                    "nullable": true,
+                                    "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+                                    "type": "string"
+                                  },
+                                  "valueCents": {
+                                    "maximum": 9007199254740991,
+                                    "minimum": 0,
+                                    "type": "integer"
+                                  }
+                                },
+                                "required": ["valueCents", "confirmedAt"],
+                                "type": "object"
+                              },
                               "merchantCategory": {
                                 "nullable": true,
                                 "type": "string"
@@ -5234,6 +5327,7 @@
                               "promotionalPrice",
                               "gstApplicable",
                               "kind",
+                              "listPrice",
                               "createdAt"
                             ],
                             "type": "object"
@@ -6016,6 +6110,24 @@
                           "minimum": -9007199254740991,
                           "type": "integer"
                         },
+                        "listPrice": {
+                          "additionalProperties": false,
+                          "nullable": true,
+                          "properties": {
+                            "confirmedAt": {
+                              "nullable": true,
+                              "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+                              "type": "string"
+                            },
+                            "valueCents": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            }
+                          },
+                          "required": ["valueCents", "confirmedAt"],
+                          "type": "object"
+                        },
                         "merchantCategory": {
                           "nullable": true,
                           "type": "string"
@@ -6099,6 +6211,7 @@
                         "promotionalPrice",
                         "gstApplicable",
                         "kind",
+                        "listPrice",
                         "createdAt"
                       ],
                       "type": "object"
@@ -7029,6 +7142,24 @@
                                         "minimum": -9007199254740991,
                                         "type": "integer"
                                       },
+                                      "listPrice": {
+                                        "additionalProperties": false,
+                                        "nullable": true,
+                                        "properties": {
+                                          "confirmedAt": {
+                                            "nullable": true,
+                                            "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+                                            "type": "string"
+                                          },
+                                          "valueCents": {
+                                            "maximum": 9007199254740991,
+                                            "minimum": 0,
+                                            "type": "integer"
+                                          }
+                                        },
+                                        "required": ["valueCents", "confirmedAt"],
+                                        "type": "object"
+                                      },
                                       "merchantCategory": {
                                         "nullable": true,
                                         "type": "string"
@@ -7112,6 +7243,7 @@
                                       "promotionalPrice",
                                       "gstApplicable",
                                       "kind",
+                                      "listPrice",
                                       "createdAt"
                                     ],
                                     "type": "object"
@@ -7486,6 +7618,12 @@
                                     "minLength": 1,
                                     "type": "string"
                                   },
+                                  "listAmount": {
+                                    "default": null,
+                                    "minLength": 1,
+                                    "nullable": true,
+                                    "type": "string"
+                                  },
                                   "quantity": {
                                     "exclusiveMinimum": true,
                                     "maximum": 9007199254740991,
@@ -7497,7 +7635,7 @@
                                     "type": "string"
                                   }
                                 },
-                                "required": ["description", "amount"],
+                                "required": ["description", "amount", "listAmount"],
                                 "type": "object"
                               },
                               "type": "array"
@@ -7920,6 +8058,15 @@
                         "lineTotalCents": {
                           "maximum": 9007199254740991,
                           "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "listPriceAsserted": {
+                          "type": "boolean"
+                        },
+                        "listPriceCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "nullable": true,
                           "type": "integer"
                         },
                         "merchantCategory": {
@@ -8488,6 +8635,24 @@
                                 "minimum": -9007199254740991,
                                 "type": "integer"
                               },
+                              "listPrice": {
+                                "additionalProperties": false,
+                                "nullable": true,
+                                "properties": {
+                                  "confirmedAt": {
+                                    "nullable": true,
+                                    "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2})(?:\\.\\d{1,9})?(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+                                    "type": "string"
+                                  },
+                                  "valueCents": {
+                                    "maximum": 9007199254740991,
+                                    "minimum": 0,
+                                    "type": "integer"
+                                  }
+                                },
+                                "required": ["valueCents", "confirmedAt"],
+                                "type": "object"
+                              },
                               "merchantCategory": {
                                 "nullable": true,
                                 "type": "string"
@@ -8571,6 +8736,7 @@
                               "promotionalPrice",
                               "gstApplicable",
                               "kind",
+                              "listPrice",
                               "createdAt"
                             ],
                             "type": "object"
@@ -9229,6 +9395,15 @@
                                   "lineTotalCents": {
                                     "maximum": 9007199254740991,
                                     "minimum": -9007199254740991,
+                                    "type": "integer"
+                                  },
+                                  "listPriceAsserted": {
+                                    "type": "boolean"
+                                  },
+                                  "listPriceCents": {
+                                    "maximum": 9007199254740991,
+                                    "minimum": 0,
+                                    "nullable": true,
                                     "type": "integer"
                                   },
                                   "merchantCategory": {

@@ -77,8 +77,30 @@ function itemRow(ctx: IngestContext, input: CreateItemInput, position: number): 
     lineTotalCents: input.lineTotalCents,
     allocatedShippingCents: input.allocatedShippingCents ?? 0,
     allocatedAdjustmentCents: input.allocatedAdjustmentCents ?? 0,
+    ...listPriceColumns(input, ctx.now),
     ...productFacts(input, ctx.now),
     createdAt: ctx.now,
+  };
+}
+
+/**
+ * `listPriceCents` and the confirmation that says whether to trust it.
+ *
+ * Unlike `kind`, presence of a value does not itself mean asserted — a `WAS`
+ * price read off the paper is present and still only proposed. A null price
+ * can never carry a confirmation, matched to the DB CHECK, so a caller that
+ * got this wrong fails loudly here rather than throwing a raw SQLite
+ * constraint error.
+ */
+function listPriceColumns(
+  input: CreateItemInput,
+  now: string
+): Pick<PurchaseItemInsert, 'listPriceCents' | 'listPriceConfirmedAt'> {
+  const listPriceCents = input.listPriceCents ?? null;
+  const confirmed = listPriceCents !== null && input.listPriceAsserted === true;
+  return {
+    listPriceCents,
+    listPriceConfirmedAt: confirmed ? now : null,
   };
 }
 

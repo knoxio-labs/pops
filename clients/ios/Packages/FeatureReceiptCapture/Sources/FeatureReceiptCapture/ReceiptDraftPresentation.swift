@@ -98,11 +98,7 @@ extension ReceiptDraftPresentation {
                 amount: ReceiptDraftValue(extracted: line.amount),
                 quantity: ReceiptDraftValue(extracted: line.quantity.map(String.init)),
                 unitNote: ReceiptDraftValue(extracted: line.unitNote),
-                // `ExtractedReceiptLine` carries no list price, so this is
-                // always empty for the reader to fill. Asking the model for
-                // the `WAS` figure is the server half of POPS-3652; the field
-                // exists first so there is somewhere to put it.
-                listPrice: ReceiptDraftValue(extracted: nil)
+                listPrice: ReceiptDraftValue(extracted: line.listAmount)
             )
         }
     }

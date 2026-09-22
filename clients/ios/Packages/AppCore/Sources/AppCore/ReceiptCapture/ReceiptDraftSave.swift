@@ -85,15 +85,26 @@ public struct ReceiptSaveLine: Hashable, Sendable {
     public let unitPriceCents: Int
     public let lineTotalCents: Int
     public let notes: [String]
+    /// What the line would have cost at the merchant's normal price. `nil`
+    /// when nothing stated one.
+    public let listPriceCents: Int?
+    /// True when the reviewer typed or confirmed ``listPriceCents`` rather
+    /// than leaving an extracted reading untouched. Computed once, at the
+    /// mapping layer that builds this from a `ReceiptDraftLine`, and forwarded
+    /// verbatim by every layer below it.
+    public let listPriceAsserted: Bool
 
     public init(
-        name: String, quantity: Int?, unitPriceCents: Int, lineTotalCents: Int, notes: [String]
+        name: String, quantity: Int?, unitPriceCents: Int, lineTotalCents: Int, notes: [String],
+        listPriceCents: Int?, listPriceAsserted: Bool
     ) {
         self.name = name
         self.quantity = quantity
         self.unitPriceCents = unitPriceCents
         self.lineTotalCents = lineTotalCents
         self.notes = notes
+        self.listPriceCents = listPriceCents
+        self.listPriceAsserted = listPriceAsserted
     }
 }
 

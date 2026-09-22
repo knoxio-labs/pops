@@ -361,6 +361,28 @@ describe('item constraints', () => {
     expect(() => toPurchaseDetailBody(detail)).toThrow(/with no scheme/i);
   });
 
+  it('rejects a list price confirmation with no value under it', () => {
+    // The same total-pair CHECK `kind_confirmed_at` carries: a confirmation
+    // cannot exist without a value, so there is no "confirmed unknown" list
+    // price for a consumer to mishandle.
+    const id = createPurchase(
+      opened.db,
+      amazonOrder({
+        checksum: 'bad-list-price',
+        sourceOrderId: 'bad-list-price',
+        items: [{ name: 'x', unitPriceCents: 100, lineTotalCents: 100 }],
+      })
+    );
+    expect(() =>
+      opened.raw
+        .prepare(
+          `UPDATE purchase_items SET list_price_cents = NULL, list_price_confirmed_at = '2026-08-12T00:00:00.000Z'
+           WHERE purchase_id = ?`
+        )
+        .run(id)
+    ).toThrow(/CHECK constraint failed/i);
+  });
+
   it('rejects a receipt-character boolean that is neither stated value', () => {
     expect(() =>
       createPurchase(

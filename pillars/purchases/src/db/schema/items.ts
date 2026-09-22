@@ -118,6 +118,33 @@ export const purchaseItems = sqliteTable(
     allocatedAdjustmentCents: integer('allocated_adjustment_cents').notNull().default(0),
 
     /**
+     * What the line would have cost at the merchant's normal price — a
+     * receipt's `WAS $5.50` beside a `$3.50` that was actually charged.
+     * `unitPriceCents`/`lineTotalCents` stay what was paid; this is the
+     * separate fact of what was saved, and it is a fused value-plus-provenance
+     * pair like `kind`/`kindConfirmedAt` on this same table.
+     *
+     * Unlike `kind`, a non-null value does NOT itself mean asserted: a `WAS`
+     * price read by the vision model or parsed by the Woolworths adapter is
+     * present and still only proposed. The write path needs an explicit
+     * assert signal (`CreateItemInput.listPriceAsserted`) rather than
+     * inferring one from presence, because presence here means "read off the
+     * paper", not "vouched for".
+     *
+     * Null means no source stated one — the charged figure is checked
+     * against the receipt's stated total by the gate, but nothing checks a
+     * list price against anything, so its absence carries no other meaning.
+     */
+    listPriceCents: integer('list_price_cents'),
+    /**
+     * When {@link listPriceCents} stopped being a proposal. Null means a
+     * reading proposed the figure; non-null means a person in the review
+     * step is vouching for it. The CHECK holds the pair total the same way
+     * `kindConfirmedAt`'s does: no confirmation can exist without a value.
+     */
+    listPriceConfirmedAt: text('list_price_confirmed_at'),
+
+    /**
      * The merchant's own category string, kept verbatim. Not a POPS tag,
      * and not a condition — see {@link merchantCondition}.
      *

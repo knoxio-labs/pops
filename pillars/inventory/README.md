@@ -317,3 +317,12 @@ that exist:
 
 Everything else is documented by the file header comments in the directory
 itself.
+
+## Storage box measurements
+
+The `storage_box` catalogue type keeps capacity in litres and load limit in
+kilograms as optional measurements. Its outside dimensions are separate
+width, height and depth measurements, each accepting millimetres, centimetres
+or metres. Duty rating is a closed choice of Light, Standard, Heavy Duty and
+Extra Heavy Duty; stackability remains a yes-or-no field. The former free-text
+Footprint field is removed by migration `0016_storage_box_dimensions`.

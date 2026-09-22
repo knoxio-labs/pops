@@ -37,13 +37,13 @@
                     lines: [
                         ExtractedReceiptLine(
                             description: "ZCHEETOS C&B BALLS", amount: "4.00", quantity: nil,
-                            unitNote: nil),
+                            unitNote: nil, listAmount: nil),
                         ExtractedReceiptLine(
                             description: "ZSOFT TCH BLK TRAY", amount: "12.00", quantity: nil,
-                            unitNote: nil),
+                            unitNote: nil, listAmount: nil),
                         ExtractedReceiptLine(
                             description: "ZIRONING BOARD", amount: "15.00", quantity: nil,
-                            unitNote: nil),
+                            unitNote: nil, listAmount: nil),
                     ],
                     unreadableNotes: [],
                     taxIncluded: false,

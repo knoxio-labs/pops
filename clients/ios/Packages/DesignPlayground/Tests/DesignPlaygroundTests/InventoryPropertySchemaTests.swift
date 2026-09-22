@@ -58,6 +58,25 @@ internal struct InventoryPropertySchemaTests {
         #expect(InventoryPropertyValue.flag(false).display == "No")
         #expect(InventoryPropertyValue.text("centre positive").display == "centre positive")
     }
+
+    @Test("storage boxes use individual dimensions and a closed duty rating")
+    func storageBoxTemplate() {
+        let fields = InventoryPropertyTemplates.container.fields
+
+        #expect(
+            fields.map(\.key) == [
+                "Capacity", "Width", "Height", "Depth", "Load limit", "Duty rating", "Stackable",
+            ])
+        #expect(
+            fields.filter { ["Width", "Height", "Depth"].contains($0.key) }.allSatisfy {
+                $0.kindLabel == "Measurement" && $0.unit == "cm"
+            })
+        #expect(
+            fields.first { $0.key == "Duty rating" }?.choices == [
+                "Light", "Standard", "Heavy Duty", "Extra Heavy Duty",
+            ])
+        #expect(!fields.contains { $0.key == "Footprint" })
+    }
 }
 
 /// What a property search can and cannot reach, which is the consequence the
@@ -94,7 +113,8 @@ internal struct InventoryPropertyClauseTests {
 
     @Test("a numeric clause cannot compare a value that is not a number")
     func numericComparisonNeedsANumber() {
-        let clause = InventoryPropertyClause(key: "Footprint", comparison: .atLeast, value: "10")
+        let clause = InventoryPropertyClause(
+            key: "Duty rating", comparison: .atLeast, value: "10")
 
         #expect(!clause.matches(InventoryPropertyFixtures.box))
         #expect(

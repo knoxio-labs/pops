@@ -15,8 +15,8 @@ const receipt = (over: Partial<ExtractedReceipt> = {}): ExtractedReceipt =>
     tax: null,
     discounts: [],
     lines: [
-      { description: 'Timber Pine DAR 42x19', amount: '$12.50' },
-      { description: 'Screws Bugle 8g 65mm', amount: '$15.00' },
+      { description: 'Timber Pine DAR 42x19', amount: '$12.50', listAmount: null },
+      { description: 'Screws Bugle 8g 65mm', amount: '$15.00', listAmount: null },
     ],
     unreadable: [],
     ...over,
@@ -83,8 +83,8 @@ describe('a reading that does not', () => {
     const result = gateExtraction(
       receipt({
         lines: [
-          { description: 'Timber Pine DAR 42x19', amount: '$12.50' },
-          { description: 'Screws Bugle 8g 65mm', amount: 'SMUDGED' },
+          { description: 'Timber Pine DAR 42x19', amount: '$12.50', listAmount: null },
+          { description: 'Screws Bugle 8g 65mm', amount: 'SMUDGED', listAmount: null },
         ],
       })
     );
@@ -135,7 +135,7 @@ describe('a reading that does not', () => {
     const result = gateExtraction(
       receipt({
         total: 'TOTAL',
-        lines: [{ description: 'Something', amount: 'SMUDGED' }],
+        lines: [{ description: 'Something', amount: 'SMUDGED', listAmount: null }],
         unreadable: ['bottom corner missing'],
       })
     );
@@ -157,8 +157,8 @@ describe('what the gate cannot catch, and does not pretend to', () => {
     const result = gateExtraction(
       receipt({
         lines: [
-          { description: 'aaaa', amount: '$12.50' },
-          { description: 'bbbb', amount: '$15.00' },
+          { description: 'aaaa', amount: '$12.50', listAmount: null },
+          { description: 'bbbb', amount: '$15.00', listAmount: null },
         ],
       })
     );
@@ -175,8 +175,8 @@ describe('a discount the model filed among the lines', () => {
     const misfiled = receipt({
       total: '$8.00',
       lines: [
-        { description: 'Timber Pine DAR 42x19', amount: '$10.00' },
-        { description: 'MEMBER DISCOUNT', amount: '-$2.00' },
+        { description: 'Timber Pine DAR 42x19', amount: '$10.00', listAmount: null },
+        { description: 'MEMBER DISCOUNT', amount: '-$2.00', listAmount: null },
       ],
     });
 
@@ -196,7 +196,7 @@ describe('a discount the model filed among the lines', () => {
     const proper = receipt({
       total: '$8.00',
       discounts: ['$2.00'],
-      lines: [{ description: 'Timber Pine DAR 42x19', amount: '$10.00' }],
+      lines: [{ description: 'Timber Pine DAR 42x19', amount: '$10.00', listAmount: null }],
     });
 
     const result = gateExtraction(proper);
@@ -216,8 +216,8 @@ describe('the two conventions for stated tax', () => {
       total: '$30.00',
       tax: '$2.73',
       lines: [
-        { description: 'Towel Bath Ribbed', amount: '$12.00' },
-        { description: 'Storage Basket', amount: '$18.00' },
+        { description: 'Towel Bath Ribbed', amount: '$12.00', listAmount: null },
+        { description: 'Storage Basket', amount: '$18.00', listAmount: null },
       ],
     });
 
@@ -234,8 +234,8 @@ describe('the two conventions for stated tax', () => {
       total: '$32.73',
       tax: '$2.73',
       lines: [
-        { description: 'Towel Bath Ribbed', amount: '$12.00' },
-        { description: 'Storage Basket', amount: '$18.00' },
+        { description: 'Towel Bath Ribbed', amount: '$12.00', listAmount: null },
+        { description: 'Storage Basket', amount: '$18.00', listAmount: null },
       ],
     });
 
@@ -251,8 +251,8 @@ describe('the two conventions for stated tax', () => {
       total: '$40.00',
       tax: '$2.73',
       lines: [
-        { description: 'Towel Bath Ribbed', amount: '$12.00' },
-        { description: 'Storage Basket', amount: '$18.00' },
+        { description: 'Towel Bath Ribbed', amount: '$12.00', listAmount: null },
+        { description: 'Storage Basket', amount: '$18.00', listAmount: null },
       ],
     });
 
@@ -405,9 +405,9 @@ describe('delivery, in its own term', () => {
       total: '$37.45',
       shipping: '$9.95',
       lines: [
-        { description: 'Timber Pine DAR 42x19', amount: '$12.50' },
-        { description: 'Screws Bugle 8g 65mm', amount: '$15.00' },
-        { description: 'Delivery', amount: '$9.95' },
+        { description: 'Timber Pine DAR 42x19', amount: '$12.50', listAmount: null },
+        { description: 'Screws Bugle 8g 65mm', amount: '$15.00', listAmount: null },
+        { description: 'Delivery', amount: '$9.95', listAmount: null },
       ],
     });
 
@@ -519,9 +519,9 @@ describe('an extraction error of exactly the stated tax', () => {
       tax: '$9.95',
       shipping: '$9.95',
       lines: [
-        { description: 'Timber Pine DAR 42x19', amount: '$12.50' },
-        { description: 'Screws Bugle 8g 65mm', amount: '$15.00' },
-        { description: 'Delivery', amount: '$9.95' },
+        { description: 'Timber Pine DAR 42x19', amount: '$12.50', listAmount: null },
+        { description: 'Screws Bugle 8g 65mm', amount: '$15.00', listAmount: null },
+        { description: 'Delivery', amount: '$9.95', listAmount: null },
       ],
     });
 
@@ -569,8 +569,8 @@ describe('an extraction error of exactly the stated tax', () => {
       total: '$110.00',
       tax: '$10.00',
       lines: [
-        { description: 'Timber Pine DAR 42x19', amount: '$100.00' },
-        { description: 'Screws Bugle 8g 65mm', amount: '$10.00' },
+        { description: 'Timber Pine DAR 42x19', amount: '$100.00', listAmount: null },
+        { description: 'Screws Bugle 8g 65mm', amount: '$10.00', listAmount: null },
       ],
     });
 
@@ -594,9 +594,9 @@ describe('an extraction error of exactly the stated tax', () => {
       total: '$37.45',
       tax: '$9.95',
       lines: [
-        { description: 'Timber Pine DAR 42x19', amount: '$12.50' },
-        { description: 'Screws Bugle 8g 65mm', amount: '$15.00' },
-        { description: 'Sales Tax', amount: '$9.95' },
+        { description: 'Timber Pine DAR 42x19', amount: '$12.50', listAmount: null },
+        { description: 'Screws Bugle 8g 65mm', amount: '$15.00', listAmount: null },
+        { description: 'Sales Tax', amount: '$9.95', listAmount: null },
       ],
     });
 
@@ -615,8 +615,8 @@ describe('an extraction error of exactly the stated tax', () => {
       total: '$19.90',
       tax: '$1.81',
       lines: [
-        { description: 'Coffee Flat White', amount: '$9.95' },
-        { description: 'Coffee Flat White', amount: '$9.95' },
+        { description: 'Coffee Flat White', amount: '$9.95', listAmount: null },
+        { description: 'Coffee Flat White', amount: '$9.95', listAmount: null },
       ],
     });
 
@@ -645,9 +645,9 @@ describe('an extraction error of exactly the stated tax', () => {
       total: '$110.00',
       tax: '$10.00',
       lines: [
-        { description: 'Timber Pine DAR 42x19', amount: '$90.00' },
-        { description: 'Screws Bugle 8g 65mm', amount: '$10.00' },
-        { description: 'Screws Bugle 8g 65mm', amount: '$10.00' },
+        { description: 'Timber Pine DAR 42x19', amount: '$90.00', listAmount: null },
+        { description: 'Screws Bugle 8g 65mm', amount: '$10.00', listAmount: null },
+        { description: 'Screws Bugle 8g 65mm', amount: '$10.00', listAmount: null },
       ],
     });
 
@@ -726,8 +726,8 @@ describe('a fee the merchant added', () => {
       tax: null,
       surcharges: ['0.12'],
       lines: [
-        { description: 'BeefChuckCass CW', amount: '17.56' },
-        { description: 'ChsBlockColby500g', amount: '6.49' },
+        { description: 'BeefChuckCass CW', amount: '17.56', listAmount: null },
+        { description: 'ChsBlockColby500g', amount: '6.49', listAmount: null },
       ],
     });
 
@@ -742,7 +742,7 @@ describe('a fee the merchant added', () => {
       total: '$30.00',
       tax: null,
       surcharges: ['0.12'],
-      lines: [{ description: 'BeefChuckCass CW', amount: '17.56' }],
+      lines: [{ description: 'BeefChuckCass CW', amount: '17.56', listAmount: null }],
     });
 
     expect(gateExtraction(wrong).admissible).toBe(false);

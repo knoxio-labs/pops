@@ -12,11 +12,14 @@ extension ReceiptSaveLine {
         quantity: Int? = nil,
         unitPriceCents: Int = 1000,
         lineTotalCents: Int = 1000,
-        notes: [String] = []
+        notes: [String] = [],
+        listPriceCents: Int? = nil,
+        listPriceAsserted: Bool = false
     ) -> ReceiptSaveLine {
         ReceiptSaveLine(
             name: name, quantity: quantity, unitPriceCents: unitPriceCents,
-            lineTotalCents: lineTotalCents, notes: notes)
+            lineTotalCents: lineTotalCents, notes: notes, listPriceCents: listPriceCents,
+            listPriceAsserted: listPriceAsserted)
     }
 }
 

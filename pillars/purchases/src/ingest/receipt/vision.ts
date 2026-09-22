@@ -170,6 +170,12 @@ export const PROMPT_FIELDS: Readonly<Record<string, string>> = {
     'a whole number ONLY when the receipt states a count. Omit it otherwise — omitted means the source did not say',
   unitNote:
     'any qualifier on the price, verbatim: "2 @ $3.00", "0.202 kg NET @ $2.90/kg". Omit if absent',
+  listAmount:
+    'the pre-discount, normal price printed beside a promotional one for this line — a ' +
+    'struck-through price, or a "WAS $X" notation. The amount only, same rule as "amount" ' +
+    'and "shipping" above. Null when the receipt prints no such second price for this line. ' +
+    'Do NOT confuse this with "unitNote", which is a per-unit qualifier like "2 @ $3.00", not ' +
+    'a second price',
   unreadable:
     'a short note for anything you could not read — a torn corner, a smudged line, a garbled section. An empty array if the receipt is fully legible',
 };
