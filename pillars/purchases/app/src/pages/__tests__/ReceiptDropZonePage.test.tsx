@@ -350,7 +350,7 @@ describe('ReceiptDropZonePage — staging what is sent', () => {
     expect(sentParts()).toHaveLength(1);
   });
 
-  it('stops at the parts one receipt may have, and says how many were left out', async () => {
+  it('uploads every selected page beyond eight parts', async () => {
     receiptUploadMock.mockResolvedValue(created());
     const user = renderPage();
 
@@ -361,18 +361,12 @@ describe('ReceiptDropZonePage — staging what is sent', () => {
       )
     );
 
-    const alert = await screen.findByRole('alert');
-    expect(
-      within(alert).getByText(
-        enAUPurchases['receipts.problem.tooMany']
-          .replace('{{max}}', '8')
-          .replace('{{dropped}}', '1')
-      )
-    ).toBeVisible();
+    expect(await screen.findByText('frame-8.jpg')).toBeVisible();
+    expect(screen.queryByRole('alert')).toBeNull();
 
     await submit(user);
-    expect(sentParts()).toHaveLength(8);
-    expect(sentParts().at(-1)?.dataBase64).toBe(btoa('f7'));
+    expect(sentParts()).toHaveLength(9);
+    expect(sentParts().at(-1)?.dataBase64).toBe(btoa('f8'));
   });
 
   it('offers nothing to send until something is staged', () => {

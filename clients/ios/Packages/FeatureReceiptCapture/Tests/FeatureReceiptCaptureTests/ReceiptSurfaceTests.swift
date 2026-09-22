@@ -203,7 +203,6 @@ internal struct ReceiptCaptureProblemCopyTests {
 
         #expect(Set(messages).count == messages.count)
     }
-
 }
 
 /// The one layout decision on these screens that is not the framework's.

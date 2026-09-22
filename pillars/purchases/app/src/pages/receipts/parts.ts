@@ -1,15 +1,6 @@
 import type { ReceiptMediaType, ReceiptPart } from './types.js';
 
 /**
- * How many parts one receipt may be sent as.
- *
- * The contract enforces this bound and the generated client carries no schema
- * to read it from, so staging a ninth part here would produce a refusal with
- * nothing on screen explaining which parts were the problem.
- */
-export const MAX_RECEIPT_PARTS = 8;
-
-/**
  * One part staged in the browser, before the upload.
  *
  * `name` is null for a pasted body, which has no file behind it to name.
