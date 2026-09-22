@@ -141,8 +141,10 @@ jobs:
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
         run: |
           node ../../scripts/ci/prune-testflight-certificates.mjs
-          mise run release:testflight Pops
-          mise run release:testflight PopsPlayground
+          status=0
+          mise run release:testflight Pops || status=1
+          mise run release:testflight PopsPlayground || status=1
+          exit "$status"
 
       - name: Remove the App Store Connect key
         if: always()
