@@ -486,8 +486,6 @@ export function countBudgetLines(source) {
 /**
  * @param {string[]} args
  * @param {string} cwd
- * @param {boolean} [preferLocal] Resolve a local stacked parent before a
- * remote-tracking branch with the same name.
  * @returns {string}
  */
 function git(args, cwd) {
@@ -663,6 +661,8 @@ function verdictStatus(count, max, headroom) {
  * @param {string} params.cwd
  * @param {string} params.baseRef Local or `origin/<ref>`-resolved branch name.
  * @param {number} params.headroom
+ * @param {boolean} [params.preferLocal] Resolve `baseRef` locally before its
+ * remote-tracking counterpart.
  * @param {boolean} [params.preferLocal] Resolve `baseRef` locally before its
  * remote-tracking counterpart.
  * @param {string} [params.headRef] The commit to project — a ref or a raw
