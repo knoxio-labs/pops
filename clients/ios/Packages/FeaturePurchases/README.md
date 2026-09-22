@@ -2,6 +2,8 @@
 
 Purchase browsing, receipt capture and the shared draft form.
 
+`PurchasesFlowView` is the Purchases tab. It owns one navigation stack rooted at the saved-purchase list and resolves feature-local archive and detail routes. Cross-feature links use the public `PurchasesRoute` and install `purchasesDestinations(dependencies:)` on their own stack. The current detail and archive destinations draw `ContentUnavailableView`; the available repository surface exposes only the paged list. The existing Receipts tab continues to own capture.
+
 ## Capture and the draft form
 
 Photograph or paste a receipt and let the purchases pillar's model turn it into a purchase.

@@ -371,4 +371,10 @@ internal struct ContentViewFeatureSwitchingWiringTests {
         // lives in one place.
         #expect(Self.contentViewSource.contains("screen(for: feature)"))
     }
+
+    @Test("Purchases uses its flow while Receipts keeps the capture screen")
+    func purchasesAndReceiptsKeepTheirOwnRoots() {
+        #expect(Self.contentViewSource.contains("PurchasesFlowView(dependencies: dependencies)"))
+        #expect(Self.contentViewSource.contains("ReceiptCaptureView(model:"))
+    }
 }

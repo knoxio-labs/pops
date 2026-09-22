@@ -1,5 +1,6 @@
 import AppCore
 import FeatureInventory
+import FeaturePurchases
 import Testing
 
 @testable import Pops
@@ -27,8 +28,9 @@ internal struct ContentViewTabSelectionTests {
     @Test("a chosen feature the BFM still offers stays shown")
     func aChosenFeatureStays() {
         let shown = ContentView.shownFeature(
-            chosen: Self.receipts, available: [Self.transactions, Self.accounts, Self.receipts])
-        #expect(shown == Self.receipts)
+            chosen: FeaturePurchases.feature,
+            available: [Self.transactions, FeaturePurchases.feature, Self.receipts])
+        #expect(shown == FeaturePurchases.feature)
     }
 
     @Test("a chosen feature a reload removed falls back to the first")
