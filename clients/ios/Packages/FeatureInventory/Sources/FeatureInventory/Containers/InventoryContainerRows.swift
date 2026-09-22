@@ -19,7 +19,7 @@ internal struct InventoryOpenContainersPanel: View {
                     .padding(.bottom, PopsSpacing.sm)
                 ForEach(containers) { container in
                     row(container)
-                        .transition(InventoryMotion.row)
+                        .transition(PopsMotion.row)
                     if container.id != containers.last?.id {
                         PopsDivider()
                             .padding(.leading, PopsSize.touchTarget + PopsSpacing.md)
@@ -49,7 +49,7 @@ internal struct InventoryOpenContainersPanel: View {
                     .foregroundStyle(Color.popsMutedForeground)
                     .contentTransition(.numericText(value: Double(itemCount)))
             }
-            .inventoryMotion(value: containers.map(\.id))
+            .popsMotion(value: containers.map(\.id))
         } icon: {
             Image(systemName: "shippingbox.fill")
                 .font(.popsTitle)

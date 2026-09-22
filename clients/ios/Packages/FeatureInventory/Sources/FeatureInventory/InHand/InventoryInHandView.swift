@@ -33,14 +33,14 @@ internal struct InventoryInHandView: View {
     private func content(_ page: InventoryInHandPage) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: PopsSpacing.lg) {
-                InventoryPageTitle(title: "In hand")
+                PopsPageTitle(title: "In hand")
                 if page.isOffline {
                     InventoryLocationNoticeLine(
                         symbol: InventorySymbol.offline.system, tint: .popsWarning,
                         text: "Offline. Changes wait on this phone.")
                 }
                 if page.items.isEmpty {
-                    InventoryCentredLine(text: "Nothing in hand")
+                    PopsCentredLine(text: "Nothing in hand")
                 } else {
                     InventoryInHandRows(
                         items: page.items, selection: $selection,
@@ -49,13 +49,13 @@ internal struct InventoryInHandView: View {
                         loadPhoto: { await model.thumbnail($0) })
                 }
             }
-            .inventoryMotion(value: page.items.map(\.id))
+            .popsMotion(value: page.items.map(\.id))
             .padding(.horizontal, PopsSpacing.lg)
             .padding(.bottom, PopsSpacing.xxl)
         }
         .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
         .inventoryGroundedSwipeActionsContainer()
-        .inventoryCollapsingTitle("In hand")
+        .popsCollapsingTitle("In hand")
         .background(Color.popsBackground)
         .inHandChrome(page, model: model, selection: $selection, moving: $moving)
     }
@@ -93,15 +93,15 @@ internal struct InventoryInHandSkeleton: View {
     internal var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: PopsSpacing.lg) {
-                InventoryPageTitle(title: "In hand")
-                InventoryLocationListSkeleton(rows: 5)
+                PopsPageTitle(title: "In hand")
+                PopsListSkeleton(rows: 5)
             }
             .padding(.horizontal, PopsSpacing.lg)
         }
         .scrollDisabled(true)
         .background(Color.popsBackground)
         .navigationTitle("In hand")
-        .inventoryTitleDisplay(large: false)
+        .popsTitleDisplay(large: false)
         .toolbar {
             ToolbarItem(placement: .principal) { Text("In hand").hidden() }
         }

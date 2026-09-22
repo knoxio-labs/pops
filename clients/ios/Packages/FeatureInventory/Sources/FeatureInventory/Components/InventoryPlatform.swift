@@ -17,17 +17,6 @@ extension View {
         #endif
     }
 
-    /// Sets the navigation title's display mode, which is an iOS-only
-    /// modifier.
-    @ViewBuilder
-    internal func inventoryTitleDisplay(large: Bool) -> some View {
-        #if os(iOS)
-            navigationBarTitleDisplayMode(large ? .large : .inline)
-        #else
-            self
-        #endif
-    }
-
     /// The platform's glass button: every verb that is not the screen's one
     /// call to action.
     @ViewBuilder

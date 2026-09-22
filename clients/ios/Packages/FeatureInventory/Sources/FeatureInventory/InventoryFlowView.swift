@@ -33,7 +33,7 @@ public struct InventoryFlowView: View {
         NavigationStack(path: $path) {
             InventoryDashboardView(model: model)
                 .navigationTitle(FeatureInventory.displayName)
-                .inventoryTitleDisplay(large: true)
+                .popsTitleDisplay(large: true)
                 .safeAreaInset(edge: .bottom, alignment: .trailing) {
                     if model.dashboard.map({ !$0.isFirstRun }) ?? false {
                         controls

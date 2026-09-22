@@ -1,20 +1,6 @@
 import DesignSystem
 import SwiftUI
 
-/// One muted line where a list would be.
-internal struct InventoryLocationEmptyLine: View {
-    internal let text: String
-
-    internal var body: some View {
-        Text(text)
-            .font(.popsBody)
-            .foregroundStyle(Color.popsMutedForeground)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, PopsSpacing.md)
-            .transition(.opacity)
-    }
-}
-
 /// A place in the dashboard's row idiom: the place glyph, its name over what
 /// it holds, and the items it holds in all.
 ///
@@ -65,6 +51,6 @@ internal struct InventoryLocationNoticeLine: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, PopsSpacing.md)
-        .inventoryFadeIn()
+        .popsFadeIn()
     }
 }

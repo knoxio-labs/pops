@@ -59,7 +59,7 @@ internal struct InventorySearchBar<FilterOptions: View>: View {
         .frame(minHeight: height)
         .inventoryGlass(in: Capsule())
         .contentShape(Capsule())
-        .inventoryMotion(value: query.isEmpty)
+        .popsMotion(value: query.isEmpty)
     }
 
     @ViewBuilder private var trailingButton: some View {
@@ -110,7 +110,7 @@ internal struct InventorySearchBar<FilterOptions: View>: View {
             circle(filled: isFiltered) {
                 Image(systemName: "line.3.horizontal.decrease")
             }
-            .inventoryMotion(value: isFiltered)
+            .popsMotion(value: isFiltered)
         }
         .accessibilityLabel("Filter")
         .accessibilityValue(filterSummary.isEmpty ? "None" : filterSummary)
@@ -121,7 +121,7 @@ internal struct InventorySearchBar<FilterOptions: View>: View {
             circle(filled: isFiltered) {
                 Image(systemName: "line.3.horizontal.decrease")
             }
-            .inventoryMotion(value: isFiltered)
+            .popsMotion(value: isFiltered)
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Filter")

@@ -6,6 +6,12 @@ That is the entire point of it. The real visual design is being produced elsewhe
 
 The **structural** primitives under `Sources/DesignSystem/Primitives/` are a different matter, and they are decisions. `PopsStatusHeader` says an outcome is announced by a glyph and a colour before it is announced by a sentence; `PopsActionBar` says a screen's primary action does not scroll away; `PopsButton`'s prominent variant says at most one action per screen is the one to press; `PopsPhoto` says a picture the app is holding is drawn as a plate that is the same object, at the same size, whether or not there is a picture in it yet. Those hold across a repaint — a redesign changes what they look like, not that the app has them.
 
+## Shared list and page primitives
+
+`PopsListPanel` composes `popsPanelInsets()` and `popsPanelGround()`. A feature that draws selection highlights between the content and surface uses those modifiers separately, in that order. `PopsDividedRows` supplies stable identifiable rows and inset separators without imposing a surface.
+
+`PopsSectionHeader`, `PopsCentredLine`, `PopsEmptyLine`, `PopsNotice` and `PopsListSkeleton` share the list's headings, placeholders and local status. `PopsPageTitle` pairs with `popsCollapsingTitle` for a title drawn inside the scroll view. `PopsMotion` provides shared springs and transitions; `popsMotion` and `popsFadeIn` respect Reduce Motion. `popsTitleDisplay` contains the iOS navigation-title platform difference.
+
 ## The two rules
 
 Both apply to every module under `Packages/` and to `App/`, not just to this one.

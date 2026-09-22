@@ -17,7 +17,7 @@ extension InventoryDashboardView {
 
                 ForEach(dashboard.openContainers) { container in
                     containerRow(container)
-                        .transition(InventoryMotion.row)
+                        .transition(PopsMotion.row)
                     if container.id != dashboard.openContainers.last?.id {
                         PopsDivider()
                             .padding(.leading, PopsSize.touchTarget + PopsSpacing.md)
@@ -80,7 +80,7 @@ extension InventoryDashboardView {
                 VStack(spacing: PopsSpacing.zero) {
                     ForEach(activities) { activity in
                         activityRow(activity)
-                            .transition(InventoryMotion.row)
+                            .transition(PopsMotion.row)
                         if activity.id != activities.last?.id {
                             PopsDivider()
                                 .padding(.leading, PopsSize.touchTarget + PopsSpacing.md)

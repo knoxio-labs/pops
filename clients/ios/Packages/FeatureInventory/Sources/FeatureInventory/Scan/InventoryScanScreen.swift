@@ -44,7 +44,7 @@ internal struct InventoryScanScreen: View {
             }
         }
         .safeAreaInset(edge: .top) { controls }
-        .inventoryMotion(InventoryMotion.smooth, value: model.phase)
+        .popsMotion(PopsMotion.smooth, value: model.phase)
         .task { await model.start() }
         .onAppear { shown = true }
         .onChange(of: model.didRouteElsewhere) { _, routed in

@@ -18,7 +18,7 @@ internal struct InventoryInHandRows: View {
             VStack(spacing: PopsSpacing.zero) {
                 ForEach(items) { item in
                     row(item)
-                        .transition(InventoryMotion.row)
+                        .transition(PopsMotion.row)
                     if item.id != items.last?.id {
                         PopsDivider()
                             .padding(.leading, PopsSize.touchTarget + PopsSpacing.md)

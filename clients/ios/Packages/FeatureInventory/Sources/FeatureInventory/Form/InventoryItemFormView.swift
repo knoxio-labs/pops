@@ -22,7 +22,7 @@ internal struct InventoryItemFormView: View {
         NavigationStack {
             content
                 .navigationTitle(model.mode.title)
-                .inventoryTitleDisplay(large: false)
+                .popsTitleDisplay(large: false)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
                         InventoryFormCancelButton(
@@ -99,7 +99,7 @@ internal struct InventoryItemFormView: View {
             identity
             labelling
         }
-        .inventoryMotion(value: model.draft.typeKey)
+        .popsMotion(value: model.draft.typeKey)
         .inventoryInsetGroupedList()
         .task(id: model.draft.code.value) { await model.checkCode() }
     }

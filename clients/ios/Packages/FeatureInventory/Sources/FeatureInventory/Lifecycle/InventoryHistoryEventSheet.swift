@@ -28,7 +28,7 @@ internal struct InventoryHistoryEventSheet: View {
             }
             .inventoryInsetGroupedList()
             .navigationTitle(entry.verb)
-            .inventoryTitleDisplay(large: false)
+            .popsTitleDisplay(large: false)
             .toolbar {
                 if entry.isUndoable {
                     ToolbarItem(placement: .cancellationAction) {

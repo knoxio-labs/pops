@@ -68,7 +68,7 @@ internal struct InventoryTypeArrivedSheet: View {
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
             .navigationTitle("New type: \(prompt.typeName)")
-            .inventoryTitleDisplay(large: false)
+            .popsTitleDisplay(large: false)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Not now") { Task { await model.close() } }
@@ -80,7 +80,7 @@ internal struct InventoryTypeArrivedSheet: View {
                         Text("Apply to \(model.ticked.count)")
                             .contentTransition(.numericText(value: Double(model.ticked.count)))
                     }
-                    .inventoryMotion(value: model.ticked)
+                    .popsMotion(value: model.ticked)
                     .inventoryProminentGlassButton()
                     .tint(.popsInventory)
                     .disabled(model.ticked.isEmpty)

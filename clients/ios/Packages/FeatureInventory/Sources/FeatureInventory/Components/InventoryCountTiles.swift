@@ -27,7 +27,7 @@ internal struct InventoryCountTiles: View {
             ForEach(tiles) { tile($0) }
         }
         .fixedSize(horizontal: false, vertical: true)
-        .inventoryMotion(value: tiles)
+        .popsMotion(value: tiles)
     }
 
     private func tile(_ tile: InventoryCountTile) -> some View {

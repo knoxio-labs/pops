@@ -38,14 +38,14 @@ internal struct InventoryOpenContainersView: View {
                     .transition(.opacity)
                 }
             }
-            .inventoryMotion(value: containers.map(\.id))
+            .popsMotion(value: containers.map(\.id))
             .padding(.horizontal, PopsSpacing.lg)
             .padding(.bottom, PopsSpacing.xxl)
         }
         .inventoryGroundedSwipeActionsContainer()
         .background(Color.popsBackground)
         .navigationTitle("Open containers")
-        .inventoryTitleDisplay(large: true)
+        .popsTitleDisplay(large: true)
         .tint(.popsInventory)
     }
 }
@@ -74,7 +74,7 @@ internal struct InventoryOpenContainersSkeleton: View {
         .scrollDisabled(true)
         .background(Color.popsBackground)
         .navigationTitle("Open containers")
-        .inventoryTitleDisplay(large: true)
+        .popsTitleDisplay(large: true)
         .accessibilityLabel("Loading")
     }
 }

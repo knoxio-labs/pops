@@ -63,7 +63,7 @@ internal struct InventoryContainerEmptiedCard: View {
             }
         }
         .padding(.vertical, PopsSpacing.xs)
-        .transition(InventoryMotion.row)
+        .transition(PopsMotion.row)
     }
 }
 

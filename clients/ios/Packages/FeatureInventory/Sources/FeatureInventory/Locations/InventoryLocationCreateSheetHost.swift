@@ -54,7 +54,7 @@ internal struct InventoryLocationCreateSheetHost: View {
         NavigationStack {
             content()
                 .navigationTitle("New place")
-                .inventoryTitleDisplay(large: false)
+                .popsTitleDisplay(large: false)
         }
         .presentationDetents([.medium, .large])
         .tint(.popsInventory)

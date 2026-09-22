@@ -170,20 +170,11 @@ internal struct InventoryGroundedListPanel<Content: View>: View {
 
     internal var body: some View {
         content
-            .padding(.horizontal, PopsSpacing.md)
-            .padding(.vertical, PopsSpacing.sm)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .popsPanelInsets()
             .inventorySelectionHighlights(
                 edgeInset: PopsSpacing.sm, in: RoundedRectangle(cornerRadius: PopsRadius.card)
             )
-            .background {
-                RoundedRectangle(cornerRadius: PopsRadius.card)
-                    .fill(Color.popsSurface)
-            }
-            .overlay {
-                RoundedRectangle(cornerRadius: PopsRadius.card)
-                    .stroke(Color.popsSeparator, lineWidth: PopsBorder.hairline)
-            }
+            .popsPanelGround()
     }
 }
 

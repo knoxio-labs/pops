@@ -36,7 +36,7 @@ internal struct InventorySyncView: View {
         }
         .task(id: generation) { await model.observe() }
         .navigationTitle("Sync")
-        .inventoryTitleDisplay(large: true)
+        .popsTitleDisplay(large: true)
         .background(Color.popsBackground)
         .tint(.popsInventory)
         .inventoryUndoCapsule($model.undoOffer) { offer in
@@ -75,8 +75,8 @@ internal struct InventorySyncView: View {
                 if !page.waitingRows.isEmpty { waiting(page) }
                 if !page.resolvedRows.isEmpty { resolved(page) }
             }
-            .inventoryMotion(value: page)
-            .inventoryMotion(value: showsResolved)
+            .popsMotion(value: page)
+            .popsMotion(value: showsResolved)
             .padding(.horizontal, PopsSpacing.lg)
             .padding(.bottom, PopsSpacing.xxl)
         }

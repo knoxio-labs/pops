@@ -38,7 +38,7 @@ internal struct InventoryRepairScreen: View {
             if code.isEmpty { code = newValue ?? "" }
         }
         .navigationTitle("Repair")
-        .inventoryTitleDisplay(large: false)
+        .popsTitleDisplay(large: false)
         .tint(.popsInventory)
         .inventoryWriteFailureAlerts($model.failure)
     }
@@ -49,8 +49,8 @@ internal struct InventoryRepairScreen: View {
                 notice(row)
                 details(row)
             }
-            .inventoryMotion(value: model.outcome)
-            .inventoryMotion(value: chosen)
+            .popsMotion(value: model.outcome)
+            .popsMotion(value: chosen)
             .padding(.horizontal, PopsSpacing.lg)
             .padding(.bottom, PopsSpacing.xxl)
         }

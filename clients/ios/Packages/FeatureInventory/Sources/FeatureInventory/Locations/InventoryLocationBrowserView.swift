@@ -57,7 +57,7 @@ internal struct InventoryLocationBrowserView: View {
         @Bindable var model = model
         return ScrollView {
             VStack(alignment: .leading, spacing: PopsSpacing.lg) {
-                InventoryPageTitle(title: "Locations")
+                PopsPageTitle(title: "Locations")
                 if let offline = model.offlineLine {
                     InventoryLocationNoticeLine(
                         symbol: InventorySymbol.offline.system, tint: .popsWarning, text: offline)
@@ -74,12 +74,12 @@ internal struct InventoryLocationBrowserView: View {
                     }
                 }
             }
-            .inventoryMotion(value: model.query.isEmpty)
-            .inventoryMotion(value: sort)
+            .popsMotion(value: model.query.isEmpty)
+            .popsMotion(value: sort)
             .padding(.horizontal, PopsSpacing.lg)
             .padding(.bottom, PopsSpacing.xxl)
         }
-        .inventoryCollapsingTitle("Locations")
+        .popsCollapsingTitle("Locations")
         .background(Color.popsBackground)
         .sheet(isPresented: $model.creating) {
             InventoryLocationCreateSheet(tree: tree, runner: model.runner)
@@ -105,9 +105,9 @@ internal struct InventoryLocationBrowserView: View {
     @ViewBuilder private func rootList(_ tree: InventoryLocationTree) -> some View {
         let places = roots(of: tree)
         if places.isEmpty {
-            InventoryLocationEmptyLine(text: "No places")
+            PopsEmptyLine(text: "No places")
         } else {
-            InventoryLocationPanel(rows: places) { place in
+            InventorySelectionPanel(rows: places) { place in
                 NavigationLink(value: InventoryRoute.place(place.id)) {
                     InventoryLocationRowLabel(place: place, tree: tree)
                 }
@@ -119,11 +119,11 @@ internal struct InventoryLocationBrowserView: View {
     @ViewBuilder private func results(_ tree: InventoryLocationTree) -> some View {
         let matches = tree.matching(model.query)
         if matches.isEmpty {
-            InventoryLocationEmptyLine(text: "No places match \u{201C}\(model.query)\u{201D}")
+            PopsEmptyLine(text: "No places match \u{201C}\(model.query)\u{201D}")
         } else {
             VStack(alignment: .leading, spacing: PopsSpacing.xs) {
-                InventoryLocationSectionHeader(title: "Places", trailing: "\(matches.count)")
-                InventoryLocationPanel(rows: matches) { place in
+                PopsSectionHeader(title: "Places", trailing: "\(matches.count)")
+                InventorySelectionPanel(rows: matches) { place in
                     NavigationLink(value: InventoryRoute.place(place.id)) {
                         InventoryLocationRowLabel(place: place, tree: tree, showsPath: true)
                     }
@@ -135,6 +135,6 @@ internal struct InventoryLocationBrowserView: View {
 
     private var firstRun: some View {
         InventoryAddPlaceButton { model.creating = true }
-            .inventoryFadeIn()
+            .popsFadeIn()
     }
 }

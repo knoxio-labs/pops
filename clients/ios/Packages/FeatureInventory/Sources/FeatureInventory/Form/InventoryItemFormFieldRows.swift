@@ -76,7 +76,7 @@ internal struct InventoryFormChoiceList: View {
             }
         }
         .navigationTitle(field.label)
-        .inventoryTitleDisplay(large: false)
+        .popsTitleDisplay(large: false)
         .modifier(
             InventoryFormChoiceSearch(
                 isSearchable: InventoryFormChoices.isSearchable(field), query: $query))

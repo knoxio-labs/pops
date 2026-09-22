@@ -20,7 +20,7 @@ internal struct InventoryItemDetailActionRow: View {
                             .transition(.opacity.combined(with: .scale))
                     }
                 }
-                .inventoryMotion(value: actions)
+                .popsMotion(value: actions)
             }
             .frame(maxWidth: .infinity)
             .padding(.horizontal, PopsSpacing.lg)

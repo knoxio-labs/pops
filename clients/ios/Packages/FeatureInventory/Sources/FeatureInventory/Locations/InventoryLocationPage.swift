@@ -68,8 +68,9 @@ internal struct InventoryLocationPage: View {
             }
             .padding(.horizontal, PopsSpacing.lg)
             .padding(.bottom, PopsSpacing.xxl)
-            .inventoryMotion(value: model.shownNotice)
+            .popsMotion(value: model.shownNotice)
         }
+        .popsCollapsingTitle(place.name)
         .background(Color.popsBackground)
         .tint(.popsInventory)
         .pageChrome(tree, place, model: model, newName: $newName)
@@ -223,12 +224,14 @@ internal struct InventoryLocationPageSkeleton: View {
             }
             .popsShimmer()
             .padding(.horizontal, PopsSpacing.lg)
-            InventoryLocationListSkeleton(rows: 5)
+            PopsListSkeleton(rows: 5)
                 .padding(.horizontal, PopsSpacing.lg)
                 .padding(.top, PopsSpacing.lg)
         }
         .scrollDisabled(true)
         .background(Color.popsBackground)
+        .navigationTitle("")
+        .popsTitleDisplay(large: false)
         .accessibilityLabel("Loading")
     }
 

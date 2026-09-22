@@ -43,9 +43,9 @@ internal struct InventoryContainerContentsSection: View {
                 InventoryItemDetailGroup { rows }
             }
         }
-        .inventoryMotion(value: contents.entries.map(\.id))
-        .inventoryMotion(value: filter)
-        .inventoryMotion(value: model.isFull(profile))
+        .popsMotion(value: contents.entries.map(\.id))
+        .popsMotion(value: filter)
+        .popsMotion(value: model.isFull(profile))
         .inventoryGroundedSwipeActionsContainer()
     }
 
@@ -65,7 +65,7 @@ internal struct InventoryContainerContentsSection: View {
         } else {
             ForEach(visible) { entry in
                 row(entry)
-                    .transition(InventoryMotion.row)
+                    .transition(PopsMotion.row)
             }
         }
     }

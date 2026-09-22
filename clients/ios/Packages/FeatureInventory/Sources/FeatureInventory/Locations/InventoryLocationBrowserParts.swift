@@ -33,20 +33,20 @@ internal struct InventoryLocationBrowserSkeleton: View {
     internal var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: PopsSpacing.lg) {
-                InventoryPageTitle(title: "Locations")
+                PopsPageTitle(title: "Locations")
                 VStack(alignment: .leading, spacing: PopsSpacing.lg) {
                     InventoryCountTilesSkeleton(count: 3)
                     Capsule().fill(Color.popsSurface).frame(height: fieldHeight)
                 }
                 .popsShimmer()
-                InventoryLocationListSkeleton(rows: 5)
+                PopsListSkeleton(rows: 5)
             }
             .padding(.horizontal, PopsSpacing.lg)
         }
         .scrollDisabled(true)
         .background(Color.popsBackground)
         .navigationTitle("Locations")
-        .inventoryTitleDisplay(large: false)
+        .popsTitleDisplay(large: false)
         .toolbar {
             ToolbarItem(placement: .principal) { Text("Locations").hidden() }
         }

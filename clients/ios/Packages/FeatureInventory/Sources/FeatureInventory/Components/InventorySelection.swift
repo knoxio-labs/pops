@@ -100,12 +100,12 @@ internal struct InventorySelectableMark<Mark: View>: View {
         }
         .frame(width: size, height: size)
         .contentShape(.rect)
-        .animation(reduceMotion ? nil : InventoryMotion.snappy, value: row.isSelecting)
-        .animation(reduceMotion ? nil : InventoryMotion.snappy, value: row.isSelected)
+        .animation(reduceMotion ? nil : PopsMotion.snappy, value: row.isSelecting)
+        .animation(reduceMotion ? nil : PopsMotion.snappy, value: row.isSelected)
     }
 
     private var transition: AnyTransition {
-        reduceMotion ? .opacity : InventoryMotion.flip
+        reduceMotion ? .opacity : PopsMotion.flip
     }
 }
 
@@ -152,7 +152,7 @@ private struct InventorySelectableRowModifier: ViewModifier {
                     }
                 }
                 .accessibilityAddTraits(isSelected ? .isSelected : [])
-                .inventoryMotion(value: isSelected)
+                .popsMotion(value: isSelected)
         } else {
             content
         }

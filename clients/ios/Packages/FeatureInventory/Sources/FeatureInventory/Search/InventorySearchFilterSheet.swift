@@ -49,7 +49,7 @@ internal struct InventorySearchFilterSheet: View {
             }
             .inventoryInsetGroupedList()
             .navigationTitle("Filters")
-            .inventoryTitleDisplay(large: false)
+            .popsTitleDisplay(large: false)
             .inventoryLeadingBarItem {
                 Button("Reset") { filter = InventorySearchFilter() }
                     .disabled(!filter.isActive)
@@ -58,7 +58,7 @@ internal struct InventorySearchFilterSheet: View {
                 Button("Done") { dismiss() }
                     .inventoryProminentGlassButton()
             }
-            .inventoryMotion(value: filter)
+            .popsMotion(value: filter)
         }
         .tint(.popsInventory)
         .presentationDetents([.large])

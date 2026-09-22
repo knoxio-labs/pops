@@ -50,9 +50,9 @@ internal struct InventoryLocationCreateSheet: View {
                 }
             }
             .inventoryInsetGroupedList()
-            .inventoryMotion(value: isNamed)
+            .popsMotion(value: isNamed)
             .navigationTitle("New place")
-            .inventoryTitleDisplay(large: false)
+            .popsTitleDisplay(large: false)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }

@@ -6,6 +6,10 @@ Inventory on the phone. `InventoryFlowView` is the Inventory tab: it owns the ta
 
 The package depends on `AppCore` and `DesignSystem` only, and reads and writes through `AppCore`'s `InventoryStore`. `ModuleBoundaryTests` in `AppCore` holds that line.
 
+## Shared visual primitives
+
+List panels, divided rows, section labels, quiet lines, notices, skeletons, page titles and motion come from `DesignSystem`. Inventory keeps its selection decoration between `popsPanelInsets()` and `popsPanelGround()`; `InventorySelectionPanel` combines that decoration with `PopsDividedRows`. Promoting these primitives preserves the panel's modifier order and its appearance.
+
 ## One query per screen
 
 The dashboard observes a single `InventoryQuery` built from several of the store's reads (`InventoryDashboardReader.swift`), not one stream per section. Every section therefore comes from the same state: putting something back removes it from In hand and adds it to its container's count in the same frame, and a write never has to patch the screen by hand. The view model's only state of its own is which receipt an Undo capsule reverses and the last write that failed.

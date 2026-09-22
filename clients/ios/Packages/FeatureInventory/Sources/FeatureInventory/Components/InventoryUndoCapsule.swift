@@ -76,7 +76,7 @@ private struct InventoryUndoCapsuleModifier: ViewModifier {
                     .id(offer.id)
                 }
             }
-            .inventoryMotion(value: offer?.id)
+            .popsMotion(value: offer?.id)
             .task(id: offer?.id) {
                 guard let shown = offer?.id else { return }
                 try? await Task.sleep(for: Self.window)

@@ -56,7 +56,7 @@ internal struct InventoryPlacementPickerSheet: View {
                 NavigationStack {
                     InventoryUnavailableView { generation += 1 }
                         .navigationTitle(request.title)
-                        .inventoryTitleDisplay(large: false)
+                        .popsTitleDisplay(large: false)
                 }
             case .loaded(let loaded):
                 chooser(loaded)

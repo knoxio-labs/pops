@@ -39,7 +39,7 @@ internal struct InventoryPhotoStrip: View {
                         .transition(.scale.combined(with: .opacity))
                 }
             }
-            .inventoryMotion(value: photos.map(\.id))
+            .popsMotion(value: photos.map(\.id))
             .padding(.horizontal, PopsSpacing.lg)
             .padding(.vertical, PopsSpacing.sm)
         }
