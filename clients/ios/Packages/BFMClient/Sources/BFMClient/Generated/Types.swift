@@ -3717,6 +3717,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -3839,6 +3841,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -4633,6 +4637,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -4755,6 +4761,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -5411,6 +5419,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -5637,6 +5647,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -5759,6 +5771,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -6442,6 +6456,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -6668,6 +6684,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -6790,6 +6808,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -7480,6 +7500,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -7706,6 +7728,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -7828,6 +7852,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -8750,6 +8776,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -8872,6 +8900,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -9759,6 +9789,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -9985,6 +10017,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -10107,6 +10141,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -10985,6 +11021,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -11107,6 +11145,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -11906,6 +11946,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -12132,6 +12174,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -12254,6 +12298,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -13136,6 +13182,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -13258,6 +13306,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -14805,6 +14855,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -15124,6 +15176,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -15246,6 +15300,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -15946,6 +16002,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -16172,6 +16230,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -16294,6 +16354,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -17195,6 +17257,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -17421,6 +17485,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -17543,6 +17609,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -19316,6 +19384,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -19438,6 +19508,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -22165,6 +22237,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -22287,6 +22361,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -24141,6 +24217,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -24263,6 +24341,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -25350,6 +25430,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -25472,6 +25554,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -26545,6 +26629,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -26667,6 +26753,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -27629,6 +27717,8 @@ internal enum Operations {
                         internal var orderedOn: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/receiptUri`.
                         internal var receiptUri: Swift.String?
+                        /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/receiptUris`.
+                        internal var receiptUris: [Swift.String]
                         /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/shippingCents`.
                         internal var shippingCents: Swift.Int
                         /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/source`.
@@ -27659,6 +27749,7 @@ internal enum Operations {
                         ///   - orderedAt:
                         ///   - orderedOn:
                         ///   - receiptUri:
+                        ///   - receiptUris:
                         ///   - shippingCents:
                         ///   - source:
                         ///   - status:
@@ -27679,6 +27770,7 @@ internal enum Operations {
                             orderedAt: Swift.String,
                             orderedOn: Swift.String,
                             receiptUri: Swift.String? = nil,
+                            receiptUris: [Swift.String],
                             shippingCents: Swift.Int,
                             source: Swift.String,
                             status: Swift.String,
@@ -27699,6 +27791,7 @@ internal enum Operations {
                             self.orderedAt = orderedAt
                             self.orderedOn = orderedOn
                             self.receiptUri = receiptUri
+                            self.receiptUris = receiptUris
                             self.shippingCents = shippingCents
                             self.source = source
                             self.status = status
@@ -27720,6 +27813,7 @@ internal enum Operations {
                             case orderedAt
                             case orderedOn
                             case receiptUri
+                            case receiptUris
                             case shippingCents
                             case source
                             case status
@@ -27775,6 +27869,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .receiptUri
                             )
+                            self.receiptUris = try container.decode(
+                                [Swift.String].self,
+                                forKey: .receiptUris
+                            )
                             self.shippingCents = try container.decode(
                                 Swift.Int.self,
                                 forKey: .shippingCents
@@ -27819,6 +27917,7 @@ internal enum Operations {
                                 "orderedAt",
                                 "orderedOn",
                                 "receiptUri",
+                                "receiptUris",
                                 "shippingCents",
                                 "source",
                                 "status",
@@ -28363,6 +28462,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -28485,6 +28586,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -29502,6 +29605,8 @@ internal enum Operations {
                         internal var orderedOn: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/receiptUri`.
                         internal var receiptUri: Swift.String?
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/receiptUris`.
+                        internal var receiptUris: [Swift.String]
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/shippingCents`.
                         internal var shippingCents: Swift.Int
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/source`.
@@ -29532,6 +29637,7 @@ internal enum Operations {
                         ///   - orderedAt:
                         ///   - orderedOn:
                         ///   - receiptUri:
+                        ///   - receiptUris:
                         ///   - shippingCents:
                         ///   - source:
                         ///   - status:
@@ -29552,6 +29658,7 @@ internal enum Operations {
                             orderedAt: Swift.String,
                             orderedOn: Swift.String,
                             receiptUri: Swift.String? = nil,
+                            receiptUris: [Swift.String],
                             shippingCents: Swift.Int,
                             source: Swift.String,
                             status: Swift.String,
@@ -29572,6 +29679,7 @@ internal enum Operations {
                             self.orderedAt = orderedAt
                             self.orderedOn = orderedOn
                             self.receiptUri = receiptUri
+                            self.receiptUris = receiptUris
                             self.shippingCents = shippingCents
                             self.source = source
                             self.status = status
@@ -29593,6 +29701,7 @@ internal enum Operations {
                             case orderedAt
                             case orderedOn
                             case receiptUri
+                            case receiptUris
                             case shippingCents
                             case source
                             case status
@@ -29648,6 +29757,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .receiptUri
                             )
+                            self.receiptUris = try container.decode(
+                                [Swift.String].self,
+                                forKey: .receiptUris
+                            )
                             self.shippingCents = try container.decode(
                                 Swift.Int.self,
                                 forKey: .shippingCents
@@ -29692,6 +29805,7 @@ internal enum Operations {
                                 "orderedAt",
                                 "orderedOn",
                                 "receiptUri",
+                                "receiptUris",
                                 "shippingCents",
                                 "source",
                                 "status",
@@ -30236,6 +30350,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -30358,6 +30474,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -32034,6 +32152,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -32156,6 +32276,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -32834,6 +32956,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -33060,6 +33184,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -33182,6 +33308,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -33860,6 +33988,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -33982,6 +34112,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -34208,6 +34340,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -34330,6 +34464,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -35405,6 +35541,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -35527,6 +35665,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -36517,6 +36657,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -36639,6 +36781,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -37368,6 +37512,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -37490,6 +37636,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -38034,6 +38182,8 @@ internal enum Operations {
                         internal var orderedOn: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/receiptUri`.
                         internal var receiptUri: Swift.String?
+                        /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/receiptUris`.
+                        internal var receiptUris: [Swift.String]
                         /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/shippingCents`.
                         internal var shippingCents: Swift.Int
                         /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/source`.
@@ -38064,6 +38214,7 @@ internal enum Operations {
                         ///   - orderedAt:
                         ///   - orderedOn:
                         ///   - receiptUri:
+                        ///   - receiptUris:
                         ///   - shippingCents:
                         ///   - source:
                         ///   - status:
@@ -38084,6 +38235,7 @@ internal enum Operations {
                             orderedAt: Swift.String,
                             orderedOn: Swift.String,
                             receiptUri: Swift.String? = nil,
+                            receiptUris: [Swift.String],
                             shippingCents: Swift.Int,
                             source: Swift.String,
                             status: Swift.String,
@@ -38104,6 +38256,7 @@ internal enum Operations {
                             self.orderedAt = orderedAt
                             self.orderedOn = orderedOn
                             self.receiptUri = receiptUri
+                            self.receiptUris = receiptUris
                             self.shippingCents = shippingCents
                             self.source = source
                             self.status = status
@@ -38125,6 +38278,7 @@ internal enum Operations {
                             case orderedAt
                             case orderedOn
                             case receiptUri
+                            case receiptUris
                             case shippingCents
                             case source
                             case status
@@ -38180,6 +38334,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .receiptUri
                             )
+                            self.receiptUris = try container.decode(
+                                [Swift.String].self,
+                                forKey: .receiptUris
+                            )
                             self.shippingCents = try container.decode(
                                 Swift.Int.self,
                                 forKey: .shippingCents
@@ -38224,6 +38382,7 @@ internal enum Operations {
                                 "orderedAt",
                                 "orderedOn",
                                 "receiptUri",
+                                "receiptUris",
                                 "shippingCents",
                                 "source",
                                 "status",
@@ -38664,6 +38823,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -38890,6 +39051,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -39012,6 +39175,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -39764,6 +39929,8 @@ internal enum Operations {
                         internal var orderedOn: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/200/content/json/receiptUri`.
                         internal var receiptUri: Swift.String?
+                        /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/200/content/json/receiptUris`.
+                        internal var receiptUris: [Swift.String]
                         /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/200/content/json/shippingCents`.
                         internal var shippingCents: Swift.Int
                         /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/200/content/json/source`.
@@ -39794,6 +39961,7 @@ internal enum Operations {
                         ///   - orderedAt:
                         ///   - orderedOn:
                         ///   - receiptUri:
+                        ///   - receiptUris:
                         ///   - shippingCents:
                         ///   - source:
                         ///   - status:
@@ -39814,6 +39982,7 @@ internal enum Operations {
                             orderedAt: Swift.String,
                             orderedOn: Swift.String,
                             receiptUri: Swift.String? = nil,
+                            receiptUris: [Swift.String],
                             shippingCents: Swift.Int,
                             source: Swift.String,
                             status: Swift.String,
@@ -39834,6 +40003,7 @@ internal enum Operations {
                             self.orderedAt = orderedAt
                             self.orderedOn = orderedOn
                             self.receiptUri = receiptUri
+                            self.receiptUris = receiptUris
                             self.shippingCents = shippingCents
                             self.source = source
                             self.status = status
@@ -39855,6 +40025,7 @@ internal enum Operations {
                             case orderedAt
                             case orderedOn
                             case receiptUri
+                            case receiptUris
                             case shippingCents
                             case source
                             case status
@@ -39910,6 +40081,10 @@ internal enum Operations {
                                 Swift.String.self,
                                 forKey: .receiptUri
                             )
+                            self.receiptUris = try container.decode(
+                                [Swift.String].self,
+                                forKey: .receiptUris
+                            )
                             self.shippingCents = try container.decode(
                                 Swift.Int.self,
                                 forKey: .shippingCents
@@ -39954,6 +40129,7 @@ internal enum Operations {
                                 "orderedAt",
                                 "orderedOn",
                                 "receiptUri",
+                                "receiptUris",
                                 "shippingCents",
                                 "source",
                                 "status",
@@ -40394,6 +40570,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -40516,6 +40694,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -40742,6 +40922,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }
@@ -40864,6 +41046,8 @@ internal enum Operations {
                             case upstreamMisconfigured = "upstream_misconfigured"
                             case upstreamInvalidRequest = "upstream_invalid_request"
                             case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
                             case upstreamUnsupportedMedia = "upstream_unsupported_media"
                             case notFound = "not_found"
                         }

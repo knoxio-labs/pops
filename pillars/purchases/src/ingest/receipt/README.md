@@ -486,8 +486,7 @@ what the sender actually saw.
 its own bytes, sharded one level on the hash prefix, under an extension
 per media type. That makes the ticket's dedup requirement structural rather
 than a check someone has to remember to write — the same file lands on the
-same path, so a re-upload is a 409 from the existing write path rather than
-a twin. It also means a truncated upload cannot quietly overwrite a good
+same path rather than creating a second copy. It also means a truncated upload cannot quietly overwrite a good
 one: different bytes, different name.
 
 Files live beside the database (`<dirname(sqlite)>/receipts`, derived with
@@ -497,6 +496,20 @@ purchase references one as `pops://purchases/receipt/<sha256>`. ADR-042
 says evidence belongs in the `documents` pillar instead; that pillar has no
 write surface at all today, so this is where it lives until POPS-1528 moves
 it, and these URIs migrate with everything else.
+
+### Retention of unsaved receipts
+
+The retention worker runs at startup and every six hours thereafter. It deletes
+stored receipt files only when their modification time is at least 48 hours old
+and no purchase document references their exact receipt URI. Re-uploading the
+same bytes refreshes that modification time, protecting a new review of an
+older, unsaved receipt. Saved receipt pages remain evidence regardless of age.
+
+Discarding a draft does not delete its files immediately; abandoned and
+discarded drafts expire through the same sweep. Malformed filenames are kept.
+`PURCHASES_RECEIPT_SWEEP_INTERVAL_MS` controls the interval between completed
+passes. Runs never overlap, failures are logged and retried on the next tick,
+and shutdown stops the timer and drains the active pass before closing SQLite.
 
 ### Reading one back
 

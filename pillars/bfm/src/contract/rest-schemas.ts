@@ -245,6 +245,21 @@ export const MobileUpstreamErrorSchema = z.object({
     'upstream_invalid_request',
     'upstream_conflict',
     /**
+     * `PATCH /mobile/purchases/:id` refused because the edit targets a
+     * field `purchases` has locked for this purchase's reconciliation
+     * state (merchant, date or total on a matched or part-matched order).
+     * Distinct from `purchase_stale` so the app can draw two different
+     * recoveries: re-opening the edit does not help here.
+     */
+    'purchase_locked',
+    /**
+     * `PATCH /mobile/purchases/:id` refused because the purchase changed
+     * since this edit was opened (`expectedUpdatedAt` no longer matches).
+     * The app's recovery is to re-fetch the detail and let the person
+     * re-apply their edit, unlike `purchase_locked`.
+     */
+    'purchase_stale',
+    /**
      * The producer holds the record and will not give it in the form asked
      * for — a receipt that is a PDF, asked for as an image. Settled: the app
      * draws its placeholder and does not ask again. Only routes that request

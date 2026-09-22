@@ -51,6 +51,14 @@ type GatewayFailureBase = {
   readonly pillar: string;
   /** Operator-facing context. Never assume it is safe to show a user. */
   readonly detail?: string;
+  /**
+   * The producer's own error code, verbatim, when its answer carried one.
+   * Lets a route distinguish two failures of the same `kind` by a stable
+   * machine token instead of parsing `detail`'s free text — see
+   * `toPurchaseUpdateErrorResponse`'s `purchase_locked` / `purchase_stale`
+   * split.
+   */
+  readonly code?: string;
 };
 
 /**
@@ -157,44 +165,17 @@ export function toGatewayFailure(failure: CallFailure): GatewayFailure {
     case 'not-found':
       return { kind: 'not-found', pillar: target, status: 404, detail: failure.message };
     case 'conflict':
-      return { kind: 'conflict', pillar: target, status: 409, detail: failure.message };
+      return {
+        kind: 'conflict',
+        pillar: target,
+        status: 409,
+        detail: failure.message,
+        code: failure.code,
+      };
     case 'bad-request':
       return { kind: 'invalid-request', pillar: target, status: 400, detail: failure.message };
     case 'refused':
-      // 415 and 426 are pulled out of the fold below because each says
-      // something the generic `invalid-request` bucket cannot: 415 is about
-      // the resource, not the request (see `unsupported-media`'s own note);
-      // 426 is a fact about THIS PILLAR'S BUILD, not about anything the
-      // request asked for, and the phone's recovery for it (bfm needs
-      // deploying) is nothing like "the app sent a bad query".
-      if (failure.status === 415) {
-        return {
-          kind: 'unsupported-media',
-          pillar: target,
-          status: 415,
-          detail: withUpstreamStatus(failure.status, failure.message),
-        };
-      }
-      if (failure.status === 426) {
-        return {
-          kind: 'protocol-too-old',
-          pillar: target,
-          status: 426,
-          detail: withUpstreamStatus(failure.status, failure.message),
-        };
-      }
-      // A permanent 4xx the SDK did not otherwise recognise (413 body too
-      // large, 422 unprocessable, ...) — see `toGatewayFailure`'s header for
-      // why this folds onto the SAME outcome as `bad-request` rather than
-      // getting its own `GatewayFailure` kind. The real upstream status
-      // survives in `detail` so it is not lost, only not distinguished on
-      // the wire.
-      return {
-        kind: 'invalid-request',
-        pillar: target,
-        status: 400,
-        detail: withUpstreamStatus(failure.status, failure.message),
-      };
+      return mapRefused(failure, target);
     case 'rate-limited':
       // Retryable, same as `unavailable` — but NOT the same fact: this
       // producer answered and said "later", not "nobody answered". See
@@ -217,6 +198,48 @@ export function toGatewayFailure(failure: CallFailure): GatewayFailure {
         detail: failure.message,
       };
   }
+}
+
+/**
+ * `refused` — a producer 4xx the SDK does not otherwise recognise. 415 and
+ * 426 are pulled out of the fold below because each says something the
+ * generic `invalid-request` bucket cannot: 415 is about the resource, not
+ * the request (see `unsupported-media`'s own note); 426 is a fact about THIS
+ * PILLAR'S BUILD, not about anything the request asked for, and the phone's
+ * recovery for it (bfm needs deploying) is nothing like "the app sent a bad
+ * query".
+ */
+function mapRefused(
+  failure: Extract<CallFailure, { kind: 'refused' }>,
+  target: string
+): GatewayFailure {
+  if (failure.status === 415) {
+    return {
+      kind: 'unsupported-media',
+      pillar: target,
+      status: 415,
+      detail: withUpstreamStatus(failure.status, failure.message),
+    };
+  }
+  if (failure.status === 426) {
+    return {
+      kind: 'protocol-too-old',
+      pillar: target,
+      status: 426,
+      detail: withUpstreamStatus(failure.status, failure.message),
+    };
+  }
+  // A permanent 4xx the SDK did not otherwise recognise (413 body too large,
+  // 422 unprocessable, ...) — see `toGatewayFailure`'s header for why this
+  // folds onto the SAME outcome as `bad-request` rather than getting its own
+  // `GatewayFailure` kind. The real upstream status survives in `detail` so
+  // it is not lost, only not distinguished on the wire.
+  return {
+    kind: 'invalid-request',
+    pillar: target,
+    status: 400,
+    detail: withUpstreamStatus(failure.status, failure.message),
+  };
 }
 
 function describeMismatch(failure: Extract<CallFailure, { kind: 'contract-mismatch' }>): string {

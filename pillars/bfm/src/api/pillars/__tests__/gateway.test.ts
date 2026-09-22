@@ -147,6 +147,25 @@ describe('failures that are about the request, not the federation', () => {
     expect(mapped.kind).toBe(kind);
     expect(mapped.status).toBe(status);
   });
+
+  it("carries the producer's own error code through a conflict, for a route that needs to tell two 409s apart", () => {
+    const mapped = toGatewayFailure({
+      kind: 'conflict',
+      pillar: 'purchases',
+      code: 'purchase_locked',
+      message: 'locked',
+    });
+
+    if (mapped.kind !== 'conflict') throw new Error('conflict narrowed wrong');
+    expect(mapped.code).toBe('purchase_locked');
+  });
+
+  it('leaves code undefined on a conflict the producer sent none for', () => {
+    const mapped = toGatewayFailure({ kind: 'conflict', pillar: 'purchases' });
+
+    if (mapped.kind !== 'conflict') throw new Error('conflict narrowed wrong');
+    expect(mapped.code).toBeUndefined();
+  });
 });
 
 /**

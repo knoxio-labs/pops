@@ -132,10 +132,11 @@ describe('PATCH /mobile/purchases/:id', () => {
     expect(fake.calls).toEqual([]);
   });
 
-  it('maps purchase_locked to 409 upstream_conflict', async () => {
+  it('maps purchase_locked to its own 409 code, not a generic conflict', async () => {
     const fake = fakeUpdate({
       kind: 'conflict',
       pillar: 'purchases',
+      code: 'purchase_locked',
       message: 'Purchase pur-1 is matched; merchant, date and total cannot be edited',
     });
     const { app, token } = openWith(fake.factory);
@@ -143,13 +144,14 @@ describe('PATCH /mobile/purchases/:id', () => {
     const res = await patch(app, token, 'pur-1', BODY);
 
     expect(res.status).toBe(409);
-    expect(res.body.code).toBe('upstream_conflict');
+    expect(res.body.code).toBe('purchase_locked');
   });
 
-  it('maps purchase_stale to 409 upstream_conflict', async () => {
+  it('maps purchase_stale to its own 409 code, distinct from purchase_locked', async () => {
     const fake = fakeUpdate({
       kind: 'conflict',
       pillar: 'purchases',
+      code: 'purchase_stale',
       message: 'Purchase pur-1 was changed since this edit was opened',
     });
     const { app, token } = openWith(fake.factory);
@@ -157,8 +159,22 @@ describe('PATCH /mobile/purchases/:id', () => {
     const res = await patch(app, token, 'pur-1', BODY);
 
     expect(res.status).toBe(409);
-    expect(res.body.code).toBe('upstream_conflict');
+    expect(res.body.code).toBe('purchase_stale');
     expect(res.body.message).toContain('changed since');
+  });
+
+  it('falls back to upstream_conflict for a 409 that carries no known code', async () => {
+    const fake = fakeUpdate({
+      kind: 'conflict',
+      pillar: 'purchases',
+      message: 'Purchase pur-1 conflicted for a reason this build does not name',
+    });
+    const { app, token } = openWith(fake.factory);
+
+    const res = await patch(app, token, 'pur-1', BODY);
+
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe('upstream_conflict');
   });
 
   it('passes a 404 through', async () => {

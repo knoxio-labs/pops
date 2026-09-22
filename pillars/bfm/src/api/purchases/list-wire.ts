@@ -287,6 +287,7 @@ export function toMobilePurchaseDetail(
     itemCount: detail.items.length,
     status: purchase.status,
     receiptUri: firstReceiptUri(detail.documents),
+    receiptUris: receiptUris(detail.documents),
     subtotalCents: purchase.subtotalCents,
     taxCents: purchase.taxCents,
     shippingCents: purchase.shippingCents,
@@ -314,6 +315,13 @@ function toMobilePurchaseItem(line: z.infer<typeof PurchasesItemSchema>): Mobile
   };
 }
 
+/** Every receipt-kind document, in the order `purchases` returned them. */
+function receiptUris(documents: readonly { documentUri: string; kind: string }[]): string[] {
+  return documents
+    .filter((document) => document.kind === 'receipt')
+    .map((document) => document.documentUri);
+}
+
 /**
  * The first receipt-kind document, matching what the producer's list endpoint
  * picks for the same order.
@@ -325,5 +333,5 @@ function toMobilePurchaseItem(line: z.infer<typeof PurchasesItemSchema>): Mobile
 function firstReceiptUri(
   documents: readonly { documentUri: string; kind: string }[]
 ): string | null {
-  return documents.find((document) => document.kind === 'receipt')?.documentUri ?? null;
+  return receiptUris(documents).at(0) ?? null;
 }

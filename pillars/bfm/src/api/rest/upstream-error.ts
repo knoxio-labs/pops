@@ -221,14 +221,25 @@ export interface PurchaseUpdateErrorResponse {
  * about the user's own edit, not a fault, and the phone needs the real
  * status to show its conflict UI rather than a generic upstream failure.
  *
- * `detail` is what tells the two 409s apart on the wire today — the pillar
- * SDK's `CallFailure` carries only the producer's `message`, not its
- * `code`, so `purchase_locked` and `purchase_stale` are distinguished by
- * their message text rather than by a stable machine token. Widening
- * `CallFailure` to carry `code` would fix that properly; it is a
- * cross-pillar SDK change and out of scope here (see POPS-4268's own
- * ticket for the follow-up).
+ * `purchases`' own error code — carried on `GatewayFailure.code` since the
+ * pillar SDK's `CallFailure` widened to keep it (POPS-4334) — is what tells
+ * the two 409s apart: `purchase_locked` and `purchase_stale` reach the phone
+ * as distinct `MobileUpstreamError.code`s, so it can offer the right
+ * recovery for each rather than one generic conflict. A `purchases` build
+ * old enough to send no `code` at all still gets a 409, folded to the
+ * pre-existing `upstream_conflict`.
  */
+const PURCHASE_UPDATE_CONFLICT_CODES = new Set(['purchase_locked', 'purchase_stale']);
+
+function purchaseUpdateConflictCode(
+  failure: Extract<GatewayFailure, { kind: 'conflict' }>
+): 'purchase_locked' | 'purchase_stale' | 'upstream_conflict' {
+  const code = failure.code;
+  return code !== undefined && PURCHASE_UPDATE_CONFLICT_CODES.has(code)
+    ? (code as 'purchase_locked' | 'purchase_stale')
+    : 'upstream_conflict';
+}
+
 export function toPurchaseUpdateErrorResponse(
   failure: GatewayFailure
 ): PurchaseUpdateErrorResponse {
@@ -236,7 +247,7 @@ export function toPurchaseUpdateErrorResponse(
     return {
       status: 409,
       body: {
-        code: 'upstream_conflict',
+        code: purchaseUpdateConflictCode(failure),
         pillar: failure.pillar,
         retryable: false,
         message: describe(`${failure.pillar} refused the edit`, failure),

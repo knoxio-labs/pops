@@ -329,6 +329,17 @@ list that ships without thumbnails. `purchases` computes both for the page —
 see that pillar's README. Nothing serves the bytes `receiptUri` names yet
 (POPS-2475), so the phone can key a cache on it and cannot draw it.
 
+**Edit conflicts preserve machine-readable reasons.** BFM carries the
+producer's error code through its gateway. Purchase updates distinguish
+`purchase_locked` from `purchase_stale` on a `409`; other conflict codes map to
+`upstream_conflict`. These decisions do not depend on the producer's message.
+
+**Detail carries every receipt page.** `receiptUris` contains all receipt-kind
+purchase document URIs in the order purchases returns them, or an empty array
+when there are none. The detail's `receiptUri` remains the first entry, or
+`null`, for installed clients that still decode the single-receipt field.
+Detail renderers use `receiptUris`; list rows retain their single thumbnail URI.
+
 **The date is a day, not an instant.** `orderedOn` is `YYYY-MM-DD`, derived by
 bfm from the offset the order's own `orderedAt` carries. That is deliberate and
 it is the mistake the transactions leg made in the other direction: a client

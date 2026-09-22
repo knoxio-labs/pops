@@ -180,12 +180,17 @@ describe('performRestCall — response / error mapping', () => {
     expect(result).toEqual({ kind: 'not-found', pillar: 'registry', message: 'no such entity' });
   });
 
-  it('maps 400 → bad-request with the envelope message', async () => {
+  it('maps 400 → bad-request with the envelope message and code', async () => {
     const { fetchImpl } = recordingRest(() =>
       jsonOk({ message: 'bad keys', code: 'ValidationError' }, 400)
     );
     const result = await performRestCall(ctx(['settings', 'getMany'], {}, fetchImpl));
-    expect(result).toEqual({ kind: 'bad-request', pillar: 'registry', message: 'bad keys' });
+    expect(result).toEqual({
+      kind: 'bad-request',
+      pillar: 'registry',
+      message: 'bad keys',
+      code: 'ValidationError',
+    });
   });
 
   it('maps 409 → conflict', async () => {
@@ -194,6 +199,38 @@ describe('performRestCall — response / error mapping', () => {
       ctx(['entities', 'update'], { id: 'ent-1', name: 'x' }, fetchImpl)
     );
     expect(result).toEqual({ kind: 'conflict', pillar: 'registry', message: 'already exists' });
+  });
+
+  it('maps a 409 with a code envelope to a CallFailure carrying both', async () => {
+    const { fetchImpl } = recordingRest(() =>
+      jsonOk({ message: 'purchase is locked', code: 'purchase_locked' }, 409)
+    );
+    const result = await performRestCall(
+      ctx(['entities', 'update'], { id: 'ent-1', name: 'x' }, fetchImpl)
+    );
+    expect(result).toEqual({
+      kind: 'conflict',
+      pillar: 'registry',
+      message: 'purchase is locked',
+      code: 'purchase_locked',
+    });
+  });
+
+  it('leaves code undefined when the envelope carries none', async () => {
+    const { fetchImpl } = recordingRest(() => jsonOk({ message: 'already exists' }, 409));
+    const result = await performRestCall(
+      ctx(['entities', 'update'], { id: 'ent-1', name: 'x' }, fetchImpl)
+    );
+    expect(result).toEqual({ kind: 'conflict', pillar: 'registry', message: 'already exists' });
+    expect((result as { code?: string }).code).toBeUndefined();
+  });
+
+  it('leaves code undefined for a non-JSON body', async () => {
+    const { fetchImpl } = recordingRest(() => new Response('not json', { status: 409 }));
+    const result = await performRestCall(
+      ctx(['entities', 'update'], { id: 'ent-1', name: 'x' }, fetchImpl)
+    );
+    expect(result).toEqual({ kind: 'conflict', pillar: 'registry' });
   });
 
   it('maps 401 → unauthorized with the envelope message', async () => {
@@ -257,6 +294,7 @@ describe('performRestCall — response / error mapping', () => {
       pillar: 'registry',
       status: 413,
       message: 'request entity too large',
+      code: 'PAYLOAD_TOO_LARGE',
     });
     expect(result.kind).not.toBe('unavailable');
   });

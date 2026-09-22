@@ -491,6 +491,64 @@ describe('one order', () => {
     expect(res.body.receiptUri).toBe('pops://purchases/receipt/first');
   });
 
+  it('exposes every receipt document, in order, on receiptUris', async () => {
+    const { app, token } = openWithRows([purchasesRow({ id: 'pur-1' })], {
+      'pur-1': purchasesDetail({
+        id: 'pur-1',
+        documents: [
+          {
+            documentUri: 'pops://purchases/receipt/first',
+            kind: 'receipt',
+            createdAt: '2026-08-13T02:16:00.000Z',
+          },
+          {
+            documentUri: 'pops://purchases/receipt/second',
+            kind: 'receipt',
+            createdAt: '2026-08-13T02:17:00.000Z',
+          },
+          {
+            documentUri: 'pops://purchases/receipt/third',
+            kind: 'receipt',
+            createdAt: '2026-08-13T02:18:00.000Z',
+          },
+        ],
+      }),
+    });
+
+    const res = await one(app, token, 'pur-1');
+
+    expect(res.body.receiptUris).toEqual([
+      'pops://purchases/receipt/first',
+      'pops://purchases/receipt/second',
+      'pops://purchases/receipt/third',
+    ]);
+    expect(res.body.receiptUri).toBe('pops://purchases/receipt/first');
+  });
+
+  it('does not count a non-receipt document as a page', async () => {
+    const { app, token } = openWithRows([purchasesRow({ id: 'pur-1' })], {
+      'pur-1': purchasesDetail({
+        id: 'pur-1',
+        documents: [
+          {
+            documentUri: 'pops://purchases/invoice/x',
+            kind: 'tax_invoice',
+            createdAt: '2026-08-13T02:16:00.000Z',
+          },
+          {
+            documentUri: 'pops://purchases/receipt/only',
+            kind: 'receipt',
+            createdAt: '2026-08-13T02:17:00.000Z',
+          },
+        ],
+      }),
+    });
+
+    const res = await one(app, token, 'pur-1');
+
+    expect(res.body.receiptUris).toEqual(['pops://purchases/receipt/only']);
+  });
+
   it('reports no receipt rather than the first document of any kind', async () => {
     const { app, token } = openWithRows([purchasesRow({ id: 'pur-1' })], {
       'pur-1': purchasesDetail({

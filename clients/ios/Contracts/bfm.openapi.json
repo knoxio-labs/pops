@@ -793,6 +793,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -829,6 +831,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -1036,6 +1040,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -1072,6 +1078,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -1231,6 +1239,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -1294,6 +1304,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -1330,6 +1342,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -1499,6 +1513,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -1562,6 +1578,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -1598,6 +1616,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -1773,6 +1793,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -1836,6 +1858,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -1872,6 +1896,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -2118,6 +2144,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -2154,6 +2182,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -2397,6 +2427,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -2460,6 +2492,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -2496,6 +2530,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -2743,6 +2779,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -2779,6 +2817,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -3002,6 +3042,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -3065,6 +3107,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -3101,6 +3145,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -3326,6 +3372,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -3362,6 +3410,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -3778,6 +3828,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -3862,6 +3914,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -3898,6 +3952,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -4074,6 +4130,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -4137,6 +4195,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -4173,6 +4233,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -4400,6 +4462,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -4463,6 +4527,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -4499,6 +4565,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -4997,6 +5065,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -5033,6 +5103,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -5845,6 +5917,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -5881,6 +5955,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -6445,6 +6521,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -6481,6 +6559,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -6763,6 +6843,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -6799,6 +6881,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -7103,6 +7187,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -7139,6 +7225,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -7506,6 +7594,12 @@
                       "nullable": true,
                       "type": "string"
                     },
+                    "receiptUris": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
                     "shippingCents": {
                       "maximum": 9007199254740991,
                       "minimum": -9007199254740991,
@@ -7561,7 +7655,8 @@
                     "surchargeCents",
                     "source",
                     "items",
-                    "edit"
+                    "edit",
+                    "receiptUris"
                   ],
                   "type": "object"
                 }
@@ -7694,6 +7789,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -7730,6 +7827,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -8116,6 +8215,12 @@
                       "nullable": true,
                       "type": "string"
                     },
+                    "receiptUris": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
                     "shippingCents": {
                       "maximum": 9007199254740991,
                       "minimum": -9007199254740991,
@@ -8171,7 +8276,8 @@
                     "surchargeCents",
                     "source",
                     "items",
-                    "edit"
+                    "edit",
+                    "receiptUris"
                   ],
                   "type": "object"
                 }
@@ -8304,6 +8410,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -8340,6 +8448,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -8885,6 +8995,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -8921,6 +9033,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -9088,6 +9202,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -9151,6 +9267,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -9187,6 +9305,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -9354,6 +9474,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -9390,6 +9512,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -9453,6 +9577,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -9489,6 +9615,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -9808,6 +9936,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -9844,6 +9974,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -10129,6 +10261,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -10165,6 +10299,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -10342,6 +10478,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -10378,6 +10516,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -10564,6 +10704,12 @@
                       "nullable": true,
                       "type": "string"
                     },
+                    "receiptUris": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
                     "shippingCents": {
                       "maximum": 9007199254740991,
                       "minimum": -9007199254740991,
@@ -10619,7 +10765,8 @@
                     "surchargeCents",
                     "source",
                     "items",
-                    "edit"
+                    "edit",
+                    "receiptUris"
                   ],
                   "type": "object"
                 }
@@ -10725,6 +10872,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -10788,6 +10937,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -10824,6 +10975,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -11093,6 +11246,12 @@
                       "nullable": true,
                       "type": "string"
                     },
+                    "receiptUris": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
                     "shippingCents": {
                       "maximum": 9007199254740991,
                       "minimum": -9007199254740991,
@@ -11148,7 +11307,8 @@
                     "surchargeCents",
                     "source",
                     "items",
-                    "edit"
+                    "edit",
+                    "receiptUris"
                   ],
                   "type": "object"
                 }
@@ -11254,6 +11414,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -11290,6 +11452,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -11353,6 +11517,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
@@ -11389,6 +11555,8 @@
                         "upstream_misconfigured",
                         "upstream_invalid_request",
                         "upstream_conflict",
+                        "purchase_locked",
+                        "purchase_stale",
                         "upstream_unsupported_media",
                         "not_found"
                       ],
