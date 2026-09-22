@@ -49,8 +49,17 @@ internal enum PurchaseDetailCopy {
         }
     }
 
-    internal static func edited(_ date: Date) -> String {
-        "Edited \(date.formatted(.dateTime.day().month(.abbreviated)))"
+    internal static func edited(
+        _ date: Date,
+        locale: Locale = .autoupdatingCurrent,
+        timeZone: TimeZone = .autoupdatingCurrent
+    ) -> String {
+        let style = Date.FormatStyle(
+            locale: locale, calendar: locale.calendar, timeZone: timeZone
+        )
+        .day()
+        .month(.abbreviated)
+        return "Edited \(date.formatted(style))"
     }
 
     internal static func receiptLabel(pages: Int) -> String {

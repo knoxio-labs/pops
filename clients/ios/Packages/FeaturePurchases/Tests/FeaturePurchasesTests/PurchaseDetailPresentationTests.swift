@@ -91,6 +91,73 @@ internal struct PurchaseDetailPresentationTests {
         #expect(PurchaseDetailCopy.receiptLabel(pages: 3) == "Receipt, 3 pages")
     }
 
+    @Test("every refresh failure has exact retained-content copy")
+    func refreshFailureCopy() {
+        let failures: [PurchaseDetailFailure] = [
+            .offline, .unreachable, .notFound, .unauthorized, .contractMismatch,
+        ]
+        let notices = failures.map(PurchaseDetailCopy.refreshNotice)
+
+        #expect(
+            notices == [
+                "Offline, showing the saved copy",
+                "Couldn't refresh",
+                "Deleted elsewhere",
+                "No longer allowed to refresh",
+                "Update Pops to refresh",
+            ])
+        #expect(Set(notices).count == failures.count)
+    }
+
+    @Test("the edited label uses the reader's requested calendar presentation")
+    func editedDate() throws {
+        let utc = try #require(TimeZone(secondsFromGMT: 0))
+        var components = DateComponents()
+        components.calendar = Calendar(identifier: .gregorian)
+        components.timeZone = utc
+        components.year = 2026
+        components.month = 3
+        components.day = 6
+        let date = try #require(components.date)
+
+        #expect(
+            PurchaseDetailCopy.edited(date, locale: Locale(identifier: "en_AU"), timeZone: utc)
+                == "Edited 6 Mar")
+    }
+
+    @Test("share copy keeps header and receipt lines in reading order")
+    func shareCopy() {
+        let detail = PurchaseDetail.fake(
+            purchase: .fake(merchant: .printed("Corner Shop"), total: money(1_250)),
+            lines: [
+                .fake(id: "first", name: "Tea\n bags", lineTotal: money(500)),
+                .fake(id: "second", name: "Milk", lineTotal: money(750)),
+            ])
+
+        let text = PurchaseDetailCopy.shareText(detail)
+        let parts = text.components(separatedBy: "\n")
+
+        #expect(parts[0] == "Corner Shop")
+        #expect(parts[1] == PurchaseDetailCopy.day(detail.purchase.orderedOn))
+        #expect(parts[2] == detail.purchase.total.formatted())
+        #expect(parts[3].isEmpty)
+        #expect(parts[4] == "Tea · bags  \(detail.lines[0].lineTotal.formatted())")
+        #expect(parts[5] == "Milk  \(detail.lines[1].lineTotal.formatted())")
+    }
+
+    @Test("a purchase without item lines shares no empty item section")
+    func shareCopyWithoutLines() {
+        let detail = PurchaseDetail.fake(
+            purchase: .fake(merchant: .printed("Corner Shop"), total: money(1_250)),
+            lines: [])
+
+        let parts = PurchaseDetailCopy.shareText(detail).components(separatedBy: "\n")
+        let containsBlankLine = parts.contains { $0.isEmpty }
+
+        #expect(parts.count == 3)
+        #expect(!containsBlankLine)
+    }
+
     private func detail(
         tax: MoneyAmount = money(0),
         shipping: MoneyAmount = money(0),
