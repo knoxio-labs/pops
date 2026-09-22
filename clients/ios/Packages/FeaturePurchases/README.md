@@ -2,7 +2,7 @@
 
 Purchase browsing, receipt capture and the shared draft form.
 
-`PurchasesFlowView` is the Purchases tab. It owns one navigation stack rooted at the saved-purchase list and resolves feature-local archive and detail routes. Cross-feature links use the public `PurchasesRoute` and install `purchasesDestinations(dependencies:)` on their own stack. The current detail and archive destinations draw `ContentUnavailableView`; the available repository surface exposes only the paged list. The existing Receipts tab continues to own capture.
+`PurchasesFlowView` is the Purchases tab. It owns one navigation stack rooted at the purchases home and resolves feature-local archive and detail routes. Cross-feature links use the public `PurchasesRoute` and install `purchasesDestinations(dependencies:)` on their own stack. The current detail and archive destinations draw `ContentUnavailableView`; their repository reads land separately. The existing Receipts tab continues to own capture while the home asks the app host to present that flow through `purchaseCapture`.
 
 ## Capture and the draft form
 
@@ -53,6 +53,8 @@ Saved-purchase screens share `PurchasesPresentation` for merchant names, settlem
 `PurchasesHomeModel` loads that summary and the first unfiltered purchase page together. Refresh failures keep the last digest visible, while a generation counter prevents an older request from replacing a newer refresh. Capture can land complete purchases immediately or report only saved identifiers; both paths highlight every saved identifier and perform one refresh, and the identifier path never fabricates purchase rows.
 
 The home presentation reuses DesignSystem glass, spacing, type, and status primitives. Its monthly figure keeps currencies separate and omits a comparison when the server has no previous month. Archive tiles use server counts and stack vertically at accessibility Dynamic Type sizes; the Unmatched tile disappears only when the server count is zero. Loading, empty, initial failure, and retained-content refresh failure remain visibly distinct states.
+
+The assembled home switches between those states, refreshes without removing loaded content, and routes its tiles and rows through the Purchases stack. Recent purchases mark every identifier saved by capture with a purchases-coloured wash and a “Just saved” caption. Merchant leaders draw aggregate rows directly from the month summary, without manufacturing purchases or identifiers. Add offers photos, files, and hand entry in that order; Scan is the purchases-tinted direct action. Both controls disappear when the host has not installed `purchaseCapture`, including on the empty state.
 
 Editing a saved purchase remains POPS-2458. There is no initialiser building a `ReceiptDraft` from a `ReceiptPurchase`: that summary carries a merchant, a total and a count, and a form pre-filled from it would present three line items as zero. Reusing the form requires the full detail model, rather than treating the summary as an editable purchase.
 

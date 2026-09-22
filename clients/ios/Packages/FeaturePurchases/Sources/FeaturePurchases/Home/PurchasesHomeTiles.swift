@@ -13,8 +13,6 @@ internal enum PurchasesHomeTileLayout {
 
 internal struct PurchasesHomeTiles: View {
     internal let digest: PurchasesHomeDigest
-    internal let onUnmatched: () -> Void
-    internal let onAll: () -> Void
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     internal var body: some View {
@@ -24,20 +22,22 @@ internal struct PurchasesHomeTiles: View {
             : AnyLayout(HStackLayout(spacing: PopsSpacing.sm))
         layout {
             if PurchasesHomeTileLayout.showsUnmatched(count: digest.unmatchedCount) {
-                Button(action: onUnmatched) {
+                NavigationLink(value: PurchasesScreenRoute.archive(.unmatched)) {
                     ViewThatFits(in: .horizontal) {
                         unmatchedTile(marks: 3)
                         unmatchedTile(marks: 2)
                     }
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier(PurchasesAccessibility.unmatchedTile)
             }
-            Button(action: onAll) {
+            NavigationLink(value: PurchasesScreenRoute.archive(.all)) {
                 PurchasesHomeTile(count: digest.allCount, title: "All purchases") {
                     PurchasesTileSymbol(symbol: "tray.full")
                 }
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier(PurchasesAccessibility.allTile)
         }
         .fixedSize(horizontal: false, vertical: true)
     }

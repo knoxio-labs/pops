@@ -59,7 +59,7 @@ internal struct PurchasesHomeFailureView: View {
 }
 
 internal struct PurchasesHomeEmptyView: View {
-    internal let onScan: () -> Void
+    internal let onScan: (() -> Void)?
 
     internal var body: some View {
         ContentUnavailableView {
@@ -72,11 +72,13 @@ internal struct PurchasesHomeEmptyView: View {
         } description: {
             Text("Receipts you capture land here.")
         } actions: {
-            Button("Scan a receipt", systemImage: "doc.viewfinder", action: onScan)
-                .font(.popsHeadline)
-                .foregroundStyle(Color.popsBackground)
-                .popsProminentGlassButton()
-                .tint(.popsPurchases)
+            if let onScan {
+                Button("Scan a receipt", systemImage: "doc.viewfinder", action: onScan)
+                    .font(.popsHeadline)
+                    .foregroundStyle(Color.popsBackground)
+                    .popsProminentGlassButton()
+                    .tint(.popsPurchases)
+            }
         }
     }
 }
