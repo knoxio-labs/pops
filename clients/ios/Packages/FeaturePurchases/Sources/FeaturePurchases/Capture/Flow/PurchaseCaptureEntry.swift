@@ -1,3 +1,4 @@
+import AppCore
 import SwiftUI
 
 /// Values used by a host to open purchase capture without owning its flow.
@@ -53,15 +54,26 @@ public enum PurchaseCaptureEntry {
 /// not report completion.
 public struct PurchaseCapturePresenter: Sendable {
     private let present: @MainActor @Sendable (PurchaseCaptureEntry.Source) -> Void
+    private let onSaved: @MainActor @Sendable ([Purchase.ID]) -> Void
 
     /// Creates a presenter that opens capture at `source`.
-    public init(_ present: @escaping @MainActor @Sendable (PurchaseCaptureEntry.Source) -> Void) {
+    public init(
+        _ present: @escaping @MainActor @Sendable (PurchaseCaptureEntry.Source) -> Void,
+        onSaved: @escaping @MainActor @Sendable ([Purchase.ID]) -> Void = { _ in }
+    ) {
         self.present = present
+        self.onSaved = onSaved
     }
 
     /// Opens the host's capture flow at the selected source.
     @MainActor public func callAsFunction(_ source: PurchaseCaptureEntry.Source) {
         present(source)
+    }
+
+    /// Reports the identifiers saved by the presented capture run in save order.
+    @MainActor public func reportSaved(_ savedIDs: [Purchase.ID]) {
+        guard !savedIDs.isEmpty else { return }
+        onSaved(savedIDs)
     }
 }
 

@@ -113,6 +113,20 @@ internal struct PurchasesHomeModelTests {
         #expect(await repository.calls() == callsBeforeLanding + 2)
     }
 
+    @Test("an ordinary refresh clears the saved highlight after capture lands")
+    func ordinaryRefreshClearsSavedHighlights() async throws {
+        let model = PurchasesHomeModel(
+            dependencies: .fake(purchases: MutableHomeRepository(rows: [.fake(id: "row")])))
+        await model.load()
+        await model.land(savedIDs: ["saved"])
+
+        #expect(model.highlighted == ["saved"])
+
+        await model.refresh()
+
+        #expect(model.highlighted.isEmpty)
+    }
+
     @Test("a stale refresh cannot replace a newer refresh")
     func staleRefreshIsDiscarded() async throws {
         let oldGate = HomeGate()

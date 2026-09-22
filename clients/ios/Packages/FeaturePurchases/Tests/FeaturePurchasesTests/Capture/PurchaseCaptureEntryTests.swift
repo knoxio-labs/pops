@@ -36,6 +36,26 @@ internal struct PurchaseCaptureEntryTests {
 
         #expect(received == .file)
     }
+
+    @Test("the presenter reports saved identifiers in order")
+    func presenterReportsSavedIdentifiers() {
+        var received: [String] = []
+        let presenter = PurchaseCapturePresenter({ _ in }, onSaved: { received = $0 })
+
+        presenter.reportSaved(["saved-1", "saved-2"])
+
+        #expect(received == ["saved-1", "saved-2"])
+    }
+
+    @Test("an empty capture run does not report saved identifiers")
+    func presenterDoesNotReportEmptyRuns() {
+        var callbackCount = 0
+        let presenter = PurchaseCapturePresenter({ _ in }, onSaved: { _ in callbackCount += 1 })
+
+        presenter.reportSaved([])
+
+        #expect(callbackCount == 0)
+    }
 }
 
 private struct CaptureAvailabilityProbe: View {

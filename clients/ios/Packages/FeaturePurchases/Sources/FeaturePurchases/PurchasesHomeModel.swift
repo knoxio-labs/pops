@@ -21,12 +21,18 @@ internal final class PurchasesHomeModel {
     }
 
     internal func load() async {
+        highlighted.removeAll()
         let previous = phase
         phase = .loading
         await read(previous: previous, refreshFailure: nil)
     }
 
     internal func refresh() async {
+        highlighted.removeAll()
+        await refreshPreservingHighlights()
+    }
+
+    private func refreshPreservingHighlights() async {
         guard case .loaded(let digest, let refresh) = phase else { return }
         let previousRefresh: PurchasesHomeRefresh = refresh == .refreshing ? .current : refresh
         let previous = PurchasesHomePhase.loaded(digest, refresh: previousRefresh)
@@ -38,13 +44,13 @@ internal final class PurchasesHomeModel {
         guard case .loaded(let digest, let refreshState) = phase else { return }
         highlighted.formUnion(saved.map(\.id))
         phase = .loaded(digest.landing(saved), refresh: refreshState)
-        await refresh()
+        await refreshPreservingHighlights()
     }
 
     internal func land(savedIDs: [Purchase.ID]) async {
         guard case .loaded = phase else { return }
         highlighted.formUnion(savedIDs)
-        await refresh()
+        await refreshPreservingHighlights()
     }
 
     private func read(previous: PurchasesHomePhase, refreshFailure digest: PurchasesHomeDigest?)
