@@ -11,28 +11,44 @@ import UniformTypeIdentifiers
 ///
 /// A `.move` proposal draws no badge, which is what the home screen does when
 /// one icon is held over another.
-internal struct PageDropDelegate: DropDelegate {
-    internal let onEntered: () -> Void
-    internal let onExited: () -> Void
-    internal let onDropped: ([String]) -> Void
+public struct PageDropDelegate: DropDelegate {
+    private let onEntered: () -> Void
+    private let onExited: () -> Void
+    private let onDropped: ([String]) -> Void
 
-    internal func validateDrop(info: DropInfo) -> Bool {
+    /// Creates a move target with callbacks for hover and dropped page identifiers.
+    public init(
+        onEntered: @escaping () -> Void,
+        onExited: @escaping () -> Void,
+        onDropped: @escaping ([String]) -> Void
+    ) {
+        self.onEntered = onEntered
+        self.onExited = onExited
+        self.onDropped = onDropped
+    }
+
+    /// Accepts the plain-text identifiers emitted by staged-page drags.
+    public func validateDrop(info: DropInfo) -> Bool {
         info.hasItemsConforming(to: [.plainText])
     }
 
-    internal func dropUpdated(info: DropInfo) -> DropProposal? {
+    /// Proposes a move so the drag does not display a misleading copy badge.
+    public func dropUpdated(info: DropInfo) -> DropProposal? {
         DropProposal(operation: .move)
     }
 
-    internal func dropEntered(info: DropInfo) {
+    /// Reports that the dragged page entered this target.
+    public func dropEntered(info: DropInfo) {
         onEntered()
     }
 
-    internal func dropExited(info: DropInfo) {
+    /// Reports that the dragged page exited this target.
+    public func dropExited(info: DropInfo) {
         onExited()
     }
 
-    internal func performDrop(info: DropInfo) -> Bool {
+    /// Loads and forwards every dropped page identifier on the main actor.
+    public func performDrop(info: DropInfo) -> Bool {
         let providers = info.itemProviders(for: [.plainText])
         guard !providers.isEmpty else { return false }
         for provider in providers {
