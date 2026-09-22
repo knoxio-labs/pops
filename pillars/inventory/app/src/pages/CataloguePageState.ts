@@ -4,7 +4,7 @@ import { findCreated, publishedField, reorderField, resolveTypeId } from './cata
 
 import type { CatalogueField, CatalogueOperation, CatalogueType } from '../catalogue-editor/types';
 import type { useCatalogueEditor } from '../catalogue-editor/useCatalogueEditor';
-import type { EditorMode } from './useTypeCataloguePage';
+import type { EditorMode } from './cataloguePageTypes';
 
 /** Resolves the selected type and field against each newly persisted catalogue snapshot. */
 export function useCataloguePageData(

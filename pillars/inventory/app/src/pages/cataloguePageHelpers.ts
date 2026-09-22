@@ -1,5 +1,5 @@
 import type { CatalogueField, CatalogueOperation, CatalogueType } from '../catalogue-editor/types';
-import type { EditorMode } from './useTypeCataloguePage';
+import type { EditorMode } from './cataloguePageTypes';
 
 /** Builds an adjacent field reorder while retaining archived definitions in the full order. */
 export function reorderField(

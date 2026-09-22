@@ -7,10 +7,7 @@ import {
   useCataloguePageNavigation,
 } from './CataloguePageState';
 
-/** The focused editor section currently shown in the catalogue workspace. */
-export type EditorMode = 'type' | 'field' | 'new-type' | 'new-field';
-/** A definition awaiting archive confirmation. */
-export type ArchiveTarget = { kind: 'type' | 'field'; id: string; label: string };
+import type { ArchiveTarget, EditorMode } from './cataloguePageTypes';
 
 /** Provides catalogue page selection and mutation behaviour independently from its layout. */
 export function useTypeCataloguePage() {

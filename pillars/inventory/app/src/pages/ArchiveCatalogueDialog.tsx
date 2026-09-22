@@ -10,7 +10,7 @@ import {
 } from '@pops/ui';
 
 import type { CatalogueOperation } from '../catalogue-editor/types';
-import type { ArchiveTarget } from './useTypeCataloguePage';
+import type { ArchiveTarget } from './cataloguePageTypes';
 
 interface Props {
   readonly onOpenChange: (open: boolean) => void;
