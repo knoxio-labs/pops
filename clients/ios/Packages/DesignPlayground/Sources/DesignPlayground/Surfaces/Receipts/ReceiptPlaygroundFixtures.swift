@@ -27,11 +27,14 @@ internal enum ReceiptPlaygroundFixtures {
         shipping: nil,
         lines: [
             ExtractedReceiptLine(
-                description: "ZCHEETOS C&B BALLS", amount: "4.00", quantity: nil, unitNote: nil),
+                description: "ZCHEETOS C&B BALLS", amount: "4.00", quantity: nil, unitNote: nil,
+                listAmount: nil),
             ExtractedReceiptLine(
-                description: "ZSOFT TCH BLK TRAY", amount: "12.00", quantity: nil, unitNote: nil),
+                description: "ZSOFT TCH BLK TRAY", amount: "12.00", quantity: nil, unitNote: nil,
+                listAmount: nil),
             ExtractedReceiptLine(
-                description: "ZIRONING BOARD", amount: "15.00", quantity: nil, unitNote: nil),
+                description: "ZIRONING BOARD", amount: "15.00", quantity: nil, unitNote: nil,
+                listAmount: nil),
         ],
         unreadableNotes: [],
         taxIncluded: false,
@@ -56,16 +59,20 @@ internal enum ReceiptPlaygroundFixtures {
         shipping: nil,
         lines: [
             ExtractedReceiptLine(
-                description: "Reusable bag", amount: "0.15", quantity: nil, unitNote: nil),
+                description: "Reusable bag", amount: "0.15", quantity: nil, unitNote: nil,
+                listAmount: nil),
             ExtractedReceiptLine(
-                description: "Reusable bag", amount: "0.15", quantity: nil, unitNote: nil),
+                description: "Reusable bag", amount: "0.15", quantity: nil, unitNote: nil,
+                listAmount: nil),
             ExtractedReceiptLine(
-                description: "Full cream milk 2L", amount: "4.50", quantity: 2, unitNote: nil),
+                description: "Full cream milk 2L", amount: "4.50", quantity: 2, unitNote: nil,
+                listAmount: nil),
             ExtractedReceiptLine(
-                description: "Sourdough loaf", amount: "6.00", quantity: nil, unitNote: nil),
+                description: "Sourdough loaf", amount: "6.00", quantity: nil, unitNote: nil,
+                listAmount: nil),
             ExtractedReceiptLine(
                 description: "Royal gala apples", amount: "7.84", quantity: nil,
-                unitNote: "$4.90/kg"),
+                unitNote: "$4.90/kg", listAmount: nil),
         ],
         unreadableNotes: ["The line under the apples is torn away."],
         taxIncluded: false,
@@ -92,9 +99,11 @@ internal enum ReceiptPlaygroundFixtures {
         shipping: nil,
         lines: [
             ExtractedReceiptLine(
-                description: "18V drill driver", amount: "89.00", quantity: nil, unitNote: nil),
+                description: "18V drill driver", amount: "89.00", quantity: nil, unitNote: nil,
+                listAmount: nil),
             ExtractedReceiptLine(
-                description: "Loyalty adjustment", amount: "-30.60", quantity: nil, unitNote: nil),
+                description: "Loyalty adjustment", amount: "-30.60", quantity: nil, unitNote: nil,
+                listAmount: nil),
         ],
         unreadableNotes: ["The bottom edge is torn, hiding any lines below the drill bits."],
         taxIncluded: false,

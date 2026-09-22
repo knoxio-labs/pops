@@ -82,11 +82,15 @@ export function toPurchaseChargeLinkBody(row: PurchaseChargeLinkRow): PurchaseCh
  * inline for the kind — so neither half can be reached alone.
  */
 export function toPurchaseItemBody(item: PurchaseItemRow): PurchaseItemBody {
-  const { kind, kindConfirmedAt, skuScheme, ...rest } = item;
+  const { kind, kindConfirmedAt, skuScheme, listPriceCents, listPriceConfirmedAt, ...rest } = item;
   return {
     ...rest,
     sku: productIdentityOf(item),
     kind: kind === null ? null : { value: kind, confirmedAt: kindConfirmedAt },
+    listPrice:
+      listPriceCents === null
+        ? null
+        : { valueCents: listPriceCents, confirmedAt: listPriceConfirmedAt },
   };
 }
 

@@ -106,3 +106,79 @@ internal struct ReceiptDraftSaveMappingAdjustmentTests {
         #expect(payload.fields.shippingIncluded == true)
     }
 }
+
+/// What a line would have cost at list, forwarded with its provenance
+/// (POPS-3652).
+@Suite("Receipt draft save mapping: list price")
+internal struct ReceiptDraftSaveMappingListPriceTests {
+    @Test("an unedited, extracted list price saves as proposed")
+    func extractedListPriceIsProposed() throws {
+        let draft = ReceiptDraft.fake(.withListPriceAndShipping())
+
+        let payload = try draft.toSavePayload(
+            reading: ReceiptDraftReading(
+                receiptUris: ["pops://purchases/receipt/x"], reconciled: true, failures: [],
+                extracted: .withListPriceAndShipping(), capture: nil),
+            idempotencyKey: "key"
+        )
+
+        #expect(payload.fields.items.first?.listPriceCents == 550)
+        #expect(payload.fields.items.first?.listPriceAsserted == false)
+    }
+
+    @Test("editing an extracted list price saves as asserted")
+    func editedListPriceIsAsserted() throws {
+        var draft = ReceiptDraft.fake(.withListPriceAndShipping())
+        draft.lines[0].listPrice.value = "6.00"
+
+        let payload = try draft.toManualPayload(idempotencyKey: "key")
+
+        #expect(payload.fields.items.first?.listPriceCents == 600)
+        #expect(payload.fields.items.first?.listPriceAsserted == true)
+    }
+
+    @Test("a list price typed on a hand-added line saves as asserted")
+    func handTypedListPriceIsAsserted() throws {
+        var draft = ReceiptDraft.blank(currency: "AUD")
+        draft.merchantResolution = .chosen(id: "ent-kmart")
+        draft.date.value = "2026-08-01"
+        draft.total.value = "10.00"
+        draft.lines[0].amount.value = "10.00"
+        draft.lines[0].listPrice.value = "12.00"
+
+        let payload = try draft.toManualPayload(idempotencyKey: "key")
+
+        #expect(payload.fields.items.first?.listPriceCents == 1200)
+        #expect(payload.fields.items.first?.listPriceAsserted == true)
+    }
+
+    @Test("no stated list price saves as nil, unasserted")
+    func absentListPriceSavesAsNil() throws {
+        var draft = ReceiptDraft.blank(currency: "AUD")
+        draft.merchantResolution = .chosen(id: "ent-kmart")
+        draft.date.value = "2026-08-01"
+        draft.total.value = "10.00"
+        draft.lines[0].amount.value = "10.00"
+
+        let payload = try draft.toManualPayload(idempotencyKey: "key")
+
+        #expect(payload.fields.items.first?.listPriceCents == nil)
+        #expect(payload.fields.items.first?.listPriceAsserted == false)
+    }
+
+    /// The figure is checked against nothing, unlike every other amount in
+    /// this file — so an unparseable list price must not block the save.
+    @Test("an unparseable list price is dropped rather than blocking the save")
+    func unparseableListPriceIsDropped() throws {
+        var draft = ReceiptDraft.blank(currency: "AUD")
+        draft.merchantResolution = .chosen(id: "ent-kmart")
+        draft.date.value = "2026-08-01"
+        draft.total.value = "10.00"
+        draft.lines[0].amount.value = "10.00"
+        draft.lines[0].listPrice.value = "not a number"
+
+        let payload = try draft.toManualPayload(idempotencyKey: "key")
+
+        #expect(payload.fields.items.first?.listPriceCents == nil)
+    }
+}

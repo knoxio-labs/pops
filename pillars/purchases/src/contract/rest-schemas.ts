@@ -9,27 +9,31 @@
  */
 import { z } from 'zod';
 
-import { ProductIdentitySchema } from './schemas/product-identity.js';
 import {
   AutoLinkPolicySchema,
   CaptureSourceSchema,
   CentsSchema,
   ChargeOriginSchema,
+  CreateItemBodySchema,
+  CreateItemUnitBodySchema,
   CurrencySchema,
   DocumentKindSchema,
   IngestMethodSchema,
   IsoTimestampSchema,
-  ItemKindSchema,
   ItemTagSchema,
   NonNegativeCentsSchema,
+  PatchItemBodySchema,
   PopsUriSchema,
   PurchaseStatusSchema,
   PurchaseTagSchema,
+  RefSchema,
   SettlementModeSchema,
   SettlementRoleSchema,
   ShipmentStatusSchema,
   UtcOffsetMinutesSchema,
 } from './schemas/purchase.js';
+
+export { CreateItemBodySchema, CreateItemUnitBodySchema, PatchItemBodySchema };
 
 export const ErrorBodySchema = z.object({
   message: z.string(),
@@ -49,26 +53,6 @@ export const OkSchema = z.object({ ok: z.literal(true) });
  */
 export const QueryBoolSchema = z.preprocess((v) => v === true || v === 'true', z.boolean());
 
-/**
- * Adapter-local wiring handle, unique within one create call and never
- * persisted. It exists only so a line or charge can point at a delivery
- * the payload has not been given ids for yet.
- */
-const RefSchema = z.string().trim().min(1);
-
-/**
- * A string that must carry at least one non-whitespace character and is
- * handed on exactly as it arrived.
- *
- * The distinction from `z.string().trim().min(1)` is that `.trim()` is a
- * transform, so the value the handler writes is not the value the caller
- * sent. That is fine for a wiring handle and wrong for anything documented
- * as verbatim.
- */
-const NonBlankTextSchema = z
-  .string()
-  .regex(/\S/u, 'expected at least one non-whitespace character');
-
 export const CreateShipmentBodySchema = z.object({
   ref: RefSchema,
   /**
@@ -85,84 +69,6 @@ export const CreateShipmentBodySchema = z.object({
   deliveredAt: IsoTimestampSchema.nullable().optional(),
   status: ShipmentStatusSchema.optional(),
   shippingCents: NonNegativeCentsSchema.optional(),
-});
-
-export const CreateItemUnitBodySchema = z.object({
-  /**
-   * The serial engraved on the hardware, persisted verbatim and unvalidated.
-   * Amazon's DSAR export has no such column: its `Item Serial Number` is
-   * mostly a Transparency anti-counterfeit token identifying the packaging,
-   * so its adapter sends no units at all rather than promoting a package
-   * code into a field that means something else. See
-   * `pillars/purchases/src/ingest/amazon/README.md`.
-   */
-  serialNumber: z.string().nullable().optional(),
-  inventoryItemUri: PopsUriSchema.nullable().optional(),
-});
-
-export const CreateItemBodySchema = z.object({
-  ref: RefSchema.optional(),
-  shipmentRef: RefSchema.nullable().optional(),
-  name: z.string().trim().min(1),
-  /**
-   * The identifier the source stated, and the namespace it stated it in.
-   * Both or neither — an adapter that cannot say which namespace an
-   * identifier belongs to has not read one, and a bare string here is what
-   * let a single column mean a different thing per adapter.
-   *
-   * Omit it for every source that states none, which today is every one but
-   * the Amazon export.
-   */
-  sku: ProductIdentitySchema.nullable().optional(),
-  url: z.string().nullable().optional(),
-  imageUrl: z.string().nullable().optional(),
-  quantity: z.int().min(1).optional(),
-  unitPriceCents: CentsSchema,
-  lineTotalCents: CentsSchema,
-  allocatedShippingCents: NonNegativeCentsSchema.optional(),
-  allocatedAdjustmentCents: CentsSchema.optional(),
-  merchantCategory: z.string().nullable().optional(),
-  merchantCondition: z.string().nullable().optional(),
-  promotionalPrice: z.boolean().nullable().optional(),
-  gstApplicable: z.boolean().nullable().optional(),
-  /**
-   * Only where the source states it outright — never inferred. A kind
-   * supplied here lands *asserted*, because a transcription of what a
-   * merchant said is not a guess a later pass should reconsider.
-   */
-  kind: ItemKindSchema.nullable().optional(),
-  /**
-   * POPS item tags. No shipped source states one, so an adapter supplying
-   * these is asserting a classification of its own — which is the bug this
-   * table was carrying. Like {@link CreateItemBodySchema.shape.kind} these
-   * land asserted, and a guard test holds the adapters to writing none.
-   */
-  tags: z.array(ItemTagSchema).optional(),
-  /**
-   * Verbatim merchant prose, in printed order. Duplicates are kept.
-   *
-   * Not `.trim()`: leading and trailing whitespace is part of the printed
-   * text, and a schema that quietly rewrote it would make the word
-   * `verbatim` above false — the column exists so a reviewer can check a
-   * reading against the paper. Blank is rejected rather than trimmed away.
-   */
-  notes: z.array(NonBlankTextSchema).optional(),
-  units: z.array(CreateItemUnitBodySchema).optional(),
-});
-
-/**
- * The confirmation body for one line.
- *
- * Both fields are optional and both are meaningful when explicitly null:
- * `kind: null` retracts a wrong confirmation to unclassified rather than to
- * a different wrong answer, and an empty `tags` array clears the line's
- * tags. Omitting a field leaves it alone, so confirming a kind does not
- * silently drop tags a proposal pass put there.
- */
-export const PatchItemBodySchema = z.object({
-  kind: ItemKindSchema.nullable().optional(),
-  /** Replaces the line's tags outright — what is not listed is rejected. */
-  tags: z.array(ItemTagSchema).optional(),
 });
 
 export const CreateChargeAllocationBodySchema = z.object({

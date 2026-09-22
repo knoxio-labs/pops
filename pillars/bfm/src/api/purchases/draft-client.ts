@@ -58,6 +58,8 @@ interface DraftWireItem {
   readonly unitPriceCents: number;
   readonly lineTotalCents: number;
   readonly notes: readonly string[];
+  readonly listPriceCents: number | null | undefined;
+  readonly listPriceAsserted: boolean | undefined;
 }
 
 interface DraftWireBody {
@@ -102,6 +104,8 @@ function toDraftWireBody(
       unitPriceCents: item.unitPriceCents,
       lineTotalCents: item.lineTotalCents,
       notes: item.notes,
+      listPriceCents: item.listPriceCents,
+      listPriceAsserted: item.listPriceAsserted,
     })),
     capture: body.capture ?? undefined,
     idempotencyKey: body.idempotencyKey,

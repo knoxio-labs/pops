@@ -7,7 +7,7 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { CreatePurchaseBodySchema } from '../rest-schemas.js';
+import { CreateItemBodySchema, CreatePurchaseBodySchema } from '../rest-schemas.js';
 
 const MINIMAL = {
   source: 'amazon',
@@ -41,5 +41,31 @@ describe('CreatePurchaseBodySchema — adjustment basis', () => {
     expect(parsed.discountIncluded).toBeUndefined();
     expect(parsed.surchargeIncluded).toBeUndefined();
     expect(parsed.shippingIncluded).toBeUndefined();
+  });
+});
+
+const MINIMAL_ITEM = {
+  name: 'Timber Pine DAR 42x19',
+  unitPriceCents: 350,
+  lineTotalCents: 350,
+};
+
+describe('CreateItemBodySchema — list price (POPS-3652)', () => {
+  it('round-trips a stated list price and its assertion', () => {
+    const parsed = CreateItemBodySchema.parse({
+      ...MINIMAL_ITEM,
+      listPriceCents: 550,
+      listPriceAsserted: true,
+    });
+
+    expect(parsed.listPriceCents).toBe(550);
+    expect(parsed.listPriceAsserted).toBe(true);
+  });
+
+  it('parses with both fields omitted, backward compatible with every existing adapter payload', () => {
+    const parsed = CreateItemBodySchema.parse(MINIMAL_ITEM);
+
+    expect(parsed.listPriceCents).toBeUndefined();
+    expect(parsed.listPriceAsserted).toBeUndefined();
   });
 });

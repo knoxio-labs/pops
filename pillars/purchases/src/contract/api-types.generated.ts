@@ -935,6 +935,10 @@ export interface operations {
                   value: 'consumable' | 'durable' | 'digital' | 'service';
                 } | null;
                 lineTotalCents: number;
+                listPrice: {
+                  confirmedAt: string | null;
+                  valueCents: number;
+                } | null;
                 merchantCategory: string | null;
                 merchantCondition: string | null;
                 name: string;
@@ -1376,6 +1380,8 @@ export interface operations {
             /** @enum {string|null} */
             kind?: 'consumable' | 'durable' | 'digital' | 'service' | null;
             lineTotalCents: number;
+            listPriceAsserted?: boolean;
+            listPriceCents?: number | null;
             merchantCategory?: string | null;
             merchantCondition?: string | null;
             name: string;
@@ -1509,6 +1515,10 @@ export interface operations {
                   value: 'consumable' | 'durable' | 'digital' | 'service';
                 } | null;
                 lineTotalCents: number;
+                listPrice: {
+                  confirmedAt: string | null;
+                  valueCents: number;
+                } | null;
                 merchantCategory: string | null;
                 merchantCondition: string | null;
                 name: string;
@@ -1675,6 +1685,8 @@ export interface operations {
             /** @enum {string|null} */
             kind?: 'consumable' | 'durable' | 'digital' | 'service' | null;
             lineTotalCents: number;
+            listPriceAsserted?: boolean;
+            listPriceCents?: number | null;
             merchantCategory?: string | null;
             merchantCondition?: string | null;
             name: string;
@@ -1806,6 +1818,10 @@ export interface operations {
                   value: 'consumable' | 'durable' | 'digital' | 'service';
                 } | null;
                 lineTotalCents: number;
+                listPrice: {
+                  confirmedAt: string | null;
+                  valueCents: number;
+                } | null;
                 merchantCategory: string | null;
                 merchantCondition: string | null;
                 name: string;
@@ -2004,6 +2020,10 @@ export interface operations {
                   value: 'consumable' | 'durable' | 'digital' | 'service';
                 } | null;
                 lineTotalCents: number;
+                listPrice: {
+                  confirmedAt: string | null;
+                  valueCents: number;
+                } | null;
                 merchantCategory: string | null;
                 merchantCondition: string | null;
                 name: string;
@@ -2329,6 +2349,10 @@ export interface operations {
                 value: 'consumable' | 'durable' | 'digital' | 'service';
               } | null;
               lineTotalCents: number;
+              listPrice: {
+                confirmedAt: string | null;
+                valueCents: number;
+              } | null;
               merchantCategory: string | null;
               merchantCondition: string | null;
               name: string;
@@ -2676,6 +2700,10 @@ export interface operations {
                         value: 'consumable' | 'durable' | 'digital' | 'service';
                       } | null;
                       lineTotalCents: number;
+                      listPrice: {
+                        confirmedAt: string | null;
+                        valueCents: number;
+                      } | null;
                       merchantCategory: string | null;
                       merchantCondition: string | null;
                       name: string;
@@ -2773,6 +2801,8 @@ export interface operations {
                   lines: {
                     amount: string;
                     description: string;
+                    /** @default null */
+                    listAmount: string | null;
                     quantity?: number;
                     unitNote?: string;
                   }[];
@@ -2910,6 +2940,8 @@ export interface operations {
             /** @enum {string|null} */
             kind?: 'consumable' | 'durable' | 'digital' | 'service' | null;
             lineTotalCents: number;
+            listPriceAsserted?: boolean;
+            listPriceCents?: number | null;
             merchantCategory?: string | null;
             merchantCondition?: string | null;
             name: string;
@@ -3041,6 +3073,10 @@ export interface operations {
                   value: 'consumable' | 'durable' | 'digital' | 'service';
                 } | null;
                 lineTotalCents: number;
+                listPrice: {
+                  confirmedAt: string | null;
+                  valueCents: number;
+                } | null;
                 merchantCategory: string | null;
                 merchantCondition: string | null;
                 name: string;
@@ -3244,6 +3280,8 @@ export interface operations {
                     /** @enum {string|null} */
                     kind?: 'consumable' | 'durable' | 'digital' | 'service' | null;
                     lineTotalCents: number;
+                    listPriceAsserted?: boolean;
+                    listPriceCents?: number | null;
                     merchantCategory?: string | null;
                     merchantCondition?: string | null;
                     name: string;

@@ -156,7 +156,8 @@ internal enum PurchaseEditDraft {
                     description: PurchaseDetailLineText.oneLine($0.name),
                     amount: plain($0.lineTotal),
                     quantity: $0.quantity > 1 ? $0.quantity : nil,
-                    unitNote: nil)
+                    unitNote: nil,
+                    listAmount: nil)
             },
             unreadableNotes: [],
             // A saved purchase's adjustments sit on top of its lines: the

@@ -97,6 +97,7 @@ function checksumFor(purchase: {
         item.gstApplicable,
         item.promotionalPrice,
         item.notes,
+        item.listPriceCents,
       ])
     );
   }
@@ -118,6 +119,9 @@ function toItem(grouped: ReturnType<typeof groupReceiptRows>['items'][number]): 
     // merchant saying "no", not saying nothing.
     promotionalPrice: grouped.promotional,
     gstApplicable: grouped.gstApplicable,
+    // A machine reading of structured data — the same provenance posture as
+    // the vision-model path. `listPriceAsserted` is deliberately omitted.
+    listPriceCents: grouped.listPriceCents,
   };
 }
 

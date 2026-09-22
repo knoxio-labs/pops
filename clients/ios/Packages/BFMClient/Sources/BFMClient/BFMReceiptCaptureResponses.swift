@@ -61,7 +61,8 @@ extension BFMReceiptCaptureRepository {
             description: wire.name,
             amount: ReceiptMoneyText.string(fromCents: wire.lineTotalCents),
             quantity: wire.quantity,
-            unitNote: nil
+            unitNote: nil,
+            listAmount: wire.listPriceCents.map { ReceiptMoneyText.string(fromCents: $0) }
         )
     }
 

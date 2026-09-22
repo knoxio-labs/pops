@@ -31,6 +31,7 @@ const PurchasesDraftLineSchema = z.object({
   unitPriceCents: z.number().int(),
   lineTotalCents: z.number().int(),
   notes: z.array(z.string()).optional(),
+  listPriceCents: z.number().int().nullable().optional(),
 });
 
 const PurchasesDraftDocumentSchema = z.object({
@@ -160,6 +161,9 @@ export function toMobileExtractOutcome(outcome: PurchasesExtractOutcome): Mobile
         unitPriceCents: item.unitPriceCents,
         lineTotalCents: item.lineTotalCents,
         notes: item.notes ?? [],
+        // A fresh extraction never asserts it — `listPriceAsserted` is
+        // omitted, matching the mobile schema's `.optional()`.
+        listPriceCents: item.listPriceCents ?? null,
       })),
       documents: (draft.documents ?? []).map((document) => ({
         documentUri: document.documentUri,

@@ -34,6 +34,14 @@ export const ExtractedLineSchema = z.object({
   quantity: z.number().int().positive().optional(),
   /** `$4.50/kg`, `2 @ $3.00` — whatever qualifies the price, verbatim. */
   unitNote: z.string().trim().min(1).optional(),
+  /**
+   * The pre-discount, normal price printed beside a promotional one — a
+   * struck-through price, or a `WAS $X` notation. Printed money, verbatim,
+   * following the exact convention {@link unitNote} already uses: null when
+   * the receipt prints no such second price for this line, and never
+   * invented. Not the same field as `unitNote`'s per-unit qualifier.
+   */
+  listAmount: z.string().trim().min(1).nullable().default(null),
 });
 
 export const ExtractedReceiptSchema = z.object({

@@ -55,6 +55,8 @@ export interface GroupedItem {
   readonly gstApplicable: boolean;
   /** `^` marks a line sold at a promotional price. */
   readonly promotional: boolean;
+  /** The merchant's normal price, recovered from a `WAS $x` note. Null when none is stated. */
+  readonly listPriceCents: number | null;
 }
 
 export interface GroupingAnomaly {
@@ -77,6 +79,30 @@ export interface GroupedRows {
 
 /** `Qty 2 @ $9.24 each` — quantity and unit price, as prose. */
 const QUANTITY_RE = /^qty\s+(\d+)\s*@\s*\$?([\d,]+\.?\d*)\s*each/iu;
+
+/**
+ * `WAS $5.50` — the merchant's own normal price, stated beside a
+ * promotional one. Anchored to the start of the note so it does not
+ * over-match `PRICE REDUCED BY $7.26 each` or `SAVE $x`, which state a
+ * saving rather than a price and are left as unparsed verbatim notes.
+ */
+const WAS_PRICE_RE = /^was\s*\$?([\d,]+\.?\d*)/iu;
+
+/**
+ * Recover a `WAS` price from a product's notes, when one is stated.
+ *
+ * Only `WAS` is handled here. `PRICE REDUCED BY $x each`, `SAVE $x` and
+ * `MEMBER PRICE` are left as unparsed verbatim notes — deriving a list price
+ * from them would be a guess about arithmetic the receipt never stated as a
+ * normal price.
+ */
+export function parseWasPrice(notes: readonly string[]): number | null {
+  for (const note of notes) {
+    const match = WAS_PRICE_RE.exec(note);
+    if (match?.[1] !== undefined) return parseAmountCents(match[1]);
+  }
+  return null;
+}
 
 /**
  * Rows that modify the product above them rather than naming a new one.
@@ -126,6 +152,7 @@ class Grouper {
       notes: open.notes,
       gstApplicable: open.gstApplicable,
       promotional: open.promotional,
+      listPriceCents: parseWasPrice(open.notes),
     });
   }
 

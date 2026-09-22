@@ -333,6 +333,10 @@ export type PurchaseItemsByTagResponses = {
           value: 'consumable' | 'durable' | 'digital' | 'service';
         } | null;
         lineTotalCents: number;
+        listPrice: {
+          confirmedAt: string | null;
+          valueCents: number;
+        } | null;
         merchantCategory: string | null;
         merchantCondition: string | null;
         name: string;
@@ -725,6 +729,8 @@ export type PurchaseCreateData = {
       imageUrl?: string | null;
       kind?: 'consumable' | 'durable' | 'digital' | 'service' | null;
       lineTotalCents: number;
+      listPriceAsserted?: boolean;
+      listPriceCents?: number | null;
       merchantCategory?: string | null;
       merchantCondition?: string | null;
       name: string;
@@ -869,6 +875,10 @@ export type PurchaseCreateResponses = {
           value: 'consumable' | 'durable' | 'digital' | 'service';
         } | null;
         lineTotalCents: number;
+        listPrice: {
+          confirmedAt: string | null;
+          valueCents: number;
+        } | null;
         merchantCategory: string | null;
         merchantCondition: string | null;
         name: string;
@@ -994,6 +1004,8 @@ export type PurchaseCreateManualData = {
       imageUrl?: string | null;
       kind?: 'consumable' | 'durable' | 'digital' | 'service' | null;
       lineTotalCents: number;
+      listPriceAsserted?: boolean;
+      listPriceCents?: number | null;
       merchantCategory?: string | null;
       merchantCondition?: string | null;
       name: string;
@@ -1137,6 +1149,10 @@ export type PurchaseCreateManualResponses = {
           value: 'consumable' | 'durable' | 'digital' | 'service';
         } | null;
         lineTotalCents: number;
+        listPrice: {
+          confirmedAt: string | null;
+          valueCents: number;
+        } | null;
         merchantCategory: string | null;
         merchantCondition: string | null;
         name: string;
@@ -1347,6 +1363,10 @@ export type PurchaseGetResponses = {
           value: 'consumable' | 'durable' | 'digital' | 'service';
         } | null;
         lineTotalCents: number;
+        listPrice: {
+          confirmedAt: string | null;
+          valueCents: number;
+        } | null;
         merchantCategory: string | null;
         merchantCondition: string | null;
         name: string;
@@ -1607,6 +1627,10 @@ export type PurchasePatchItemResponses = {
         value: 'consumable' | 'durable' | 'digital' | 'service';
       } | null;
       lineTotalCents: number;
+      listPrice: {
+        confirmedAt: string | null;
+        valueCents: number;
+      } | null;
       merchantCategory: string | null;
       merchantCondition: string | null;
       name: string;
@@ -1907,6 +1931,10 @@ export type ReceiptUploadResponses = {
                 value: 'consumable' | 'durable' | 'digital' | 'service';
               } | null;
               lineTotalCents: number;
+              listPrice: {
+                confirmedAt: string | null;
+                valueCents: number;
+              } | null;
               merchantCategory: string | null;
               merchantCondition: string | null;
               name: string;
@@ -1992,6 +2020,7 @@ export type ReceiptUploadResponses = {
           lines: Array<{
             amount: string;
             description: string;
+            listAmount: string | null;
             quantity?: number;
             unitNote?: string;
           }>;
@@ -2074,6 +2103,8 @@ export type ReceiptSaveDraftData = {
       imageUrl?: string | null;
       kind?: 'consumable' | 'durable' | 'digital' | 'service' | null;
       lineTotalCents: number;
+      listPriceAsserted?: boolean;
+      listPriceCents?: number | null;
       merchantCategory?: string | null;
       merchantCondition?: string | null;
       name: string;
@@ -2216,6 +2247,10 @@ export type ReceiptSaveDraftResponses = {
           value: 'consumable' | 'durable' | 'digital' | 'service';
         } | null;
         lineTotalCents: number;
+        listPrice: {
+          confirmedAt: string | null;
+          valueCents: number;
+        } | null;
         merchantCategory: string | null;
         merchantCondition: string | null;
         name: string;
@@ -2397,6 +2432,8 @@ export type ReceiptExtractResponses = {
             imageUrl?: string | null;
             kind?: 'consumable' | 'durable' | 'digital' | 'service' | null;
             lineTotalCents: number;
+            listPriceAsserted?: boolean;
+            listPriceCents?: number | null;
             merchantCategory?: string | null;
             merchantCondition?: string | null;
             name: string;

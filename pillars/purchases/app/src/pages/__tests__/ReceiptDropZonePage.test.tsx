@@ -149,6 +149,7 @@ function lineItem(name: string): PurchaseDetail['items'][number] {
       imageUrl: null,
       kind: null,
       lineTotalCents: 2060,
+      listPrice: null,
       merchantCategory: null,
       merchantCondition: null,
       name,
@@ -181,8 +182,8 @@ function extracted(overrides: Partial<ExtractedReceipt> = {}): ExtractedReceipt 
     currency: 'AUD',
     discounts: [],
     lines: [
-      { description: 'Sourdough loaf', amount: '8.50', quantity: 1 },
-      { description: 'Tomatoes', amount: '6.20', unitNote: 'per kg' },
+      { description: 'Sourdough loaf', amount: '8.50', quantity: 1, listAmount: null },
+      { description: 'Tomatoes', amount: '6.20', unitNote: 'per kg', listAmount: null },
     ],
     merchantName: 'Woolworths',
     purchasedAt: '2026-08-12 19:30',

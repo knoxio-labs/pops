@@ -6,7 +6,11 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { MobileReceiptDraftSchema, MobileSaveReceiptDraftBodySchema } from '../receipt-draft.js';
+import {
+  MobileDraftLineSchema,
+  MobileReceiptDraftSchema,
+  MobileSaveReceiptDraftBodySchema,
+} from '../receipt-draft.js';
 
 const MINIMAL_SAVE_BODY = {
   merchantName: 'Bunnings',
@@ -86,5 +90,25 @@ describe('MobileReceiptDraftSchema — adjustment basis', () => {
     expect(parsed.taxIncluded).toBeNull();
     expect(parsed.shippingIncluded).toBeNull();
     expect(() => MobileReceiptDraftSchema.parse(MINIMAL_DRAFT)).toThrow();
+  });
+});
+
+const MINIMAL_LINE = { name: 'A', unitPriceCents: 350, lineTotalCents: 350, notes: [] };
+
+describe('MobileDraftLineSchema — list price', () => {
+  it('round-trips a stated list price and its assertion', () => {
+    const parsed = MobileDraftLineSchema.parse({
+      ...MINIMAL_LINE,
+      listPriceCents: 550,
+      listPriceAsserted: true,
+    });
+    expect(parsed.listPriceCents).toBe(550);
+    expect(parsed.listPriceAsserted).toBe(true);
+  });
+
+  it('parses with both fields omitted, backward compatible with a line that predates them', () => {
+    const parsed = MobileDraftLineSchema.parse(MINIMAL_LINE);
+    expect(parsed.listPriceCents).toBeUndefined();
+    expect(parsed.listPriceAsserted).toBeUndefined();
   });
 });
