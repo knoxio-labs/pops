@@ -137,6 +137,7 @@ export const handlers: Readonly<Record<OperationKey, MockHandler>> = {
     receiptUris: [`pops://purchases/receipt/${'a'.repeat(64)}`],
     reconciled: true,
     failures: [],
+    matchedMerchantEntityId: null,
     draft: RECEIPT_DRAFT,
   }),
   'POST /receipts/draft': ok(ORDER),

@@ -64,4 +64,23 @@ describe('the mock layer covers the purchases contract', () => {
   it('covers the contract exactly', () => {
     expect(handled).toEqual(operations);
   });
+
+  it('returns a contract-shaped receipt extraction draft', async () => {
+    const extractReceipt = handlers['POST /receipts/extract'];
+    expect(extractReceipt).toBeDefined();
+    if (extractReceipt === undefined) throw new Error('receipt extraction handler is missing');
+
+    const response = await extractReceipt({
+      method: 'POST',
+      path: '/receipts/extract',
+      params: {},
+      query: new URLSearchParams(),
+      body: undefined,
+    });
+
+    expect(response.body).toMatchObject({
+      kind: 'draft',
+      matchedMerchantEntityId: null,
+    });
+  });
 });
