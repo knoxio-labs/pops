@@ -26,9 +26,6 @@ extension ReceiptSaveLine {
 extension ReceiptPurchaseDraftFields {
     public static func fake(
         merchantName: String? = "Fake Store",
-        merchantEntityId: String? = nil,
-        merchantAddressId: String? = nil,
-        merchantAddressText: String? = nil,
         orderedAt: String = "2026-01-01T09:30:00+00:00",
         currency: String = "AUD",
         totalCents: Int = 1000,
@@ -46,9 +43,6 @@ extension ReceiptPurchaseDraftFields {
     ) -> ReceiptPurchaseDraftFields {
         ReceiptPurchaseDraftFields(
             merchantName: merchantName,
-            merchantEntityId: merchantEntityId,
-            merchantAddressId: merchantAddressId,
-            merchantAddressText: merchantAddressText,
             orderedAt: orderedAt,
             currency: currency,
             totalCents: totalCents,
