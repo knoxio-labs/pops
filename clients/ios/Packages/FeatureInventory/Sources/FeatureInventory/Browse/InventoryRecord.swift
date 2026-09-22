@@ -96,9 +96,17 @@ internal struct InventoryRecordReader {
 
 /// A type the filter sheet offers: the key a record carries and the name a
 /// person reads.
-internal struct InventoryTypeName: Identifiable, Hashable, Sendable {
-    internal let key: String
-    internal let name: String
+public struct InventoryTypeName: Identifiable, Hashable, Sendable {
+    /// The stable catalogue key carried by records.
+    public let key: String
+    /// The reader-facing catalogue name.
+    public let name: String
 
-    internal var id: String { key }
+    public var id: String { key }
+
+    /// Creates a type option from its catalogue key and display name.
+    public init(key: String, name: String) {
+        self.key = key
+        self.name = name
+    }
 }

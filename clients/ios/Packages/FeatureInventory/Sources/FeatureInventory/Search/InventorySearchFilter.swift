@@ -92,10 +92,11 @@ public struct InventorySearchFilter: Equatable, Sendable {
     /// Creates a filter that includes active records in every placement.
     public init() {}
 
-    internal var isActive: Bool { self != InventorySearchFilter() }
+    /// Whether any narrowing differs from the default filter.
+    public var isActive: Bool { self != InventorySearchFilter() }
 
     /// What VoiceOver reads as the filter circle's value.
-    internal var summary: String {
+    public var summary: String {
         [
             placement == .any ? nil : placement.title,
             containerState == .any ? nil : containerState.title,

@@ -19,33 +19,7 @@ internal struct InventorySearchFilterSheet: View {
                         }
                     }
                 }
-                Section {
-                    Picker("Placement", selection: $filter.placement) {
-                        ForEach(InventoryPlacementFilter.allCases) { Text($0.title).tag($0) }
-                    }
-                    Picker("Container", selection: $filter.containerState) {
-                        ForEach(InventoryContainerStateFilter.allCases) {
-                            Text($0.title).tag($0)
-                        }
-                    }
-                    Picker("Type", selection: $filter.type) {
-                        Text("Any").tag(InventoryTypeName?.none)
-                        ForEach(types) { Text($0.name).tag(InventoryTypeName?.some($0)) }
-                    }
-                    Picker("Quantity", selection: $filter.quantity) {
-                        ForEach(InventoryQuantityFilter.allCases) { Text($0.title).tag($0) }
-                    }
-                    Picker("Missing", selection: $filter.missing) {
-                        ForEach(InventoryMissingFilter.allCases) { Text($0.title).tag($0) }
-                    }
-                    Picker("Sync", selection: $filter.sync) {
-                        ForEach(InventorySyncFilter.allCases) { Text($0.title).tag($0) }
-                    }
-                }
-                .pickerStyle(.menu)
-                Section {
-                    Toggle("Include inactive", isOn: $filter.includesInactive)
-                }
+                InventorySearchFilterFields(filter: $filter, types: types)
             }
             .inventoryInsetGroupedList()
             .navigationTitle("Filters")
@@ -62,5 +36,60 @@ internal struct InventorySearchFilterSheet: View {
         }
         .tint(.popsInventory)
         .presentationDetents([.large])
+    }
+}
+
+/// Inventory's filter pickers and inactive toggle for use in a shared filter form.
+public struct InventorySearchFilterFields<Header: View>: View {
+    @Binding private var filter: InventorySearchFilter
+    private let types: [InventoryTypeName]
+    @ViewBuilder private let header: () -> Header
+
+    /// Creates Inventory filter fields with a caller-provided section header.
+    public init(
+        filter: Binding<InventorySearchFilter>,
+        types: [InventoryTypeName],
+        @ViewBuilder header: @escaping () -> Header
+    ) {
+        _filter = filter
+        self.types = types
+        self.header = header
+    }
+
+    public var body: some View {
+        Section {
+            Picker("Placement", selection: $filter.placement) {
+                ForEach(InventoryPlacementFilter.allCases) { Text($0.title).tag($0) }
+            }
+            Picker("Container", selection: $filter.containerState) {
+                ForEach(InventoryContainerStateFilter.allCases) { Text($0.title).tag($0) }
+            }
+            Picker("Type", selection: $filter.type) {
+                Text("Any").tag(InventoryTypeName?.none)
+                ForEach(types) { Text($0.name).tag(InventoryTypeName?.some($0)) }
+            }
+            Picker("Quantity", selection: $filter.quantity) {
+                ForEach(InventoryQuantityFilter.allCases) { Text($0.title).tag($0) }
+            }
+            Picker("Missing", selection: $filter.missing) {
+                ForEach(InventoryMissingFilter.allCases) { Text($0.title).tag($0) }
+            }
+            Picker("Sync", selection: $filter.sync) {
+                ForEach(InventorySyncFilter.allCases) { Text($0.title).tag($0) }
+            }
+        } header: {
+            header()
+        }
+        .pickerStyle(.menu)
+        Section {
+            Toggle("Include inactive", isOn: $filter.includesInactive)
+        }
+    }
+}
+
+extension InventorySearchFilterFields where Header == EmptyView {
+    /// Creates Inventory filter fields without a section header.
+    public init(filter: Binding<InventorySearchFilter>, types: [InventoryTypeName]) {
+        self.init(filter: filter, types: types) { EmptyView() }
     }
 }

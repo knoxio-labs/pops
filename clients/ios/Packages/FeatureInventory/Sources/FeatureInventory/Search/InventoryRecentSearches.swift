@@ -1,3 +1,4 @@
+import AppCore
 import DesignSystem
 import SwiftUI
 
@@ -5,9 +6,8 @@ import SwiftUI
 /// what was scanned lately as small photo tiles.
 internal struct InventoryRecentSearches: View {
     @Binding internal var queries: [String]
-    internal let scanned: [InventoryRecord]
+    internal let store: any InventoryStore
     internal let onSelect: (String) -> Void
-    internal let loadPhoto: @MainActor (String) async -> Data?
     @State private var swiping: String?
 
     internal var body: some View {
@@ -21,14 +21,7 @@ internal struct InventoryRecentSearches: View {
                 }
                 .transition(.opacity)
             }
-            if !scanned.isEmpty {
-                VStack(alignment: .leading, spacing: PopsSpacing.xs) {
-                    PopsSectionHeader(title: "Recently scanned")
-                    HStack(alignment: .top, spacing: PopsSpacing.sm) {
-                        ForEach(scanned) { InventoryScannedTile(record: $0, loadPhoto: loadPhoto) }
-                    }
-                }
-            }
+            InventoryRecentlyScanned(store: store)
         }
         .popsMotion(value: queries)
     }
@@ -61,6 +54,44 @@ internal struct InventoryRecentSearches: View {
                     Label("Remove", systemImage: InventorySymbol.discard.system)
                 }
             })
+    }
+}
+
+/// Recently scanned Inventory records, resolved from their stored identifiers through the replica.
+public struct InventoryRecentlyScanned: View {
+    private let store: any InventoryStore
+    @AppStorage(InventorySearchRecents.scannedKey) private var storedScanned = ""
+    @State private var records: [InventoryRecord] = []
+
+    /// Creates recently scanned tiles backed by the supplied Inventory replica.
+    public init(store: any InventoryStore) {
+        self.store = store
+    }
+
+    public var body: some View {
+        Group {
+            if !records.isEmpty {
+                VStack(alignment: .leading, spacing: PopsSpacing.xs) {
+                    PopsSectionHeader(title: "Recently scanned")
+                    HStack(alignment: .top, spacing: PopsSpacing.sm) {
+                        ForEach(records) { record in
+                            InventoryScannedTile(
+                                record: record,
+                                loadPhoto: { try? await store.photo($0, variant: .thumb) })
+                        }
+                    }
+                }
+                .transition(.opacity)
+            }
+        }
+        .task(id: storedScanned) {
+            let ids = InventorySearchRecents.decode(storedScanned)
+            for await result in store.observe(
+                InventorySearchResults.query(text: "", includeInactive: false, scannedIDs: ids))
+            {
+                records = result.scanned
+            }
+        }
     }
 }
 

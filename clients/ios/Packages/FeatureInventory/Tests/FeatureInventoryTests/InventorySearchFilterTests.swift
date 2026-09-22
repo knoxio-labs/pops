@@ -1,4 +1,5 @@
 import AppCore
+import AppCoreFakes
 import Testing
 
 @testable import FeatureInventory
@@ -143,5 +144,55 @@ internal struct InventorySearchFilterTests {
         filter.includesInactive = true
         #expect(filter.isActive)
         #expect(filter.summary == "In a container, No type, Including inactive")
+    }
+
+    @Test("the default value is the Reset contract")
+    func resetContract() {
+        var filter = InventorySearchFilter()
+        filter.placement = .contained
+        filter.includesInactive = true
+
+        filter = InventorySearchFilter()
+
+        #expect(!filter.isActive)
+        #expect(filter.summary.isEmpty)
+        #expect(filter.placement == .any)
+        #expect(!filter.includesInactive)
+    }
+
+    @Test("recent scans keep stored order, skip missing and deleted records, and cap at four")
+    func recentlyScannedOrderAndLimit() async throws {
+        let store = InMemoryInventoryStore(
+            items: [
+                Fixture.item("one", "One"),
+                Fixture.item("two", "Two"),
+                Fixture.item("three", "Three"),
+                Fixture.item("four", "Four"),
+                Fixture.item("five", "Five"),
+                Fixture.item("deleted", "Deleted", deleted: true),
+            ])
+
+        let records = try #require(
+            await Self.scanned(
+                ["three", "missing", "deleted", "one", "five", "two", "four"],
+                in: store))
+
+        #expect(records.map(\.id) == ["three", "one", "five", "two"])
+    }
+
+    @Test("an empty recent-scan key resolves no tiles")
+    func emptyRecentlyScanned() async throws {
+        let records = try #require(await Self.scanned([], in: InMemoryInventoryStore()))
+        #expect(records.isEmpty)
+    }
+
+    private static func scanned(
+        _ ids: [InventoryItem.ID],
+        in store: InMemoryInventoryStore
+    ) async -> [InventoryRecord]? {
+        var results = store.observe(
+            InventorySearchResults.query(text: "", includeInactive: false, scannedIDs: ids)
+        ).makeAsyncIterator()
+        return await results.next()?.scanned
     }
 }

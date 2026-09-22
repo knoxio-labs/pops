@@ -88,12 +88,11 @@ internal struct InventorySearchView: View {
             ErrorStateView(message: InventoryCopy.unavailable) { generation += 1 }
         case .loaded(let results):
             if results.isFirstRun {
-                InventoryFirstLaunchPrompt { Task { await model.download() } }
+                InventoryNotOnPhonePrompt { Task { await model.download() } }
             } else if model.trimmedQuery.isEmpty {
                 InventoryRecentSearches(
-                    queries: recents, scanned: results.scanned,
-                    onSelect: { model.query = $0 },
-                    loadPhoto: { await model.thumbnail($0) })
+                    queries: recents, store: model.store,
+                    onSelect: { model.query = $0 })
             } else if model.hits.isEmpty {
                 PopsCentredLine(text: emptyText)
             } else {
