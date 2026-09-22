@@ -2,6 +2,9 @@ import Foundation
 
 /// The purchase records the phone can read.
 public protocol PurchasesRepository: Sendable {
+    /// Searches purchase and line matches, narrowed by settlement status on the server.
+    func search(text: String, status: PurchaseSearchStatus) async throws -> [PurchaseSearchHit]
+
     /// Reads one filtered page after an opaque cursor, or the first page when it is nil.
     func purchases(
         after cursor: String?, statusFilter: PurchaseStatusFilter
@@ -22,4 +25,12 @@ public protocol PurchasesRepository: Sendable {
 
     /// Reads a full-size receipt, or returns `nil` when it does not exist.
     func receiptImage(sha256: String) async throws -> ReceiptImage?
+}
+
+extension PurchasesRepository {
+    public func search(
+        text: String, status: PurchaseSearchStatus
+    ) async throws -> [PurchaseSearchHit] {
+        throw RepositoryError.dependencyNotBound
+    }
 }

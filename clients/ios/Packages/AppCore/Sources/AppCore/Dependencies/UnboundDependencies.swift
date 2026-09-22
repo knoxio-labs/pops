@@ -37,6 +37,10 @@ internal struct UnboundReceiptCaptureRepository: ReceiptCaptureRepository {
 }
 
 internal struct UnboundPurchasesRepository: PurchasesRepository {
+    func search(text: String, status: PurchaseSearchStatus) async throws -> [PurchaseSearchHit] {
+        throw RepositoryError.dependencyNotBound
+    }
+
     func purchases(
         after cursor: String?, statusFilter: PurchaseStatusFilter
     ) async throws -> PurchasePage {
