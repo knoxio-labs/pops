@@ -112,19 +112,24 @@ internal struct ContentView: View {
         }
     }
 
-    /// The tab bar's tint for the tab showing: Inventory's amber while
-    /// Inventory is the one selected, and the platform's own tint — which is
-    /// what `nil` restores — for every other tab.
+    /// The tab bar's tint for the tab showing: each feature tint while its tab
+    /// is selected, and the platform's own tint where no feature tint applies.
     ///
     /// A tab bar tints the selected item and nothing else, so tinting the
-    /// whole `TabView` from the selection is what makes the amber belong to
-    /// Inventory rather than to whichever tab happens to be chosen. Inventory's
-    /// search sibling is a tab of its own and keeps the usual tint; the ticket
-    /// asks for the Inventory tab item.
+    /// whole `TabView` from the selection is what makes a colour belong to its
+    /// feature rather than to whichever tab happens to be chosen. Inventory's
+    /// search sibling is a tab of its own and keeps the usual tint.
     ///
     /// `nonisolated` because it is pure, for the reason ``shownFeature`` is.
     nonisolated internal static func tabTint(for shown: MobileFeature) -> Color? {
-        shown == FeatureInventory.feature ? .popsInventory : nil
+        switch shown {
+        case FeaturePurchases.feature:
+            .popsPurchases
+        case FeatureInventory.feature:
+            .popsInventory
+        default:
+            nil
+        }
     }
 
     private var selection: Binding<MobileFeature> {
@@ -164,7 +169,7 @@ internal struct ContentView: View {
                 dependencies: dependencies,
                 router: composition.router(for: FeatureAccounts.feature))
         case FeaturePurchases.feature:
-            PurchasesListView(dependencies: dependencies)
+            PurchasesFlowView(dependencies: dependencies)
         case ReceiptCaptureTab.feature:
             ReceiptCaptureView(model: ReceiptCaptureViewModel(dependencies: dependencies))
         case FeatureInventory.feature:

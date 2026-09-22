@@ -3,14 +3,14 @@ import DesignSystem
 import SwiftUI
 
 /// The purchase history, with states that distinguish an empty history from an unavailable one.
-public struct PurchasesListView: View {
+internal struct PurchasesListView: View {
     @State private var model: PurchasesListViewModel
 
-    public init(dependencies: AppDependencies) {
+    internal init(dependencies: AppDependencies) {
         _model = State(wrappedValue: PurchasesListViewModel(dependencies: dependencies))
     }
 
-    public var body: some View {
+    internal var body: some View {
         Group {
             if model.isLoading {
                 LoadingStateView(message: "Loading purchases…")

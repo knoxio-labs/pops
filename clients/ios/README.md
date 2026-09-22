@@ -209,6 +209,8 @@ Half of that is compiler-enforced — a package can only `import` what its own `
 
 Every package is written — see [Packages/Auth/README.md](Packages/Auth/README.md), [Packages/BFMClient/README.md](Packages/BFMClient/README.md), [Packages/FeaturePairing/README.md](Packages/FeaturePairing/README.md) and [Packages/FeatureTransactions/README.md](Packages/FeatureTransactions/README.md), and so is the root that binds them together — see [The shell](#the-shell) below.
 
+Feature tabs own their navigation stacks. `PurchasesFlowView` is the Purchases tab root and exposes `PurchasesRoute` only for another feature to open a purchase detail by identifier. `ContentView` selects `popsPurchases` for that tab and `popsInventory` for Inventory; tabs without a feature colour use the platform tint. Receipt capture remains a separate tab until its replacement flow lands.
+
 ## `Contracts/`
 
 Artefacts this app and the BFM must agree on byte for byte, kept outside any one package because more than one module will assert against them and because the BFM asserts against the same bytes from TypeScript.
