@@ -18,45 +18,41 @@ internal enum PurchaseCaptureRoute: Hashable {
 internal final class PurchaseCaptureFlow {
     internal var sheet: PurchaseCaptureSheet?
     internal var path: [PurchaseCaptureRoute] = []
-    internal private(set) var staging: PurchaseStagingModel?
+    internal var picker: PurchaseCapturePicker?
+    internal var replacing: String?
+    internal var cameraRefusal: CameraRefusal?
+    internal var staging: PurchaseStagingModel?
     internal private(set) var reading: PurchaseReadingViewModel?
     internal private(set) var review: PurchaseReviewViewModel?
-    internal private(set) var handEntry: PurchaseHandEntryViewModel?
+    internal var handEntry: PurchaseHandEntryViewModel?
 
-    private let dependencies: AppDependencies
+    internal let dependencies: AppDependencies
+    internal let camera: any CameraAuthorizing
     private let onSaved: ([Purchase.ID]) -> Void
-    private let reportInvalidTransition: (String) -> Void
+    internal let reportInvalidTransition: (String) -> Void
 
     internal convenience init(
         dependencies: AppDependencies,
+        camera: any CameraAuthorizing = SystemCameraAuthorization(),
         onSaved: @escaping ([Purchase.ID]) -> Void
     ) {
         self.init(
             dependencies: dependencies,
+            camera: camera,
             onSaved: onSaved,
             reportInvalidTransition: { assertionFailure($0) })
     }
 
     internal init(
         dependencies: AppDependencies,
+        camera: any CameraAuthorizing = SystemCameraAuthorization(),
         onSaved: @escaping ([Purchase.ID]) -> Void,
         reportInvalidTransition: @escaping (String) -> Void
     ) {
         self.dependencies = dependencies
+        self.camera = camera
         self.onSaved = onSaved
         self.reportInvalidTransition = reportInvalidTransition
-    }
-
-    internal func start(_ source: PurchaseCaptureSource) {
-        guard sheet == nil else { return }
-        switch source {
-        case .hand:
-            handEntry = PurchaseHandEntryViewModel(dependencies: dependencies)
-            sheet = .handEntry
-        case .scan, .photos, .file:
-            staging = PurchaseStagingModel()
-            sheet = .batch
-        }
     }
 
     internal func read() {
@@ -108,16 +104,19 @@ internal final class PurchaseCaptureFlow {
         if !savedIDs.isEmpty { onSaved(savedIDs) }
     }
 
-    private func reset() {
+    internal func reset() {
         sheet = nil
         path = []
+        picker = nil
+        replacing = nil
+        cameraRefusal = nil
         staging = nil
         reading = nil
         review = nil
         handEntry = nil
     }
 
-    private func invalid(_ message: String) {
+    internal func invalid(_ message: String) {
         reportInvalidTransition(message)
     }
 }
