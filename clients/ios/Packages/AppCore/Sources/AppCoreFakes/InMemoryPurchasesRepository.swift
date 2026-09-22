@@ -7,10 +7,11 @@ public actor InMemoryPurchasesRepository: PurchasesRepository {
     private var rows: [Purchase]
     private let pageSize: Int
     private var failures: [Int: RepositoryError] = [:]
-    private var mintedCursors: Set<MintedCursor> = []
+    private var mintedCursors: [String: CursorRecord] = [:]
+    private var nextCursorID = 0
 
-    private struct MintedCursor: Hashable {
-        let value: String
+    private struct CursorRecord {
+        let offset: Int
         let statusFilter: PurchaseStatusFilter
     }
 
@@ -23,7 +24,7 @@ public actor InMemoryPurchasesRepository: PurchasesRepository {
     /// Replaces the rows and invalidates cursors minted for the previous list.
     public func replace(with rows: [Purchase]) {
         self.rows = rows
-        mintedCursors = []
+        mintedCursors = [:]
     }
 
     /// Fails the `call`-th request, numbered from one, with `error`.
@@ -52,8 +53,9 @@ public actor InMemoryPurchasesRepository: PurchasesRepository {
                 totalCount: totalCount)
         }
 
-        let nextCursor = String(end)
-        mintedCursors.insert(MintedCursor(value: nextCursor, statusFilter: statusFilter))
+        nextCursorID += 1
+        let nextCursor = "purchase-cursor-\(nextCursorID)"
+        mintedCursors[nextCursor] = CursorRecord(offset: end, statusFilter: statusFilter)
         return PurchasePage(
             purchases: Array(filteredRows[start..<end]), nextCursor: nextCursor,
             totalCount: totalCount)
@@ -63,10 +65,11 @@ public actor InMemoryPurchasesRepository: PurchasesRepository {
         for cursor: String?, statusFilter: PurchaseStatusFilter, count: Int
     ) throws -> Int {
         guard let cursor else { return 0 }
-        let minted = MintedCursor(value: cursor, statusFilter: statusFilter)
-        guard mintedCursors.contains(minted), let offset = Int(cursor), offset <= count else {
+        guard let minted = mintedCursors[cursor], minted.statusFilter == statusFilter,
+            minted.offset <= count
+        else {
             throw RepositoryError.contractMismatch
         }
-        return offset
+        return minted.offset
     }
 }

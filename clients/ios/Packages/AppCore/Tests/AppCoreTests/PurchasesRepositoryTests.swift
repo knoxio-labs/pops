@@ -80,18 +80,24 @@ internal struct PurchasesRepositoryTests {
         }
     }
 
-    @Test("a cursor held across replacement is rejected")
+    @Test("a cursor held across replacement stays rejected after the new list mints a cursor")
     func rejectsCursorHeldAcrossReplacement() async throws {
         let repository = InMemoryPurchasesRepository(
             rows: Purchase.fakes(count: 4), pageSize: 2)
-        let cursor = try #require(
+        let staleCursor = try #require(
             try await repository.purchases(after: nil, statusFilter: .all).nextCursor)
 
         await repository.replace(with: Purchase.fakes(count: 4))
+        let currentCursor = try #require(
+            try await repository.purchases(after: nil, statusFilter: .all).nextCursor)
 
         await #expect(throws: RepositoryError.contractMismatch) {
-            try await repository.purchases(after: cursor, statusFilter: .all)
+            try await repository.purchases(after: staleCursor, statusFilter: .all)
         }
+        #expect(staleCursor != currentCursor)
+        #expect(
+            try await repository.purchases(after: currentCursor, statusFilter: .all)
+                .purchases.map(\.id) == ["purchase-2", "purchase-3"])
     }
 
     @Test("replacing purchases changes the next first page")
@@ -138,15 +144,26 @@ internal struct PurchasesRepositoryTests {
         #expect(second.purchases.map(\.id) == ["purchase-1"])
     }
 
-    @Test("a cursor cannot be reused with another filter")
+    @Test("a cursor cannot be reused after both filters mint the same page boundary")
     func cursorRejectsAnotherFilter() async throws {
         let repository = InMemoryPurchasesRepository(
-            rows: Purchase.fakes(count: 3), pageSize: 1)
-        let cursor = try #require(
+            rows: [
+                .fake(id: "first", status: .awaitingSettlement),
+                .fake(id: "second", status: .partial),
+                .fake(id: "third", status: .awaitingSettlement),
+            ],
+            pageSize: 1)
+        let allCursor = try #require(
             try await repository.purchases(after: nil, statusFilter: .all).nextCursor)
+        let unsettledCursor = try #require(
+            try await repository.purchases(after: nil, statusFilter: .unsettled).nextCursor)
 
         await #expect(throws: RepositoryError.contractMismatch) {
-            try await repository.purchases(after: cursor, statusFilter: .unsettled)
+            try await repository.purchases(after: allCursor, statusFilter: .unsettled)
         }
+        #expect(allCursor != unsettledCursor)
+        #expect(
+            try await repository.purchases(after: unsettledCursor, statusFilter: .unsettled)
+                .purchases.map(\.id) == ["second"])
     }
 }
