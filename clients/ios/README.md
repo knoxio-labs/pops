@@ -273,3 +273,7 @@ Both production credential stores are already covered on every CI run — `Keych
 `macos-latest` runners have no device attached, so a standing lane would need a self-hosted runner or a device farm. Neither is worth it, and the deciding factor is that **this repository is public**: a self-hosted runner executes the workflow of whatever commit it is given, so a pull request would run arbitrary code on a machine in someone's home with an unlocked personal iPhone attached to it. That is a materially different risk from a broken build. A device farm avoids it but is a recurring cost and its devices are not _this_ phone either, which was the entire point of the gap.
 
 So `test:device` stays a deliberate pre-release ritual. Run it by hand before shipping a build to hardware; do not expect CI to have run it.
+
+### Primary navigation
+
+Transactions, Receipts and Inventory remain in the main tab bar when available. Accounts and Purchases are grouped under More and open in dismissible sheets, preserving each feature’s own navigation. Inventory’s Search uses the native search-role tab, in a separate bubble. The server still determines which features are available; unavailable features are omitted. A single feature other than Inventory fills the screen without a tab bar.
