@@ -231,7 +231,9 @@ private actor HomeGate {
         isOpen = true
         let pending = waiters
         waiters.removeAll()
-        pending.forEach { $0.resume() }
+        for waiter in pending {
+            waiter.resume()
+        }
     }
 }
 
@@ -289,6 +291,8 @@ private actor SequencedHomeRepository: PurchasesRepository {
         callCount += 1
         let ready = callWaiters.filter { callCount >= $0.0 }
         callWaiters.removeAll { callCount >= $0.0 }
-        ready.forEach { $0.1.resume() }
+        for waiter in ready {
+            waiter.1.resume()
+        }
     }
 }

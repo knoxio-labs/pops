@@ -67,5 +67,5 @@ public struct PurchaseCapturePresenter: Sendable {
 
 extension EnvironmentValues {
     /// The host capture presenter, or `nil` when purchase capture is unavailable.
-    @Entry public var purchaseCapture: PurchaseCapturePresenter? = nil
+    @Entry public var purchaseCapture: PurchaseCapturePresenter?
 }
