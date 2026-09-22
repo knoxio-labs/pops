@@ -79,7 +79,8 @@ Editing a saved purchase remains POPS-2458. There is no initialiser building a `
 `StagedReceipts` is the grouping model shared by production capture and the design playground. A
 selected page starts as a one-page receipt; combining, moving, separating, and deleting pages keep
 receipt and page order stable and remove empty groups. Adding an identifier already present is a
-no-op, including a duplicate within one picker result.
+no-op, including a duplicate within one picker result. `PurchaseStagingModel` exposes that shape to
+SwiftUI without adding a receipt-page ceiling; upload size remains the only bound.
 
 `ReceiptDraftView` is a reading — or a blank purchase — as something the reader may change: the pages above (empty for a manual entry), the outcome's status header, then the same groups in the same order — who and when, the items in a column, what adjusts them, the total in `popsAmount` — with every value in a `PopsTextField` instead of a `Text`. The bar's prominent action is Save; whichever the entry point's own "start again" action is sits beside it at the standard weight, which is what `PopsButtonProminence` exists for. A host that commits from its own navigation bar passes no `save`, so there is no bar, and hands the form a `Binding` to its draft so it can gate its Save on `ReceiptDraftView.canSave` as the reader types.
 
