@@ -53,8 +53,11 @@ internal enum InventoryPropertyFixtures {
         template: InventoryPropertyTemplates.container,
         properties: [
             InventoryProperty("Capacity", .measure(52, unit: "L")),
+            InventoryProperty("Width", .measure(60, unit: "cm")),
+            InventoryProperty("Height", .measure(32, unit: "cm")),
+            InventoryProperty("Depth", .measure(40, unit: "cm")),
             InventoryProperty("Load limit", .measure(30, unit: "kg")),
-            InventoryProperty("Footprint", .text("600 × 400 × 320")),
+            InventoryProperty("Duty rating", .choice("Heavy Duty")),
             InventoryProperty("Stackable", .flag(true)),
         ],
         tags: ["heavy duty", "stacks", "lid clips"],

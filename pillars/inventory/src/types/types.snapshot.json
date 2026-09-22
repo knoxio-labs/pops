@@ -1,5 +1,5 @@
 {
-  "version": "b4055cb0ef1217a20d20f36a5934fbdb6ec716ae7792397fbeb4cbc0bfab7bd7",
+  "version": "6f5fb7a23565fde6b02429772a7c2e10c364bbacf42fc3214166be264abb931c",
   "units": [
     {
       "symbol": "cm",
@@ -258,10 +258,25 @@
           "highlighted": true
         },
         {
-          "key": "Footprint",
-          "label": "Footprint",
-          "kind": "text",
-          "hint": "Outside, in millimetres"
+          "key": "Depth",
+          "label": "Depth",
+          "kind": "measurement",
+          "dimension": "length",
+          "unit": "cm"
+        },
+        {
+          "key": "Duty rating",
+          "label": "Duty rating",
+          "kind": "choice",
+          "choices": ["Light", "Standard", "Heavy Duty", "Extra Heavy Duty"],
+          "highlighted": true
+        },
+        {
+          "key": "Height",
+          "label": "Height",
+          "kind": "measurement",
+          "dimension": "length",
+          "unit": "cm"
         },
         {
           "key": "Load limit",
@@ -275,6 +290,13 @@
           "key": "Stackable",
           "label": "Stackable",
           "kind": "flag"
+        },
+        {
+          "key": "Width",
+          "label": "Width",
+          "kind": "measurement",
+          "dimension": "length",
+          "unit": "cm"
         }
       ],
       "legacyLabels": ["Box", "Storage box", "Storage Box"]
