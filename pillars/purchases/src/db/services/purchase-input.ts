@@ -196,3 +196,43 @@ export interface CreatePurchaseInput {
    */
   readonly tags?: readonly string[];
 }
+
+/**
+ * One line as an edit states it should look afterwards.
+ *
+ * `id` present means "this existing line, changed to look like this"; `id`
+ * absent means "a new line, not in the order before". An existing id not
+ * named by any entry in {@link UpdatePurchaseInput.lines} is a removal —
+ * the full desired set is sent every time, not a delta, because only the
+ * full set lets the service tell an omission from a line the caller never
+ * knew about.
+ */
+export interface UpdatePurchaseLineInput {
+  readonly id?: string;
+  readonly name: string;
+  readonly quantity: number;
+  readonly lineTotalCents: number;
+}
+
+/**
+ * What a saved-purchase edit changes.
+ *
+ * A header field left `undefined` is unchanged. `lines` is always the FULL
+ * set the purchase should hold afterwards — see {@link UpdatePurchaseLineInput}.
+ * `expectedUpdatedAt` must equal the row's current `updated_at` or the edit
+ * is refused as stale, matched against a copy of the same value the
+ * purchase's own detail read hands back.
+ */
+export interface UpdatePurchaseInput {
+  readonly merchantEntityId?: string | null;
+  readonly merchantEntityName?: string | null;
+  readonly orderedAt?: string;
+  readonly totalCents?: number;
+  readonly subtotalCents?: number;
+  readonly taxCents?: number;
+  readonly shippingCents?: number;
+  readonly discountCents?: number;
+  readonly surchargeCents?: number;
+  readonly lines: readonly UpdatePurchaseLineInput[];
+  readonly expectedUpdatedAt: string;
+}

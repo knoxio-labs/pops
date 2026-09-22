@@ -24,6 +24,7 @@ import {
   OkSchema,
   PaginationMetaSchema,
   PatchItemBodySchema,
+  UpdatePurchaseBodySchema,
 } from './rest-schemas.js';
 import { ItemTagSchema } from './schemas/item.js';
 import { PurchaseDetailSchema, PurchaseItemDetailSchema } from './schemas/purchase-detail.js';
@@ -129,6 +130,29 @@ export const purchasesPurchaseContract = c.router({
    * ADR-042 and the documents pillar will take this surface over, so it is
    * deliberately one document at a time and carries no shipment.
    */
+  /**
+   * Edit a purchase that is already saved (POPS-2458). Merchant, date and
+   * total are locked on a matched, part-matched, or unrecognised status;
+   * everything else stays editable. `409 purchase_locked` and `409
+   * purchase_stale` are the two ways the edit is refused outright; `502` is
+   * inventory's own pointer clear failing before anything here commits
+   * (POPS-4268) — the phone shows its save-failed state and the caller's own
+   * retry is the retry, since clearing that pointer is idempotent.
+   */
+  update: {
+    method: 'PATCH',
+    path: '/purchases/:id',
+    pathParams: z.object({ id: z.string() }),
+    body: UpdatePurchaseBodySchema,
+    responses: {
+      200: PurchaseDetailSchema,
+      400: ErrorBodySchema,
+      404: ErrorBodySchema,
+      409: ErrorBodySchema,
+      502: ErrorBodySchema,
+    },
+    summary: 'Edit a saved purchase',
+  },
   attachDocument: {
     method: 'POST',
     path: '/purchases/:id/documents',

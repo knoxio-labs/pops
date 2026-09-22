@@ -292,7 +292,7 @@ This is not a weaker gate, and it is no longer untested. The whole mechanism is 
 
 ## Who it calls, and as whom
 
-The mirror of the section above, and the half with a production failure mode. purchases makes five outbound cross-pillar calls, all through `pillar()` from `@pops/pillar-sdk/server`, which attaches the pillar's service-account key as `X-API-Key`:
+The mirror of the section above, and the half with a production failure mode. purchases makes six outbound cross-pillar calls, all through `pillar()` from `@pops/pillar-sdk/server`, which attaches the pillar's service-account key as `X-API-Key`:
 
 | Leg                            | Call                | Scope needed           | Where                           |
 | ------------------------------ | ------------------- | ---------------------- | ------------------------------- |
@@ -301,8 +301,9 @@ The mirror of the section above, and the half with a production failure mode. pu
 | soft-URI check, documents      | `paperless.get`     | `documents.paperless`  | `src/api/cron/pillar-lookup.ts` |
 | receipt merchant resolution    | `entities.list`     | `contacts.entities`    | `src/api/contacts/merchant.ts`  |
 | accepted proposal → asset      | `items.create`      | `inventory.items`      | `src/api/inventory/client.ts`   |
+| edit removes a linked line     | `items.update`      | `inventory.items`      | `src/api/inventory/client.ts`   |
 
-**Four of those five read. The last one writes**, and it is the only call in this pillar that changes data another pillar owns — see [the fan-out](#the-inventory-fan-out) for why it sits here rather than in the browser, and what that costs. Note what the Scope column shows: it needs no scope the cron's `items.get` did not already carry, because prefix matching cannot separate reading an item from creating one. The list below therefore did not grow when this leg landed, which is exactly why the leg is documented in three places instead.
+**Four of those six read. The other two write**, and they are the only calls in this pillar that change data another pillar owns — see [the fan-out](#the-inventory-fan-out) for why the first sits here rather than in the browser, and what that costs. Note what the Scope column shows: neither needs a scope the cron's `items.get` did not already carry, because prefix matching cannot separate reading an item from creating or updating one. The list below therefore did not grow when either leg landed, which is exactly why they are documented in three places instead.
 
 The grant is those four scopes and nothing wider; `src/api/pillars/service-account.ts` is its source of truth and a test pins the list. Scopes are dotted and match by prefix, so `finance.transactions` reaches `transactions.list` and not `budgets.list`. Minting the account is an operator step against the registry's `userOnly` admin surface — the same runbook as [`pillars/bfm/README.md`](../bfm/README.md#provisioning-the-service-account), with `"name":"purchases"` and these scopes — and the plaintext goes in the Docker secret described by [`infra/secrets.example/purchases/README.md`](../../infra/secrets.example/purchases/README.md).
 

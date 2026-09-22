@@ -12,6 +12,7 @@ import { makeAnalyticsHandlers } from './analytics-handlers.js';
 import { makeInventoryItemHandlers } from './inventory-item-handlers.js';
 import { makeProductHandlers } from './product-handlers.js';
 import { makePurchaseHandlers } from './purchase-handlers.js';
+import { makePurchaseUpdateHandlers } from './purchase-update-handlers.js';
 import { makeReceiptHandlers } from './receipt-handlers.js';
 import { makeReconcileHandlers, type SweepTrigger } from './reconcile-handlers.js';
 import { makeSearchHandlers } from './search-handlers.js';
@@ -20,7 +21,7 @@ import { makeSourceHandlers } from './source-handlers.js';
 import type { OpenedPurchasesDb } from '../../db/index.js';
 import type { ReceiptVision } from '../../ingest/receipt/vision.js';
 import type { MerchantResolver } from '../contacts/merchant.js';
-import type { InventoryAssetCreator } from '../inventory/client.js';
+import type { InventoryAssetCreator, InventoryLinkClearer } from '../inventory/client.js';
 
 const server: ReturnType<typeof initServer> = initServer();
 
@@ -36,6 +37,8 @@ export function makePurchasesRestHandlers(deps: {
   merchant?: MerchantResolver;
   /** Creates the asset an accepted proposal names. Injectable so tests stay offline. */
   inventoryAssets?: InventoryAssetCreator;
+  /** Clears inventory's own pointer when an edit unlinks a line (POPS-4268). Injectable so tests stay offline. */
+  inventoryLinkClearer?: InventoryLinkClearer;
 }): ReturnType<typeof server.router<typeof purchasesContract>> {
   return server.router(purchasesContract, {
     analytics: makeAnalyticsHandlers(deps.purchasesDb.db),
@@ -43,6 +46,7 @@ export function makePurchasesRestHandlers(deps: {
     purchase: {
       ...makePurchaseHandlers(deps.purchasesDb.db, deps.onIngest, deps.merchant),
       ...makeInventoryItemHandlers(deps.purchasesDb.db, deps.inventoryAssets),
+      ...makePurchaseUpdateHandlers(deps.purchasesDb.db, deps.inventoryLinkClearer),
     },
     receipt: makeReceiptHandlers(deps.purchasesDb.db, deps.vision, deps.onIngest, deps.merchant),
     reconcile: makeReconcileHandlers(deps.purchasesDb.db, deps.sweep),

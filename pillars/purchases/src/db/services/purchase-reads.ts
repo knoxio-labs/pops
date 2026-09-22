@@ -8,34 +8,26 @@
  */
 import { and, asc, desc, eq, gt, inArray, isNull, lt, or } from 'drizzle-orm';
 
-import {
-  purchaseDocuments,
-  purchaseItemNotes,
-  purchaseItems,
-  purchaseItemTags,
-  purchaseItemUnits,
-  purchases,
-  purchaseShipments,
-  purchaseTags,
-} from '../schema.js';
-import { computeAccounting, landedCostCents, type PurchaseAccounting } from './accounting.js';
-import { groupBy } from './group-by.js';
+import { purchaseDocuments, purchases, purchaseShipments, purchaseTags } from '../schema.js';
+import { computeAccounting, type PurchaseAccounting } from './accounting.js';
 import { nowIso, type PurchasesDb } from './internal.js';
 import { blankMerchantLabel, nameLabelCondition } from './merchant-identity.js';
 import { orderedAtWindow } from './ordered-at.js';
+import { getPurchaseEditSummary, type PurchaseEditSummary } from './purchase-edit-reads.js';
+import { selectItemDetails, type PurchaseItemDetail } from './purchase-item-details.js';
 import { selectChargeDetails, type PurchaseChargeDetail } from './purchase-read-charges.js';
 
 import type { SQL } from 'drizzle-orm';
 
 import type { PurchaseStatus } from '../../contract/constants.js';
 import type { MerchantFilter } from '../../contract/merchant-filter.js';
-import type {
-  PurchaseDocumentRow,
-  PurchaseItemRow,
-  PurchaseItemUnitRow,
-  PurchaseRow,
-  PurchaseShipmentRow,
-} from '../schema.js';
+import type { PurchaseDocumentRow, PurchaseRow, PurchaseShipmentRow } from '../schema.js';
+
+export {
+  type ItemTagReading,
+  type PurchaseItemDetail,
+  selectItemDetails,
+} from './purchase-item-details.js';
 
 /**
  * Which orders a read is about, with no say in how many come back.
@@ -79,30 +71,6 @@ export interface ListPurchasesFilter extends PurchaseScopeFilter {
   readonly beforeId?: string;
 }
 
-/**
- * An item tag as a reader must receive it: never the slug on its own.
- *
- * `confirmedAt === null` is a classification pass's proposal; non-null is
- * an assertion. A list of lines "tagged `snack`" that mixes the two is a
- * counterfactual computed over guesses.
- */
-export interface ItemTagReading {
-  readonly tag: string;
-  readonly confirmedAt: string | null;
-}
-
-/** A line with everything hanging off it, plus its derived landed cost. */
-export interface PurchaseItemDetail {
-  readonly item: PurchaseItemRow;
-  /** POPS classification. Empty is the normal state — no source states one. */
-  readonly tags: readonly ItemTagReading[];
-  /** Verbatim merchant prose, in printed order. */
-  readonly notes: readonly string[];
-  readonly units: readonly PurchaseItemUnitRow[];
-  /** `lineTotal + allocatedShipping + allocatedAdjustment`. */
-  readonly landedCostCents: number;
-}
-
 /** An order and every list hanging off it. */
 export interface PurchaseDetail {
   readonly purchase: PurchaseRow;
@@ -117,6 +85,8 @@ export interface PurchaseDetail {
   readonly charges: readonly PurchaseChargeDetail[];
   readonly documents: readonly PurchaseDocumentRow[];
   readonly accounting: PurchaseAccounting;
+  /** `null` for a purchase nobody has ever edited. See `purchase-edit-reads.ts`. */
+  readonly edit: PurchaseEditSummary | null;
 }
 
 /**
@@ -254,57 +224,13 @@ export function getPurchase(db: PurchasesDb, id: string): PurchaseDetail | undef
     linksByChargeId
   );
 
-  return { purchase, tags, shipments, items, charges, documents, accounting };
-}
+  const edit = getPurchaseEditSummary(
+    db,
+    purchase,
+    items.map((detail) => detail.item)
+  );
 
-export function selectItemDetails(
-  db: PurchasesDb,
-  purchaseId: string
-): readonly PurchaseItemDetail[] {
-  const rows = db
-    .select()
-    .from(purchaseItems)
-    .where(eq(purchaseItems.purchaseId, purchaseId))
-    .orderBy(asc(purchaseItems.position), asc(purchaseItems.id))
-    .all();
-  if (rows.length === 0) return [];
-
-  const ids = rows.map((row) => row.id);
-  const tagRows = db
-    .select()
-    .from(purchaseItemTags)
-    .where(inArray(purchaseItemTags.itemId, ids))
-    .orderBy(asc(purchaseItemTags.tag))
-    .all();
-  // By position, not by insertion order: the position IS the ordering, and
-  // it is the reason notes are not tag rows.
-  const noteRows = db
-    .select()
-    .from(purchaseItemNotes)
-    .where(inArray(purchaseItemNotes.itemId, ids))
-    .orderBy(asc(purchaseItemNotes.position))
-    .all();
-  const unitRows = db
-    .select()
-    .from(purchaseItemUnits)
-    .where(inArray(purchaseItemUnits.itemId, ids))
-    .orderBy(asc(purchaseItemUnits.createdAt), asc(purchaseItemUnits.id))
-    .all();
-
-  const tagsByItem = groupBy(tagRows, (row) => row.itemId);
-  const notesByItem = groupBy(noteRows, (row) => row.itemId);
-  const unitsByItem = groupBy(unitRows, (row) => row.itemId);
-
-  return rows.map((item) => ({
-    item,
-    tags: (tagsByItem.get(item.id) ?? []).map((row) => ({
-      tag: row.tag,
-      confirmedAt: row.confirmedAt,
-    })),
-    notes: (notesByItem.get(item.id) ?? []).map((row) => row.note),
-    units: unitsByItem.get(item.id) ?? [],
-    landedCostCents: landedCostCents(item),
-  }));
+  return { purchase, tags, shipments, items, charges, documents, accounting, edit };
 }
 
 /**

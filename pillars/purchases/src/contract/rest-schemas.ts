@@ -204,6 +204,42 @@ export const CreatePurchaseBodySchema = z.object({
 export const IdempotencyKeySchema = z.string().trim().min(1).max(200);
 
 /**
+ * One line as an edit states it should look afterwards. `id` present means
+ * "this existing line, changed to look like this"; absent means "a new
+ * line". The full desired set is sent every time — see
+ * {@link UpdatePurchaseBodySchema.shape.lines}.
+ */
+export const UpdatePurchaseLineBodySchema = z.object({
+  id: z.string().optional(),
+  name: z.string().trim().min(1),
+  quantity: z.int().min(1),
+  lineTotalCents: CentsSchema,
+});
+
+/**
+ * `PATCH /purchases/:id`. Every header field is optional — absent means
+ * unchanged — but merchant, `orderedAt` and `totalCents` are refused on a
+ * matched, part-matched, or unrecognised-status purchase (POPS-4255).
+ * `lines` is always the FULL set the purchase should hold afterwards, not a
+ * delta: an existing line whose id is missing from it is removed.
+ * `expectedUpdatedAt` must equal the row's own `updated_at`, from the same
+ * detail read the edit was opened against, or the save is refused as stale.
+ */
+export const UpdatePurchaseBodySchema = z.object({
+  merchantEntityId: z.string().nullable().optional(),
+  merchantEntityName: z.string().nullable().optional(),
+  orderedAt: IsoTimestampSchema.optional(),
+  totalCents: NonNegativeCentsSchema.optional(),
+  subtotalCents: NonNegativeCentsSchema.optional(),
+  taxCents: NonNegativeCentsSchema.optional(),
+  shippingCents: NonNegativeCentsSchema.optional(),
+  discountCents: NonNegativeCentsSchema.optional(),
+  surchargeCents: NonNegativeCentsSchema.optional(),
+  lines: z.array(UpdatePurchaseLineBodySchema),
+  expectedUpdatedAt: IsoTimestampSchema,
+});
+
+/**
  * The fields a reviewer edits before a purchase is written — shared by
  * saving a corrected receipt-derived draft and typing a manual entry.
  *
