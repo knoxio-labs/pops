@@ -63,6 +63,23 @@ const PAGED1 = { pagination: { total: 1, limit: 50, offset: 0, hasMore: false } 
 
 export const mockPillarInventory = {
   inventory: {
+    types: {
+      read: {
+        catalogue: vi.fn().mockResolvedValue(callOk({ revision: { revision: 1 }, types: [] })),
+        audit: vi.fn().mockResolvedValue(callOk({ events: [], nextBefore: null })),
+      },
+      manage: {
+        createDraft: vi.fn().mockResolvedValue(callOk({ revision: { revision: 2 }, types: [] })),
+        patchDraft: vi.fn().mockResolvedValue(
+          callOk({
+            draft: { revision: { revision: 2 }, types: [] },
+            compatibility: { classification: 'compatible', affectedIds: [], changes: [] },
+          })
+        ),
+        publishDraft: vi.fn().mockResolvedValue(callOk({ revision: { revision: 2 }, types: [] })),
+        abandonDraft: vi.fn().mockResolvedValue(callOk({ revision: { revision: 2 }, types: [] })),
+      },
+    },
     locations: {
       tree: vi.fn().mockResolvedValue(callOk({ data: [{ ...LOC, children: [] }] })),
       list: vi.fn().mockResolvedValue(callOk({ data: [LOC], total: 1 })),
