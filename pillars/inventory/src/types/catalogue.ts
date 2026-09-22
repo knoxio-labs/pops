@@ -1,5 +1,5 @@
 /**
- * The initial inventory type catalogue: the six templates the approved
+ * The inventory type catalogue: the initial six templates the approved
  * iOS design (`DesignPlayground/Surfaces/Inventory/Properties`) drew its
  * fixtures against. Field names, kinds, units and which fields are
  * highlighted match those templates exactly; each type's own declaration
@@ -13,6 +13,7 @@
  * chosen list. Narrowing that list later is a type change, guarded by
  * `type-migrations.ts`.
  */
+import { bookType } from './templates/book.js';
 import { bulbType } from './templates/bulb.js';
 import { cableType } from './templates/cable.js';
 import { chargerType } from './templates/charger.js';
@@ -22,9 +23,9 @@ import { tapeType } from './templates/tape.js';
 
 import type { TypeDefinition } from './define-type.js';
 
-export { bulbType, cableType, chargerType, furnitureType, storageBoxType, tapeType };
+export { bookType, bulbType, cableType, chargerType, furnitureType, storageBoxType, tapeType };
 
-/** Every type A1 ships, in the order the playground introduces them. */
+/** Every shipped inventory type, with the initial playground types first. */
 export const INVENTORY_TYPES: readonly TypeDefinition[] = [
   cableType,
   chargerType,
@@ -32,6 +33,7 @@ export const INVENTORY_TYPES: readonly TypeDefinition[] = [
   tapeType,
   storageBoxType,
   furnitureType,
+  bookType,
 ];
 
 /** The type declared under `key`, or `undefined` if the catalogue has none by that key. */

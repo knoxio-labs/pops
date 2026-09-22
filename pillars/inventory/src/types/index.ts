@@ -41,6 +41,7 @@ export type { Dimension, UnitDefinition } from './units.js';
 export {
   INVENTORY_TYPES,
   findType,
+  bookType,
   cableType,
   chargerType,
   bulbType,
