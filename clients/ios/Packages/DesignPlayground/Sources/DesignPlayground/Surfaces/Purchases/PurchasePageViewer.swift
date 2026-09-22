@@ -1,4 +1,5 @@
 import DesignSystem
+import FeaturePurchases
 import SwiftUI
 
 /// One picked file, open.

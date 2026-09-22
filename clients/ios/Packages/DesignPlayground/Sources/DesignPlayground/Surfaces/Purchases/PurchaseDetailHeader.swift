@@ -1,5 +1,6 @@
 import AppCore
 import DesignSystem
+import FeaturePurchases
 import SwiftUI
 
 /// Who the purchase was from and what it came to, with the receipt beside it.

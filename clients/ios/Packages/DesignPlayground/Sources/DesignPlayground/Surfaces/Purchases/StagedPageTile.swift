@@ -1,4 +1,5 @@
 import DesignSystem
+import FeaturePurchases
 import SwiftUI
 
 /// One staged page in the grid: the picture, what it is called, and every

@@ -1,5 +1,6 @@
 import AppCore
 import DesignSystem
+import FeaturePurchases
 import SwiftUI
 
 /// A saved purchase on screen: who and what it came to, where it stands

@@ -1,5 +1,6 @@
 import AppCore
 import DesignSystem
+import FeaturePurchases
 import SwiftUI
 
 /// One line of a saved purchase, as the mobile detail route returns it.

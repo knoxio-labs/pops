@@ -1,4 +1,5 @@
 import AppCore
+import FeaturePurchases
 import SwiftUI
 
 /// Where each of the capture menu's four entries lands.

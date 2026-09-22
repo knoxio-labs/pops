@@ -1,5 +1,6 @@
 import AppCore
 import DesignSystem
+import FeaturePurchases
 import Foundation
 
 /// The capture flow, from what was picked to what was read.
@@ -24,8 +25,7 @@ internal enum PurchaseCaptureSurfaces {
         StagedPage(
             id: "pg-\(index)",
             label: label,
-            media: media,
-            bytes: media == .pdf || media == .plainText ? nil : paper(index)
+            part: ReceiptPart(mediaType: media, data: paper(index) ?? Data())
         )
     }
 

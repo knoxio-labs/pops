@@ -1,4 +1,5 @@
 import DesignSystem
+import FeaturePurchases
 import SwiftUI
 
 /// One staged page, pinchable and pannable.
