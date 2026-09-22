@@ -41,7 +41,11 @@ let package = Package(
         ),
         .testTarget(
             name: "InventoryReplicaTests",
-            dependencies: ["InventoryReplica", "AppCore"],
+            dependencies: [
+                "InventoryReplica",
+                "AppCore",
+                .product(name: "AppCoreFakes", package: "AppCore"),
+            ],
             swiftSettings: strictSwiftSettings
         ),
     ]
