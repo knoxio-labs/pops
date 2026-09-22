@@ -1,5 +1,3 @@
-import AppCore
-import Foundation
 import SwiftUI
 import Testing
 
