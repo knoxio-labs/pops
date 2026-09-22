@@ -62,6 +62,26 @@ internal enum PurchaseDetailCopy {
         return "Edited \(date.formatted(style))"
     }
 
+    internal static func label(
+        for change: PurchaseFieldChange,
+        lines: [PurchaseDetailLine]
+    ) -> String {
+        switch change.field {
+        case .merchant: "Merchant"
+        case .orderedOn: "Date"
+        case .total: "Total"
+        case .subtotal: "Subtotal"
+        case .tax: "Tax"
+        case .shipping: "Delivery"
+        case .discount: "Discount"
+        case .surcharge: "Surcharge"
+        case .lineName, .lineQuantity, .lineTotal, .lineAdded:
+            itemLabel(for: change.itemID, lines: lines)
+        case .lineRemoved: "Removed"
+        case .unrecognised(let raw): raw
+        }
+    }
+
     internal static func receiptLabel(pages: Int) -> String {
         pages == 1 ? "Receipt" : "Receipt, \(pages) pages"
     }
@@ -121,5 +141,15 @@ internal enum PurchaseDetailCopy {
             "\(PurchaseDetailLineText.oneLine($0.name))  \($0.lineTotal.formatted())"
         }
         return (head + (lines.isEmpty ? [] : [""] + lines)).joined(separator: "\n")
+    }
+
+    private static func itemLabel(
+        for itemID: String?,
+        lines: [PurchaseDetailLine]
+    ) -> String {
+        guard let itemID, let index = lines.firstIndex(where: { $0.id == itemID }) else {
+            return "Item"
+        }
+        return "Item \(index + 1)"
     }
 }
