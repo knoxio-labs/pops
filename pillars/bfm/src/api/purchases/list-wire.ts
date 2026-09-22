@@ -140,7 +140,16 @@ const PurchasesEditSchema = z.object({
 });
 
 export const PurchasesDetailResponseSchema = z.object({
-  edit: PurchasesEditSchema.nullable(),
+  /**
+   * Optional as well as nullable, matching `merchantEntityId`'s precedent
+   * just below: a producer build that predates the edit feature (POPS-2458)
+   * — the iOS UI-flow lane's hand-written stub, or a `purchases` that has
+   * not yet redeployed alongside this bfm — omits the key outright, and
+   * that is the same fact a `null` states explicitly: never edited.
+   * Requiring the key would turn that omission into a `502` on the whole
+   * detail over a field no reader here treats as anything but absent.
+   */
+  edit: PurchasesEditSchema.nullable().optional(),
   purchase: z.object({
     id: z.string(),
     source: z.string(),
@@ -156,7 +165,18 @@ export const PurchasesDetailResponseSchema = z.object({
     orderedAt: OrderedAtSchema,
     orderedAtOffsetMinutes: OrderedAtOffsetSchema,
     status: z.string(),
-    updatedAt: z.string(),
+    /**
+     * Optional for the same reason `edit` above is: a producer that
+     * predates POPS-2458 sends no such column. Absent means bfm cannot
+     * hand the phone a value to round-trip as `expectedUpdatedAt` — see
+     * {@link toMobilePurchaseDetail}, which maps that case to `null` on
+     * the mobile wire rather than fabricating a timestamp. A phone that
+     * gets `null` here has nothing valid to send back, and the write
+     * contract's `expectedUpdatedAt` stays a required field — refusing an
+     * edit for want of a compare-and-swap value, rather than accepting one
+     * with no staleness check at all.
+     */
+    updatedAt: z.string().optional(),
   }),
   items: z.array(PurchasesItemSchema),
   documents: z.array(
@@ -274,9 +294,12 @@ export function toMobilePurchaseDetail(
     surchargeCents: purchase.surchargeCents,
     source: purchase.source,
     items: detail.items.map(toMobilePurchaseItem),
-    updatedAt: purchase.updatedAt,
+    // `?? null`, not left undefined: a producer that predates the edit
+    // feature omits the key outright, and that is the same fact a `null`
+    // states explicitly — see the schema's own comment on each field.
+    updatedAt: purchase.updatedAt ?? null,
     edit:
-      detail.edit === null
+      detail.edit === null || detail.edit === undefined
         ? null
         : { editedAt: detail.edit.editedAt, changes: detail.edit.changes },
   };

@@ -152,6 +152,52 @@ describe('merchantEntityId absent, not just null (POPS-3634 regression)', () => 
   });
 });
 
+describe('edit and updatedAt absent, not just null (POPS-2458 regression)', () => {
+  // The same stub the merchantEntityId regression above documents answers a
+  // manually-created purchase with no `edit` or `updatedAt` key at all — the
+  // same shape a `purchases` build that predates the edit feature sends.
+  // Requiring either key turned that into a `502` for the whole detail; both
+  // now have to keep parsing it, and the mapping has to default them.
+  it('PurchasesDetailResponseSchema accepts a detail with no edit key at all', () => {
+    const { edit: _omitted, ...detailWithoutEdit } = BASE_DETAIL;
+
+    const result = PurchasesDetailResponseSchema.safeParse(detailWithoutEdit);
+
+    expect(result.success).toBe(true);
+  });
+
+  it('PurchasesDetailResponseSchema accepts a purchase with no updatedAt key at all', () => {
+    const { updatedAt: _omitted, ...purchaseWithoutUpdatedAt } = BASE_DETAIL.purchase;
+
+    const result = PurchasesDetailResponseSchema.safeParse({
+      ...BASE_DETAIL,
+      purchase: purchaseWithoutUpdatedAt,
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it('maps an absent edit and an absent updatedAt to null on the mobile wire', () => {
+    const { edit: _omittedEdit, purchase, ...rest } = BASE_DETAIL;
+    const { updatedAt: _omittedUpdatedAt, ...purchaseWithoutUpdatedAt } = purchase;
+    const parsed = PurchasesDetailResponseSchema.parse({
+      ...rest,
+      purchase: purchaseWithoutUpdatedAt,
+    });
+
+    const mobile = toMobilePurchaseDetail(parsed);
+
+    expect(mobile.edit).toBeNull();
+    expect(mobile.updatedAt).toBeNull();
+  });
+
+  it('still maps an explicit null the same way as absent', () => {
+    const mobile = toMobilePurchaseDetail(BASE_DETAIL);
+
+    expect(mobile.edit).toBeNull();
+  });
+});
+
 describe('toMobilePurchaseDetail merchant identity', () => {
   it('resolves to entity, naming it from the batched lookup', () => {
     const detail: PurchasesDetailResponse = {

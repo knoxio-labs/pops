@@ -27644,7 +27644,7 @@ internal enum Operations {
                         /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/totalCents`.
                         internal var totalCents: Swift.Int
                         /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/updatedAt`.
-                        internal var updatedAt: Swift.String
+                        internal var updatedAt: Swift.String?
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
@@ -27686,7 +27686,7 @@ internal enum Operations {
                             surchargeCents: Swift.Int,
                             taxCents: Swift.Int,
                             totalCents: Swift.Int,
-                            updatedAt: Swift.String
+                            updatedAt: Swift.String? = nil
                         ) {
                             self.currency = currency
                             self.discountCents = discountCents
@@ -27803,7 +27803,7 @@ internal enum Operations {
                                 Swift.Int.self,
                                 forKey: .totalCents
                             )
-                            self.updatedAt = try container.decode(
+                            self.updatedAt = try container.decodeIfPresent(
                                 Swift.String.self,
                                 forKey: .updatedAt
                             )
@@ -29517,7 +29517,7 @@ internal enum Operations {
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/totalCents`.
                         internal var totalCents: Swift.Int
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/updatedAt`.
-                        internal var updatedAt: Swift.String
+                        internal var updatedAt: Swift.String?
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
@@ -29559,7 +29559,7 @@ internal enum Operations {
                             surchargeCents: Swift.Int,
                             taxCents: Swift.Int,
                             totalCents: Swift.Int,
-                            updatedAt: Swift.String
+                            updatedAt: Swift.String? = nil
                         ) {
                             self.currency = currency
                             self.discountCents = discountCents
@@ -29676,7 +29676,7 @@ internal enum Operations {
                                 Swift.Int.self,
                                 forKey: .totalCents
                             )
-                            self.updatedAt = try container.decode(
+                            self.updatedAt = try container.decodeIfPresent(
                                 Swift.String.self,
                                 forKey: .updatedAt
                             )
@@ -38049,7 +38049,7 @@ internal enum Operations {
                         /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/totalCents`.
                         internal var totalCents: Swift.Int
                         /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/updatedAt`.
-                        internal var updatedAt: Swift.String
+                        internal var updatedAt: Swift.String?
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
@@ -38091,7 +38091,7 @@ internal enum Operations {
                             surchargeCents: Swift.Int,
                             taxCents: Swift.Int,
                             totalCents: Swift.Int,
-                            updatedAt: Swift.String
+                            updatedAt: Swift.String? = nil
                         ) {
                             self.currency = currency
                             self.discountCents = discountCents
@@ -38208,7 +38208,7 @@ internal enum Operations {
                                 Swift.Int.self,
                                 forKey: .totalCents
                             )
-                            self.updatedAt = try container.decode(
+                            self.updatedAt = try container.decodeIfPresent(
                                 Swift.String.self,
                                 forKey: .updatedAt
                             )
@@ -39779,7 +39779,7 @@ internal enum Operations {
                         /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/200/content/json/totalCents`.
                         internal var totalCents: Swift.Int
                         /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/200/content/json/updatedAt`.
-                        internal var updatedAt: Swift.String
+                        internal var updatedAt: Swift.String?
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
@@ -39821,7 +39821,7 @@ internal enum Operations {
                             surchargeCents: Swift.Int,
                             taxCents: Swift.Int,
                             totalCents: Swift.Int,
-                            updatedAt: Swift.String
+                            updatedAt: Swift.String? = nil
                         ) {
                             self.currency = currency
                             self.discountCents = discountCents
@@ -39938,7 +39938,7 @@ internal enum Operations {
                                 Swift.Int.self,
                                 forKey: .totalCents
                             )
-                            self.updatedAt = try container.decode(
+                            self.updatedAt = try container.decodeIfPresent(
                                 Swift.String.self,
                                 forKey: .updatedAt
                             )

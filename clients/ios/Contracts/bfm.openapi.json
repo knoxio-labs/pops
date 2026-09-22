@@ -7538,6 +7538,7 @@
                       "type": "integer"
                     },
                     "updatedAt": {
+                      "nullable": true,
                       "type": "string"
                     }
                   },
@@ -8147,6 +8148,7 @@
                       "type": "integer"
                     },
                     "updatedAt": {
+                      "nullable": true,
                       "type": "string"
                     }
                   },
@@ -10594,6 +10596,7 @@
                       "type": "integer"
                     },
                     "updatedAt": {
+                      "nullable": true,
                       "type": "string"
                     }
                   },
@@ -11122,6 +11125,7 @@
                       "type": "integer"
                     },
                     "updatedAt": {
+                      "nullable": true,
                       "type": "string"
                     }
                   },

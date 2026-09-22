@@ -2857,7 +2857,7 @@ export type MobilePurchasesCreateManualPurchaseResponses = {
     surchargeCents: number;
     taxCents: number;
     totalCents: number;
-    updatedAt: string;
+    updatedAt: string | null;
   };
 };
 
@@ -3037,7 +3037,7 @@ export type MobilePurchasesSaveReceiptDraftResponses = {
     surchargeCents: number;
     taxCents: number;
     totalCents: number;
-    updatedAt: string;
+    updatedAt: string | null;
   };
 };
 
@@ -3953,7 +3953,7 @@ export type MobilePurchasesGetPurchaseResponses = {
     surchargeCents: number;
     taxCents: number;
     totalCents: number;
-    updatedAt: string;
+    updatedAt: string | null;
   };
 };
 
@@ -4146,7 +4146,7 @@ export type MobilePurchasesUpdatePurchaseResponses = {
     surchargeCents: number;
     taxCents: number;
     totalCents: number;
-    updatedAt: string;
+    updatedAt: string | null;
   };
 };
 

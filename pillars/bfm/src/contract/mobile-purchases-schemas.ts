@@ -180,8 +180,15 @@ export const MobilePurchaseDetailSchema = MobilePurchaseSchema.extend({
    * The row's own last-write instant, verbatim from `purchases`. Echoed back
    * as `expectedUpdatedAt` on `PATCH /mobile/purchases/:id` — the phone
    * never computes or displays it, only carries it.
+   *
+   * Nullable: a producer build that predates the edit feature (POPS-2458)
+   * sends none, and bfm has nothing to fabricate one from. A phone reading
+   * `null` here has no compare-and-swap value to offer, so `expectedUpdatedAt`
+   * stays a required field on the write body rather than becoming optional
+   * — an edit is refused outright for want of it, never accepted without
+   * the staleness check.
    */
-  updatedAt: z.string(),
+  updatedAt: z.string().nullable(),
   subtotalCents: z.int(),
   taxCents: z.int(),
   shippingCents: z.int(),
