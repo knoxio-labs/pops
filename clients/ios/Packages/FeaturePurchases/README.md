@@ -90,6 +90,12 @@ so a returned page keeps the original receipt identity and position. The design 
 still owns a raw `StagedReceipts` value; its local viewer cannot be exchanged for this model-backed
 viewer without disconnecting deletion from the grid.
 
+The production staging grid groups pages directly through that model. Its title counts receipts,
+while discard confirmation counts pages; an empty Cancel leaves immediately and Read remains
+unavailable until at least one receipt exists. Add and Replace report scan, photo, or file intent to
+the enclosing capture flow, which owns the platform pickers. Scanner preparation refusals remain on
+the grid until their alert is acknowledged.
+
 Before reading starts, each staged receipt becomes a `StagedReceiptForReading`: its stable receipt
 identity plus its parts in page order, without mutable staging layout. `PurchaseReadingRow` then
 tracks queued, active, readable, and terminally unreadable outcomes while retaining a full
