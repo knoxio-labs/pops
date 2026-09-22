@@ -30,6 +30,7 @@ import {
 } from './list-wire.js';
 import { PurchasesMonthSummaryResponseSchema, toMobileMonthSummary } from './month-summary-wire.js';
 import { search, tagVocabulary, type SearchPurchasesRequest } from './search-client.js';
+import { updatePurchase } from './update-client.js';
 import { PurchasesReceiptBytesSchema } from './wire.js';
 
 import type { CallResult, PillarHandle } from '@pops/pillar-sdk/server';
@@ -50,6 +51,7 @@ import type {
   MobilePurchasesPage,
   MobileReceiptBytes,
   MobileReceiptPart,
+  MobileUpdatePurchaseBody,
 } from '../../contract/rest-schemas.js';
 
 /**
@@ -127,6 +129,10 @@ export interface MobilePurchasesClient {
   ): Promise<GatewayOutcome<MobilePurchaseDetail>>;
   listPurchases(request: ListPurchasesRequest): Promise<GatewayOutcome<MobilePurchasesPage>>;
   getPurchase(id: string): Promise<GatewayOutcome<MobilePurchaseDetail>>;
+  updatePurchase(
+    id: string,
+    body: MobileUpdatePurchaseBody
+  ): Promise<GatewayOutcome<MobilePurchaseDetail>>;
   getReceipt(sha256: string): Promise<GatewayOutcome<MobileReceiptBytes>>;
   getReceiptThumbnail(sha256: string): Promise<GatewayOutcome<MobileReceiptBytes>>;
   getMonthSummary(month: string): Promise<GatewayOutcome<MobileMonthSummary>>;
@@ -145,6 +151,7 @@ export function createMobilePurchasesClient(
 
     listPurchases: (request) => listPurchases(gateway, contacts, request),
     getPurchase: (id) => getPurchase(gateway, contacts, id),
+    updatePurchase: (id, body) => updatePurchase(gateway, id, body),
 
     async getReceipt(sha256: string) {
       return fetchReceiptBytes(gateway, 'receipt.read', (handle) =>

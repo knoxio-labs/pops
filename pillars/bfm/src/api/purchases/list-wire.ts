@@ -126,7 +126,21 @@ const PurchasesItemSchema = z.object({
  * and the screen behind it come to disagree, so the derivation is in one
  * function ({@link toMobilePurchaseDetail}) and the arrays are its only input.
  */
+/** `purchases`' edit summary — see `MobilePurchaseEditSchema` for the mobile shape it maps onto. */
+const PurchasesEditSchema = z.object({
+  editedAt: z.string(),
+  changes: z.array(
+    z.object({
+      field: z.string(),
+      itemId: z.string().nullable(),
+      original: z.string().nullable(),
+      current: z.string().nullable(),
+    })
+  ),
+});
+
 export const PurchasesDetailResponseSchema = z.object({
+  edit: PurchasesEditSchema.nullable(),
   purchase: z.object({
     id: z.string(),
     source: z.string(),
@@ -142,6 +156,7 @@ export const PurchasesDetailResponseSchema = z.object({
     orderedAt: OrderedAtSchema,
     orderedAtOffsetMinutes: OrderedAtOffsetSchema,
     status: z.string(),
+    updatedAt: z.string(),
   }),
   items: z.array(PurchasesItemSchema),
   documents: z.array(
@@ -259,6 +274,11 @@ export function toMobilePurchaseDetail(
     surchargeCents: purchase.surchargeCents,
     source: purchase.source,
     items: detail.items.map(toMobilePurchaseItem),
+    updatedAt: purchase.updatedAt,
+    edit:
+      detail.edit === null
+        ? null
+        : { editedAt: detail.edit.editedAt, changes: detail.edit.changes },
   };
 }
 

@@ -150,9 +150,38 @@ export type MobilePurchaseItem = z.infer<typeof MobilePurchaseItemSchema>;
  * `orderedOn` from `orderedAt`, which is how a purchase made at 9pm comes to
  * show yesterday's date on a phone that has since moved west.
  */
+/**
+ * One field a saved-purchase edit changed (POPS-2458). Open string for
+ * `field` rather than the producer's closed vocabulary, for the reason
+ * `status` is open on the list row: `purchases` adding an edit field must
+ * not fail an installed build's decode of the whole detail.
+ */
+export const MobilePurchaseFieldChangeSchema = z.object({
+  field: z.string(),
+  itemId: z.string().nullable(),
+  original: z.string().nullable(),
+  current: z.string().nullable(),
+});
+
+export type MobilePurchaseFieldChange = z.infer<typeof MobilePurchaseFieldChangeSchema>;
+
+/** The detail's "Edited &lt;date&gt;" notice and its Original sheet. `null` for a never-edited purchase. */
+export const MobilePurchaseEditSchema = z.object({
+  editedAt: z.string(),
+  changes: z.array(MobilePurchaseFieldChangeSchema),
+});
+
+export type MobilePurchaseEdit = z.infer<typeof MobilePurchaseEditSchema>;
+
 export const MobilePurchaseDetailSchema = MobilePurchaseSchema.extend({
   /** ISO-8601 with the offset `purchases` recorded. Evidence, not a rendering instruction. */
   orderedAt: z.string(),
+  /**
+   * The row's own last-write instant, verbatim from `purchases`. Echoed back
+   * as `expectedUpdatedAt` on `PATCH /mobile/purchases/:id` — the phone
+   * never computes or displays it, only carries it.
+   */
+  updatedAt: z.string(),
   subtotalCents: z.int(),
   taxCents: z.int(),
   shippingCents: z.int(),
@@ -162,9 +191,48 @@ export const MobilePurchaseDetailSchema = MobilePurchaseSchema.extend({
   /** Where the order came from — an adapter id, or the receipt drop-zone. Open string. */
   source: z.string(),
   items: z.array(MobilePurchaseItemSchema),
+  /** `null` for a purchase nobody has ever edited. See {@link MobilePurchaseEditSchema}. */
+  edit: MobilePurchaseEditSchema.nullable(),
 });
 
 export type MobilePurchaseDetail = z.infer<typeof MobilePurchaseDetailSchema>;
+
+/**
+ * One line as an edit states it should look afterwards. `id` present means
+ * "this existing line, changed to look like this"; absent means "a new
+ * line". Mirrors `purchases`' own `UpdatePurchaseLineBodySchema`.
+ */
+export const MobileUpdatePurchaseLineSchema = z.object({
+  id: z.string().optional(),
+  name: z.string().trim().min(1),
+  quantity: z.int().min(1),
+  lineTotalCents: z.int(),
+});
+
+/**
+ * `PATCH /mobile/purchases/:id` (POPS-2458). Every header field is optional
+ * — absent means unchanged — but merchant, `orderedAt` and `totalCents` are
+ * refused on a matched, part-matched, or unrecognised-status purchase.
+ * `lines` is always the FULL set the purchase should hold afterwards, not a
+ * delta. `expectedUpdatedAt` is a compare-and-swap against the row's own
+ * last-write instant, read from the same detail the edit was opened
+ * against — a stale value is refused rather than silently overwritten.
+ */
+export const MobileUpdatePurchaseBodySchema = z.object({
+  merchantEntityId: z.string().nullable().optional(),
+  merchantEntityName: z.string().nullable().optional(),
+  orderedAt: z.string().optional(),
+  totalCents: z.int().min(0).optional(),
+  subtotalCents: z.int().min(0).optional(),
+  taxCents: z.int().min(0).optional(),
+  shippingCents: z.int().min(0).optional(),
+  discountCents: z.int().min(0).optional(),
+  surchargeCents: z.int().min(0).optional(),
+  lines: z.array(MobileUpdatePurchaseLineSchema),
+  expectedUpdatedAt: z.string(),
+});
+
+export type MobileUpdatePurchaseBody = z.infer<typeof MobileUpdatePurchaseBodySchema>;
 
 /**
  * One page of the purchases list.

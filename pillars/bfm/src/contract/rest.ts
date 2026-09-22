@@ -56,6 +56,7 @@ import { mobileContactsContract } from './rest-mobile-contacts.js';
 import { mobileFinanceContract } from './rest-mobile-finance.js';
 import { mobileInventoryContract } from './rest-mobile-inventory.js';
 import { mobilePurchasesSearchRoutes } from './rest-mobile-purchases-search.js';
+import { mobilePurchasesUpdateRoute } from './rest-mobile-purchases-update.js';
 import {
   MOBILE_PERIMETER_RESPONSES,
   MOBILE_REQUEST_RESPONSES,
@@ -158,6 +159,7 @@ const mobilePurchasesContract = c.router({
     summary: 'The fuller record behind one list row, with its lines',
     metadata: requires('purchases.read'),
   },
+  ...mobilePurchasesUpdateRoute,
   /**
    * Read a receipt into an editable draft. Persists nothing (POPS-2454):
    * the phone edits `draft` and hands it to `saveReceiptDraft` when the

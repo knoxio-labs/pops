@@ -44,6 +44,7 @@ function stubClient(overrides: Partial<MobilePurchasesClient>): MobilePurchasesC
     createManualPurchase: notExercised,
     listPurchases: notExercised,
     getPurchase: notExercised,
+    updatePurchase: notExercised,
     getReceipt: notExercised,
     getReceiptThumbnail: notExercised,
     getMonthSummary: notExercised,

@@ -204,6 +204,48 @@ export function toReceiptBytesErrorResponse(failure: GatewayFailure): ReceiptByt
   };
 }
 
+/** The statuses `PATCH /mobile/purchases/:id` declares for an upstream fault. */
+export type PurchaseUpdateErrorStatus = UpstreamErrorStatus | 409;
+
+export interface PurchaseUpdateErrorResponse {
+  readonly status: PurchaseUpdateErrorStatus;
+  readonly body: MobileUpstreamError;
+}
+
+/**
+ * The one mapper that answers a real 409. Every other route in this pillar
+ * only ever reads, so `classify`'s `conflict` case treats a 409 as a contract
+ * fault (folded to 502) — a producer should not be able to conflict on a
+ * GET. This route WRITES, and `purchases` answers 409 for exactly two
+ * meaningful reasons (the edit is locked, or it is stale): both are facts
+ * about the user's own edit, not a fault, and the phone needs the real
+ * status to show its conflict UI rather than a generic upstream failure.
+ *
+ * `detail` is what tells the two 409s apart on the wire today — the pillar
+ * SDK's `CallFailure` carries only the producer's `message`, not its
+ * `code`, so `purchase_locked` and `purchase_stale` are distinguished by
+ * their message text rather than by a stable machine token. Widening
+ * `CallFailure` to carry `code` would fix that properly; it is a
+ * cross-pillar SDK change and out of scope here (see POPS-4268's own
+ * ticket for the follow-up).
+ */
+export function toPurchaseUpdateErrorResponse(
+  failure: GatewayFailure
+): PurchaseUpdateErrorResponse {
+  if (failure.kind === 'conflict') {
+    return {
+      status: 409,
+      body: {
+        code: 'upstream_conflict',
+        pillar: failure.pillar,
+        retryable: false,
+        message: describe(`${failure.pillar} refused the edit`, failure),
+      },
+    };
+  }
+  return toUpstreamErrorResponse(failure);
+}
+
 /** The subset a collection route can answer — 404 is not among them. */
 export type CollectionUpstreamErrorStatus = Exclude<UpstreamErrorStatus, 404>;
 

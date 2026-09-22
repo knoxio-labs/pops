@@ -32,6 +32,7 @@ const BASE_ROW: PurchasesListRow = {
 };
 
 const BASE_DETAIL: PurchasesDetailResponse = {
+  edit: null,
   purchase: {
     id: 'pur-1',
     source: 'receipt',
@@ -47,6 +48,7 @@ const BASE_DETAIL: PurchasesDetailResponse = {
     orderedAt: '2026-08-13T02:15:00.000Z',
     orderedAtOffsetMinutes: 600,
     status: 'awaiting_settlement',
+    updatedAt: '2026-08-13T02:15:00.000Z',
   },
   items: [],
   documents: [],
