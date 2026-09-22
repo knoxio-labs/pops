@@ -12,14 +12,17 @@ public final class PurchaseStagingModel {
     private var pendingReplacementID: String?
 
     internal private(set) var refusal: ReceiptCaptureProblem?
+    internal private(set) var pending: [PendingStagedItem]
 
     /// Creates empty staging state.
     public init() {
         staged = StagedReceipts([])
+        pending = []
     }
 
-    internal init(receipts: [StagedReceipt]) {
+    internal init(receipts: [StagedReceipt], pending: [PendingStagedItem] = []) {
         staged = StagedReceipts(receipts)
+        self.pending = pending
     }
 
     internal var groups: [StagedReceipt] { staged.groups }
@@ -43,6 +46,10 @@ public final class PurchaseStagingModel {
 
     internal func delete(_ id: String) {
         staged.delete(id)
+    }
+
+    internal func removePending(_ id: String) {
+        pending.removeAll { $0.id == id }
     }
 
     internal func acknowledgeRefusal() {
