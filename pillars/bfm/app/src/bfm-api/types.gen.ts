@@ -2920,6 +2920,7 @@ export type MobilePurchasesCreateManualPurchaseResponses = {
     id: string;
     itemCount: number;
     items: Array<{
+      hasInventoryLink?: boolean;
       id: string;
       lineTotalCents: number;
       name: string;
@@ -3105,6 +3106,7 @@ export type MobilePurchasesSaveReceiptDraftResponses = {
     id: string;
     itemCount: number;
     items: Array<{
+      hasInventoryLink?: boolean;
       id: string;
       lineTotalCents: number;
       name: string;
@@ -4058,6 +4060,7 @@ export type MobilePurchasesGetPurchaseResponses = {
     id: string;
     itemCount: number;
     items: Array<{
+      hasInventoryLink?: boolean;
       id: string;
       lineTotalCents: number;
       name: string;
@@ -4260,6 +4263,7 @@ export type MobilePurchasesUpdatePurchaseResponses = {
     id: string;
     itemCount: number;
     items: Array<{
+      hasInventoryLink?: boolean;
       id: string;
       lineTotalCents: number;
       name: string;

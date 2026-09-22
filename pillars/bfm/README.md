@@ -37,7 +37,7 @@ It also holds a service-account credential and one way to spend it — see
 | `GET /mobile/finance/transactions`     | One cursor-paginated page of list rows — see [The mobile shape](#the-mobile-shape).          |
 | `GET /mobile/finance/transactions/:id` | The fuller record behind one row, for the detail screen.                                     |
 | `GET /mobile/purchases`                | One cursor-paginated page of purchase list rows — see [The mobile shape](#the-mobile-shape). |
-| `GET /mobile/purchases/:id`            | One order with its lines, for the detail screen.                                             |
+| `GET /mobile/purchases/:id`            | One order with its lines and Inventory-link flags, for the detail screen.                    |
 | `POST /mobile/purchases/receipts`      | Hands a captured receipt to `purchases` — see [The mobile write](#the-mobile-write).         |
 | `/mobile/*`                            | Everything the phone calls, gated by `requireDevice` and then `requireCapability`.           |
 
