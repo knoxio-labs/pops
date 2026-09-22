@@ -1,6 +1,6 @@
 import Testing
 
-@testable import DesignPlayground
+@testable import FeaturePurchases
 
 /// What pressing Save does to a batch, as values.
 ///
@@ -78,8 +78,8 @@ internal struct ReviewSavingTests {
             ReviewSaving.failed(id: "e3", reason: "r", retryable: true).saveTitle(count: 1)
                 == "Try again")
         #expect(
-            ReviewSaving.failed(id: "e2", reason: "r", retryable: false).saveTitle(count: 2)
-                == "Save all 2")
+            ReviewSaving.failed(id: "e2", reason: "r", retryable: false).saveTitle(count: 3)
+                == "Save all 3")
     }
 
     @Test("a flagged reading holds Save until it has been on screen")
