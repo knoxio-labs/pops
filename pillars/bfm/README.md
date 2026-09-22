@@ -329,6 +329,11 @@ list that ships without thumbnails. `purchases` computes both for the page —
 see that pillar's README. Nothing serves the bytes `receiptUri` names yet
 (POPS-2475), so the phone can key a cache on it and cannot draw it.
 
+**Edit conflicts preserve machine-readable reasons.** BFM carries the
+producer's error code through its gateway. Purchase updates distinguish
+`purchase_locked` from `purchase_stale` on a `409`; other conflict codes map to
+`upstream_conflict`. These decisions do not depend on the producer's message.
+
 **Detail carries every receipt page.** `receiptUris` contains all receipt-kind
 purchase document URIs in the order purchases returns them, or an empty array
 when there are none. The detail's `receiptUri` remains the first entry, or

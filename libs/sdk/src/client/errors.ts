@@ -48,6 +48,16 @@ export type CallSuccess<T> = { kind: 'ok'; value: T };
  * retryable, but on the producer's schedule (`retryAfterSeconds`, parsed from
  * `Retry-After` when the producer sent one) rather than a caller's guess.
  */
+/**
+ * The producer's own error code, from its `{ message, code? }` envelope
+ * (see `rest-call.ts`'s `mapHttpFailure`). Optional: a producer's envelope
+ * may carry no `code`, or none at all when the body was not JSON.
+ *
+ * Lets a consumer tell two failures of the same `kind` apart by a stable
+ * machine token instead of parsing the producer's human-readable `message`
+ * — e.g. bfm's `PATCH /mobile/purchases/:id` needs to distinguish a stale
+ * save from a locked field, both of which arrive as `kind: 'conflict'`.
+ */
 export type CallFailure =
   | { kind: 'unavailable'; pillar: string }
   | { kind: 'degraded'; pillar: string; reason: 'reconciling' }
@@ -58,12 +68,18 @@ export type CallFailure =
       actual?: string;
       message?: string;
     }
-  | { kind: 'not-found'; pillar: string; message?: string }
-  | { kind: 'conflict'; pillar: string; message?: string }
-  | { kind: 'bad-request'; pillar: string; message?: string }
-  | { kind: 'unauthorized'; pillar: string; message?: string }
-  | { kind: 'refused'; pillar: string; status: number; message?: string }
-  | { kind: 'rate-limited'; pillar: string; retryAfterSeconds?: number; message?: string };
+  | { kind: 'not-found'; pillar: string; message?: string; code?: string }
+  | { kind: 'conflict'; pillar: string; message?: string; code?: string }
+  | { kind: 'bad-request'; pillar: string; message?: string; code?: string }
+  | { kind: 'unauthorized'; pillar: string; message?: string; code?: string }
+  | { kind: 'refused'; pillar: string; status: number; message?: string; code?: string }
+  | {
+      kind: 'rate-limited';
+      pillar: string;
+      retryAfterSeconds?: number;
+      message?: string;
+      code?: string;
+    };
 
 export type CallResult<T> = CallSuccess<T> | CallFailure;
 

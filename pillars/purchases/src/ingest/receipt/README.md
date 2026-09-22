@@ -486,8 +486,7 @@ what the sender actually saw.
 its own bytes, sharded one level on the hash prefix, under an extension
 per media type. That makes the ticket's dedup requirement structural rather
 than a check someone has to remember to write — the same file lands on the
-same path, so a re-upload is a 409 from the existing write path rather than
-a twin. It also means a truncated upload cannot quietly overwrite a good
+same path rather than creating a second copy. It also means a truncated upload cannot quietly overwrite a good
 one: different bytes, different name.
 
 Files live beside the database (`<dirname(sqlite)>/receipts`, derived with

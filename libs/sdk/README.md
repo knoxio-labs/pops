@@ -96,6 +96,13 @@ the one from `capabilities/call-result.ts` (carries `.cause`; has a
 unions. An `instanceof` check against the wrong import never matches, and fails
 quietly.
 
+HTTP failures classified as `not-found`, `conflict`, `bad-request`,
+`unauthorized`, `refused` or `rate-limited` preserve a non-empty string `code`
+from the producer's JSON error envelope alongside `message`. Both are optional;
+non-JSON bodies supply neither, and non-string fields are ignored. Consumers can distinguish
+failures within one kind without parsing human-readable messages. Retry and
+status classification are unchanged, including `Retry-After` on rate limits.
+
 ## Unavailable-classification is not the SDK's
 
 The `unavailable` discriminant covers `pillar()` calls only. A pillar app's own
