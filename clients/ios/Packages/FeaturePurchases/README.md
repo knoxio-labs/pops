@@ -131,6 +131,12 @@ Three rules hold the form together, and each is a value a test asserts rather th
 
 Feature-owned controls request capture through the optional `purchaseCapture` environment presenter. The presenter receives only a `PurchaseCaptureSource`; the app host owns the navigation and whatever follows the run. A host without capture support leaves the environment value `nil`, so a feature can omit the control instead of opening a dead destination.
 
+`purchaseCapturePresentation(dependencies:isAvailable:onSaved:)` installs that presenter and owns the
+capture overlays. Staging, reading, and review share one large sheet and navigation stack; hand entry
+uses its own non-dismissible sheet. The document scanner remains a full-screen system controller,
+while photo and file selections return through the staging intake. Empty cancellation reports no
+completion, and camera refusals offer Settings only when the system permission can be changed there.
+
 `ReceiptCaptureView`'s ready state offers two actions side by side: photograph a receipt, or "Add a purchase" with no camera involved. Both land on `ReceiptResultView` over a `ReceiptResultViewModel`, and both save through the same `save(_:)`, which reads `ReceiptResultState` to decide which BFM call to make:
 
 - **A corrected reading (`.draft(reading)`).** `extract()` already ran; `save(_:)` turns the edited `ReceiptDraft` into a `ReceiptDraftSavePayload` — via `ReceiptDraftSaveMapping`, in this module, since `ReceiptDraft`'s fields are `internal` to it — carrying `reading`'s receipt URIs and capture facts forward untouched, and calls `saveDraft(_:)`.

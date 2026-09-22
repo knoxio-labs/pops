@@ -6,18 +6,22 @@
     internal struct ReceiptPhotoPickerModifier: ViewModifier {
         @Binding private var isPresented: Bool
         @State private var selection: [PhotosPickerItem] = []
+        @State private var pickedSelection = false
 
         private let selectionLimit: Int
         private let onPicked: @MainActor ([PhotosPickerItem]) -> Void
+        private let onCancel: @MainActor () -> Void
 
         internal init(
             isPresented: Binding<Bool>,
             selectionLimit: Int,
-            onPicked: @escaping @MainActor ([PhotosPickerItem]) -> Void
+            onPicked: @escaping @MainActor ([PhotosPickerItem]) -> Void,
+            onCancel: @escaping @MainActor () -> Void
         ) {
             _isPresented = isPresented
             self.selectionLimit = selectionLimit
             self.onPicked = onPicked
+            self.onCancel = onCancel
         }
 
         internal func body(content: Content) -> some View {
@@ -30,8 +34,17 @@
                 )
                 .onChange(of: selection) { _, items in
                     guard !items.isEmpty else { return }
+                    pickedSelection = true
                     onPicked(items)
                     selection = []
+                }
+                .onChange(of: isPresented) { _, presented in
+                    guard !presented else { return }
+                    if pickedSelection {
+                        pickedSelection = false
+                    } else {
+                        onCancel()
+                    }
                 }
         }
     }
@@ -44,13 +57,15 @@
         internal func receiptPhotoPicker(
             isPresented: Binding<Bool>,
             selectionLimit: Int = 0,
-            onPicked: @escaping @MainActor ([PhotosPickerItem]) -> Void
+            onPicked: @escaping @MainActor ([PhotosPickerItem]) -> Void,
+            onCancel: @escaping @MainActor () -> Void
         ) -> some View {
             modifier(
                 ReceiptPhotoPickerModifier(
                     isPresented: isPresented,
                     selectionLimit: selectionLimit,
-                    onPicked: onPicked))
+                    onPicked: onPicked,
+                    onCancel: onCancel))
         }
     }
 
