@@ -10,6 +10,7 @@ internal final class PurchasesHomeModel {
     private let repository: any PurchasesRepository
     private let now: @MainActor @Sendable () -> Date
     private var generation = 0
+    private var lastSuccessfulRead: Date?
 
     internal init(
         dependencies: AppDependencies,
@@ -27,7 +28,8 @@ internal final class PurchasesHomeModel {
 
     internal func refresh() async {
         guard case .loaded(let digest, let refresh) = phase else { return }
-        let previous = PurchasesHomePhase.loaded(digest, refresh: refresh)
+        let previousRefresh: PurchasesHomeRefresh = refresh == .refreshing ? .current : refresh
+        let previous = PurchasesHomePhase.loaded(digest, refresh: previousRefresh)
         phase = .loaded(digest, refresh: .refreshing)
         await read(previous: previous, refreshFailure: digest)
     }
@@ -65,6 +67,7 @@ internal final class PurchasesHomeModel {
                 unmatched: page.purchases,
                 month: month,
                 summary: summary)
+            lastSuccessfulRead = month
             phase = .loaded(loaded, refresh: .current)
         } catch let error where error is CancellationError || Task.isCancelled {
             guard requestGeneration == generation else { return }
@@ -75,7 +78,8 @@ internal final class PurchasesHomeModel {
             if let digest {
                 phase = .loaded(
                     digest,
-                    refresh: .failed(updated: PurchasesHomeCopy.time(now())))
+                    refresh: .failed(
+                        updated: PurchasesHomeCopy.time(lastSuccessfulRead ?? now())))
             } else {
                 phase = .failed(failure)
             }

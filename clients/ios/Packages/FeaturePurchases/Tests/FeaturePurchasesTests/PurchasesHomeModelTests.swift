@@ -64,6 +64,26 @@ internal struct PurchasesHomeModelTests {
         #expect(digest.purchases.map(\.id) == ["kept"])
     }
 
+    @Test("a refresh failure reports the last successful read time")
+    func refreshFailureUsesSuccessfulReadTime() async throws {
+        let loadedAt = Date(timeIntervalSince1970: 1_789_000_000)
+        let clock = HomeClock(now: loadedAt)
+        let repository = MutableHomeRepository(rows: [.fake(id: "kept")])
+        let model = PurchasesHomeModel(
+            dependencies: .fake(purchases: repository), now: { clock.now })
+        await model.load()
+        clock.now = loadedAt.addingTimeInterval(3_600)
+        await repository.setFailure(.unavailable)
+
+        await model.refresh()
+
+        guard case .loaded(_, .failed(let updated)) = model.phase else {
+            Issue.record("Expected a failed refresh")
+            return
+        }
+        #expect(updated == PurchasesHomeCopy.time(loadedAt))
+    }
+
     @Test("landing rows highlights every saved ID and performs one refresh")
     func landsRowsAndRefreshesOnce() async throws {
         let repository = MutableHomeRepository(rows: [.fake(id: "existing")])
@@ -122,6 +142,33 @@ internal struct PurchasesHomeModelTests {
         #expect(digest.purchases.map(\.id) == ["newest"])
     }
 
+    @Test("cancelling an overlapping refresh does not leave the phase refreshing")
+    func overlappingRefreshCancellationRestoresCurrentPhase() async throws {
+        let staleGate = HomeGate()
+        let row = Purchase.fake(id: "row")
+        let repository = SequencedHomeRepository(
+            pages: [
+                .immediate(page([row])), .gated(staleGate, page([row])), .cancelled,
+            ],
+            summaries: [
+                .immediate(.empty), .gated(staleGate, .empty), .immediate(.empty),
+            ])
+        let model = PurchasesHomeModel(dependencies: .fake(purchases: repository))
+        await model.load()
+
+        let stale = Task { await model.refresh() }
+        await repository.waitForCalls(4)
+        await model.refresh()
+        await staleGate.open()
+        await stale.value
+
+        guard case .loaded(_, let refresh) = model.phase else {
+            Issue.record("Expected loaded content")
+            return
+        }
+        #expect(refresh == .current)
+    }
+
     @Test("summary facts drive the digest instead of the loaded page")
     func summaryDrivesDigest() async throws {
         let summary = PurchasesMonthSummary(
@@ -171,6 +218,13 @@ private let homeFailureCases: [(RepositoryError, PurchasesHomeFailure)] = [
 ]
 
 private enum HomeTestError: Error { case notLoaded }
+
+@MainActor
+private final class HomeClock {
+    var now: Date
+
+    init(now: Date) { self.now = now }
+}
 
 private struct FailingHomeRepository: PurchasesRepository {
     let error: RepositoryError
@@ -240,13 +294,16 @@ private actor HomeGate {
 private enum HomeResponse<Value: Sendable>: Sendable {
     case immediate(Value)
     case gated(HomeGate, Value)
+    case cancelled
 
-    func value() async -> Value {
+    func value() async throws -> Value {
         switch self {
         case .immediate(let value): return value
         case .gated(let gate, let value):
             await gate.wait()
             return value
+        case .cancelled:
+            throw CancellationError()
         }
     }
 }
@@ -277,14 +334,14 @@ private actor SequencedHomeRepository: PurchasesRepository {
         let response = pages[pageIndex]
         pageIndex += 1
         recordedCall()
-        return await response.value()
+        return try await response.value()
     }
 
     func monthSummary(for: Date) async throws -> PurchasesMonthSummary {
         let response = summaries[summaryIndex]
         summaryIndex += 1
         recordedCall()
-        return await response.value()
+        return try await response.value()
     }
 
     private func recordedCall() {
