@@ -60,12 +60,6 @@ export type {
   CatalogueCompatibilityClassification,
   CatalogueCompatibilityResult,
 } from './compatibility.js';
-export { executeCatalogueMigration } from './migrations.js';
-export type {
-  CatalogueMigration,
-  CatalogueMigrationResult,
-  CatalogueMigrationStep,
-} from './migrations.js';
 export type {
   CanonicalValue,
   FieldCardinality,

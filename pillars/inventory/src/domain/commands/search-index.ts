@@ -6,14 +6,12 @@
  */
 import { eq, sql } from 'drizzle-orm';
 
-import { parseCanonicalValue, resolvePublishedType } from '../../catalogue/index.js';
+import { resolvePublishedType } from '../../catalogue/catalogue.js';
+import { parseCanonicalValue } from '../../catalogue/value-dispatch.js';
 import { itemFieldValues } from '../../db/schema.js';
 
-import type {
-  PersistedItemType,
-  PersistedItemTypeField,
-  PrimitiveWireValue,
-} from '../../catalogue/index.js';
+import type { PersistedItemType, PersistedItemTypeField } from '../../catalogue/catalogue-types.js';
+import type { PrimitiveWireValue } from '../../catalogue/value-codec.js';
 import type { ItemRow } from '../../db/row-types.js';
 import type { CommandDb } from './entities.js';
 

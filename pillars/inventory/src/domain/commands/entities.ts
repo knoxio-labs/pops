@@ -1,13 +1,10 @@
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
-import {
-  clearItemFieldValues,
-  loadProtocol1Fields,
-  replaceItemFieldValues,
-  resolveProtocol1Type,
-  resolveProtocol1TypeById,
-} from '../../catalogue/index.js';
+import { resolveProtocol1Type, resolveProtocol1TypeById } from '../../catalogue/catalogue.js';
+import { clearItemFieldValues } from '../../catalogue/protocol-1-copy.js';
+import { loadProtocol1Fields } from '../../catalogue/protocol-1-read.js';
+import { replaceItemFieldValues } from '../../catalogue/protocol-1-values.js';
 import { items, locations } from '../../db/schema.js';
 import { CommandRejected } from './errors.js';
 import { itemFieldsBlobSchema, ITEM_FIELD_CODECS, parseFieldValue } from './item-fields.js';
