@@ -17781,7 +17781,7 @@ internal enum Operations {
                         /// - Remark: Generated from `#/paths/mobile/inventory/mutations/POST/requestBody/json/MutationsPayload/baseRevision`.
                         internal var baseRevision: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/inventory/mutations/POST/requestBody/json/MutationsPayload/catalogueRevision`.
-                        internal var catalogueRevision: Swift.Int
+                        internal var catalogueRevision: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/inventory/mutations/POST/requestBody/json/MutationsPayload/clientTime`.
                         internal var clientTime: Foundation.Date
                         /// - Remark: Generated from `#/paths/mobile/inventory/mutations/POST/requestBody/json/MutationsPayload/dependsOn`.
@@ -17806,7 +17806,7 @@ internal enum Operations {
                         internal init(
                             args: OpenAPIRuntime.OpenAPIValueContainer,
                             baseRevision: Swift.Int? = nil,
-                            catalogueRevision: Swift.Int,
+                            catalogueRevision: Swift.Int? = nil,
                             clientTime: Foundation.Date,
                             dependsOn: [Swift.String],
                             entityId: Swift.String,
@@ -17842,7 +17842,7 @@ internal enum Operations {
                                 Swift.Int.self,
                                 forKey: .baseRevision
                             )
-                            self.catalogueRevision = try container.decode(
+                            self.catalogueRevision = try container.decodeIfPresent(
                                 Swift.Int.self,
                                 forKey: .catalogueRevision
                             )

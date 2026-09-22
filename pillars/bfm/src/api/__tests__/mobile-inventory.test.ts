@@ -489,6 +489,20 @@ describe('mutations', () => {
     expect(fake.mutationsCalls[0]?.mutations).toEqual([aMutation()]);
   });
 
+  it('accepts mutations from app versions that predate catalogue revision pins', async () => {
+    const fake = createInventoryFake();
+    const { app, token } = openWith(fake.factory, ['inventory.write']);
+    const mutation = aMutation();
+    delete mutation.catalogueRevision;
+
+    const res = await post(app, token, '/mobile/inventory/mutations', {
+      mutations: [mutation],
+    });
+
+    expect(res.status).toBe(200);
+    expect(fake.mutationsCalls[0]?.mutations).toEqual([mutation]);
+  });
+
   it('refuses a batch above the 256KB cap before it ever reaches inventory', async () => {
     const fake = createInventoryFake();
     const { app, token } = openWith(fake.factory, ['inventory.write']);
