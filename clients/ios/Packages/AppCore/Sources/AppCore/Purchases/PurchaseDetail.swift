@@ -33,6 +33,9 @@ public struct PurchaseDetail: Identifiable, Hashable, Sendable {
     public let source: String
     public let lines: [PurchaseDetailLine]
     public let receiptURIs: [String]
+    public let edit: PurchaseEdit?
+    /// The server's verbatim compare-and-swap token for an update, when supplied.
+    public let updatedAt: String?
 
     /// Creates a complete purchase detail while preserving receipt document order.
     public init(
@@ -44,7 +47,9 @@ public struct PurchaseDetail: Identifiable, Hashable, Sendable {
         surcharge: MoneyAmount,
         source: String,
         lines: [PurchaseDetailLine],
-        receiptURIs: [String]
+        receiptURIs: [String],
+        edit: PurchaseEdit? = nil,
+        updatedAt: String? = nil
     ) {
         self.purchase = purchase
         self.subtotal = subtotal
@@ -55,6 +60,8 @@ public struct PurchaseDetail: Identifiable, Hashable, Sendable {
         self.source = source
         self.lines = lines
         self.receiptURIs = receiptURIs
+        self.edit = edit
+        self.updatedAt = updatedAt
     }
 }
 

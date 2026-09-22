@@ -24,7 +24,9 @@ extension PurchaseDetail {
         surcharge: MoneyAmount = MoneyAmount(minorUnits: 0, currencyCode: "AUD"),
         source: String = "manual",
         lines: [PurchaseDetailLine] = [.fake()],
-        receiptURIs: [String] = []
+        receiptURIs: [String] = [],
+        edit: PurchaseEdit? = nil,
+        updatedAt: String? = nil
     ) -> PurchaseDetail {
         PurchaseDetail(
             purchase: purchase,
@@ -35,7 +37,9 @@ extension PurchaseDetail {
             surcharge: surcharge,
             source: source,
             lines: lines,
-            receiptURIs: receiptURIs
+            receiptURIs: receiptURIs,
+            edit: edit,
+            updatedAt: updatedAt
         )
     }
 }
