@@ -2,11 +2,11 @@ import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
 
 import { CatalogueAuditEventSchema } from './rest-catalogue-audit-schema.js';
+import { CatalogueMigrationSchema } from './rest-catalogue-migration-schemas.js';
 import {
   CatalogueCompatibilitySchema,
   CatalogueDraftOperationSchema,
   CatalogueErrorBodySchema,
-  CatalogueMigrationSchema,
   CatalogueReadHeaders,
   TypeCatalogueDescriptorSchema,
 } from './rest-catalogue-schemas.js';

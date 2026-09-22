@@ -1,9 +1,7 @@
 import type { z } from 'zod';
 
-import type {
-  CatalogueDraftOperationSchema,
-  CatalogueMigrationStepSchema,
-} from '../contract/rest-catalogue-schemas.js';
+import type { CatalogueMigrationStepSchema } from '../contract/rest-catalogue-migration-schemas.js';
+import type { CatalogueDraftOperationSchema } from '../contract/rest-catalogue-schemas.js';
 import type { PersistedItemTypeField } from './catalogue-types.js';
 
 export type DraftOperation = z.infer<typeof CatalogueDraftOperationSchema>;
