@@ -17,9 +17,10 @@ internal struct ScopeState: Sendable {
     internal var paging: ArchivePaging = .loading
 
     internal mutating func settleTransientLoading() {
+        let wasFetchingNextPage = isFetchingNextPage
         isLoadingFirstPage = false
         isFetchingNextPage = false
-        if hasLoaded {
+        if hasLoaded, wasFetchingNextPage {
             paging = cursor == nil ? .end : .loading
         }
     }

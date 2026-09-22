@@ -165,6 +165,28 @@ internal struct PurchasesArchiveViewModelTests {
         #expect(model.paging == .end)
     }
 
+    @Test("switching scopes preserves a settled paging failure until explicit retry")
+    func scopeSwitchPreservesPagingFailure() async {
+        let repository = ArchiveRepository([
+            .immediate(Self.page([.fake(id: "all")], cursor: "next", total: 2)),
+            .failure(.unavailable),
+            .immediate(Self.page([.fake(id: "open")], total: 1)),
+            .immediate(Self.page([.fake(id: "retried")], total: 2)),
+        ])
+        let model = makeModel(repository)
+        await model.loadFirstPageIfNeeded()
+        await model.loadNextPageIfNeeded()
+
+        await model.setScope(.unmatched)
+        await model.setScope(.all)
+        await model.loadNextPageIfNeeded()
+
+        #expect(model.paging == .failed)
+        #expect(await repository.calls().count == 3)
+        await model.retryNextPage()
+        #expect(model.purchases.map(\.id) == ["all", "retried"])
+    }
+
     private func makeModel(_ repository: ArchiveRepository) -> PurchasesArchiveViewModel {
         PurchasesArchiveViewModel(dependencies: .fake(purchases: repository))
     }
