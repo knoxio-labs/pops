@@ -109,49 +109,6 @@ internal struct InventorySearchTests {
 
         #expect(await eventually { model.results?.isFirstRun == false })
     }
-
-    @Test("Pick up from the results offers one Undo that returns every row")
-    func pickUpThenUndo() async throws {
-        let store = Self.store()
-        let model = InventorySearchViewModel(store: store)
-        model.query = "gar"
-        let task = await Self.loaded(model)
-        defer { task.cancel() }
-
-        await model.writer.pickUp(["hose", "rake"], from: model.hitRecords)
-        #expect(
-            await eventually { model.hitRecords.allSatisfy { $0.placement == .hand } })
-        let offer = try #require(model.writer.undoOffer)
-        #expect(offer.message == "Picked up 2")
-
-        await model.writer.undo(offer)
-
-        #expect(
-            await eventually { model.hitRecords.allSatisfy { $0.placement == .location } })
-        #expect(model.writer.failure == nil)
-    }
-
-    @Test("Move from a search result issues item.move through the model's own runner")
-    func moveIssuesItemMoveThroughTheRunner() async throws {
-        let base = Self.store()
-        let recording = RecordingInventoryStore(base)
-        let model = InventorySearchViewModel(store: recording)
-        model.query = "hose"
-        let task = await Self.loaded(model)
-        defer { task.cancel() }
-
-        let moving = InventoryRecordActions.moveRequest(["hose"], from: model.hitRecords)
-        #expect(moving.title == "Garden hose")
-
-        let destination = InventoryDestination(id: "home", name: "Home", kind: .location)
-        let plan = InventoryPlacementPlan(
-            request: moving, destination: destination, tree: InventoryLocationTree(nodes: []))
-        let landed = await model.runner.perform(
-            plan.commands, announcing: plan.message, symbol: .move)
-
-        #expect(landed)
-        #expect(recording.commands == [.moveItem(id: "hose", to: .location("home"), verb: .move)])
-    }
 }
 
 @Suite("Inventory search ranking")

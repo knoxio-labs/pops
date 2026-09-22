@@ -10,7 +10,7 @@ import SwiftUI
 /// same reason the Inventory tab does: a stack inside a stack is broken.
 public struct InventorySearchFlowView: View {
     @State private var model: InventorySearchViewModel
-    @State private var path: [InventoryRoute] = []
+    @State private var path = NavigationPath()
     private let store: any InventoryStore
     private let entityRouter: any EntityRouter
 
@@ -25,12 +25,8 @@ public struct InventorySearchFlowView: View {
 
     public var body: some View {
         NavigationStack(path: $path) {
-            InventorySearchView(model: model, scan: { path.append(.scan) })
-                .navigationDestination(for: InventoryRoute.self) { route in
-                    InventoryDestinationView(route: route, store: store, entityRouter: entityRouter)
-                }
+            InventorySearchView(model: model, scan: { path.append(InventoryScanLink()) })
+                .inventorySearchDestinations(store: store, entityRouter: entityRouter)
         }
-        .inventoryItemFormPresentation(store: store)
-        .inventorySyncInterruptions(store: store)
     }
 }

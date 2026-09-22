@@ -19,7 +19,7 @@ internal final class InventorySearchViewModel {
     internal let writer: InventoryWriter
     /// Move's writes: the one runner every placement picker in this package shares.
     internal let runner: InventoryCommandRunner
-    private let store: any InventoryStore
+    internal let store: any InventoryStore
 
     internal init(store: any InventoryStore) {
         self.store = store

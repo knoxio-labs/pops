@@ -10,10 +10,17 @@ internal struct InventorySearchView: View {
     @AppStorage(InventorySearchRecents.queriesKey) private var storedQueries = ""
     @AppStorage(InventorySearchRecents.scannedKey) private var storedScanned = ""
     @State private var showingFilters = false
-    @State private var selection = InventorySelection()
-    @State private var moving: InventoryPlacementRequest?
+    @State private var session: InventorySearchSession
     /// Bumped by Retry to restart the observation after the store ended it.
     @State private var generation = 0
+
+    internal init(model: InventorySearchViewModel, scan: @escaping () -> Void) {
+        self.model = model
+        self.scan = scan
+        _session = State(
+            initialValue: InventorySearchSession(
+                store: model.store, writer: model.writer, runner: model.runner))
+    }
 
     internal var body: some View {
         ScrollView {
@@ -36,14 +43,7 @@ internal struct InventorySearchView: View {
                 filter: $model.filter, types: model.results?.types ?? [])
         }
         .tint(.popsInventory)
-        .inventoryRecordSelectionBar(
-            $selection, records: model.hitRecords, writer: model.writer, moving: $moving
-        )
-        .inventoryPlacementPicker($moving, runner: model.runner) { _ in
-            selection.deselectAll()
-        }
-        .inventoryRunnerChrome(model.runner)
-        .inventoryWriterFeedback(model.writer)
+        .inventorySearchChrome(session, records: searchResults, store: model.store)
         .task(
             id: TaskKey(key: model.observationKey, scanned: storedScanned, generation: generation)
         ) {
@@ -109,16 +109,14 @@ internal struct InventorySearchView: View {
     }
 
     private var resultList: some View {
-        let hits = model.hits
+        let results = searchResults
         return VStack(alignment: .leading, spacing: PopsSpacing.xs) {
-            PopsSectionHeader(title: "Results", trailing: "\(hits.count)")
-            InventorySelectionPanel(rows: hits) { hit in
-                InventorySearchHitRow(
-                    hit: hit, query: model.trimmedQuery,
-                    loadPhoto: { await model.thumbnail($0) }
-                )
-                .inventorySelectable(hit.recordID, in: $selection)
-            }
+            PopsSectionHeader(title: "Results", trailing: "\(results.count)")
+            InventorySearchRows(results, query: model.trimmedQuery, session: session)
         }
+    }
+
+    private var searchResults: [InventorySearchResult] {
+        model.hits.map(InventorySearchResult.init)
     }
 }
