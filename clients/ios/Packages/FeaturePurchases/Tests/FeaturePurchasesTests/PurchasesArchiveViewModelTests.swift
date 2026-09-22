@@ -117,19 +117,6 @@ internal struct PurchasesArchiveViewModelTests {
         #expect(model.paging == .end)
     }
 
-    @Test("select forwards exactly the selected purchase")
-    func selection() {
-        let recorder = PurchaseSelectionRecorder()
-        let model = PurchasesArchiveViewModel(
-            dependencies: .fake(purchases: ArchiveRepository([])),
-            onSelect: { recorder.purchases.append($0) })
-        let selected = Purchase.fake(id: "selected")
-
-        model.select(selected)
-
-        #expect(recorder.purchases == [selected])
-    }
-
     @Test("month incompleteness follows each scope's own cursor")
     func incompletenessIsPerScope() async {
         let repository = ArchiveRepository([

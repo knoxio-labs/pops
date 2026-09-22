@@ -72,8 +72,3 @@ internal actor ArchiveRepository: PurchasesRepository {
         .empty
     }
 }
-
-@MainActor
-internal final class PurchaseSelectionRecorder {
-    internal var purchases: [Purchase] = []
-}

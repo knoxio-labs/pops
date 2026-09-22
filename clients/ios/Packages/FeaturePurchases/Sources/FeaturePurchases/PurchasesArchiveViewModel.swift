@@ -15,7 +15,6 @@ internal final class PurchasesArchiveViewModel {
     internal var nextPageCursor: String? { current.cursor }
 
     private let repository: any PurchasesRepository
-    private let onSelect: (Purchase) -> Void
     private var states: [PurchasesArchiveScope: ScopeState] = [
         .all: ScopeState(),
         .unmatched: ScopeState(),
@@ -24,12 +23,10 @@ internal final class PurchasesArchiveViewModel {
 
     internal init(
         dependencies: AppDependencies,
-        initialScope: PurchasesArchiveScope = .all,
-        onSelect: @escaping (Purchase) -> Void = { _ in }
+        initialScope: PurchasesArchiveScope = .all
     ) {
         repository = dependencies.purchases
         scope = initialScope
-        self.onSelect = onSelect
     }
 
     internal func setScope(_ newScope: PurchasesArchiveScope) async {
@@ -92,10 +89,6 @@ internal final class PurchasesArchiveViewModel {
         else { return }
         update(requestScope) { $0.paging = .loading }
         await fetchNextPage(cursor: cursor, scope: requestScope)
-    }
-
-    internal func select(_ purchase: Purchase) {
-        onSelect(purchase)
     }
 
     private var current: ScopeState { state(for: scope) }
