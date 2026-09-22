@@ -34,7 +34,12 @@ export type ItemRow = Pick<
 > &
   Pick<
     PurchaseRow,
-    'orderedAt' | 'orderedAtOffsetMinutes' | 'currency' | 'merchantEntityName' | 'status'
+    | 'orderedAt'
+    | 'orderedAtOffsetMinutes'
+    | 'currency'
+    | 'merchantEntityName'
+    | 'status'
+    | 'totalCents'
   >;
 
 export function itemRows(
@@ -62,6 +67,7 @@ export function itemRows(
       currency: purchases.currency,
       merchantEntityName: purchases.merchantEntityName,
       status: purchases.status,
+      totalCents: purchases.totalCents,
     })
     .from(purchaseItems)
     .innerJoin(purchases, eq(purchaseItems.purchaseId, purchases.id))
@@ -112,6 +118,7 @@ export function itemCandidate(
         sku: productIdentityOf(row),
         quantity: row.quantity,
         lineTotalCents: row.lineTotalCents,
+        totalCents: row.totalCents,
         refundedCents: row.refundedCents,
         orderedAt: row.orderedAt,
         orderedAtOffsetMinutes: row.orderedAtOffsetMinutes,

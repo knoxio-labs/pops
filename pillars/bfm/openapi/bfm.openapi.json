@@ -9793,6 +9793,11 @@
                               },
                               "status": {
                                 "type": "string"
+                              },
+                              "totalCents": {
+                                "maximum": 9007199254740991,
+                                "minimum": -9007199254740991,
+                                "type": "integer"
                               }
                             },
                             "required": [
@@ -9802,6 +9807,7 @@
                               "name",
                               "quantity",
                               "lineTotalCents",
+                              "totalCents",
                               "currency",
                               "merchantName",
                               "orderedOn",

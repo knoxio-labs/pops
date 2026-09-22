@@ -368,6 +368,8 @@ export const MobilePurchaseSearchHitSchema = z.discriminatedUnion('kind', [
     name: z.string(),
     quantity: z.int().min(1),
     lineTotalCents: z.int(),
+    /** The owning order's total, distinct from this line's total. */
+    totalCents: z.int(),
     currency: z.string(),
     merchantName: z.string().nullable(),
     orderedOn: z.string(),
