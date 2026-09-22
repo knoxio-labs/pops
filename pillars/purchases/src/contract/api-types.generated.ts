@@ -3347,6 +3347,7 @@ export interface operations {
                 }[];
                 /** @enum {string} */
                 kind: 'draft';
+                matchedMerchantEntityId: string | null;
                 receiptUris: string[];
                 reconciled: boolean;
               }
