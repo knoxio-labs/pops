@@ -9,7 +9,7 @@ internal struct PurchasesDestinationView: View {
     @ViewBuilder internal var body: some View {
         switch route {
         case .archive(let scope):
-            PurchasesArchiveScreen(scope: scope)
+            PurchasesArchiveScreen(scope: scope, dependencies: dependencies)
         case .detail(let id):
             PurchaseDetailScreen(id: id, dependencies: dependencies)
         }
