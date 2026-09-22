@@ -25,6 +25,7 @@ internal struct ContentView: View {
     internal let surface: FeatureSurface
     internal let shell: AppShellModel
     internal let composition: AppComposition
+    internal var purchasesCaptureObserver: (@MainActor (Bool) -> Void)?
 
     /// The tab the person chose, if they chose one. See ``features`` for why
     /// this is held here rather than left to `TabView`.
@@ -169,7 +170,16 @@ internal struct ContentView: View {
                 dependencies: dependencies,
                 router: composition.router(for: FeatureAccounts.feature))
         case FeaturePurchases.feature:
-            PurchasesFlowView(dependencies: dependencies)
+            if let purchasesCaptureObserver {
+                PurchasesFlowView(
+                    dependencies: dependencies,
+                    captureAvailable: surface.available.contains(.receiptCapture),
+                    captureObserver: purchasesCaptureObserver)
+            } else {
+                PurchasesFlowView(
+                    dependencies: dependencies,
+                    captureAvailable: surface.available.contains(.receiptCapture))
+            }
         case ReceiptCaptureTab.feature:
             ReceiptCaptureView(model: ReceiptCaptureViewModel(dependencies: dependencies))
         case FeatureInventory.feature:
