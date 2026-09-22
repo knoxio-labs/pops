@@ -1,5 +1,7 @@
 import { useMemo, type Dispatch, type SetStateAction } from 'react';
 
+import { findCreated, publishedField, reorderField, resolveTypeId } from './cataloguePageHelpers';
+
 import type { CatalogueField, CatalogueOperation, CatalogueType } from '../catalogue-editor/types';
 import type { useCatalogueEditor } from '../catalogue-editor/useCatalogueEditor';
 import type { EditorMode } from './useTypeCataloguePage';
@@ -129,73 +131,4 @@ export function useCataloguePageNavigation({
       void onOperation(reorderField(fields, fieldId, direction, selectedType.id));
   }
   return { continueToFields, createField, createType, moveField, selectField, selectType };
-}
-
-function reorderField(
-  fields: readonly CatalogueField[],
-  fieldId: string,
-  direction: -1 | 1,
-  parentId: string
-): CatalogueOperation {
-  const ids = fields.map((field) => field.id);
-  const active = fields.filter((field) => field.archivedAt === null);
-  const adjacent = active[active.findIndex((field) => field.id === fieldId) + direction];
-  if (adjacent === undefined) return { kind: 'reorder', definition: 'field', parentId, ids };
-  const from = ids.indexOf(fieldId);
-  const to = ids.indexOf(adjacent.id);
-  if (from >= 0 && to >= 0) {
-    const fromId = ids[from];
-    const toId = ids[to];
-    if (fromId !== undefined && toId !== undefined) [ids[from], ids[to]] = [toId, fromId];
-  }
-  return { kind: 'reorder', definition: 'field', parentId, ids };
-}
-function resolveTypeId(
-  types: readonly CatalogueType[],
-  storedTypeId: string | null
-): string | null {
-  if (storedTypeId !== null && types.some((type) => type.id === storedTypeId)) return storedTypeId;
-  return types.find((type) => type.archivedAt === null)?.id ?? types[0]?.id ?? null;
-}
-function publishedField(
-  types: readonly CatalogueType[] | undefined,
-  typeId: string | null,
-  fieldId: string | null
-): boolean {
-  if (typeId === null || fieldId === null) return false;
-  return (
-    types?.find((type) => type.id === typeId)?.fields.some((field) => field.id === fieldId) ?? false
-  );
-}
-function findCreated({
-  fieldIds,
-  mode,
-  selectedTypeId,
-  typeIds,
-  types,
-}: {
-  readonly fieldIds: ReadonlySet<string>;
-  readonly mode: EditorMode;
-  readonly selectedTypeId: string | null;
-  readonly typeIds: ReadonlySet<string>;
-  readonly types: readonly CatalogueType[];
-}) {
-  if (mode === 'new-type')
-    return {
-      kind: 'type' as const,
-      typeId: types.find((type) => !typeIds.has(type.id))?.id ?? null,
-      fieldId: null,
-      mode: 'type' as const,
-    };
-  if (mode === 'new-field')
-    return {
-      kind: 'field' as const,
-      typeId: null,
-      fieldId:
-        types
-          .find((type) => type.id === selectedTypeId)
-          ?.fields.find((field) => !fieldIds.has(field.id))?.id ?? null,
-      mode: 'field' as const,
-    };
-  return { kind: 'saved' as const, typeId: null, fieldId: null, mode: null };
 }
