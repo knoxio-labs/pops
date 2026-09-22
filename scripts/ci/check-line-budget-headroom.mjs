@@ -101,7 +101,7 @@
  * depth.
  *
  * Usage:
- *   node scripts/ci/check-line-budget-headroom.mjs [--base <ref>] [--head <ref>] [--headroom <n>] [--repo <dir>]
+ *   node scripts/ci/check-line-budget-headroom.mjs [--base <ref>] [--head <ref>] [--headroom <n>] [--prefer-local] [--repo <dir>]
  *   node scripts/ci/check-line-budget-headroom.mjs --self-test
  */
 
@@ -486,6 +486,8 @@ export function countBudgetLines(source) {
 /**
  * @param {string[]} args
  * @param {string} cwd
+ * @param {boolean} [preferLocal] Resolve a local stacked parent before a
+ * remote-tracking branch with the same name.
  * @returns {string}
  */
 function git(args, cwd) {
@@ -621,9 +623,11 @@ function readBlobsBatch(queries, cwd) {
  * @param {string} cwd
  * @returns {{ ref: string, tried: string[] } | { ref: undefined, tried: string[] }}
  */
-function resolveBaseRef(baseRef, cwd) {
+function resolveBaseRef(baseRef, cwd, preferLocal = false) {
   const bare = baseRef.replace(/^refs\/heads\//, '');
-  const candidates = [...new Set([`origin/${bare}`, bare, `refs/remotes/origin/${bare}`, baseRef])];
+  const candidates = preferLocal
+    ? [...new Set([bare, baseRef, `origin/${bare}`, `refs/remotes/origin/${bare}`])]
+    : [...new Set([`origin/${bare}`, bare, `refs/remotes/origin/${bare}`, baseRef])];
   for (const candidate of candidates) {
     if (tryGit(['rev-parse', '--verify', `${candidate}^{commit}`], cwd) !== undefined) {
       return { ref: candidate, tried: candidates };
@@ -659,6 +663,8 @@ function verdictStatus(count, max, headroom) {
  * @param {string} params.cwd
  * @param {string} params.baseRef Local or `origin/<ref>`-resolved branch name.
  * @param {number} params.headroom
+ * @param {boolean} [params.preferLocal] Resolve `baseRef` locally before its
+ * remote-tracking counterpart.
  * @param {string} [params.headRef] The commit to project — a ref or a raw
  *   sha. Defaults to `HEAD`. A pre-push hook has to project the SHA git is
  *   actually about to send, which is not always the checked-out `HEAD` (a
@@ -672,7 +678,7 @@ function verdictStatus(count, max, headroom) {
  *   projection actually used, which the report names so a reader can tell
  *   `origin/main` from a stale local `main`.
  */
-export function evaluate({ cwd, baseRef, headroom, headRef = 'HEAD' }) {
+export function evaluate({ cwd, baseRef, headroom, headRef = 'HEAD', preferLocal = false }) {
   const configPath = join(repoRoot, '.oxlintrc.json');
   /** @type {unknown} */
   let rawConfig;
@@ -709,7 +715,7 @@ export function evaluate({ cwd, baseRef, headroom, headRef = 'HEAD' }) {
     };
   }
 
-  const { ref: resolvedBase, tried } = resolveBaseRef(baseRef, cwd);
+  const { ref: resolvedBase, tried } = resolveBaseRef(baseRef, cwd, preferLocal);
 
   if (resolvedBase === undefined) {
     return {
@@ -1075,6 +1081,7 @@ function run() {
   const headRef = headIdx >= 0 ? args[headIdx + 1] : 'HEAD';
   const headroomIdx = args.indexOf('--headroom');
   const headroom = headroomIdx >= 0 ? Number(args[headroomIdx + 1]) : DEFAULT_HEADROOM;
+  const preferLocal = args.includes('--prefer-local');
   // `--repo` exists so the guard's own tests can run the BINARY against a
   // planted fixture rather than only calling `evaluate()` in-process. A test
   // that exercises the pure core and trusts the wiring is exactly the shape
@@ -1113,6 +1120,7 @@ function run() {
     cwd,
     baseRef,
     headroom,
+    preferLocal,
     headRef,
   });
   if (skippedReason !== undefined) {

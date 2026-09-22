@@ -133,7 +133,7 @@ export function peelToCommits(updates, resolveCommit) {
  * @param {string | undefined} params.branchName
  * @param {string | undefined} params.remoteName
  * @param {string | undefined} params.mergeRef
- * @returns {{ref: string, budgetBase: string, fetchRemote: string | undefined, fetchBranch: string | undefined}}
+ * @returns {{ref: string, budgetBase: string, fetchRemote: string | undefined, fetchBranch: string | undefined, preferLocal?: boolean}}
  */
 export function resolveCheckBase({ branchName, remoteName, mergeRef }) {
   if (branchName === undefined || mergeRef === undefined) return DEFAULT_CHECK_BASE;
@@ -150,6 +150,7 @@ export function resolveCheckBase({ branchName, remoteName, mergeRef }) {
       budgetBase: mergeBranch,
       fetchRemote: undefined,
       fetchBranch: undefined,
+      preferLocal: true,
     };
   }
 
@@ -240,7 +241,7 @@ function readStdin() {
  * @param {object} params
  * @param {RefUpdate[]} params.updates
  * @param {string | undefined} params.headSha
- * @param {{ref: string, budgetBase: string, fetchRemote: string | undefined, fetchBranch: string | undefined}} [params.base]
+ * @param {{ref: string, budgetBase: string, fetchRemote: string | undefined, fetchBranch: string | undefined, preferLocal?: boolean}} [params.base]
  * @param {string} params.repoDir The repo being pushed, passed to the
  *   line-budget check as `--repo` so it analyses this tree's git history
  *   rather than defaulting to its own module location.
@@ -305,6 +306,7 @@ export function orchestrate({
       budgetCheckScript,
       '--base',
       base.budgetBase,
+      ...(base.preferLocal === true ? ['--prefer-local'] : []),
       '--head',
       plan.sha,
       '--repo',

@@ -249,6 +249,7 @@ describe('resolveCheckBase', () => {
       budgetBase: 'parent',
       fetchRemote: undefined,
       fetchBranch: undefined,
+      preferLocal: true,
     });
   });
 });
@@ -372,6 +373,36 @@ describe('orchestrate()', () => {
     });
     expect(ran[2]?.args).toContain('parent');
     expect(ran[2]?.args[ran[2]!.args.indexOf('--base') + 1]).toBe('parent');
+  });
+
+  it('tells the line-budget check to prefer a local-only stacked parent', () => {
+    const { run, ran } = record();
+    const code = orchestrate({
+      updates: [
+        {
+          localRef: 'refs/heads/child',
+          localSha: headSha,
+          remoteRef: 'refs/heads/child',
+          remoteSha: NULL_SHA,
+        },
+      ],
+      headSha,
+      base: {
+        ref: 'parent',
+        budgetBase: 'parent',
+        fetchRemote: undefined,
+        fetchBranch: undefined,
+        preferLocal: true,
+      },
+      repoDir: '/some/repo',
+      run,
+      out: () => {},
+      err: () => {},
+    });
+    expect(code).toBe(0);
+    expect(ran).toHaveLength(2);
+    expect(ran[0]).toEqual({ cmd: 'git', args: ['merge-tree', '--write-tree', 'parent', headSha] });
+    expect(ran[1]?.args).toContain('--prefer-local');
   });
 
   it('fails, and never reaches the line-budget check, when merge-tree conflicts', () => {
