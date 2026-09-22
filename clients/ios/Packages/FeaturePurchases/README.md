@@ -2,7 +2,7 @@
 
 Purchase browsing, receipt capture and the shared draft form.
 
-`PurchasesFlowView` is the Purchases tab. It owns one navigation stack rooted at the purchases home and resolves feature-local archive and detail routes. Cross-feature links use the public `PurchasesRoute` and install `purchasesDestinations(dependencies:)` on their own stack. The current detail and archive destinations draw `ContentUnavailableView`; their repository reads land separately. The existing Receipts tab continues to own capture while the home asks the app host to present that flow through `purchaseCapture`.
+`PurchasesFlowView` is the Purchases tab. It owns one navigation stack rooted at the purchases home and resolves feature-local archive and detail routes. Cross-feature links use the public `PurchasesRoute` and install `purchasesDestinations(dependencies:)` on their own stack. The current detail destination draws `ContentUnavailableView`; its repository read lands separately. The existing Receipts tab continues to own capture while the home asks the app host to present that flow through `purchaseCapture`.
 
 ## Capture and the draft form
 
@@ -55,6 +55,12 @@ Saved-purchase screens share `PurchasesPresentation` for merchant names, settlem
 The home presentation reuses DesignSystem glass, spacing, type, and status primitives. Its monthly figure keeps currencies separate and omits a comparison when the server has no previous month. Archive tiles use server counts and stack vertically at accessibility Dynamic Type sizes; the Unmatched tile disappears only when the server count is zero. Loading, empty, initial failure, and retained-content refresh failure remain visibly distinct states.
 
 The assembled home switches between those states, refreshes without removing loaded content, and routes its tiles and rows through the Purchases stack. An empty history remains pull-to-refreshable and keeps a failed-refresh capsule visible; existing history with no activity in the current month says “No purchases this month” inside the monthly figure instead of becoming an empty history. Recent purchases mark every identifier saved by capture with a purchases-coloured wash and a “Just saved” caption until the next ordinary refresh. Merchant leaders draw aggregate rows directly from the month summary, without manufacturing purchases or identifiers. Add offers photos, files, and hand entry in that order; Scan is the purchases-tinted direct action. Both controls disappear when the host has not installed `purchaseCapture`, including on the empty state.
+
+The archive groups each server-filtered scope into calendar months. Until a scope reaches its final cursor, only its oldest loaded month is marked incomplete; totals for that month say they are partial instead of presenting a page boundary as a complete month. Status badges answer a different question in each scope: All marks unsettled rows, while Unmatched marks only the partially matched exception.
+
+Each archive scope owns its rows, opaque cursor, first-page total, and paging state. Switching scope invalidates in-flight work without discarding either scope's loaded cache; returning to a scope resumes from its cursor. Later pages deduplicate purchase identifiers, keep the first page's server total, and expose failure only at the footer so already loaded months remain readable.
+
+The archive screen pins shared section headers over shared purchase-row panels. Its principal toolbar picker swaps All and Unmatched without creating another navigation stack, and rows push feature-local detail values. First-page loading and failure replace the screen; later-page loading, failure, retry, and the “Everything since” boundary live in the footer beneath rows that remain readable. The archive loading footer follows the next-page cursor, so a duplicate-only page can advance pagination without requiring new rows or a scroll gesture.
 
 Editing a saved purchase remains POPS-2458. There is no initialiser building a `ReceiptDraft` from a `ReceiptPurchase`: that summary carries a merchant, a total and a count, and a form pre-filled from it would present three line items as zero. Reusing the form requires the full detail model, rather than treating the summary as an editable purchase.
 
