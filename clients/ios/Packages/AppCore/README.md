@@ -22,6 +22,8 @@ The existing flattened item properties remain the protocol-1 compatibility surfa
 
 Fakes ship beside the protocols, as a separate `AppCoreFakes` product, so a feature's tests never stub a URL protocol and a shipping target cannot link them by accident. `Auth` follows the same split with `AuthTestSupport`; `ModuleBoundaryTests` discovers every such module by name rather than listing them, so the next one is guarded on arrival.
 
+Universal search names its pillars, scopes, answer phases, chip states and recent queries in AppCore so feature packages can provide results without depending on one another. A `SearchProvider` streams ordered results or a specific availability failure and must stop promptly when its consumer is cancelled; on-device providers may publish later changes through the same stream.
+
 The in-memory transaction and purchase repositories page through opaque cursors they minted themselves, reject caller-derived and stale cursors, count calls, and can fail a chosen call. Replacing their rows invalidates every outstanding cursor so a refresh starts from the first page. Purchase cursor identities are never recycled, including when two filters end at the same offset.
 
 `PurchasesRepository` accepts `PurchaseStatusFilter.all` or `.unsettled`; the latter mirrors the mobile wire's single status filter without exposing generated types. `PurchasePage.totalCount` is optional because the BFM supplies it only on a first page. Callers retain that first value while later pages carry `nil`. The in-memory repository filters before applying its cursor and binds every cursor to the filter that minted it.
