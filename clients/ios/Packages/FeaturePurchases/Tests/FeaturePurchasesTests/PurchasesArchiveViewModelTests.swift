@@ -94,6 +94,29 @@ internal struct PurchasesArchiveViewModelTests {
         #expect(model.totalCount == 9)
     }
 
+    @Test("a duplicate-only page advances the footer cursor without adding rows")
+    func duplicateOnlyPageAdvancesCursor() async {
+        let first = Purchase.fake(id: "first")
+        let repository = ArchiveRepository([
+            .immediate(Self.page([first], cursor: "second", total: 2)),
+            .immediate(Self.page([first], cursor: "third")),
+            .immediate(Self.page([.fake(id: "last")])),
+        ])
+        let model = makeModel(repository)
+        await model.loadFirstPageIfNeeded()
+        #expect(model.nextPageCursor == "second")
+
+        await model.loadNextPageIfNeeded()
+        #expect(model.purchases == [first])
+        #expect(model.nextPageCursor == "third")
+        #expect(model.paging == .loading)
+
+        await model.loadNextPageIfNeeded()
+        #expect(model.purchases.map(\.id) == ["first", "last"])
+        #expect(model.nextPageCursor == nil)
+        #expect(model.paging == .end)
+    }
+
     @Test("select forwards exactly the selected purchase")
     func selection() {
         let recorder = PurchaseSelectionRecorder()

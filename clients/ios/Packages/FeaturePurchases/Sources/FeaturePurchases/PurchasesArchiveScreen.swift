@@ -136,7 +136,7 @@ internal struct PurchasesArchiveScreen: View {
         case .loading:
             PopsListSkeleton(rows: 2)
                 .accessibilityLabel("Loading earlier purchases")
-                .task { await model.loadNextPageIfNeeded() }
+                .task(id: model.nextPageCursor) { await model.loadNextPageIfNeeded() }
         case .failed:
             VStack(spacing: PopsSpacing.sm) {
                 Label(

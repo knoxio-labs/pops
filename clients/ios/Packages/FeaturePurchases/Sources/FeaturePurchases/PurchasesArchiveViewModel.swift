@@ -12,6 +12,7 @@ internal final class PurchasesArchiveViewModel {
     internal var topLevelState: TopLevelState { current.topLevel }
     internal var paging: ArchivePaging { current.paging }
     internal var totalCount: Int? { current.totalCount }
+    internal var nextPageCursor: String? { current.cursor }
 
     private let repository: any PurchasesRepository
     private let onSelect: (Purchase) -> Void
