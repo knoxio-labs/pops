@@ -48,6 +48,8 @@ Saved-purchase screens share `PurchasesPresentation` for merchant names, settlem
 
 `PurchaseRowContent` turns a saved purchase into the value every list row draws, including whether the merchant is unattributed and whether that context asks for a settlement badge. `PurchaseRowLabel`, `PurchaseRowsPanel`, and `PurchaseMarkStack` compose that value from the shared DesignSystem panel and divided-row primitives.
 
+`PurchasesHomeDigest` bounds Recent and merchant leaders while keeping the server's All and Unmatched counts independent from the number of loaded rows. Its summary initializer reads monthly totals, comparisons, and aggregate merchant leaders from `PurchasesMonthSummary`; leaders remain aggregate facts and never require an invented purchase or purchase identifier.
+
 Editing a saved purchase remains POPS-2458. There is no initialiser building a `ReceiptDraft` from a `ReceiptPurchase`: that summary carries a merchant, a total and a count, and a form pre-filled from it would present three line items as zero. Reusing the form requires the full detail model, rather than treating the summary as an editable purchase.
 
 ### The form, and how both entry points reach it
