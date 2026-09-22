@@ -114,6 +114,7 @@ describe('one page of orders', () => {
     expect(res.body.data).toEqual([
       {
         id: 'pur-1',
+        merchant: { resolution: 'name', name: 'Woolworths' },
         merchantName: 'Woolworths',
         totalCents: 8420,
         currency: 'AUD',
@@ -161,6 +162,7 @@ describe('one page of orders', () => {
       'currency',
       'id',
       'itemCount',
+      'merchant',
       'merchantName',
       'orderedOn',
       'receiptUri',
@@ -175,6 +177,33 @@ describe('one page of orders', () => {
     const res = await list(app, token);
 
     expect(res.body.data[0].merchantName).toBeNull();
+    expect(res.body.data[0].merchant).toEqual({ resolution: 'unattributed' });
+  });
+
+  it('resolves an entity-matched merchant to the contacts name, not the till’s wording', async () => {
+    const { app, token } = openWithRows([
+      purchasesRow({
+        id: 'pur-1',
+        merchantEntityId: 'ent-1',
+        merchantEntityName: 'K mart',
+      }),
+    ]);
+
+    const res = await list(app, token);
+
+    expect(res.body.data[0].merchant).toEqual({
+      resolution: 'entity',
+      entityId: 'ent-1',
+      // The read fake's default contacts factory resolves nothing — see
+      // `openWithRows`'s use of `createPurchasesReadFake`'s own default
+      // `PillarHandleFactory`, which answers only `purchase.*`. The default
+      // `MobileContactsClient` this app is built with therefore calls a
+      // `contacts` pillar the fake never registers, degrading to no name —
+      // exactly the outage-safe path `resolveMergedNames` exists for.
+      name: null,
+    });
+    // The till's own wording is unaffected either way.
+    expect(res.body.data[0].merchantName).toBe('K mart');
   });
 });
 

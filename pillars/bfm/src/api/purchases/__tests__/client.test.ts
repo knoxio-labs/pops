@@ -7,7 +7,7 @@
  * which mobile one, what a request bfm sends looks like, and what happens
  * to a response bfm cannot read.
  */
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   createPurchasesDraftFake,
@@ -15,8 +15,15 @@ import {
   purchasesDraftUnreadable,
   purchasesPurchaseDetail,
 } from '../../__tests__/purchases-draft-fake.js';
+import {
+  createPurchasesReadFake,
+  purchasesDetail,
+  purchasesRow,
+} from '../../__tests__/purchases-read-fake.js';
+import { type MobileContactsClient } from '../../contacts/client.js';
 import { createPillarGateway, isGatewayOk } from '../../pillars/gateway.js';
 import { createMobilePurchasesClient } from '../client.js';
+import { CONTACTS_LOOKUP_TIMEOUT_MS } from '../list-page.js';
 
 import type { CallResult } from '@pops/pillar-sdk/server';
 
@@ -25,8 +32,25 @@ import type { PillarHandleFactory } from '../../pillars/gateway.js';
 
 const PARTS: readonly MobileReceiptPart[] = [{ mediaType: 'image/jpeg', dataBase64: 'AAAA' }];
 
-function clientOver(factory: PillarHandleFactory) {
-  return createMobilePurchasesClient(createPillarGateway(factory));
+function clientOver(factory: PillarHandleFactory, contacts?: MobileContactsClient) {
+  return createMobilePurchasesClient(createPillarGateway(factory), contacts);
+}
+
+/** A `MobileContactsClient` stub that records every `lookupEntities` call. */
+function contactsSpy(names: ReadonlyMap<string, string> = new Map()): {
+  client: MobileContactsClient;
+  calls: (readonly string[])[];
+} {
+  const calls: (readonly string[])[] = [];
+  return {
+    calls,
+    client: {
+      lookupEntities: (ids) => {
+        calls.push(ids);
+        return Promise.resolve({ kind: 'ok', value: names });
+      },
+    },
+  };
 }
 
 describe('extractReceipt', () => {
@@ -207,5 +231,249 @@ describe('createManualPurchase', () => {
     if (!isGatewayOk(outcome)) return;
     expect(outcome.value.id).toBe('pur-manual-1');
     expect(outcome.value.source).toBe('manual');
+  });
+});
+
+describe('merchant identity batching', () => {
+  it('resolves 10 distinct merchant entity ids across 25 rows in exactly ONE call', async () => {
+    const rows = Array.from({ length: 25 }, (_, i) =>
+      purchasesRow({
+        id: `pur-${String(i)}`,
+        orderedAt: `2026-08-${String(13 - Math.floor(i / 2)).padStart(2, '0')}T02:00:00.000Z`,
+        merchantEntityId: `ent-${String(i % 10)}`,
+        merchantEntityName: `Merchant ${String(i % 10)}`,
+      })
+    );
+    const readFake = createPurchasesReadFake(rows);
+    const spy = contactsSpy();
+
+    const outcome = await clientOver(readFake.factory, spy.client).listPurchases({
+      limit: 25,
+      cursor: null,
+    });
+
+    expect(isGatewayOk(outcome)).toBe(true);
+    expect(spy.calls).toHaveLength(1);
+    expect(new Set(spy.calls[0])).toEqual(
+      new Set(Array.from({ length: 10 }, (_, i) => `ent-${String(i)}`))
+    );
+    expect(spy.calls[0]).toHaveLength(10);
+  });
+
+  it('makes zero calls for a page with no merchant entity ids at all', async () => {
+    const readFake = createPurchasesReadFake([
+      purchasesRow({ id: 'pur-1', merchantEntityId: null }),
+      purchasesRow({ id: 'pur-2', merchantEntityId: null, orderedAt: '2026-08-12T02:00:00.000Z' }),
+    ]);
+    const spy = contactsSpy();
+
+    await clientOver(readFake.factory, spy.client).listPurchases({ limit: 10, cursor: null });
+
+    expect(spy.calls).toHaveLength(0);
+  });
+
+  it('makes zero calls for an entirely empty page', async () => {
+    const readFake = createPurchasesReadFake([]);
+    const spy = contactsSpy();
+
+    await clientOver(readFake.factory, spy.client).listPurchases({ limit: 10, cursor: null });
+
+    expect(spy.calls).toHaveLength(0);
+  });
+
+  it('degrades to an unnamed entity rather than a 502 when contacts is down', async () => {
+    const readFake = createPurchasesReadFake([
+      purchasesRow({ id: 'pur-1', merchantEntityId: 'ent-1', merchantEntityName: 'K mart' }),
+    ]);
+    const downContacts: MobileContactsClient = {
+      lookupEntities: () =>
+        Promise.resolve({ kind: 'unavailable', pillar: 'contacts', status: 503 }),
+    };
+
+    const outcome = await clientOver(readFake.factory, downContacts).listPurchases({
+      limit: 10,
+      cursor: null,
+    });
+
+    expect(isGatewayOk(outcome)).toBe(true);
+    if (!isGatewayOk(outcome)) return;
+    expect(outcome.value.data[0]?.merchant).toEqual({
+      resolution: 'entity',
+      entityId: 'ent-1',
+      name: null,
+    });
+  });
+
+  it('resolves a single order’s merchant entity through the same batched call', async () => {
+    const readFake = createPurchasesReadFake(
+      [purchasesRow({ id: 'pur-1', merchantEntityId: 'ent-1' })],
+      {
+        'pur-1': purchasesDetail({
+          id: 'pur-1',
+          merchantEntityId: 'ent-1',
+          merchantEntityName: 'K mart',
+        }),
+      }
+    );
+    const spy = contactsSpy(new Map([['ent-1', 'Kmart']]));
+
+    const outcome = await clientOver(readFake.factory, spy.client).getPurchase('pur-1');
+
+    expect(isGatewayOk(outcome)).toBe(true);
+    if (!isGatewayOk(outcome)) return;
+    expect(outcome.value.merchant).toEqual({
+      resolution: 'entity',
+      entityId: 'ent-1',
+      name: 'Kmart',
+    });
+    expect(spy.calls).toEqual([['ent-1']]);
+  });
+
+  // scripts/ios-e2e/purchases-stub.mjs answers a manually-created purchase
+  // without a `merchantEntityId` key at all — not `null`, absent — and the
+  // iOS UI-flow lane's manual-entry flow 502'd against this pillar's own
+  // requirement that the key be present. Reproduced directly against the
+  // wire, not through `purchasesDetail`'s fixture builder, which always sets
+  // the key: this is the one case that has to omit it.
+  it('does not fail the response when purchases omits merchantEntityId entirely', async () => {
+    const detail: CallResult<unknown> = {
+      kind: 'ok',
+      value: {
+        purchase: {
+          id: 'pur-1',
+          source: 'manual',
+          merchantEntityName: 'Corner Store',
+          totalCents: 500,
+          subtotalCents: 500,
+          taxCents: 0,
+          shippingCents: 0,
+          discountCents: 0,
+          surchargeCents: 0,
+          currency: 'AUD',
+          orderedAt: '2026-08-13T02:15:00.000Z',
+          orderedAtOffsetMinutes: 600,
+          status: 'linked',
+        },
+        items: [],
+        documents: [],
+      },
+    };
+    const readFake = createPurchasesReadFake([], { 'pur-1': detail });
+
+    const outcome = await clientOver(readFake.factory).getPurchase('pur-1');
+
+    expect(isGatewayOk(outcome)).toBe(true);
+    if (!isGatewayOk(outcome)) return;
+    expect(outcome.value.merchant).toEqual({ resolution: 'name', name: 'Corner Store' });
+  });
+});
+
+describe('a contacts outage never fails the purchases response', () => {
+  it('degrades to an unnamed entity when contacts is unreachable', async () => {
+    const readFake = createPurchasesReadFake([
+      purchasesRow({ id: 'pur-1', merchantEntityId: 'ent-1', merchantEntityName: 'K mart' }),
+    ]);
+    const downContacts: MobileContactsClient = {
+      lookupEntities: () =>
+        Promise.resolve({ kind: 'unavailable', pillar: 'contacts', status: 503 }),
+    };
+
+    const outcome = await clientOver(readFake.factory, downContacts).listPurchases({
+      limit: 10,
+      cursor: null,
+    });
+
+    expect(isGatewayOk(outcome)).toBe(true);
+    if (!isGatewayOk(outcome)) return;
+    expect(outcome.value.data[0]?.merchant).toEqual({
+      resolution: 'entity',
+      entityId: 'ent-1',
+      name: null,
+    });
+  });
+
+  it('degrades to an unnamed entity when contacts answers a shape this pillar cannot read', async () => {
+    const readFake = createPurchasesReadFake([
+      purchasesRow({ id: 'pur-1', merchantEntityId: 'ent-1', merchantEntityName: 'K mart' }),
+    ]);
+    const erroringContacts: MobileContactsClient = {
+      lookupEntities: () =>
+        Promise.resolve({ kind: 'contract-mismatch', pillar: 'contacts', status: 502 }),
+    };
+
+    const outcome = await clientOver(readFake.factory, erroringContacts).listPurchases({
+      limit: 10,
+      cursor: null,
+    });
+
+    expect(isGatewayOk(outcome)).toBe(true);
+    if (!isGatewayOk(outcome)) return;
+    expect(outcome.value.data[0]?.merchant).toEqual({
+      resolution: 'entity',
+      entityId: 'ent-1',
+      name: null,
+    });
+  });
+
+  describe('a contacts call that never answers', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('degrades to an unnamed entity on its own timeout, not the SDK’s 30s call timeout', async () => {
+      const readFake = createPurchasesReadFake([
+        purchasesRow({ id: 'pur-1', merchantEntityId: 'ent-1', merchantEntityName: 'K mart' }),
+      ]);
+      // Never resolves on its own — only `resolveMergedNames`'s own bound
+      // (`CONTACTS_LOOKUP_TIMEOUT_MS`) can end this call. If that bound were
+      // missing, this test would hang until the suite's own timeout instead
+      // of failing cleanly, which is why it is asserted below rather than
+      // just trusted to pass.
+      const hungContacts: MobileContactsClient = {
+        lookupEntities: () => new Promise(() => undefined),
+      };
+
+      const pending = clientOver(readFake.factory, hungContacts).listPurchases({
+        limit: 10,
+        cursor: null,
+      });
+
+      await vi.advanceTimersByTimeAsync(CONTACTS_LOOKUP_TIMEOUT_MS);
+      const outcome = await pending;
+
+      expect(isGatewayOk(outcome)).toBe(true);
+      if (!isGatewayOk(outcome)) return;
+      expect(outcome.value.data[0]?.merchant).toEqual({
+        resolution: 'entity',
+        entityId: 'ent-1',
+        name: null,
+      });
+    });
+  });
+
+  it('degrades to an unnamed entity rather than crashing the request when the client throws', async () => {
+    const readFake = createPurchasesReadFake([
+      purchasesRow({ id: 'pur-1', merchantEntityId: 'ent-1', merchantEntityName: 'K mart' }),
+    ]);
+    const throwingContacts: MobileContactsClient = {
+      lookupEntities: () => Promise.reject(new Error('boom')),
+    };
+
+    const outcome = await clientOver(readFake.factory, throwingContacts).listPurchases({
+      limit: 10,
+      cursor: null,
+    });
+
+    expect(isGatewayOk(outcome)).toBe(true);
+    if (!isGatewayOk(outcome)) return;
+    expect(outcome.value.data[0]?.merchant).toEqual({
+      resolution: 'entity',
+      entityId: 'ent-1',
+      name: null,
+    });
   });
 });

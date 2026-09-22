@@ -115,6 +115,7 @@ export function purchasesPurchaseDetail(
   overrides: {
     id?: string;
     source?: string;
+    merchantEntityId?: string | null;
     merchantEntityName?: string | null;
     totalCents?: number;
   } = {}
@@ -125,6 +126,7 @@ export function purchasesPurchaseDetail(
       purchase: {
         id: overrides.id ?? 'pur-1',
         source: overrides.source ?? 'receipt',
+        merchantEntityId: overrides.merchantEntityId ?? null,
         merchantEntityName: overrides.merchantEntityName ?? 'Bunnings Warehouse',
         totalCents: overrides.totalCents ?? 2750,
         subtotalCents: overrides.totalCents ?? 2750,

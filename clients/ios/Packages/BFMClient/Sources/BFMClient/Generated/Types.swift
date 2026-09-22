@@ -20656,6 +20656,177 @@ internal enum Operations {
                             internal var id: Swift.String
                             /// - Remark: Generated from `#/paths/mobile/purchases/GET/responses/200/content/json/DataPayload/itemCount`.
                             internal var itemCount: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/purchases/GET/responses/200/content/json/DataPayload/merchant`.
+                            internal enum MerchantPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/purchases/GET/responses/200/content/json/DataPayload/merchant/case1`.
+                                internal struct Case1Payload: Codable, Hashable, Sendable {
+                                    /// - Remark: Generated from `#/paths/mobile/purchases/GET/responses/200/content/json/DataPayload/merchant/case1/entityId`.
+                                    internal var entityId: Swift.String
+                                    /// - Remark: Generated from `#/paths/mobile/purchases/GET/responses/200/content/json/DataPayload/merchant/case1/name`.
+                                    internal var name: Swift.String?
+                                    /// - Remark: Generated from `#/paths/mobile/purchases/GET/responses/200/content/json/DataPayload/merchant/case1/resolution`.
+                                    internal enum ResolutionPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                        case entity = "entity"
+                                    }
+                                    /// - Remark: Generated from `#/paths/mobile/purchases/GET/responses/200/content/json/DataPayload/merchant/case1/resolution`.
+                                    internal var resolution: Operations.MobilePurchases_listPurchases.Output.Ok.Body.JsonPayload.DataPayloadPayload.MerchantPayload.Case1Payload.ResolutionPayload
+                                    /// Creates a new `Case1Payload`.
+                                    ///
+                                    /// - Parameters:
+                                    ///   - entityId:
+                                    ///   - name:
+                                    ///   - resolution:
+                                    internal init(
+                                        entityId: Swift.String,
+                                        name: Swift.String? = nil,
+                                        resolution: Operations.MobilePurchases_listPurchases.Output.Ok.Body.JsonPayload.DataPayloadPayload.MerchantPayload.Case1Payload.ResolutionPayload
+                                    ) {
+                                        self.entityId = entityId
+                                        self.name = name
+                                        self.resolution = resolution
+                                    }
+                                    internal enum CodingKeys: String, CodingKey {
+                                        case entityId
+                                        case name
+                                        case resolution
+                                    }
+                                    internal init(from decoder: any Swift.Decoder) throws {
+                                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                                        self.entityId = try container.decode(
+                                            Swift.String.self,
+                                            forKey: .entityId
+                                        )
+                                        self.name = try container.decodeIfPresent(
+                                            Swift.String.self,
+                                            forKey: .name
+                                        )
+                                        self.resolution = try container.decode(
+                                            Operations.MobilePurchases_listPurchases.Output.Ok.Body.JsonPayload.DataPayloadPayload.MerchantPayload.Case1Payload.ResolutionPayload.self,
+                                            forKey: .resolution
+                                        )
+                                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                            "entityId",
+                                            "name",
+                                            "resolution"
+                                        ])
+                                    }
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/purchases/GET/responses/200/content/json/DataPayload/merchant/case1`.
+                                case case1(Operations.MobilePurchases_listPurchases.Output.Ok.Body.JsonPayload.DataPayloadPayload.MerchantPayload.Case1Payload)
+                                /// - Remark: Generated from `#/paths/mobile/purchases/GET/responses/200/content/json/DataPayload/merchant/case2`.
+                                internal struct Case2Payload: Codable, Hashable, Sendable {
+                                    /// - Remark: Generated from `#/paths/mobile/purchases/GET/responses/200/content/json/DataPayload/merchant/case2/name`.
+                                    internal var name: Swift.String
+                                    /// - Remark: Generated from `#/paths/mobile/purchases/GET/responses/200/content/json/DataPayload/merchant/case2/resolution`.
+                                    internal enum ResolutionPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                        case name = "name"
+                                    }
+                                    /// - Remark: Generated from `#/paths/mobile/purchases/GET/responses/200/content/json/DataPayload/merchant/case2/resolution`.
+                                    internal var resolution: Operations.MobilePurchases_listPurchases.Output.Ok.Body.JsonPayload.DataPayloadPayload.MerchantPayload.Case2Payload.ResolutionPayload
+                                    /// Creates a new `Case2Payload`.
+                                    ///
+                                    /// - Parameters:
+                                    ///   - name:
+                                    ///   - resolution:
+                                    internal init(
+                                        name: Swift.String,
+                                        resolution: Operations.MobilePurchases_listPurchases.Output.Ok.Body.JsonPayload.DataPayloadPayload.MerchantPayload.Case2Payload.ResolutionPayload
+                                    ) {
+                                        self.name = name
+                                        self.resolution = resolution
+                                    }
+                                    internal enum CodingKeys: String, CodingKey {
+                                        case name
+                                        case resolution
+                                    }
+                                    internal init(from decoder: any Swift.Decoder) throws {
+                                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                                        self.name = try container.decode(
+                                            Swift.String.self,
+                                            forKey: .name
+                                        )
+                                        self.resolution = try container.decode(
+                                            Operations.MobilePurchases_listPurchases.Output.Ok.Body.JsonPayload.DataPayloadPayload.MerchantPayload.Case2Payload.ResolutionPayload.self,
+                                            forKey: .resolution
+                                        )
+                                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                            "name",
+                                            "resolution"
+                                        ])
+                                    }
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/purchases/GET/responses/200/content/json/DataPayload/merchant/case2`.
+                                case case2(Operations.MobilePurchases_listPurchases.Output.Ok.Body.JsonPayload.DataPayloadPayload.MerchantPayload.Case2Payload)
+                                /// - Remark: Generated from `#/paths/mobile/purchases/GET/responses/200/content/json/DataPayload/merchant/case3`.
+                                internal struct Case3Payload: Codable, Hashable, Sendable {
+                                    /// - Remark: Generated from `#/paths/mobile/purchases/GET/responses/200/content/json/DataPayload/merchant/case3/resolution`.
+                                    internal enum ResolutionPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                        case unattributed = "unattributed"
+                                    }
+                                    /// - Remark: Generated from `#/paths/mobile/purchases/GET/responses/200/content/json/DataPayload/merchant/case3/resolution`.
+                                    internal var resolution: Operations.MobilePurchases_listPurchases.Output.Ok.Body.JsonPayload.DataPayloadPayload.MerchantPayload.Case3Payload.ResolutionPayload
+                                    /// Creates a new `Case3Payload`.
+                                    ///
+                                    /// - Parameters:
+                                    ///   - resolution:
+                                    internal init(resolution: Operations.MobilePurchases_listPurchases.Output.Ok.Body.JsonPayload.DataPayloadPayload.MerchantPayload.Case3Payload.ResolutionPayload) {
+                                        self.resolution = resolution
+                                    }
+                                    internal enum CodingKeys: String, CodingKey {
+                                        case resolution
+                                    }
+                                    internal init(from decoder: any Swift.Decoder) throws {
+                                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                                        self.resolution = try container.decode(
+                                            Operations.MobilePurchases_listPurchases.Output.Ok.Body.JsonPayload.DataPayloadPayload.MerchantPayload.Case3Payload.ResolutionPayload.self,
+                                            forKey: .resolution
+                                        )
+                                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                            "resolution"
+                                        ])
+                                    }
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/purchases/GET/responses/200/content/json/DataPayload/merchant/case3`.
+                                case case3(Operations.MobilePurchases_listPurchases.Output.Ok.Body.JsonPayload.DataPayloadPayload.MerchantPayload.Case3Payload)
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    var errors: [any Swift.Error] = []
+                                    do {
+                                        self = .case1(try .init(from: decoder))
+                                        return
+                                    } catch {
+                                        errors.append(error)
+                                    }
+                                    do {
+                                        self = .case2(try .init(from: decoder))
+                                        return
+                                    } catch {
+                                        errors.append(error)
+                                    }
+                                    do {
+                                        self = .case3(try .init(from: decoder))
+                                        return
+                                    } catch {
+                                        errors.append(error)
+                                    }
+                                    throw Swift.DecodingError.failedToDecodeOneOfSchema(
+                                        type: Self.self,
+                                        codingPath: decoder.codingPath,
+                                        errors: errors
+                                    )
+                                }
+                                internal func encode(to encoder: any Swift.Encoder) throws {
+                                    switch self {
+                                    case let .case1(value):
+                                        try value.encode(to: encoder)
+                                    case let .case2(value):
+                                        try value.encode(to: encoder)
+                                    case let .case3(value):
+                                        try value.encode(to: encoder)
+                                    }
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/purchases/GET/responses/200/content/json/DataPayload/merchant`.
+                            internal var merchant: Operations.MobilePurchases_listPurchases.Output.Ok.Body.JsonPayload.DataPayloadPayload.MerchantPayload
                             /// - Remark: Generated from `#/paths/mobile/purchases/GET/responses/200/content/json/DataPayload/merchantName`.
                             internal var merchantName: Swift.String?
                             /// - Remark: Generated from `#/paths/mobile/purchases/GET/responses/200/content/json/DataPayload/orderedOn`.
@@ -20672,6 +20843,7 @@ internal enum Operations {
                             ///   - currency:
                             ///   - id:
                             ///   - itemCount:
+                            ///   - merchant:
                             ///   - merchantName:
                             ///   - orderedOn:
                             ///   - receiptUri:
@@ -20681,6 +20853,7 @@ internal enum Operations {
                                 currency: Swift.String,
                                 id: Swift.String,
                                 itemCount: Swift.Int,
+                                merchant: Operations.MobilePurchases_listPurchases.Output.Ok.Body.JsonPayload.DataPayloadPayload.MerchantPayload,
                                 merchantName: Swift.String? = nil,
                                 orderedOn: Swift.String,
                                 receiptUri: Swift.String? = nil,
@@ -20690,6 +20863,7 @@ internal enum Operations {
                                 self.currency = currency
                                 self.id = id
                                 self.itemCount = itemCount
+                                self.merchant = merchant
                                 self.merchantName = merchantName
                                 self.orderedOn = orderedOn
                                 self.receiptUri = receiptUri
@@ -20700,6 +20874,7 @@ internal enum Operations {
                                 case currency
                                 case id
                                 case itemCount
+                                case merchant
                                 case merchantName
                                 case orderedOn
                                 case receiptUri
@@ -20719,6 +20894,10 @@ internal enum Operations {
                                 self.itemCount = try container.decode(
                                     Swift.Int.self,
                                     forKey: .itemCount
+                                )
+                                self.merchant = try container.decode(
+                                    Operations.MobilePurchases_listPurchases.Output.Ok.Body.JsonPayload.DataPayloadPayload.MerchantPayload.self,
+                                    forKey: .merchant
                                 )
                                 self.merchantName = try container.decodeIfPresent(
                                     Swift.String.self,
@@ -20744,6 +20923,7 @@ internal enum Operations {
                                     "currency",
                                     "id",
                                     "itemCount",
+                                    "merchant",
                                     "merchantName",
                                     "orderedOn",
                                     "receiptUri",
@@ -22038,6 +22218,177 @@ internal enum Operations {
                         internal typealias ItemsPayload = [Operations.MobilePurchases_createManualPurchase.Output.Ok.Body.JsonPayload.ItemsPayloadPayload]
                         /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/items`.
                         internal var items: Operations.MobilePurchases_createManualPurchase.Output.Ok.Body.JsonPayload.ItemsPayload
+                        /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/merchant`.
+                        internal enum MerchantPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/merchant/case1`.
+                            internal struct Case1Payload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/merchant/case1/entityId`.
+                                internal var entityId: Swift.String
+                                /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/merchant/case1/name`.
+                                internal var name: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/merchant/case1/resolution`.
+                                internal enum ResolutionPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case entity = "entity"
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/merchant/case1/resolution`.
+                                internal var resolution: Operations.MobilePurchases_createManualPurchase.Output.Ok.Body.JsonPayload.MerchantPayload.Case1Payload.ResolutionPayload
+                                /// Creates a new `Case1Payload`.
+                                ///
+                                /// - Parameters:
+                                ///   - entityId:
+                                ///   - name:
+                                ///   - resolution:
+                                internal init(
+                                    entityId: Swift.String,
+                                    name: Swift.String? = nil,
+                                    resolution: Operations.MobilePurchases_createManualPurchase.Output.Ok.Body.JsonPayload.MerchantPayload.Case1Payload.ResolutionPayload
+                                ) {
+                                    self.entityId = entityId
+                                    self.name = name
+                                    self.resolution = resolution
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case entityId
+                                    case name
+                                    case resolution
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.entityId = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .entityId
+                                    )
+                                    self.name = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .name
+                                    )
+                                    self.resolution = try container.decode(
+                                        Operations.MobilePurchases_createManualPurchase.Output.Ok.Body.JsonPayload.MerchantPayload.Case1Payload.ResolutionPayload.self,
+                                        forKey: .resolution
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "entityId",
+                                        "name",
+                                        "resolution"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/merchant/case1`.
+                            case case1(Operations.MobilePurchases_createManualPurchase.Output.Ok.Body.JsonPayload.MerchantPayload.Case1Payload)
+                            /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/merchant/case2`.
+                            internal struct Case2Payload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/merchant/case2/name`.
+                                internal var name: Swift.String
+                                /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/merchant/case2/resolution`.
+                                internal enum ResolutionPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case name = "name"
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/merchant/case2/resolution`.
+                                internal var resolution: Operations.MobilePurchases_createManualPurchase.Output.Ok.Body.JsonPayload.MerchantPayload.Case2Payload.ResolutionPayload
+                                /// Creates a new `Case2Payload`.
+                                ///
+                                /// - Parameters:
+                                ///   - name:
+                                ///   - resolution:
+                                internal init(
+                                    name: Swift.String,
+                                    resolution: Operations.MobilePurchases_createManualPurchase.Output.Ok.Body.JsonPayload.MerchantPayload.Case2Payload.ResolutionPayload
+                                ) {
+                                    self.name = name
+                                    self.resolution = resolution
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case name
+                                    case resolution
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.name = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .name
+                                    )
+                                    self.resolution = try container.decode(
+                                        Operations.MobilePurchases_createManualPurchase.Output.Ok.Body.JsonPayload.MerchantPayload.Case2Payload.ResolutionPayload.self,
+                                        forKey: .resolution
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "name",
+                                        "resolution"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/merchant/case2`.
+                            case case2(Operations.MobilePurchases_createManualPurchase.Output.Ok.Body.JsonPayload.MerchantPayload.Case2Payload)
+                            /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/merchant/case3`.
+                            internal struct Case3Payload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/merchant/case3/resolution`.
+                                internal enum ResolutionPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case unattributed = "unattributed"
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/merchant/case3/resolution`.
+                                internal var resolution: Operations.MobilePurchases_createManualPurchase.Output.Ok.Body.JsonPayload.MerchantPayload.Case3Payload.ResolutionPayload
+                                /// Creates a new `Case3Payload`.
+                                ///
+                                /// - Parameters:
+                                ///   - resolution:
+                                internal init(resolution: Operations.MobilePurchases_createManualPurchase.Output.Ok.Body.JsonPayload.MerchantPayload.Case3Payload.ResolutionPayload) {
+                                    self.resolution = resolution
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case resolution
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.resolution = try container.decode(
+                                        Operations.MobilePurchases_createManualPurchase.Output.Ok.Body.JsonPayload.MerchantPayload.Case3Payload.ResolutionPayload.self,
+                                        forKey: .resolution
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "resolution"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/merchant/case3`.
+                            case case3(Operations.MobilePurchases_createManualPurchase.Output.Ok.Body.JsonPayload.MerchantPayload.Case3Payload)
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                var errors: [any Swift.Error] = []
+                                do {
+                                    self = .case1(try .init(from: decoder))
+                                    return
+                                } catch {
+                                    errors.append(error)
+                                }
+                                do {
+                                    self = .case2(try .init(from: decoder))
+                                    return
+                                } catch {
+                                    errors.append(error)
+                                }
+                                do {
+                                    self = .case3(try .init(from: decoder))
+                                    return
+                                } catch {
+                                    errors.append(error)
+                                }
+                                throw Swift.DecodingError.failedToDecodeOneOfSchema(
+                                    type: Self.self,
+                                    codingPath: decoder.codingPath,
+                                    errors: errors
+                                )
+                            }
+                            internal func encode(to encoder: any Swift.Encoder) throws {
+                                switch self {
+                                case let .case1(value):
+                                    try value.encode(to: encoder)
+                                case let .case2(value):
+                                    try value.encode(to: encoder)
+                                case let .case3(value):
+                                    try value.encode(to: encoder)
+                                }
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/merchant`.
+                        internal var merchant: Operations.MobilePurchases_createManualPurchase.Output.Ok.Body.JsonPayload.MerchantPayload
                         /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/merchantName`.
                         internal var merchantName: Swift.String?
                         /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/orderedAt`.
@@ -22068,6 +22419,7 @@ internal enum Operations {
                         ///   - id:
                         ///   - itemCount:
                         ///   - items:
+                        ///   - merchant:
                         ///   - merchantName:
                         ///   - orderedAt:
                         ///   - orderedOn:
@@ -22085,6 +22437,7 @@ internal enum Operations {
                             id: Swift.String,
                             itemCount: Swift.Int,
                             items: Operations.MobilePurchases_createManualPurchase.Output.Ok.Body.JsonPayload.ItemsPayload,
+                            merchant: Operations.MobilePurchases_createManualPurchase.Output.Ok.Body.JsonPayload.MerchantPayload,
                             merchantName: Swift.String? = nil,
                             orderedAt: Swift.String,
                             orderedOn: Swift.String,
@@ -22102,6 +22455,7 @@ internal enum Operations {
                             self.id = id
                             self.itemCount = itemCount
                             self.items = items
+                            self.merchant = merchant
                             self.merchantName = merchantName
                             self.orderedAt = orderedAt
                             self.orderedOn = orderedOn
@@ -22120,6 +22474,7 @@ internal enum Operations {
                             case id
                             case itemCount
                             case items
+                            case merchant
                             case merchantName
                             case orderedAt
                             case orderedOn
@@ -22153,6 +22508,10 @@ internal enum Operations {
                             self.items = try container.decode(
                                 Operations.MobilePurchases_createManualPurchase.Output.Ok.Body.JsonPayload.ItemsPayload.self,
                                 forKey: .items
+                            )
+                            self.merchant = try container.decode(
+                                Operations.MobilePurchases_createManualPurchase.Output.Ok.Body.JsonPayload.MerchantPayload.self,
+                                forKey: .merchant
                             )
                             self.merchantName = try container.decodeIfPresent(
                                 Swift.String.self,
@@ -22204,6 +22563,7 @@ internal enum Operations {
                                 "id",
                                 "itemCount",
                                 "items",
+                                "merchant",
                                 "merchantName",
                                 "orderedAt",
                                 "orderedOn",
@@ -23510,6 +23870,177 @@ internal enum Operations {
                         internal typealias ItemsPayload = [Operations.MobilePurchases_saveReceiptDraft.Output.Ok.Body.JsonPayload.ItemsPayloadPayload]
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/items`.
                         internal var items: Operations.MobilePurchases_saveReceiptDraft.Output.Ok.Body.JsonPayload.ItemsPayload
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/merchant`.
+                        internal enum MerchantPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/merchant/case1`.
+                            internal struct Case1Payload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/merchant/case1/entityId`.
+                                internal var entityId: Swift.String
+                                /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/merchant/case1/name`.
+                                internal var name: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/merchant/case1/resolution`.
+                                internal enum ResolutionPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case entity = "entity"
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/merchant/case1/resolution`.
+                                internal var resolution: Operations.MobilePurchases_saveReceiptDraft.Output.Ok.Body.JsonPayload.MerchantPayload.Case1Payload.ResolutionPayload
+                                /// Creates a new `Case1Payload`.
+                                ///
+                                /// - Parameters:
+                                ///   - entityId:
+                                ///   - name:
+                                ///   - resolution:
+                                internal init(
+                                    entityId: Swift.String,
+                                    name: Swift.String? = nil,
+                                    resolution: Operations.MobilePurchases_saveReceiptDraft.Output.Ok.Body.JsonPayload.MerchantPayload.Case1Payload.ResolutionPayload
+                                ) {
+                                    self.entityId = entityId
+                                    self.name = name
+                                    self.resolution = resolution
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case entityId
+                                    case name
+                                    case resolution
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.entityId = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .entityId
+                                    )
+                                    self.name = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .name
+                                    )
+                                    self.resolution = try container.decode(
+                                        Operations.MobilePurchases_saveReceiptDraft.Output.Ok.Body.JsonPayload.MerchantPayload.Case1Payload.ResolutionPayload.self,
+                                        forKey: .resolution
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "entityId",
+                                        "name",
+                                        "resolution"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/merchant/case1`.
+                            case case1(Operations.MobilePurchases_saveReceiptDraft.Output.Ok.Body.JsonPayload.MerchantPayload.Case1Payload)
+                            /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/merchant/case2`.
+                            internal struct Case2Payload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/merchant/case2/name`.
+                                internal var name: Swift.String
+                                /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/merchant/case2/resolution`.
+                                internal enum ResolutionPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case name = "name"
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/merchant/case2/resolution`.
+                                internal var resolution: Operations.MobilePurchases_saveReceiptDraft.Output.Ok.Body.JsonPayload.MerchantPayload.Case2Payload.ResolutionPayload
+                                /// Creates a new `Case2Payload`.
+                                ///
+                                /// - Parameters:
+                                ///   - name:
+                                ///   - resolution:
+                                internal init(
+                                    name: Swift.String,
+                                    resolution: Operations.MobilePurchases_saveReceiptDraft.Output.Ok.Body.JsonPayload.MerchantPayload.Case2Payload.ResolutionPayload
+                                ) {
+                                    self.name = name
+                                    self.resolution = resolution
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case name
+                                    case resolution
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.name = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .name
+                                    )
+                                    self.resolution = try container.decode(
+                                        Operations.MobilePurchases_saveReceiptDraft.Output.Ok.Body.JsonPayload.MerchantPayload.Case2Payload.ResolutionPayload.self,
+                                        forKey: .resolution
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "name",
+                                        "resolution"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/merchant/case2`.
+                            case case2(Operations.MobilePurchases_saveReceiptDraft.Output.Ok.Body.JsonPayload.MerchantPayload.Case2Payload)
+                            /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/merchant/case3`.
+                            internal struct Case3Payload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/merchant/case3/resolution`.
+                                internal enum ResolutionPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case unattributed = "unattributed"
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/merchant/case3/resolution`.
+                                internal var resolution: Operations.MobilePurchases_saveReceiptDraft.Output.Ok.Body.JsonPayload.MerchantPayload.Case3Payload.ResolutionPayload
+                                /// Creates a new `Case3Payload`.
+                                ///
+                                /// - Parameters:
+                                ///   - resolution:
+                                internal init(resolution: Operations.MobilePurchases_saveReceiptDraft.Output.Ok.Body.JsonPayload.MerchantPayload.Case3Payload.ResolutionPayload) {
+                                    self.resolution = resolution
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case resolution
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.resolution = try container.decode(
+                                        Operations.MobilePurchases_saveReceiptDraft.Output.Ok.Body.JsonPayload.MerchantPayload.Case3Payload.ResolutionPayload.self,
+                                        forKey: .resolution
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "resolution"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/merchant/case3`.
+                            case case3(Operations.MobilePurchases_saveReceiptDraft.Output.Ok.Body.JsonPayload.MerchantPayload.Case3Payload)
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                var errors: [any Swift.Error] = []
+                                do {
+                                    self = .case1(try .init(from: decoder))
+                                    return
+                                } catch {
+                                    errors.append(error)
+                                }
+                                do {
+                                    self = .case2(try .init(from: decoder))
+                                    return
+                                } catch {
+                                    errors.append(error)
+                                }
+                                do {
+                                    self = .case3(try .init(from: decoder))
+                                    return
+                                } catch {
+                                    errors.append(error)
+                                }
+                                throw Swift.DecodingError.failedToDecodeOneOfSchema(
+                                    type: Self.self,
+                                    codingPath: decoder.codingPath,
+                                    errors: errors
+                                )
+                            }
+                            internal func encode(to encoder: any Swift.Encoder) throws {
+                                switch self {
+                                case let .case1(value):
+                                    try value.encode(to: encoder)
+                                case let .case2(value):
+                                    try value.encode(to: encoder)
+                                case let .case3(value):
+                                    try value.encode(to: encoder)
+                                }
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/merchant`.
+                        internal var merchant: Operations.MobilePurchases_saveReceiptDraft.Output.Ok.Body.JsonPayload.MerchantPayload
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/merchantName`.
                         internal var merchantName: Swift.String?
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/orderedAt`.
@@ -23540,6 +24071,7 @@ internal enum Operations {
                         ///   - id:
                         ///   - itemCount:
                         ///   - items:
+                        ///   - merchant:
                         ///   - merchantName:
                         ///   - orderedAt:
                         ///   - orderedOn:
@@ -23557,6 +24089,7 @@ internal enum Operations {
                             id: Swift.String,
                             itemCount: Swift.Int,
                             items: Operations.MobilePurchases_saveReceiptDraft.Output.Ok.Body.JsonPayload.ItemsPayload,
+                            merchant: Operations.MobilePurchases_saveReceiptDraft.Output.Ok.Body.JsonPayload.MerchantPayload,
                             merchantName: Swift.String? = nil,
                             orderedAt: Swift.String,
                             orderedOn: Swift.String,
@@ -23574,6 +24107,7 @@ internal enum Operations {
                             self.id = id
                             self.itemCount = itemCount
                             self.items = items
+                            self.merchant = merchant
                             self.merchantName = merchantName
                             self.orderedAt = orderedAt
                             self.orderedOn = orderedOn
@@ -23592,6 +24126,7 @@ internal enum Operations {
                             case id
                             case itemCount
                             case items
+                            case merchant
                             case merchantName
                             case orderedAt
                             case orderedOn
@@ -23625,6 +24160,10 @@ internal enum Operations {
                             self.items = try container.decode(
                                 Operations.MobilePurchases_saveReceiptDraft.Output.Ok.Body.JsonPayload.ItemsPayload.self,
                                 forKey: .items
+                            )
+                            self.merchant = try container.decode(
+                                Operations.MobilePurchases_saveReceiptDraft.Output.Ok.Body.JsonPayload.MerchantPayload.self,
+                                forKey: .merchant
                             )
                             self.merchantName = try container.decodeIfPresent(
                                 Swift.String.self,
@@ -23676,6 +24215,7 @@ internal enum Operations {
                                 "id",
                                 "itemCount",
                                 "items",
+                                "merchant",
                                 "merchantName",
                                 "orderedAt",
                                 "orderedOn",
@@ -29604,6 +30144,177 @@ internal enum Operations {
                         internal typealias ItemsPayload = [Operations.MobilePurchases_getPurchase.Output.Ok.Body.JsonPayload.ItemsPayloadPayload]
                         /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/items`.
                         internal var items: Operations.MobilePurchases_getPurchase.Output.Ok.Body.JsonPayload.ItemsPayload
+                        /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/merchant`.
+                        internal enum MerchantPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/merchant/case1`.
+                            internal struct Case1Payload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/merchant/case1/entityId`.
+                                internal var entityId: Swift.String
+                                /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/merchant/case1/name`.
+                                internal var name: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/merchant/case1/resolution`.
+                                internal enum ResolutionPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case entity = "entity"
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/merchant/case1/resolution`.
+                                internal var resolution: Operations.MobilePurchases_getPurchase.Output.Ok.Body.JsonPayload.MerchantPayload.Case1Payload.ResolutionPayload
+                                /// Creates a new `Case1Payload`.
+                                ///
+                                /// - Parameters:
+                                ///   - entityId:
+                                ///   - name:
+                                ///   - resolution:
+                                internal init(
+                                    entityId: Swift.String,
+                                    name: Swift.String? = nil,
+                                    resolution: Operations.MobilePurchases_getPurchase.Output.Ok.Body.JsonPayload.MerchantPayload.Case1Payload.ResolutionPayload
+                                ) {
+                                    self.entityId = entityId
+                                    self.name = name
+                                    self.resolution = resolution
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case entityId
+                                    case name
+                                    case resolution
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.entityId = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .entityId
+                                    )
+                                    self.name = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .name
+                                    )
+                                    self.resolution = try container.decode(
+                                        Operations.MobilePurchases_getPurchase.Output.Ok.Body.JsonPayload.MerchantPayload.Case1Payload.ResolutionPayload.self,
+                                        forKey: .resolution
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "entityId",
+                                        "name",
+                                        "resolution"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/merchant/case1`.
+                            case case1(Operations.MobilePurchases_getPurchase.Output.Ok.Body.JsonPayload.MerchantPayload.Case1Payload)
+                            /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/merchant/case2`.
+                            internal struct Case2Payload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/merchant/case2/name`.
+                                internal var name: Swift.String
+                                /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/merchant/case2/resolution`.
+                                internal enum ResolutionPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case name = "name"
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/merchant/case2/resolution`.
+                                internal var resolution: Operations.MobilePurchases_getPurchase.Output.Ok.Body.JsonPayload.MerchantPayload.Case2Payload.ResolutionPayload
+                                /// Creates a new `Case2Payload`.
+                                ///
+                                /// - Parameters:
+                                ///   - name:
+                                ///   - resolution:
+                                internal init(
+                                    name: Swift.String,
+                                    resolution: Operations.MobilePurchases_getPurchase.Output.Ok.Body.JsonPayload.MerchantPayload.Case2Payload.ResolutionPayload
+                                ) {
+                                    self.name = name
+                                    self.resolution = resolution
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case name
+                                    case resolution
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.name = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .name
+                                    )
+                                    self.resolution = try container.decode(
+                                        Operations.MobilePurchases_getPurchase.Output.Ok.Body.JsonPayload.MerchantPayload.Case2Payload.ResolutionPayload.self,
+                                        forKey: .resolution
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "name",
+                                        "resolution"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/merchant/case2`.
+                            case case2(Operations.MobilePurchases_getPurchase.Output.Ok.Body.JsonPayload.MerchantPayload.Case2Payload)
+                            /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/merchant/case3`.
+                            internal struct Case3Payload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/merchant/case3/resolution`.
+                                internal enum ResolutionPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case unattributed = "unattributed"
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/merchant/case3/resolution`.
+                                internal var resolution: Operations.MobilePurchases_getPurchase.Output.Ok.Body.JsonPayload.MerchantPayload.Case3Payload.ResolutionPayload
+                                /// Creates a new `Case3Payload`.
+                                ///
+                                /// - Parameters:
+                                ///   - resolution:
+                                internal init(resolution: Operations.MobilePurchases_getPurchase.Output.Ok.Body.JsonPayload.MerchantPayload.Case3Payload.ResolutionPayload) {
+                                    self.resolution = resolution
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case resolution
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.resolution = try container.decode(
+                                        Operations.MobilePurchases_getPurchase.Output.Ok.Body.JsonPayload.MerchantPayload.Case3Payload.ResolutionPayload.self,
+                                        forKey: .resolution
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "resolution"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/merchant/case3`.
+                            case case3(Operations.MobilePurchases_getPurchase.Output.Ok.Body.JsonPayload.MerchantPayload.Case3Payload)
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                var errors: [any Swift.Error] = []
+                                do {
+                                    self = .case1(try .init(from: decoder))
+                                    return
+                                } catch {
+                                    errors.append(error)
+                                }
+                                do {
+                                    self = .case2(try .init(from: decoder))
+                                    return
+                                } catch {
+                                    errors.append(error)
+                                }
+                                do {
+                                    self = .case3(try .init(from: decoder))
+                                    return
+                                } catch {
+                                    errors.append(error)
+                                }
+                                throw Swift.DecodingError.failedToDecodeOneOfSchema(
+                                    type: Self.self,
+                                    codingPath: decoder.codingPath,
+                                    errors: errors
+                                )
+                            }
+                            internal func encode(to encoder: any Swift.Encoder) throws {
+                                switch self {
+                                case let .case1(value):
+                                    try value.encode(to: encoder)
+                                case let .case2(value):
+                                    try value.encode(to: encoder)
+                                case let .case3(value):
+                                    try value.encode(to: encoder)
+                                }
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/merchant`.
+                        internal var merchant: Operations.MobilePurchases_getPurchase.Output.Ok.Body.JsonPayload.MerchantPayload
                         /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/merchantName`.
                         internal var merchantName: Swift.String?
                         /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/orderedAt`.
@@ -29634,6 +30345,7 @@ internal enum Operations {
                         ///   - id:
                         ///   - itemCount:
                         ///   - items:
+                        ///   - merchant:
                         ///   - merchantName:
                         ///   - orderedAt:
                         ///   - orderedOn:
@@ -29651,6 +30363,7 @@ internal enum Operations {
                             id: Swift.String,
                             itemCount: Swift.Int,
                             items: Operations.MobilePurchases_getPurchase.Output.Ok.Body.JsonPayload.ItemsPayload,
+                            merchant: Operations.MobilePurchases_getPurchase.Output.Ok.Body.JsonPayload.MerchantPayload,
                             merchantName: Swift.String? = nil,
                             orderedAt: Swift.String,
                             orderedOn: Swift.String,
@@ -29668,6 +30381,7 @@ internal enum Operations {
                             self.id = id
                             self.itemCount = itemCount
                             self.items = items
+                            self.merchant = merchant
                             self.merchantName = merchantName
                             self.orderedAt = orderedAt
                             self.orderedOn = orderedOn
@@ -29686,6 +30400,7 @@ internal enum Operations {
                             case id
                             case itemCount
                             case items
+                            case merchant
                             case merchantName
                             case orderedAt
                             case orderedOn
@@ -29719,6 +30434,10 @@ internal enum Operations {
                             self.items = try container.decode(
                                 Operations.MobilePurchases_getPurchase.Output.Ok.Body.JsonPayload.ItemsPayload.self,
                                 forKey: .items
+                            )
+                            self.merchant = try container.decode(
+                                Operations.MobilePurchases_getPurchase.Output.Ok.Body.JsonPayload.MerchantPayload.self,
+                                forKey: .merchant
                             )
                             self.merchantName = try container.decodeIfPresent(
                                 Swift.String.self,
@@ -29770,6 +30489,7 @@ internal enum Operations {
                                 "id",
                                 "itemCount",
                                 "items",
+                                "merchant",
                                 "merchantName",
                                 "orderedAt",
                                 "orderedOn",

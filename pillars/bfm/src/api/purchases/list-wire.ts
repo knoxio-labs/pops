@@ -19,6 +19,8 @@
  */
 import { z } from 'zod';
 
+import { toMerchantIdentity } from './merchant-identity.js';
+
 import type {
   MobileMonthMerchantLeader,
   MobileMonthSummary,
@@ -60,6 +62,18 @@ const OrderedAtOffsetSchema = z.int().min(-840).max(840).nullable().optional();
 export const PurchasesListRowSchema = z.object({
   id: z.string(),
   source: z.string(),
+  /**
+   * A resolved `contacts` entity, when `purchases` has one. See
+   * `merchant-identity.ts`.
+   *
+   * Optional as well as nullable, for the same reason
+   * {@link OrderedAtOffsetSchema} is: a write path that never set this
+   * column (a manual entry, an older producer build) can omit the key
+   * outright, and that is the same fact as an explicit `null` — no entity.
+   * Requiring the key would turn that omission into a `502` for the whole
+   * page over a field this pillar treats as absent either way.
+   */
+  merchantEntityId: z.string().nullable().optional(),
   merchantEntityName: z.string().nullable(),
   totalCents: z.number().int(),
   currency: z.string(),
@@ -118,6 +132,7 @@ export const PurchasesDetailResponseSchema = z.object({
   purchase: z.object({
     id: z.string(),
     source: z.string(),
+    merchantEntityId: z.string().nullable().optional(),
     merchantEntityName: z.string().nullable(),
     totalCents: z.number().int(),
     subtotalCents: z.number().int(),
@@ -240,9 +255,13 @@ function readOffsetMinutes(timestamp: string): number {
 }
 
 /** purchases list row → mobile list row. Field-for-field; no arithmetic on money. */
-export function toMobilePurchase(row: PurchasesListRow): MobilePurchase {
+export function toMobilePurchase(
+  row: PurchasesListRow,
+  mergedNames: ReadonlyMap<string, string> = new Map()
+): MobilePurchase {
   return {
     id: row.id,
+    merchant: toMerchantIdentity(row.merchantEntityId ?? null, row.merchantEntityName, mergedNames),
     merchantName: row.merchantEntityName,
     totalCents: row.totalCents,
     currency: row.currency,
@@ -254,10 +273,18 @@ export function toMobilePurchase(row: PurchasesListRow): MobilePurchase {
 }
 
 /** purchases detail → the mobile detail record. */
-export function toMobilePurchaseDetail(detail: PurchasesDetailResponse): MobilePurchaseDetail {
+export function toMobilePurchaseDetail(
+  detail: PurchasesDetailResponse,
+  mergedNames: ReadonlyMap<string, string> = new Map()
+): MobilePurchaseDetail {
   const purchase = detail.purchase;
   return {
     id: purchase.id,
+    merchant: toMerchantIdentity(
+      purchase.merchantEntityId ?? null,
+      purchase.merchantEntityName,
+      mergedNames
+    ),
     merchantName: purchase.merchantEntityName,
     totalCents: purchase.totalCents,
     currency: purchase.currency,

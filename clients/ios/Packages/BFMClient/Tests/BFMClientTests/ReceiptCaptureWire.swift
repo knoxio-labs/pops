@@ -96,13 +96,17 @@ internal enum ReceiptCaptureWire {
         itemCount: Int = 1
     ) -> String {
         let merchantField = merchantName.map { "\"\($0)\"" } ?? "null"
+        let merchantIdentity =
+            merchantName.map { "{\"resolution\":\"name\",\"name\":\"\($0)\"}" }
+            ?? "{\"resolution\":\"unattributed\"}"
         let items = String(
             repeating: """
                 {"id":"item","name":"item","quantity":1,"lineTotalCents":100},
                 """, count: itemCount
         ).dropLast()
         return """
-            {"id":"\(id)","merchantName":\(merchantField),"totalCents":\(totalCents),\
+            {"id":"\(id)","merchant":\(merchantIdentity),"merchantName":\(merchantField),\
+            "totalCents":\(totalCents),\
             "orderedOn":"2026-08-01","currency":"\(currency)","orderedAt":"\(orderedAt)",\
             "itemCount":\(itemCount),"status":"awaiting_settlement","receiptUri":null,\
             "subtotalCents":\(totalCents),"taxCents":0,"shippingCents":0,"discountCents":0,\

@@ -2112,6 +2112,19 @@ export type MobilePurchasesListPurchasesResponses = {
       currency: string;
       id: string;
       itemCount: number;
+      merchant:
+        | {
+            entityId: string;
+            name: string | null;
+            resolution: 'entity';
+          }
+        | {
+            name: string;
+            resolution: 'name';
+          }
+        | {
+            resolution: 'unattributed';
+          };
       merchantName: string | null;
       orderedOn: string;
       receiptUri: string | null;
@@ -2253,6 +2266,19 @@ export type MobilePurchasesCreateManualPurchaseResponses = {
       name: string;
       quantity: number;
     }>;
+    merchant:
+      | {
+          entityId: string;
+          name: string | null;
+          resolution: 'entity';
+        }
+      | {
+          name: string;
+          resolution: 'name';
+        }
+      | {
+          resolution: 'unattributed';
+        };
     merchantName: string | null;
     orderedAt: string;
     orderedOn: string;
@@ -2401,6 +2427,19 @@ export type MobilePurchasesSaveReceiptDraftResponses = {
       name: string;
       quantity: number;
     }>;
+    merchant:
+      | {
+          entityId: string;
+          name: string | null;
+          resolution: 'entity';
+        }
+      | {
+          name: string;
+          resolution: 'name';
+        }
+      | {
+          resolution: 'unattributed';
+        };
     merchantName: string | null;
     orderedAt: string;
     orderedOn: string;
@@ -3068,6 +3107,19 @@ export type MobilePurchasesGetPurchaseResponses = {
       name: string;
       quantity: number;
     }>;
+    merchant:
+      | {
+          entityId: string;
+          name: string | null;
+          resolution: 'entity';
+        }
+      | {
+          name: string;
+          resolution: 'name';
+        }
+      | {
+          resolution: 'unattributed';
+        };
     merchantName: string | null;
     orderedAt: string;
     orderedOn: string;
