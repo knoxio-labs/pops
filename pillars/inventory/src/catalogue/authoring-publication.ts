@@ -13,25 +13,10 @@ import type { CommandDb } from '../domain/commands/index.js';
 import type {
   CatalogueAuthor,
   CatalogueDescriptor,
-  MigrationStepInput,
+  CataloguePublicationInput,
 } from './authoring-types.js';
 import type { CatalogueCompatibilityResult } from './compatibility.js';
 import type { CatalogueMigration } from './migrations.js';
-
-export interface CataloguePublicationInput {
-  readonly baseRevision: number;
-  readonly note: string | null;
-  readonly minimumProtocol?: number;
-  readonly migrationName?: string;
-  readonly migration?: {
-    readonly name: string;
-    readonly fromRevision: number;
-    readonly toRevision: number;
-    readonly affectedTypeIds: readonly string[];
-    readonly affectedFieldIds: readonly string[];
-    readonly steps: readonly MigrationStepInput[];
-  };
-}
 
 function publicationCompatibility(
   db: CommandDb,
@@ -115,5 +100,8 @@ export function publishCatalogueDraft(
   });
 }
 
-export type { CataloguePublicationInput as PublicationInput };
+export type {
+  CataloguePublicationInput,
+  CataloguePublicationInput as PublicationInput,
+} from './authoring-types.js';
 export { toCatalogueDescriptor };

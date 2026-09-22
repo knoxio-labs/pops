@@ -12,8 +12,11 @@ import { toCatalogueDescriptor } from './authoring-wire.js';
 import { executeCatalogueMigrationInTransaction, type CatalogueMigration } from './migrations.js';
 
 import type { CommandDb } from '../domain/commands/index.js';
-import type { CataloguePublicationInput } from './authoring-publication.js';
-import type { CatalogueAuthor, CatalogueDescriptor } from './authoring-types.js';
+import type {
+  CatalogueAuthor,
+  CatalogueDescriptor,
+  CataloguePublicationInput,
+} from './authoring-types.js';
 import type { CatalogueCompatibilityResult } from './compatibility.js';
 
 export interface PublicationWriteContext {

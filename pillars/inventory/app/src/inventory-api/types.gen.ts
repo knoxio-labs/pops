@@ -3556,6 +3556,990 @@ export type SyncSnapshotResponses = {
 
 export type SyncSnapshotResponse = SyncSnapshotResponses[keyof SyncSnapshotResponses];
 
+export type TypesReadCatalogueData = {
+  body?: never;
+  headers?: {
+    'if-none-match'?: string;
+  };
+  path?: never;
+  query?: {
+    revision?: number;
+  };
+  url: '/type-catalogue';
+};
+
+export type TypesReadCatalogueErrors = {
+  /**
+   * 401
+   */
+  401: {
+    code?: string;
+    issues?: Array<{
+      code: string;
+      definitionId: string | null;
+      message: string;
+      path: string;
+    }>;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    issues?: Array<{
+      code: string;
+      definitionId: string | null;
+      message: string;
+      path: string;
+    }>;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type TypesReadCatalogueError = TypesReadCatalogueErrors[keyof TypesReadCatalogueErrors];
+
+export type TypesReadCatalogueResponses = {
+  /**
+   * 200
+   */
+  200: {
+    revision: {
+      abandoned: {
+        actor: {
+          id: string | null;
+          kind: 'web' | 'service' | 'migration';
+          label: string | null;
+        };
+        at: string;
+      } | null;
+      baseRevision: number | null;
+      created: {
+        actor: {
+          id: string | null;
+          kind: 'web' | 'service' | 'migration';
+          label: string | null;
+        };
+        at: string;
+      };
+      minimumProtocol: number;
+      published: {
+        actor: {
+          id: string | null;
+          kind: 'web' | 'service' | 'migration';
+          label: string | null;
+        };
+        at: string;
+        note: string | null;
+      } | null;
+      revision: number;
+      status: 'draft' | 'published' | 'abandoned';
+    };
+    types: Array<{
+      archivedAt: string | null;
+      capabilities: Array<string>;
+      description: string | null;
+      fields: Array<{
+        allowOverride: boolean;
+        archivedAt: string | null;
+        cardinality: 'one' | 'many';
+        enumOptions: Array<{
+          archivedAt: string | null;
+          id: string;
+          key: string;
+          label: string;
+          sortOrder: number;
+        }>;
+        expression: unknown;
+        expressionVersion: number | null;
+        fixedUnit: string | null;
+        help: string | null;
+        id: string;
+        key: string;
+        kind:
+          | 'short_text'
+          | 'long_text'
+          | 'integer'
+          | 'decimal'
+          | 'boolean'
+          | 'enum'
+          | 'measurement'
+          | 'date'
+          | 'date_time'
+          | 'url'
+          | 'reference';
+        label: string;
+        presentation: {
+          [key: string]: unknown;
+        };
+        referenceKinds: Array<'item' | 'location'>;
+        referenceTypeIds: Array<string>;
+        required: boolean;
+        sortOrder: number;
+        storage: 'stored' | 'computed';
+        typeId: string;
+      }>;
+      id: string;
+      key: string;
+      label: string;
+      legacyLabels: Array<string>;
+      presentation: {
+        [key: string]: unknown;
+      };
+      revision: number;
+      sortOrder: number;
+    }>;
+  };
+};
+
+export type TypesReadCatalogueResponse =
+  TypesReadCatalogueResponses[keyof TypesReadCatalogueResponses];
+
+export type TypesReadAuditData = {
+  body?: never;
+  path?: never;
+  query: {
+    before?: number;
+    limit: number;
+  };
+  url: '/type-catalogue/audit';
+};
+
+export type TypesReadAuditErrors = {
+  /**
+   * 401
+   */
+  401: {
+    code?: string;
+    issues?: Array<{
+      code: string;
+      definitionId: string | null;
+      message: string;
+      path: string;
+    }>;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type TypesReadAuditError = TypesReadAuditErrors[keyof TypesReadAuditErrors];
+
+export type TypesReadAuditResponses = {
+  /**
+   * 200
+   */
+  200: {
+    events: Array<{
+      actor: {
+        id: string | null;
+        kind: 'web' | 'service' | 'migration';
+        label: string | null;
+      };
+      affectedItems: number;
+      after: {
+        [key: string]: unknown;
+      };
+      before: {
+        [key: string]: unknown;
+      };
+      id: number;
+      kind: 'published' | 'abandoned';
+      migrationName: string | null;
+      revision: number;
+      serverTime: string;
+    }>;
+    nextBefore: number | null;
+  };
+};
+
+export type TypesReadAuditResponse = TypesReadAuditResponses[keyof TypesReadAuditResponses];
+
+export type TypesManageCreateDraftData = {
+  /**
+   * Body
+   */
+  body?: {
+    baseRevision: number;
+  };
+  path?: never;
+  query?: never;
+  url: '/type-catalogue/drafts';
+};
+
+export type TypesManageCreateDraftErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    issues?: Array<{
+      code: string;
+      definitionId: string | null;
+      message: string;
+      path: string;
+    }>;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 401
+   */
+  401: {
+    code?: string;
+    issues?: Array<{
+      code: string;
+      definitionId: string | null;
+      message: string;
+      path: string;
+    }>;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    issues?: Array<{
+      code: string;
+      definitionId: string | null;
+      message: string;
+      path: string;
+    }>;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type TypesManageCreateDraftError =
+  TypesManageCreateDraftErrors[keyof TypesManageCreateDraftErrors];
+
+export type TypesManageCreateDraftResponses = {
+  /**
+   * 201
+   */
+  201: {
+    revision: {
+      abandoned: {
+        actor: {
+          id: string | null;
+          kind: 'web' | 'service' | 'migration';
+          label: string | null;
+        };
+        at: string;
+      } | null;
+      baseRevision: number | null;
+      created: {
+        actor: {
+          id: string | null;
+          kind: 'web' | 'service' | 'migration';
+          label: string | null;
+        };
+        at: string;
+      };
+      minimumProtocol: number;
+      published: {
+        actor: {
+          id: string | null;
+          kind: 'web' | 'service' | 'migration';
+          label: string | null;
+        };
+        at: string;
+        note: string | null;
+      } | null;
+      revision: number;
+      status: 'draft' | 'published' | 'abandoned';
+    };
+    types: Array<{
+      archivedAt: string | null;
+      capabilities: Array<string>;
+      description: string | null;
+      fields: Array<{
+        allowOverride: boolean;
+        archivedAt: string | null;
+        cardinality: 'one' | 'many';
+        enumOptions: Array<{
+          archivedAt: string | null;
+          id: string;
+          key: string;
+          label: string;
+          sortOrder: number;
+        }>;
+        expression: unknown;
+        expressionVersion: number | null;
+        fixedUnit: string | null;
+        help: string | null;
+        id: string;
+        key: string;
+        kind:
+          | 'short_text'
+          | 'long_text'
+          | 'integer'
+          | 'decimal'
+          | 'boolean'
+          | 'enum'
+          | 'measurement'
+          | 'date'
+          | 'date_time'
+          | 'url'
+          | 'reference';
+        label: string;
+        presentation: {
+          [key: string]: unknown;
+        };
+        referenceKinds: Array<'item' | 'location'>;
+        referenceTypeIds: Array<string>;
+        required: boolean;
+        sortOrder: number;
+        storage: 'stored' | 'computed';
+        typeId: string;
+      }>;
+      id: string;
+      key: string;
+      label: string;
+      legacyLabels: Array<string>;
+      presentation: {
+        [key: string]: unknown;
+      };
+      revision: number;
+      sortOrder: number;
+    }>;
+  };
+};
+
+export type TypesManageCreateDraftResponse =
+  TypesManageCreateDraftResponses[keyof TypesManageCreateDraftResponses];
+
+export type TypesManagePatchDraftData = {
+  /**
+   * Body
+   */
+  body?: {
+    baseRevision: number;
+    operations: Array<
+      | {
+          archivedAt?: string | null;
+          capabilities?: Array<string>;
+          description?: string | null;
+          id?: string;
+          key?: string;
+          kind: 'put_type';
+          label?: string;
+          legacyLabels?: Array<string>;
+          presentation?: {
+            [key: string]: unknown;
+          };
+          sortOrder?: number;
+        }
+      | {
+          allowOverride?: boolean;
+          archivedAt?: string | null;
+          cardinality?: 'one' | 'many';
+          expression?: unknown;
+          expressionVersion?: number | null;
+          fieldKind?:
+            | 'short_text'
+            | 'long_text'
+            | 'integer'
+            | 'decimal'
+            | 'boolean'
+            | 'enum'
+            | 'measurement'
+            | 'date'
+            | 'date_time'
+            | 'url'
+            | 'reference';
+          fixedUnit?: string | null;
+          help?: string | null;
+          id?: string;
+          key?: string;
+          kind: 'put_field';
+          label?: string;
+          presentation?: {
+            [key: string]: unknown;
+          };
+          referenceKinds?: Array<'item' | 'location'>;
+          referenceTypeIds?: Array<string>;
+          required?: boolean;
+          sortOrder?: number;
+          storage?: 'stored' | 'computed';
+          typeId: string;
+        }
+      | {
+          archivedAt?: string | null;
+          fieldId: string;
+          id?: string;
+          key?: string;
+          kind: 'put_enum_option';
+          label?: string;
+          sortOrder?: number;
+        }
+      | {
+          id: string;
+          kind: 'archive_type' | 'archive_field' | 'archive_enum_option';
+        }
+      | {
+          definition: 'type' | 'field' | 'enum_option';
+          ids: Array<string>;
+          kind: 'reorder';
+          parentId?: string | null;
+        }
+    >;
+  };
+  path: {
+    revision: number;
+  };
+  query?: never;
+  url: '/type-catalogue/drafts/{revision}';
+};
+
+export type TypesManagePatchDraftErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    issues?: Array<{
+      code: string;
+      definitionId: string | null;
+      message: string;
+      path: string;
+    }>;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 401
+   */
+  401: {
+    code?: string;
+    issues?: Array<{
+      code: string;
+      definitionId: string | null;
+      message: string;
+      path: string;
+    }>;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    issues?: Array<{
+      code: string;
+      definitionId: string | null;
+      message: string;
+      path: string;
+    }>;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    issues?: Array<{
+      code: string;
+      definitionId: string | null;
+      message: string;
+      path: string;
+    }>;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type TypesManagePatchDraftError =
+  TypesManagePatchDraftErrors[keyof TypesManagePatchDraftErrors];
+
+export type TypesManagePatchDraftResponses = {
+  /**
+   * 200
+   */
+  200: {
+    compatibility: {
+      affectedIds: Array<string>;
+      changes: Array<{
+        classification: 'compatible' | 'protocol_gated' | 'migration_required' | 'forbidden';
+        code: string;
+        definitionId: string;
+      }>;
+      classification: 'compatible' | 'protocol_gated' | 'migration_required' | 'forbidden';
+    };
+    draft: {
+      revision: {
+        abandoned: {
+          actor: {
+            id: string | null;
+            kind: 'web' | 'service' | 'migration';
+            label: string | null;
+          };
+          at: string;
+        } | null;
+        baseRevision: number | null;
+        created: {
+          actor: {
+            id: string | null;
+            kind: 'web' | 'service' | 'migration';
+            label: string | null;
+          };
+          at: string;
+        };
+        minimumProtocol: number;
+        published: {
+          actor: {
+            id: string | null;
+            kind: 'web' | 'service' | 'migration';
+            label: string | null;
+          };
+          at: string;
+          note: string | null;
+        } | null;
+        revision: number;
+        status: 'draft' | 'published' | 'abandoned';
+      };
+      types: Array<{
+        archivedAt: string | null;
+        capabilities: Array<string>;
+        description: string | null;
+        fields: Array<{
+          allowOverride: boolean;
+          archivedAt: string | null;
+          cardinality: 'one' | 'many';
+          enumOptions: Array<{
+            archivedAt: string | null;
+            id: string;
+            key: string;
+            label: string;
+            sortOrder: number;
+          }>;
+          expression: unknown;
+          expressionVersion: number | null;
+          fixedUnit: string | null;
+          help: string | null;
+          id: string;
+          key: string;
+          kind:
+            | 'short_text'
+            | 'long_text'
+            | 'integer'
+            | 'decimal'
+            | 'boolean'
+            | 'enum'
+            | 'measurement'
+            | 'date'
+            | 'date_time'
+            | 'url'
+            | 'reference';
+          label: string;
+          presentation: {
+            [key: string]: unknown;
+          };
+          referenceKinds: Array<'item' | 'location'>;
+          referenceTypeIds: Array<string>;
+          required: boolean;
+          sortOrder: number;
+          storage: 'stored' | 'computed';
+          typeId: string;
+        }>;
+        id: string;
+        key: string;
+        label: string;
+        legacyLabels: Array<string>;
+        presentation: {
+          [key: string]: unknown;
+        };
+        revision: number;
+        sortOrder: number;
+      }>;
+    };
+  };
+};
+
+export type TypesManagePatchDraftResponse =
+  TypesManagePatchDraftResponses[keyof TypesManagePatchDraftResponses];
+
+export type TypesManageAbandonDraftData = {
+  /**
+   * Body
+   */
+  body?: {
+    baseRevision: number;
+  };
+  path: {
+    revision: number;
+  };
+  query?: never;
+  url: '/type-catalogue/drafts/{revision}/abandon';
+};
+
+export type TypesManageAbandonDraftErrors = {
+  /**
+   * 401
+   */
+  401: {
+    code?: string;
+    issues?: Array<{
+      code: string;
+      definitionId: string | null;
+      message: string;
+      path: string;
+    }>;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    issues?: Array<{
+      code: string;
+      definitionId: string | null;
+      message: string;
+      path: string;
+    }>;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    issues?: Array<{
+      code: string;
+      definitionId: string | null;
+      message: string;
+      path: string;
+    }>;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type TypesManageAbandonDraftError =
+  TypesManageAbandonDraftErrors[keyof TypesManageAbandonDraftErrors];
+
+export type TypesManageAbandonDraftResponses = {
+  /**
+   * 200
+   */
+  200: {
+    revision: {
+      abandoned: {
+        actor: {
+          id: string | null;
+          kind: 'web' | 'service' | 'migration';
+          label: string | null;
+        };
+        at: string;
+      } | null;
+      baseRevision: number | null;
+      created: {
+        actor: {
+          id: string | null;
+          kind: 'web' | 'service' | 'migration';
+          label: string | null;
+        };
+        at: string;
+      };
+      minimumProtocol: number;
+      published: {
+        actor: {
+          id: string | null;
+          kind: 'web' | 'service' | 'migration';
+          label: string | null;
+        };
+        at: string;
+        note: string | null;
+      } | null;
+      revision: number;
+      status: 'draft' | 'published' | 'abandoned';
+    };
+    types: Array<{
+      archivedAt: string | null;
+      capabilities: Array<string>;
+      description: string | null;
+      fields: Array<{
+        allowOverride: boolean;
+        archivedAt: string | null;
+        cardinality: 'one' | 'many';
+        enumOptions: Array<{
+          archivedAt: string | null;
+          id: string;
+          key: string;
+          label: string;
+          sortOrder: number;
+        }>;
+        expression: unknown;
+        expressionVersion: number | null;
+        fixedUnit: string | null;
+        help: string | null;
+        id: string;
+        key: string;
+        kind:
+          | 'short_text'
+          | 'long_text'
+          | 'integer'
+          | 'decimal'
+          | 'boolean'
+          | 'enum'
+          | 'measurement'
+          | 'date'
+          | 'date_time'
+          | 'url'
+          | 'reference';
+        label: string;
+        presentation: {
+          [key: string]: unknown;
+        };
+        referenceKinds: Array<'item' | 'location'>;
+        referenceTypeIds: Array<string>;
+        required: boolean;
+        sortOrder: number;
+        storage: 'stored' | 'computed';
+        typeId: string;
+      }>;
+      id: string;
+      key: string;
+      label: string;
+      legacyLabels: Array<string>;
+      presentation: {
+        [key: string]: unknown;
+      };
+      revision: number;
+      sortOrder: number;
+    }>;
+  };
+};
+
+export type TypesManageAbandonDraftResponse =
+  TypesManageAbandonDraftResponses[keyof TypesManageAbandonDraftResponses];
+
+export type TypesManagePublishDraftData = {
+  /**
+   * Body
+   */
+  body?: {
+    baseRevision: number;
+    migration?: {
+      affectedFieldIds: Array<string>;
+      affectedTypeIds: Array<string>;
+      fromRevision: number;
+      name: string;
+      steps: Array<
+        | {
+            fromFieldId: string;
+            kind: 'copy';
+            toFieldId: string;
+          }
+        | {
+            fieldId: string;
+            kind: 'set_default';
+            values: Array<unknown>;
+          }
+        | {
+            fieldId: string;
+            kind: 'map_enum';
+            optionIds: {
+              [key: string]: string;
+            };
+          }
+        | {
+            factor: string;
+            fromFieldId: string;
+            kind: 'convert_decimal';
+            toFieldId: string;
+          }
+        | {
+            fieldId: string;
+            fromTargetId: string;
+            kind: 'replace_reference';
+            targetKind: 'item' | 'location';
+            toTargetId: string;
+          }
+        | {
+            fieldId: string;
+            kind: 'drop_value';
+          }
+      >;
+      toRevision: number;
+    };
+    migrationName?: string;
+    minimumProtocol?: number;
+    note?: string | null;
+  };
+  path: {
+    revision: number;
+  };
+  query?: never;
+  url: '/type-catalogue/drafts/{revision}/publish';
+};
+
+export type TypesManagePublishDraftErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    issues?: Array<{
+      code: string;
+      definitionId: string | null;
+      message: string;
+      path: string;
+    }>;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 401
+   */
+  401: {
+    code?: string;
+    issues?: Array<{
+      code: string;
+      definitionId: string | null;
+      message: string;
+      path: string;
+    }>;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    issues?: Array<{
+      code: string;
+      definitionId: string | null;
+      message: string;
+      path: string;
+    }>;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    issues?: Array<{
+      code: string;
+      definitionId: string | null;
+      message: string;
+      path: string;
+    }>;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type TypesManagePublishDraftError =
+  TypesManagePublishDraftErrors[keyof TypesManagePublishDraftErrors];
+
+export type TypesManagePublishDraftResponses = {
+  /**
+   * 200
+   */
+  200: {
+    revision: {
+      abandoned: {
+        actor: {
+          id: string | null;
+          kind: 'web' | 'service' | 'migration';
+          label: string | null;
+        };
+        at: string;
+      } | null;
+      baseRevision: number | null;
+      created: {
+        actor: {
+          id: string | null;
+          kind: 'web' | 'service' | 'migration';
+          label: string | null;
+        };
+        at: string;
+      };
+      minimumProtocol: number;
+      published: {
+        actor: {
+          id: string | null;
+          kind: 'web' | 'service' | 'migration';
+          label: string | null;
+        };
+        at: string;
+        note: string | null;
+      } | null;
+      revision: number;
+      status: 'draft' | 'published' | 'abandoned';
+    };
+    types: Array<{
+      archivedAt: string | null;
+      capabilities: Array<string>;
+      description: string | null;
+      fields: Array<{
+        allowOverride: boolean;
+        archivedAt: string | null;
+        cardinality: 'one' | 'many';
+        enumOptions: Array<{
+          archivedAt: string | null;
+          id: string;
+          key: string;
+          label: string;
+          sortOrder: number;
+        }>;
+        expression: unknown;
+        expressionVersion: number | null;
+        fixedUnit: string | null;
+        help: string | null;
+        id: string;
+        key: string;
+        kind:
+          | 'short_text'
+          | 'long_text'
+          | 'integer'
+          | 'decimal'
+          | 'boolean'
+          | 'enum'
+          | 'measurement'
+          | 'date'
+          | 'date_time'
+          | 'url'
+          | 'reference';
+        label: string;
+        presentation: {
+          [key: string]: unknown;
+        };
+        referenceKinds: Array<'item' | 'location'>;
+        referenceTypeIds: Array<string>;
+        required: boolean;
+        sortOrder: number;
+        storage: 'stored' | 'computed';
+        typeId: string;
+      }>;
+      id: string;
+      key: string;
+      label: string;
+      legacyLabels: Array<string>;
+      presentation: {
+        [key: string]: unknown;
+      };
+      revision: number;
+      sortOrder: number;
+    }>;
+  };
+};
+
+export type TypesManagePublishDraftResponse =
+  TypesManagePublishDraftResponses[keyof TypesManagePublishDraftResponses];
+
 export type TypesCatalogueData = {
   body?: never;
   headers?: {

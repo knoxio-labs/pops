@@ -7,6 +7,22 @@ import type { PersistedItemTypeField } from './catalogue-types.js';
 export type DraftOperation = z.infer<typeof CatalogueDraftOperationSchema>;
 export type MigrationStepInput = z.infer<typeof CatalogueMigrationStepSchema>;
 
+/** Input contract for publishing a validated catalogue draft. */
+export interface CataloguePublicationInput {
+  readonly baseRevision: number;
+  readonly note: string | null;
+  readonly minimumProtocol?: number;
+  readonly migrationName?: string;
+  readonly migration?: {
+    readonly name: string;
+    readonly fromRevision: number;
+    readonly toRevision: number;
+    readonly affectedTypeIds: readonly string[];
+    readonly affectedFieldIds: readonly string[];
+    readonly steps: readonly MigrationStepInput[];
+  };
+}
+
 /** The two actors allowed to author a catalogue revision. */
 export type CatalogueAuthor =
   | { readonly kind: 'web'; readonly id: string; readonly label: string }
