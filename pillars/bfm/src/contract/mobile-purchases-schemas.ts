@@ -150,9 +150,45 @@ export type MobilePurchaseItem = z.infer<typeof MobilePurchaseItemSchema>;
  * `orderedOn` from `orderedAt`, which is how a purchase made at 9pm comes to
  * show yesterday's date on a phone that has since moved west.
  */
+/**
+ * One field a saved-purchase edit changed (POPS-2458). Open string for
+ * `field` rather than the producer's closed vocabulary, for the reason
+ * `status` is open on the list row: `purchases` adding an edit field must
+ * not fail an installed build's decode of the whole detail.
+ */
+export const MobilePurchaseFieldChangeSchema = z.object({
+  field: z.string(),
+  itemId: z.string().nullable(),
+  original: z.string().nullable(),
+  current: z.string().nullable(),
+});
+
+export type MobilePurchaseFieldChange = z.infer<typeof MobilePurchaseFieldChangeSchema>;
+
+/** The detail's "Edited &lt;date&gt;" notice and its Original sheet. `null` for a never-edited purchase. */
+export const MobilePurchaseEditSchema = z.object({
+  editedAt: z.string(),
+  changes: z.array(MobilePurchaseFieldChangeSchema),
+});
+
+export type MobilePurchaseEdit = z.infer<typeof MobilePurchaseEditSchema>;
+
 export const MobilePurchaseDetailSchema = MobilePurchaseSchema.extend({
   /** ISO-8601 with the offset `purchases` recorded. Evidence, not a rendering instruction. */
   orderedAt: z.string(),
+  /**
+   * The row's own last-write instant, verbatim from `purchases`. Echoed back
+   * as `expectedUpdatedAt` on `PATCH /mobile/purchases/:id` — the phone
+   * never computes or displays it, only carries it.
+   *
+   * Nullable: a producer build that predates the edit feature (POPS-2458)
+   * sends none, and bfm has nothing to fabricate one from. A phone reading
+   * `null` here has no compare-and-swap value to offer, so `expectedUpdatedAt`
+   * stays a required field on the write body rather than becoming optional
+   * — an edit is refused outright for want of it, never accepted without
+   * the staleness check.
+   */
+  updatedAt: z.string().nullable(),
   subtotalCents: z.int(),
   taxCents: z.int(),
   shippingCents: z.int(),
@@ -162,9 +198,48 @@ export const MobilePurchaseDetailSchema = MobilePurchaseSchema.extend({
   /** Where the order came from — an adapter id, or the receipt drop-zone. Open string. */
   source: z.string(),
   items: z.array(MobilePurchaseItemSchema),
+  /** `null` for a purchase nobody has ever edited. See {@link MobilePurchaseEditSchema}. */
+  edit: MobilePurchaseEditSchema.nullable(),
 });
 
 export type MobilePurchaseDetail = z.infer<typeof MobilePurchaseDetailSchema>;
+
+/**
+ * One line as an edit states it should look afterwards. `id` present means
+ * "this existing line, changed to look like this"; absent means "a new
+ * line". Mirrors `purchases`' own `UpdatePurchaseLineBodySchema`.
+ */
+export const MobileUpdatePurchaseLineSchema = z.object({
+  id: z.string().optional(),
+  name: z.string().trim().min(1),
+  quantity: z.int().min(1),
+  lineTotalCents: z.int(),
+});
+
+/**
+ * `PATCH /mobile/purchases/:id` (POPS-2458). Every header field is optional
+ * — absent means unchanged — but merchant, `orderedAt` and `totalCents` are
+ * refused on a matched, part-matched, or unrecognised-status purchase.
+ * `lines` is always the FULL set the purchase should hold afterwards, not a
+ * delta. `expectedUpdatedAt` is a compare-and-swap against the row's own
+ * last-write instant, read from the same detail the edit was opened
+ * against — a stale value is refused rather than silently overwritten.
+ */
+export const MobileUpdatePurchaseBodySchema = z.object({
+  merchantEntityId: z.string().nullable().optional(),
+  merchantEntityName: z.string().nullable().optional(),
+  orderedAt: z.string().optional(),
+  totalCents: z.int().min(0).optional(),
+  subtotalCents: z.int().min(0).optional(),
+  taxCents: z.int().min(0).optional(),
+  shippingCents: z.int().min(0).optional(),
+  discountCents: z.int().min(0).optional(),
+  surchargeCents: z.int().min(0).optional(),
+  lines: z.array(MobileUpdatePurchaseLineSchema),
+  expectedUpdatedAt: z.string(),
+});
+
+export type MobileUpdatePurchaseBody = z.infer<typeof MobileUpdatePurchaseBodySchema>;
 
 /**
  * One page of the purchases list.
@@ -202,6 +277,100 @@ export const MobileMonthMerchantLeaderSchema = z.object({
 });
 
 export type MobileMonthMerchantLeader = z.infer<typeof MobileMonthMerchantLeaderSchema>;
+
+/**
+ * `purchases`' own reconciliation vocabulary (`PURCHASE_STATUSES`,
+ * `pillars/purchases/src/contract/constants.ts`), restated rather than
+ * imported per ADR-040. Closed here rather than left open like a list row's
+ * own `status`: this is a QUERY PARAMETER naming one status to filter by,
+ * not a value every future row must still decode, so an unrecognised one can
+ * afford to 400 immediately instead of round-tripping to the pillar only to
+ * be refused there.
+ */
+const MOBILE_SEARCH_STATUSES = [
+  'awaiting_settlement',
+  'linked',
+  'partial',
+  'settled_cash',
+  'ignored',
+] as const;
+
+/** `GET /mobile/purchases/search`'s query. */
+export const MobileSearchQuerySchema = z.object({
+  q: z.string().trim().min(1),
+  /**
+   * Forwarded verbatim as `purchases`' `status eq` search filter — narrowing
+   * on the SERVER, because the pillar's search is itself capped per adapter
+   * and a client-side filter over a capped answer misses matches the server
+   * never sent.
+   */
+  status: z.enum(MOBILE_SEARCH_STATUSES).optional(),
+  /**
+   * Chosen item tags, forwarded as `purchases`' own `tags eq` search filter
+   * (any-of semantics: a line carrying any of them matches, and the purchase
+   * holding such a line matches through it). Absent or empty narrows nothing,
+   * exactly as sending none of `purchases`' own filter fields does.
+   */
+  tags: z.array(z.string().trim().min(1)).optional(),
+});
+
+export type MobileSearchQuery = z.infer<typeof MobileSearchQuerySchema>;
+
+/**
+ * One purchase hit: an order whose merchant matched.
+ *
+ * `matchField` and `matchedText` (POPS-4308) say WHAT matched, mirroring the
+ * producer's own `SearchHitSchema` (`pillars/purchases/src/contract/
+ * rest-search.ts`) rather than inventing a second vocabulary — a phone that
+ * highlights the matched text needs to know which field it came from and
+ * what the matched substring actually was, and the producer's ranking
+ * already carries both.
+ */
+export const MobilePurchaseSearchHitSchema = z.discriminatedUnion('kind', [
+  z.object({
+    kind: z.literal('purchase'),
+    id: z.string(),
+    merchantName: z.string().nullable(),
+    totalCents: z.int(),
+    currency: z.string(),
+    orderedOn: z.string(),
+    status: z.string(),
+    matchField: z.string(),
+    /** The matched substring itself, or null when the match carries none worth showing (e.g. a name match — the name is already on screen). */
+    matchedText: z.string().nullable(),
+  }),
+  z.object({
+    kind: z.literal('item'),
+    id: z.string(),
+    /** The order this line belongs to — a line hit is meaningless without it. */
+    purchaseId: z.string(),
+    name: z.string(),
+    quantity: z.int().min(1),
+    lineTotalCents: z.int(),
+    currency: z.string(),
+    merchantName: z.string().nullable(),
+    orderedOn: z.string(),
+    /** The order's own reconciliation status, carried onto the line (POPS-4308). */
+    status: z.string(),
+    matchField: z.string(),
+    matchedText: z.string().nullable(),
+  }),
+]);
+
+export type MobilePurchaseSearchHit = z.infer<typeof MobilePurchaseSearchHitSchema>;
+
+export const MobilePurchaseSearchResponseSchema = z.object({
+  hits: z.array(MobilePurchaseSearchHitSchema),
+});
+
+export type MobilePurchaseSearchResponse = z.infer<typeof MobilePurchaseSearchResponseSchema>;
+
+/** `GET /mobile/purchases/tags`'s response: the item tag vocabulary, most-used first. */
+export const MobilePurchaseTagsResponseSchema = z.object({
+  tags: z.array(z.string()),
+});
+
+export type MobilePurchaseTagsResponse = z.infer<typeof MobilePurchaseTagsResponseSchema>;
 
 /** The home screen's figures for one calendar month. */
 export const MobileMonthSummarySchema = z.object({

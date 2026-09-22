@@ -55,10 +55,11 @@ import type { InventoryProposal } from '../../db/index.js';
 
 export const INVENTORY_PILLAR_ID = 'inventory';
 
-/** The operation this file calls, declared here for the cross-pillar gate. */
+/** The operations this file calls, declared here for the cross-pillar gate. */
 export type InventoryWriteRouter = {
   items: {
     create: (input: InventoryItemCreateBody) => Promise<unknown>;
+    update: (input: { id: string; purchaseTransactionId: string | null }) => Promise<unknown>;
   };
 };
 
@@ -171,6 +172,84 @@ export function createInventoryAssetCreator(
 
       const outcome = classify(result);
       reportOutcome(outcome, result);
+      return outcome;
+    },
+  };
+}
+
+/**
+ * What became of one attempt to clear inventory's own pointer back at a
+ * purchase (POPS-4268).
+ *
+ * Two outcomes rather than five: the caller that refuses an edit over this
+ * cannot act differently on a bad credential than on a network failure —
+ * both mean "cannot reach inventory right now, retry the whole edit" — so
+ * they collapse into `unavailable`. `unauthorized` still records its own
+ * reason for the log line the same way {@link classify} does.
+ */
+export type InventoryLinkClearResult =
+  | { readonly kind: 'cleared' }
+  | { readonly kind: 'unauthorized'; readonly reason: string }
+  | { readonly kind: 'unavailable'; readonly reason: string };
+
+export interface InventoryLinkClearer {
+  clear(inventoryItemId: string): Promise<InventoryLinkClearResult>;
+}
+
+function classifyClear(result: CallResult<unknown>): InventoryLinkClearResult {
+  if (isOk(result)) return { kind: 'cleared' };
+  switch (result.kind) {
+    case 'unauthorized':
+      return { kind: 'unauthorized', reason: UNAUTHORIZED_REASON };
+    // Nothing to clear: inventory's own row is already gone, so the state
+    // this call exists to reach — no item claims this purchase — already
+    // holds.
+    case 'not-found':
+      return { kind: 'cleared' };
+    case 'bad-request':
+    case 'refused':
+    case 'conflict':
+    case 'unavailable':
+    case 'degraded':
+    case 'contract-mismatch':
+    case 'rate-limited':
+      return { kind: 'unavailable', reason: result.kind };
+  }
+}
+
+/**
+ * Live clearer over the inventory pillar: `PATCH /items/:id` with
+ * `purchaseTransactionId: null`, the same legacy field an operator edits
+ * by hand, which derives `purchase_transaction_uri: null` alongside it
+ * (`legacy-item-fields.ts` on that pillar).
+ *
+ * Idempotent by construction — clearing an already-null pointer is still a
+ * successful update — which is what makes a retried edit safe to call this
+ * again for the same line.
+ */
+export function createInventoryLinkClearer(
+  handle?: PillarHandle<InventoryWriteRouter>
+): InventoryLinkClearer {
+  return {
+    async clear(inventoryItemId: string): Promise<InventoryLinkClearResult> {
+      const inventory =
+        handle ??
+        credentialled(INVENTORY_PILLAR_ID, () => pillar<InventoryWriteRouter>(INVENTORY_PILLAR_ID));
+      if (inventory === null) {
+        return { kind: 'unauthorized', reason: NO_CREDENTIAL_REASON };
+      }
+
+      let result: CallResult<unknown>;
+      try {
+        result = await inventory.items.update({ id: inventoryItemId, purchaseTransactionId: null });
+      } catch (err) {
+        return { kind: 'unavailable', reason: err instanceof Error ? err.message : String(err) };
+      }
+
+      const outcome = classifyClear(result);
+      if (outcome.kind === 'unauthorized') {
+        console.error(credentialRejectedMessage(INVENTORY_PILLAR_ID, 'items.update'));
+      }
       return outcome;
     },
   };

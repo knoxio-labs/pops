@@ -15,7 +15,7 @@ import {
 } from './catalogue-field-shape.js';
 import { parseObject, parseStringArray } from './catalogue-json.js';
 
-import type { CommandDb } from '../domain/commands/entities.js';
+import type { CommandDb } from '../db/command-db.js';
 import type {
   PersistedCatalogue,
   PersistedCatalogueRevision,

@@ -12,9 +12,10 @@ import { convertProtocol1MeasurementAmount } from './protocol-1-measurement.js';
 import { protocol1RangeFields } from './protocol-1-range.js';
 import { loadProtocol1Fields } from './protocol-1-read.js';
 import { Protocol1ValueError, type CanonicalItemFieldValues } from './protocol-1-types.js';
-import { canonicalizeValue, type CanonicalValue } from './value-codec.js';
+import { canonicalizeValue } from './value-dispatch.js';
 
-import type { CommandDb } from '../domain/commands/entities.js';
+import type { CommandDb } from '../db/command-db.js';
+import type { CanonicalValue } from './value-codec.js';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);

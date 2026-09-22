@@ -25,6 +25,7 @@ const SUPPORTED_PAIRINGS: readonly SearchFilter[] = [
   { field: 'status', operator: 'eq', value: 'linked' },
   { field: 'orderedAt', operator: 'gte', value: '2026-01-01T00:00:00Z' },
   { field: 'orderedAt', operator: 'lte', value: '2026-01-31T00:00:00Z' },
+  { field: 'tags', operator: 'eq', value: 'snack' },
 ];
 
 function isSupported(filter: { field: string; operator: string }): boolean {
@@ -94,6 +95,15 @@ describe('what each supported field reads into', () => {
     ]);
 
     expect(scopeOf(result)).toEqual({ sources: ['amazon', 'woolworths'] });
+  });
+
+  it('collects tags the same way', () => {
+    const result = searchFilterScope([
+      { field: 'tags', operator: 'eq', value: 'snack' },
+      { field: 'tags', operator: 'eq', value: 'drink' },
+    ]);
+
+    expect(scopeOf(result)).toEqual({ tags: ['snack', 'drink'] });
   });
 
   it('collects statuses the same way', () => {

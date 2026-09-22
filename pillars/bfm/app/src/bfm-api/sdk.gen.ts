@@ -21,9 +21,18 @@ import type {
   MobileContactsCreateMerchantAddressData,
   MobileContactsCreateMerchantAddressErrors,
   MobileContactsCreateMerchantAddressResponses,
+  MobileContactsCreateMerchantData,
+  MobileContactsCreateMerchantErrors,
+  MobileContactsCreateMerchantResponses,
   MobileContactsGetMerchantAddressesData,
   MobileContactsGetMerchantAddressesErrors,
   MobileContactsGetMerchantAddressesResponses,
+  MobileContactsGetMerchantData,
+  MobileContactsGetMerchantErrors,
+  MobileContactsGetMerchantResponses,
+  MobileContactsSearchMerchantsData,
+  MobileContactsSearchMerchantsErrors,
+  MobileContactsSearchMerchantsResponses,
   MobileFinanceGetAccountData,
   MobileFinanceGetAccountErrors,
   MobileFinanceGetAccountResponses,
@@ -81,9 +90,18 @@ import type {
   MobilePurchasesListPurchasesData,
   MobilePurchasesListPurchasesErrors,
   MobilePurchasesListPurchasesResponses,
+  MobilePurchasesPurchaseTagsData,
+  MobilePurchasesPurchaseTagsErrors,
+  MobilePurchasesPurchaseTagsResponses,
   MobilePurchasesSaveReceiptDraftData,
   MobilePurchasesSaveReceiptDraftErrors,
   MobilePurchasesSaveReceiptDraftResponses,
+  MobilePurchasesSearchPurchasesData,
+  MobilePurchasesSearchPurchasesErrors,
+  MobilePurchasesSearchPurchasesResponses,
+  MobilePurchasesUpdatePurchaseData,
+  MobilePurchasesUpdatePurchaseErrors,
+  MobilePurchasesUpdatePurchaseResponses,
   OperatorIssuePairingCodeData,
   OperatorIssuePairingCodeErrors,
   OperatorIssuePairingCodeResponses,
@@ -179,6 +197,61 @@ export const mobileBootstrap = <ThrowOnError extends boolean = false>(
     url: '/mobile/bootstrap',
     ...options,
   });
+
+/**
+ * Record a new merchant from the reader's own wording. Idempotent by name: a repeated call with the same name answers the same id rather than a conflict
+ */
+export const mobileContactsCreateMerchant = <ThrowOnError extends boolean = false>(
+  options?: Options<MobileContactsCreateMerchantData, ThrowOnError>
+): RequestResult<
+  MobileContactsCreateMerchantResponses,
+  MobileContactsCreateMerchantErrors,
+  ThrowOnError
+> =>
+  (options?.client ?? client).post<
+    MobileContactsCreateMerchantResponses,
+    MobileContactsCreateMerchantErrors,
+    ThrowOnError
+  >({
+    url: '/mobile/contacts/merchants',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
+
+/**
+ * Merchants matching free text, for the review form's merchant picker — there are hundreds, so matching happens here, not on the phone
+ */
+export const mobileContactsSearchMerchants = <ThrowOnError extends boolean = false>(
+  options: Options<MobileContactsSearchMerchantsData, ThrowOnError>
+): RequestResult<
+  MobileContactsSearchMerchantsResponses,
+  MobileContactsSearchMerchantsErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    MobileContactsSearchMerchantsResponses,
+    MobileContactsSearchMerchantsErrors,
+    ThrowOnError
+  >({ url: '/mobile/contacts/merchants/search', ...options });
+
+/**
+ * One merchant by id, for a draft that arrives already matched
+ */
+export const mobileContactsGetMerchant = <ThrowOnError extends boolean = false>(
+  options: Options<MobileContactsGetMerchantData, ThrowOnError>
+): RequestResult<
+  MobileContactsGetMerchantResponses,
+  MobileContactsGetMerchantErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    MobileContactsGetMerchantResponses,
+    MobileContactsGetMerchantErrors,
+    ThrowOnError
+  >({ url: '/mobile/contacts/merchants/{id}', ...options });
 
 /**
  * Every address recorded against one merchant, for the review screen's address picker
@@ -522,6 +595,22 @@ export const mobilePurchasesGetReceiptThumbnail = <ThrowOnError extends boolean 
   >({ url: '/mobile/purchases/receipts/{sha256}/thumbnail', ...options });
 
 /**
+ * Search purchases and their line items by merchant, product name or item tag
+ */
+export const mobilePurchasesSearchPurchases = <ThrowOnError extends boolean = false>(
+  options: Options<MobilePurchasesSearchPurchasesData, ThrowOnError>
+): RequestResult<
+  MobilePurchasesSearchPurchasesResponses,
+  MobilePurchasesSearchPurchasesErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    MobilePurchasesSearchPurchasesResponses,
+    MobilePurchasesSearchPurchasesErrors,
+    ThrowOnError
+  >({ url: '/mobile/purchases/search', ...options });
+
+/**
  * The home screen figures for one calendar month
  */
 export const mobilePurchasesGetMonthSummary = <ThrowOnError extends boolean = false>(
@@ -538,6 +627,22 @@ export const mobilePurchasesGetMonthSummary = <ThrowOnError extends boolean = fa
   >({ url: '/mobile/purchases/summary', ...options });
 
 /**
+ * The item tag vocabulary in use, most-used first, for the search filter sheet
+ */
+export const mobilePurchasesPurchaseTags = <ThrowOnError extends boolean = false>(
+  options?: Options<MobilePurchasesPurchaseTagsData, ThrowOnError>
+): RequestResult<
+  MobilePurchasesPurchaseTagsResponses,
+  MobilePurchasesPurchaseTagsErrors,
+  ThrowOnError
+> =>
+  (options?.client ?? client).get<
+    MobilePurchasesPurchaseTagsResponses,
+    MobilePurchasesPurchaseTagsErrors,
+    ThrowOnError
+  >({ url: '/mobile/purchases/tags', ...options });
+
+/**
  * The fuller record behind one list row, with its lines
  */
 export const mobilePurchasesGetPurchase = <ThrowOnError extends boolean = false>(
@@ -552,6 +657,29 @@ export const mobilePurchasesGetPurchase = <ThrowOnError extends boolean = false>
     MobilePurchasesGetPurchaseErrors,
     ThrowOnError
   >({ url: '/mobile/purchases/{id}', ...options });
+
+/**
+ * Edit a saved purchase
+ */
+export const mobilePurchasesUpdatePurchase = <ThrowOnError extends boolean = false>(
+  options: Options<MobilePurchasesUpdatePurchaseData, ThrowOnError>
+): RequestResult<
+  MobilePurchasesUpdatePurchaseResponses,
+  MobilePurchasesUpdatePurchaseErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).patch<
+    MobilePurchasesUpdatePurchaseResponses,
+    MobilePurchasesUpdatePurchaseErrors,
+    ThrowOnError
+  >({
+    url: '/mobile/purchases/{id}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
 
 /**
  * List paired devices, revoked ones included. Never returns a token or a key

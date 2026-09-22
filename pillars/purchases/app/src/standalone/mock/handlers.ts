@@ -60,6 +60,7 @@ export const handlers: Readonly<Record<OperationKey, MockHandler>> = {
       ? { body: ORDER }
       : { status: 404, body: { code: 'NOT_FOUND', message: 'No such purchase' } },
   'POST /purchases': ok(ORDER),
+  'PATCH /purchases/{id}': ok(ORDER),
   'DELETE /purchases/{id}': acknowledged,
   'DELETE /purchases/{id}/capture/location': acknowledged,
   'PATCH /purchases/{id}/items/{itemId}': ok(ORDER),
@@ -68,6 +69,7 @@ export const handlers: Readonly<Record<OperationKey, MockHandler>> = {
   'POST /purchases/{id}/items/{itemId}/inventory-item': acknowledged,
   'POST /purchases/{id}/items/{itemId}/inventory-proposal': acknowledged,
   'GET /items': ok({ items: [] }),
+  'GET /items/tags': ok({ tags: [] }),
 
   // ── Products ─────────────────────────────────────────────────────────────
   'GET /products': ok(PRODUCT_DICTIONARY),

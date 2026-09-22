@@ -1,0 +1,15 @@
+name: Inventory type editor layout
+question: Does a complex type definition read better as a persistent three-pane
+  workspace or as a focused section-by-section editor?
+status: decided
+screen: inventory/type-editor
+variants:
+  workspace: Persistent three-pane workspace
+  focused: Focused section editor
+chosen: focused
+decided: 2026-09-22
+rationale: >-
+  The focused editor keeps the field outline visible while giving primitive,
+  reference, validation and computed settings enough width to scan and act on.
+  The persistent three-pane workspace compresses all three jobs at the real
+  POPS web width.

@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 
 import { itemFieldValues } from '../db/schema.js';
 import { loadPublishedCatalogue } from './catalogue.js';
-import { parseCanonicalValue } from './value-codec.js';
+import { parseCanonicalValue } from './value-dispatch.js';
 
 import type { ItemFieldValueSource } from '../db/schema.js';
 import type { CommandDb } from '../domain/commands/entities.js';

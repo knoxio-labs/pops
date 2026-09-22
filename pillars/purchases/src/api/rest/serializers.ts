@@ -117,5 +117,9 @@ export function toPurchaseDetailBody(detail: PurchaseDetail): PurchaseDetailBody
     })),
     documents: [...detail.documents],
     accounting: detail.accounting,
+    edit:
+      detail.edit === null
+        ? null
+        : { editedAt: detail.edit.editedAt, changes: [...detail.edit.changes] },
   };
 }

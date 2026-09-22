@@ -29,7 +29,8 @@ export const BFM_SERVICE_ACCOUNT_NAME = 'bfm';
  * screens read finance's `transactions.*`, the mobile accounts screen reads
  * finance's `accounts.*` and `checkpoints.*`, the receipt upload writes to
  * purchases' `receipt.*`, the mobile purchases screens read purchases'
- * `purchase.*`, the inventory replica's reads and its mutation batch lean on
+ * `purchase.*`, the mobile search box calls purchases' separate `search.*`
+ * sub-router, the inventory replica's reads and its mutation batch lean on
  * `inventory.sync`/`inventory.types`, `inventory.codes` is the
  * code-suggestion route's own sub-router grant (A12), and `inventory.media`
  * is inventory's raw content-addressed media store's own scope, reached by
@@ -41,10 +42,11 @@ export const BFM_SERVICE_ACCOUNT_NAME = 'bfm';
  * `purchases.purchase` authorises reading an order but nothing under
  * `purchases.source`.
  *
- * The two entries under `purchases` are two entries on purpose. Reading an
- * order and handing over a photograph are different authorities, and the
- * capability model above them (ADR-048) draws the same line — a device may
- * hold one without the other.
+ * The three entries under `purchases` are three entries on purpose. Reading
+ * an order, searching across every order, and handing over a photograph are
+ * three different authorities, and the capability model above them (ADR-048)
+ * draws the same line — a device may hold any one of them without the
+ * others.
  *
  * Both producers enforce this (ADR-044): each resolves the presented key
  * against the registry and refuses an operation the grant does not cover, so a
@@ -62,6 +64,7 @@ export const BFM_SERVICE_ACCOUNT_SCOPES: readonly string[] = [
   'finance.accounts',
   'finance.checkpoints',
   'purchases.purchase',
+  'purchases.search',
   'purchases.receipt',
   'inventory.sync',
   'inventory.types',

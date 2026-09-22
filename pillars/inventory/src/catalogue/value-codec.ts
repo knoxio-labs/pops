@@ -178,5 +178,3 @@ export function canonicalReference(
   }
   return { targetKind, targetId };
 }
-
-export { canonicalizeValue, parseCanonicalValue } from './value-dispatch.js';

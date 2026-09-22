@@ -7,7 +7,7 @@ import {
 import { CommandRejected } from './errors.js';
 import { itemFieldsBlobSchema } from './item-fields.js';
 
-import type { CommandDb } from './entities.js';
+import type { CommandDb } from '../../db/command-db.js';
 import type { JsonValue } from './outcome.js';
 
 /** Validates a protocol-1 field projection and presents invalid values as a command rejection. */

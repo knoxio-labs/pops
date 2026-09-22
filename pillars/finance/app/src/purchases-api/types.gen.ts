@@ -366,6 +366,25 @@ export type PurchaseItemsByTagResponses = {
 export type PurchaseItemsByTagResponse =
   PurchaseItemsByTagResponses[keyof PurchaseItemsByTagResponses];
 
+export type PurchaseTagVocabularyData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/items/tags';
+};
+
+export type PurchaseTagVocabularyResponses = {
+  /**
+   * 200
+   */
+  200: {
+    tags: Array<string>;
+  };
+};
+
+export type PurchaseTagVocabularyResponse =
+  PurchaseTagVocabularyResponses[keyof PurchaseTagVocabularyResponses];
+
 export type ProductListData = {
   body?: never;
   path?: never;
@@ -866,6 +885,28 @@ export type PurchaseCreateResponses = {
       purchaseId: string;
       shipmentId: string | null;
     }>;
+    edit: {
+      changes: Array<{
+        current: string | null;
+        field:
+          | 'merchant'
+          | 'orderedOn'
+          | 'total'
+          | 'subtotal'
+          | 'tax'
+          | 'shipping'
+          | 'discount'
+          | 'surcharge'
+          | 'lineName'
+          | 'lineQuantity'
+          | 'lineTotal'
+          | 'lineAdded'
+          | 'lineRemoved';
+        itemId: string | null;
+        original: string | null;
+      }>;
+      editedAt: string;
+    } | null;
     items: Array<{
       item: {
         allocatedAdjustmentCents: number;
@@ -1144,6 +1185,28 @@ export type PurchaseCreateManualResponses = {
       purchaseId: string;
       shipmentId: string | null;
     }>;
+    edit: {
+      changes: Array<{
+        current: string | null;
+        field:
+          | 'merchant'
+          | 'orderedOn'
+          | 'total'
+          | 'subtotal'
+          | 'tax'
+          | 'shipping'
+          | 'discount'
+          | 'surcharge'
+          | 'lineName'
+          | 'lineQuantity'
+          | 'lineTotal'
+          | 'lineAdded'
+          | 'lineRemoved';
+        itemId: string | null;
+        original: string | null;
+      }>;
+      editedAt: string;
+    } | null;
     items: Array<{
       item: {
         allocatedAdjustmentCents: number;
@@ -1360,6 +1423,28 @@ export type PurchaseGetResponses = {
       purchaseId: string;
       shipmentId: string | null;
     }>;
+    edit: {
+      changes: Array<{
+        current: string | null;
+        field:
+          | 'merchant'
+          | 'orderedOn'
+          | 'total'
+          | 'subtotal'
+          | 'tax'
+          | 'shipping'
+          | 'discount'
+          | 'surcharge'
+          | 'lineName'
+          | 'lineQuantity'
+          | 'lineTotal'
+          | 'lineAdded'
+          | 'lineRemoved';
+        itemId: string | null;
+        original: string | null;
+      }>;
+      editedAt: string;
+    } | null;
     items: Array<{
       item: {
         allocatedAdjustmentCents: number;
@@ -1458,6 +1543,247 @@ export type PurchaseGetResponses = {
 };
 
 export type PurchaseGetResponse = PurchaseGetResponses[keyof PurchaseGetResponses];
+
+export type PurchaseUpdateData = {
+  /**
+   * Body
+   */
+  body?: {
+    discountCents?: number;
+    expectedUpdatedAt: string;
+    lines: Array<{
+      id?: string;
+      lineTotalCents: number;
+      name: string;
+      quantity: number;
+    }>;
+    merchantEntityId?: string | null;
+    merchantEntityName?: string | null;
+    orderedAt?: string;
+    shippingCents?: number;
+    subtotalCents?: number;
+    surchargeCents?: number;
+    taxCents?: number;
+    totalCents?: number;
+  };
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/purchases/{id}';
+};
+
+export type PurchaseUpdateErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    message: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    message: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    message: string;
+  };
+  /**
+   * 502
+   */
+  502: {
+    code?: string;
+    message: string;
+  };
+};
+
+export type PurchaseUpdateError = PurchaseUpdateErrors[keyof PurchaseUpdateErrors];
+
+export type PurchaseUpdateResponses = {
+  /**
+   * 200
+   */
+  200: {
+    accounting: {
+      awaitingImportCents: number;
+      matchedCents: number;
+      netSpendCents: number;
+      refundedCents: number;
+      residualCents: number;
+      totalCents: number;
+    };
+    charges: Array<{
+      allocations: Array<{
+        amountCents: number;
+        chargeId: string;
+        createdAt: string;
+        id: string;
+        itemId: string;
+      }>;
+      charge: {
+        amountCents: number;
+        chargedAt: string | null;
+        createdAt: string;
+        currency: string;
+        id: string;
+        orderAmountCents: number;
+        origin: 'merchant' | 'derived';
+        paymentHint: string | null;
+        position: number;
+        purchaseId: string;
+        role: 'capture' | 'authorization' | 'refund' | 'adjustment';
+        shipmentId: string | null;
+        sourceChargeRef: string | null;
+        updatedAt: string;
+      };
+      links: Array<{
+        amountCents: number;
+        chargeId: string;
+        confidence: number;
+        confirmedAt: string | null;
+        createdAt: string;
+        id: string;
+        linkType: 'exact' | 'split' | 'combined' | 'partial' | 'rule' | 'manual';
+        matchRuleId: string | null;
+        transactionUri: string;
+      }>;
+    }>;
+    documents: Array<{
+      createdAt: string;
+      documentStaleAt: string | null;
+      documentUri: string;
+      id: string;
+      kind: 'tax_invoice' | 'receipt' | 'order_confirmation' | 'delivery_photo' | 'other';
+      purchaseId: string;
+      shipmentId: string | null;
+    }>;
+    edit: {
+      changes: Array<{
+        current: string | null;
+        field:
+          | 'merchant'
+          | 'orderedOn'
+          | 'total'
+          | 'subtotal'
+          | 'tax'
+          | 'shipping'
+          | 'discount'
+          | 'surcharge'
+          | 'lineName'
+          | 'lineQuantity'
+          | 'lineTotal'
+          | 'lineAdded'
+          | 'lineRemoved';
+        itemId: string | null;
+        original: string | null;
+      }>;
+      editedAt: string;
+    } | null;
+    items: Array<{
+      item: {
+        allocatedAdjustmentCents: number;
+        allocatedShippingCents: number;
+        createdAt: string;
+        gstApplicable: boolean | null;
+        id: string;
+        imageUrl: string | null;
+        kind: {
+          confirmedAt: string | null;
+          value: 'consumable' | 'durable' | 'digital' | 'service';
+        } | null;
+        lineTotalCents: number;
+        listPrice: {
+          confirmedAt: string | null;
+          valueCents: number;
+        } | null;
+        merchantCategory: string | null;
+        merchantCondition: string | null;
+        name: string;
+        position: number;
+        promotionalPrice: boolean | null;
+        purchaseId: string;
+        quantity: number;
+        refundedCents: number;
+        shipmentId: string | null;
+        sku: {
+          scheme: 'asin' | 'merchant';
+          value: string;
+        } | null;
+        unitPriceCents: number;
+        url: string | null;
+      };
+      landedCostCents: number;
+      notes: Array<string>;
+      tags: Array<{
+        confirmedAt: string | null;
+        tag: string;
+      }>;
+      units: Array<{
+        createdAt: string;
+        id: string;
+        inventoryDeclinedAt: string | null;
+        inventoryItemStaleAt: string | null;
+        inventoryItemUri: string | null;
+        itemId: string;
+        serialNumber: string | null;
+      }>;
+    }>;
+    purchase: {
+      checksum: string;
+      createdAt: string;
+      currency: string;
+      discountCents: number;
+      discountIncluded: boolean | null;
+      id: string;
+      ingestMethod: 'email' | 'export' | 'upload' | 'manual';
+      merchantAddressId: string | null;
+      merchantAddressName: string | null;
+      merchantEntityId: string | null;
+      merchantEntityName: string | null;
+      orderedAt: string;
+      orderedAtOffsetMinutes: number | null;
+      paymentHint: string | null;
+      rawRef: string | null;
+      settlementMode: 'card' | 'cash' | 'unknown';
+      shippingCents: number;
+      shippingIncluded: boolean | null;
+      source: string;
+      sourceOrderId: string | null;
+      status: 'awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored';
+      subtotalCents: number;
+      surchargeCents: number;
+      surchargeIncluded: boolean | null;
+      taxCents: number;
+      taxIncluded: boolean | null;
+      totalCents: number;
+      updatedAt: string;
+    };
+    shipments: Array<{
+      carrier: string | null;
+      createdAt: string;
+      deliveredAt: string | null;
+      id: string;
+      position: number;
+      purchaseId: string;
+      shippedAt: string | null;
+      shippingCents: number;
+      sourceShipmentRef: string | null;
+      status: 'pending' | 'shipped' | 'delivered' | 'cancelled' | 'returned';
+      trackingNumber: string | null;
+      updatedAt: string;
+    }>;
+    tags: Array<string>;
+  };
+};
+
+export type PurchaseUpdateResponse = PurchaseUpdateResponses[keyof PurchaseUpdateResponses];
 
 export type PurchaseEraseCaptureLocationData = {
   /**
@@ -1930,6 +2256,28 @@ export type ReceiptUploadResponses = {
             purchaseId: string;
             shipmentId: string | null;
           }>;
+          edit: {
+            changes: Array<{
+              current: string | null;
+              field:
+                | 'merchant'
+                | 'orderedOn'
+                | 'total'
+                | 'subtotal'
+                | 'tax'
+                | 'shipping'
+                | 'discount'
+                | 'surcharge'
+                | 'lineName'
+                | 'lineQuantity'
+                | 'lineTotal'
+                | 'lineAdded'
+                | 'lineRemoved';
+              itemId: string | null;
+              original: string | null;
+            }>;
+            editedAt: string;
+          } | null;
           items: Array<{
             item: {
               allocatedAdjustmentCents: number;
@@ -2250,6 +2598,28 @@ export type ReceiptSaveDraftResponses = {
       purchaseId: string;
       shipmentId: string | null;
     }>;
+    edit: {
+      changes: Array<{
+        current: string | null;
+        field:
+          | 'merchant'
+          | 'orderedOn'
+          | 'total'
+          | 'subtotal'
+          | 'tax'
+          | 'shipping'
+          | 'discount'
+          | 'surcharge'
+          | 'lineName'
+          | 'lineQuantity'
+          | 'lineTotal'
+          | 'lineAdded'
+          | 'lineRemoved';
+        itemId: string | null;
+        original: string | null;
+      }>;
+      editedAt: string;
+    } | null;
     items: Array<{
       item: {
         allocatedAdjustmentCents: number;
@@ -2955,7 +3325,7 @@ export type SearchSearchData = {
     };
     query: {
       filters?: Array<{
-        field: 'source' | 'status' | 'orderedAt';
+        field: 'source' | 'status' | 'orderedAt' | 'tags';
         operator: 'eq' | 'gte' | 'lte';
         value: string;
       }>;

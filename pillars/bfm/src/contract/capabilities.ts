@@ -78,6 +78,16 @@ export const MOBILE_CAPABILITIES = [
    */
   'purchases.write',
   /**
+   * Edit a purchase that is already saved (POPS-2458): rename, requantify or
+   * remove a line, or correct an adjustment. Apart from {@link
+   * MOBILE_CAPABILITIES}' `purchases.write` entry on purpose — changing a
+   * record the pillar already holds is not the same authority as creating
+   * one, and ADR-046's verb ban is superseded for exactly this reason
+   * (POPS-2451): a mobile write names the capability it needs rather than
+   * being refused for being a write at all.
+   */
+  'purchases.edit',
+  /**
    * Read the inventory replica: the type catalogue, the paged snapshot, the
    * change feed and one item's history. Buys every GET on
    * `/mobile/inventory/*` (A9) — writing a mutation or suggesting a code is
@@ -131,7 +141,16 @@ export const MOBILE_CAPABILITY_SCOPES: Readonly<Record<MobileCapability, readonl
   'session.read': [],
   'finance.transactions.read': ['finance.transactions'],
   'finance.accounts.read': ['finance.accounts', 'finance.checkpoints'],
-  'purchases.read': ['purchases.purchase'],
+  /**
+   * Two prefixes: reading an order and reading the page it sits on is
+   * `purchases.purchase`, and the mobile search box is a separate call
+   * into purchases' own `search.*` sub-router (`pillars/purchases/src/api/
+   * middleware/service-account-scope.ts` derives the scope straight from
+   * a contract's top-level router key, so `purchases.purchase` does not
+   * cover a route under `search`). Reading purchases now also means
+   * calling that module.
+   */
+  'purchases.read': ['purchases.purchase', 'purchases.search'],
   /**
    * The same prefix the upload leans on, because both are purchases' own
    * `receipt.*` module — the bytes are that module's artifact, written by its
@@ -152,6 +171,11 @@ export const MOBILE_CAPABILITY_SCOPES: Readonly<Record<MobileCapability, readonl
    * covers.
    */
   'purchases.write': ['purchases.purchase'],
+  /**
+   * `PATCH /purchases/:id` lives on the same `purchase.*` module `purchases.write`
+   * already leans on, so this widens nothing new to audit either.
+   */
+  'purchases.edit': ['purchases.purchase'],
   /**
    * Three prefixes: the sync contract's own scope gate derives two grants
    * from its two other sub-routers (`inventory.sync` for the

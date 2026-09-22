@@ -67,6 +67,8 @@ export type {
   EntitiesListResponse,
   EntitiesListResponses,
   EntitiesLookupData,
+  EntitiesLookupError,
+  EntitiesLookupErrors,
   EntitiesLookupResponse,
   EntitiesLookupResponses,
   EntitiesRemoveAvatarData,

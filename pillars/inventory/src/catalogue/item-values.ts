@@ -5,7 +5,7 @@ import { loadPublishedCatalogue } from './catalogue.js';
 import { referenceState, referenceValue } from './item-value-references.js';
 import { ItemFieldSetError } from './item-value-types.js';
 import { validateItemFieldValues } from './item-value-validation.js';
-import { parseCanonicalValue } from './value-codec.js';
+import { parseCanonicalValue } from './value-dispatch.js';
 
 import type { CommandDb } from '../domain/commands/entities.js';
 import type { PersistedItemType } from './catalogue-types.js';

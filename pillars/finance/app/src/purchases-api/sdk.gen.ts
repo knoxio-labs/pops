@@ -63,6 +63,11 @@ import type {
   PurchasePatchItemData,
   PurchasePatchItemErrors,
   PurchasePatchItemResponses,
+  PurchaseTagVocabularyData,
+  PurchaseTagVocabularyResponses,
+  PurchaseUpdateData,
+  PurchaseUpdateErrors,
+  PurchaseUpdateResponses,
   ReceiptExtractData,
   ReceiptExtractErrors,
   ReceiptExtractResponses,
@@ -178,6 +183,17 @@ export const purchaseItemsByTag = <ThrowOnError extends boolean = false>(
 ): RequestResult<PurchaseItemsByTagResponses, unknown, ThrowOnError> =>
   (options.client ?? client).get<PurchaseItemsByTagResponses, unknown, ThrowOnError>({
     url: '/items',
+    ...options,
+  });
+
+/**
+ * List the distinct item tags in use, most-used first
+ */
+export const purchaseTagVocabulary = <ThrowOnError extends boolean = false>(
+  options?: Options<PurchaseTagVocabularyData, ThrowOnError>
+): RequestResult<PurchaseTagVocabularyResponses, unknown, ThrowOnError> =>
+  (options?.client ?? client).get<PurchaseTagVocabularyResponses, unknown, ThrowOnError>({
+    url: '/items/tags',
     ...options,
   });
 
@@ -344,6 +360,21 @@ export const purchaseGet = <ThrowOnError extends boolean = false>(
   (options.client ?? client).get<PurchaseGetResponses, PurchaseGetErrors, ThrowOnError>({
     url: '/purchases/{id}',
     ...options,
+  });
+
+/**
+ * Edit a saved purchase
+ */
+export const purchaseUpdate = <ThrowOnError extends boolean = false>(
+  options: Options<PurchaseUpdateData, ThrowOnError>
+): RequestResult<PurchaseUpdateResponses, PurchaseUpdateErrors, ThrowOnError> =>
+  (options.client ?? client).patch<PurchaseUpdateResponses, PurchaseUpdateErrors, ThrowOnError>({
+    url: '/purchases/{id}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
   });
 
 /**

@@ -1,6 +1,3 @@
-import type { z } from 'zod';
-
-import type { IngestMethod } from '../../contract/constants.js';
 /**
  * Turning a reviewed draft body into a `CreatePurchaseInput`, and checking
  * it is internally consistent before it is ever handed to `createPurchase`.
@@ -9,6 +6,11 @@ import type { IngestMethod } from '../../contract/constants.js';
  * purchase (POPS-2454) — the two differ only in `source` and `ingestMethod`,
  * which the caller supplies and the phone never gets to choose.
  */
+import { computeExpectedTotalCents } from '../../db/services/purchase-write-validation.js';
+
+import type { z } from 'zod';
+
+import type { IngestMethod } from '../../contract/constants.js';
 import type {
   CreateManualPurchaseBodySchema,
   SaveReceiptDraftBodySchema,
@@ -62,16 +64,7 @@ export interface DraftInconsistency {
  */
 export function findDraftInconsistency(body: DraftBody): DraftInconsistency | null {
   const lineTotalCents = body.items.reduce((sum, item) => sum + item.lineTotalCents, 0);
-  // An adjustment already inside the line prices contributes nothing more:
-  // adding it again would double-count a figure the lines already carry. A
-  // null or undefined basis is treated as not-included, matching the
-  // behaviour a caller that omits the flag entirely already got.
-  const computed =
-    lineTotalCents -
-    (body.discountIncluded ? 0 : (body.discountCents ?? 0)) +
-    (body.surchargeIncluded ? 0 : (body.surchargeCents ?? 0)) +
-    (body.shippingIncluded ? 0 : (body.shippingCents ?? 0)) +
-    (body.taxIncluded ? 0 : (body.taxCents ?? 0));
+  const computed = computeExpectedTotalCents(lineTotalCents, body);
   if (computed !== body.totalCents) {
     return {
       message:

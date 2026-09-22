@@ -34,10 +34,17 @@ export {
   type PurchaseScopeFilter,
 } from './services/purchase-reads.js';
 
+export {
+  type PurchaseEditSummary,
+  type PurchaseFieldChange,
+} from './services/purchase-edit-reads.js';
+
 export { countPurchases } from './services/purchase-count.js';
 
 export {
   listItemsByTag,
+  listTagVocabulary,
+  TAG_VOCABULARY_LIMIT,
   type TaggedItem,
   type TaggedItemPage,
 } from './services/purchase-item-tags.js';
@@ -48,6 +55,19 @@ export {
   confirmItemClassification,
   type ConfirmItemInput,
 } from './services/purchase-item-mutations.js';
+
+export {
+  commitPurchaseUpdate,
+  inventoryUnlinkTargets,
+  planPurchaseUpdate,
+  updatePurchase,
+  type UpdatePlan,
+} from './services/purchase-edit.js';
+
+export {
+  type UpdatePurchaseInput,
+  type UpdatePurchaseLineInput,
+} from './services/purchase-input.js';
 
 export { type MerchantIdentity } from './services/merchant-identity.js';
 
@@ -121,6 +141,7 @@ export {
 
 export {
   searchFilterScope,
+  type PurchaseSearchScope,
   type SearchFilter,
   type SearchScopeResult,
 } from './services/search-filters.js';

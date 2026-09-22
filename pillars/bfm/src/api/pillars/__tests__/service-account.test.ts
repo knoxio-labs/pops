@@ -122,6 +122,7 @@ describe('the granted scopes', () => {
       'finance.accounts',
       'finance.checkpoints',
       'purchases.purchase',
+      'purchases.search',
       'purchases.receipt',
       'inventory.sync',
       'inventory.types',
@@ -182,6 +183,11 @@ describe('every capability has the downstream scope it leans on', () => {
     const planted: Record<string, readonly string[]> = {
       'session.read': [],
       'media.watchlist.write': ['media.watchlist'],
+      // An array-valued entry whose FIRST scope is one bfm already holds —
+      // the fan-out this plants against is a capability leaning on more
+      // than one scope, so a check that only looked at index 0 would miss
+      // the second one being unbacked.
+      'media.watchlist.read': ['finance.transactions', 'media.watchlist'],
     };
 
     const unbacked = Object.entries(planted)
@@ -189,7 +195,7 @@ describe('every capability has the downstream scope it leans on', () => {
       .filter(([, scope]) => !BFM_SERVICE_ACCOUNT_SCOPES.includes(scope))
       .map(([capability]) => capability);
 
-    expect(unbacked).toEqual(['media.watchlist.write']);
+    expect(unbacked).toEqual(['media.watchlist.write', 'media.watchlist.read']);
   });
 
   it('says explicitly which capabilities need no scope at all', () => {

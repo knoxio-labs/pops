@@ -10,8 +10,10 @@
  */
 import { z } from 'zod';
 
+import { PURCHASE_EDIT_FIELDS } from '../constants.js';
 import {
   CentsSchema,
+  IsoTimestampSchema,
   NonNegativeCentsSchema,
   PurchaseChargeLinkSchema,
   PurchaseChargeSchema,
@@ -23,6 +25,22 @@ import {
   PurchaseSchema,
   PurchaseShipmentSchema,
 } from './purchase.js';
+
+export const PurchaseEditFieldSchema = z.enum(PURCHASE_EDIT_FIELDS);
+
+/** One field an edit changed. `original`/`current` null where the edit policy says they must be — see `purchase_edits`. */
+export const PurchaseFieldChangeSchema = z.object({
+  field: PurchaseEditFieldSchema,
+  itemId: z.string().nullable(),
+  original: z.string().nullable(),
+  current: z.string().nullable(),
+});
+
+/** The Original sheet's data, and the detail's "Edited &lt;date&gt;" notice. `null` for a never-edited purchase. */
+export const PurchaseEditSchema = z.object({
+  editedAt: IsoTimestampSchema,
+  changes: z.array(PurchaseFieldChangeSchema),
+});
 
 /**
  * The accounting split.
@@ -83,4 +101,5 @@ export const PurchaseDetailSchema = z.object({
   charges: z.array(PurchaseChargeDetailSchema),
   documents: z.array(PurchaseDocumentSchema),
   accounting: PurchaseAccountingSchema,
+  edit: PurchaseEditSchema.nullable(),
 });

@@ -285,9 +285,16 @@
         "type": "object"
       },
       "LookupBody": {
-        "description": "`POST /entities/lookup` body — reserved for a future field selector; an\nempty body fetches the default match columns.",
+        "description": "`POST /entities/lookup` body. `fields` is reserved for a future field\nselector. `ids`, when present and non-empty, narrows the match set to\nthose ids (POPS-3925) instead of the whole contact set; omitted or empty\nkeeps the original \"answer everything\" behaviour existing callers rely on.",
         "properties": {
           "fields": {
+            "items": {
+              "type": "string"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "ids": {
             "items": {
               "type": "string"
             },
@@ -657,7 +664,17 @@
                 }
               }
             },
-            "description": "Bulk match columns"
+            "description": "Bulk match columns, optionally narrowed by ids"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "More ids than the lookup cap allows"
           }
         },
         "tags": [

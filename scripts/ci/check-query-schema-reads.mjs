@@ -460,6 +460,12 @@ export const BFM_ROUTES = [
   },
   {
     method: 'get',
+    path: '/mobile/purchases/search',
+    handlerFile: 'pillars/bfm/src/api/rest/mobile-purchases-search-handlers.ts',
+    handlerKey: 'searchPurchases',
+  },
+  {
+    method: 'get',
     path: '/mobile/inventory/sync/snapshot',
     handlerFile: 'pillars/bfm/src/api/rest/mobile-inventory-handlers.ts',
     handlerKey: 'snapshot',
@@ -481,6 +487,12 @@ export const BFM_ROUTES = [
     path: '/mobile/inventory/media/{sha256}',
     handlerFile: 'pillars/bfm/src/api/rest/mobile-inventory-media-handlers.ts',
     handlerKey: 'getMedia',
+  },
+  {
+    method: 'get',
+    path: '/mobile/contacts/merchants/search',
+    handlerFile: 'pillars/bfm/src/api/rest/mobile-contacts-handlers.ts',
+    handlerKey: 'searchMerchants',
   },
 ];
 

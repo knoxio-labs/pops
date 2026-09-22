@@ -33,23 +33,27 @@ const c = initContract();
 /**
  * What a filter may narrow on.
  *
- * These are the scope terms every other read on this pillar already takes —
- * `GET /purchases` and `GET /analytics/merchant-spend` both take sources,
- * statuses and a date window — because search narrows the same set of orders
- * and a second scope language would be a second thing to keep true. A filter
- * on a line item's own columns is not here for the same reason: it would
- * scope one adapter and silently pass the other through unfiltered, which is
- * the failure this vocabulary exists to make impossible.
+ * `source`, `status` and `orderedAt` are the scope terms every other read on
+ * this pillar already takes — `GET /purchases` and
+ * `GET /analytics/merchant-spend` both take sources, statuses and a date
+ * window — because search narrows the same set of orders and a second scope
+ * language would be a second thing to keep true. Both adapters honour these
+ * three, and an item is in scope exactly when the order it was bought on is:
+ * a line has no source, status or date of its own.
  *
- * Both adapters honour a filter, and an item is in scope exactly when the
- * order it was bought on is: a line has no source, status or date of its own.
+ * `tags` is the one field that IS a line's own column: a chosen tag matches
+ * a line carrying it, and an order matches through any line of its own that
+ * does — never through a purchase-level tag, which is a different table.
+ * Applying it only to the order side would leave an order with a tagged line
+ * out of an item search's own results, which is the same silent narrowing
+ * this vocabulary exists to refuse.
  *
  * Closed rather than a free string. The field a caller may send is published
  * in the OpenAPI projection and therefore in every generated client, so an
  * unsupported one is a 400 from the contract itself rather than a 200 whose
  * results quietly ignored it.
  */
-export const SEARCH_FILTER_FIELDS = ['source', 'status', 'orderedAt'] as const;
+export const SEARCH_FILTER_FIELDS = ['source', 'status', 'orderedAt', 'tags'] as const;
 export type SearchFilterField = (typeof SEARCH_FILTER_FIELDS)[number];
 
 /**

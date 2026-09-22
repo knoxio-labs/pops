@@ -22,8 +22,6 @@ import { z } from 'zod';
 import { toMerchantIdentity } from './merchant-identity.js';
 
 import type {
-  MobileMonthMerchantLeader,
-  MobileMonthSummary,
   MobilePurchase,
   MobilePurchaseDetail,
   MobilePurchaseItem,
@@ -128,7 +126,30 @@ const PurchasesItemSchema = z.object({
  * and the screen behind it come to disagree, so the derivation is in one
  * function ({@link toMobilePurchaseDetail}) and the arrays are its only input.
  */
+/** `purchases`' edit summary — see `MobilePurchaseEditSchema` for the mobile shape it maps onto. */
+const PurchasesEditSchema = z.object({
+  editedAt: z.string(),
+  changes: z.array(
+    z.object({
+      field: z.string(),
+      itemId: z.string().nullable(),
+      original: z.string().nullable(),
+      current: z.string().nullable(),
+    })
+  ),
+});
+
 export const PurchasesDetailResponseSchema = z.object({
+  /**
+   * Optional as well as nullable, matching `merchantEntityId`'s precedent
+   * just below: a producer build that predates the edit feature (POPS-2458)
+   * — the iOS UI-flow lane's hand-written stub, or a `purchases` that has
+   * not yet redeployed alongside this bfm — omits the key outright, and
+   * that is the same fact a `null` states explicitly: never edited.
+   * Requiring the key would turn that omission into a `502` on the whole
+   * detail over a field no reader here treats as anything but absent.
+   */
+  edit: PurchasesEditSchema.nullable().optional(),
   purchase: z.object({
     id: z.string(),
     source: z.string(),
@@ -144,6 +165,18 @@ export const PurchasesDetailResponseSchema = z.object({
     orderedAt: OrderedAtSchema,
     orderedAtOffsetMinutes: OrderedAtOffsetSchema,
     status: z.string(),
+    /**
+     * Optional for the same reason `edit` above is: a producer that
+     * predates POPS-2458 sends no such column. Absent means bfm cannot
+     * hand the phone a value to round-trip as `expectedUpdatedAt` — see
+     * {@link toMobilePurchaseDetail}, which maps that case to `null` on
+     * the mobile wire rather than fabricating a timestamp. A phone that
+     * gets `null` here has nothing valid to send back, and the write
+     * contract's `expectedUpdatedAt` stays a required field — refusing an
+     * edit for want of a compare-and-swap value, rather than accepting one
+     * with no staleness check at all.
+     */
+    updatedAt: z.string().optional(),
   }),
   items: z.array(PurchasesItemSchema),
   documents: z.array(
@@ -157,45 +190,6 @@ export const PurchasesDetailResponseSchema = z.object({
 });
 
 export type PurchasesDetailResponse = z.infer<typeof PurchasesDetailResponseSchema>;
-
-/**
- * One currency's spend, as `purchases`' month-summary route serves it.
- *
- * Only `totalCents` and `netSpendCents` are read out of the six-figure
- * accounting split: the phone's month figure and its home-screen headline
- * are the two spend numbers, not the settlement breakdown behind them.
- */
-const MonthCurrencyTotalSchema = z.object({
-  currency: z.string(),
-  orderCount: z.number().int().min(0),
-  accounting: z.object({
-    totalCents: z.number().int(),
-    netSpendCents: z.number().int(),
-  }),
-});
-
-const MonthMerchantLeaderSchema = z.object({
-  merchant: z.object({
-    resolution: z.enum(['entity', 'name', 'unattributed']),
-    entityId: z.string().nullable(),
-    name: z.string().nullable(),
-  }),
-  currency: z.string(),
-  netSpendCents: z.number().int(),
-  orderCount: z.number().int().min(0),
-});
-
-/** `purchases`' `GET /analytics/month-summary` response. */
-export const PurchasesMonthSummaryResponseSchema = z.object({
-  month: z.string(),
-  totals: z.array(MonthCurrencyTotalSchema),
-  purchaseCount: z.number().int().min(0),
-  previousMonthTotals: z.array(MonthCurrencyTotalSchema).nullable(),
-  unmatchedCount: z.number().int().min(0),
-  merchantLeaders: z.array(MonthMerchantLeaderSchema),
-});
-
-export type PurchasesMonthSummaryResponse = z.infer<typeof PurchasesMonthSummaryResponseSchema>;
 
 /**
  * The calendar day an order is dated, WHERE IT WAS PLACED.
@@ -300,6 +294,14 @@ export function toMobilePurchaseDetail(
     surchargeCents: purchase.surchargeCents,
     source: purchase.source,
     items: detail.items.map(toMobilePurchaseItem),
+    // `?? null`, not left undefined: a producer that predates the edit
+    // feature omits the key outright, and that is the same fact a `null`
+    // states explicitly — see the schema's own comment on each field.
+    updatedAt: purchase.updatedAt ?? null,
+    edit:
+      detail.edit === null || detail.edit === undefined
+        ? null
+        : { editedAt: detail.edit.editedAt, changes: detail.edit.changes },
   };
 }
 
@@ -324,41 +326,4 @@ function firstReceiptUri(
   documents: readonly { documentUri: string; kind: string }[]
 ): string | null {
   return documents.find((document) => document.kind === 'receipt')?.documentUri ?? null;
-}
-
-function toMobileMonthCurrencyTotal(
-  total: z.infer<typeof MonthCurrencyTotalSchema>
-): MobileMonthSummary['totals'][number] {
-  return {
-    currency: total.currency,
-    orderCount: total.orderCount,
-    totalCents: total.accounting.totalCents,
-    netSpendCents: total.accounting.netSpendCents,
-  };
-}
-
-function toMobileMonthMerchantLeader(
-  leader: z.infer<typeof MonthMerchantLeaderSchema>
-): MobileMonthMerchantLeader {
-  return {
-    merchantName: leader.merchant.name,
-    currency: leader.currency,
-    netSpendCents: leader.netSpendCents,
-    orderCount: leader.orderCount,
-  };
-}
-
-/** `purchases`' month summary → the mobile month summary record. */
-export function toMobileMonthSummary(summary: PurchasesMonthSummaryResponse): MobileMonthSummary {
-  return {
-    month: summary.month,
-    totals: summary.totals.map(toMobileMonthCurrencyTotal),
-    purchaseCount: summary.purchaseCount,
-    previousMonthTotals:
-      summary.previousMonthTotals === null
-        ? null
-        : summary.previousMonthTotals.map(toMobileMonthCurrencyTotal),
-    unmatchedCount: summary.unmatchedCount,
-    merchantLeaders: summary.merchantLeaders.map(toMobileMonthMerchantLeader),
-  };
 }

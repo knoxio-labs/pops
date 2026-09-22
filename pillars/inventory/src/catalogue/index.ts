@@ -36,12 +36,8 @@ export type {
   Protocol1MeasurementValue,
   Protocol1RangeValue,
 } from './protocol-1-types.js';
-export {
-  canonicalizeValue,
-  parseCanonicalValue,
-  PRIMITIVE_KINDS,
-  ValueValidationError,
-} from './value-codec.js';
+export { canonicalizeValue, parseCanonicalValue } from './value-dispatch.js';
+export { PRIMITIVE_KINDS, ValueValidationError } from './value-codec.js';
 export {
   findCatalogueType,
   assertIncomingReferencesPermitType,

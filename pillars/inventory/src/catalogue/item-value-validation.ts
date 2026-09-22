@@ -4,7 +4,8 @@ import { itemFieldValues, items } from '../db/schema.js';
 import { loadPublishedCatalogue } from './catalogue.js';
 import { assertReferenceTarget } from './item-value-references.js';
 import { ItemFieldSetError } from './item-value-types.js';
-import { canonicalizeValue, ValueValidationError } from './value-codec.js';
+import { ValueValidationError } from './value-codec.js';
+import { canonicalizeValue } from './value-dispatch.js';
 
 import type { ItemFieldValueSource } from '../db/schema.js';
 import type { CommandDb } from '../domain/commands/entities.js';

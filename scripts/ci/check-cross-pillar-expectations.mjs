@@ -193,6 +193,20 @@ export const EXPECTATIONS = [
   },
   {
     consumer: 'purchases',
+    producer: 'inventory',
+    operationId: 'items.update',
+    path: '/items/{id}',
+    method: 'patch',
+    // Clearing `purchaseTransactionId` before committing an edit that unlinks
+    // a line (POPS-4268) — the whole payload is a body, which this guard does
+    // not model. What it can pin is that the operation still exists as a
+    // PATCH on the item.
+    query: [],
+    pathParams: ['id'],
+    usedBy: 'pillars/purchases/src/api/inventory/client.ts',
+  },
+  {
+    consumer: 'purchases',
     producer: 'documents',
     operationId: 'paperless.get',
     path: '/paperless/documents/{id}',
@@ -345,6 +359,19 @@ export const EXPECTATIONS = [
   {
     consumer: 'bfm',
     producer: 'purchases',
+    operationId: 'purchase.update',
+    path: '/purchases/{id}',
+    method: 'patch',
+    // Editing a saved purchase (POPS-2458/POPS-4258). The whole request is
+    // the body — the header fields, adjustments and the full desired line
+    // set, plus the compare-and-swap `expectedUpdatedAt`.
+    query: [],
+    pathParams: ['id'],
+    usedBy: 'pillars/bfm/src/api/purchases/update-client.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'purchases',
     operationId: 'receipt.read',
     path: '/receipts/{sha256}',
     method: 'get',
@@ -377,6 +404,30 @@ export const EXPECTATIONS = [
   },
   {
     consumer: 'bfm',
+    producer: 'purchases',
+    operationId: 'search.search',
+    path: '/search',
+    method: 'post',
+    // The whole request is the body: query text plus the structured filters
+    // status/tags forward as (POPS-3645/POPS-4308/POPS-4274). This guard does
+    // not model bodies; what it pins is that the mobile search box's own
+    // endpoint still exists as a POST on this path.
+    query: [],
+    usedBy: 'pillars/bfm/src/api/purchases/search-client.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'purchases',
+    operationId: 'purchase.tagVocabulary',
+    path: '/items/tags',
+    method: 'get',
+    // No query: the whole vocabulary, capped and ordered on the producer's
+    // side (POPS-3754/POPS-3758).
+    query: [],
+    usedBy: 'pillars/bfm/src/api/purchases/search-client.ts',
+  },
+  {
+    consumer: 'bfm',
     producer: 'contacts',
     operationId: 'entities.lookup',
     path: '/entities/lookup',
@@ -384,6 +435,40 @@ export const EXPECTATIONS = [
     // The whole request is a body this guard does not model. What it can pin
     // is that the batched lookup bfm's merchant-identity resolution depends
     // on (POPS-3634) still exists as a POST on this path.
+    query: [],
+    usedBy: 'pillars/bfm/src/api/contacts/client.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'contacts',
+    operationId: 'entities.list',
+    path: '/entities',
+    method: 'get',
+    // The merchant search/create-conflict-resolution leg (POPS-3753): a free
+    // text query and a page cap, both of which this guard can pin.
+    query: ['search', 'limit'],
+    usedBy: 'pillars/bfm/src/api/contacts/client.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'contacts',
+    operationId: 'entities.get',
+    path: '/entities/{id}',
+    method: 'get',
+    // One merchant by id, for a draft that arrives already matched
+    // (POPS-3753). The id is the whole request.
+    query: [],
+    pathParams: ['id'],
+    usedBy: 'pillars/bfm/src/api/contacts/client.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'contacts',
+    operationId: 'entities.create',
+    path: '/entities',
+    method: 'post',
+    // The body (`{ name }`) is not modelled here; there is no query or path
+    // param to pin (POPS-3753).
     query: [],
     usedBy: 'pillars/bfm/src/api/contacts/client.ts',
   },
