@@ -97,14 +97,21 @@ describe('type catalogue owner API', () => {
   });
 
   it('allows a read-scoped service account to read but not author', async () => {
+    const owner = apiFor('web');
+    const current = await owner.get('/type-catalogue');
+    await owner
+      .post('/type-catalogue/drafts')
+      .send({ baseRevision: current.body.revision.revision });
     const api = apiFor('service', ['inventory.types.read']);
     const read = await api.get('/type-catalogue').set('x-api-key', SERVICE_KEY);
+    const readDraft = await api.get('/type-catalogue/drafts/current').set('x-api-key', SERVICE_KEY);
     const create = await api
       .post('/type-catalogue/drafts')
       .set('x-api-key', SERVICE_KEY)
       .send({ baseRevision: read.body.revision.revision });
 
     expect(read.status).toBe(200);
+    expect(readDraft.status).toBe(403);
     expect(create.status).toBe(403);
   });
 
@@ -113,6 +120,12 @@ describe('type catalogue owner API', () => {
     const current = await api.get('/type-catalogue');
     const baseRevision = current.body.revision.revision;
     const type = current.body.types[0];
+    inventoryDb.raw
+      .prepare(
+        `INSERT INTO items (id, name, type_id, placement_kind, last_edited_time, seq)
+         VALUES ('catalogue-item', 'Catalogue item', ?, 'hand', '2026-09-23T00:00:00.000Z', 1)`
+      )
+      .run(type.id);
 
     const draftResponse = await api.post('/type-catalogue/drafts').send({ baseRevision });
     const draftRevision = draftResponse.body.revision.revision;
@@ -120,9 +133,25 @@ describe('type catalogue owner API', () => {
     expect(draftResponse.status).toBe(201);
     expect(draftResponse.body.revision.status).toBe('draft');
 
+    const resumedDraft = await api.get('/type-catalogue/drafts/current');
+
+    expect(resumedDraft.status).toBe(200);
+    expect(resumedDraft.body.revision.revision).toBe(draftRevision);
+
     const patch = await api.patch(`/type-catalogue/drafts/${draftRevision}`).send({
       baseRevision,
-      operations: [{ kind: 'put_type', id: type.id, label: 'Updated label' }],
+      operations: [
+        { kind: 'put_type', id: type.id, label: 'Updated label' },
+        {
+          kind: 'put_field',
+          typeId: type.id,
+          key: 'catalogue_test_field',
+          label: 'Catalogue test field',
+          fieldKind: 'short_text',
+          cardinality: 'one',
+          storage: 'stored',
+        },
+      ],
     });
 
     expect(patch.status).toBe(200);
@@ -130,6 +159,7 @@ describe('type catalogue owner API', () => {
       'Updated label'
     );
     expect(patch.body.compatibility.classification).toBe('compatible');
+    expect(patch.body.compatibility.affectedItems).toBe(1);
 
     const published = await api
       .post(`/type-catalogue/drafts/${draftRevision}/publish`)
@@ -147,6 +177,50 @@ describe('type catalogue owner API', () => {
       kind: 'published',
       actor: { kind: 'web', id: OWNER_EMAIL },
     });
+  });
+
+  it('reports when there is no draft to resume', async () => {
+    const response = await apiFor('web').get('/type-catalogue/drafts/current');
+
+    expect(response.status).toBe(404);
+    expect(response.body.code).toBe('catalogue_draft_missing');
+  });
+
+  it('creates, edits, rejects a stale edit, and archives a type atomically', async () => {
+    const api = apiFor('web');
+    const current = await api.get('/type-catalogue');
+    const baseRevision = current.body.revision.revision;
+    const createdDraft = await api.post('/type-catalogue/drafts').send({ baseRevision });
+    const revision = createdDraft.body.revision.revision;
+    const created = await api.patch(`/type-catalogue/drafts/${revision}`).send({
+      baseRevision,
+      operations: [{ kind: 'put_type', key: 'test_equipment', label: 'Test equipment' }],
+    });
+    const type = created.body.draft.types.find(
+      (entry: { key: string }) => entry.key === 'test_equipment'
+    );
+
+    const stale = await api.patch(`/type-catalogue/drafts/${revision}`).send({
+      baseRevision: baseRevision + 1,
+      operations: [{ kind: 'put_type', id: type.id, label: 'Stale label' }],
+    });
+    const edited = await api.patch(`/type-catalogue/drafts/${revision}`).send({
+      baseRevision,
+      operations: [{ kind: 'put_type', id: type.id, label: 'Edited equipment' }],
+    });
+    const archived = await api.patch(`/type-catalogue/drafts/${revision}`).send({
+      baseRevision,
+      operations: [{ kind: 'archive_type', id: type.id }],
+    });
+
+    expect(stale.status).toBe(409);
+    expect(stale.body.code).toBe('catalogue_conflict');
+    expect(
+      edited.body.draft.types.find((entry: { id: string }) => entry.id === type.id).label
+    ).toBe('Edited equipment');
+    expect(
+      archived.body.draft.types.find((entry: { id: string }) => entry.id === type.id)
+    ).toMatchObject({ label: 'Edited equipment', archivedAt: expect.any(String) });
   });
 
   it('rejects a draft based on a stale published revision', async () => {

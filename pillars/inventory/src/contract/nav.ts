@@ -31,6 +31,7 @@ export const INVENTORY_NAV = {
       icon: 'shield-check',
     },
     { path: '/locations', label: 'Locations', labelKey: 'inventory.locations', icon: 'map-pin' },
+    { path: '/types', label: 'Types', labelKey: 'inventory.types', icon: 'list-checks' },
     { path: '/reports', label: 'Reports', labelKey: 'inventory.reports', icon: 'bar-chart-3' },
     {
       path: '/connections',

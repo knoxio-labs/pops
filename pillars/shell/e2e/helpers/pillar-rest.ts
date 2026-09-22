@@ -363,6 +363,7 @@ const LOADER_MOUNTED_UI: Readonly<Record<string, Record<string, unknown>>> = {
           labelKey: 'inventory.locations',
           icon: 'map-pin',
         },
+        { path: '/types', label: 'Types', labelKey: 'inventory.types', icon: 'list-checks' },
         { path: '/reports', label: 'Reports', labelKey: 'inventory.reports', icon: 'bar-chart-3' },
         {
           path: '/connections',
@@ -380,6 +381,7 @@ const LOADER_MOUNTED_UI: Readonly<Record<string, Record<string, unknown>>> = {
       { path: 'connections', bundleSlot: 'inventory-connections' },
       { path: 'warranties', bundleSlot: 'inventory-warranties' },
       { path: 'locations', bundleSlot: 'inventory-location-tree' },
+      { path: 'types', bundleSlot: 'inventory-type-catalogue' },
       {
         path: 'reports',
         bundleSlot: 'inventory-reports-group',

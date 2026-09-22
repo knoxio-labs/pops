@@ -3913,6 +3913,143 @@ export type TypesManageCreateDraftResponses = {
 export type TypesManageCreateDraftResponse =
   TypesManageCreateDraftResponses[keyof TypesManageCreateDraftResponses];
 
+export type TypesManageReadDraftData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/type-catalogue/drafts/current';
+};
+
+export type TypesManageReadDraftErrors = {
+  /**
+   * 401
+   */
+  401: {
+    code?: string;
+    issues?: Array<{
+      code: string;
+      definitionId: string | null;
+      message: string;
+      path: string;
+    }>;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    issues?: Array<{
+      code: string;
+      definitionId: string | null;
+      message: string;
+      path: string;
+    }>;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type TypesManageReadDraftError =
+  TypesManageReadDraftErrors[keyof TypesManageReadDraftErrors];
+
+export type TypesManageReadDraftResponses = {
+  /**
+   * 200
+   */
+  200: {
+    revision: {
+      abandoned: {
+        actor: {
+          id: string | null;
+          kind: 'web' | 'service' | 'migration';
+          label: string | null;
+        };
+        at: string;
+      } | null;
+      baseRevision: number | null;
+      created: {
+        actor: {
+          id: string | null;
+          kind: 'web' | 'service' | 'migration';
+          label: string | null;
+        };
+        at: string;
+      };
+      minimumProtocol: number;
+      published: {
+        actor: {
+          id: string | null;
+          kind: 'web' | 'service' | 'migration';
+          label: string | null;
+        };
+        at: string;
+        note: string | null;
+      } | null;
+      revision: number;
+      status: 'draft' | 'published' | 'abandoned';
+    };
+    types: Array<{
+      archivedAt: string | null;
+      capabilities: Array<string>;
+      description: string | null;
+      fields: Array<{
+        allowOverride: boolean;
+        archivedAt: string | null;
+        cardinality: 'one' | 'many';
+        enumOptions: Array<{
+          archivedAt: string | null;
+          id: string;
+          key: string;
+          label: string;
+          sortOrder: number;
+        }>;
+        expression: unknown;
+        expressionVersion: number | null;
+        fixedUnit: string | null;
+        help: string | null;
+        id: string;
+        key: string;
+        kind:
+          | 'short_text'
+          | 'long_text'
+          | 'integer'
+          | 'decimal'
+          | 'boolean'
+          | 'enum'
+          | 'measurement'
+          | 'date'
+          | 'date_time'
+          | 'url'
+          | 'reference';
+        label: string;
+        presentation: {
+          [key: string]: unknown;
+        };
+        referenceKinds: Array<'item' | 'location'>;
+        referenceTypeIds: Array<string>;
+        required: boolean;
+        sortOrder: number;
+        storage: 'stored' | 'computed';
+        typeId: string;
+      }>;
+      id: string;
+      key: string;
+      label: string;
+      legacyLabels: Array<string>;
+      presentation: {
+        [key: string]: unknown;
+      };
+      revision: number;
+      sortOrder: number;
+    }>;
+  };
+};
+
+export type TypesManageReadDraftResponse =
+  TypesManageReadDraftResponses[keyof TypesManageReadDraftResponses];
+
 export type TypesManagePatchDraftData = {
   /**
    * Body
@@ -4065,6 +4202,7 @@ export type TypesManagePatchDraftResponses = {
   200: {
     compatibility: {
       affectedIds: Array<string>;
+      affectedItems: number;
       changes: Array<{
         classification: 'compatible' | 'protocol_gated' | 'migration_required' | 'forbidden';
         code: string;

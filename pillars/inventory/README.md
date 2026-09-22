@@ -137,6 +137,21 @@ The served type catalogue includes a `book` type with page-count length,
 genre, binding/format type, and ISBN fields. ISBN is type-specific metadata;
 it does not reuse the legacy product-model column.
 
+### Web catalogue editor
+
+The shell mounts the owner editor at `/inventory/types`. It implements the
+focused section layout decided in the design playground: a searchable type
+list, type details, an ordered field outline, and one wide inspector for
+stored, enum, reference, measurement, and computed definitions. The editor
+creates the single draft on the first write, resumes it after reload through
+`GET /type-catalogue/drafts/current`, and surfaces structured validation,
+stale-base, compatibility, archive, abandonment, audit, and publication
+states. Each successful draft patch includes the producer-counted live items
+affected by its changed definitions, so the publication review does not
+reimplement catalogue validation in the browser. Published field identity and shape stay locked; incompatible changes
+must be expressed as a replacement and an explicit named migration rather
+than edited in place.
+
 ## Registration
 
 On boot, when `POPS_REGISTRY_ENABLED=true`, the server calls `bootstrapPillar`
@@ -219,7 +234,9 @@ the gate above derives three grants: `inventory.sync` (`GET /sync/snapshot`,
   `service:<account>`.
 - Catalogue authoring does not pass through bfm. Inventory exposes a shared
   owner-only draft/publish surface for MCP and the web editor; bfm relays only
-  immutable catalogue reads.
+  immutable catalogue reads. `GET /type-catalogue/drafts/current` lets an
+  owner resume the one in-progress draft after a reload or another authoring
+  session; it returns `404 catalogue_draft_missing` when no draft exists.
 - `GET /type-catalogue` and `GET /type-catalogue/audit` require a Cloudflare
   Access owner session or a service account granted `inventory.types.read`.
   Draft creation, patching, publication and abandonment require the owner

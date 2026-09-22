@@ -90,6 +90,7 @@ const CatalogueCompatibilityChangeSchema = z.object({
 export const CatalogueCompatibilitySchema = z.object({
   classification: z.enum(['compatible', 'protocol_gated', 'migration_required', 'forbidden']),
   affectedIds: z.array(z.string()),
+  affectedItems: z.number().int().nonnegative(),
   changes: z.array(CatalogueCompatibilityChangeSchema),
 });
 

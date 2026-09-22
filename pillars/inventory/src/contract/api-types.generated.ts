@@ -852,6 +852,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/type-catalogue/drafts/current': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Read the current editable catalogue draft */
+    get: operations['types.manage.readDraft'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/type-catalogue/drafts/{revision}': {
     parameters: {
       query?: never;
@@ -5699,6 +5716,161 @@ export interface operations {
       };
     };
   };
+  'types.manage.readDraft': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            revision: {
+              abandoned: {
+                actor: {
+                  id: string | null;
+                  /** @enum {string} */
+                  kind: 'web' | 'service' | 'migration';
+                  label: string | null;
+                };
+                at: string;
+              } | null;
+              baseRevision: number | null;
+              created: {
+                actor: {
+                  id: string | null;
+                  /** @enum {string} */
+                  kind: 'web' | 'service' | 'migration';
+                  label: string | null;
+                };
+                at: string;
+              };
+              minimumProtocol: number;
+              published: {
+                actor: {
+                  id: string | null;
+                  /** @enum {string} */
+                  kind: 'web' | 'service' | 'migration';
+                  label: string | null;
+                };
+                at: string;
+                note: string | null;
+              } | null;
+              revision: number;
+              /** @enum {string} */
+              status: 'draft' | 'published' | 'abandoned';
+            };
+            types: {
+              archivedAt: string | null;
+              capabilities: string[];
+              description: string | null;
+              fields: {
+                allowOverride: boolean;
+                archivedAt: string | null;
+                /** @enum {string} */
+                cardinality: 'one' | 'many';
+                enumOptions: {
+                  archivedAt: string | null;
+                  /** Format: uuid */
+                  id: string;
+                  key: string;
+                  label: string;
+                  sortOrder: number;
+                }[];
+                expression: unknown;
+                expressionVersion: number | null;
+                fixedUnit: string | null;
+                help: string | null;
+                /** Format: uuid */
+                id: string;
+                key: string;
+                /** @enum {string} */
+                kind:
+                  | 'short_text'
+                  | 'long_text'
+                  | 'integer'
+                  | 'decimal'
+                  | 'boolean'
+                  | 'enum'
+                  | 'measurement'
+                  | 'date'
+                  | 'date_time'
+                  | 'url'
+                  | 'reference';
+                label: string;
+                presentation: {
+                  [key: string]: unknown;
+                };
+                referenceKinds: ('item' | 'location')[];
+                referenceTypeIds: string[];
+                required: boolean;
+                sortOrder: number;
+                /** @enum {string} */
+                storage: 'stored' | 'computed';
+                /** Format: uuid */
+                typeId: string;
+              }[];
+              /** Format: uuid */
+              id: string;
+              key: string;
+              label: string;
+              legacyLabels: string[];
+              presentation: {
+                [key: string]: unknown;
+              };
+              revision: number;
+              sortOrder: number;
+            }[];
+          };
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            issues?: {
+              code: string;
+              definitionId: string | null;
+              message: string;
+              path: string;
+            }[];
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            issues?: {
+              code: string;
+              definitionId: string | null;
+              message: string;
+              path: string;
+            }[];
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
   'types.manage.patchDraft': {
     parameters: {
       query?: never;
@@ -5811,6 +5983,7 @@ export interface operations {
           'application/json': {
             compatibility: {
               affectedIds: string[];
+              affectedItems: number;
               changes: {
                 /** @enum {string} */
                 classification:

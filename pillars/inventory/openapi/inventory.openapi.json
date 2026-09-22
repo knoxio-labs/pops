@@ -10725,6 +10725,473 @@
         "tags": ["types", "manage"]
       }
     },
+    "/type-catalogue/drafts/current": {
+      "get": {
+        "operationId": "types.manage.readDraft",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "revision": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "abandoned": {
+                          "additionalProperties": false,
+                          "nullable": true,
+                          "properties": {
+                            "actor": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "id": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "kind": {
+                                  "enum": ["web", "service", "migration"],
+                                  "type": "string"
+                                },
+                                "label": {
+                                  "nullable": true,
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["kind", "id", "label"],
+                              "type": "object"
+                            },
+                            "at": {
+                              "type": "string"
+                            }
+                          },
+                          "required": ["actor", "at"],
+                          "type": "object"
+                        },
+                        "baseRevision": {
+                          "exclusiveMinimum": true,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "created": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "actor": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "id": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "kind": {
+                                  "enum": ["web", "service", "migration"],
+                                  "type": "string"
+                                },
+                                "label": {
+                                  "nullable": true,
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["kind", "id", "label"],
+                              "type": "object"
+                            },
+                            "at": {
+                              "type": "string"
+                            }
+                          },
+                          "required": ["actor", "at"],
+                          "type": "object"
+                        },
+                        "minimumProtocol": {
+                          "exclusiveMinimum": true,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "published": {
+                          "additionalProperties": false,
+                          "nullable": true,
+                          "properties": {
+                            "actor": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "id": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "kind": {
+                                  "enum": ["web", "service", "migration"],
+                                  "type": "string"
+                                },
+                                "label": {
+                                  "nullable": true,
+                                  "type": "string"
+                                }
+                              },
+                              "required": ["kind", "id", "label"],
+                              "type": "object"
+                            },
+                            "at": {
+                              "type": "string"
+                            },
+                            "note": {
+                              "nullable": true,
+                              "type": "string"
+                            }
+                          },
+                          "required": ["actor", "at", "note"],
+                          "type": "object"
+                        },
+                        "revision": {
+                          "exclusiveMinimum": true,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "status": {
+                          "enum": ["draft", "published", "abandoned"],
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "revision",
+                        "baseRevision",
+                        "status",
+                        "minimumProtocol",
+                        "created",
+                        "published",
+                        "abandoned"
+                      ],
+                      "type": "object"
+                    },
+                    "types": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "archivedAt": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "capabilities": {
+                            "items": {
+                              "type": "string"
+                            },
+                            "type": "array"
+                          },
+                          "description": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "fields": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "allowOverride": {
+                                  "type": "boolean"
+                                },
+                                "archivedAt": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "cardinality": {
+                                  "enum": ["one", "many"],
+                                  "type": "string"
+                                },
+                                "enumOptions": {
+                                  "items": {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "archivedAt": {
+                                        "nullable": true,
+                                        "type": "string"
+                                      },
+                                      "id": {
+                                        "format": "uuid",
+                                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                        "type": "string"
+                                      },
+                                      "key": {
+                                        "type": "string"
+                                      },
+                                      "label": {
+                                        "type": "string"
+                                      },
+                                      "sortOrder": {
+                                        "maximum": 9007199254740991,
+                                        "minimum": 0,
+                                        "type": "integer"
+                                      }
+                                    },
+                                    "required": ["id", "key", "label", "sortOrder", "archivedAt"],
+                                    "type": "object"
+                                  },
+                                  "type": "array"
+                                },
+                                "expression": {
+                                  "nullable": true
+                                },
+                                "expressionVersion": {
+                                  "exclusiveMinimum": true,
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "nullable": true,
+                                  "type": "integer"
+                                },
+                                "fixedUnit": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "help": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "id": {
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                  "type": "string"
+                                },
+                                "key": {
+                                  "type": "string"
+                                },
+                                "kind": {
+                                  "enum": [
+                                    "short_text",
+                                    "long_text",
+                                    "integer",
+                                    "decimal",
+                                    "boolean",
+                                    "enum",
+                                    "measurement",
+                                    "date",
+                                    "date_time",
+                                    "url",
+                                    "reference"
+                                  ],
+                                  "type": "string"
+                                },
+                                "label": {
+                                  "type": "string"
+                                },
+                                "presentation": {
+                                  "additionalProperties": {},
+                                  "type": "object"
+                                },
+                                "referenceKinds": {
+                                  "items": {
+                                    "enum": ["item", "location"],
+                                    "type": "string"
+                                  },
+                                  "type": "array"
+                                },
+                                "referenceTypeIds": {
+                                  "items": {
+                                    "format": "uuid",
+                                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                    "type": "string"
+                                  },
+                                  "type": "array"
+                                },
+                                "required": {
+                                  "type": "boolean"
+                                },
+                                "sortOrder": {
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                },
+                                "storage": {
+                                  "enum": ["stored", "computed"],
+                                  "type": "string"
+                                },
+                                "typeId": {
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "typeId",
+                                "key",
+                                "label",
+                                "help",
+                                "sortOrder",
+                                "kind",
+                                "cardinality",
+                                "required",
+                                "storage",
+                                "fixedUnit",
+                                "referenceKinds",
+                                "referenceTypeIds",
+                                "expressionVersion",
+                                "expression",
+                                "allowOverride",
+                                "presentation",
+                                "archivedAt",
+                                "enumOptions"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "id": {
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                            "type": "string"
+                          },
+                          "key": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "legacyLabels": {
+                            "items": {
+                              "type": "string"
+                            },
+                            "type": "array"
+                          },
+                          "presentation": {
+                            "additionalProperties": {},
+                            "type": "object"
+                          },
+                          "revision": {
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "sortOrder": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "revision",
+                          "id",
+                          "key",
+                          "label",
+                          "description",
+                          "sortOrder",
+                          "capabilities",
+                          "legacyLabels",
+                          "presentation",
+                          "archivedAt",
+                          "fields"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": ["revision", "types"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "issues": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "code": {
+                            "type": "string"
+                          },
+                          "definitionId": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "path": {
+                            "type": "string"
+                          }
+                        },
+                        "required": ["definitionId", "path", "code", "message"],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "401"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "issues": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "code": {
+                            "type": "string"
+                          },
+                          "definitionId": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "path": {
+                            "type": "string"
+                          }
+                        },
+                        "required": ["definitionId", "path", "code", "message"],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "404"
+          }
+        },
+        "summary": "Read the current editable catalogue draft",
+        "tags": ["types", "manage"]
+      }
+    },
     "/type-catalogue/drafts/{revision}": {
       "patch": {
         "operationId": "types.manage.patchDraft",
@@ -11047,6 +11514,11 @@
                           },
                           "type": "array"
                         },
+                        "affectedItems": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
                         "changes": {
                           "items": {
                             "additionalProperties": false,
@@ -11082,7 +11554,7 @@
                           "type": "string"
                         }
                       },
-                      "required": ["classification", "affectedIds", "changes"],
+                      "required": ["classification", "affectedIds", "affectedItems", "changes"],
                       "type": "object"
                     },
                     "draft": {

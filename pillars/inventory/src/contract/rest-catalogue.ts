@@ -45,6 +45,16 @@ export const inventoryCatalogueContract = c.router({
     },
   },
   manage: {
+    readDraft: {
+      method: 'GET',
+      path: '/type-catalogue/drafts/current',
+      responses: {
+        200: TypeCatalogueDescriptorSchema,
+        401: CatalogueErrorBodySchema,
+        404: CatalogueErrorBodySchema,
+      },
+      summary: 'Read the current editable catalogue draft',
+    },
     createDraft: {
       method: 'POST',
       path: '/type-catalogue/drafts',

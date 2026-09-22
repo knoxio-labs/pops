@@ -49,6 +49,7 @@ describe('buildInventoryManifest', () => {
         '',
         '/warranties',
         '/locations',
+        '/types',
         '/reports',
         '/connections',
       ]);
@@ -64,6 +65,7 @@ describe('buildInventoryManifest', () => {
         { path: 'connections', bundleSlot: 'inventory-connections' },
         { path: 'warranties', bundleSlot: 'inventory-warranties' },
         { path: 'locations', bundleSlot: 'inventory-location-tree' },
+        { path: 'types', bundleSlot: 'inventory-type-catalogue' },
         {
           path: 'reports',
           bundleSlot: 'inventory-reports-group',

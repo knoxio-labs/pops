@@ -38,6 +38,7 @@
   "inventory.locations": "Locations",
   "inventory.reports": "Reports",
   "inventory.connections": "Connections",
+  "inventory.types": "Types",
   "cerebrum": "Cerebrum",
   "cerebrum.ingest": "Ingest",
   "cerebrum.chat": "Chat",

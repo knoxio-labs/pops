@@ -189,6 +189,9 @@ import type {
   TypesManagePublishDraftData,
   TypesManagePublishDraftErrors,
   TypesManagePublishDraftResponses,
+  TypesManageReadDraftData,
+  TypesManageReadDraftErrors,
+  TypesManageReadDraftResponses,
   TypesReadAuditData,
   TypesReadAuditErrors,
   TypesReadAuditResponses,
@@ -1081,6 +1084,18 @@ export const typesManageCreateDraft = <ThrowOnError extends boolean = false>(
       ...options?.headers,
     },
   });
+
+/**
+ * Read the current editable catalogue draft
+ */
+export const typesManageReadDraft = <ThrowOnError extends boolean = false>(
+  options?: Options<TypesManageReadDraftData, ThrowOnError>
+): RequestResult<TypesManageReadDraftResponses, TypesManageReadDraftErrors, ThrowOnError> =>
+  (options?.client ?? client).get<
+    TypesManageReadDraftResponses,
+    TypesManageReadDraftErrors,
+    ThrowOnError
+  >({ url: '/type-catalogue/drafts/current', ...options });
 
 /**
  * Apply validated operations to a draft and preview publication compatibility
