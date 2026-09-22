@@ -1,6 +1,13 @@
 import AppCore
 
 internal enum PurchaseEditPolicy {
+    internal static func canSave(_ draft: ReceiptDraft, opened: ReceiptDraft) -> Bool {
+        draft.problems.allSatisfy { problem in
+            problem == .merchantUnresolved
+                && draft.merchantResolution == opened.merchantResolution
+        }
+    }
+
     internal static func lockedFields(
         for status: PurchaseSettlement
     ) -> Set<ReceiptDraftLock.Field> {

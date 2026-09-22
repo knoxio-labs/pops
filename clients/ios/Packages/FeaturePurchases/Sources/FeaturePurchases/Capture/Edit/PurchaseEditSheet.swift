@@ -40,12 +40,11 @@ public struct PurchaseEditSheet: View {
 
     public var body: some View {
         ReceiptDraftView(
-            draft: model.opened,
-            complaints: .hintsOnly,
+            savedPurchase: model.opened,
             lock: PurchaseEditPolicy.lock(for: request.detail.purchase.status),
-            commit: .navigationBar,
             onChange: model.updateDraft,
             lineRemovalNotice: removalNotice,
+            saveEligibility: { PurchaseEditPolicy.canSave($0, opened: model.opened) },
             isSaving: model.saving,
             save: { draft in
                 model.updateDraft(draft)

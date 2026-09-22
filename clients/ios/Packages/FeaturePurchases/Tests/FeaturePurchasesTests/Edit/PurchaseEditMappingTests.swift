@@ -18,7 +18,8 @@ internal struct PurchaseEditMappingTests {
         #expect(draft.lines.map(\.amount.value) == ["8.00", "4.00"])
         #expect(draft.lines.map(\.quantity.value) == ["2", ""])
         #expect(draft.merchantResolution == .matched(id: "merchant-1"))
-        #expect(PurchaseEditDraft.plain(money(-1_000)) == "10.00")
+        #expect(PurchaseEditDraft.signed(money(-1_000)) == "-10.00")
+        #expect(PurchaseEditDraft.magnitude(money(-1_000)) == "10.00")
     }
 
     @Test("an unchanged draft produces no repository request payload")
@@ -44,6 +45,19 @@ internal struct PurchaseEditMappingTests {
         #expect(update.orderedAt == nil)
         #expect(update.totalCents == nil)
         #expect(update.expectedUpdatedAt == "opaque-token")
+    }
+
+    @Test("renaming a line preserves a negative saved line amount")
+    func renamedLinePreservesNegativeAmount() throws {
+        let detail = Self.detail(firstLineTotal: -800)
+        let opened = PurchaseEditDraft.draft(for: detail)
+        var draft = opened
+        draft.lines[1].description.value = "Oat milk"
+
+        let update = try requireUpdate(from: draft, opened: opened, detail: detail)
+
+        #expect(opened.lines[0].amount.value == "-8.00")
+        #expect(update.lines[0].lineTotalCents == -800)
     }
 
     @Test("a new line has no server identity while existing lines retain theirs")
@@ -179,6 +193,7 @@ internal struct PurchaseEditMappingTests {
     private static func detail(
         status: PurchaseSettlement = .awaitingSettlement,
         tax: MoneyAmount = money(0),
+        firstLineTotal: Int = 800,
         updatedAt: String? = "opaque-token"
     ) -> PurchaseDetail {
         .fake(
@@ -189,7 +204,8 @@ internal struct PurchaseEditMappingTests {
             subtotal: money(1_200), tax: tax,
             lines: [
                 .fake(
-                    id: "line-1", name: "Bread", quantity: 2, lineTotal: money(800),
+                    id: "line-1", name: "Bread", quantity: 2,
+                    lineTotal: money(firstLineTotal),
                     hasInventoryLink: true),
                 .fake(id: "line-2", name: "Milk", lineTotal: money(400)),
             ],

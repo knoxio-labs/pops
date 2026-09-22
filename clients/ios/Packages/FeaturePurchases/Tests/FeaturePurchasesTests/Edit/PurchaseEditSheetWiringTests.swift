@@ -17,9 +17,9 @@ internal struct PurchaseEditSheetWiringTests {
     @Test("the shared form commits from the navigation bar with purchase locks")
     func sharedFormContract() {
         #expect(Self.source.contains("ReceiptDraftView("))
-        #expect(Self.source.contains("draft: model.opened"))
+        #expect(Self.source.contains("savedPurchase: model.opened"))
         #expect(Self.source.contains("PurchaseEditPolicy.lock(for:"))
-        #expect(Self.source.contains("commit: .navigationBar"))
+        #expect(Self.source.contains("PurchaseEditPolicy.canSave("))
         #expect(Self.source.contains("lineRemovalNotice: removalNotice"))
     }
 
