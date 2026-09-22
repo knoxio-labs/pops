@@ -9,7 +9,7 @@ import Testing
 @Suite("Reading a saved purchase")
 @MainActor
 internal struct PurchaseDetailPresentationTests {
-    private static let staged: [PurchaseDetail] = [
+    private static let staged: [DesignPlayground.PurchaseDetail] = [
         PurchaseDetailFixtures.bunnings, PurchaseDetailFixtures.bunningsEdited,
         PurchaseDetailFixtures.aldi, PurchaseDetailFixtures.salvos,
         PurchaseDetailFixtures.uniqlo, PurchaseDetailFixtures.sushiNoLines,
@@ -94,8 +94,8 @@ internal struct PurchaseDetailPresentationTests {
         #expect(PurchaseDetailCopy.match(for: .awaitingSettlement) == "Awaiting a bank match")
     }
 
-    private func line(_ quantity: Int, _ cents: Int) -> PurchaseDetailLine {
-        PurchaseDetailLine(
+    private func line(_ quantity: Int, _ cents: Int) -> DesignPlayground.PurchaseDetailLine {
+        DesignPlayground.PurchaseDetailLine(
             id: "l", name: "LINE", quantity: quantity, lineTotal: Fixtures.money(cents))
     }
 }

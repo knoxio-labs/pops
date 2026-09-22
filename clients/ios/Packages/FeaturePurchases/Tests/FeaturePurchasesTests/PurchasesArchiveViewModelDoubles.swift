@@ -71,4 +71,10 @@ internal actor ArchiveRepository: PurchasesRepository {
     internal func monthSummary(for: Date) async throws -> PurchasesMonthSummary {
         .empty
     }
+
+    internal func purchaseDetail(id: Purchase.ID) async throws -> PurchaseDetail? { nil }
+
+    internal func receiptThumbnail(sha256: String) async throws -> ReceiptImage? { nil }
+
+    internal func receiptImage(sha256: String) async throws -> ReceiptImage? { nil }
 }

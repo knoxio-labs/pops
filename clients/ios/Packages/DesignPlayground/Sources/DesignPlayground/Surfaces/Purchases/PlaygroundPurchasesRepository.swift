@@ -34,6 +34,12 @@ internal struct PlaygroundPurchasesRepository: PurchasesRepository {
         }
         return .empty
     }
+
+    func purchaseDetail(id: Purchase.ID) async throws -> AppCore.PurchaseDetail? { nil }
+
+    func receiptThumbnail(sha256: String) async throws -> AppCore.ReceiptImage? { nil }
+
+    func receiptImage(sha256: String) async throws -> AppCore.ReceiptImage? { nil }
 }
 
 /// Builds an ``AppDependencies`` around one ``PurchasesRepository`` shape,
