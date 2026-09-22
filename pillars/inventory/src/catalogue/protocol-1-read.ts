@@ -9,9 +9,9 @@ import {
   type Protocol1FieldValue,
   type Protocol1Fields,
 } from './protocol-1-types.js';
-import { parseCanonicalValue } from './value-codec.js';
+import { parseCanonicalValue } from './value-dispatch.js';
 
-import type { CommandDb } from '../domain/commands/entities.js';
+import type { CommandDb } from '../db/command-db.js';
 
 function objectValue(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);

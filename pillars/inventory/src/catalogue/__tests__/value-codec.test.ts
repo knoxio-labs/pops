@@ -1,11 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  canonicalizeValue,
-  parseCanonicalValue,
-  type ValueFieldDefinition,
-  ValueValidationError,
-} from '../value-codec.js';
+import { type ValueFieldDefinition, ValueValidationError } from '../value-codec.js';
+import { canonicalizeValue, parseCanonicalValue } from '../value-dispatch.js';
 
 function field(overrides: Partial<ValueFieldDefinition> = {}): ValueFieldDefinition {
   return {

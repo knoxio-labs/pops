@@ -3,8 +3,8 @@ import { and, eq } from 'drizzle-orm';
 
 import { itemFieldValues } from '../db/schema.js';
 
+import type { CommandDb } from '../db/command-db.js';
 import type { ItemFieldValueSource } from '../db/schema.js';
-import type { CommandDb } from '../domain/commands/entities.js';
 
 /** Removes an item's stored or overridden authoritative values atomically. */
 export function clearItemFieldValues(

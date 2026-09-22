@@ -15,14 +15,11 @@ import { LEGACY_ITEM_FIELD_CODECS } from './legacy-item-fields.js';
 import { LOCATION_FIELD_CODECS } from './location-fields.js';
 import { protocol1FieldsAsJson } from './protocol-1-fields.js';
 
-import type { RunResult } from 'better-sqlite3';
-import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
-
+import type { CommandDb } from '../../db/command-db.js';
 import type { ItemInsert, ItemRow, LocationInsert, LocationRow } from '../../db/row-types.js';
 import type { JsonValue } from './outcome.js';
 
-/** A synchronous drizzle handle: the database or a transaction (or savepoint) on it. */
-export type CommandDb = BaseSQLiteDatabase<'sync', RunResult, Record<string, unknown>>;
+export type { CommandDb } from '../../db/command-db.js';
 
 /** The revisioned entities a mutation can address. */
 export type EntityKind = 'item' | 'location';

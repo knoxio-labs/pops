@@ -7,7 +7,7 @@ import {
   type PersistedItemTypeField,
 } from './catalogue.js';
 
-import type { CommandDb } from '../domain/commands/entities.js';
+import type { CommandDb } from '../db/command-db.js';
 
 /** A unit carried by the unchanged protocol-1 catalogue descriptor. */
 export interface Protocol1Unit {
