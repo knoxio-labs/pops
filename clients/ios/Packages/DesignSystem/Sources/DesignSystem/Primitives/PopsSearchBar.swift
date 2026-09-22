@@ -54,7 +54,8 @@ public struct PopsSearchBar<FilterOptions: View>: View {
     public init(
         query: Binding<String>, tint: Color, prompt: String = "Search", isFiltered: Bool,
         filterSummary: String = "", add: PopsSearchBarAdd? = nil,
-        scan: (() -> Void)? = nil, onSubmit: @escaping () -> Void = {},
+        onFilter: (() -> Void)? = nil, scan: (() -> Void)? = nil,
+        onSubmit: @escaping () -> Void = {},
         @ViewBuilder filterOptions: @escaping () -> FilterOptions
     ) {
         self._query = query
@@ -63,7 +64,7 @@ public struct PopsSearchBar<FilterOptions: View>: View {
         self.isFiltered = isFiltered
         self.filterSummary = filterSummary
         self.add = add
-        self.onFilter = nil
+        self.onFilter = onFilter
         self.scan = scan
         self.onSubmit = onSubmit
         self.filterOptions = filterOptions
@@ -209,15 +210,9 @@ extension PopsSearchBar where FilterOptions == EmptyView {
         scan: (() -> Void)? = nil, onSubmit: @escaping () -> Void = {},
         add: PopsSearchBarAdd? = nil
     ) {
-        self._query = query
-        self.tint = tint
-        self.prompt = prompt
-        self.isFiltered = isFiltered
-        self.filterSummary = filterSummary
-        self.add = add
-        self.onFilter = onFilter
-        self.scan = scan
-        self.onSubmit = onSubmit
-        self.filterOptions = { EmptyView() }
+        self.init(
+            query: query, tint: tint, prompt: prompt, isFiltered: isFiltered,
+            filterSummary: filterSummary, add: add, onFilter: onFilter, scan: scan,
+            onSubmit: onSubmit, filterOptions: { EmptyView() })
     }
 }
