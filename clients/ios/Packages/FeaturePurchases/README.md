@@ -70,6 +70,8 @@ Three rules hold the form together, and each is a value a test asserts rather th
 
 ### Two entry points, one save path
 
+Feature-owned controls request capture through the optional `purchaseCapture` environment presenter. The presenter receives only a `PurchaseCaptureEntry.Source`; the app host owns navigation and reports one ordered batch of saved identifiers when the presented run ends. A host without capture support leaves the environment value `nil`, so a feature can omit the control instead of opening a dead destination.
+
 `ReceiptCaptureView`'s ready state offers two actions side by side: photograph a receipt, or "Add a purchase" with no camera involved. Both land on `ReceiptResultView` over a `ReceiptResultViewModel`, and both save through the same `save(_:)`, which reads `ReceiptResultState` to decide which BFM call to make:
 
 - **A corrected reading (`.draft(reading)`).** `extract()` already ran; `save(_:)` turns the edited `ReceiptDraft` into a `ReceiptDraftSavePayload` — via `ReceiptDraftSaveMapping`, in this module, since `ReceiptDraft`'s fields are `internal` to it — carrying `reading`'s receipt URIs and capture facts forward untouched, and calls `saveDraft(_:)`.
