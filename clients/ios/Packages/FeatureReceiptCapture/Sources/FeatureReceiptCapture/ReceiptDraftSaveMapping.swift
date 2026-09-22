@@ -61,6 +61,10 @@ extension ReceiptDraft {
             surchargeCents: adjustmentCents.surcharge,
             shippingCents: adjustmentCents.shipping,
             discountCents: adjustmentCents.discount,
+            taxIncluded: adjustmentCents.taxIncluded,
+            discountIncluded: adjustmentCents.discountIncluded,
+            surchargeIncluded: adjustmentCents.surchargeIncluded,
+            shippingIncluded: adjustmentCents.shippingIncluded,
             items: items,
             capture: capture,
             idempotencyKey: idempotencyKey
@@ -101,11 +105,20 @@ extension ReceiptDraft {
         var discount = 0
         var surcharge = 0
         var shipping = 0
+        var taxIncluded = false
+        var discountIncluded = false
+        var surchargeIncluded = false
+        var shippingIncluded = false
     }
 
     /// Every adjustment row, summed per kind — the BFM carries one figure per
     /// kind, and a receipt printing two discounts states one discount total
     /// either way.
+    ///
+    /// There is at most one row per kind on this form
+    /// (`ReceiptDraft.addableAdjustments` limits it), so the included flag
+    /// carried alongside each kind's total is unambiguous — no need to
+    /// reconcile disagreeing rows of the same kind, which cannot occur here.
     private func adjustmentTotals() throws -> AdjustmentTotals {
         var totals = AdjustmentTotals()
         for adjustment in adjustments where !adjustment.amount.isEmpty {
@@ -113,10 +126,18 @@ extension ReceiptDraft {
                 throw ReceiptDraftSaveError.unparseableAmount
             }
             switch adjustment.kind {
-            case .tax: totals.tax += cents
-            case .discount: totals.discount += cents
-            case .surcharge: totals.surcharge += cents
-            case .shipping: totals.shipping += cents
+            case .tax:
+                totals.tax += cents
+                totals.taxIncluded = adjustment.isIncluded
+            case .discount:
+                totals.discount += cents
+                totals.discountIncluded = adjustment.isIncluded
+            case .surcharge:
+                totals.surcharge += cents
+                totals.surchargeIncluded = adjustment.isIncluded
+            case .shipping:
+                totals.shipping += cents
+                totals.shippingIncluded = adjustment.isIncluded
             }
         }
         return totals

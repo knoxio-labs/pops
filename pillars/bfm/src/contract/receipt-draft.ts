@@ -92,6 +92,15 @@ const MobileDraftPurchaseFieldsSchema = z.object({
   surchargeCents: z.number().int().optional(),
   shippingCents: z.number().int().optional(),
   discountCents: z.number().int().optional(),
+  /**
+   * Whether each adjustment is already folded into the line prices
+   * (`true`) or sits on top of them (`false`). Nullable and optional: only
+   * a reviewer who stated a basis knows one.
+   */
+  taxIncluded: z.boolean().nullable().optional(),
+  discountIncluded: z.boolean().nullable().optional(),
+  surchargeIncluded: z.boolean().nullable().optional(),
+  shippingIncluded: z.boolean().nullable().optional(),
   items: z.array(MobileDraftLineSchema).min(1),
   capture: MobileResolvedCaptureSchema.nullable().optional(),
   /**
@@ -126,6 +135,15 @@ export const MobileReceiptDraftSchema = z.object({
   surchargeCents: z.number().int(),
   shippingCents: z.number().int(),
   discountCents: z.number().int(),
+  /**
+   * Whether each adjustment is already folded into the line prices
+   * (`true`) or sits on top of them (`false`). The extract response always
+   * states a definite verdict, even if that verdict is null/unknown.
+   */
+  taxIncluded: z.boolean().nullable(),
+  discountIncluded: z.boolean().nullable(),
+  surchargeIncluded: z.boolean().nullable(),
+  shippingIncluded: z.boolean().nullable(),
   items: z.array(MobileDraftLineSchema),
   documents: z.array(MobileDraftDocumentSchema),
   capture: MobileResolvedCaptureSchema.nullable(),

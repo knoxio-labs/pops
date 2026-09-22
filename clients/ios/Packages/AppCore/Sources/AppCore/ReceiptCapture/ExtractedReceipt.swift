@@ -64,6 +64,15 @@ public struct ExtractedReceipt: Hashable, Sendable {
     /// line — recorded so a reviewer can tell "the model is wrong" from "the
     /// receipt is damaged".
     public let unreadableNotes: [String]
+    /// Whether each adjustment is already folded into the line prices, or
+    /// sits on top of them. Non-optional: by the time this struct is built
+    /// (from bfm's cents draft) a definite verdict always exists — `false`
+    /// when the wire sent `null`, matching bfm's own "not stated means not
+    /// included, for display" convention at this boundary.
+    public let taxIncluded: Bool
+    public let discountIncluded: Bool
+    public let surchargeIncluded: Bool
+    public let shippingIncluded: Bool
 
     public init(
         merchantName: String?,
@@ -77,7 +86,11 @@ public struct ExtractedReceipt: Hashable, Sendable {
         surcharges: [String],
         shipping: String?,
         lines: [ExtractedReceiptLine],
-        unreadableNotes: [String]
+        unreadableNotes: [String],
+        taxIncluded: Bool,
+        discountIncluded: Bool,
+        surchargeIncluded: Bool,
+        shippingIncluded: Bool
     ) {
         self.merchantName = merchantName
         self.address = address
@@ -91,5 +104,9 @@ public struct ExtractedReceipt: Hashable, Sendable {
         self.shipping = shipping
         self.lines = lines
         self.unreadableNotes = unreadableNotes
+        self.taxIncluded = taxIncluded
+        self.discountIncluded = discountIncluded
+        self.surchargeIncluded = surchargeIncluded
+        self.shippingIncluded = shippingIncluded
     }
 }

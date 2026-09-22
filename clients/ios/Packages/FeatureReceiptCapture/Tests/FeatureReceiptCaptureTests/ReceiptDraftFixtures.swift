@@ -30,7 +30,11 @@ extension ExtractedReceipt {
                     description: "ZIRONING BOARD", amount: "15.00", quantity: nil,
                     unitNote: "$15.00 ea"),
             ],
-            unreadableNotes: []
+            unreadableNotes: [],
+            taxIncluded: false,
+            discountIncluded: false,
+            surchargeIncluded: false,
+            shippingIncluded: false
         )
     }
 
@@ -60,7 +64,11 @@ extension ExtractedReceipt {
                     description: "AIRISM CREW NECK T", amount: "70.00", quantity: 1,
                     unitNote: nil),
             ],
-            unreadableNotes: []
+            unreadableNotes: [],
+            taxIncluded: true,
+            discountIncluded: true,
+            surchargeIncluded: true,
+            shippingIncluded: true
         )
     }
 
@@ -82,7 +90,11 @@ extension ExtractedReceipt {
                 ExtractedReceiptLine(
                     description: "", amount: "4.00", quantity: nil, unitNote: nil),
             ],
-            unreadableNotes: []
+            unreadableNotes: [],
+            taxIncluded: false,
+            discountIncluded: false,
+            surchargeIncluded: false,
+            shippingIncluded: false
         )
     }
 }

@@ -222,6 +222,26 @@ function checksumFor(key: string, purchase: Omit<CreatePurchaseInput, 'checksum'
 }
 
 /**
+ * Whether each adjustment is already folded into the line prices. The gate
+ * infers a basis for tax only; discount, surcharge and shipping always
+ * state "not included" here, since a receipt-derived reading never claims
+ * otherwise, leaving each toggle purely reviewer-editable.
+ */
+function adjustmentBasis(gate: AdmissibleGate): {
+  taxIncluded: boolean;
+  discountIncluded: boolean;
+  surchargeIncluded: boolean;
+  shippingIncluded: boolean;
+} {
+  return {
+    taxIncluded: gate.taxIncluded,
+    discountIncluded: false,
+    surchargeIncluded: false,
+    shippingIncluded: false,
+  };
+}
+
+/**
  * Shape an admitted reading into a purchase.
  *
  * Takes {@link AdmissibleGate} rather than the full {@link GateResult}
@@ -287,11 +307,9 @@ export function receiptToPurchase(
     orderedAtOffsetMinutes: offsetAt(orderedAt, capture.timeReference),
     currency: resolvedCurrency.currency,
     subtotalCents: gate.lineTotalCents,
-    // Zero when the price already contained it: the receipt states the tax
-    // as a fact about the total, not as a component to add. Carrying it
-    // here as well would make it appear twice in any sum of parts — the
-    // same reason the Woolworths adapter drops GST.
-    taxCents: gate.taxIncluded ? 0 : gate.taxCents,
+    // The real figure, always: `taxIncluded` is what tells a consumer not
+    // to add it again.
+    taxCents: gate.taxCents,
     surchargeCents: gate.surchargeCents,
     // Its own column, so "what did delivery cost this year" is answerable
     // and a delivery fee is not indistinguishable from a card surcharge.
@@ -299,6 +317,7 @@ export function receiptToPurchase(
     // the outlier.
     shippingCents: gate.shippingCents,
     discountCents: gate.discountCents,
+    ...adjustmentBasis(gate),
     totalCents,
     // Unknown is a valid outcome, not a failure — the escape hatch exists
     // precisely for merchants nothing else recognises.

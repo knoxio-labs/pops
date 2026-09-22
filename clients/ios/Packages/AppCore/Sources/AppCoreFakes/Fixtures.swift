@@ -54,7 +54,11 @@ extension ExtractedReceipt {
         surcharges: [String] = [],
         shipping: String? = nil,
         lines: [ExtractedReceiptLine] = [ExtractedReceiptLine.fake()],
-        unreadableNotes: [String] = []
+        unreadableNotes: [String] = [],
+        taxIncluded: Bool = false,
+        discountIncluded: Bool = false,
+        surchargeIncluded: Bool = false,
+        shippingIncluded: Bool = false
     ) -> ExtractedReceipt {
         ExtractedReceipt(
             merchantName: merchantName,
@@ -68,7 +72,11 @@ extension ExtractedReceipt {
             surcharges: surcharges,
             shipping: shipping,
             lines: lines,
-            unreadableNotes: unreadableNotes
+            unreadableNotes: unreadableNotes,
+            taxIncluded: taxIncluded,
+            discountIncluded: discountIncluded,
+            surchargeIncluded: surchargeIncluded,
+            shippingIncluded: shippingIncluded
         )
     }
 }

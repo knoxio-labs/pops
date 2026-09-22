@@ -296,6 +296,33 @@ describe('the totals', () => {
   });
 });
 
+describe('the adjustment basis', () => {
+  it('keeps the real tax figure and marks it included when the total already carries it', () => {
+    // Lines sum to $27.50 and the total is unchanged at $27.50 with $2.50
+    // of stated tax — the tax is already inside the lines. The old
+    // behaviour zeroed taxCents here, throwing the figure away entirely.
+    const purchase = mapped({ total: '$27.50', tax: '$2.50' });
+
+    expect(purchase.taxCents).toBe(250);
+    expect(purchase.taxIncluded).toBe(true);
+  });
+
+  it('keeps the real tax figure and marks it not included under the exclusive convention', () => {
+    const purchase = mapped({ total: '$30.00', tax: '$2.50' });
+
+    expect(purchase.taxCents).toBe(250);
+    expect(purchase.taxIncluded).toBe(false);
+  });
+
+  it('always states discount, surcharge and shipping as not included', () => {
+    const purchase = mapped();
+
+    expect(purchase.discountIncluded).toBe(false);
+    expect(purchase.surchargeIncluded).toBe(false);
+    expect(purchase.shippingIncluded).toBe(false);
+  });
+});
+
 describe('a receipt that does not say when it happened', () => {
   it('is dated from the upload and tagged, rather than refused', () => {
     // The shop happened and the photograph exists. Losing it would be worse

@@ -157,6 +157,15 @@ export interface CreatePurchaseInput {
   readonly discountCents?: number;
   /** A fee the merchant added: a card surcharge, a small-order fee. */
   readonly surchargeCents?: number;
+  /**
+   * Whether each adjustment is already folded into the line prices
+   * (`true`) or sits on top of them (`false`). Omitted or null means not
+   * stated.
+   */
+  readonly taxIncluded?: boolean | null;
+  readonly discountIncluded?: boolean | null;
+  readonly surchargeIncluded?: boolean | null;
+  readonly shippingIncluded?: boolean | null;
   readonly totalCents: number;
   readonly merchantEntityId?: string | null;
   readonly merchantEntityName?: string | null;

@@ -49,6 +49,10 @@ internal enum ReceiptCaptureWire {
         surchargeCents: Int = 0,
         shippingCents: Int = 0,
         discountCents: Int = 0,
+        taxIncluded: Bool = false,
+        discountIncluded: Bool = false,
+        surchargeIncluded: Bool = false,
+        shippingIncluded: Bool = false,
         items: String = oneItem,
         documents: String =
             "[{\"documentUri\":\"pops://purchases/receipt/\(String(repeating: "a", count: 64))\",\"kind\":\"receipt\"}]"
@@ -60,7 +64,11 @@ internal enum ReceiptCaptureWire {
             "orderedAt":"\(orderedAt)","currency":"\(currency)","totalCents":\(totalCents),\
             "subtotalCents":\(subtotalCents),"taxCents":\(taxCents),\
             "surchargeCents":\(surchargeCents),"shippingCents":\(shippingCents),\
-            "discountCents":\(discountCents),"items":\(items),"documents":\(documents)}}
+            "discountCents":\(discountCents),"taxIncluded":\(taxIncluded),\
+            "discountIncluded":\(discountIncluded),\
+            "surchargeIncluded":\(surchargeIncluded),\
+            "shippingIncluded":\(shippingIncluded),\
+            "items":\(items),"documents":\(documents)}}
             """
     }
 

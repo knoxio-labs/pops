@@ -62,12 +62,16 @@ export interface DraftInconsistency {
  */
 export function findDraftInconsistency(body: DraftBody): DraftInconsistency | null {
   const lineTotalCents = body.items.reduce((sum, item) => sum + item.lineTotalCents, 0);
+  // An adjustment already inside the line prices contributes nothing more:
+  // adding it again would double-count a figure the lines already carry. A
+  // null or undefined basis is treated as not-included, matching the
+  // behaviour a caller that omits the flag entirely already got.
   const computed =
     lineTotalCents -
-    (body.discountCents ?? 0) +
-    (body.surchargeCents ?? 0) +
-    (body.shippingCents ?? 0) +
-    (body.taxCents ?? 0);
+    (body.discountIncluded ? 0 : (body.discountCents ?? 0)) +
+    (body.surchargeIncluded ? 0 : (body.surchargeCents ?? 0)) +
+    (body.shippingIncluded ? 0 : (body.shippingCents ?? 0)) +
+    (body.taxIncluded ? 0 : (body.taxCents ?? 0));
   if (computed !== body.totalCents) {
     return {
       message:

@@ -160,6 +160,10 @@ describe('saveReceiptDraft', () => {
         surchargeCents: undefined,
         shippingCents: undefined,
         discountCents: undefined,
+        taxIncluded: undefined,
+        discountIncluded: undefined,
+        surchargeIncluded: undefined,
+        shippingIncluded: undefined,
         items: [
           {
             name: 'Timber Pine DAR 42x19',
@@ -199,6 +203,21 @@ describe('saveReceiptDraft', () => {
     const outcome = await clientOver(fake.factory).saveReceiptDraft(SAVE_BODY);
 
     expect(isGatewayOk(outcome)).toBe(false);
+  });
+
+  it('forwards all four adjustment-basis flags unchanged', async () => {
+    const fake = createPurchasesDraftFake(purchasesDraft(), purchasesPurchaseDetail());
+    await clientOver(fake.factory).saveReceiptDraft({
+      ...SAVE_BODY,
+      taxIncluded: true,
+      discountIncluded: false,
+      surchargeIncluded: false,
+      shippingIncluded: true,
+    });
+
+    const [saved] = fake.saved as { taxIncluded?: unknown; shippingIncluded?: unknown }[];
+    expect(saved?.taxIncluded).toBe(true);
+    expect(saved?.shippingIncluded).toBe(true);
   });
 });
 

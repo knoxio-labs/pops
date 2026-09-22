@@ -225,3 +225,30 @@ describe('shapeReceiptDraft — context defaults', () => {
     expect(draft.tags).not.toContain('timezone-uncertain');
   });
 });
+
+describe('shapeReceiptDraft — adjustment basis', () => {
+  it('keeps the real tax figure and marks it included when the total already carries it', () => {
+    // Lines sum to $27.50, tax is stated as $2.50, and the total is
+    // unchanged at $27.50 — the tax is already inside the lines.
+    const { draft } = shape({ total: '$27.50', tax: '$2.50' });
+
+    expect(draft.taxCents).toBe(250);
+    expect(draft.taxIncluded).toBe(true);
+  });
+
+  it('keeps the real tax figure and marks it not included under the exclusive convention', () => {
+    // $27.50 of lines plus $2.50 of tax on top is $30.00.
+    const { draft } = shape({ total: '$30.00', tax: '$2.50' });
+
+    expect(draft.taxCents).toBe(250);
+    expect(draft.taxIncluded).toBe(false);
+  });
+
+  it('always states discount, surcharge and shipping as not included', () => {
+    const { draft } = shape();
+
+    expect(draft.discountIncluded).toBe(false);
+    expect(draft.surchargeIncluded).toBe(false);
+    expect(draft.shippingIncluded).toBe(false);
+  });
+});

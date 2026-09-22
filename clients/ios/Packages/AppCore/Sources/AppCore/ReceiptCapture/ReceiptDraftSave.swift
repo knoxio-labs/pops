@@ -119,6 +119,14 @@ public struct ReceiptPurchaseDraftFields: Hashable, Sendable {
     public let surchargeCents: Int?
     public let shippingCents: Int?
     public let discountCents: Int?
+    /// Whether each adjustment is already folded into the line prices, or
+    /// sits on top of them. Always a definite claim — the form states
+    /// `false` for a kind it carries no row for, the same "not included"
+    /// every other adapter states by default.
+    public let taxIncluded: Bool
+    public let discountIncluded: Bool
+    public let surchargeIncluded: Bool
+    public let shippingIncluded: Bool
     public let items: [ReceiptSaveLine]
     public let capture: ReceiptCaptureFacts?
     /// Chosen by this device, not by the BFM — the same key resubmitted
@@ -134,6 +142,10 @@ public struct ReceiptPurchaseDraftFields: Hashable, Sendable {
         surchargeCents: Int?,
         shippingCents: Int?,
         discountCents: Int?,
+        taxIncluded: Bool,
+        discountIncluded: Bool,
+        surchargeIncluded: Bool,
+        shippingIncluded: Bool,
         items: [ReceiptSaveLine],
         capture: ReceiptCaptureFacts?,
         idempotencyKey: String
@@ -146,6 +158,10 @@ public struct ReceiptPurchaseDraftFields: Hashable, Sendable {
         self.surchargeCents = surchargeCents
         self.shippingCents = shippingCents
         self.discountCents = discountCents
+        self.taxIncluded = taxIncluded
+        self.discountIncluded = discountIncluded
+        self.surchargeIncluded = surchargeIncluded
+        self.shippingIncluded = shippingIncluded
         self.items = items
         self.capture = capture
         self.idempotencyKey = idempotencyKey

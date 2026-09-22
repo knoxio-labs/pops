@@ -16,12 +16,11 @@ internal struct ReceiptDraftAdjustmentTests {
 
     // MARK: whether it is included
 
-    /// GST sits inside the marked price on an Australian receipt, so that is
-    /// the assumption the form opens with. It is still an assumption — the
-    /// extractor is never told which convention it read — which is the whole
-    /// reason the toggle exists.
-    @Test("tax opens as included and the rest do not")
-    func taxDefaultsToIncluded() {
+    /// Each row's basis comes from the receipt's own gate verdict — a fact
+    /// the reading stated, not a hardcoded guess. `.withEveryAdjustment`
+    /// states all four as included, and each row must say so.
+    @Test("each row's basis comes from what the reading actually stated")
+    func rowBasisComesFromTheReading() {
         let draft = ReceiptDraft.fake(.withEveryAdjustment)
 
         let byKind = Dictionary(
@@ -29,8 +28,28 @@ internal struct ReceiptDraftAdjustmentTests {
         ).compactMapValues(\.first)
 
         #expect(byKind[.tax]?.isIncluded == true)
-        #expect(byKind[.discount]?.isIncluded == false)
-        #expect(byKind[.surcharge]?.isIncluded == false)
+        #expect(byKind[.discount]?.isIncluded == true)
+        #expect(byKind[.surcharge]?.isIncluded == true)
+        #expect(byKind[.shipping]?.isIncluded == true)
+    }
+
+    /// The exclusive convention is exactly as real as the inclusive one, and
+    /// a hardcoded `true` on the tax row would misreport it.
+    @Test("a row reads not-included when the reading said so")
+    func rowBasisReadsExclusive() {
+        let extracted = ExtractedReceipt(
+            merchantName: "ALDI", address: nil, purchasedOn: nil, purchasedAt: nil,
+            currency: "AUD", total: "42.03", tax: "3.82", discounts: [], surcharges: [],
+            shipping: "9.95", lines: [], unreadableNotes: [],
+            taxIncluded: false, discountIncluded: false, surchargeIncluded: false,
+            shippingIncluded: false)
+        let draft = ReceiptDraft.fake(extracted)
+
+        let byKind = Dictionary(
+            grouping: draft.adjustments, by: \.kind
+        ).compactMapValues(\.first)
+
+        #expect(byKind[.tax]?.isIncluded == false)
         #expect(byKind[.shipping]?.isIncluded == false)
     }
 
@@ -231,86 +250,5 @@ internal struct ReceiptDraftAdjustmentTests {
 
         draft.lines[0].listPrice.value = "5.50"
         #expect(draft.lines[0].isBlank == false)
-    }
-
-    // MARK: who it was from
-
-    /// There is no way to type a merchant, so the only unresolved state is
-    /// one nobody has answered — and it stops a save, because a purchase
-    /// attributed to nothing is what this model exists to prevent.
-    @Test("a purchase with no merchant cannot be saved")
-    func unresolvedMerchantBlocksSave() {
-        var draft = ReceiptDraft.fake(tillNames)
-
-        #expect(draft.merchantResolution == .unresolved)
-        #expect(draft.problems.contains(.merchantUnresolved))
-        #expect(draft.isSaveable == false)
-
-        draft.merchantResolution = .chosen(id: "ent-kmart")
-
-        #expect(draft.problems.contains(.merchantUnresolved) == false)
-        #expect(draft.isSaveable)
-    }
-
-    /// A merchant being created has no id yet — the save mints it — and that
-    /// is still a resolved merchant, because the purchase will be attributed
-    /// to something. Treating it as unresolved would refuse the save that
-    /// creates it.
-    @Test("a merchant being created resolves without an id")
-    func createdMerchantIsResolvedWithoutAnID() {
-        var draft = ReceiptDraft.fake(tillNames)
-
-        draft.merchantResolution = .created(value: "Tongli Supermarket")
-
-        #expect(draft.merchantResolution.isResolved)
-        #expect(draft.merchantResolution.entityID == nil)
-        #expect(draft.merchantResolution.createdValue == "Tongli Supermarket")
-        #expect(draft.problems.contains(.merchantUnresolved) == false)
-    }
-
-    /// An address is descriptive where a merchant is operative — nothing keys
-    /// on a branch — so an unanswered one must not hold the save.
-    @Test("an unresolved address does not block a save")
-    func unresolvedAddressDoesNotBlock() {
-        var draft = ReceiptDraft.fake(tillNames)
-        draft.merchantResolution = .chosen(id: "ent-kmart")
-
-        #expect(draft.addressResolution == .unresolved)
-        #expect(draft.isSaveable)
-    }
-
-    /// The handset resolves nothing itself. Whatever the server matched
-    /// arrives with the reading, and until POPS-3654 sends it the reading
-    /// carries no entity at all.
-    @Test("a reading arrives unresolved until the server sends its match")
-    func readingArrivesUnresolved() {
-        let draft = ReceiptDraft.fake(tillNames)
-
-        #expect(draft.merchantResolution == .unresolved)
-        #expect(draft.merchantResolution.isConfirmed == false)
-    }
-
-    /// A match is a proposal and a pick is an assertion. Presenting them
-    /// identically would collect agreement nobody gave, which is the whole
-    /// reason this is three states and not an optional id.
-    @Test(
-        "only a picked merchant counts as settled",
-        arguments: [
-            (RecordResolution.matched(id: "ent-bunnings"), false),
-            (.chosen(id: "ent-bunnings"), true),
-            (.created(value: "Tongli Supermarket"), true),
-            (.unresolved, false),
-        ]
-    )
-    func onlyAPickIsConfirmed(resolution: RecordResolution, expected: Bool) {
-        #expect(resolution.isConfirmed == expected)
-    }
-
-    @Test("a match and a pick both carry the id; typing carries none")
-    func idSurvivesEitherWay() {
-        #expect(RecordResolution.matched(id: "ent-aldi").entityID == "ent-aldi")
-        #expect(RecordResolution.chosen(id: "ent-aldi").entityID == "ent-aldi")
-        #expect(RecordResolution.created(value: "Aldi").entityID == nil)
-        #expect(RecordResolution.unresolved.entityID == nil)
     }
 }

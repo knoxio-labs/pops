@@ -76,6 +76,17 @@ export interface ReceiptDraftFields {
   readonly surchargeCents: number;
   readonly shippingCents: number;
   readonly discountCents: number;
+  /**
+   * Whether each adjustment is already folded into the line prices
+   * (`true`) or sits on top of them (`false`). The gate infers a basis for
+   * tax; discount, surcharge and shipping are always stated `false` here —
+   * the reading never claims otherwise, leaving each toggle purely
+   * reviewer-editable.
+   */
+  readonly taxIncluded: boolean;
+  readonly discountIncluded: boolean;
+  readonly surchargeIncluded: boolean;
+  readonly shippingIncluded: boolean;
   readonly totalCents: number;
   readonly items: ReturnType<typeof toWireItem>[];
   readonly tags: string[];
@@ -154,10 +165,14 @@ export function shapeReceiptDraft(
     orderedAtOffsetMinutes: offsetAt(orderedAt, capture.timeReference),
     currency: resolvedCurrency.currency,
     subtotalCents: gate.lineTotalCents,
-    taxCents: gate.taxIncluded ? 0 : gate.taxCents,
+    taxCents: gate.taxCents,
+    taxIncluded: gate.taxIncluded,
     surchargeCents: gate.surchargeCents,
+    surchargeIncluded: false,
     shippingCents: gate.shippingCents,
+    shippingIncluded: false,
     discountCents: gate.discountCents,
+    discountIncluded: false,
     totalCents: startingTotalCents(extracted, gate),
     items,
     tags,

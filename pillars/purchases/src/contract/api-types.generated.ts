@@ -1271,6 +1271,7 @@ export interface operations {
               createdAt: string;
               currency: string;
               discountCents: number;
+              discountIncluded: boolean | null;
               id: string;
               /** @enum {string} */
               ingestMethod: 'email' | 'export' | 'upload' | 'manual';
@@ -1285,13 +1286,16 @@ export interface operations {
               /** @enum {string} */
               settlementMode: 'card' | 'cash' | 'unknown';
               shippingCents: number;
+              shippingIncluded: boolean | null;
               source: string;
               sourceOrderId: string | null;
               /** @enum {string} */
               status: 'awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored';
               subtotalCents: number;
               surchargeCents: number;
+              surchargeIncluded: boolean | null;
               taxCents: number;
+              taxIncluded: boolean | null;
               totalCents: number;
               updatedAt: string;
             }[];
@@ -1355,6 +1359,7 @@ export interface operations {
           checksum: string;
           currency: string;
           discountCents?: number;
+          discountIncluded?: boolean | null;
           documents?: {
             documentUri: string;
             /** @enum {string} */
@@ -1412,12 +1417,15 @@ export interface operations {
             trackingNumber?: string | null;
           }[];
           shippingCents?: number;
+          shippingIncluded?: boolean | null;
           source: string;
           sourceOrderId?: string | null;
           subtotalCents?: number;
           surchargeCents?: number;
+          surchargeIncluded?: boolean | null;
           tags?: string[];
           taxCents?: number;
+          taxIncluded?: boolean | null;
           totalCents: number;
         };
       };
@@ -1539,6 +1547,7 @@ export interface operations {
               createdAt: string;
               currency: string;
               discountCents: number;
+              discountIncluded: boolean | null;
               id: string;
               /** @enum {string} */
               ingestMethod: 'email' | 'export' | 'upload' | 'manual';
@@ -1551,13 +1560,16 @@ export interface operations {
               /** @enum {string} */
               settlementMode: 'card' | 'cash' | 'unknown';
               shippingCents: number;
+              shippingIncluded: boolean | null;
               source: string;
               sourceOrderId: string | null;
               /** @enum {string} */
               status: 'awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored';
               subtotalCents: number;
               surchargeCents: number;
+              surchargeIncluded: boolean | null;
               taxCents: number;
+              taxIncluded: boolean | null;
               totalCents: number;
               updatedAt: string;
             };
@@ -1647,6 +1659,7 @@ export interface operations {
           }[];
           currency: string;
           discountCents?: number;
+          discountIncluded?: boolean | null;
           documents?: {
             documentUri: string;
             /** @enum {string} */
@@ -1703,10 +1716,13 @@ export interface operations {
             trackingNumber?: string | null;
           }[];
           shippingCents?: number;
+          shippingIncluded?: boolean | null;
           subtotalCents?: number;
           surchargeCents?: number;
+          surchargeIncluded?: boolean | null;
           tags?: string[];
           taxCents?: number;
+          taxIncluded?: boolean | null;
           totalCents: number;
         };
       };
@@ -1828,6 +1844,7 @@ export interface operations {
               createdAt: string;
               currency: string;
               discountCents: number;
+              discountIncluded: boolean | null;
               id: string;
               /** @enum {string} */
               ingestMethod: 'email' | 'export' | 'upload' | 'manual';
@@ -1840,13 +1857,16 @@ export interface operations {
               /** @enum {string} */
               settlementMode: 'card' | 'cash' | 'unknown';
               shippingCents: number;
+              shippingIncluded: boolean | null;
               source: string;
               sourceOrderId: string | null;
               /** @enum {string} */
               status: 'awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored';
               subtotalCents: number;
               surchargeCents: number;
+              surchargeIncluded: boolean | null;
               taxCents: number;
+              taxIncluded: boolean | null;
               totalCents: number;
               updatedAt: string;
             };
@@ -2022,6 +2042,7 @@ export interface operations {
               createdAt: string;
               currency: string;
               discountCents: number;
+              discountIncluded: boolean | null;
               id: string;
               /** @enum {string} */
               ingestMethod: 'email' | 'export' | 'upload' | 'manual';
@@ -2034,13 +2055,16 @@ export interface operations {
               /** @enum {string} */
               settlementMode: 'card' | 'cash' | 'unknown';
               shippingCents: number;
+              shippingIncluded: boolean | null;
               source: string;
               sourceOrderId: string | null;
               /** @enum {string} */
               status: 'awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored';
               subtotalCents: number;
               surchargeCents: number;
+              surchargeIncluded: boolean | null;
               taxCents: number;
+              taxIncluded: boolean | null;
               totalCents: number;
               updatedAt: string;
             };
@@ -2690,6 +2714,7 @@ export interface operations {
                     createdAt: string;
                     currency: string;
                     discountCents: number;
+                    discountIncluded: boolean | null;
                     id: string;
                     /** @enum {string} */
                     ingestMethod: 'email' | 'export' | 'upload' | 'manual';
@@ -2702,6 +2727,7 @@ export interface operations {
                     /** @enum {string} */
                     settlementMode: 'card' | 'cash' | 'unknown';
                     shippingCents: number;
+                    shippingIncluded: boolean | null;
                     source: string;
                     sourceOrderId: string | null;
                     /** @enum {string} */
@@ -2713,7 +2739,9 @@ export interface operations {
                       | 'ignored';
                     subtotalCents: number;
                     surchargeCents: number;
+                    surchargeIncluded: boolean | null;
                     taxCents: number;
+                    taxIncluded: boolean | null;
                     totalCents: number;
                     updatedAt: string;
                   };
@@ -2866,6 +2894,7 @@ export interface operations {
           }[];
           currency: string;
           discountCents?: number;
+          discountIncluded?: boolean | null;
           documents: {
             documentUri: string;
             /** @enum {string} */
@@ -2922,10 +2951,13 @@ export interface operations {
             trackingNumber?: string | null;
           }[];
           shippingCents?: number;
+          shippingIncluded?: boolean | null;
           subtotalCents?: number;
           surchargeCents?: number;
+          surchargeIncluded?: boolean | null;
           tags?: string[];
           taxCents?: number;
+          taxIncluded?: boolean | null;
           totalCents: number;
         };
       };
@@ -3047,6 +3079,7 @@ export interface operations {
               createdAt: string;
               currency: string;
               discountCents: number;
+              discountIncluded: boolean | null;
               id: string;
               /** @enum {string} */
               ingestMethod: 'email' | 'export' | 'upload' | 'manual';
@@ -3059,13 +3092,16 @@ export interface operations {
               /** @enum {string} */
               settlementMode: 'card' | 'cash' | 'unknown';
               shippingCents: number;
+              shippingIncluded: boolean | null;
               source: string;
               sourceOrderId: string | null;
               /** @enum {string} */
               status: 'awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored';
               subtotalCents: number;
               surchargeCents: number;
+              surchargeIncluded: boolean | null;
               taxCents: number;
+              taxIncluded: boolean | null;
               totalCents: number;
               updatedAt: string;
             };
@@ -3188,6 +3224,7 @@ export interface operations {
                   }[];
                   currency: string;
                   discountCents?: number;
+                  discountIncluded?: boolean | null;
                   documents?: {
                     documentUri: string;
                     /** @enum {string} */
@@ -3248,10 +3285,13 @@ export interface operations {
                     trackingNumber?: string | null;
                   }[];
                   shippingCents?: number;
+                  shippingIncluded?: boolean | null;
                   subtotalCents?: number;
                   surchargeCents?: number;
+                  surchargeIncluded?: boolean | null;
                   tags?: string[];
                   taxCents?: number;
+                  taxIncluded?: boolean | null;
                   totalCents: number;
                 };
                 failures: {
@@ -3547,6 +3587,7 @@ export interface operations {
                 createdAt: string;
                 currency: string;
                 discountCents: number;
+                discountIncluded: boolean | null;
                 id: string;
                 /** @enum {string} */
                 ingestMethod: 'email' | 'export' | 'upload' | 'manual';
@@ -3559,13 +3600,16 @@ export interface operations {
                 /** @enum {string} */
                 settlementMode: 'card' | 'cash' | 'unknown';
                 shippingCents: number;
+                shippingIncluded: boolean | null;
                 source: string;
                 sourceOrderId: string | null;
                 /** @enum {string} */
                 status: 'awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored';
                 subtotalCents: number;
                 surchargeCents: number;
+                surchargeIncluded: boolean | null;
                 taxCents: number;
+                taxIncluded: boolean | null;
                 totalCents: number;
                 updatedAt: string;
               };

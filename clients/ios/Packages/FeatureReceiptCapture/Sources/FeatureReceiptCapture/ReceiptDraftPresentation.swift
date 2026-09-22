@@ -124,29 +124,31 @@ extension ReceiptDraftPresentation {
             adjustments.append(
                 ReceiptDraftAdjustment(
                     id: "tax", kind: .tax, amount: ReceiptDraftValue(extracted: tax),
-                    // GST is inside the marked price on an Australian
-                    // receipt, so included is the assumption that is right
-                    // more often. It is an assumption either way — the
-                    // extractor is not told which convention it read — and
-                    // the toggle is there because a default cannot be right
-                    // for every receipt.
-                    isIncluded: true))
+                    // The receipt's own gate verdict: tried both ways
+                    // against the stated total, which is a fact rather than
+                    // a guess — and can still be wrong for the reasons
+                    // gate.ts's own docs describe (an extraction error of
+                    // exactly the stated tax).
+                    isIncluded: extracted.taxIncluded))
         }
         adjustments += extracted.discounts.enumerated().map { index, discount in
             ReceiptDraftAdjustment(
                 id: "discount-\(index)", kind: .discount,
-                amount: ReceiptDraftValue(extracted: discount))
+                amount: ReceiptDraftValue(extracted: discount),
+                isIncluded: extracted.discountIncluded)
         }
         adjustments += extracted.surcharges.enumerated().map { index, surcharge in
             ReceiptDraftAdjustment(
                 id: "surcharge-\(index)", kind: .surcharge,
-                amount: ReceiptDraftValue(extracted: surcharge))
+                amount: ReceiptDraftValue(extracted: surcharge),
+                isIncluded: extracted.surchargeIncluded)
         }
         if let shipping = extracted.shipping {
             adjustments.append(
                 ReceiptDraftAdjustment(
                     id: "shipping", kind: .shipping,
-                    amount: ReceiptDraftValue(extracted: shipping)))
+                    amount: ReceiptDraftValue(extracted: shipping),
+                    isIncluded: extracted.shippingIncluded))
         }
         return adjustments
     }

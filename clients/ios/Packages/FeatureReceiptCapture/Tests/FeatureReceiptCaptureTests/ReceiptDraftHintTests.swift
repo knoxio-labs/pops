@@ -174,7 +174,9 @@ extension ReceiptDraftHintTests {
             ExtractedReceipt(
                 merchantName: nil, address: nil, purchasedOn: nil, purchasedAt: nil,
                 currency: nil, total: "10.00", tax: "1.00", discounts: [], surcharges: [],
-                shipping: nil, lines: [], unreadableNotes: []))
+                shipping: nil, lines: [], unreadableNotes: [],
+                taxIncluded: false, discountIncluded: false, surchargeIncluded: false,
+                shippingIncluded: false))
 
         draft.adjustments[0].amount.value = "1.50"
 
