@@ -11,7 +11,7 @@ public actor InMemoryPurchasesRepository: PurchasesRepository {
     private var mintedCursors: [String: CursorRecord] = [:]
     private var nextCursorID = 0
     private let summary: PurchasesMonthSummary
-    private let details: [Purchase.ID: PurchaseDetail]
+    private var details: [Purchase.ID: PurchaseDetail]
     private let receipts: [String: ReceiptImage]
 
     private struct CursorRecord {
@@ -83,6 +83,52 @@ public actor InMemoryPurchasesRepository: PurchasesRepository {
         return details[id]
     }
 
+    public func updatePurchase(
+        id: Purchase.ID, _ update: PurchaseUpdate
+    ) async throws -> PurchaseDetail? {
+        try beginCall()
+        guard let current = details[id] else { return nil }
+
+        let currency = current.purchase.total.currencyCode
+        let lines = update.lines.enumerated().map { index, line in
+            PurchaseDetailLine(
+                id: line.id ?? "fake-line-\(callCount)-\(index)",
+                name: line.name,
+                quantity: line.quantity,
+                lineTotal: MoneyAmount(
+                    minorUnits: line.lineTotalCents, currencyCode: currency))
+        }
+        let purchase = Purchase(
+            id: current.id,
+            merchant: updatedMerchant(current.purchase.merchant, with: update),
+            orderedOn: update.orderedAt ?? current.purchase.orderedOn,
+            total: MoneyAmount(
+                minorUnits: update.totalCents ?? current.purchase.total.minorUnits,
+                currencyCode: currency),
+            itemCount: lines.reduce(0) { $0 + $1.quantity },
+            receiptURI: current.purchase.receiptURI,
+            status: current.purchase.status
+        )
+        let updated = PurchaseDetail(
+            purchase: purchase,
+            subtotal: updatedMoney(update.subtotalCents, preserving: current.subtotal),
+            tax: updatedMoney(update.taxCents, preserving: current.tax),
+            shipping: updatedMoney(update.shippingCents, preserving: current.shipping),
+            discount: updatedMoney(update.discountCents, preserving: current.discount),
+            surcharge: updatedMoney(update.surchargeCents, preserving: current.surcharge),
+            source: current.source,
+            lines: lines,
+            receiptURIs: current.receiptURIs,
+            edit: current.edit,
+            updatedAt: current.updatedAt
+        )
+        details[id] = updated
+        if let index = rows.firstIndex(where: { $0.id == id }) {
+            rows[index] = purchase
+        }
+        return updated
+    }
+
     public func receiptThumbnail(sha256: String) async throws -> ReceiptImage? {
         try beginCall()
         return receipts[sha256]
@@ -96,6 +142,25 @@ public actor InMemoryPurchasesRepository: PurchasesRepository {
     private func beginCall() throws {
         callCount += 1
         if let failure = failures[callCount] { throw failure }
+    }
+
+    private func updatedMoney(_ minorUnits: Int?, preserving current: MoneyAmount) -> MoneyAmount {
+        MoneyAmount(
+            minorUnits: minorUnits ?? current.minorUnits,
+            currencyCode: current.currencyCode)
+    }
+
+    private func updatedMerchant(
+        _ current: MerchantIdentity, with update: PurchaseUpdate
+    ) -> MerchantIdentity {
+        if let id = update.merchantEntityID {
+            let name = update.merchantEntityName ?? current.displayName ?? id
+            return .entity(id: id, name: name, printed: name)
+        }
+        if let name = update.merchantEntityName {
+            return .printed(name)
+        }
+        return current
     }
 
     private func offset(

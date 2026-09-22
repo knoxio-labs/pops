@@ -87,6 +87,8 @@ The mapping from wire to domain is the whole of it, and each leg is somewhere a 
 
 `BFMPurchasesRepository` maps `PurchaseStatusFilter.unsettled` to the generated `status=unsettled` query and omits the query for `.all`. The wire's optional `total` becomes `PurchasePage.totalCount`: present when the BFM includes the first-page count and absent otherwise.
 
+Purchase detail reads and updates retain the server's optional edit record and opaque `updatedAt` compare-and-swap token. Updates send the complete desired line set, map a missing purchase to `nil`, and preserve the exact 409 conflict code so locked and stale edits remain distinguishable.
+
 The same repository maps `GET /mobile/purchases/summary` into `PurchasesMonthSummary`. Currency groups remain separate, an absent previous month remains `nil`, and merchant leaders keep only the aggregate facts supplied by the route: optional name, currency, net spend, and order count.
 
 Purchase detail reads preserve the contract's complete ordered `receiptUris` list; the deprecated single `receiptUri` is retained only inside the nested list-compatible `Purchase`. Receipt and thumbnail envelopes are decoded from base64 into `ReceiptImage`, with the server's media type unchanged. Missing details or receipt bytes return `nil`, as does a receipt whose media type the thumbnail route cannot render; malformed bytes and other contract failures still throw.

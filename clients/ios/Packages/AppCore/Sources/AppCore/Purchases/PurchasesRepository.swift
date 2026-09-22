@@ -13,6 +13,10 @@ public protocol PurchasesRepository: Sendable {
     /// Reads a purchase detail, or returns `nil` when the purchase does not exist.
     func purchaseDetail(id: Purchase.ID) async throws -> PurchaseDetail?
 
+    /// Replaces the editable values and complete desired line set, or returns `nil` when the
+    /// purchase no longer exists.
+    func updatePurchase(id: Purchase.ID, _ update: PurchaseUpdate) async throws -> PurchaseDetail?
+
     /// Reads a receipt thumbnail, or returns `nil` when it is absent or cannot be thumbnailed.
     func receiptThumbnail(sha256: String) async throws -> ReceiptImage?
 

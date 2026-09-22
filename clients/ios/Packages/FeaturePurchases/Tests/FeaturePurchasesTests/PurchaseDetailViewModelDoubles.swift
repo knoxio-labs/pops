@@ -92,6 +92,10 @@ internal actor DetailRepositoryDouble: PurchasesRepository {
         return try await response.resolve()
     }
 
+    internal func updatePurchase(
+        id: Purchase.ID, _ update: PurchaseUpdate
+    ) async throws -> PurchaseDetail? { nil }
+
     internal func receiptThumbnail(sha256: String) async throws -> ReceiptImage? {
         thumbnailCalls.append(sha256)
         return try await thumbnails[sha256, default: .value(nil)].resolve()
