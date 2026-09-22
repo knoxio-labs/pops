@@ -69,7 +69,7 @@ jobs:
         run: node scripts/ci/testflight-ship-sha.mjs
 
   upload:
-    name: Upload ${{ matrix.scheme }}
+    name: Upload Pops and PopsPlayground
     needs: [pick]
     if: always() && needs.pick.result == 'success' && needs.pick.outputs.sha != ''
     runs-on: macos-latest
@@ -79,19 +79,14 @@ jobs:
     # name this environment cannot read either.
     environment: main
     timeout-minutes: 60
-    strategy:
-      # One app failing to upload is no reason to withhold the other.
-      fail-fast: false
-      matrix:
-        scheme: [Pops, PopsPlayground]
-    # One lane per app per commit, so only a re-run of the same commit
-    # replaces an in-flight one. Keyed on the commit because triggers do not
-    # arrive in commit order: a dispatch re-shipping an older commit must not
-    # cancel a newer commit's upload. (`env` is not available here, hence the
-    # expression spelled out rather than `env.SHA`.)
+    # The cleanup and both archives share one runner and one keychain. This
+    # prevents another run from revoking a certificate while it is in use and
+    # lets both apps reuse the same certificate instead of minting one each.
+    # Only runs that actually selected an iOS commit enter this group, so a
+    # non-iOS push cannot replace a waiting upload.
     concurrency:
-      group: ios-testflight-${{ matrix.scheme }}-${{ needs.pick.outputs.sha }}
-      cancel-in-progress: true
+      group: ios-testflight-upload
+      cancel-in-progress: false
     defaults:
       run:
         working-directory: clients/ios
@@ -118,6 +113,10 @@ jobs:
 
       - uses: ./.github/actions/select-xcode
 
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+
       - uses: ./.github/actions/setup-mise
         with:
           working_directory: clients/ios
@@ -140,7 +139,10 @@ jobs:
           DEVELOPMENT_TEAM: ${{ secrets.APPLE_TEAM_ID }}
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-        run: mise run release:testflight ${{ matrix.scheme }}
+        run: |
+          node ../../scripts/ci/prune-testflight-certificates.mjs
+          mise run release:testflight Pops
+          mise run release:testflight PopsPlayground
 
       - name: Remove the App Store Connect key
         if: always()
