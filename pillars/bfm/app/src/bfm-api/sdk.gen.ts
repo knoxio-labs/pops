@@ -99,6 +99,9 @@ import type {
   MobilePurchasesSearchPurchasesData,
   MobilePurchasesSearchPurchasesErrors,
   MobilePurchasesSearchPurchasesResponses,
+  MobilePurchasesUpdatePurchaseData,
+  MobilePurchasesUpdatePurchaseErrors,
+  MobilePurchasesUpdatePurchaseResponses,
   OperatorIssuePairingCodeData,
   OperatorIssuePairingCodeErrors,
   OperatorIssuePairingCodeResponses,
@@ -654,6 +657,29 @@ export const mobilePurchasesGetPurchase = <ThrowOnError extends boolean = false>
     MobilePurchasesGetPurchaseErrors,
     ThrowOnError
   >({ url: '/mobile/purchases/{id}', ...options });
+
+/**
+ * Edit a saved purchase
+ */
+export const mobilePurchasesUpdatePurchase = <ThrowOnError extends boolean = false>(
+  options: Options<MobilePurchasesUpdatePurchaseData, ThrowOnError>
+): RequestResult<
+  MobilePurchasesUpdatePurchaseResponses,
+  MobilePurchasesUpdatePurchaseErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).patch<
+    MobilePurchasesUpdatePurchaseResponses,
+    MobilePurchasesUpdatePurchaseErrors,
+    ThrowOnError
+  >({
+    url: '/mobile/purchases/{id}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
 
 /**
  * List paired devices, revoked ones included. Never returns a token or a key

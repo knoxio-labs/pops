@@ -65,6 +65,9 @@ import type {
   PurchasePatchItemResponses,
   PurchaseTagVocabularyData,
   PurchaseTagVocabularyResponses,
+  PurchaseUpdateData,
+  PurchaseUpdateErrors,
+  PurchaseUpdateResponses,
   ReceiptExtractData,
   ReceiptExtractErrors,
   ReceiptExtractResponses,
@@ -357,6 +360,21 @@ export const purchaseGet = <ThrowOnError extends boolean = false>(
   (options.client ?? client).get<PurchaseGetResponses, PurchaseGetErrors, ThrowOnError>({
     url: '/purchases/{id}',
     ...options,
+  });
+
+/**
+ * Edit a saved purchase
+ */
+export const purchaseUpdate = <ThrowOnError extends boolean = false>(
+  options: Options<PurchaseUpdateData, ThrowOnError>
+): RequestResult<PurchaseUpdateResponses, PurchaseUpdateErrors, ThrowOnError> =>
+  (options.client ?? client).patch<PurchaseUpdateResponses, PurchaseUpdateErrors, ThrowOnError>({
+    url: '/purchases/{id}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
   });
 
 /**

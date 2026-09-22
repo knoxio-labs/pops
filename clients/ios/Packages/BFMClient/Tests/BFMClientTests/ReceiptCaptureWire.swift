@@ -121,7 +121,8 @@ internal enum ReceiptCaptureWire {
             "orderedOn":"2026-08-01","currency":"\(currency)","orderedAt":"\(orderedAt)",\
             "itemCount":\(itemCount),"status":"awaiting_settlement","receiptUri":null,\
             "subtotalCents":\(totalCents),"taxCents":0,"shippingCents":0,"discountCents":0,\
-            "surchargeCents":0,"source":"receipt","items":[\(items)]}
+            "surchargeCents":0,"source":"receipt","items":[\(items)],\
+            "updatedAt":"2026-08-01T14:32:00.000Z","edit":null}
             """
     }
 

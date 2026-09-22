@@ -193,6 +193,20 @@ export const EXPECTATIONS = [
   },
   {
     consumer: 'purchases',
+    producer: 'inventory',
+    operationId: 'items.update',
+    path: '/items/{id}',
+    method: 'patch',
+    // Clearing `purchaseTransactionId` before committing an edit that unlinks
+    // a line (POPS-4268) — the whole payload is a body, which this guard does
+    // not model. What it can pin is that the operation still exists as a
+    // PATCH on the item.
+    query: [],
+    pathParams: ['id'],
+    usedBy: 'pillars/purchases/src/api/inventory/client.ts',
+  },
+  {
+    consumer: 'purchases',
     producer: 'documents',
     operationId: 'paperless.get',
     path: '/paperless/documents/{id}',
@@ -341,6 +355,19 @@ export const EXPECTATIONS = [
     query: [],
     pathParams: ['id'],
     usedBy: 'pillars/bfm/src/api/purchases/client.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'purchases',
+    operationId: 'purchase.update',
+    path: '/purchases/{id}',
+    method: 'patch',
+    // Editing a saved purchase (POPS-2458/POPS-4258). The whole request is
+    // the body — the header fields, adjustments and the full desired line
+    // set, plus the compare-and-swap `expectedUpdatedAt`.
+    query: [],
+    pathParams: ['id'],
+    usedBy: 'pillars/bfm/src/api/purchases/update-client.ts',
   },
   {
     consumer: 'bfm',

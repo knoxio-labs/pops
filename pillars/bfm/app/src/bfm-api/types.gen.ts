@@ -2816,6 +2816,15 @@ export type MobilePurchasesCreateManualPurchaseResponses = {
   200: {
     currency: string;
     discountCents: number;
+    edit: {
+      changes: Array<{
+        current: string | null;
+        field: string;
+        itemId: string | null;
+        original: string | null;
+      }>;
+      editedAt: string;
+    } | null;
     id: string;
     itemCount: number;
     items: Array<{
@@ -2848,6 +2857,7 @@ export type MobilePurchasesCreateManualPurchaseResponses = {
     surchargeCents: number;
     taxCents: number;
     totalCents: number;
+    updatedAt: string;
   };
 };
 
@@ -2986,6 +2996,15 @@ export type MobilePurchasesSaveReceiptDraftResponses = {
   200: {
     currency: string;
     discountCents: number;
+    edit: {
+      changes: Array<{
+        current: string | null;
+        field: string;
+        itemId: string | null;
+        original: string | null;
+      }>;
+      editedAt: string;
+    } | null;
     id: string;
     itemCount: number;
     items: Array<{
@@ -3018,6 +3037,7 @@ export type MobilePurchasesSaveReceiptDraftResponses = {
     surchargeCents: number;
     taxCents: number;
     totalCents: number;
+    updatedAt: string;
   };
 };
 
@@ -3892,6 +3912,15 @@ export type MobilePurchasesGetPurchaseResponses = {
   200: {
     currency: string;
     discountCents: number;
+    edit: {
+      changes: Array<{
+        current: string | null;
+        field: string;
+        itemId: string | null;
+        original: string | null;
+      }>;
+      editedAt: string;
+    } | null;
     id: string;
     itemCount: number;
     items: Array<{
@@ -3924,11 +3953,205 @@ export type MobilePurchasesGetPurchaseResponses = {
     surchargeCents: number;
     taxCents: number;
     totalCents: number;
+    updatedAt: string;
   };
 };
 
 export type MobilePurchasesGetPurchaseResponse =
   MobilePurchasesGetPurchaseResponses[keyof MobilePurchasesGetPurchaseResponses];
+
+export type MobilePurchasesUpdatePurchaseData = {
+  /**
+   * Body
+   */
+  body?: {
+    discountCents?: number;
+    expectedUpdatedAt: string;
+    lines: Array<{
+      id?: string;
+      lineTotalCents: number;
+      name: string;
+      quantity: number;
+    }>;
+    merchantEntityId?: string | null;
+    merchantEntityName?: string | null;
+    orderedAt?: string;
+    shippingCents?: number;
+    subtotalCents?: number;
+    surchargeCents?: number;
+    taxCents?: number;
+    totalCents?: number;
+  };
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/mobile/purchases/{id}';
+};
+
+export type MobilePurchasesUpdatePurchaseErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code: 'invalid_cursor' | 'invalid_request';
+    message: string;
+  };
+  /**
+   * 401
+   */
+  401: {
+    code: 'invalid_token';
+    message: string;
+  };
+  /**
+   * 403
+   */
+  403:
+    | {
+        code: 'device_revoked';
+        message: string;
+      }
+    | {
+        capability: string;
+        code: 'capability_not_granted';
+        message: string;
+      };
+  /**
+   * 404
+   */
+  404: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'upstream_unsupported_media'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'upstream_unsupported_media'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+  /**
+   * 429
+   */
+  429: {
+    code: 'rate_limited';
+    message: string;
+    retryAfterSeconds: number;
+  };
+  /**
+   * 502
+   */
+  502: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'upstream_unsupported_media'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'upstream_unsupported_media'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+};
+
+export type MobilePurchasesUpdatePurchaseError =
+  MobilePurchasesUpdatePurchaseErrors[keyof MobilePurchasesUpdatePurchaseErrors];
+
+export type MobilePurchasesUpdatePurchaseResponses = {
+  /**
+   * 200
+   */
+  200: {
+    currency: string;
+    discountCents: number;
+    edit: {
+      changes: Array<{
+        current: string | null;
+        field: string;
+        itemId: string | null;
+        original: string | null;
+      }>;
+      editedAt: string;
+    } | null;
+    id: string;
+    itemCount: number;
+    items: Array<{
+      id: string;
+      lineTotalCents: number;
+      name: string;
+      quantity: number;
+    }>;
+    merchant:
+      | {
+          entityId: string;
+          name: string | null;
+          resolution: 'entity';
+        }
+      | {
+          name: string;
+          resolution: 'name';
+        }
+      | {
+          resolution: 'unattributed';
+        };
+    merchantName: string | null;
+    orderedAt: string;
+    orderedOn: string;
+    receiptUri: string | null;
+    shippingCents: number;
+    source: string;
+    status: string;
+    subtotalCents: number;
+    surchargeCents: number;
+    taxCents: number;
+    totalCents: number;
+    updatedAt: string;
+  };
+};
+
+export type MobilePurchasesUpdatePurchaseResponse =
+  MobilePurchasesUpdatePurchaseResponses[keyof MobilePurchasesUpdatePurchaseResponses];
 
 export type OperatorListDevicesData = {
   body?: never;
