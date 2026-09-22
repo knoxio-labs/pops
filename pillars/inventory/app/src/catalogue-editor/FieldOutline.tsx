@@ -97,7 +97,7 @@ function FieldOutlineItem({
       <button
         type="button"
         onClick={() => onSelect(field.id)}
-        className="flex min-w-0 flex-1 items-center gap-2 px-1 py-1 text-left"
+        className="flex min-h-11 min-w-11 flex-1 items-center gap-2 px-1 py-1 text-left"
       >
         <span className="min-w-0 flex-1">
           <span className={cn('block truncate text-sm font-medium', isArchived && 'line-through')}>

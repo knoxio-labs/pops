@@ -91,11 +91,9 @@ function TypeListItem({
   return (
     <button
       type="button"
+      aria-pressed={selected}
       onClick={() => onSelect(type.id)}
-      className={cn(
-        'flex min-h-11 w-full items-start gap-3 rounded-lg border p-3 text-left transition-colors',
-        selected ? 'border-primary bg-primary/10' : 'border-transparent hover:bg-muted'
-      )}
+      className="flex min-h-11 min-w-11 w-full items-start gap-3 rounded-lg border border-transparent p-3 text-left transition-colors hover:bg-muted aria-pressed:border-primary aria-pressed:bg-primary/10"
     >
       <Boxes className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
       <span className="min-w-0 flex-1">
