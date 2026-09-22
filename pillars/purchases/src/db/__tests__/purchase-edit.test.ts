@@ -48,6 +48,76 @@ function seedOrder(overrides: Parameters<typeof amazonOrder>[0] = {}) {
 }
 
 describe('updatePurchase — the lock policy', () => {
+  it.each([
+    { merchantEntityId: 'another-merchant' },
+    { merchantEntityName: 'Another merchant' },
+    { orderedAt: '2026-09-22T00:00:00Z' },
+  ])('refuses a locked header edit without changing the purchase: %j', (change) => {
+    const { purchaseId, itemId } = seedOrder();
+    setPurchaseStatus(opened.db, purchaseId, 'linked');
+    const before = getPurchase(opened.db, purchaseId);
+    expect(() =>
+      updatePurchase(opened.db, purchaseId, {
+        ...change,
+        lines: [{ id: itemId, name: 'Widget', quantity: 1, lineTotalCents: 1000 }],
+        expectedUpdatedAt: before?.purchase.updatedAt ?? '',
+      })
+    ).toThrow(PurchaseLockedError);
+    expect(getPurchase(opened.db, purchaseId)).toEqual(before);
+  });
+
+  it('records changed merchant, date and quantity originals across later edits', () => {
+    const { purchaseId, itemId, updatedAt } = seedOrder({ merchantEntityName: 'Original shop' });
+    const before = getPurchase(opened.db, purchaseId);
+    const first = updatePurchase(
+      opened.db,
+      purchaseId,
+      {
+        merchantEntityName: 'Second shop',
+        orderedAt: '2026-09-21T00:00:00Z',
+        lines: [{ id: itemId, name: 'Widget', quantity: 2, lineTotalCents: 1000 }],
+        expectedUpdatedAt: updatedAt,
+      },
+      '2026-09-22T01:00:00Z'
+    );
+    const second = updatePurchase(
+      opened.db,
+      purchaseId,
+      {
+        merchantEntityName: 'Third shop',
+        orderedAt: '2026-09-22T00:00:00Z',
+        lines: [{ id: itemId, name: 'Widget', quantity: 3, lineTotalCents: 1000 }],
+        expectedUpdatedAt: first?.purchase.updatedAt ?? '',
+      },
+      '2026-09-22T02:00:00Z'
+    );
+    expect(second?.edit?.changes).toEqual(
+      expect.arrayContaining([
+        { field: 'merchant', itemId: null, original: 'Original shop', current: 'Third shop' },
+        {
+          field: 'orderedOn',
+          itemId: null,
+          original: before?.purchase.orderedAt,
+          current: '2026-09-22T00:00:00Z',
+        },
+        { field: 'lineQuantity', itemId, original: '1', current: '3' },
+      ])
+    );
+    expect(second?.edit?.changes).toHaveLength(3);
+  });
+
+  it('rejects a foreign line id without writing either purchase', () => {
+    const { purchaseId, updatedAt } = seedOrder();
+    const before = getPurchase(opened.db, purchaseId);
+    expect(() =>
+      updatePurchase(opened.db, purchaseId, {
+        lines: [{ id: 'foreign-line', name: 'Widget', quantity: 1, lineTotalCents: 1000 }],
+        expectedUpdatedAt: updatedAt,
+      })
+    ).toThrow(InvalidIngestPayloadError);
+    expect(getPurchase(opened.db, purchaseId)).toEqual(before);
+  });
+
   it('renames a line on a linked purchase and records the original', () => {
     const { purchaseId, itemId } = seedOrder();
     setPurchaseStatus(opened.db, purchaseId, 'linked');
@@ -113,10 +183,15 @@ describe('updatePurchase — the lock policy', () => {
 
   it('refuses a stale expectedUpdatedAt and writes nothing', () => {
     const { purchaseId, itemId, updatedAt } = seedOrder();
-    updatePurchase(opened.db, purchaseId, {
-      lines: [{ id: itemId, name: 'Gadget', quantity: 1, lineTotalCents: 1000 }],
-      expectedUpdatedAt: updatedAt,
-    });
+    updatePurchase(
+      opened.db,
+      purchaseId,
+      {
+        lines: [{ id: itemId, name: 'Gadget', quantity: 1, lineTotalCents: 1000 }],
+        expectedUpdatedAt: updatedAt,
+      },
+      new Date(Date.parse(updatedAt) + 1000).toISOString()
+    );
 
     expect(() =>
       updatePurchase(opened.db, purchaseId, {
