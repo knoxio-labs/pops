@@ -32,18 +32,31 @@ internal struct PopsPagedPhotoViewerTests {
 
     @Test("the iOS viewer installs the native page style")
     func installsPageStyle() throws {
-        let primitives = URL(filePath: #filePath)
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .appending(path: "Sources/DesignSystem/Primitives")
         let viewer = try String(
-            contentsOf: primitives.appending(path: "PopsPagedPhotoViewer.swift"), encoding: .utf8)
+            contentsOf: Self.primitives.appending(path: "PopsPagedPhotoViewer.swift"),
+            encoding: .utf8)
         let platform = try String(
-            contentsOf: primitives.appending(path: "PopsPagedPhotoViewerPlatform.swift"),
+            contentsOf: Self.primitives.appending(path: "PopsPagedPhotoViewerPlatform.swift"),
             encoding: .utf8)
 
         #expect(viewer.contains(".popsPagedPhotoStyle()"))
         #expect(platform.contains("tabViewStyle(.page)"))
     }
+
+    @Test("paging reports the selected page while existing call sites keep a default callback")
+    func pageChangeCallbackWiring() throws {
+        let source = try String(
+            contentsOf: Self.primitives.appending(path: "PopsPagedPhotoViewer.swift"),
+            encoding: .utf8)
+
+        #expect(source.contains("onPageChange: @escaping (Int) -> Void = { _ in }"))
+        #expect(source.contains(".onChange(of: index)"))
+        #expect(source.contains("onPageChange(pageIndex)"))
+    }
+
+    private static let primitives = URL(filePath: #filePath)
+        .deletingLastPathComponent()
+        .deletingLastPathComponent()
+        .deletingLastPathComponent()
+        .appending(path: "Sources/DesignSystem/Primitives")
 }
