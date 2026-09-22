@@ -140,6 +140,34 @@ extension Transaction {
     }
 }
 
+extension Purchase {
+    /// A purchase whose fields a test can ignore, with every value overridable.
+    public static func fake(
+        id: String = "purchase-1",
+        merchant: MerchantIdentity = .printed("Fake Store"),
+        orderedOn: Date = Date(timeIntervalSince1970: 0),
+        total: MoneyAmount = MoneyAmount(minorUnits: 1999, currencyCode: "AUD"),
+        itemCount: Int = 1,
+        receiptURI: String? = nil,
+        status: PurchaseSettlement = .awaitingSettlement
+    ) -> Purchase {
+        Purchase(
+            id: id,
+            merchant: merchant,
+            orderedOn: orderedOn,
+            total: total,
+            itemCount: itemCount,
+            receiptURI: receiptURI,
+            status: status
+        )
+    }
+
+    /// `count` purchases with distinct ids, for paging.
+    public static func fakes(count: Int) -> [Purchase] {
+        (0..<count).map { Purchase.fake(id: "purchase-\($0)") }
+    }
+}
+
 extension Account {
     /// An account whose fields a test can ignore. Every value is overridable,
     /// so a test names only the field it is actually about.
