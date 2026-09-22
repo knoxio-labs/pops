@@ -1,7 +1,7 @@
 import AppCore
 import FeatureAccounts
 import FeatureInventory
-import FeaturePurchases
+import FeatureTransactions
 
 extension ContentView {
     nonisolated internal static let moreTab = MobileFeature(rawValue: "shell.more")
@@ -14,7 +14,7 @@ extension ContentView {
 
     nonisolated internal static func moreFeatures(for available: [MobileFeature]) -> [MobileFeature]
     {
-        available.filter { $0 == FeatureAccounts.feature || $0 == FeaturePurchases.feature }
+        available.filter { $0 == FeatureAccounts.feature || $0 == FeatureTransactions.feature }
     }
 
     /// Groups secondary features into one tab so the native search bubble never overflows.

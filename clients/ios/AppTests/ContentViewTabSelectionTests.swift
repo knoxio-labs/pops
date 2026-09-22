@@ -49,10 +49,10 @@ internal struct ContentViewTabSelectionTests {
     @Test("the search tab goes when Inventory does, and the selection falls back")
     func theSearchTabLeavesWithInventory() {
         let tabs = ContentView.tabs(for: [Self.transactions, Self.accounts])
-        #expect(tabs == [Self.transactions, ContentView.moreTab])
+        #expect(tabs == [ContentView.moreTab])
         let shown = ContentView.shownFeature(
             chosen: ContentView.inventorySearchTab, available: tabs)
-        #expect(shown == Self.transactions)
+        #expect(shown == ContentView.moreTab)
     }
     @Test("the full fleet keeps Inventory visible and leaves room for the search bubble")
     func fullFleetGroupsSecondaryFeatures() {
@@ -62,10 +62,10 @@ internal struct ContentViewTabSelectionTests {
         ]
         #expect(
             ContentView.tabs(for: available) == [
-                Self.transactions, Self.receipts, FeatureInventory.feature,
+                purchases, Self.receipts, FeatureInventory.feature,
                 ContentView.moreTab, ContentView.inventorySearchTab,
             ])
-        #expect(ContentView.moreFeatures(for: available) == [Self.accounts, purchases])
+        #expect(ContentView.moreFeatures(for: available) == [Self.transactions, Self.accounts])
     }
 
     @Test("More disappears when neither secondary feature is available")
