@@ -7506,6 +7506,12 @@
                       "nullable": true,
                       "type": "string"
                     },
+                    "receiptUris": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
                     "shippingCents": {
                       "maximum": 9007199254740991,
                       "minimum": -9007199254740991,
@@ -7561,7 +7567,8 @@
                     "surchargeCents",
                     "source",
                     "items",
-                    "edit"
+                    "edit",
+                    "receiptUris"
                   ],
                   "type": "object"
                 }
@@ -8116,6 +8123,12 @@
                       "nullable": true,
                       "type": "string"
                     },
+                    "receiptUris": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
                     "shippingCents": {
                       "maximum": 9007199254740991,
                       "minimum": -9007199254740991,
@@ -8171,7 +8184,8 @@
                     "surchargeCents",
                     "source",
                     "items",
-                    "edit"
+                    "edit",
+                    "receiptUris"
                   ],
                   "type": "object"
                 }
@@ -10564,6 +10578,12 @@
                       "nullable": true,
                       "type": "string"
                     },
+                    "receiptUris": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
                     "shippingCents": {
                       "maximum": 9007199254740991,
                       "minimum": -9007199254740991,
@@ -10619,7 +10639,8 @@
                     "surchargeCents",
                     "source",
                     "items",
-                    "edit"
+                    "edit",
+                    "receiptUris"
                   ],
                   "type": "object"
                 }
@@ -11093,6 +11114,12 @@
                       "nullable": true,
                       "type": "string"
                     },
+                    "receiptUris": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
                     "shippingCents": {
                       "maximum": 9007199254740991,
                       "minimum": -9007199254740991,
@@ -11148,7 +11175,8 @@
                     "surchargeCents",
                     "source",
                     "items",
-                    "edit"
+                    "edit",
+                    "receiptUris"
                   ],
                   "type": "object"
                 }

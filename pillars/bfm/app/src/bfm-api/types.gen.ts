@@ -2850,6 +2850,7 @@ export type MobilePurchasesCreateManualPurchaseResponses = {
     orderedAt: string;
     orderedOn: string;
     receiptUri: string | null;
+    receiptUris: Array<string>;
     shippingCents: number;
     source: string;
     status: string;
@@ -3030,6 +3031,7 @@ export type MobilePurchasesSaveReceiptDraftResponses = {
     orderedAt: string;
     orderedOn: string;
     receiptUri: string | null;
+    receiptUris: Array<string>;
     shippingCents: number;
     source: string;
     status: string;
@@ -3946,6 +3948,7 @@ export type MobilePurchasesGetPurchaseResponses = {
     orderedAt: string;
     orderedOn: string;
     receiptUri: string | null;
+    receiptUris: Array<string>;
     shippingCents: number;
     source: string;
     status: string;
@@ -4139,6 +4142,7 @@ export type MobilePurchasesUpdatePurchaseResponses = {
     orderedAt: string;
     orderedOn: string;
     receiptUri: string | null;
+    receiptUris: Array<string>;
     shippingCents: number;
     source: string;
     status: string;

@@ -124,6 +124,9 @@ export const MobilePurchaseSchema = z.object({
    * every time it appeared. Nothing serves these bytes yet — the phone can
    * key a cache on it and recognise two rows as the same receipt, and cannot
    * draw it. See the pillar README.
+   *
+   * On the DETAIL response (`MobilePurchaseDetailSchema`), this field is
+   * compatibility-only — see `receiptUris` there.
    */
   receiptUri: z.string().nullable(),
 });
@@ -200,6 +203,18 @@ export const MobilePurchaseDetailSchema = MobilePurchaseSchema.extend({
   items: z.array(MobilePurchaseItemSchema),
   /** `null` for a purchase nobody has ever edited. See {@link MobilePurchaseEditSchema}. */
   edit: MobilePurchaseEditSchema.nullable(),
+  /**
+   * Every receipt-kind document `purchases` holds for this order, in the
+   * same `(createdAt, id)` order the producer returns them. A multi-page
+   * scan or a grouped receipt is more than one entry here.
+   *
+   * On the DETAIL response, the inherited `receiptUri` above is
+   * compatibility-only — `receiptUris[0]` — kept so an installed build
+   * older than this field keeps decoding. A client rendering the detail
+   * screen must read `receiptUris`, not `receiptUri`; only the LIST row
+   * still has a genuine single-receipt reason to read `receiptUri`.
+   */
+  receiptUris: z.array(z.string()),
 });
 
 export type MobilePurchaseDetail = z.infer<typeof MobilePurchaseDetailSchema>;
