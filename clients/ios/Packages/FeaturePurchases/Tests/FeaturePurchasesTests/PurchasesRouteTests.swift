@@ -1,4 +1,3 @@
-import AppCore
 import Testing
 
 @testable import FeaturePurchases
