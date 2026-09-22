@@ -87,6 +87,7 @@ function aMutation(overrides: Partial<Record<string, unknown>> = {}): Record<str
     op: 'item.rename',
     entityId: 'item-1',
     baseRevision: 1,
+    catalogueRevision: 7,
     dependsOn: [],
     clientTime: '2026-09-19T00:00:00.000Z',
     args: { name: 'New name' },
@@ -485,7 +486,7 @@ describe('mutations', () => {
 
     expect(res.status).toBe(200);
     expect(fake.mutationsCalls).toHaveLength(1);
-    expect(fake.mutationsCalls[0]?.mutations).toHaveLength(1);
+    expect(fake.mutationsCalls[0]?.mutations).toEqual([aMutation()]);
   });
 
   it('refuses a batch above the 256KB cap before it ever reaches inventory', async () => {

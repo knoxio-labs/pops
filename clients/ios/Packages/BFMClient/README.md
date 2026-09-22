@@ -4,6 +4,10 @@ The one way this app reaches the federation. Everything the phone knows about a 
 
 Four things live in this package: the Swift client **generated** from the BFM's OpenAPI snapshot, the hand-written façade that wraps it, `BuiltInBaseURL`, which answers where the BFM is for a Debug build, and the repositories that turn a contract response into the vocabulary `AppCore` declares.
 
+Inventory mutation requests carry the catalogue revision stored with the
+queued edit. `BFMInventoryTransport` forwards that pin as its own wire field;
+it is not command-specific data and therefore does not belong inside `args`.
+
 ## The client is generated, committed, and gated
 
 ```bash

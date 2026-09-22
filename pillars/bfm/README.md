@@ -41,6 +41,11 @@ It also holds a service-account credential and one way to spend it — see
 | `POST /mobile/purchases/receipts`      | Hands a captured receipt to `purchases` — see [The mobile write](#the-mobile-write).         |
 | `/mobile/*`                            | Everything the phone calls, gated by `requireDevice` and then `requireCapability`.           |
 
+Inventory mutations retain the phone's `catalogueRevision` while BFM relays
+them to the inventory pillar. The revision is the immutable schema against
+which an offline edit was authored; dropping it would make a queued mutation
+ambiguous after the phone downloads a newer catalogue.
+
 `/health` answers without a database round-trip, which is why an unreachable
 `bfm.db` still reads as live.
 

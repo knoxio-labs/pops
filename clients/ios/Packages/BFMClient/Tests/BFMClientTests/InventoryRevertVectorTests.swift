@@ -47,7 +47,7 @@ internal struct InventoryRevertVectorTests {
                 command: .revertEvent(
                     seq: try #require(args["seq"] as? Int), entityKind: .item,
                     entityId: try #require(expected["entityId"] as? String)),
-                baseRevision: nil, dependsOn: [], clientTime: clientTime)
+                baseRevision: nil, dependsOn: [], clientTime: clientTime, catalogueRevision: 7)
         ])
 
         let sentBody = try #require(await bodies.all.first)
@@ -60,6 +60,7 @@ internal struct InventoryRevertVectorTests {
         #expect((mutation["dependsOn"] as? [Any])?.isEmpty == true)
         #expect(expected["baseRevision"] is NSNull)
         #expect(mutation["baseRevision"] == nil || mutation["baseRevision"] is NSNull)
+        #expect(mutation["catalogueRevision"] as? Int == 7)
         #expect((mutation["clientTime"] as? String).flatMap(Self.date) == clientTime)
     }
 

@@ -5020,6 +5020,7 @@ export interface operations {
           mutations: {
             args: unknown;
             baseRevision?: number | null;
+            catalogueRevision?: number;
             /** Format: date-time */
             clientTime: string;
             /** @default [] */
