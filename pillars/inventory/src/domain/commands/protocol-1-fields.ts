@@ -1,9 +1,6 @@
-import {
-  type Protocol1Fields,
-  Protocol1ValueError,
-  validateProtocol1Fields,
-  ValueValidationError,
-} from '../../catalogue/index.js';
+import { Protocol1ValueError, type Protocol1Fields } from '../../catalogue/protocol-1-types.js';
+import { validateProtocol1Fields } from '../../catalogue/protocol-1-values.js';
+import { ValueValidationError } from '../../catalogue/value-codec.js';
 import { CommandRejected } from './errors.js';
 import { itemFieldsBlobSchema } from './item-fields.js';
 

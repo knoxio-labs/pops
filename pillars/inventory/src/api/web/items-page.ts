@@ -8,7 +8,7 @@
 import { and, asc, eq, gt, isNull, sql, type SQL } from 'drizzle-orm';
 import { z } from 'zod';
 
-import { resolveProtocol1Type } from '../../catalogue/index.js';
+import { resolvePublishedType } from '../../catalogue/index.js';
 import { items, type ItemRow } from '../../db/index.js';
 import { ValidationError } from '../shared/errors.js';
 import { decodeCursor, encodeCursor } from '../sync/cursor.js';
@@ -41,7 +41,7 @@ export interface WebItemsPage {
 function filterConditions(db: CommandDb, filter: WebItemsFilter): SQL[] {
   const conditions: SQL[] = [];
   if (filter.typeKey !== undefined) {
-    const type = resolveProtocol1Type(db, filter.typeKey);
+    const type = resolvePublishedType(db, { key: filter.typeKey });
     conditions.push(type === null ? sql`0` : eq(items.typeId, type.id));
   }
   if (filter.placementKind !== undefined) {

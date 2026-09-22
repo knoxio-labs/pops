@@ -78,7 +78,8 @@ export type ValueValidationCode =
   | 'enum_option_unknown'
   | 'enum_option_archived'
   | 'reference_kind_mismatch'
-  | 'reference_type_mismatch';
+  | 'reference_type_mismatch'
+  | 'target_missing';
 
 /** An invalid canonical field value, annotated with its field and reason code. */
 export class ValueValidationError extends Error {

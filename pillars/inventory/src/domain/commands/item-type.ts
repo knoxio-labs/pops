@@ -1,7 +1,9 @@
 import { and, eq, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 
-import { resolveProtocol1Type } from '../../catalogue/index.js';
+import { resolveProtocol1Type } from '../../catalogue/catalogue.js';
+import { assertIncomingReferencesPermitType } from '../../catalogue/item-values.js';
+import { ValueValidationError } from '../../catalogue/value-codec.js';
 import { items } from '../../db/index.js';
 import { requireItem, type CommandDb, type FieldValues } from './entities.js';
 import { CommandRejected } from './errors.js';
@@ -53,6 +55,14 @@ export const itemChangeType = defineOp({
     const row = requireItem(target);
     const type = resolveProtocol1Type(ctx.db, args.typeKey);
     if (!type) throw new CommandRejected('type_unknown', `unknown type ${args.typeKey}`);
+    try {
+      assertIncomingReferencesPermitType(ctx.db, row.id, type.id);
+    } catch (error) {
+      if (error instanceof ValueValidationError) {
+        throw new CommandRejected('invalid', error.message);
+      }
+      throw error;
+    }
     assertProtocol1Fields(ctx.db, type.id, args.fields);
     const willContain = type.capabilities.includes('containment');
     if (row.isContainer === 1 && !willContain && hasActiveContents(ctx.db, row.id)) {
