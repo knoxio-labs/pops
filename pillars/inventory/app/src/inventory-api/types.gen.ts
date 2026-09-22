@@ -3327,6 +3327,7 @@ export type SyncMutationsData = {
     mutations: Array<{
       args: unknown;
       baseRevision?: number | null;
+      catalogueRevision?: number;
       clientTime: string;
       dependsOn: Array<string>;
       entityId: string;

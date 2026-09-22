@@ -88,8 +88,15 @@ public struct InventoryItem: Identifiable, Hashable, Sendable {
     public let id: String
     public let revision: Int
     public let seq: Int
+    /// Catalogue revision that validated this item's field values.
+    public let catalogueRevision: Int?
     public let name: String
+    /// Stable catalogue type identity used by protocol 2.
+    public let typeId: String?
     public let typeKey: String?
+    /// Stable-ID protocol-2 values, ordered as the server returned them.
+    /// Empty while the replica is reading the protocol-1 compatibility projection.
+    public let fieldValues: [InventoryItemFieldEntry]
     /// The free-text type the item carried before types existed, kept
     /// read-only by the migration and never set by any command. Only an
     /// untyped item's is ever consulted: it is what a newly arrived type's
@@ -117,8 +124,11 @@ public struct InventoryItem: Identifiable, Hashable, Sendable {
         id: String,
         revision: Int,
         seq: Int,
+        catalogueRevision: Int? = nil,
         name: String,
+        typeId: String? = nil,
         typeKey: String?,
+        fieldValues: [InventoryItemFieldEntry] = [],
         legacyType: String? = nil,
         fields: [String: InventoryFieldValue] = [:],
         note: String? = nil,
@@ -141,8 +151,11 @@ public struct InventoryItem: Identifiable, Hashable, Sendable {
         self.id = id
         self.revision = revision
         self.seq = seq
+        self.catalogueRevision = catalogueRevision
         self.name = name
+        self.typeId = typeId
         self.typeKey = typeKey
+        self.fieldValues = fieldValues
         self.legacyType = legacyType
         self.fields = fields
         self.note = note

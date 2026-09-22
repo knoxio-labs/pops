@@ -17780,6 +17780,8 @@ internal enum Operations {
                         internal var args: OpenAPIRuntime.OpenAPIValueContainer
                         /// - Remark: Generated from `#/paths/mobile/inventory/mutations/POST/requestBody/json/MutationsPayload/baseRevision`.
                         internal var baseRevision: Swift.Int?
+                        /// - Remark: Generated from `#/paths/mobile/inventory/mutations/POST/requestBody/json/MutationsPayload/catalogueRevision`.
+                        internal var catalogueRevision: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/inventory/mutations/POST/requestBody/json/MutationsPayload/clientTime`.
                         internal var clientTime: Foundation.Date
                         /// - Remark: Generated from `#/paths/mobile/inventory/mutations/POST/requestBody/json/MutationsPayload/dependsOn`.
@@ -17795,6 +17797,7 @@ internal enum Operations {
                         /// - Parameters:
                         ///   - args:
                         ///   - baseRevision:
+                        ///   - catalogueRevision:
                         ///   - clientTime:
                         ///   - dependsOn:
                         ///   - entityId:
@@ -17803,6 +17806,7 @@ internal enum Operations {
                         internal init(
                             args: OpenAPIRuntime.OpenAPIValueContainer,
                             baseRevision: Swift.Int? = nil,
+                            catalogueRevision: Swift.Int? = nil,
                             clientTime: Foundation.Date,
                             dependsOn: [Swift.String],
                             entityId: Swift.String,
@@ -17811,6 +17815,7 @@ internal enum Operations {
                         ) {
                             self.args = args
                             self.baseRevision = baseRevision
+                            self.catalogueRevision = catalogueRevision
                             self.clientTime = clientTime
                             self.dependsOn = dependsOn
                             self.entityId = entityId
@@ -17820,6 +17825,7 @@ internal enum Operations {
                         internal enum CodingKeys: String, CodingKey {
                             case args
                             case baseRevision
+                            case catalogueRevision
                             case clientTime
                             case dependsOn
                             case entityId
@@ -17835,6 +17841,10 @@ internal enum Operations {
                             self.baseRevision = try container.decodeIfPresent(
                                 Swift.Int.self,
                                 forKey: .baseRevision
+                            )
+                            self.catalogueRevision = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .catalogueRevision
                             )
                             self.clientTime = try container.decode(
                                 Foundation.Date.self,
@@ -17859,6 +17869,7 @@ internal enum Operations {
                             try decoder.ensureNoAdditionalProperties(knownKeys: [
                                 "args",
                                 "baseRevision",
+                                "catalogueRevision",
                                 "clientTime",
                                 "dependsOn",
                                 "entityId",

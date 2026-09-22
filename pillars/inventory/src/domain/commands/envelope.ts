@@ -8,6 +8,8 @@ import type { EventActorKind } from '../../db/index.js';
  * non-empty because rows that predate client-minted ids keep their old ids
  * (a create op validates the id it mints). `baseRevision` is the revision the
  * client last saw, absent for a create and for ops that do their own check.
+ * `catalogueRevision` pins the immutable schema an offline client authored
+ * against; older callers may omit it until they adopt protocol 2 values.
  * `dependsOn` names mutations that must have applied first. `clientTime` is
  * stored on the event as audit evidence and decides nothing. `args` is
  * validated by the op named in `op`.
@@ -17,6 +19,7 @@ export const mutationSchema = z.object({
   op: z.string().min(1).max(64),
   entityId: z.string().min(1).max(128),
   baseRevision: z.number().int().min(1).nullish(),
+  catalogueRevision: z.number().int().min(1).optional(),
   dependsOn: z.array(z.uuid()).max(50).default([]),
   clientTime: z.iso.datetime({ offset: true }),
   args: z.unknown(),

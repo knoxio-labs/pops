@@ -12,16 +12,19 @@ public struct InventoryOutboundMutation: Hashable, Sendable {
     public let baseRevision: Int?
     public let dependsOn: [String]
     public let clientTime: Date
+    /// Catalogue revision against which the command's values were authored.
+    public let catalogueRevision: Int
 
     public init(
         mutationId: String, command: InventoryCommand, baseRevision: Int?, dependsOn: [String],
-        clientTime: Date
+        clientTime: Date, catalogueRevision: Int = 1
     ) {
         self.mutationId = mutationId
         self.command = command
         self.baseRevision = baseRevision
         self.dependsOn = dependsOn
         self.clientTime = clientTime
+        self.catalogueRevision = catalogueRevision
     }
 }
 
@@ -73,6 +76,7 @@ public struct InventorySnapshotPage: Hashable, Sendable {
     public let epoch: String
     public let highWaterSeq: Int
     public let catalogueVersion: String
+    public let catalogueRevision: Int?
     public let total: Int
     public let items: [InventoryItem]
     public let locations: [InventoryLocation]
@@ -80,7 +84,8 @@ public struct InventorySnapshotPage: Hashable, Sendable {
 
     public init(
         epoch: String, highWaterSeq: Int, catalogueVersion: String, total: Int,
-        items: [InventoryItem], locations: [InventoryLocation], nextCursor: String?
+        items: [InventoryItem], locations: [InventoryLocation], nextCursor: String?,
+        catalogueRevision: Int? = nil
     ) {
         self.epoch = epoch
         self.highWaterSeq = highWaterSeq
@@ -89,6 +94,7 @@ public struct InventorySnapshotPage: Hashable, Sendable {
         self.items = items
         self.locations = locations
         self.nextCursor = nextCursor
+        self.catalogueRevision = catalogueRevision
     }
 }
 
@@ -102,10 +108,12 @@ public struct InventoryChangesPage: Hashable, Sendable {
     public let nextSince: Int
     public let hasMore: Bool
     public let catalogueVersion: String
+    public let catalogueRevision: Int?
 
     public init(
         epoch: String, items: [InventoryItem], locations: [InventoryLocation],
-        events: [InventoryEvent], nextSince: Int, hasMore: Bool, catalogueVersion: String
+        events: [InventoryEvent], nextSince: Int, hasMore: Bool, catalogueVersion: String,
+        catalogueRevision: Int? = nil
     ) {
         self.epoch = epoch
         self.items = items
@@ -114,6 +122,7 @@ public struct InventoryChangesPage: Hashable, Sendable {
         self.nextSince = nextSince
         self.hasMore = hasMore
         self.catalogueVersion = catalogueVersion
+        self.catalogueRevision = catalogueRevision
     }
 }
 

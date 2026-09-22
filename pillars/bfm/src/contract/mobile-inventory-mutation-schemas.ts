@@ -12,13 +12,15 @@ import { z } from 'zod';
  * One mutation as the phone sends it, mirroring inventory's own
  * `domain/commands/envelope.ts#mutationSchema` field for field — `args` is
  * opaque JSON here too, validated by the op it names once inventory receives
- * it, not by this relay.
+ * it, not by this relay. Current phones supply `catalogueRevision`; this
+ * boundary remains lenient for already-installed builds that predate it.
  */
 export const MobileMutationSchema = z.object({
   mutationId: z.uuid(),
   op: z.string().min(1).max(64),
   entityId: z.string().min(1).max(128),
   baseRevision: z.number().int().min(1).nullish(),
+  catalogueRevision: z.number().int().min(1).nullish(),
   dependsOn: z.array(z.uuid()).max(50).default([]),
   clientTime: z.iso.datetime({ offset: true }),
   args: z.unknown(),

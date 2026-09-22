@@ -1907,6 +1907,7 @@ export type MobileInventoryMutationsData = {
     mutations: Array<{
       args: unknown;
       baseRevision?: number | null;
+      catalogueRevision?: number | null;
       clientTime: string;
       dependsOn: Array<string>;
       entityId: string;

@@ -36,7 +36,8 @@ internal enum MutationLogWrites {
             localSeq: nil, mutationId: mutationId, entity: primary, command: command,
             dependsOn: try dependencies(
                 of: application.touched.union(application.references), in: db),
-            baseRevision: sendsBase ? application.baseRevision : nil, state: .queued,
+            baseRevision: sendsBase ? application.baseRevision : nil,
+            catalogueRevision: try SyncMeta.read(db).catalogueRevision ?? 1, state: .queued,
             outcome: nil, settlesAtSeq: nil, touched: application.touched,
             change: application.change, attempts: 0, createdAt: storedDate(time),
             lastAttemptAt: nil)
@@ -96,7 +97,8 @@ internal enum MutationLogWrites {
             let mutation = InventoryOutboundMutation(
                 mutationId: entry.mutationId, command: command, baseRevision: entry.baseRevision,
                 dependsOn: entry.dependsOn,
-                clientTime: Date(timeIntervalSinceReferenceDate: entry.createdAt))
+                clientTime: Date(timeIntervalSinceReferenceDate: entry.createdAt),
+                catalogueRevision: entry.catalogueRevision)
             outbound.append(OutboundEntry(entry: entry, mutation: mutation))
         }
         return outbound

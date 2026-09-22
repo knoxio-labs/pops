@@ -13,6 +13,7 @@ import GRDB
 /// filters it out.
 internal enum ReplicaApply {
     static func snapshot(_ page: InventorySnapshotPage, now: Date, in db: Database) throws {
+        try requireCatalogue(page.catalogueRevision, in: db)
         var meta = try SyncMeta.read(db)
         if let epoch = meta.epoch, epoch != page.epoch {
             try discardServerState(db)
@@ -21,6 +22,7 @@ internal enum ReplicaApply {
         let changed = try upsert(items: page.items, locations: page.locations, in: db)
         meta.epoch = page.epoch
         meta.catalogueVersion = page.catalogueVersion
+        meta.catalogueRevision = page.catalogueRevision
         meta.snapshotTotal = page.total
         meta.snapshotRows += page.items.count + page.locations.count
         meta.snapshotCursor = page.nextCursor
@@ -36,6 +38,7 @@ internal enum ReplicaApply {
     }
 
     static func changes(_ page: InventoryChangesPage, now: Date, in db: Database) throws {
+        try requireCatalogue(page.catalogueRevision, in: db)
         var meta = try SyncMeta.read(db)
         guard let since = meta.since, let epoch = meta.epoch else {
             throw InventoryReplicaError.notDownloaded
@@ -51,6 +54,7 @@ internal enum ReplicaApply {
         }
         meta.since = max(since, page.nextSince)
         meta.catalogueVersion = page.catalogueVersion
+        meta.catalogueRevision = page.catalogueRevision
         if !page.hasMore { meta.lastRefreshAt = now }
         try meta.write(db)
         try MutationLogReplay.rebase(resetting: changed, in: db)
@@ -92,6 +96,8 @@ internal enum ReplicaApply {
             try db.execute(
                 sql: upsertSQL(ItemRow.columns, into: "item_base"),
                 arguments: StatementArguments(try ItemRow.values(of: item)))
+            try Protocol2FieldValueRows.replace(
+                itemId: item.id, entries: item.fieldValues, in: "item_field_value_base", db)
             changed.insert(.item(item.id))
         }
         for location in locations {
@@ -118,10 +124,22 @@ internal enum ReplicaApply {
     /// longer compare with anything stored, so everything the server owns
     /// goes. The catalogue stays: it is versioned by content, not by epoch.
     private static func discardServerState(_ db: Database) throws {
-        for table in ReplicaSchema.itemLayers + ReplicaSchema.locationLayers + [
-            "event", "item_fts",
-        ] {
+        for table in ReplicaSchema.itemLayers + ReplicaSchema.fieldValueLayers
+            + ReplicaSchema.locationLayers + ["event", "item_fts"]
+        {
             try db.execute(sql: "DELETE FROM \(table)")
+        }
+    }
+
+    private static func requireCatalogue(_ revision: Int?, in db: Database) throws {
+        guard let revision else { return }
+        let exists =
+            try Bool.fetchOne(
+                db,
+                sql: "SELECT EXISTS (SELECT 1 FROM catalogue_revision WHERE revision = ?)",
+                arguments: [revision]) ?? false
+        guard exists else {
+            throw InventoryReplicaError.corruptValue("catalogue revision \(revision) is not stored")
         }
     }
 

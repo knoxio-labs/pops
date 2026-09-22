@@ -12,6 +12,7 @@ internal enum ItemRow {
         "containing_item_id", "previous_placement_kind", "previous_placement_id", "is_container",
         "access", "is_full", "photos", "provenance", "documents_status", "documents_linked",
         "document_titles", "created_at", "updated_at", "deleted_at", "legacy_type",
+        "catalogue_revision", "type_id",
     ]
 
     static func values(of item: InventoryItem) throws -> [(any DatabaseValueConvertible)?] {
@@ -34,7 +35,7 @@ internal enum ItemRow {
             documents.status, try StoredJSON.encode(documents.linked),
             try StoredJSON.encode(item.documentTitles),
             storedDate(item.createdAt), storedDate(item.updatedAt), item.deletedAt.map(storedDate),
-            item.legacyType,
+            item.legacyType, item.catalogueRevision, item.typeId,
         ]
     }
 
@@ -48,8 +49,14 @@ internal enum ItemRow {
         let id: String = try row.decode(forColumn: "id")
         return InventoryItem(
             id: id, revision: try row.decode(forColumn: "revision"),
-            seq: try row.decode(forColumn: "seq"), name: try row.decode(forColumn: "name"),
+            seq: try row.decode(forColumn: "seq"),
+            catalogueRevision: try row.decode(forColumn: "catalogue_revision"),
+            name: try row.decode(forColumn: "name"), typeId: try row.decode(forColumn: "type_id"),
             typeKey: try row.decode(forColumn: "type_key"),
+            fieldValues: try db.map {
+                try Protocol2FieldValueRows.read(
+                    itemId: id, from: "item_field_value", in: $0)
+            } ?? [],
             legacyType: try row.decode(forColumn: "legacy_type"),
             fields: try StoredFieldValue.decodeFields(try row.decode(forColumn: "fields")),
             note: try row.decode(forColumn: "note"), code: try row.decode(forColumn: "code"),

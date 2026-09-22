@@ -87,6 +87,7 @@ function aMutation(overrides: Partial<Record<string, unknown>> = {}): Record<str
     op: 'item.rename',
     entityId: 'item-1',
     baseRevision: 1,
+    catalogueRevision: 7,
     dependsOn: [],
     clientTime: '2026-09-19T00:00:00.000Z',
     args: { name: 'New name' },
@@ -485,7 +486,21 @@ describe('mutations', () => {
 
     expect(res.status).toBe(200);
     expect(fake.mutationsCalls).toHaveLength(1);
-    expect(fake.mutationsCalls[0]?.mutations).toHaveLength(1);
+    expect(fake.mutationsCalls[0]?.mutations).toEqual([aMutation()]);
+  });
+
+  it('accepts mutations from app versions that predate catalogue revision pins', async () => {
+    const fake = createInventoryFake();
+    const { app, token } = openWith(fake.factory, ['inventory.write']);
+    const mutation = aMutation();
+    delete mutation.catalogueRevision;
+
+    const res = await post(app, token, '/mobile/inventory/mutations', {
+      mutations: [mutation],
+    });
+
+    expect(res.status).toBe(200);
+    expect(fake.mutationsCalls[0]?.mutations).toEqual([mutation]);
   });
 
   it('refuses a batch above the 256KB cap before it ever reaches inventory', async () => {

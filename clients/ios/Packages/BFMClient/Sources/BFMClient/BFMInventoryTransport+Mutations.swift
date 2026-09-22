@@ -57,6 +57,7 @@ extension BFMInventoryTransport {
         return Mutations.Input.Body.JsonPayload.MutationsPayloadPayload(
             args: try OpenAPIValueContainer(unvalidatedValue: envelope.args),
             baseRevision: outbound.baseRevision,
+            catalogueRevision: outbound.catalogueRevision,
             clientTime: outbound.clientTime,
             dependsOn: outbound.dependsOn,
             entityId: envelope.entityId,

@@ -4,7 +4,7 @@ The phone's copy of the inventory. The Inventory screens read from here, not fro
 
 It is one of the packages `ModuleBoundaryTests` allows to hold a concrete implementation of an `AppCore` seam, and the only one allowed to depend on [GRDB](https://github.com/groue/GRDB.swift), pinned `exact:` for the reason [`../BFMClient/Package.swift`](../BFMClient/Package.swift) gives. It performs no HTTP: `OnlineInventoryStore` fetches pages through `AppCore`'s `InventorySyncTransport` and hands them to `InventoryReplica.apply(_:)`.
 
-`InventoryReplica()` is in memory, for tests and previews, so a relaunch downloads again. `InventoryReplica(onDiskAt:)` (POPS-4069) is the durable one: WAL with `synchronous = FULL`, `completeUntilFirstUserAuthentication` on the database and media cache, the media cache excluded from backup, a free-space floor and `SQLITE_FULL` both raised as `InventoryStorageError.full`, and a migration that cannot run falling back to a fresh snapshot while keeping the `mutation_log` table by name.
+`InventoryReplica()` is in memory, for tests and previews, so a relaunch downloads again. `InventoryReplica(onDiskAt:)` (POPS-4069) is the durable one: WAL with `synchronous = FULL`, `completeUntilFirstUserAuthentication` on the database and media cache, the media cache excluded from backup, a free-space floor and `SQLITE_FULL` both raised as `InventoryStorageError.full`, and a migration that cannot run falling back to a fresh snapshot while keeping the mutation log, its supporting tables and every immutable catalogue revision by name.
 
 ## How a page lands
 
@@ -13,6 +13,14 @@ Every page is one transaction. Rows are upserted by revision: a row at or below 
 A snapshot page from a new epoch discards every stored row first: a restored server rewinds revisions and `seq`, so nothing stored compares with what it sends. A feed page from another epoch is refused outright; the answer to it is a fresh snapshot.
 
 Items and locations each have two tables of the same shape: `*_base` is what the server last sent, and the unsuffixed table is what queries read. A page writes only the base; the rebase that follows in the same transaction resets every row the page changed, or any logged change wrote, and replays the log over it.
+
+## Revisioned catalogue and values
+
+Protocol-2 catalogues are normalized into immutable revision, type, field and option tables. Storing a revision that already exists is idempotent only when every value matches; a different payload under the same revision is corruption. Older revisions remain readable while an item value or queued mutation still names them. A page cannot store protocol-2 rows until its exact catalogue revision exists, and the overload that accepts both commits the catalogue and the first dependent page in one transaction.
+
+Item field values have base and optimistic layers like item rows. Their key includes item, field, source and ordinal: order and duplicates are data, while the row's catalogue revision binds the encoded primitive to the schema that defined it. References deliberately have no database foreign key to their target. Reads derive resolved, missing or deleted state without dropping the target id, so a tombstone or an incomplete local snapshot cannot erase identity.
+
+Each mutation is pinned to the current catalogue revision when it enters the log, and that pin survives rebase, repair, retry and relaunch. The server can therefore interpret a queued edit against the schema the author saw even after the phone stores a newer revision.
 
 ## Type arrivals
 

@@ -25,6 +25,7 @@ internal struct LogEntry: Sendable {
     var command: LoggedCommand
     var dependsOn: [String]
     var baseRevision: Int?
+    let catalogueRevision: Int
     var state: MutationState
     var outcome: StoredOutcome?
     var settlesAtSeq: Int?
@@ -43,12 +44,18 @@ internal enum MutationLogRows {
         try db.execute(
             sql: """
                 INSERT INTO \(table) (mutation_id, entity_kind, entity_id, command, depends_on,
-                    base_revision, state, outcome, outcome_seq, settles_at_seq, touched, change,
+                    base_revision, catalogue_revision, state, outcome, outcome_seq, settles_at_seq, touched, change,
                     attempts, created_at, last_attempt_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
             arguments: StatementArguments(
-                [entry.mutationId, entry.entity.kind, entry.entity.id] + (try mutableColumns(entry))
+                [
+                    entry.mutationId, entry.entity.kind, entry.entity.id,
+                    try StoredJSON.encode(StoredCommand(entry.command)),
+                    try StoredJSON.encode(entry.dependsOn), entry.baseRevision,
+                    entry.catalogueRevision,
+                ]
+                    + (try mutableStateColumns(entry))
                     + [entry.createdAt, entry.lastAttemptAt]))
     }
 
@@ -133,7 +140,15 @@ internal enum MutationLogRows {
     )?] {
         [
             try StoredJSON.encode(StoredCommand(entry.command)),
-            try StoredJSON.encode(entry.dependsOn), entry.baseRevision, entry.state.rawValue,
+            try StoredJSON.encode(entry.dependsOn), entry.baseRevision,
+        ] + (try mutableStateColumns(entry))
+    }
+
+    private static func mutableStateColumns(_ entry: LogEntry) throws -> [(
+        any DatabaseValueConvertible
+    )?] {
+        [
+            entry.state.rawValue,
             try entry.outcome.map(StoredJSON.encode), entry.outcome?.appliedSeq,
             entry.settlesAtSeq,
             try StoredJSON.encode(entry.touched.sorted { ($0.kind, $0.id) < ($1.kind, $1.id) }),
@@ -159,7 +174,9 @@ internal enum MutationLogRows {
             ).logged(),
             dependsOn: try StoredJSON.decode(
                 [String].self, from: try row.decode(forColumn: "depends_on")),
-            baseRevision: try row.decode(forColumn: "base_revision"), state: mutationState,
+            baseRevision: try row.decode(forColumn: "base_revision"),
+            catalogueRevision: try row.decode(forColumn: "catalogue_revision"),
+            state: mutationState,
             outcome: try outcome.map { try StoredJSON.decode(StoredOutcome.self, from: $0) },
             settlesAtSeq: try row.decode(forColumn: "settles_at_seq"),
             touched: Set(
