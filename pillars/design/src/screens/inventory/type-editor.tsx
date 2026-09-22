@@ -41,7 +41,7 @@ function TypeList() {
  * Owner-facing catalogue editor design covering the complete type, field,
  * compatibility and publication workflow from Inventory ADR-002 D5.
  */
-export function TypeEditor({ mode = 'edit', layout = 'workspace' }: TypeEditorProps) {
+export function TypeEditor({ mode = 'edit', layout = 'focused' }: TypeEditorProps) {
   if (mode === 'list') return <TypeList />;
 
   return (
@@ -81,7 +81,7 @@ export function createTypeEditorStates(layout: TypeEditorLayout): ScreenStates {
   };
 }
 
-export const states = createTypeEditorStates('workspace');
+export const states = createTypeEditorStates('focused');
 
 export default function TypeEditorScreen() {
   return <TypeEditor />;
