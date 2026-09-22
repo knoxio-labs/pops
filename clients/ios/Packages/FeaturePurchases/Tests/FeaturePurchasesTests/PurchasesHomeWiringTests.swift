@@ -86,11 +86,17 @@ internal struct PurchasesHomeWiringTests {
             PurchasesAccessibility.unmatchedTile,
             PurchasesAccessibility.listPicker,
             PurchasesAccessibility.add,
-            PurchasesAccessibility.scan,
+            PurchaseCaptureSource.scan.accessibilityIdentifier,
             PurchasesAccessibility.row("one"),
             PurchasesAccessibility.highlightedRow("one"),
         ]
         #expect(Set(identifiers).count == identifiers.count)
+        #expect(
+            Self.controls.contains(
+                ".accessibilityIdentifier(source.accessibilityIdentifier)"))
+        #expect(
+            Self.controls.contains(
+                ".accessibilityIdentifier(PurchaseCaptureSource.scan.accessibilityIdentifier)"))
     }
 
     private static func source(_ relativePath: String) -> String {

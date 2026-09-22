@@ -10,6 +10,7 @@ internal struct PurchasesCaptureControls: View {
             Menu {
                 ForEach(PurchaseCaptureSource.added) { source in
                     Button(source.title, systemImage: source.symbol) { presenter(source) }
+                        .accessibilityIdentifier(source.accessibilityIdentifier)
                 }
             } label: {
                 Image(systemName: "plus")
@@ -32,7 +33,7 @@ internal struct PurchasesCaptureControls: View {
             .buttonStyle(.plain)
             .popsGlass(in: Circle())
             .accessibilityLabel(PurchaseCaptureSource.scan.title)
-            .accessibilityIdentifier(PurchasesAccessibility.scan)
+            .accessibilityIdentifier(PurchaseCaptureSource.scan.accessibilityIdentifier)
         }
         .padding(.trailing, PopsSpacing.xl)
         .padding(.bottom, PopsSpacing.lg)

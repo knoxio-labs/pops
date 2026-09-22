@@ -138,6 +138,3 @@ name: Fill in a blank receipt draft and submit it
           text: '2026-09-01'
           childOf:
             id: 'receipt-draft-date'
-
-- tapOn:
-    id: 'receipt-draft-save'

@@ -4,7 +4,6 @@ internal enum PurchasesAccessibility {
     internal static let unmatchedTile = "purchases-home-unmatched"
     internal static let listPicker = "purchases-home-list"
     internal static let add = "purchases-home-add"
-    internal static let scan = "purchases-home-scan"
 
     internal static func row(_ id: String) -> String {
         "purchases-home-row-\(id)"

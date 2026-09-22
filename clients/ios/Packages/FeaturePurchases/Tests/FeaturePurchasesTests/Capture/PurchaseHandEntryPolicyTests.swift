@@ -4,6 +4,11 @@ import Testing
 
 @Suite("Purchase hand-entry policy")
 internal struct PurchaseHandEntryPolicyTests {
+    @Test("hand entry exposes stable root and save identifiers")
+    func accessibilityIdentifiers() {
+        #expect(PurchaseHandEntryAccessibility.root == "purchases-hand-entry")
+        #expect(PurchaseHandEntryAccessibility.save == "purchases-hand-entry-save")
+    }
     @Test("an untouched form cancels immediately")
     func untouchedCancel() {
         let opened = ReceiptDraftPresentation().blankDraft(currency: "AUD")
