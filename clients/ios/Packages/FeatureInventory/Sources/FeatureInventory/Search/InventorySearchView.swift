@@ -18,18 +18,18 @@ internal struct InventorySearchView: View {
     internal var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: PopsSpacing.lg) {
-                InventoryPageTitle(title: "Search")
+                PopsPageTitle(title: "Search")
                 searchBar
                 content
             }
-            .inventoryMotion(value: model.query)
-            .inventoryMotion(value: model.filter)
+            .popsMotion(value: model.query)
+            .popsMotion(value: model.filter)
             .padding(.horizontal, PopsSpacing.lg)
             .padding(.bottom, PopsSpacing.xxl)
         }
         .scrollDismissesKeyboard(.immediately)
-        .inventoryCollapsingTitle("Search")
-        .inventoryGroundedSwipeActionsContainer()
+        .popsCollapsingTitle("Search")
+        .popsGroundedSwipeActionsContainer()
         .background(Color.popsBackground)
         .sheet(isPresented: $showingFilters) {
             InventorySearchFilterSheet(
@@ -64,8 +64,9 @@ internal struct InventorySearchView: View {
     }
 
     private var searchBar: some View {
-        InventorySearchBar(
+        PopsSearchBar(
             query: $model.query,
+            tint: .popsInventory,
             prompt: "Items, containers, places",
             isFiltered: model.filter.isActive,
             filterSummary: model.filter.summary,
@@ -82,7 +83,7 @@ internal struct InventorySearchView: View {
     @ViewBuilder private var content: some View {
         switch model.phase {
         case .loading:
-            InventoryLocationListSkeleton(rows: 6)
+            PopsListSkeleton(rows: 6)
         case .unavailable:
             ErrorStateView(message: InventoryCopy.unavailable) { generation += 1 }
         case .loaded(let results):
@@ -94,7 +95,7 @@ internal struct InventorySearchView: View {
                     onSelect: { model.query = $0 },
                     loadPhoto: { await model.thumbnail($0) })
             } else if model.hits.isEmpty {
-                InventoryCentredLine(text: emptyText)
+                PopsCentredLine(text: emptyText)
             } else {
                 resultList
             }
@@ -110,8 +111,8 @@ internal struct InventorySearchView: View {
     private var resultList: some View {
         let hits = model.hits
         return VStack(alignment: .leading, spacing: PopsSpacing.xs) {
-            InventoryLocationSectionHeader(title: "Results", trailing: "\(hits.count)")
-            InventoryLocationPanel(rows: hits) { hit in
+            PopsSectionHeader(title: "Results", trailing: "\(hits.count)")
+            InventorySelectionPanel(rows: hits) { hit in
                 InventorySearchHitRow(
                     hit: hit, query: model.trimmedQuery,
                     loadPhoto: { await model.thumbnail($0) }

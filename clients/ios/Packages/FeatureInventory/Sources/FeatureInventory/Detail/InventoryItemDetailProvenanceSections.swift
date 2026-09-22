@@ -49,7 +49,7 @@ internal struct InventoryItemDetailDocumentsSection: View {
             }
         case .unavailable:
             InventoryItemDetailGroup {
-                InventoryItemDetailNotice(tone: .warning, text: "Documents unavailable") {
+                PopsNotice(tone: .warning, text: "Documents unavailable") {
                     InventoryItemDetailRetryButton(retry: retry)
                 }
             }

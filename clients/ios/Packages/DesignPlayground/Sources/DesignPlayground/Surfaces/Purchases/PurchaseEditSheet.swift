@@ -1,6 +1,6 @@
 import AppCore
 import DesignSystem
-import FeatureReceiptCapture
+import FeaturePurchases
 import SwiftUI
 
 /// Where an edit sheet opens: ready to type, asking whether to throw changes

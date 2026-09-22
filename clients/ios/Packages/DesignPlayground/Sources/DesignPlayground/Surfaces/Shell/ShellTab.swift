@@ -1,6 +1,5 @@
 import FeatureAccounts
 import FeaturePurchases
-import FeatureReceiptCapture
 import FeatureTransactions
 
 /// One tab in the shell's own composition — not a `MobileFeature`, because the
@@ -36,9 +35,9 @@ internal let shellTabs: [ShellTab] = [
         symbol: FeaturePurchases.symbolName
     ),
     ShellTab(
-        id: FeatureReceiptCapture.feature.rawValue,
-        label: FeatureReceiptCapture.displayName,
-        symbol: FeatureReceiptCapture.symbolName
+        id: ReceiptCaptureTab.feature.rawValue,
+        label: ReceiptCaptureTab.displayName,
+        symbol: ReceiptCaptureTab.symbolName
     ),
     ShellTab(
         id: FeatureAccounts.feature.rawValue,

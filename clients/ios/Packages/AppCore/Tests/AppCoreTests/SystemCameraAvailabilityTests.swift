@@ -35,7 +35,7 @@ import Testing
     /// than an inference from device lookup.
     ///
     /// It lives beside the implementation rather than beside a consumer: both
-    /// `FeaturePairing`'s QR scanner and `FeatureReceiptCapture` read this same
+    /// `FeaturePairing`'s QR scanner and `FeaturePurchases` read this same
     /// decision, and a claim about the seam belongs with the seam.
     @Suite("Simulator camera availability")
     internal struct SystemCameraAvailabilityTests {

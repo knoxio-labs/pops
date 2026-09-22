@@ -67,8 +67,6 @@ packages:
     path: Packages/DesignSystem
   FeaturePairing:
     path: Packages/FeaturePairing
-  FeatureReceiptCapture:
-    path: Packages/FeatureReceiptCapture
   FeaturePurchases:
     path: Packages/FeaturePurchases
   FeatureTransactions:
@@ -107,7 +105,6 @@ targets:
       - package: BFMClient
       - package: DesignSystem
       - package: FeaturePairing
-      - package: FeatureReceiptCapture
       - package: FeaturePurchases
       - package: FeatureTransactions
       - package: FeatureAccounts
@@ -142,7 +139,6 @@ targets:
         - package: BFMClient/BFMClientTests
         - package: DesignSystem/DesignSystemTests
         - package: FeaturePairing/FeaturePairingTests
-        - package: FeatureReceiptCapture/FeatureReceiptCaptureTests
         - package: FeaturePurchases/FeaturePurchasesTests
         - package: FeatureTransactions/FeatureTransactionsTests
         - package: FeatureAccounts/FeatureAccountsTests

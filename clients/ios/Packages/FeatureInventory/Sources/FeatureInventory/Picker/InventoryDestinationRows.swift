@@ -97,7 +97,7 @@ internal struct InventoryNewPlaceRow: View {
         }
         .frame(minHeight: markSize)
         .padding(.vertical, PopsSpacing.xs)
-        .inventoryMotion(value: drafting == nil)
+        .popsMotion(value: drafting == nil)
     }
 
     private var field: some View {
@@ -109,7 +109,7 @@ internal struct InventoryNewPlaceRow: View {
                 .onSubmit { add() }
             Button("Add") { add() }
                 .font(.popsHeadline)
-                .inventoryProminentGlassButton()
+                .popsProminentGlassButton()
                 .tint(.popsInventory)
                 .disabled(trimmed.isEmpty)
         }

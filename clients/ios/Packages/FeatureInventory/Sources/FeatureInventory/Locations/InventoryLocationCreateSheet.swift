@@ -50,16 +50,16 @@ internal struct InventoryLocationCreateSheet: View {
                 }
             }
             .inventoryInsetGroupedList()
-            .inventoryMotion(value: isNamed)
+            .popsMotion(value: isNamed)
             .navigationTitle("New place")
-            .inventoryTitleDisplay(large: false)
+            .popsTitleDisplay(large: false)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Create") { Task { await create() } }
-                        .inventoryProminentGlassButton()
+                        .popsProminentGlassButton()
                         .tint(.popsInventory)
                         .disabled(!isNamed || isSaving)
                 }

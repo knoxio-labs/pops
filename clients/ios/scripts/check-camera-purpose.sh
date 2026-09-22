@@ -11,7 +11,7 @@
 # reported as a success. It judges the binary, not the code paths a user can
 # reach: PopsPlayground never opens a camera, but it stages the real pairing
 # and receipt-capture screens, so it links AVFoundation and VisionKit through
-# AppCore and FeatureReceiptCapture, and build 3289 was rejected for it.
+# AppCore and FeaturePurchases, and build 3289 was rejected for it.
 #
 # Linking is the test here because it is what can be read from a binary without
 # disassembling it. It is stricter than Apple's symbol-level check — an app

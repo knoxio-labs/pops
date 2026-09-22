@@ -35,7 +35,7 @@ internal struct InventoryContainerBrowserView: View {
         let shown = model.shown(profiles)
         return ScrollView {
             VStack(alignment: .leading, spacing: PopsSpacing.lg) {
-                InventoryPageTitle(title: "Containers")
+                PopsPageTitle(title: "Containers")
                 if profiles.isEmpty {
                     ContentUnavailableView("No containers", systemImage: "shippingbox")
                 } else {
@@ -54,15 +54,15 @@ internal struct InventoryContainerBrowserView: View {
                     }
                 }
             }
-            .inventoryMotion(value: model.filter)
-            .inventoryMotion(value: model.query)
-            .inventoryMotion(InventoryMotion.smooth, value: profiles.map(\.item.containment))
+            .popsMotion(value: model.filter)
+            .popsMotion(value: model.query)
+            .popsMotion(PopsMotion.smooth, value: profiles.map(\.item.containment))
             .padding(.horizontal, PopsSpacing.lg)
             .padding(.bottom, PopsSpacing.xxl)
         }
         .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
-        .inventoryCollapsingTitle("Containers")
-        .inventoryGroundedSwipeActionsContainer()
+        .popsCollapsingTitle("Containers")
+        .popsGroundedSwipeActionsContainer()
         .background(Color.popsBackground)
         .tint(.popsInventory)
     }
@@ -75,31 +75,33 @@ internal struct InventoryContainerBrowserView: View {
             InventoryOpenContainersPanel(containers: open, rowSpace: rowSpace) { container in
                 Task { await model.close(container) }
             }
-            .transition(InventoryMotion.row)
+            .transition(PopsMotion.row)
         }
         if !rest.isEmpty {
             restList(rest)
-                .transition(InventoryMotion.row)
+                .transition(PopsMotion.row)
         }
     }
 
     private var searchBar: some View {
         @Bindable var model = model
-        return InventorySearchBar(
+        return PopsSearchBar(
             query: $model.query,
+            tint: .popsInventory,
             prompt: "Search containers",
             isFiltered: model.filter != .all,
             filterSummary: model.filter == .all ? "" : model.filter.title,
-            add: InventorySearchBarAdd(label: "New container") {
+            add: PopsSearchBarAdd(label: "New container") {
                 itemForm?(.create(placement: nil))
-            }
-        ) {
-            Picker("Filter", selection: $model.filter) {
-                ForEach(InventoryContainerFilter.allCases) { option in
-                    Text(option.title).tag(option)
+            },
+            filterOptions: {
+                Picker("Filter", selection: $model.filter) {
+                    ForEach(InventoryContainerFilter.allCases) { option in
+                        Text(option.title).tag(option)
+                    }
                 }
             }
-        }
+        )
     }
 
     private func restList(_ rest: [InventoryContainerProfile]) -> some View {
@@ -111,7 +113,7 @@ internal struct InventoryContainerBrowserView: View {
                     }
                     .buttonStyle(.plain)
                     .matchedGeometryEffect(id: profile.id, in: rowSpace)
-                    .transition(InventoryMotion.row)
+                    .transition(PopsMotion.row)
                     if profile.id != rest.last?.id {
                         PopsDivider()
                             .padding(.leading, PopsSize.touchTarget + PopsSpacing.md)
@@ -169,7 +171,7 @@ internal struct InventoryContainerBrowserSkeleton: View {
         .scrollDisabled(true)
         .background(Color.popsBackground)
         .navigationTitle("Containers")
-        .inventoryTitleDisplay(large: true)
+        .popsTitleDisplay(large: true)
         .accessibilityLabel("Loading")
     }
 }

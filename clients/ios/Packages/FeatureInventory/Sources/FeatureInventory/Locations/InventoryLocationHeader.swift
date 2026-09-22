@@ -90,7 +90,7 @@ internal struct InventoryLocationConflict: View {
             InventoryLocationNoticeLine(
                 symbol: InventorySymbol.attention.system, tint: .popsWarning,
                 text: "Moved to \(theirs) on \(device)")
-            InventoryGlassGroup(spacing: PopsSpacing.sm) {
+            PopsGlassGroup(spacing: PopsSpacing.sm) {
                 HStack(spacing: PopsSpacing.sm) {
                     choice("Keep \(mine)", keepingMine: true)
                     choice("Keep \(theirs)", keepingMine: false)

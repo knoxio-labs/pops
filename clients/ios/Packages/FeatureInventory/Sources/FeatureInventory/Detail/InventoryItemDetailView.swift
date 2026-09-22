@@ -53,14 +53,14 @@ internal struct InventoryItemDetailView<Capability: View>: View {
                     onAction: onAction ?? act)
                 sections
             }
-            .inventoryMotion(value: detail)
+            .popsMotion(value: detail)
             .padding(.bottom, PopsSpacing.xl)
         }
         .background(Color.popsBackground)
         .ignoresSafeArea(edges: .top)
         .tint(.popsInventory)
         .navigationTitle("")
-        .inventoryTitleDisplay(large: false)
+        .popsTitleDisplay(large: false)
         .toolbar {
             InventoryItemDetailToolbar(
                 record: detail.record, destroying: $destroying, open: openPending,

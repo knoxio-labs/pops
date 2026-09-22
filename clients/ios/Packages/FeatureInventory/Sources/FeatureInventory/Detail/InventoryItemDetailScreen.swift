@@ -63,7 +63,7 @@ internal struct InventoryItemDetailSkeleton: View {
         .background(Color.popsBackground)
         .ignoresSafeArea(edges: .top)
         .navigationTitle("")
-        .inventoryTitleDisplay(large: false)
+        .popsTitleDisplay(large: false)
         .accessibilityLabel("Loading")
     }
 

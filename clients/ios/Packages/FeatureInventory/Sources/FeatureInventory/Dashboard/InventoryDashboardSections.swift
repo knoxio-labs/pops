@@ -17,7 +17,7 @@ extension InventoryDashboardView {
 
                 ForEach(dashboard.openContainers) { container in
                     containerRow(container)
-                        .transition(InventoryMotion.row)
+                        .transition(PopsMotion.row)
                     if container.id != dashboard.openContainers.last?.id {
                         PopsDivider()
                             .padding(.leading, PopsSize.touchTarget + PopsSpacing.md)
@@ -80,7 +80,7 @@ extension InventoryDashboardView {
                 VStack(spacing: PopsSpacing.zero) {
                     ForEach(activities) { activity in
                         activityRow(activity)
-                            .transition(InventoryMotion.row)
+                            .transition(PopsMotion.row)
                         if activity.id != activities.last?.id {
                             PopsDivider()
                                 .padding(.leading, PopsSize.touchTarget + PopsSpacing.md)
@@ -130,9 +130,9 @@ extension InventoryDashboardView {
             )
         }
         .buttonStyle(.plain)
-        .inventoryGroundedSwipeRow(isActive: activeSwipeRow == .container(container.id))
+        .popsGroundedSwipeRow(isActive: activeSwipeRow == .container(container.id))
         .accessibilityElement(children: .combine)
-        .inventoryGroundedSwipeActions(
+        .popsGroundedSwipeActions(
             edge: .trailing,
             onPresentationChanged: {
                 updateSwipePresentation(.container(container.id), isPresented: $0)
@@ -155,8 +155,8 @@ extension InventoryDashboardView {
                 symbol: activity.symbol)
         }
         .buttonStyle(.plain)
-        .inventoryGroundedSwipeRow(isActive: activeSwipeRow == .activity(activity.id))
-        .inventoryGroundedSwipeActions(
+        .popsGroundedSwipeRow(isActive: activeSwipeRow == .activity(activity.id))
+        .popsGroundedSwipeActions(
             edge: .trailing,
             onPresentationChanged: {
                 updateSwipePresentation(.activity(activity.id), isPresented: $0)
