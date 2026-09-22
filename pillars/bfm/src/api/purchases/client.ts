@@ -26,10 +26,9 @@ import { distinctEntityIds, resolveMergedNames, servedRows, toPage } from './lis
 import {
   PurchasesDetailResponseSchema,
   PurchasesListResponseSchema,
-  PurchasesMonthSummaryResponseSchema,
-  toMobileMonthSummary,
   toMobilePurchaseDetail,
 } from './list-wire.js';
+import { PurchasesMonthSummaryResponseSchema, toMobileMonthSummary } from './month-summary-wire.js';
 import { search, tagVocabulary, type SearchPurchasesRequest } from './search-client.js';
 import { PurchasesReceiptBytesSchema } from './wire.js';
 
