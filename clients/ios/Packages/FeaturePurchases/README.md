@@ -2,7 +2,7 @@
 
 Purchase browsing, receipt capture and the shared draft form.
 
-`PurchasesFlowView` is the Purchases tab. It owns one navigation stack rooted at the saved-purchase list and resolves feature-local archive and detail routes. Cross-feature links use the public `PurchasesRoute` and install `purchasesDestinations(dependencies:)` on their own stack. The current detail and archive destinations draw `ContentUnavailableView`; the available repository surface exposes only the paged list. The existing Receipts tab continues to own capture.
+`PurchasesFlowView` is the Purchases tab. It owns one navigation stack rooted at the purchases home and resolves feature-local archive and detail routes. Cross-feature links use the public `PurchasesRoute` and install `purchasesDestinations(dependencies:)` on their own stack. The current detail and archive destinations draw `ContentUnavailableView`; their repository reads land separately. The existing Receipts tab continues to own capture while the home asks the app host to present that flow through `purchaseCapture`.
 
 ## Capture and the draft form
 
@@ -44,6 +44,18 @@ Four decisions carry the rest of it, and each is a rule the screens landing next
 
 The Purchases tab renders the saved-purchase list with `PurchaseStatusFilter.all`; capture and draft creation use the receipt repository. Stored receipt presentation needs the typed detail repository and UI integration tracked by POPS-3708. The mobile detail and receipt-byte routes already exist.
 
+Saved-purchase screens share `PurchasesPresentation` for merchant names, settlement labels and tones, calendar grouping, and per-currency totals. Unknown settlement labels remain visible verbatim, and totals in different currencies never become one invented amount. `PurchaseMark`, `PurchaseStatusBadge`, and `PurchaseHeroWash` carry the approved visual vocabulary into the feature without depending on the design playground.
+
+`PurchaseRowContent` turns a saved purchase into the value every list row draws, including whether the merchant is unattributed and whether that context asks for a settlement badge. `PurchaseRowLabel`, `PurchaseRowsPanel`, and `PurchaseMarkStack` compose that value from the shared DesignSystem panel and divided-row primitives.
+
+`PurchasesHomeDigest` bounds Recent and merchant leaders while keeping the server's All and Unmatched counts independent from the number of loaded rows. Its summary initializer reads monthly totals, comparisons, and aggregate merchant leaders from `PurchasesMonthSummary`; leaders remain aggregate facts and never require an invented purchase or purchase identifier.
+
+`PurchasesHomeModel` loads that summary and the first unfiltered purchase page together. Refresh failures keep the last digest visible, while a generation counter prevents an older request from replacing a newer refresh. Capture can land complete purchases immediately or report only saved identifiers; both paths highlight every saved identifier and perform one refresh, and the identifier path never fabricates purchase rows.
+
+The home presentation reuses DesignSystem glass, spacing, type, and status primitives. Its monthly figure keeps currencies separate and omits a comparison when the server has no previous month. Archive tiles use server counts and stack vertically at accessibility Dynamic Type sizes; the Unmatched tile disappears only when the server count is zero. Loading, empty, initial failure, and retained-content refresh failure remain visibly distinct states.
+
+The assembled home switches between those states, refreshes without removing loaded content, and routes its tiles and rows through the Purchases stack. An empty history remains pull-to-refreshable and keeps a failed-refresh capsule visible; existing history with no activity in the current month says “No purchases this month” inside the monthly figure instead of becoming an empty history. Recent purchases mark every identifier saved by capture with a purchases-coloured wash and a “Just saved” caption until the next ordinary refresh. Merchant leaders draw aggregate rows directly from the month summary, without manufacturing purchases or identifiers. Add offers photos, files, and hand entry in that order; Scan is the purchases-tinted direct action. Both controls disappear when the host has not installed `purchaseCapture`, including on the empty state.
+
 Editing a saved purchase remains POPS-2458. There is no initialiser building a `ReceiptDraft` from a `ReceiptPurchase`: that summary carries a merchant, a total and a count, and a form pre-filled from it would present three line items as zero. Reusing the form requires the full detail model, rather than treating the summary as an editable purchase.
 
 ### The form, and how both entry points reach it
@@ -59,6 +71,8 @@ Three rules hold the form together, and each is a value a test asserts rather th
 **The arithmetic is reported, never recomputed.** `ReceiptDraft`'s fields hold what a model transcribed, printed-looking, whichever arm of `receipt.extract` produced them — `BFMReceiptCaptureRepository` turns the BFM's cents-based draft back into that shape once, at the repository boundary, so this module's own presentation code is unaware the wire is cents at all. The form repeats what the gate found — and withdraws it the moment a figure changes, because from then on the check is about numbers no longer on screen. `ReceiptDraftReconciliation` is those three states, and saying "as read, the items and the total agree" is what tells a reader who came to rename three items which figures to leave alone.
 
 ### Two entry points, one save path
+
+Feature-owned controls request capture through the optional `purchaseCapture` environment presenter. The presenter receives a `PurchaseCaptureEntry.Source`; the host reports one ordered batch of saved identifiers through `reportSaved(_:)` when the presented run ends, and the presenter delivers that batch to its `onSaved` callback. A host without capture support leaves the environment value `nil`, so a feature can omit the control instead of opening a dead destination.
 
 `ReceiptCaptureView`'s ready state offers two actions side by side: photograph a receipt, or "Add a purchase" with no camera involved. Both land on `ReceiptResultView` over a `ReceiptResultViewModel`, and both save through the same `save(_:)`, which reads `ReceiptResultState` to decide which BFM call to make:
 
