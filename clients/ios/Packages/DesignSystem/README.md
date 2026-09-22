@@ -14,6 +14,8 @@ The **structural** primitives under `Sources/DesignSystem/Primitives/` are a dif
 
 `PopsSearchBar` owns the shared Mail-style search, filter, scan, dictation and add controls while its caller supplies the feature tint and filter contents. `PopsGlassGroup`, `popsGlass(in:)` and `popsProminentGlassButton()` contain the platform glass differences. `PopsDashedActionButton` is the empty-screen action, and the `popsGroundedSwipe*` modifiers keep swipe rows above their surrounding surface while actions are open.
 
+`popsTrailingBarItem` places a screen action at the trailing edge of its navigation bar. `popsBottomBar` groups secondary controls in the platform bottom toolbar. Their iOS placements and host-toolchain fallbacks live together in `PopsBarItemsPlatform.swift`.
+
 ## The two rules
 
 Both apply to every module under `Packages/` and to `App/`, not just to this one.
