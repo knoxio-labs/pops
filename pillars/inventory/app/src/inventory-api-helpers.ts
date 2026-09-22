@@ -12,18 +12,53 @@
  */
 
 interface SdkErrorBody {
+  code?: unknown;
+  issues?: unknown;
   message?: unknown;
 }
 
+/** One definition-level validation issue returned by catalogue authoring. */
+export interface InventoryApiIssue {
+  readonly code: string;
+  readonly definitionId: string | null;
+  readonly message: string;
+  readonly path: string;
+}
+
+function apiIssues(value: unknown): readonly InventoryApiIssue[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((issue): issue is InventoryApiIssue => {
+    if (typeof issue !== 'object' || issue === null) return false;
+    const candidate = issue as Record<string, unknown>;
+    return (
+      typeof candidate.code === 'string' &&
+      (typeof candidate.definitionId === 'string' || candidate.definitionId === null) &&
+      typeof candidate.message === 'string' &&
+      typeof candidate.path === 'string'
+    );
+  });
+}
+
+/** Error raised after a generated Inventory client call returns an error body. */
 export class InventoryApiError extends Error {
+  readonly code: string | undefined;
+  readonly issues: readonly InventoryApiIssue[];
   readonly status: number | undefined;
-  constructor(message: string, status: number | undefined) {
+  constructor(
+    message: string,
+    status: number | undefined,
+    code?: string,
+    issues: readonly InventoryApiIssue[] = []
+  ) {
     super(message);
     this.name = 'InventoryApiError';
     this.status = status;
+    this.code = code;
+    this.issues = issues;
   }
 }
 
+/** Returns a successful generated-client payload or raises its typed API error. */
 export function unwrap<T>(result: { data?: T; error?: unknown; response?: Response }): T {
   if (result.error !== undefined) {
     const body = result.error as SdkErrorBody;
@@ -31,7 +66,12 @@ export function unwrap<T>(result: { data?: T; error?: unknown; response?: Respon
       typeof body.message === 'string' && body.message.length > 0
         ? body.message
         : 'inventory API request failed';
-    throw new InventoryApiError(message, result.response?.status);
+    throw new InventoryApiError(
+      message,
+      result.response?.status,
+      typeof body.code === 'string' ? body.code : undefined,
+      apiIssues(body.issues)
+    );
   }
   if (result.data === undefined) {
     throw new InventoryApiError('inventory API returned no data', result.response?.status);

@@ -7,6 +7,7 @@ import {
   patchCatalogueDraft,
   publishCatalogueDraft,
   readCatalogueAudit,
+  readCurrentCatalogueDraft,
   toCatalogueDescriptor,
   type CatalogueAuthor,
 } from '../../catalogue/authoring.js';
@@ -89,6 +90,7 @@ function compatibilityBody(
   return {
     classification: result.classification,
     affectedIds: [...result.affectedIds],
+    affectedItems: result.affectedItems,
     changes: result.changes.map((change) => ({ ...change })),
   };
 }
@@ -123,6 +125,11 @@ function makeTypeCatalogueReadHandlers(db: CommandDb) {
 
 function makeTypeCatalogueManageHandlers(db: CommandDb) {
   return {
+    readDraft: ({ res }: TypesRequest['manage']['readDraft'] & { res: Response }) =>
+      runCatalogue(() => {
+        requireAuthor(res, 'manage');
+        return { status: 200 as const, body: readCurrentCatalogueDraft(db) };
+      }),
     createDraft: ({ body, res }: TypesRequest['manage']['createDraft'] & { res: Response }) =>
       runCatalogue(() => {
         const author = requireAuthor(res, 'manage');

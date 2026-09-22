@@ -17,6 +17,7 @@ import {
 import { CatalogueApiError } from './authoring-types.js';
 import { validateCatalogue } from './authoring-validation.js';
 import { toCatalogueDescriptor } from './authoring-wire.js';
+import { countCompatibilityAffectedItems } from './compatibility-preview.js';
 import { classifyCatalogueCompatibility } from './compatibility.js';
 
 import type { CommandDb } from '../domain/commands/index.js';
@@ -38,6 +39,19 @@ export type {
   CatalogueRevisionWire,
   CatalogueTypeWire,
 } from './authoring-types.js';
+
+/** Reads the one editable draft, when authoring is already in progress. */
+export function readCurrentCatalogueDraft(db: CommandDb): CatalogueDescriptor {
+  const row = db
+    .select({ revision: catalogueRevisions.revision })
+    .from(catalogueRevisions)
+    .where(eq(catalogueRevisions.status, 'draft'))
+    .get();
+  if (row === undefined) {
+    throw new CatalogueApiError(404, 'catalogue_draft_missing', 'No catalogue draft exists');
+  }
+  return toCatalogueDescriptor(db, requireCatalogue(db, row.revision, ['draft']));
+}
 
 function actorColumns(author: CatalogueAuthor): {
   createdActorKind: 'web' | 'service';
@@ -126,16 +140,23 @@ export function patchCatalogueDraft(
   revision: number,
   baseRevision: number,
   operations: readonly DraftOperation[]
-): { draft: CatalogueDescriptor; compatibility: CatalogueCompatibilityResult } {
+): {
+  draft: CatalogueDescriptor;
+  compatibility: CatalogueCompatibilityResult & { readonly affectedItems: number };
+} {
   return db.transaction((tx) => {
     requireCurrentDraft(tx, revision, baseRevision);
     for (const operation of operations) applyOperation(tx, revision, operation);
     const draft = requireCatalogue(tx, revision, ['draft']);
     validateCatalogue(draft);
     const base = requireCatalogue(tx, baseRevision, ['published']);
+    const compatibility = classifyCatalogueCompatibility(base, draft);
     return {
       draft: toCatalogueDescriptor(tx, draft),
-      compatibility: classifyCatalogueCompatibility(base, draft),
+      compatibility: {
+        ...compatibility,
+        affectedItems: countCompatibilityAffectedItems(tx, base, draft, compatibility.affectedIds),
+      },
     };
   });
 }

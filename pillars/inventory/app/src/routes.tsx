@@ -46,6 +46,9 @@ const ConnectionsPage = lazy(() =>
     default: m.ConnectionsPage,
   }))
 );
+const TypeCataloguePage = lazy(() =>
+  import('./pages/TypeCataloguePage').then((m) => ({ default: m.TypeCataloguePage }))
+);
 
 /** Redirects the old singular path to the plural equivalent, preserving query string. */
 export function SearchPreservingRedirect({ to }: { to: string }) {
@@ -89,6 +92,7 @@ export const PAGE_COMPONENTS = {
   'inventory-connections': ConnectionsPage,
   'inventory-warranties': WarrantiesPage,
   'inventory-location-tree': LocationTreePage,
+  'inventory-type-catalogue': TypeCataloguePage,
   'inventory-reports-group': ReportsGroup,
   'inventory-report-dashboard': ReportDashboardPage,
   'inventory-insurance-report': InsuranceReportPage,
@@ -104,6 +108,7 @@ export const routes: RouteObject[] = [
   { path: 'connections', element: <ConnectionsPage /> },
   { path: 'warranties', element: <WarrantiesPage /> },
   { path: 'locations', element: <LocationTreePage /> },
+  { path: 'types', element: <TypeCataloguePage /> },
   {
     path: 'reports',
     element: <ReportsGroup />,
