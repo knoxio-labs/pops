@@ -83,7 +83,10 @@ describe('item.create', () => {
       mutation(
         'item.create',
         id,
-        createArgs({ typeKey: 'storage_box', fields: { Footprint: '400x300mm' } }),
+        createArgs({
+          typeKey: 'storage_box',
+          fields: { Width: { value: 40, unit: 'cm' } },
+        }),
         { baseRevision: null }
       )
     );

@@ -49,8 +49,42 @@ describe('the six initial types', () => {
     expect(highlightedKeysOf('cable')).toEqual(['End A', 'End B', 'Length'].toSorted());
     expect(highlightedKeysOf('charger')).toEqual(['Ports', 'Power'].toSorted());
     expect(highlightedKeysOf('bulb')).toEqual(['Fitting', 'Protocol'].toSorted());
-    expect(highlightedKeysOf('storage_box')).toEqual(['Capacity', 'Load limit'].toSorted());
+    expect(highlightedKeysOf('storage_box')).toEqual(
+      ['Capacity', 'Duty rating', 'Load limit'].toSorted()
+    );
     expect(highlightedKeysOf('tape')).toEqual(['Width', 'Length'].toSorted());
     expect(highlightedKeysOf('furniture')).toEqual(['Footprint', 'Material'].toSorted());
+  });
+
+  it('defines storage box dimensions and duty ratings without a duplicate footprint', () => {
+    expect(byKey.get('storage_box')?.fields).toEqual([
+      {
+        key: 'Capacity',
+        label: 'Capacity',
+        kind: 'measurement',
+        dimension: 'volume',
+        unit: 'L',
+        highlighted: true,
+      },
+      { key: 'Width', label: 'Width', kind: 'measurement', dimension: 'length', unit: 'cm' },
+      { key: 'Height', label: 'Height', kind: 'measurement', dimension: 'length', unit: 'cm' },
+      { key: 'Depth', label: 'Depth', kind: 'measurement', dimension: 'length', unit: 'cm' },
+      {
+        key: 'Load limit',
+        label: 'Load limit',
+        kind: 'measurement',
+        dimension: 'mass',
+        unit: 'kg',
+        highlighted: true,
+      },
+      {
+        key: 'Duty rating',
+        label: 'Duty rating',
+        kind: 'choice',
+        choices: ['Light', 'Standard', 'Heavy Duty', 'Extra Heavy Duty'],
+        highlighted: true,
+      },
+      { key: 'Stackable', label: 'Stackable', kind: 'flag' },
+    ]);
   });
 });

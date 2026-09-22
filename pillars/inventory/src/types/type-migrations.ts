@@ -21,7 +21,13 @@ export interface TypeMigrationRecord {
  * starts empty; a later slice that narrows a choice list or changes a
  * dimension adds an entry here in the same change.
  */
-export const TYPE_MIGRATIONS: readonly TypeMigrationRecord[] = [];
+export const TYPE_MIGRATIONS: readonly TypeMigrationRecord[] = [
+  {
+    typeKey: 'storage_box',
+    description:
+      '0016_storage_box_dimensions removes the superseded free-text Footprint value before the catalogue exposes separate dimensions',
+  },
+];
 
 /** Whether `typeKey` has a registered migration covering its current breaking change. */
 export function hasMigration(
