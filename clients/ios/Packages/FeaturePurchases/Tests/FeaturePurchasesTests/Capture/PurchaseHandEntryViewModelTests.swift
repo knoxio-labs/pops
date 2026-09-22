@@ -1,5 +1,4 @@
 import AppCore
-import AppCoreFakes
 import Synchronization
 import Testing
 
