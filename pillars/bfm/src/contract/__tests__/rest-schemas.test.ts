@@ -11,6 +11,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   FALLBACK_MOBILE_CURRENCY,
+  MobileReceiptUploadBodySchema,
   MobileTransactionDetailSchema,
   MobileTransactionSchema,
 } from '../rest-schemas.js';
@@ -58,5 +59,21 @@ describe('MobileTransactionDetailSchema.shape.currency', () => {
 
     expect(result.success).toBe(true);
     expect(result.data?.currency).toBe('USD');
+  });
+});
+
+describe('MobileReceiptUploadBodySchema.parts', () => {
+  const part = { mediaType: 'image/jpeg', dataBase64: 'AAAA' };
+
+  it('rejects an empty parts array', () => {
+    const result = MobileReceiptUploadBodySchema.safeParse({ parts: [] });
+    expect(result.success).toBe(false);
+  });
+
+  it('accepts more than the old eight-part ceiling, matching purchases', () => {
+    const result = MobileReceiptUploadBodySchema.safeParse({
+      parts: Array.from({ length: 20 }, () => part),
+    });
+    expect(result.success).toBe(true);
   });
 });

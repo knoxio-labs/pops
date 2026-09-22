@@ -155,7 +155,7 @@ internal struct ReceiptCaptureRenderingTests {
         "every capture problem reaches the screen",
         .requiresCompiledColorCatalog,
         arguments: [
-            ReceiptCaptureProblem.cameraFailed, .noPages, .unpreparedPages, .tooManyPages(9),
+            ReceiptCaptureProblem.cameraFailed, .noPages, .unpreparedPages,
         ])
     func problemsAreDrawn(problem: ReceiptCaptureProblem) throws {
         let clean = try #require(Self.render(Self.prompt(access: .authorized)))
@@ -170,7 +170,7 @@ internal struct ReceiptCaptureRenderingTests {
     @Test("the problems do not all draw the same sentence", .requiresCompiledColorCatalog)
     func problemsAreDistinct() throws {
         let drawn = try [
-            ReceiptCaptureProblem.cameraFailed, .noPages, .unpreparedPages, .tooManyPages(9),
+            ReceiptCaptureProblem.cameraFailed, .noPages, .unpreparedPages,
         ].map { try #require(Self.render(Self.prompt(access: .authorized, problem: $0))) }
 
         #expect(Set(drawn).count == drawn.count)
@@ -247,7 +247,7 @@ internal struct ReceiptCaptureLayoutTests {
     @Test(
         "every capture problem takes up room on the screen it is reported on",
         arguments: [
-            ReceiptCaptureProblem.cameraFailed, .noPages, .unpreparedPages, .tooManyPages(9),
+            ReceiptCaptureProblem.cameraFailed, .noPages, .unpreparedPages,
         ])
     func everyProblemTakesUpRoom(problem: ReceiptCaptureProblem) throws {
         let clean = try #require(Self.height(access: .authorized))
@@ -289,10 +289,6 @@ internal enum ReceiptCaptureFixture {
             model.didCapture([], from: 0)
         case .unpreparedPages:
             model.didCapture([], from: 2)
-        case .tooManyPages(let count):
-            model.didCapture(
-                (0..<count).map { ReceiptPart(mediaType: .jpeg, data: Data("\($0)".utf8)) },
-                from: count)
         }
         precondition(
             model.problem == problem,

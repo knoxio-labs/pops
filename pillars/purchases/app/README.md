@@ -248,11 +248,11 @@ invoice, or a pasted order confirmation. Files become base64 parts with no
 contract stores every shape one way.
 
 **One receipt can be several parts, and their order is the receipt's.** A long
-supermarket slip does not fit in one frame, so up to eight parts are staged
+supermarket slip does not fit in one frame, so all selected parts are staged
 into one upload and one purchase. The staged list is reorderable for that
 reason: the server reads the parts top to bottom, and shuffled frames are a
-different document. Overflow past the eighth part is reported rather than
-trimmed in silence.
+different document. There is no page-count ceiling; unreadable or unsupported
+files are reported without dropping accepted parts.
 
 **The three outcomes stay three.** `POST /receipts` answers with a
 discriminated union and the page keeps the distinction:

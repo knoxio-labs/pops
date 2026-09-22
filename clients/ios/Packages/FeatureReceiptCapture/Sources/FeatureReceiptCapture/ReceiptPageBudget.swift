@@ -4,11 +4,11 @@ import CoreGraphics
 ///
 /// A receipt is read by a model, not by a person zooming in, so the useful
 /// question is whether the print is still legible rather than whether the
-/// picture is as good as the sensor could make it. Against that, a receipt can
-/// be up to ``ReceiptPart/maxPerReceipt`` photographs in one request, taken by
-/// somebody standing in a shop on whatever connection they have — so the whole
-/// upload has to stay bounded, and the only place to bound it is before the
-/// bytes exist.
+/// picture is as good as the sensor could make it. Against that, a receipt has
+/// no ceiling on how many photographs it may take (ADR-052), taken by
+/// somebody standing in a shop on whatever connection they have — so each
+/// page has to stay bounded on its own, and the only place to bound it is
+/// before the bytes exist.
 ///
 /// A value rather than two constants so a test can state the rule with its own
 /// numbers and not have to photograph anything to do it.

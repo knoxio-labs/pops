@@ -302,17 +302,6 @@ export const MobileReceiptBytesSchema = z.object({
 export type MobileReceiptBytes = z.infer<typeof MobileReceiptBytesSchema>;
 
 /**
- * How many parts one receipt may be sent as. Mirrors `purchases`'
- * `MAX_RECEIPT_PARTS` so an upload bfm accepts is not one the producer will
- * reject — the cheaper refusal is the one that never leaves the handset.
- *
- * Kept in this file rather than moving with the rest of the receipt shapes
- * (`receipt.ts`) because `scripts/ci/check-receipt-max-parts-drift.mjs` pins
- * it by this exact path and pattern.
- */
-export const MOBILE_RECEIPT_MAX_PARTS = 8;
-
-/**
  * One receipt, in order, top to bottom. Several photographs of one piece of
  * paper are one upload and one purchase, not several receipts.
  *
@@ -321,9 +310,14 @@ export const MOBILE_RECEIPT_MAX_PARTS = 8;
  * purchase back with `alreadyStored` set. A key minted here would be a second
  * dedup rule, and the first time the two disagreed the user would have two
  * purchases for one receipt (ADR-046).
+ *
+ * No count ceiling on `parts`: a long shop is not told to stop partway
+ * through. `MOBILE_UPLOAD_MAX_BYTES` is the only real bound on how many
+ * parts one upload can carry — see ADR-052
+ * (`docs/architecture/adr-052-receipt-part-count-ceiling.md`).
  */
 export const MobileReceiptUploadBodySchema = z.object({
-  parts: z.array(MobileReceiptPartSchema).min(1).max(MOBILE_RECEIPT_MAX_PARTS),
+  parts: z.array(MobileReceiptPartSchema).min(1),
   /**
    * What the handset knew that the paper cannot state — see `capture.ts`,
    * which is also where the reason a location is accepted at all lives.

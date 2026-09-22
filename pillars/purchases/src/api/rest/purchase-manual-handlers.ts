@@ -5,6 +5,7 @@
  * line-count cap; there is no behavioural reason for the boundary to sit
  * here rather than anywhere else in that router.
  */
+import { findPurchaseByChecksum } from '../../db/index.js';
 import { MANUAL_SOURCE_ID } from '../../ingest/source-ids.js';
 import {
   createMerchantResolver,
@@ -12,7 +13,11 @@ import {
   type MerchantResolver,
 } from '../contacts/merchant.js';
 import { findDraftInconsistency, toCreatePurchaseInput } from './draft-mapping.js';
-import { ensureDraftSource, persistDraftPurchase } from './purchase-draft-persist.js';
+import {
+  ensureDraftSource,
+  persistDraftPurchase,
+  readDraftPurchaseDetail,
+} from './purchase-draft-persist.js';
 import { toPurchaseDetailBody } from './serializers.js';
 
 import type { z } from 'zod';
@@ -54,6 +59,18 @@ export function makePurchaseManualHandlers(
         return {
           status: 400 as const,
           body: { message: inconsistency.message, code: 'INCONSISTENT_TOTAL' },
+        };
+      }
+
+      // A replay of the same idempotency key is the retry it exists for:
+      // return the purchase it already wrote. A key already used by a
+      // purchase from another source (a receipt save, say) is a genuine
+      // collision and falls through to `persistDraftPurchase`'s 409.
+      const existing = findPurchaseByChecksum(db, body.idempotencyKey);
+      if (existing !== undefined && existing.source === MANUAL_SOURCE_ID) {
+        return {
+          status: 200 as const,
+          body: toPurchaseDetailBody(readDraftPurchaseDetail(db, existing.id)),
         };
       }
 

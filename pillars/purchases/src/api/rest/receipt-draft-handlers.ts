@@ -20,7 +20,11 @@ import {
   type MerchantResolver,
 } from '../contacts/merchant.js';
 import { findDraftInconsistency, toCreatePurchaseInput } from './draft-mapping.js';
-import { ensureDraftSource, persistDraftPurchase } from './purchase-draft-persist.js';
+import {
+  ensureDraftSource,
+  persistDraftPurchase,
+  readDraftPurchaseDetail,
+} from './purchase-draft-persist.js';
 import {
   fireIngest,
   prepareReceiptParts,
@@ -140,6 +144,16 @@ export function makeReceiptDraftHandlers(
       }
       const alreadySaved = findPurchaseBySourceOrderId(db, RECEIPT_SOURCE_ID, contentKey);
       if (alreadySaved !== undefined) {
+        // Replaying the same idempotency key is the retry this key exists
+        // for: return what it already wrote rather than refusing it. A
+        // different key on the same receipt is a genuinely different save
+        // request and stays a 409.
+        if (alreadySaved.checksum === body.idempotencyKey) {
+          return {
+            status: 200 as const,
+            body: toPurchaseDetailBody(readDraftPurchaseDetail(db, alreadySaved.id)),
+          };
+        }
         return {
           status: 409 as const,
           body: {

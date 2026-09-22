@@ -21,13 +21,12 @@ import SwiftUI
 /// correction, a hand-entered purchase and an edit of a saved one — three
 /// tickets, one form, per this package's README.
 ///
-/// Nothing in the shipped app calls it yet, and that is a real gap rather than
-/// an oversight: saving a corrected extraction is the handset writing something
-/// other than a raw capture, which the mobile surface's current ADR forbids
-/// outright. The capability-scope model that replaces that rule is a separate,
-/// unlanded decision. Building the form against a seam is the shape that
-/// survives it; building a confirm-before-save flow that squeezed inside the
-/// current rule is the shape that would have to be thrown away.
+/// ReceiptResultView is the caller today: its `.draft` and `.manualEntry`
+/// states both build this view with `save` wired to
+/// `ReceiptResultViewModel.save(_:)` (POPS-2454). The seam still earns its
+/// keep beyond that one caller — an eventual edit-a-saved-purchase screen
+/// (POPS-2458) can reuse the same view with a different save closure without
+/// this type knowing the difference.
 public struct ReceiptDraftView: View {
     @State private var ownDraft: ReceiptDraft
     private let hostDraft: Binding<ReceiptDraft>?

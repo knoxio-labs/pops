@@ -1,7 +1,5 @@
 import { useTranslation } from 'react-i18next';
 
-import { MAX_RECEIPT_PARTS } from './parts.js';
-
 import type { ReactElement } from 'react';
 
 import type { StagingProblem } from './staging.js';
@@ -17,8 +15,6 @@ export function StagingProblems({ problems }: { problems: StagingProblem[] }): R
         return t('receipts.problem.rejected', { names: problem.names.join(', ') });
       case 'unreadable':
         return t('receipts.problem.unreadableFile', { names: problem.names.join(', ') });
-      case 'tooMany':
-        return t('receipts.problem.tooMany', { max: MAX_RECEIPT_PARTS, dropped: problem.dropped });
     }
   };
 

@@ -6545,7 +6545,6 @@
                       "required": ["mediaType", "dataBase64"],
                       "type": "object"
                     },
-                    "maxItems": 8,
                     "minItems": 1,
                     "type": "array"
                   }
@@ -8846,7 +8845,6 @@
                       "required": ["mediaType", "dataBase64"],
                       "type": "object"
                     },
-                    "maxItems": 8,
                     "minItems": 1,
                     "type": "array"
                   }

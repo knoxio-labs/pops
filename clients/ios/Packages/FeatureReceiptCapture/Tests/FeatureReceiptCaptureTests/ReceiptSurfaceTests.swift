@@ -185,7 +185,7 @@ internal struct ReceiptPagesTests {
 @Suite("Capture problem copy")
 internal struct ReceiptCaptureProblemCopyTests {
     private static let everyProblem: [ReceiptCaptureProblem] = [
-        .cameraFailed, .noPages, .unpreparedPages, .tooManyPages(9),
+        .cameraFailed, .noPages, .unpreparedPages,
     ]
 
     @Test("every problem says something", arguments: everyProblem)
@@ -202,16 +202,6 @@ internal struct ReceiptCaptureProblemCopyTests {
         let messages = Self.everyProblem.map(ReceiptCaptureCopy.message(for:))
 
         #expect(Set(messages).count == messages.count)
-    }
-
-    /// "you took eleven" is what makes the limit actionable, and the limit
-    /// itself is what makes the next attempt likely to work.
-    @Test("too many pages says how many, and how many are allowed")
-    func tooManyPagesCarriesBothNumbers() {
-        let message = ReceiptCaptureCopy.message(for: .tooManyPages(11))
-
-        #expect(message.contains("11"))
-        #expect(message.contains("\(ReceiptPart.maxPerReceipt)"))
     }
 }
 

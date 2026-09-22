@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { MAX_RECEIPT_PARTS, nextPartId, type StagedPart } from '../parts';
+import { nextPartId, type StagedPart } from '../parts';
 import {
   encodeBatch,
   EMPTY_STAGING,
@@ -40,44 +40,35 @@ describe('stage', () => {
     expect(next.problems).toEqual([]);
   });
 
-  it('stops at the contract bound and says how many were left out', () => {
-    const full = staged(
-      ...Array.from({ length: MAX_RECEIPT_PARTS }, (_, i) => `frame-${String(i)}`)
-    );
+  it('keeps every part in a batch beyond eight pages', () => {
+    const frames = Array.from({ length: 12 }, (_, i) => part(`frame-${String(i)}`));
+    const next = stage(EMPTY_STAGING, batch({ encoded: frames }));
 
-    const next = stage(full, batch({ encoded: [part('spill-1'), part('spill-2')] }));
-
-    expect(next.parts).toHaveLength(MAX_RECEIPT_PARTS);
-    expect(names(next)).not.toContain('spill-1');
-    expect(next.problems).toEqual([{ kind: 'tooMany', dropped: 2 }]);
+    expect(next.parts).toEqual(frames);
+    expect(next.problems).toEqual([]);
   });
 
-  it('takes what fits and reports only the overflow', () => {
-    const nearlyFull = staged(
-      ...Array.from({ length: MAX_RECEIPT_PARTS - 1 }, (_, i) => `frame-${String(i)}`)
-    );
+  it('appends every part when earlier batches already contain eight pages', () => {
+    const current = staged(...Array.from({ length: 8 }, (_, i) => `frame-${String(i)}`));
+    const added = [part('nine'), part('ten')];
+    const next = stage(current, batch({ encoded: added }));
 
-    const next = stage(nearlyFull, batch({ encoded: [part('fits'), part('does-not')] }));
-
-    expect(names(next)).toContain('fits');
-    expect(names(next)).not.toContain('does-not');
-    expect(next.problems).toEqual([{ kind: 'tooMany', dropped: 1 }]);
+    expect(next.parts).toEqual([...current.parts, ...added]);
+    expect(next.problems).toEqual([]);
   });
 
-  it('reports a refusal, a read failure and an overflow together', () => {
-    const full = staged(
-      ...Array.from({ length: MAX_RECEIPT_PARTS }, (_, i) => `frame-${String(i)}`)
-    );
-
+  it('keeps accepted pages beyond eight while reporting rejected and unreadable files', () => {
+    const current = staged(...Array.from({ length: 8 }, (_, i) => `frame-${String(i)}`));
+    const accepted = part('nine');
     const next = stage(
-      full,
-      batch({ encoded: [part('spill')], rejected: ['till.heic'], unreadable: ['locked.pdf'] })
+      current,
+      batch({ encoded: [accepted], rejected: ['till.heic'], unreadable: ['locked.pdf'] })
     );
 
+    expect(next.parts).toEqual([...current.parts, accepted]);
     expect(next.problems).toEqual([
       { kind: 'rejected', names: ['till.heic'] },
       { kind: 'unreadable', names: ['locked.pdf'] },
-      { kind: 'tooMany', dropped: 1 },
     ]);
   });
 

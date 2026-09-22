@@ -34,10 +34,14 @@ export function makeMobilePurchasesDraftHandlers(purchases: MobilePurchasesClien
 
     saveReceiptDraft: async ({ body }: Req['saveReceiptDraft']) => {
       const outcome = await purchases.saveReceiptDraft(body);
-      // A duplicate idempotency key or an already-saved receipt answers
-      // `502 upstream_conflict` here, the same code every route on this
-      // surface uses for a producer refusal — see `upstream-error.ts`. The
-      // app tells it apart from every other 502 by that code, not by status.
+      // Replaying the same idempotency key is a `200` from purchases with
+      // the purchase it already created, and `isGatewayOk` passes that
+      // straight through below like any other success — no special casing
+      // needed here. Only a genuinely different save of an already-saved
+      // receipt still answers `409`, which maps to `502 upstream_conflict`
+      // here, the same code every route on this surface uses for a
+      // producer refusal — see `upstream-error.ts`. The app tells it apart
+      // from every other 502 by that code, not by status.
       if (!isGatewayOk(outcome)) return toUpstreamErrorResponse(outcome);
 
       return { status: 200 as const, body: outcome.value };

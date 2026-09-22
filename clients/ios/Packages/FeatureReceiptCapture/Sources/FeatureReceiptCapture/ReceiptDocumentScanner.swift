@@ -78,10 +78,10 @@
             self.budget = budget
         }
 
-        /// Resizing and JPEG-encoding up to ``ReceiptPart/maxPerReceipt`` pages
-        /// is real work, and the main thread is where the camera is still
-        /// animating away. Off it, then back to report — the scanner stays on
-        /// screen for the extra beat rather than the app freezing for it.
+        /// Resizing and JPEG-encoding a scan's pages is real work, and the
+        /// main thread is where the camera is still animating away. Off it,
+        /// then back to report — the scanner stays on screen for the extra
+        /// beat rather than the app freezing for it.
         private func prepare(_ pages: [UIImage]) {
             let budget = budget
             Task { @MainActor [onCapture] in

@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Button, FileUpload } from '@pops/ui';
 
-import { MAX_RECEIPT_PARTS, RECEIPT_ACCEPT } from './parts.js';
+import { RECEIPT_ACCEPT } from './parts.js';
 import { PastedTextForm } from './PastedTextForm.js';
 import { StagedPartList } from './StagedPartList.js';
 import { StagingProblems } from './StagingProblems.js';
@@ -39,9 +39,7 @@ export function ReceiptIntake({ intake, disabled, onSubmit }: ReceiptIntakeProps
           }}
         />
         <p className="text-muted-foreground text-xs">{t('receipts.drop.accepts')}</p>
-        <p className="text-muted-foreground text-xs">
-          {t('receipts.drop.multiPart', { max: MAX_RECEIPT_PARTS })}
-        </p>
+        <p className="text-muted-foreground text-xs">{t('receipts.drop.multiPart')}</p>
       </div>
 
       <PastedTextForm disabled={disabled} onAdd={intake.addText} />
