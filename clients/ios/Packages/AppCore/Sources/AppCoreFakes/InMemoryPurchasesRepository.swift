@@ -90,14 +90,7 @@ public actor InMemoryPurchasesRepository: PurchasesRepository {
         guard let current = details[id] else { return nil }
 
         let currency = current.purchase.total.currencyCode
-        let lines = update.lines.enumerated().map { index, line in
-            PurchaseDetailLine(
-                id: line.id ?? "fake-line-\(callCount)-\(index)",
-                name: line.name,
-                quantity: line.quantity,
-                lineTotal: MoneyAmount(
-                    minorUnits: line.lineTotalCents, currencyCode: currency))
-        }
+        let lines = updatedLines(from: update, preserving: current.lines, currency: currency)
         let purchase = Purchase(
             id: current.id,
             merchant: updatedMerchant(current.purchase.merchant, with: update),
@@ -142,6 +135,23 @@ public actor InMemoryPurchasesRepository: PurchasesRepository {
     private func beginCall() throws {
         callCount += 1
         if let failure = failures[callCount] { throw failure }
+    }
+
+    private func updatedLines(
+        from update: PurchaseUpdate,
+        preserving current: [PurchaseDetailLine],
+        currency: String
+    ) -> [PurchaseDetailLine] {
+        let currentByID = Dictionary(uniqueKeysWithValues: current.map { ($0.id, $0) })
+        return update.lines.enumerated().map { index, line in
+            PurchaseDetailLine(
+                id: line.id ?? "fake-line-\(callCount)-\(index)",
+                name: line.name,
+                quantity: line.quantity,
+                lineTotal: MoneyAmount(
+                    minorUnits: line.lineTotalCents, currencyCode: currency),
+                hasInventoryLink: line.id.flatMap { currentByID[$0]?.hasInventoryLink } ?? false)
+        }
     }
 
     private func updatedMoney(_ minorUnits: Int?, preserving current: MoneyAmount) -> MoneyAmount {

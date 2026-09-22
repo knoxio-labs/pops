@@ -36,6 +36,7 @@ internal struct PurchaseUpdateMappingTests {
         #expect(detail.updatedAt == "opaque-new-token")
         #expect(detail.edit?.changes.map(\.field) == [.merchant, .lineAdded])
         #expect(detail.edit?.changes.last?.itemID == "line-2")
+        #expect(detail.lines.map(\.hasInventoryLink) == [true, false])
         let sent = try #require(await transport.recorded.all.first)
         #expect(sent.request.method == .patch)
         #expect(sent.request.path == "/mobile/purchases/purchase-1")
@@ -144,7 +145,7 @@ internal struct PurchaseUpdateMappingTests {
         {"field":"merchant","itemId":null,"original":"Old Cafe","current":"New Cafe"},
         {"field":"lineAdded","itemId":"line-2","original":null,"current":"Cake"}]},
         "id":"purchase-1","itemCount":2,
-        "items":[{"id":"line-1","lineTotalCents":1500,"name":"Coffee","quantity":2},
+        "items":[{"hasInventoryLink":true,"id":"line-1","lineTotalCents":1500,"name":"Coffee","quantity":2},
         {"id":"line-2","lineTotalCents":400,"name":"Cake","quantity":1}],
         "merchant":{"resolution":"entity","entityId":"merchant-2","name":"New Cafe"},
         "merchantName":"New Cafe","orderedAt":"2026-09-21T01:02:03.000Z",

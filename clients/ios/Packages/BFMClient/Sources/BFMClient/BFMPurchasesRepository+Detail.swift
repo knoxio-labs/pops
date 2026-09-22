@@ -51,7 +51,8 @@ extension BFMPurchasesRepository {
                 lines: wire.items.map {
                     DetailLineValues(
                         id: $0.id, name: $0.name, quantity: $0.quantity,
-                        lineTotalCents: $0.lineTotalCents)
+                        lineTotalCents: $0.lineTotalCents,
+                        hasInventoryLink: $0.hasInventoryLink ?? false)
                 },
                 receiptURIs: wire.receiptUris,
                 edit: try Self.edit(from: wire.edit),
@@ -78,7 +79,8 @@ extension BFMPurchasesRepository {
                 lines: wire.items.map {
                     DetailLineValues(
                         id: $0.id, name: $0.name, quantity: $0.quantity,
-                        lineTotalCents: $0.lineTotalCents)
+                        lineTotalCents: $0.lineTotalCents,
+                        hasInventoryLink: $0.hasInventoryLink ?? false)
                 },
                 receiptURIs: wire.receiptUris,
                 edit: try Self.edit(from: wire.edit),
@@ -116,7 +118,8 @@ extension BFMPurchasesRepository {
                     name: $0.name,
                     quantity: $0.quantity,
                     lineTotal: MoneyAmount(
-                        minorUnits: $0.lineTotalCents, currencyCode: wire.currency))
+                        minorUnits: $0.lineTotalCents, currencyCode: wire.currency),
+                    hasInventoryLink: $0.hasInventoryLink)
             },
             receiptURIs: wire.receiptURIs,
             edit: wire.edit,
@@ -204,6 +207,7 @@ private struct DetailLineValues {
     let name: String
     let quantity: Int
     let lineTotalCents: Int
+    let hasInventoryLink: Bool
 }
 
 private typealias GetPurchase = Operations.MobilePurchases_getPurchase

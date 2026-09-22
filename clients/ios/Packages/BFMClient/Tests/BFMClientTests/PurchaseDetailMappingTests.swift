@@ -25,7 +25,8 @@ internal struct PurchaseDetailMappingTests {
             detail.lines == [
                 PurchaseDetailLine(
                     id: "line-1", name: "Coffee", quantity: 2,
-                    lineTotal: MoneyAmount(minorUnits: 1_275, currencyCode: "AUD"))
+                    lineTotal: MoneyAmount(minorUnits: 1_275, currencyCode: "AUD"),
+                    hasInventoryLink: true)
             ])
         #expect(detail.receiptURIs == ["pops://receipt/b", "pops://receipt/a"])
         #expect(detail.updatedAt == "opaque-version-token")
@@ -59,6 +60,19 @@ internal struct PurchaseDetailMappingTests {
 
         #expect(detail.edit == nil)
         #expect(detail.updatedAt == "opaque-version-token")
+    }
+
+    @Test("legacy detail lines without link metadata remain unlinked")
+    func absentInventoryLink() async throws {
+        let json = Self.detailJSON.replacingOccurrences(
+            of: #""hasInventoryLink":true,"#,
+            with: "")
+        let repository = try BFMPurchasesRepository.stubbed(
+            StubTransport(status: .ok, json: json))
+
+        let detail = try #require(try await repository.purchaseDetail(id: "purchase-1"))
+
+        #expect(detail.lines.first?.hasInventoryLink == false)
     }
 
     @Test("a detail entity with no name falls back to the printed wording")
@@ -132,7 +146,7 @@ internal struct PurchaseDetailMappingTests {
         editJSON,
         """
         ,"id":"purchase-1","itemCount":2,
-        "items":[{"id":"line-1","lineTotalCents":1275,"name":"Coffee","quantity":2}],
+        "items":[{"hasInventoryLink":true,"id":"line-1","lineTotalCents":1275,"name":"Coffee","quantity":2}],
         "merchant":{"resolution":"name","name":"Cafe"},"merchantName":"Cafe",
         "orderedAt":"2026-09-20T10:00:00+10:00","orderedOn":"2026-09-20",
         "receiptUri":"compatibility-only",

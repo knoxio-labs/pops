@@ -73,6 +73,8 @@ internal struct PurchaseDetailRepositoryTests {
         #expect(saved.lines.map(\.id).contains("removed") == false)
         #expect(saved.lines.map(\.name) == ["Renamed", "Added"])
         #expect(saved.lines[0].quantity == 2)
+        #expect(saved.lines[0].hasInventoryLink)
+        #expect(!saved.lines[1].hasInventoryLink)
         #expect(saved.lines[1].id != "kept")
         #expect(
             try await repository.purchases(after: nil, statusFilter: .all).purchases.first?.total
@@ -114,7 +116,8 @@ internal struct PurchaseDetailRepositoryTests {
         lines: [
             .fake(
                 id: "kept", name: "Old",
-                lineTotal: .init(minorUnits: 800, currencyCode: "AUD")),
+                lineTotal: .init(minorUnits: 800, currencyCode: "AUD"),
+                hasInventoryLink: true),
             .fake(
                 id: "removed", name: "Remove",
                 lineTotal: .init(minorUnits: 500, currencyCode: "AUD")),

@@ -6,13 +6,22 @@ public struct PurchaseDetailLine: Identifiable, Hashable, Sendable {
     public let name: String
     public let quantity: Int
     public let lineTotal: MoneyAmount
+    /// Whether removing this line also removes an Inventory association.
+    public let hasInventoryLink: Bool
 
     /// Creates an itemized purchase line.
-    public init(id: String, name: String, quantity: Int, lineTotal: MoneyAmount) {
+    public init(
+        id: String,
+        name: String,
+        quantity: Int,
+        lineTotal: MoneyAmount,
+        hasInventoryLink: Bool = false
+    ) {
         self.id = id
         self.name = name
         self.quantity = quantity
         self.lineTotal = lineTotal
+        self.hasInventoryLink = hasInventoryLink
     }
 }
 

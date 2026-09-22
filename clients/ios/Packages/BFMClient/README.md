@@ -87,7 +87,7 @@ The mapping from wire to domain is the whole of it, and each leg is somewhere a 
 
 `BFMPurchasesRepository` maps `PurchaseStatusFilter.unsettled` to the generated `status=unsettled` query and omits the query for `.all`. The wire's optional `total` becomes `PurchasePage.totalCount`: present when the BFM includes the first-page count and absent otherwise.
 
-Purchase detail reads and updates retain the server's optional edit record and opaque `updatedAt` compare-and-swap token. Updates send the complete desired line set, map a missing purchase to `nil`, and preserve the exact 409 conflict code so locked and stale edits remain distinguishable.
+Purchase detail reads and updates retain the server's optional edit record and opaque `updatedAt` compare-and-swap token. Each detail line also retains whether removing it unlinks an Inventory item; an older response with no link flag is treated as unlinked. Updates send the complete desired line set, map a missing purchase to `nil`, and preserve the exact 409 conflict code so locked and stale edits remain distinguishable.
 
 The same repository maps `GET /mobile/purchases/summary` into `PurchasesMonthSummary`. Currency groups remain separate, an absent previous month remains `nil`, and merchant leaders keep only the aggregate facts supplied by the route: optional name, currency, net spend, and order count.
 
