@@ -1,4 +1,12 @@
-import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  utimesSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 
@@ -84,6 +92,20 @@ describe('storing a photograph', () => {
     expect(second.sha256).toBe(first.sha256);
     expect(second.path).toBe(first.path);
     expect(second.alreadyPresent).toBe(true);
+  });
+
+  it('storing identical bytes again refreshes mtime', () => {
+    // The retention sweep reads mtime as "last touched" — re-extracting a
+    // previously-discarded receipt's identical bytes must reset that clock
+    // rather than leaving the sweep to delete it out from under a review.
+    const first = storeReceiptPart(image(JPEG), root);
+    const old = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000);
+    utimesSync(first.path, old, old);
+    expect(statSync(first.path).mtimeMs).toBeCloseTo(old.getTime(), -2);
+
+    storeReceiptPart(image(JPEG), root);
+
+    expect(statSync(first.path).mtimeMs).toBeGreaterThan(Date.now() - 5000);
   });
 
   it('repairs a half-written file instead of letting it win forever', () => {

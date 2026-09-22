@@ -19,7 +19,7 @@
  */
 import { isUtf8 } from 'node:buffer';
 import { createHash, randomUUID } from 'node:crypto';
-import { existsSync, mkdirSync, renameSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, renameSync, statSync, utimesSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
 import { resolvePurchasesSqlitePath } from '../../api/purchases-sqlite-path.js';
@@ -185,6 +185,11 @@ export function storeReceiptBytes(
   // the store would never repair itself. We know exactly how long the file
   // should be, so the check is free.
   if (existsSync(path) && statSync(path).size === bytes.length) {
+    // The retention sweep treats a file's mtime as "last touched"; without
+    // this, re-extracting a discarded receipt's identical bytes would leave
+    // the original write time in place and the sweep would delete it out
+    // from under an in-progress review.
+    utimesSync(path, new Date(), new Date());
     return {
       sha256,
       path,

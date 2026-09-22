@@ -498,6 +498,20 @@ says evidence belongs in the `documents` pillar instead; that pillar has no
 write surface at all today, so this is where it lives until POPS-1528 moves
 it, and these URIs migrate with everything else.
 
+### Retention of unsaved receipts
+
+The retention worker runs at startup and every six hours thereafter. It deletes
+stored receipt files only when their modification time is at least 48 hours old
+and no purchase document references their exact receipt URI. Re-uploading the
+same bytes refreshes that modification time, protecting a new review of an
+older, unsaved receipt. Saved receipt pages remain evidence regardless of age.
+
+Discarding a draft does not delete its files immediately; abandoned and
+discarded drafts expire through the same sweep. Malformed filenames are kept.
+`PURCHASES_RECEIPT_SWEEP_INTERVAL_MS` controls the interval between completed
+passes. Runs never overlap, failures are logged and retried on the next tick,
+and shutdown stops the timer and drains the active pass before closing SQLite.
+
 ### Reading one back
 
 `GET /receipts/:sha256` answers the stored bytes; `GET /receipts/:sha256/thumbnail`

@@ -27,6 +27,7 @@ import { optionalIntervalMs, resolveSweepIntervals } from '../reconcile/config.j
 import { createSweepRunner } from '../reconcile/runner.js';
 import { createPurchasesApiApp } from './app.js';
 import { createDocumentLookup, createInventoryItemLookup } from './cron/pillar-lookup.js';
+import { startReceiptRetentionSweepWorker } from './cron/receipt-retention-sweep.js';
 import { startReconcileCrossPillarWorker } from './cron/reconcile-cross-pillar.js';
 import { createFinanceClient } from './finance/client.js';
 import { buildPurchasesManifest } from './manifest.js';
@@ -120,6 +121,26 @@ const reconcileUriWorker = startReconcileCrossPillarWorker({
   },
 });
 
+/**
+ * The receipt retention sweep (POPS-3757).
+ *
+ * Also unconditional, and a trigger that finds nothing to sweep is a
+ * no-op, matching the sweep and reconcile triggers above.
+ */
+const receiptRetentionSweepWorker = startReceiptRetentionSweepWorker({
+  db: purchasesDb.db,
+  // Overridable so a smoke test does not wait 6 hours for the second tick.
+  intervalMs: optionalIntervalMs('PURCHASES_RECEIPT_SWEEP_INTERVAL_MS'),
+  logger: {
+    info: (message, context) => {
+      console.warn(`[purchases-api] ${message}`, context ?? {});
+    },
+    warn: (message, context) => {
+      console.error(`[purchases-api] ${message}`, context ?? {});
+    },
+  },
+});
+
 const app = createPurchasesApiApp({
   purchasesDb,
   version,
@@ -167,13 +188,19 @@ function shutdown(signal: NodeJS.Signals): void {
   // and are revisited on the next boot, the same position every URI is in
   // between two nightly ticks anyway, so draining costs nothing here.
   reconcileUriWorker.stop();
+  receiptRetentionSweepWorker.stop();
   sweepRunner.stop();
   void shutdownPillar({
     label: 'purchases-api',
     steps: [
       {
         name: 'trigger-drain',
-        run: () => Promise.all([sweepRunner.drain(), reconcileUriWorker.drain()]),
+        run: () =>
+          Promise.all([
+            sweepRunner.drain(),
+            reconcileUriWorker.drain(),
+            receiptRetentionSweepWorker.drain(),
+          ]),
       },
       { name: 'deregister', run: () => pillarHandle?.stop() },
     ],
