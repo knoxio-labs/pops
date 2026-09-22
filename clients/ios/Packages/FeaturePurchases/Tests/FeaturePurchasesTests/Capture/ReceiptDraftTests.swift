@@ -1,7 +1,7 @@
 import AppCore
 import Testing
 
-@testable import FeatureReceiptCapture
+@testable import FeaturePurchases
 
 /// What the correction form is, asserted as values.
 ///

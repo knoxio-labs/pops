@@ -1,7 +1,7 @@
 import AppCore
 import Testing
 
-@testable import FeatureReceiptCapture
+@testable import FeaturePurchases
 
 /// Who a purchase was from, and the difference between a match, a pick and a
 /// name typed by hand. Split out of `ReceiptDraftAdjustmentTests.swift` to

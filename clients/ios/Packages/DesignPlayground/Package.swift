@@ -29,7 +29,6 @@ let package = Package(
         .package(path: "../FeatureAccounts"),
         .package(path: "../FeaturePairing"),
         .package(path: "../FeaturePurchases"),
-        .package(path: "../FeatureReceiptCapture"),
         .package(path: "../FeatureTransactions"),
     ],
     targets: [
@@ -41,7 +40,6 @@ let package = Package(
                 "FeatureAccounts",
                 "FeaturePairing",
                 "FeaturePurchases",
-                "FeatureReceiptCapture",
                 "FeatureTransactions",
             ],
             exclude: ["Resources/SamplePhotos/README.md"],

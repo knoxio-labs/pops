@@ -1,7 +1,7 @@
 import CoreGraphics
 import Testing
 
-@testable import FeatureReceiptCapture
+@testable import FeaturePurchases
 
 /// The sizing rule on its own, with numbers a test chooses rather than
 /// whatever a camera happened to produce.

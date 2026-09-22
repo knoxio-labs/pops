@@ -1,7 +1,7 @@
 import AppCore
 import Testing
 
-@testable import FeatureReceiptCapture
+@testable import FeaturePurchases
 
 /// The form gained four things a reading cannot supply: whether an adjustment
 /// is inside the line prices, an adjustment the reading never found, what a

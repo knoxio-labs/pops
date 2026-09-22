@@ -1,7 +1,7 @@
 import AppCore
 import Testing
 
-@testable import FeatureReceiptCapture
+@testable import FeaturePurchases
 
 /// What the confirmation screen says once a receipt has become a purchase.
 ///

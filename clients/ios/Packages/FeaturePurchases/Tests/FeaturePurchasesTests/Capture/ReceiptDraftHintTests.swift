@@ -3,7 +3,7 @@ import DesignSystem
 import SwiftUI
 import Testing
 
-@testable import FeatureReceiptCapture
+@testable import FeaturePurchases
 
 /// What the form says about a reading it is not sure of, and about whether
 /// the figures add up.

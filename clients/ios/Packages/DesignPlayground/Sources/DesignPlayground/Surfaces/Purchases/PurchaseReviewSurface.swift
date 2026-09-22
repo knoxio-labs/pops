@@ -1,6 +1,6 @@
 import AppCore
 import DesignSystem
-import FeatureReceiptCapture
+import FeaturePurchases
 import SwiftUI
 
 /// Where one purchase in the batch came from.

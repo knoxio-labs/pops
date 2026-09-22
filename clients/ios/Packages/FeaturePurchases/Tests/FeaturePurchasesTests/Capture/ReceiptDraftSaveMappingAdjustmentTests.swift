@@ -1,7 +1,7 @@
 import AppCore
 import Testing
 
-@testable import FeatureReceiptCapture
+@testable import FeaturePurchases
 
 /// Whether each adjustment is folded into the line prices, forwarded from
 /// the form to the save payload (POPS-3651).

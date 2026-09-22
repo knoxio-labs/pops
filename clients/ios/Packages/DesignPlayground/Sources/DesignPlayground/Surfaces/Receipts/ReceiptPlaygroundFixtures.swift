@@ -1,7 +1,7 @@
 import AppCore
 
 /// Fictional receipts, typed against the app's own domain types — the
-/// counterpart of ``Fixtures`` for the shapes `FeatureReceiptCapture`'s
+/// counterpart of ``Fixtures`` for the shapes `FeaturePurchases`'s
 /// screens take rather than `AppCore`'s account and transaction ones.
 ///
 /// ``typicalExtracted`` prints the same line twice on purpose — a receipt

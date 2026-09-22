@@ -3,7 +3,7 @@ import AppCoreFakes
 import Foundation
 import Testing
 
-@testable import FeatureReceiptCapture
+@testable import FeaturePurchases
 
 /// What the result screen decides, against a fake and against a scripted
 /// double.

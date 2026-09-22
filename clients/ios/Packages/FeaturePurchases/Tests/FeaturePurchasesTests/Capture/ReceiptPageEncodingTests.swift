@@ -5,7 +5,7 @@
     import Testing
     import UIKit
 
-    @testable import FeatureReceiptCapture
+    @testable import FeaturePurchases
 
     /// What a photographed page becomes on the wire.
     ///

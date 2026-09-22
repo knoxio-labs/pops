@@ -1,6 +1,6 @@
 import AppCore
 
-@testable import FeatureReceiptCapture
+@testable import FeaturePurchases
 
 extension ExtractedReceipt {
     /// A receipt whose reading is complete and correct, and whose items are

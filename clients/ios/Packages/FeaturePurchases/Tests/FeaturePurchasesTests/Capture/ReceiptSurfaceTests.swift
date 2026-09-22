@@ -4,7 +4,7 @@ import Foundation
 import SwiftUI
 import Testing
 
-@testable import FeatureReceiptCapture
+@testable import FeaturePurchases
 
 /// What the design pass added, asserted as values rather than as pixels.
 ///

@@ -17,7 +17,7 @@ That boundary is asserted, not merely intended: `ModuleBoundaryTests` in `AppCor
 | `POST /devices/pair` and its four outcomes  | `BFMClient` — `BFMHTTPClient.pairDevice` |
 | The error vocabulary both sides speak       | `AppCore` — `PairingError`               |
 
-`CameraAuthorizing` lives in `AppCore` rather than here because `FeatureReceiptCapture` needs the same permission decision, and features may not import one another — `ModuleBoundaryTests`' "no feature imports another feature" rule is what would fail if it stayed put and a second feature reached for it. `QRScannerCoordinator` moved there for the same reason once the Inventory scan screen needed the same QR capture session (POPS-4077); this package now wraps `AppCore`'s coordinator and preview view in the SwiftUI surface that is actually its own — the sheet's copy, cancel button and layout.
+`CameraAuthorizing` lives in `AppCore` rather than here because `FeaturePurchases` needs the same permission decision, and features may not import one another — `ModuleBoundaryTests`' "no feature imports another feature" rule is what would fail if it stayed put and a second feature reached for it. `QRScannerCoordinator` moved there for the same reason once the Inventory scan screen needed the same QR capture session (POPS-4077); this package now wraps `AppCore`'s coordinator and preview view in the SwiftUI surface that is actually its own — the sheet's copy, cancel button and layout.
 
 ## The manual path is not a fallback screen
 

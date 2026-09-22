@@ -1,8 +1,12 @@
-# FeatureReceiptCapture
+# FeaturePurchases
+
+Purchase browsing, receipt capture and the shared draft form.
+
+## Capture and the draft form
 
 Photograph or paste a receipt and let the purchases pillar's model turn it into a purchase.
 
-## What is here and what is not
+### What is here and what is not
 
 Both ends of the flow. `ReceiptCaptureView` photographs a receipt through VisionKit's document camera and hands what it produced to `ReceiptResultView`, which calls `AppCore`'s `ReceiptCaptureRepository`. Extraction and persistence are two calls (POPS-2454): every usable reading — reconciled or not — becomes a `.draft` and reaches `ReceiptDraftView`, pre-filled; only `unreadable` has nothing to edit. Saving, from either a corrected reading or a blank manual entry, goes through the same `ReceiptDraftView`, the same `ReceiptDraft`, and the same `ReceiptResultViewModel.save(_:)` — which branches on `ReceiptResultState` to call `saveDraft(_:)` or `createManualPurchase(_:)`, never on anything the view or the form decides. Neither view names `Auth` nor `BFMClient`; both read the repository seam and have no idea a device token or HTTP call sits behind it.
 
@@ -20,7 +24,7 @@ That boundary is asserted, not merely intended: `ModuleBoundaryTests` in `AppCor
 | `POST /mobile/purchases/receipts/extract`, `/receipts` and `/manual`                        | `BFMClient` — `BFMReceiptCaptureRepository`                                                                            |
 | An end-to-end Maestro flow                                                                  | `.maestro/receipt-manual-entry.yaml` — the manual path, which needs no camera                                          |
 
-## The surface, and why it is shaped this way
+### The surface, and why it is shaped this way
 
 Both screens are **content that scrolls with a bar of actions pinned under it**. The content changes — a first-run prompt, an outcome, and later a list and a form — and the bar does not, because the one thing a screen is for must not be the thing that scrolls off it at the accessibility text sizes where the content is longest. `PopsActionBar` is attached with `.safeAreaInset(edge: .bottom)`, so the content passes behind it rather than stopping above it.
 
@@ -34,13 +38,13 @@ Four decisions carry the rest of it, and each is a rule the screens landing next
 
 **One figure per screen, in `popsAmount`.** The confirmation is a total with a merchant over it. The reference identifies the purchase and describes nothing about it, so it is last, monospaced and small — the one thing on the screen nobody has to read.
 
-## Stored purchases and the shared form
+### Stored purchases and the shared form
 
-The Purchases tab has a separate list; this feature owns capture and draft creation. Stored receipt presentation needs the typed detail repository and UI integration tracked by POPS-3708. The mobile detail and receipt-byte routes already exist.
+The Purchases tab renders the saved-purchase list; capture and draft creation use the receipt repository. Stored receipt presentation needs the typed detail repository and UI integration tracked by POPS-3708. The mobile detail and receipt-byte routes already exist.
 
 Editing a saved purchase remains POPS-2458. There is no initialiser building a `ReceiptDraft` from a `ReceiptPurchase`: that summary carries a merchant, a total and a count, and a form pre-filled from it would present three line items as zero. Reusing the form requires the full detail model, rather than treating the summary as an editable purchase.
 
-## The form, and how both entry points reach it
+### The form, and how both entry points reach it
 
 `ReceiptDraftView` is a reading — or a blank purchase — as something the reader may change: the pages above (empty for a manual entry), the outcome's status header, then the same groups in the same order — who and when, the items in a column, what adjusts them, the total in `popsAmount` — with every value in a `PopsTextField` instead of a `Text`. The bar's prominent action is Save; whichever the entry point's own "start again" action is sits beside it at the standard weight, which is what `PopsButtonProminence` exists for. A host that commits from its own navigation bar passes no `save`, so there is no bar, and hands the form a `Binding` to its draft so it can gate its Save on `ReceiptDraftView.canSave` as the reader types.
 
@@ -52,7 +56,7 @@ Three rules hold the form together, and each is a value a test asserts rather th
 
 **The arithmetic is reported, never recomputed.** `ReceiptDraft`'s fields hold what a model transcribed, printed-looking, whichever arm of `receipt.extract` produced them — `BFMReceiptCaptureRepository` turns the BFM's cents-based draft back into that shape once, at the repository boundary, so this module's own presentation code is unaware the wire is cents at all. The form repeats what the gate found — and withdraws it the moment a figure changes, because from then on the check is about numbers no longer on screen. `ReceiptDraftReconciliation` is those three states, and saying "as read, the items and the total agree" is what tells a reader who came to rename three items which figures to leave alone.
 
-## Two entry points, one save path
+### Two entry points, one save path
 
 `ReceiptCaptureView`'s ready state offers two actions side by side: photograph a receipt, or "Add a purchase" with no camera involved. Both land on `ReceiptResultView` over a `ReceiptResultViewModel`, and both save through the same `save(_:)`, which reads `ReceiptResultState` to decide which BFM call to make:
 
@@ -61,7 +65,7 @@ Three rules hold the form together, and each is a value a test asserts rather th
 
 Money is parsed once, in `ReceiptDraftSaveMapping`, using `AppCore`'s `ReceiptMoneyText` — the same parser regardless of which of the two calls the result feeds. A field that will not parse (a stray letter, a date not in `YYYY-MM-DD[ HH:MM]`) is refused locally, before either call, as a `ReceiptDraftSaveError` the form's own alert names — never sent as an invented number.
 
-## Showing the receipt, and what is still missing
+### Showing the receipt, and what is still missing
 
 The pages on the result screen are the bytes the phone is holding — what the camera produced and what was uploaded, kept by `ReceiptResultViewModel.parts` after the call precisely so the reading can be checked against them. Nothing fetches anything.
 
@@ -69,7 +73,7 @@ This feature does not fetch a receipt captured elsewhere or before the app was r
 
 A page that is not a drawable image — the contract admits PDF and plain text — draws a plate with a glyph saying which it is, decided by `ReceiptPageMedia`.
 
-## What a multi-page receipt is
+### What a multi-page receipt is
 
 One scan is one receipt and one call. `VNDocumentCameraViewController` collects several pages into a single `VNDocumentCameraScan`; every page of that scan becomes an ordered `ReceiptPart`, and the whole set goes to `ReceiptCaptureRepository.capture(_:)` once. Several photographs of one piece of paper are never several receipts — `ReceiptPart`'s own documentation says so, and the BFM's upload body says the same thing from the other side.
 
@@ -78,7 +82,7 @@ Two consequences follow, and each is enforced on the handset rather than discove
 - **All of it or none of it.** If a page cannot be encoded, the whole scan is refused. A receipt short a page still adds up to _a_ total, just not the printed one, so a short upload would come back as a confident wrong reading.
 - **Pages are bounded before they are sent.** `ReceiptPageBudget` caps a page's longest edge and its JPEG quality, so a full-resolution photograph is not what somebody standing in a shop tries to upload. There is no cap on how many pages one scan may carry — ADR-052 (`docs/architecture/adr-052-receipt-part-count-ceiling.md`) found the byte-size limit already the tighter, real bound.
 
-## Why the camera is presented modally and never inside a navigation stack
+### Why the camera is presented modally and never inside a navigation stack
 
 There is an open UIKit defect — reproduced by others on iOS 26, not fixed as of the POPS-1960 spike — where `VNDocumentCameraViewController`'s own navigation bar throws `NSInternalInconsistencyException` immediately after a capture when it is nested inside another navigation controller. So this feature has no `NavigationStack` at all: its two screens replace each other, and the scanner is a freshly-created instance presented from a `.fullScreenCover`, acting as its own delegate.
 
@@ -88,21 +92,21 @@ There is an open UIKit defect — reproduced by others on iOS 26, not fixed as o
 
 `FeaturePairing`'s QR scanner is presented from a `.sheet`, and this screen deliberately differs. A page sheet on iPhone is interactively dismissible by a downward swipe, and `VNDocumentCameraViewControllerDelegate` is never told about that dismissal — `documentCameraViewControllerDidCancel(_:)` fires for the Cancel button only, not for a swipe. Pairing can afford that: there is a manual-entry form underneath the scanner, so an accidental dismissal costs nothing. Here it would silently discard however many pages had already been photographed, with no delegate callback and no confirmation — the worse failure mode, since a person mid-scan has already put in the effort a swipe would erase. `.fullScreenCover` has no swipe-to-dismiss gesture, so the only way out of the scanner is its own Cancel button or a finished scan, both of which already report through the delegate. It also matches how the system document camera is meant to appear: undecorated and full-screen, not inset with a sheet's grabber and rounded corners.
 
-## Reachable, end to end
+### Reachable, end to end
 
-`FeatureReceiptCapture.feature` is registered in `RootFeature.renderable`, the BFM's bootstrap advertises it, and `ContentView` maps it to `ReceiptCaptureView`. A paired device's `AppDependencies.receiptCapture` is a `BFMReceiptCaptureRepository` pointed at that device's own BFM, so a capture submitted from the screen reaches the purchases pillar.
+`ReceiptCaptureTab.feature` is registered in `RootFeature.renderable`, the BFM's bootstrap advertises it, and `ContentView` maps it to `ReceiptCaptureView`. A paired device's `AppDependencies.receiptCapture` is a `BFMReceiptCaptureRepository` pointed at that device's own BFM, so a capture submitted from the screen reaches the purchases pillar.
 
 `AppComposition`'s other construction site — the pairing screen's dependencies — leaves the seam unbound on purpose, alongside `transactions`: the base URL arrives with the pairing code, so before pairing there is no BFM to point a client at, and a capture attempted from there would fail with `dependencyNotBound`. Nothing can reach this screen from there; `CompositionRootTests` asserts both halves.
 
-## The host build
+### The host build
 
 The package declares macOS as well as iOS so `swift build` and `swift test` run on a developer machine and a CI runner without booting a simulator, for the same reason `FeatureTransactions` does:
 
 ```bash
-swift test --package-path Packages/FeatureReceiptCapture
+swift test --package-path Packages/FeaturePurchases
 ```
 
-## How the look is checked, and what nothing checks
+### How the look is checked, and what nothing checks
 
 No Maestro flow reaches the result screens through the camera: the Simulator has no camera, so `receipt-capture-says-there-is-no-camera.yaml` proves the refusal and stops there (POPS-2398, POPS-2407). `receipt-manual-entry.yaml` reaches them the other way in — manual entry needs no camera, so it drives the tab, the form, a real `saveDraft`/`createManualPurchase` round trip through the harness's own `purchases` stub, and the saved result screen, end to end. Everything past the shutter that only a capture can produce is still answered by unit tests, and the design work is deliberately arranged so most of it can be.
 

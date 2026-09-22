@@ -5,7 +5,7 @@ import Foundation
 import SwiftUI
 import Testing
 
-@testable import FeatureReceiptCapture
+@testable import FeaturePurchases
 
 /// The capture screen actually draws, and draws differently when the states it
 /// is supposed to distinguish differ.

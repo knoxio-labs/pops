@@ -1,7 +1,7 @@
 import AppCore
 import Testing
 
-@testable import FeatureReceiptCapture
+@testable import FeaturePurchases
 
 /// What the result screen says, per outcome — pinned as a value rather than as
 /// a rendered view, so what changed is the assertion's business rather than a

@@ -45,13 +45,14 @@ import Testing
 /// answered for.
 @Suite("Receipt result accessibility wiring")
 internal struct ReceiptResultAccessibilityWiringTests {
-    /// `.../Tests/FeatureReceiptCaptureTests/ReceiptResultAccessibilityWiringTests.swift`
+    /// `.../Tests/FeaturePurchasesTests/Capture/ReceiptResultAccessibilityWiringTests.swift`
     private static let sourcesDirectory =
         URL(filePath: #filePath)
         .deletingLastPathComponent()
         .deletingLastPathComponent()
         .deletingLastPathComponent()
-        .appending(path: "Sources/FeatureReceiptCapture")
+        .deletingLastPathComponent()
+        .appending(path: "Sources/FeaturePurchases/Capture")
 
     private static func source(_ filename: String) -> [String] {
         let text =

@@ -8,9 +8,7 @@ import AppCore
 /// `Auth` and `BFMClient` are deliberately absent — this reads a
 /// `ReceiptCaptureRepository`, and only the composition root knows that the
 /// thing behind it attaches a device token and speaks HTTP to a BFM.
-public enum FeatureReceiptCapture {
-    public static let moduleName = "FeatureReceiptCapture"
-
+public enum ReceiptCaptureTab {
     /// Which of the BFM's features this module draws.
     ///
     /// Declared here rather than in the composition root so the claim lives

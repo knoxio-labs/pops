@@ -5,7 +5,7 @@ import Foundation
 import SwiftUI
 import Testing
 
-@testable import FeatureReceiptCapture
+@testable import FeaturePurchases
 
 /// The result card actually draws, and draws differently when the outcomes
 /// it is supposed to distinguish differ.

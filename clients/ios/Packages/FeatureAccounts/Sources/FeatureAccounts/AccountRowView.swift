@@ -125,7 +125,7 @@ internal struct AccountRowView: View {
 /// Whether an account's name and its balance fit on one row.
 ///
 /// A value rather than a modifier chain, for the reason `ReceiptLineLayout` in
-/// `FeatureReceiptCapture` is one: a layout decision that exists only inside a
+/// `FeaturePurchases` is one: a layout decision that exists only inside a
 /// `body` is one a test can prove nothing about.
 internal enum AccountRowLayout {
     /// Keyed on `isAccessibilitySize` rather than on a chosen threshold,

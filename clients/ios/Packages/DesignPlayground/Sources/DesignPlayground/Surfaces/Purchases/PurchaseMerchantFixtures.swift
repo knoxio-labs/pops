@@ -1,4 +1,4 @@
-import FeatureReceiptCapture
+import FeaturePurchases
 
 /// Merchants the review form's picker can offer, and the addresses each is
 /// known at.
