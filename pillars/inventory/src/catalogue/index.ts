@@ -1,5 +1,6 @@
 /** Persisted type-catalogue reads, canonical values and protocol-1 compatibility. */
 export {
+  loadCatalogue,
   loadPublishedCatalogue,
   resolveProtocol1Type,
   resolveProtocol1TypeById,

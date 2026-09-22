@@ -8,9 +8,13 @@ import { eq, sql } from 'drizzle-orm';
 
 import { resolvePublishedType } from '../../catalogue/catalogue.js';
 import { parseCanonicalValue } from '../../catalogue/value-dispatch.js';
-import { itemFieldValues } from '../../db/schema.js';
+import { itemFieldValues, items } from '../../db/schema.js';
 
-import type { PersistedItemType, PersistedItemTypeField } from '../../catalogue/catalogue-types.js';
+import type {
+  PersistedCatalogue,
+  PersistedItemType,
+  PersistedItemTypeField,
+} from '../../catalogue/catalogue-types.js';
 import type { PrimitiveWireValue } from '../../catalogue/value-codec.js';
 import type { ItemRow } from '../../db/row-types.js';
 import type { CommandDb } from './entities.js';
@@ -78,10 +82,16 @@ function externalIdsText(row: SearchableItem): string {
 export function upsertSearchIndex(
   db: CommandDb,
   row: SearchableItem,
-  typeOverride?: PersistedItemType
+  typeOverride?: PersistedItemType | null
 ): void {
-  const type =
-    typeOverride ?? (row.typeId === null ? null : resolvePublishedType(db, { id: row.typeId }));
+  let type: PersistedItemType | null;
+  if (typeOverride !== undefined) {
+    type = typeOverride;
+  } else if (row.typeId === null) {
+    type = null;
+  } else {
+    type = resolvePublishedType(db, { id: row.typeId });
+  }
   db.run(sql`delete from items_fts where id = ${row.id}`);
   db.run(sql`
     insert into items_fts (id, name, code, note, type_label, field_text, external_ids)
@@ -104,4 +114,25 @@ export function removeFromSearchIndex(db: CommandDb, id: string): void {
 export function rebuildSearchIndex(db: CommandDb, rows: readonly SearchableItem[]): void {
   db.run(sql`delete from items_fts`);
   for (const row of rows) upsertSearchIndex(db, row);
+}
+
+/** Rebuilds the search projection against a candidate catalogue snapshot. */
+export function rebuildSearchIndexForCatalogue(db: CommandDb, catalogue: PersistedCatalogue): void {
+  const rows = db
+    .select({
+      id: items.id,
+      name: items.name,
+      code: items.code,
+      note: items.note,
+      typeId: items.typeId,
+      externalIds: items.externalIds,
+    })
+    .from(items)
+    .all();
+  db.run(sql`delete from items_fts`);
+  for (const row of rows) {
+    const type =
+      row.typeId === null ? null : catalogue.types.find((entry) => entry.id === row.typeId);
+    upsertSearchIndex(db, row, type);
+  }
 }

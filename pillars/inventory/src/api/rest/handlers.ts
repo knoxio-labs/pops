@@ -23,6 +23,7 @@ import { makeReportsHandlers } from './reports-handlers.js';
 import { makeSearchHandlers } from './search-handlers.js';
 import { makeSettingsHandlers } from './settings-handlers.js';
 import { makeCodesHandlers, makeSyncHandlers, makeTypesHandlers } from './sync-handlers.js';
+import { makeTypeCatalogueHandlers } from './type-catalogue-handlers.js';
 import { makeWebHandlers } from './web-handlers.js';
 
 import type { ServiceAccountVerifier } from '@pops/pillar-sdk/server';
@@ -69,7 +70,7 @@ export function makeInventoryRestHandlers(deps: {
     web: makeWebHandlers({ db, documents }),
     settings: makeSettingsHandlers(db),
     sync: makeSyncHandlers({ db, documents, verify: deps.serviceAccountVerifier }),
-    types: makeTypesHandlers(db),
+    types: { ...makeTypesHandlers(db), ...makeTypeCatalogueHandlers(db) },
     codes: makeCodesHandlers(db, ai),
   });
 }

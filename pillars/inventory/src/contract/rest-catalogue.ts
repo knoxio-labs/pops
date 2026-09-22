@@ -1,0 +1,114 @@
+import { initContract } from '@ts-rest/core';
+import { z } from 'zod';
+
+import { CatalogueAuditEventSchema } from './rest-catalogue-audit-schema.js';
+import {
+  CatalogueCompatibilitySchema,
+  CatalogueDraftOperationSchema,
+  CatalogueErrorBodySchema,
+  CatalogueMigrationSchema,
+  CatalogueReadHeaders,
+  TypeCatalogueDescriptorSchema,
+} from './rest-catalogue-schemas.js';
+
+const c = initContract();
+const PageLimit = z.coerce.number().int().min(1).max(500).default(250);
+
+/** Owner-facing immutable reads and draft/publication commands. */
+export const inventoryCatalogueContract = c.router({
+  read: {
+    catalogue: {
+      method: 'GET',
+      path: '/type-catalogue',
+      headers: CatalogueReadHeaders,
+      query: z.object({ revision: z.coerce.number().int().positive().optional() }),
+      responses: {
+        200: TypeCatalogueDescriptorSchema,
+        304: c.noBody(),
+        401: CatalogueErrorBodySchema,
+        404: CatalogueErrorBodySchema,
+      },
+      summary: 'Read the current or an exact immutable type catalogue revision',
+    },
+    audit: {
+      method: 'GET',
+      path: '/type-catalogue/audit',
+      query: z.object({ before: z.coerce.number().int().positive().optional(), limit: PageLimit }),
+      responses: {
+        200: z.object({
+          events: z.array(CatalogueAuditEventSchema),
+          nextBefore: z.number().int().positive().nullable(),
+        }),
+        401: CatalogueErrorBodySchema,
+      },
+      summary: 'Read catalogue publication and abandonment audit events newest first',
+    },
+  },
+  manage: {
+    createDraft: {
+      method: 'POST',
+      path: '/type-catalogue/drafts',
+      body: z.object({ baseRevision: z.number().int().positive() }),
+      responses: {
+        201: TypeCatalogueDescriptorSchema,
+        400: CatalogueErrorBodySchema,
+        401: CatalogueErrorBodySchema,
+        409: CatalogueErrorBodySchema,
+      },
+      summary: 'Create the one editable draft from the current published catalogue',
+    },
+    patchDraft: {
+      method: 'PATCH',
+      path: '/type-catalogue/drafts/:revision',
+      pathParams: z.object({ revision: z.coerce.number().int().positive() }),
+      body: z.object({
+        baseRevision: z.number().int().positive(),
+        operations: z.array(CatalogueDraftOperationSchema).min(1).max(100),
+      }),
+      responses: {
+        200: z.object({
+          draft: TypeCatalogueDescriptorSchema,
+          compatibility: CatalogueCompatibilitySchema,
+        }),
+        400: CatalogueErrorBodySchema,
+        401: CatalogueErrorBodySchema,
+        404: CatalogueErrorBodySchema,
+        409: CatalogueErrorBodySchema,
+      },
+      summary: 'Apply validated operations to a draft and preview publication compatibility',
+    },
+    publishDraft: {
+      method: 'POST',
+      path: '/type-catalogue/drafts/:revision/publish',
+      pathParams: z.object({ revision: z.coerce.number().int().positive() }),
+      body: z.object({
+        baseRevision: z.number().int().positive(),
+        note: z.string().trim().max(2_000).nullable().optional(),
+        minimumProtocol: z.number().int().positive().optional(),
+        migrationName: z.string().trim().min(1).max(200).optional(),
+        migration: CatalogueMigrationSchema.optional(),
+      }),
+      responses: {
+        200: TypeCatalogueDescriptorSchema,
+        400: CatalogueErrorBodySchema,
+        401: CatalogueErrorBodySchema,
+        404: CatalogueErrorBodySchema,
+        409: CatalogueErrorBodySchema,
+      },
+      summary: 'Publish a validated draft atomically, including any named value migration',
+    },
+    abandonDraft: {
+      method: 'POST',
+      path: '/type-catalogue/drafts/:revision/abandon',
+      pathParams: z.object({ revision: z.coerce.number().int().positive() }),
+      body: z.object({ baseRevision: z.number().int().positive() }),
+      responses: {
+        200: TypeCatalogueDescriptorSchema,
+        401: CatalogueErrorBodySchema,
+        404: CatalogueErrorBodySchema,
+        409: CatalogueErrorBodySchema,
+      },
+      summary: 'Abandon a draft without deleting its attempt from history',
+    },
+  },
+});

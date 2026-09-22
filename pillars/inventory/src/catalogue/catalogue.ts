@@ -4,7 +4,7 @@
  * This module deliberately has no dependency on `src/types`: after the
  * bootstrap migration, the SQLite snapshot is the sole catalogue authority.
  */
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, inArray } from 'drizzle-orm';
 
 import { catalogueRevisions, fieldEnumOptions, itemTypeFields, itemTypes } from '../db/schema.js';
 import {
@@ -48,27 +48,29 @@ function asRevision(row: typeof catalogueRevisions.$inferSelect): PersistedCatal
   };
 }
 
-function loadRevision(db: CommandDb, revision?: number): PersistedCatalogueRevision | null {
+function loadRevision(
+  db: CommandDb,
+  revision: number | undefined,
+  statuses: readonly ('draft' | 'published' | 'abandoned')[]
+): typeof catalogueRevisions.$inferSelect | undefined {
+  const statusFilter =
+    statuses.length === 0 ? undefined : inArray(catalogueRevisions.status, [...statuses]);
+  const query = db.select().from(catalogueRevisions);
+  const filtered = statusFilter === undefined ? query : query.where(statusFilter);
   const row =
     revision === undefined
-      ? db
-          .select()
-          .from(catalogueRevisions)
-          .where(eq(catalogueRevisions.status, 'published'))
-          .orderBy(desc(catalogueRevisions.revision))
-          .limit(1)
-          .get()
+      ? filtered.orderBy(desc(catalogueRevisions.revision)).limit(1).get()
       : db
           .select()
           .from(catalogueRevisions)
           .where(
             and(
               eq(catalogueRevisions.revision, revision),
-              eq(catalogueRevisions.status, 'published')
+              ...(statusFilter === undefined ? [] : [statusFilter])
             )
           )
           .get();
-  return row ? asRevision(row) : null;
+  return row;
 }
 
 function materializeField(
@@ -153,7 +155,20 @@ export function loadPublishedCatalogue(
   db: CommandDb,
   revision?: number
 ): PersistedCatalogue | null {
-  const loadedRevision = loadRevision(db, revision);
+  return loadCatalogue(db, revision, ['published']);
+}
+
+/**
+ * Loads a complete persisted catalogue snapshot in one of the requested
+ * lifecycle states. Drafts are used only by the authoring API; published
+ * snapshots remain the only runtime authority for item reads.
+ */
+export function loadCatalogue(
+  db: CommandDb,
+  revision: number | undefined,
+  statuses: readonly ('draft' | 'published' | 'abandoned')[]
+): PersistedCatalogue | null {
+  const loadedRevision = loadRevision(db, revision, statuses);
   if (!loadedRevision) return null;
   const typeRows = db
     .select()
@@ -171,7 +186,7 @@ export function loadPublishedCatalogue(
     .where(eq(fieldEnumOptions.revision, loadedRevision.revision))
     .all();
   return {
-    revision: loadedRevision,
+    revision: asRevision(loadedRevision),
     types: typeRows
       .map((type) => materializeType(type, fieldRows, optionRows))
       .toSorted(

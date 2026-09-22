@@ -94,10 +94,22 @@ export function executeCatalogueMigration(
   candidate: PersistedCatalogue,
   now: string
 ): CatalogueMigrationResult {
+  return db.transaction((tx) =>
+    executeCatalogueMigrationInTransaction(tx, migration, candidate, now)
+  );
+}
+
+/** Executes a migration inside a caller-owned publication transaction. */
+export function executeCatalogueMigrationInTransaction(
+  db: CommandDb,
+  migration: CatalogueMigration,
+  candidate: PersistedCatalogue,
+  now: string
+): CatalogueMigrationResult {
   validateMigrationHeader(migration, candidate);
   const dryRun = dryRunMigration(db, migration, candidate);
-  return db.transaction((tx) => ({
+  return {
     name: migration.name,
-    affectedItems: dryRun.filter((item) => writeMigratedItem(tx, migration, item, now)).length,
-  }));
+    affectedItems: dryRun.filter((item) => writeMigratedItem(db, migration, item, now)).length,
+  };
 }
