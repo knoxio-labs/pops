@@ -1,83 +1,17 @@
-import { getPillar } from '../pillar-client.js';
+import { catalogueClient } from './inventory-catalogue-client.js';
 import {
   optionalObject,
   requiredObjectArray,
   requiredPositiveInteger,
 } from './inventory-catalogue-input.js';
+import { catalogueReadTools } from './inventory-catalogue-read.js';
 import {
   catalogueMigrationSchema,
   catalogueOperationSchema,
 } from './inventory-catalogue-schema.js';
 import { mapCallResult, nullStr, optNum, optStr, toolError } from './utils.js';
 
-import type { PillarHandle } from '@pops/pillar-sdk/client';
-
 import type { ToolDef } from './tool-def.js';
-
-type CatalogueOperation = Record<string, unknown>;
-type CatalogueMigration = Record<string, unknown>;
-
-type CatalogueShape = {
-  types: {
-    read: {
-      catalogue: (input: { revision?: number }) => unknown;
-      audit: (input: { before?: number; limit?: number }) => unknown;
-    };
-    manage: {
-      createDraft: (input: { baseRevision: number }) => unknown;
-      patchDraft: (input: {
-        revision: number;
-        baseRevision: number;
-        operations: CatalogueOperation[];
-      }) => unknown;
-      publishDraft: (input: {
-        revision: number;
-        baseRevision: number;
-        note?: string | null;
-        minimumProtocol?: number;
-        migrationName?: string;
-        migration?: CatalogueMigration;
-      }) => unknown;
-      abandonDraft: (input: { revision: number; baseRevision: number }) => unknown;
-    };
-  };
-};
-
-function catalogue(): PillarHandle<CatalogueShape>['types'] {
-  return getPillar<CatalogueShape>('inventory').types;
-}
-
-const catalogueGet: ToolDef = {
-  name: 'inventory.catalogue.get',
-  description: 'Read the current published inventory type catalogue or an exact revision.',
-  inputSchema: {
-    type: 'object',
-    properties: {
-      revision: { type: 'number', description: 'Published revision; omit for the current one' },
-    },
-  },
-  handler: async (args) =>
-    mapCallResult(await catalogue().read.catalogue({ revision: optNum(args, 'revision') })),
-};
-
-const catalogueAudit: ToolDef = {
-  name: 'inventory.catalogue.audit',
-  description: 'Read inventory catalogue publication and abandonment history, newest first.',
-  inputSchema: {
-    type: 'object',
-    properties: {
-      before: { type: 'number', description: 'Return events before this event ID' },
-      limit: { type: 'number', description: 'Maximum events to return (default 250, max 500)' },
-    },
-  },
-  handler: async (args) =>
-    mapCallResult(
-      await catalogue().read.audit({
-        before: optNum(args, 'before'),
-        limit: optNum(args, 'limit'),
-      })
-    ),
-};
 
 const catalogueCreateDraft: ToolDef = {
   name: 'inventory.catalogue.createDraft',
@@ -91,7 +25,7 @@ const catalogueCreateDraft: ToolDef = {
     const baseRevision = requiredPositiveInteger(args, 'baseRevision');
     if (!baseRevision.ok) return toolError(baseRevision.error);
     return mapCallResult(
-      await catalogue().manage.createDraft({ baseRevision: baseRevision.value })
+      await catalogueClient().manage.createDraft({ baseRevision: baseRevision.value })
     );
   },
 };
@@ -122,7 +56,7 @@ const cataloguePatchDraft: ToolDef = {
     const operations = requiredObjectArray(args, 'operations');
     if (!operations.ok) return toolError(operations.error);
     return mapCallResult(
-      await catalogue().manage.patchDraft({
+      await catalogueClient().manage.patchDraft({
         revision: revision.value,
         baseRevision: baseRevision.value,
         operations: operations.value,
@@ -158,7 +92,7 @@ const cataloguePublishDraft: ToolDef = {
     const minimumProtocol = optNum(args, 'minimumProtocol');
     const migrationName = optStr(args, 'migrationName');
     return mapCallResult(
-      await catalogue().manage.publishDraft({
+      await catalogueClient().manage.publishDraft({
         revision: revision.value,
         baseRevision: baseRevision.value,
         ...(note !== undefined ? { note } : {}),
@@ -187,7 +121,7 @@ const catalogueAbandonDraft: ToolDef = {
     const baseRevision = requiredPositiveInteger(args, 'baseRevision');
     if (!baseRevision.ok) return toolError(baseRevision.error);
     return mapCallResult(
-      await catalogue().manage.abandonDraft({
+      await catalogueClient().manage.abandonDraft({
         revision: revision.value,
         baseRevision: baseRevision.value,
       })
@@ -196,8 +130,7 @@ const catalogueAbandonDraft: ToolDef = {
 };
 
 export const catalogueTools: readonly ToolDef[] = [
-  catalogueGet,
-  catalogueAudit,
+  ...catalogueReadTools,
   catalogueCreateDraft,
   cataloguePatchDraft,
   cataloguePublishDraft,
