@@ -43,6 +43,7 @@ public struct ReceiptDraftView: View {
     private let lock: ReceiptDraftLock?
     private let commit: ReceiptDraftCommit
     private let onChange: ((ReceiptDraft) -> Void)?
+    private let lineRemovalNotice: ((String) -> String?)?
     private let isSaving: Bool
     private let save: ((ReceiptDraft) -> Void)?
 
@@ -60,6 +61,7 @@ public struct ReceiptDraftView: View {
         lock: ReceiptDraftLock?,
         commit: ReceiptDraftCommit,
         onChange: ((ReceiptDraft) -> Void)?,
+        lineRemovalNotice: ((String) -> String?)?,
         isSaving: Bool,
         save: ((ReceiptDraft) -> Void)?
     ) {
@@ -77,6 +79,7 @@ public struct ReceiptDraftView: View {
         self.lock = lock
         self.commit = commit
         self.onChange = onChange
+        self.lineRemovalNotice = lineRemovalNotice
         self.isSaving = isSaving
         self.save = save
     }
@@ -185,7 +188,9 @@ public struct ReceiptDraftView: View {
             if complaints != .belowForm { complaint }
             if title != nil || subtitle != nil { heading }
             if let lock { ReceiptDraftLockNotice(lock: lock) }
-            ReceiptDraftForm(draft: editing, merchants: merchants, lock: lock)
+            ReceiptDraftForm(
+                draft: editing, merchants: merchants, lock: lock,
+                lineRemovalNotice: lineRemovalNotice)
             if complaints == .belowForm { complaint }
         }
     }
@@ -322,6 +327,8 @@ extension ReceiptDraftView {
     ///   - commit: where Save is drawn. See ``ReceiptDraftCommit``.
     ///   - onChange: called with the draft after every edit, so a host that
     ///     owns the cancel can tell whether leaving loses anything.
+    ///   - lineRemovalNotice: returns confirmation copy for a line that has
+    ///     consequences beyond this draft, or `nil` to remove it immediately.
     public init(
         draft: ReceiptDraft,
         title: String? = nil,
@@ -335,6 +342,7 @@ extension ReceiptDraftView {
         lock: ReceiptDraftLock? = nil,
         commit: ReceiptDraftCommit = .actionBar,
         onChange: ((ReceiptDraft) -> Void)? = nil,
+        lineRemovalNotice: ((String) -> String?)? = nil,
         isSaving: Bool = false,
         save: ((ReceiptDraft) -> Void)? = nil
     ) {
@@ -342,7 +350,8 @@ extension ReceiptDraftView {
             owned: draft, host: nil, title: title, subtitle: subtitle, status: status,
             complaints: complaints, merchants: merchants, parts: parts,
             secondaryAction: secondaryAction, addAnother: addAnother, lock: lock,
-            commit: commit, onChange: onChange, isSaving: isSaving, save: save)
+            commit: commit, onChange: onChange, lineRemovalNotice: lineRemovalNotice,
+            isSaving: isSaving, save: save)
     }
 
     /// The same form over a draft the host owns, for a host that commits from
@@ -366,21 +375,7 @@ extension ReceiptDraftView {
             owned: draft.wrappedValue, host: draft, title: title, subtitle: subtitle,
             status: status, complaints: complaints, merchants: merchants, parts: parts,
             secondaryAction: secondaryAction, addAnother: addAnother, lock: nil,
-            commit: .actionBar, onChange: nil, isSaving: isSaving, save: save)
-    }
-}
-
-extension View {
-    /// The commit in a sheet's bar, drawn as the platform's prominent glass so
-    /// it reads as the sheet's one call to action. The glass style is
-    /// iOS-only; the host toolchain that runs this package's tests stands in
-    /// with the bordered prominent one.
-    @ViewBuilder
-    fileprivate func receiptDraftProminentBarButton() -> some View {
-        #if os(iOS)
-            buttonStyle(.glassProminent)
-        #else
-            buttonStyle(.borderedProminent)
-        #endif
+            commit: .actionBar, onChange: nil, lineRemovalNotice: nil,
+            isSaving: isSaving, save: save)
     }
 }

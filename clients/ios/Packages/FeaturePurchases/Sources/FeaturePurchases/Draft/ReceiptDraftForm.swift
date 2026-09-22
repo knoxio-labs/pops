@@ -28,6 +28,8 @@ internal struct ReceiptDraftForm: View {
     /// Fields a saved purchase holds read-only. `nil` for a reading, which is
     /// editable everywhere.
     internal var lock: ReceiptDraftLock?
+    /// Confirmation copy for removing a line with effects outside the draft.
+    internal var lineRemovalNotice: ((String) -> String?)?
 
     internal var body: some View {
         VStack(alignment: .leading, spacing: PopsSpacing.lg) {
@@ -89,6 +91,7 @@ extension ReceiptDraftForm {
                     line: $line,
                     problem: draft.problem(forLine: line.id) == nil
                         ? nil : ReceiptDraftCopy.lineAmountMissing,
+                    removalNotice: lineRemovalNotice?(line.id),
                     remove: { draft.removeLine(id: line.id) }
                 )
             }

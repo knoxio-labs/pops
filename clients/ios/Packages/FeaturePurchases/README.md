@@ -48,6 +48,8 @@ The detail presentation uses the saved merchant identity, day, total, settlement
 
 Saved-purchase editing maps the full detail into the shared receipt draft while retaining every saved line identifier. Matched, partially matched, and unknown settlement states lock merchant, date, and total; line and adjustment edits remain available. A submitted update carries the complete desired line set and the detail's opaque compare-and-swap token, omits unchanged header fields, and sends no request payload when no permitted value changed. Removing a line omits it from that desired set, and an Inventory-linked line carries the exact unlink notice before removal.
 
+The edit sheet commits from the navigation bar and asks before losing a changed draft. Saving holds the form against duplicate requests; a failure keeps every field for Keep editing or Retry, while locked and stale conflicts name their different recovery paths. A confirmed save notifies the detail host once with the server's replacement and then closes.
+
 Saved-purchase screens share `PurchasesPresentation` for merchant names, settlement labels and tones, calendar grouping, and per-currency totals. Unknown settlement labels remain visible verbatim, and totals in different currencies never become one invented amount. `PurchaseMark`, `PurchaseStatusBadge`, and `PurchaseHeroWash` carry the approved visual vocabulary into the feature without depending on the design playground.
 
 `PurchaseRowContent` turns a saved purchase into the value every list row draws, including whether the merchant is unattributed and whether that context asks for a settlement badge. `PurchaseRowLabel`, `PurchaseRowsPanel`, and `PurchaseMarkStack` compose that value from the shared DesignSystem panel and divided-row primitives.
