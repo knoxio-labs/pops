@@ -140,6 +140,12 @@ export const MobilePurchaseItemSchema = z.object({
   quantity: z.int().min(1),
   /** What the line cost in total, integer cents. Not the unit price times quantity — the source states it. */
   lineTotalCents: z.int(),
+  /**
+   * Whether removing this line also unlinks at least one Inventory item.
+   * Optional so a response from a BFM build predating this field still decodes;
+   * absence means the client cannot claim a link exists.
+   */
+  hasInventoryLink: z.boolean().optional(),
 });
 
 export type MobilePurchaseItem = z.infer<typeof MobilePurchaseItemSchema>;

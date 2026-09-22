@@ -444,8 +444,20 @@ describe('one order', () => {
     expect(res.status).toBe(200);
     expect(MobilePurchaseDetailSchema.safeParse(res.body).success).toBe(true);
     expect(res.body.items).toEqual([
-      { id: 'item-1', name: 'MILK 2L', quantity: 2, lineTotalCents: 620 },
-      { id: 'item-2', name: 'BREAD', quantity: 1, lineTotalCents: 450 },
+      {
+        id: 'item-1',
+        name: 'MILK 2L',
+        quantity: 2,
+        lineTotalCents: 620,
+        hasInventoryLink: false,
+      },
+      {
+        id: 'item-2',
+        name: 'BREAD',
+        quantity: 1,
+        lineTotalCents: 450,
+        hasInventoryLink: false,
+      },
     ]);
   });
 

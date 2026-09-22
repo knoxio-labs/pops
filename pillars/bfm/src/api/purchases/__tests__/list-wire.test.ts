@@ -8,6 +8,7 @@
  */
 import { describe, expect, it } from 'vitest';
 
+import { MobilePurchaseItemSchema } from '../../../contract/mobile-purchases-schemas.js';
 import {
   PurchasesDetailResponseSchema,
   PurchasesListRowSchema,
@@ -229,5 +230,91 @@ describe('toMobilePurchaseDetail merchant identity', () => {
     const mobile = toMobilePurchaseDetail(BASE_DETAIL, new Map());
 
     expect(mobile.merchant).toEqual({ resolution: 'unattributed' });
+  });
+});
+
+describe('purchase line Inventory linkage', () => {
+  const line = (
+    units?: { inventoryItemUri: string | null; inventoryItemStaleAt?: string | null }[]
+  ) => ({
+    item: { id: 'line-1', name: 'Drill', quantity: 1, lineTotalCents: 12_500 },
+    ...(units === undefined ? {} : { units }),
+  });
+
+  it('marks a valid Inventory item URI as linked', () => {
+    const mobile = toMobilePurchaseDetail({
+      ...BASE_DETAIL,
+      items: [line([{ inventoryItemUri: 'pops://inventory/item/inv-1' }])],
+    });
+
+    expect(mobile.items[0]?.hasInventoryLink).toBe(true);
+  });
+
+  it('leaves a line with no linked unit unlinked', () => {
+    const mobile = toMobilePurchaseDetail({ ...BASE_DETAIL, items: [line([])] });
+
+    expect(mobile.items[0]?.hasInventoryLink).toBe(false);
+  });
+
+  it('finds a link among multiple units', () => {
+    const mobile = toMobilePurchaseDetail({
+      ...BASE_DETAIL,
+      items: [
+        line([{ inventoryItemUri: null }, { inventoryItemUri: 'pops://inventory/item/inv-2' }]),
+      ],
+    });
+
+    expect(mobile.items[0]?.hasInventoryLink).toBe(true);
+  });
+
+  it('keeps a stale-marked valid link because removal still unlinks it', () => {
+    const mobile = toMobilePurchaseDetail({
+      ...BASE_DETAIL,
+      items: [
+        line([
+          {
+            inventoryItemUri: 'pops://inventory/item/inv-stale',
+            inventoryItemStaleAt: '2026-09-22T00:00:00.000Z',
+          },
+        ]),
+      ],
+    });
+
+    expect(mobile.items[0]?.hasInventoryLink).toBe(true);
+  });
+
+  it('does not treat another or malformed URI as an Inventory item link', () => {
+    const mobile = toMobilePurchaseDetail({
+      ...BASE_DETAIL,
+      items: [
+        line([
+          { inventoryItemUri: 'pops://finance/item/1' },
+          { inventoryItemUri: 'inventory/item/1' },
+          { inventoryItemUri: 'pops://inventory/item/a/b' },
+          { inventoryItemUri: 'pops://inventory/item/a b' },
+          { inventoryItemUri: 'pops://inventory/item/' },
+        ]),
+      ],
+    });
+
+    expect(mobile.items[0]?.hasInventoryLink).toBe(false);
+  });
+
+  it('accepts a legacy line with no units field and reports no link', () => {
+    const parsed = PurchasesDetailResponseSchema.parse({ ...BASE_DETAIL, items: [line()] });
+    const mobile = toMobilePurchaseDetail(parsed);
+
+    expect(mobile.items[0]?.hasInventoryLink).toBe(false);
+  });
+
+  it('keeps the mobile response field optional for older BFM payloads', () => {
+    const parsed = MobilePurchaseItemSchema.safeParse({
+      id: 'line-1',
+      name: 'Drill',
+      quantity: 1,
+      lineTotalCents: 12_500,
+    });
+
+    expect(parsed.success).toBe(true);
   });
 });

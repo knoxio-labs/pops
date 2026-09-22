@@ -27476,6 +27476,8 @@ internal enum Operations {
                         internal var itemCount: Swift.Int
                         /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/ItemsPayload`.
                         internal struct ItemsPayloadPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/ItemsPayload/hasInventoryLink`.
+                            internal var hasInventoryLink: Swift.Bool?
                             /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/ItemsPayload/id`.
                             internal var id: Swift.String
                             /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/ItemsPayload/lineTotalCents`.
@@ -27487,22 +27489,26 @@ internal enum Operations {
                             /// Creates a new `ItemsPayloadPayload`.
                             ///
                             /// - Parameters:
+                            ///   - hasInventoryLink:
                             ///   - id:
                             ///   - lineTotalCents:
                             ///   - name:
                             ///   - quantity:
                             internal init(
+                                hasInventoryLink: Swift.Bool? = nil,
                                 id: Swift.String,
                                 lineTotalCents: Swift.Int,
                                 name: Swift.String,
                                 quantity: Swift.Int
                             ) {
+                                self.hasInventoryLink = hasInventoryLink
                                 self.id = id
                                 self.lineTotalCents = lineTotalCents
                                 self.name = name
                                 self.quantity = quantity
                             }
                             internal enum CodingKeys: String, CodingKey {
+                                case hasInventoryLink
                                 case id
                                 case lineTotalCents
                                 case name
@@ -27510,6 +27516,10 @@ internal enum Operations {
                             }
                             internal init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.hasInventoryLink = try container.decodeIfPresent(
+                                    Swift.Bool.self,
+                                    forKey: .hasInventoryLink
+                                )
                                 self.id = try container.decode(
                                     Swift.String.self,
                                     forKey: .id
@@ -27527,6 +27537,7 @@ internal enum Operations {
                                     forKey: .quantity
                                 )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "hasInventoryLink",
                                     "id",
                                     "lineTotalCents",
                                     "name",
@@ -29364,6 +29375,8 @@ internal enum Operations {
                         internal var itemCount: Swift.Int
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/ItemsPayload`.
                         internal struct ItemsPayloadPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/ItemsPayload/hasInventoryLink`.
+                            internal var hasInventoryLink: Swift.Bool?
                             /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/ItemsPayload/id`.
                             internal var id: Swift.String
                             /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/ItemsPayload/lineTotalCents`.
@@ -29375,22 +29388,26 @@ internal enum Operations {
                             /// Creates a new `ItemsPayloadPayload`.
                             ///
                             /// - Parameters:
+                            ///   - hasInventoryLink:
                             ///   - id:
                             ///   - lineTotalCents:
                             ///   - name:
                             ///   - quantity:
                             internal init(
+                                hasInventoryLink: Swift.Bool? = nil,
                                 id: Swift.String,
                                 lineTotalCents: Swift.Int,
                                 name: Swift.String,
                                 quantity: Swift.Int
                             ) {
+                                self.hasInventoryLink = hasInventoryLink
                                 self.id = id
                                 self.lineTotalCents = lineTotalCents
                                 self.name = name
                                 self.quantity = quantity
                             }
                             internal enum CodingKeys: String, CodingKey {
+                                case hasInventoryLink
                                 case id
                                 case lineTotalCents
                                 case name
@@ -29398,6 +29415,10 @@ internal enum Operations {
                             }
                             internal init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.hasInventoryLink = try container.decodeIfPresent(
+                                    Swift.Bool.self,
+                                    forKey: .hasInventoryLink
+                                )
                                 self.id = try container.decode(
                                     Swift.String.self,
                                     forKey: .id
@@ -29415,6 +29436,7 @@ internal enum Operations {
                                     forKey: .quantity
                                 )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "hasInventoryLink",
                                     "id",
                                     "lineTotalCents",
                                     "name",
@@ -37941,6 +37963,8 @@ internal enum Operations {
                         internal var itemCount: Swift.Int
                         /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/ItemsPayload`.
                         internal struct ItemsPayloadPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/ItemsPayload/hasInventoryLink`.
+                            internal var hasInventoryLink: Swift.Bool?
                             /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/ItemsPayload/id`.
                             internal var id: Swift.String
                             /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/ItemsPayload/lineTotalCents`.
@@ -37952,22 +37976,26 @@ internal enum Operations {
                             /// Creates a new `ItemsPayloadPayload`.
                             ///
                             /// - Parameters:
+                            ///   - hasInventoryLink:
                             ///   - id:
                             ///   - lineTotalCents:
                             ///   - name:
                             ///   - quantity:
                             internal init(
+                                hasInventoryLink: Swift.Bool? = nil,
                                 id: Swift.String,
                                 lineTotalCents: Swift.Int,
                                 name: Swift.String,
                                 quantity: Swift.Int
                             ) {
+                                self.hasInventoryLink = hasInventoryLink
                                 self.id = id
                                 self.lineTotalCents = lineTotalCents
                                 self.name = name
                                 self.quantity = quantity
                             }
                             internal enum CodingKeys: String, CodingKey {
+                                case hasInventoryLink
                                 case id
                                 case lineTotalCents
                                 case name
@@ -37975,6 +38003,10 @@ internal enum Operations {
                             }
                             internal init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.hasInventoryLink = try container.decodeIfPresent(
+                                    Swift.Bool.self,
+                                    forKey: .hasInventoryLink
+                                )
                                 self.id = try container.decode(
                                     Swift.String.self,
                                     forKey: .id
@@ -37992,6 +38024,7 @@ internal enum Operations {
                                     forKey: .quantity
                                 )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "hasInventoryLink",
                                     "id",
                                     "lineTotalCents",
                                     "name",
@@ -39688,6 +39721,8 @@ internal enum Operations {
                         internal var itemCount: Swift.Int
                         /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/200/content/json/ItemsPayload`.
                         internal struct ItemsPayloadPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/200/content/json/ItemsPayload/hasInventoryLink`.
+                            internal var hasInventoryLink: Swift.Bool?
                             /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/200/content/json/ItemsPayload/id`.
                             internal var id: Swift.String
                             /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/200/content/json/ItemsPayload/lineTotalCents`.
@@ -39699,22 +39734,26 @@ internal enum Operations {
                             /// Creates a new `ItemsPayloadPayload`.
                             ///
                             /// - Parameters:
+                            ///   - hasInventoryLink:
                             ///   - id:
                             ///   - lineTotalCents:
                             ///   - name:
                             ///   - quantity:
                             internal init(
+                                hasInventoryLink: Swift.Bool? = nil,
                                 id: Swift.String,
                                 lineTotalCents: Swift.Int,
                                 name: Swift.String,
                                 quantity: Swift.Int
                             ) {
+                                self.hasInventoryLink = hasInventoryLink
                                 self.id = id
                                 self.lineTotalCents = lineTotalCents
                                 self.name = name
                                 self.quantity = quantity
                             }
                             internal enum CodingKeys: String, CodingKey {
+                                case hasInventoryLink
                                 case id
                                 case lineTotalCents
                                 case name
@@ -39722,6 +39761,10 @@ internal enum Operations {
                             }
                             internal init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.hasInventoryLink = try container.decodeIfPresent(
+                                    Swift.Bool.self,
+                                    forKey: .hasInventoryLink
+                                )
                                 self.id = try container.decode(
                                     Swift.String.self,
                                     forKey: .id
@@ -39739,6 +39782,7 @@ internal enum Operations {
                                     forKey: .quantity
                                 )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "hasInventoryLink",
                                     "id",
                                     "lineTotalCents",
                                     "name",

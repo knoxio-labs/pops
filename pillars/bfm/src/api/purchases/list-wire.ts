@@ -1,4 +1,4 @@
-/**
+/*
  * The purchase shapes bfm reads from `purchases`, and the mapping from them to
  * the mobile shapes bfm publishes.
  *
@@ -18,6 +18,8 @@
  * trimming an unused field into a `502` on a handset.
  */
 import { z } from 'zod';
+
+import { parseSoftUri } from '@pops/pillar-sdk';
 
 import { toMerchantIdentity } from './merchant-identity.js';
 
@@ -110,6 +112,19 @@ const PurchasesItemSchema = z.object({
     quantity: z.number().int().min(1),
     lineTotalCents: z.number().int(),
   }),
+  /**
+   * Optional for producer compatibility: purchases builds before per-unit
+   * Inventory links omit the collection. Absence means this BFM has no link
+   * evidence for the line, the same mobile answer as an empty collection.
+   */
+  units: z
+    .array(
+      z.object({
+        inventoryItemUri: z.string().nullable(),
+        inventoryItemStaleAt: z.string().nullable().optional(),
+      })
+    )
+    .optional(),
 });
 
 /**
@@ -312,7 +327,14 @@ function toMobilePurchaseItem(line: z.infer<typeof PurchasesItemSchema>): Mobile
     name: line.item.name,
     quantity: line.item.quantity,
     lineTotalCents: line.item.lineTotalCents,
+    hasInventoryLink: line.units?.some(hasInventoryItemUri) ?? false,
   };
+}
+
+function hasInventoryItemUri(unit: { inventoryItemUri: string | null }): boolean {
+  if (unit.inventoryItemUri === null) return false;
+  const parsed = parseSoftUri(unit.inventoryItemUri);
+  return parsed?.pillar === 'inventory' && parsed.type === 'item' && /^[^/\s]+$/u.test(parsed.id);
 }
 
 /** Every receipt-kind document, in the order `purchases` returned them. */

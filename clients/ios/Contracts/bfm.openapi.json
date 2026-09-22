@@ -7511,6 +7511,9 @@
                       "items": {
                         "additionalProperties": false,
                         "properties": {
+                          "hasInventoryLink": {
+                            "type": "boolean"
+                          },
                           "id": {
                             "type": "string"
                           },
@@ -8132,6 +8135,9 @@
                       "items": {
                         "additionalProperties": false,
                         "properties": {
+                          "hasInventoryLink": {
+                            "type": "boolean"
+                          },
                           "id": {
                             "type": "string"
                           },
@@ -10621,6 +10627,9 @@
                       "items": {
                         "additionalProperties": false,
                         "properties": {
+                          "hasInventoryLink": {
+                            "type": "boolean"
+                          },
                           "id": {
                             "type": "string"
                           },
@@ -11163,6 +11172,9 @@
                       "items": {
                         "additionalProperties": false,
                         "properties": {
+                          "hasInventoryLink": {
+                            "type": "boolean"
+                          },
                           "id": {
                             "type": "string"
                           },
