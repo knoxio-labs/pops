@@ -4,6 +4,7 @@ public struct PurchasesCurrencyTotal: Hashable, Sendable {
     public let netSpend: MoneyAmount
     public let orderCount: Int
 
+    /// Creates one currency aggregate from the server-reported amounts and order count.
     public init(total: MoneyAmount, netSpend: MoneyAmount, orderCount: Int) {
         self.total = total
         self.netSpend = netSpend
@@ -18,6 +19,7 @@ public struct PurchasesMerchantLeader: Hashable, Sendable {
     public let netSpend: MoneyAmount
     public let orderCount: Int
 
+    /// Creates a merchant aggregate, retaining an absent name when attribution is unavailable.
     public init(merchantName: String?, netSpend: MoneyAmount, orderCount: Int) {
         self.merchantName = merchantName
         self.netSpend = netSpend
@@ -34,6 +36,7 @@ public struct PurchasesMonthSummary: Hashable, Sendable {
     public let unmatchedCount: Int
     public let merchantLeaders: [PurchasesMerchantLeader]
 
+    /// Creates a monthly summary without combining currencies or inventing comparison data.
     public init(
         totals: [PurchasesCurrencyTotal],
         purchaseCount: Int,
