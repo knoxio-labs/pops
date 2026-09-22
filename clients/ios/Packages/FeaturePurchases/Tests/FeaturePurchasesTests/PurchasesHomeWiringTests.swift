@@ -24,8 +24,8 @@ internal struct PurchasesHomeWiringTests {
 
     @Test("Add uses the exact ordered non-scan source collection")
     func addSources() {
-        #expect(Self.controls.contains("ForEach(PurchaseCaptureEntry.Source.added)"))
-        #expect(PurchaseCaptureEntry.Source.added == [.photos, .file, .hand])
+        #expect(Self.controls.contains("ForEach(PurchaseCaptureSource.added)"))
+        #expect(PurchaseCaptureSource.added == [.photos, .file, .hand])
     }
 
     @Test("Scan is the purchases-tinted direct action")
