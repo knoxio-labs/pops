@@ -76,19 +76,113 @@ internal struct PurchaseStagingModelTests {
         #expect(model.everyPage.count == 9)
     }
 
+    @Test("a prepared scan arrives as one ordered receipt")
+    func scannedReceipt() {
+        let model = PurchaseStagingModel()
+        let parts = (1...3).map(part)
+
+        model.addScanned(parts, pageCount: 3)
+
+        #expect(model.count == 1)
+        #expect(model.everyPage.map(\.label) == ["Scan page 1", "Scan page 2", "Scan page 3"])
+        #expect(model.readingInput.first?.parts == parts)
+        #expect(model.refusal == nil)
+    }
+
+    @Test("a partially prepared scan is refused without changing staging")
+    func unpreparedScan() {
+        let model = model([receipt("existing", ["a"])])
+
+        model.addScanned([part(1), part(2)], pageCount: 3)
+
+        #expect(model.refusal == .unpreparedPages)
+        #expect(model.everyPage.map(\.id) == ["a"])
+        model.acknowledgeRefusal()
+        #expect(model.refusal == nil)
+    }
+
+    @Test("an empty scan is refused without staging a receipt")
+    func emptyScan() {
+        let model = PurchaseStagingModel()
+
+        model.addScanned([], pageCount: 0)
+
+        #expect(model.refusal == .noPages)
+        #expect(model.isEmpty)
+    }
+
+    @Test("a scan longer than eight pages stays grouped")
+    func longScan() {
+        let model = PurchaseStagingModel()
+        let parts = (1...9).map(part)
+
+        model.addScanned(parts, pageCount: parts.count)
+
+        #expect(model.count == 1)
+        #expect(model.groups.first?.pages.count == 9)
+        #expect(model.readingInput.first?.parts == parts)
+        #expect(model.refusal == nil)
+    }
+
+    @Test("reading input preserves receipt order and page order")
+    func readingInput() {
+        let firstPages = [page("a", value: 1), page("b", value: 2)]
+        let secondPages = [page("c", value: 3)]
+        let model = model([
+            StagedReceipt(id: "first", pages: firstPages),
+            StagedReceipt(id: "second", pages: secondPages),
+        ])
+
+        let input = model.readingInput
+
+        #expect(input.map(\.id) == ["first", "second"])
+        #expect(input.map { $0.parts.map(\.data) } == [[Data([1]), Data([2])], [Data([3])]])
+    }
+
+    @Test("replacement keeps the receipt identity, index and page count")
+    func replacement() {
+        let model = model([
+            receipt("first", ["a", "b"]),
+            receipt("second", ["c"]),
+        ])
+        let replacement = page("replacement", value: 9)
+
+        model.beginReplacing("b")
+        let replaced = model.replaceIfPending(with: replacement)
+
+        #expect(replaced)
+        #expect(model.readingInput.map(\.id) == ["first", "second"])
+        #expect(model.everyPage.map(\.id) == ["a", "replacement", "c"])
+        #expect(model.everyPage.count == 3)
+    }
+
+    @Test("replacement without a pending page changes nothing")
+    func replacementWithoutPendingPage() {
+        let model = model([receipt("first", ["a", "b"])])
+
+        let replaced = model.replaceIfPending(with: page("replacement"))
+
+        #expect(!replaced)
+        #expect(model.everyPage.map(\.id) == ["a", "b"])
+    }
+
     private func model(_ receipts: [StagedReceipt]) -> PurchaseStagingModel {
         PurchaseStagingModel(receipts: receipts)
     }
 
     private func receipt(_ id: String, _ pageIDs: [String]) -> StagedReceipt {
-        StagedReceipt(id: id, pages: pageIDs.map(page))
+        StagedReceipt(id: id, pages: pageIDs.map { page($0) })
     }
 
-    private func page(_ id: String) -> StagedPage {
+    private func page(_ id: String, value: UInt8 = 0) -> StagedPage {
         StagedPage(
             id: id,
             label: "\(id).HEIC",
-            part: ReceiptPart(mediaType: .jpeg, data: Data()))
+            part: ReceiptPart(mediaType: .jpeg, data: Data([value])))
+    }
+
+    private func part(_ value: Int) -> ReceiptPart {
+        ReceiptPart(mediaType: .jpeg, data: Data([UInt8(value)]))
     }
 
     private func shape(_ model: PurchaseStagingModel) -> [[String]] {

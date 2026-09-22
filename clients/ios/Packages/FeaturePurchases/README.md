@@ -80,7 +80,9 @@ Editing a saved purchase remains POPS-2458. There is no initialiser building a `
 selected page starts as a one-page receipt; combining, moving, separating, and deleting pages keep
 receipt and page order stable and remove empty groups. Adding an identifier already present is a
 no-op, including a duplicate within one picker result. `PurchaseStagingModel` exposes that shape to
-SwiftUI without adding a receipt-page ceiling; upload size remains the only bound.
+SwiftUI without adding a receipt-page ceiling; upload size remains the only bound. A document scan
+arrives as one ordered receipt and is refused only when it has no pages or when some photographed
+pages could not be prepared. Replacing a page swaps it at the same receipt position.
 
 Before reading starts, each staged receipt becomes a `StagedReceiptForReading`: its stable receipt
 identity plus its parts in page order, without mutable staging layout. `PurchaseReadingRow` then
