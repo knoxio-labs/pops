@@ -4,9 +4,14 @@ import OpenAPIRuntime
 
 /// The purchases list, read from the BFM mobile surface.
 public struct BFMPurchasesRepository: PurchasesRepository {
-    private let client: BFMHTTPClient
-    private let timeZone: @Sendable () -> TimeZone
+    let client: BFMHTTPClient
+    let timeZone: @Sendable () -> TimeZone
 
+    /// Creates a purchases repository over an authenticated BFM client.
+    ///
+    /// - Parameters:
+    ///   - client: The client used for mobile purchase requests.
+    ///   - timeZone: The zone used to interpret date-only purchase values.
     public init(
         client: BFMHTTPClient,
         timeZone: @escaping @Sendable () -> TimeZone = { .autoupdatingCurrent }
@@ -181,14 +186,14 @@ public struct BFMPurchasesRepository: PurchasesRepository {
         }
     }
 
-    private static func nonBlank(_ value: String?) -> String? {
+    static func nonBlank(_ value: String?) -> String? {
         guard let value, !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             return nil
         }
         return value
     }
 
-    private static func day(from raw: String, in timeZone: TimeZone) -> Date? {
+    static func day(from raw: String, in timeZone: TimeZone) -> Date? {
         let style = Date.ISO8601FormatStyle(dateSeparator: .dash, timeZone: timeZone)
             .year()
             .month()

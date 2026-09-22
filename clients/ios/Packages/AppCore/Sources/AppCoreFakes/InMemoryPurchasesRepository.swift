@@ -11,6 +11,8 @@ public actor InMemoryPurchasesRepository: PurchasesRepository {
     private var mintedCursors: [String: CursorRecord] = [:]
     private var nextCursorID = 0
     private let summary: PurchasesMonthSummary
+    private let details: [Purchase.ID: PurchaseDetail]
+    private let receipts: [String: ReceiptImage]
 
     private struct CursorRecord {
         let offset: Int
@@ -21,11 +23,15 @@ public actor InMemoryPurchasesRepository: PurchasesRepository {
     public init(
         rows: [Purchase] = [],
         pageSize: Int = 5,
-        summary: PurchasesMonthSummary = .empty
+        summary: PurchasesMonthSummary = .empty,
+        details: [PurchaseDetail] = [],
+        receipts: [String: ReceiptImage] = [:]
     ) {
         self.rows = rows
         self.pageSize = max(1, pageSize)
         self.summary = summary
+        self.details = Dictionary(uniqueKeysWithValues: details.map { ($0.id, $0) })
+        self.receipts = receipts
     }
 
     /// Replaces the rows and invalidates cursors minted for the previous list.
@@ -42,8 +48,7 @@ public actor InMemoryPurchasesRepository: PurchasesRepository {
     public func purchases(
         after cursor: String?, statusFilter: PurchaseStatusFilter
     ) async throws -> PurchasePage {
-        callCount += 1
-        if let failure = failures[callCount] { throw failure }
+        try beginCall()
 
         let filteredRows = rows.filter { purchase in
             switch statusFilter {
@@ -69,9 +74,28 @@ public actor InMemoryPurchasesRepository: PurchasesRepository {
     }
 
     public func monthSummary(for month: Date) async throws -> PurchasesMonthSummary {
+        try beginCall()
+        return summary
+    }
+
+    public func purchaseDetail(id: Purchase.ID) async throws -> PurchaseDetail? {
+        try beginCall()
+        return details[id]
+    }
+
+    public func receiptThumbnail(sha256: String) async throws -> ReceiptImage? {
+        try beginCall()
+        return receipts[sha256]
+    }
+
+    public func receiptImage(sha256: String) async throws -> ReceiptImage? {
+        try beginCall()
+        return receipts[sha256]
+    }
+
+    private func beginCall() throws {
         callCount += 1
         if let failure = failures[callCount] { throw failure }
-        return summary
     }
 
     private func offset(

@@ -9,4 +9,13 @@ public protocol PurchasesRepository: Sendable {
 
     /// Reads aggregate purchase activity for the calendar month containing `month`.
     func monthSummary(for month: Date) async throws -> PurchasesMonthSummary
+
+    /// Reads a purchase detail, or returns `nil` when the purchase does not exist.
+    func purchaseDetail(id: Purchase.ID) async throws -> PurchaseDetail?
+
+    /// Reads a receipt thumbnail, or returns `nil` when it is absent or cannot be thumbnailed.
+    func receiptThumbnail(sha256: String) async throws -> ReceiptImage?
+
+    /// Reads a full-size receipt, or returns `nil` when it does not exist.
+    func receiptImage(sha256: String) async throws -> ReceiptImage?
 }

@@ -29,6 +29,9 @@ internal struct FailingHomeRepository: PurchasesRepository {
     }
 
     func monthSummary(for: Date) async throws -> PurchasesMonthSummary { throw error }
+    func purchaseDetail(id: Purchase.ID) async throws -> PurchaseDetail? { throw error }
+    func receiptThumbnail(sha256: String) async throws -> ReceiptImage? { throw error }
+    func receiptImage(sha256: String) async throws -> ReceiptImage? { throw error }
 }
 
 internal struct CancellingHomeRepository: PurchasesRepository {
@@ -38,6 +41,18 @@ internal struct CancellingHomeRepository: PurchasesRepository {
     }
 
     func monthSummary(for: Date) async throws -> PurchasesMonthSummary {
+        throw CancellationError()
+    }
+
+    func purchaseDetail(id: Purchase.ID) async throws -> PurchaseDetail? {
+        throw CancellationError()
+    }
+
+    func receiptThumbnail(sha256: String) async throws -> ReceiptImage? {
+        throw CancellationError()
+    }
+
+    func receiptImage(sha256: String) async throws -> ReceiptImage? {
         throw CancellationError()
     }
 }
@@ -64,6 +79,12 @@ internal actor MutableHomeRepository: PurchasesRepository {
         if let failure { throw failure }
         return .empty
     }
+
+    func purchaseDetail(id: Purchase.ID) async throws -> PurchaseDetail? { nil }
+
+    func receiptThumbnail(sha256: String) async throws -> ReceiptImage? { nil }
+
+    func receiptImage(sha256: String) async throws -> ReceiptImage? { nil }
 }
 
 internal actor HomeGate {
@@ -137,6 +158,12 @@ internal actor SequencedHomeRepository: PurchasesRepository {
         recordedCall()
         return try await response.value()
     }
+
+    func purchaseDetail(id: Purchase.ID) async throws -> PurchaseDetail? { nil }
+
+    func receiptThumbnail(sha256: String) async throws -> ReceiptImage? { nil }
+
+    func receiptImage(sha256: String) async throws -> ReceiptImage? { nil }
 
     private func recordedCall() {
         callCount += 1

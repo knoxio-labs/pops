@@ -46,6 +46,18 @@ internal struct UnboundPurchasesRepository: PurchasesRepository {
     func monthSummary(for month: Date) async throws -> PurchasesMonthSummary {
         throw RepositoryError.dependencyNotBound
     }
+
+    func purchaseDetail(id: Purchase.ID) async throws -> PurchaseDetail? {
+        throw RepositoryError.dependencyNotBound
+    }
+
+    func receiptThumbnail(sha256: String) async throws -> ReceiptImage? {
+        throw RepositoryError.dependencyNotBound
+    }
+
+    func receiptImage(sha256: String) async throws -> ReceiptImage? {
+        throw RepositoryError.dependencyNotBound
+    }
 }
 
 internal struct UnboundAccountsRepository: AccountsRepository {

@@ -89,6 +89,8 @@ The mapping from wire to domain is the whole of it, and each leg is somewhere a 
 
 The same repository maps `GET /mobile/purchases/summary` into `PurchasesMonthSummary`. Currency groups remain separate, an absent previous month remains `nil`, and merchant leaders keep only the aggregate facts supplied by the route: optional name, currency, net spend, and order count.
 
+Purchase detail reads preserve the contract's complete ordered `receiptUris` list; the deprecated single `receiptUri` is retained only inside the nested list-compatible `Purchase`. Receipt and thumbnail envelopes are decoded from base64 into `ReceiptImage`, with the server's media type unchanged. Missing details or receipt bytes return `nil`, as does a receipt whose media type the thumbnail route cannot render; malformed bytes and other contract failures still throw.
+
 ### Receipt capture
 
 `POST /mobile/purchases/receipts` answers with one of three outcomes, and every one of them is a `200` — the BFM's own contract treats "purchases read this receipt and could not reconcile it" as an answer, not a failure. Only a call that never got that far throws.

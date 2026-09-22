@@ -28,6 +28,8 @@ The in-memory transaction and purchase repositories page through opaque cursors 
 
 `PurchasesMonthSummary` keeps gross and net amounts grouped by currency, carries an optional previous-month comparison, and represents merchant leaders as aggregates rather than fabricated purchases. The purchase fake accepts a seeded summary and applies the same numbered failure schedule to page and summary calls.
 
+Purchase details keep their ordered receipt URI list separate from the list row's compatibility URI. Receipt reads return decoded bytes with the server media type. The purchase fake seeds details and receipt bytes independently; page, summary, detail, thumbnail, and full-image calls all increment the same one-based call counter before applying scheduled failures.
+
 ## The composition root
 
 `App/` is the only place a protocol is bound to a concrete type. Nothing else constructs an implementation and nothing else learns which one it got — that is what makes swapping a transport, or running a whole feature against fakes, a change in one file rather than in every screen.
