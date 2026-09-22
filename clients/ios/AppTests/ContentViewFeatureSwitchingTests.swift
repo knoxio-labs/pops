@@ -1,7 +1,7 @@
 import AppCore
 import Auth
 import FeatureInventory
-import FeatureReceiptCapture
+import FeaturePurchases
 import Foundation
 import SwiftUI
 import Testing

@@ -31,7 +31,7 @@ internal struct InventoryLocationPage: View {
             }
         }
         .navigationTitle(placeName)
-        .inventoryTitleDisplay(large: false)
+        .popsTitleDisplay(large: false)
         .toolbar {
             ToolbarItem(placement: .principal) {
                 Label {
@@ -68,8 +68,9 @@ internal struct InventoryLocationPage: View {
             }
             .padding(.horizontal, PopsSpacing.lg)
             .padding(.bottom, PopsSpacing.xxl)
-            .inventoryMotion(value: model.shownNotice)
+            .popsMotion(value: model.shownNotice)
         }
+        .popsCollapsingTitle(place.name)
         .background(Color.popsBackground)
         .tint(.popsInventory)
         .pageChrome(tree, place, model: model, newName: $newName)
@@ -91,7 +92,7 @@ internal struct InventoryLocationPage: View {
     }
 
     private func actions(_ place: InventoryLocationNode) -> some View {
-        InventoryGlassGroup(spacing: PopsSpacing.lg) {
+        PopsGlassGroup(spacing: PopsSpacing.lg) {
             HStack(spacing: PopsSpacing.lg) {
                 actionButton("New place inside", symbol: .addNew) { model.creating = true }
                 actionButton("Store here", symbol: .storeHere) { model.storing = true }
@@ -223,12 +224,14 @@ internal struct InventoryLocationPageSkeleton: View {
             }
             .popsShimmer()
             .padding(.horizontal, PopsSpacing.lg)
-            InventoryLocationListSkeleton(rows: 5)
+            PopsListSkeleton(rows: 5)
                 .padding(.horizontal, PopsSpacing.lg)
                 .padding(.top, PopsSpacing.lg)
         }
         .scrollDisabled(true)
         .background(Color.popsBackground)
+        .navigationTitle("")
+        .popsTitleDisplay(large: false)
         .accessibilityLabel("Loading")
     }
 

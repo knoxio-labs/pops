@@ -96,7 +96,7 @@ internal struct InventoryQuantitySheetFrame<Content: View>: View {
             List { content() }
                 .inventoryInsetGroupedList()
                 .navigationTitle(title)
-                .inventoryTitleDisplay(large: false)
+                .popsTitleDisplay(large: false)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
                         Button("Cancel") { dismiss() }

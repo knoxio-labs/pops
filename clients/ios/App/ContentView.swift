@@ -3,7 +3,6 @@ import DesignSystem
 import FeatureAccounts
 import FeatureInventory
 import FeaturePurchases
-import FeatureReceiptCapture
 import FeatureTransactions
 import SwiftUI
 
@@ -166,7 +165,7 @@ internal struct ContentView: View {
                 router: composition.router(for: FeatureAccounts.feature))
         case FeaturePurchases.feature:
             PurchasesListView(dependencies: dependencies)
-        case FeatureReceiptCapture.feature:
+        case ReceiptCaptureTab.feature:
             ReceiptCaptureView(model: ReceiptCaptureViewModel(dependencies: dependencies))
         case FeatureInventory.feature:
             InventoryFlowView(dependencies: dependencies, entityRouter: composition.entityRouter)

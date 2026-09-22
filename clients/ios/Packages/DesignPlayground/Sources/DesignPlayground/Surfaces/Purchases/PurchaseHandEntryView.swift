@@ -1,5 +1,5 @@
 import DesignSystem
-import FeatureReceiptCapture
+import FeaturePurchases
 import SwiftUI
 
 /// A purchase typed by hand: a sheet that commits from its navigation bar.

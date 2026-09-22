@@ -4,7 +4,7 @@
 
 Every capability a feature needs from outside itself is a `protocol` declared here. The transactions feature depends on `TransactionsRepository`; the receipt-capture feature depends on `ReceiptCaptureRepository`; neither depends on `BFMClient`. A module under `Packages/` that can name a concrete implementation has its dependencies pointing the wrong way, and the cost lands on whoever next tries to run that feature without a live BFM.
 
-A capability more than one feature needs also lives here, for the same reason a seam does: `CameraAuthorizing` started in `FeaturePairing` and moved once `FeatureReceiptCapture` needed the same permission decision, because "no feature imports another feature" is one of `ModuleBoundaryTests`' rules, not a suggestion. `QRScannerCoordinator` (with `QRScannerPreviewView` and `CaptureSessionHolder`) followed the same path from `FeaturePairing` once the Inventory scan screen needed the same QR capture session (POPS-4077); `FeaturePairing` keeps only the SwiftUI sheet built around it.
+A capability more than one feature needs also lives here, for the same reason a seam does: `CameraAuthorizing` started in `FeaturePairing` and moved once `FeaturePurchases` needed the same permission decision, because "no feature imports another feature" is one of `ModuleBoundaryTests`' rules, not a suggestion. `QRScannerCoordinator` (with `QRScannerPreviewView` and `CaptureSessionHolder`) followed the same path from `FeaturePairing` once the Inventory scan screen needed the same QR capture session (POPS-4077); `FeaturePairing` keeps only the SwiftUI sheet built around it.
 
 ## Soft URIs and entity routing
 

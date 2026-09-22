@@ -86,7 +86,7 @@ internal struct InventoryItemDetailSyncBanner: View {
         if let conflict = detail.conflict {
             InventoryItemDetailGroup {
                 VStack(alignment: .leading, spacing: PopsSpacing.sm) {
-                    InventoryItemDetailNotice(
+                    PopsNotice(
                         symbol: InventorySymbol.attention.system, tint: .popsDestructive,
                         text: conflict.problem)
                     if let resolution = conflict.resolution {
@@ -100,7 +100,7 @@ internal struct InventoryItemDetailSyncBanner: View {
             }
         } else if detail.record.sync == .stale {
             InventoryItemDetailGroup {
-                InventoryItemDetailNotice(
+                PopsNotice(
                     tone: .warning,
                     text: detail.lastSynced.map { "Last synced \($0)" } ?? "May be out of date"
                 ) {

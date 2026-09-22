@@ -29,7 +29,7 @@ internal struct InventoryDestinationLevel: View {
                         symbol: InventorySymbol.move.system, tint: .popsInventory, text: effect)
                 }
                 if isLoading {
-                    InventoryLocationListSkeleton(rows: 6)
+                    PopsListSkeleton(rows: 6)
                 } else if let levelID {
                     placesSection(heading: nil, places: tree.children(of: levelID), at: levelID)
                 } else {
@@ -39,25 +39,27 @@ internal struct InventoryDestinationLevel: View {
             }
             .padding(.horizontal, PopsSpacing.lg)
             .padding(.bottom, PopsSpacing.xxl)
-            .inventoryMotion(value: query.isEmpty)
-            .inventoryMotion(value: filter)
-            .inventoryMotion(value: selection)
-            .inventoryMotion(value: tree.nodes.count)
+            .popsMotion(value: query.isEmpty)
+            .popsMotion(value: filter)
+            .popsMotion(value: selection)
+            .popsMotion(value: tree.nodes.count)
         }
         .background(Color.popsBackground)
     }
 
     private var searchBar: some View {
-        InventorySearchBar(
-            query: $query, prompt: "Search places", isFiltered: filter != .everywhere,
-            filterSummary: filter == .everywhere ? "" : filter.title
-        ) {
-            Picker("Show", selection: $filter) {
-                ForEach(InventoryDestinationFilter.allCases) { option in
-                    Label(option.title, systemImage: option.symbol).tag(option)
+        PopsSearchBar(
+            query: $query, tint: .popsInventory, prompt: "Search places",
+            isFiltered: filter != .everywhere,
+            filterSummary: filter == .everywhere ? "" : filter.title,
+            filterOptions: {
+                Picker("Show", selection: $filter) {
+                    ForEach(InventoryDestinationFilter.allCases) { option in
+                        Label(option.title, systemImage: option.symbol).tag(option)
+                    }
                 }
             }
-        }
+        )
     }
 
     /// The open containers first, as the top level lists them, then every
@@ -118,7 +120,7 @@ internal struct InventoryDestinationLevel: View {
     @ViewBuilder private var openPanel: some View {
         if !containers.isEmpty {
             VStack(alignment: .leading, spacing: PopsSpacing.xs) {
-                InventoryLocationSectionHeader(title: "Open containers")
+                PopsSectionHeader(title: "Open containers")
                 InventoryGroundedOpenPanel { divided(containers) }
             }
         }
@@ -129,7 +131,7 @@ internal struct InventoryDestinationLevel: View {
         -> some View
     {
         if destinations.isEmpty {
-            InventoryLocationEmptyLine(text: "No \(title.lowercased())")
+            PopsEmptyLine(text: "No \(title.lowercased())")
         } else {
             section(title) { rows(destinations) }
         }
@@ -142,7 +144,7 @@ internal struct InventoryDestinationLevel: View {
                 .map(destination) : []
         let boxes = offeredContainers.filter { $0.name.localizedCaseInsensitiveContains(query) }
         if places.isEmpty, boxes.isEmpty {
-            InventoryLocationEmptyLine(text: "No matches")
+            PopsEmptyLine(text: "No matches")
         } else {
             if !boxes.isEmpty {
                 section(filter == .containers ? "Containers" : "Open containers") { rows(boxes) }
@@ -157,7 +159,7 @@ internal struct InventoryDestinationLevel: View {
         let here = levelID.flatMap { tree.node($0) }.map { [$0] } ?? []
         let offeredPlaces = (here + places).filter { isOffered($0.id) }
         return VStack(alignment: .leading, spacing: PopsSpacing.xs) {
-            if let heading { InventoryLocationSectionHeader(title: heading) }
+            if let heading { PopsSectionHeader(title: heading) }
             InventoryGroundedListPanel {
                 VStack(alignment: .leading, spacing: PopsSpacing.zero) {
                     ForEach(offeredPlaces) { place in
@@ -175,7 +177,7 @@ internal struct InventoryDestinationLevel: View {
 
     private func section(_ title: String, @ViewBuilder rows: () -> some View) -> some View {
         VStack(alignment: .leading, spacing: PopsSpacing.xs) {
-            InventoryLocationSectionHeader(title: title)
+            PopsSectionHeader(title: title)
             InventoryGroundedListPanel { VStack(spacing: PopsSpacing.zero) { rows() } }
         }
     }
@@ -208,6 +210,6 @@ internal struct InventoryDestinationLevel: View {
         ) {
             selection = destination
         }
-        .transition(InventoryMotion.row)
+        .transition(PopsMotion.row)
     }
 }

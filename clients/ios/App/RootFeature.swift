@@ -2,7 +2,6 @@ import AppCore
 import FeatureAccounts
 import FeatureInventory
 import FeaturePurchases
-import FeatureReceiptCapture
 import FeatureTransactions
 
 /// The features this binary can draw, and the order to fall back to before the
@@ -30,7 +29,7 @@ internal enum RootFeature {
         FeatureTransactions.feature,
         FeatureAccounts.feature,
         FeaturePurchases.feature,
-        FeatureReceiptCapture.feature,
+        ReceiptCaptureTab.feature,
         FeatureInventory.feature,
     ]
 
@@ -52,9 +51,9 @@ internal enum RootFeature {
         FeaturePurchases.feature: FeaturePresentation(
             displayName: FeaturePurchases.displayName,
             symbolName: FeaturePurchases.symbolName),
-        FeatureReceiptCapture.feature: FeaturePresentation(
-            displayName: FeatureReceiptCapture.displayName,
-            symbolName: FeatureReceiptCapture.symbolName),
+        ReceiptCaptureTab.feature: FeaturePresentation(
+            displayName: ReceiptCaptureTab.displayName,
+            symbolName: ReceiptCaptureTab.symbolName),
         FeatureInventory.feature: FeaturePresentation(
             displayName: FeatureInventory.displayName,
             symbolName: FeatureInventory.symbolName),

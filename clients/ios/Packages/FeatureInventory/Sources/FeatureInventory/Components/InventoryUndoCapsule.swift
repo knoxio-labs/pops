@@ -39,7 +39,7 @@ internal struct InventoryUndoCapsule: View {
         }
         .padding(.leading, PopsSpacing.lg)
         .padding(.trailing, PopsSpacing.md)
-        .inventoryGlass(in: Capsule())
+        .popsGlass(in: Capsule())
         .accessibilityElement(children: .combine)
         .accessibilityAction(named: "Undo", onUndo)
     }
@@ -76,7 +76,7 @@ private struct InventoryUndoCapsuleModifier: ViewModifier {
                     .id(offer.id)
                 }
             }
-            .inventoryMotion(value: offer?.id)
+            .popsMotion(value: offer?.id)
             .task(id: offer?.id) {
                 guard let shown = offer?.id else { return }
                 try? await Task.sleep(for: Self.window)

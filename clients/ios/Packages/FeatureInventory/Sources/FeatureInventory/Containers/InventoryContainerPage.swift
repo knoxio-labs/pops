@@ -137,7 +137,7 @@ internal struct InventoryContainerPageSkeleton: View {
         .background(Color.popsBackground)
         .ignoresSafeArea(edges: .top)
         .navigationTitle("")
-        .inventoryTitleDisplay(large: false)
+        .popsTitleDisplay(large: false)
         .accessibilityLabel("Loading")
     }
 

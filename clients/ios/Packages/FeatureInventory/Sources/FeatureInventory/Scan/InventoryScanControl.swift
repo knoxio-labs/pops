@@ -19,7 +19,7 @@ internal struct InventoryScanControl: View {
                 .background {
                     if isOn { Circle().fill(Color.popsInventory) }
                 }
-                .inventoryGlass(in: Circle())
+                .popsGlass(in: Circle())
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)

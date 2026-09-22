@@ -1,62 +1,6 @@
 import DesignSystem
 import SwiftUI
 
-extension View {
-    @ViewBuilder internal func inventoryGroundedSwipeActionsContainer() -> some View {
-        #if compiler(>=6.4)
-            if #available(iOS 27.0, macOS 27.0, *) {
-                swipeActionsContainer()
-            } else {
-                self
-            }
-        #else
-            self
-        #endif
-    }
-
-    @ViewBuilder internal func inventoryGroundedSwipeActions<Actions: View>(
-        edge: HorizontalEdge,
-        onPresentationChanged: @escaping (Bool) -> Void,
-        @ViewBuilder actions: () -> Actions
-    ) -> some View {
-        #if compiler(>=6.4)
-            if #available(iOS 27.0, macOS 27.0, *) {
-                swipeActions(
-                    edge: edge,
-                    allowsFullSwipe: false,
-                    content: actions,
-                    onPresentationChanged: onPresentationChanged
-                )
-            } else {
-                swipeActions(edge: edge, allowsFullSwipe: false, content: actions)
-            }
-        #else
-            swipeActions(edge: edge, allowsFullSwipe: false, content: actions)
-        #endif
-    }
-
-    internal func inventoryGroundedSwipeRow(isActive: Bool) -> some View {
-        let shape = RoundedRectangle(
-            cornerRadius: PopsRadius.card + PopsSpacing.xs,
-            style: .continuous
-        )
-
-        return frame(maxWidth: .infinity)
-            .background {
-                if isActive {
-                    ZStack {
-                        shape.fill(Color.popsSurface)
-                        shape.fill(Color.popsForeground.opacity(0.08))
-                    }
-                    .transition(.opacity)
-                }
-            }
-            .containerShape(shape)
-            .zIndex(isActive ? 1 : 0)
-            .animation(.snappy(duration: 0.18), value: isActive)
-    }
-}
-
 internal struct InventoryGroundedSectionHeader: View {
     internal let title: String
     internal let status: String?
@@ -170,20 +114,11 @@ internal struct InventoryGroundedListPanel<Content: View>: View {
 
     internal var body: some View {
         content
-            .padding(.horizontal, PopsSpacing.md)
-            .padding(.vertical, PopsSpacing.sm)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .popsPanelInsets()
             .inventorySelectionHighlights(
                 edgeInset: PopsSpacing.sm, in: RoundedRectangle(cornerRadius: PopsRadius.card)
             )
-            .background {
-                RoundedRectangle(cornerRadius: PopsRadius.card)
-                    .fill(Color.popsSurface)
-            }
-            .overlay {
-                RoundedRectangle(cornerRadius: PopsRadius.card)
-                    .stroke(Color.popsSeparator, lineWidth: PopsBorder.hairline)
-            }
+            .popsPanelGround()
     }
 }
 
