@@ -7,12 +7,14 @@ import { randomUUID } from 'node:crypto';
 
 import { eq } from 'drizzle-orm';
 
+import { loadProtocol1Fields, resolveProtocol1Type } from '../../../catalogue/index.js';
 import { openMigratedTestDb } from '../../../db/__tests__/migrated-db.js';
 import { events, items, locations, mutations, type ItemRow } from '../../../db/index.js';
 import { runMutation } from '../engine.js';
 
 import type Database from 'better-sqlite3';
 
+import type { Protocol1Fields } from '../../../catalogue/index.js';
 import type { InventoryDb } from '../../../db/index.js';
 import type { EngineOptions } from '../engine.js';
 import type { CommandActor, Mutation } from '../envelope.js';
@@ -27,6 +29,7 @@ export interface Harness {
   raw: Database.Database;
   run(mutation: Mutation, actor?: CommandActor, options?: EngineOptions): Outcome;
   item(id: string): ItemRow;
+  fields(id: string): Protocol1Fields;
   eventsFor(id: string): (typeof events.$inferSelect)[];
   eventCount(): number;
   storedMutation(id: string): typeof mutations.$inferSelect | undefined;
@@ -52,6 +55,7 @@ export function openHarness(): Harness {
       if (!row) throw new Error(`no item ${id}`);
       return row;
     },
+    fields: (id) => loadProtocol1Fields(db, id),
     eventsFor: (id) => db.select().from(events).where(eq(events.entityId, id)).all(),
     eventCount: () => db.select().from(events).all().length,
     storedMutation: (id) => db.select().from(mutations).where(eq(mutations.mutationId, id)).get(),
@@ -111,7 +115,7 @@ export function seedItem(h: Harness, seed: SeedItem): void {
       deletedAt: seed.deletedAt ?? null,
       quantity: seed.quantity ?? 1,
       code: seed.code ?? null,
-      typeKey: seed.typeKey ?? null,
+      typeId: seed.typeKey ? (resolveProtocol1Type(h.db, seed.typeKey)?.id ?? null) : null,
       sourceRef: seed.sourceRef ?? null,
       lastEditedTime: '2026-09-18T00:00:00.000Z',
       seq: 0,

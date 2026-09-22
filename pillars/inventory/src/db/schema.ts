@@ -20,6 +20,19 @@ export { itemFixtureConnections } from './schema/item-fixture-connections.js';
 export { itemPhotos } from './schema/item-photos.js';
 export { itemUploadedFiles } from './schema/item-uploaded-files.js';
 export {
+  CATALOGUE_REVISION_STATUSES,
+  catalogueCompatibility,
+  catalogueEvents,
+  catalogueRevisions,
+  type CatalogueRevisionStatus,
+} from './schema/catalogue-history.js';
+export { fieldEnumOptions, itemTypeFields, itemTypes } from './schema/catalogue.js';
+export {
+  ITEM_FIELD_VALUE_SOURCES,
+  itemFieldValues,
+  type ItemFieldValueSource,
+} from './schema/item-field-values.js';
+export {
   ACCESS_STATES,
   items,
   LIFECYCLES,

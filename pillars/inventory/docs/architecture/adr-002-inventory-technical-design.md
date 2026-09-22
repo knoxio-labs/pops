@@ -225,7 +225,7 @@ The following examples are normative abbreviations of the shapes above:
 - Cleared override: deleting that override causes the next read to evaluate again and return `48.000` with `source: 'computed'`.
 - Unavailable: after clearing the override and removing `unitPrice`, the field returns `state: 'unavailable', reason: 'missing_dependency'`; it does not return null or the old override.
 
-**Consequences.** A new type, field, option or compatible label correction needs no deployment. A new primitive or expression node still needs an app release and protocol rollout. The six current code definitions are bootstrap input for one migration only; after publication the database is the authority and `pillars/inventory/src/types/templates/` is removed. The "type arrived" sheet triggers on a published catalogue revision that adds an active type whose `legacyLabels` match `items.legacy_type`.
+**Consequences.** A new type, field, option or compatible label correction needs no deployment. A new primitive or expression node still needs an app release and protocol rollout. The seven former code definitions were bootstrap input for migration `0017_persisted_item_types` only; after publication the database is the authority and the code templates are removed. The "type arrived" sheet triggers on a published catalogue revision that adds an active type whose `legacyLabels` match `items.legacy_type`.
 
 ### D6. Every write is a command; the command layer is the only writer
 
@@ -323,14 +323,14 @@ The direction's `pops://inventory/items/<id>` is overturned: the platform gramma
 The persisted-catalogue work lands in this dependency order; items on the same numbered line may proceed together:
 
 1. POPS-4355 fixes this contract before another child invents wire semantics.
-2. POPS-4356 adds the revision tables and value store, imports the six built-ins with deterministic ids and unchanged keys, and removes code definitions only after parity tests pass.
+2. POPS-4356 adds the revision tables and value store, imports the seven built-ins with deterministic ids and unchanged keys, and removes code definitions only after parity tests pass.
 3. POPS-4357 exposes draft, publish, catalogue and audit APIs with owner permissions; POPS-4361 implements compatibility classification, migration execution and value validation against them.
 4. POPS-4362 adds MCP management after the API can complete the workflow without direct database access.
 5. POPS-4360 persists catalogue revisions, values, references and queued-mutation revision pins on iOS; POPS-4359 renders and edits the closed primitive vocabulary against that replica.
 6. POPS-4358 designs the web editor in the playground after the validation responses are fixed; POPS-4363 implements the decided editor.
 7. POPS-4364 adds the expression validator, evaluator, dependency cache and override commands end to end after server and iOS stored-value paths agree.
 
-The first publication is deliberately boring: it contains the existing `cable`, `charger`, `bulb`, `tape`, `storage_box` and `furniture` keys, maps every current field and choice to a deterministic UUID recorded by migration, and rewrites current `items.fields` without changing a logical value. The migration proves descriptor parity before making revision 1 visible. There is no interval where code and database catalogues can both accept writes. Protocol 1 may project revision 1 back into its old six-kind descriptor during rollout, but it cannot author a catalogue or observe any later revision; publication remains locked until protocol 2 is the server minimum.
+The first publication is deliberately boring: it contains the existing `cable`, `charger`, `bulb`, `tape`, `storage_box`, `furniture` and `book` keys, maps every current field and choice to a deterministic UUID recorded by migration, and rewrites current `items.fields` without changing a logical value. The migration proves descriptor parity before making revision 1 visible. There is no interval where code and database catalogues can both accept writes. Protocol 1 may project revision 1 back into its old six-kind descriptor during rollout, but it cannot author a catalogue or observe any later revision; publication remains locked until protocol 2 is the server minimum.
 
 ## Data model (server)
 
@@ -375,7 +375,7 @@ Indexes: `items_seq(seq)`, `items_location(location_id)`, `items_containing(cont
 Each snapshot owns full definition rows:
 
 - `item_types(revision, id, key COLLATE NOCASE, label, description, sort_order, capabilities_json, legacy_labels_json, archived_at)`, primary key `(revision, id)` and unique `(revision, key)`;
-- `item_type_fields(revision, id, type_id, key COLLATE NOCASE, label, help, sort_order, kind, cardinality, required, storage, fixed_unit, reference_kinds_json, reference_type_ids_json, expression_version, expression_json, allow_override, archived_at)`, primary key `(revision, id)` and unique `(revision, type_id, key)`;
+- `item_type_fields(revision, id, type_id, key COLLATE NOCASE, label, help, sort_order, presentation_json, kind, cardinality, required, storage, fixed_unit, reference_kinds_json, reference_type_ids_json, expression_version, expression_json, allow_override, archived_at)`, primary key `(revision, id)` and unique `(revision, type_id, key)`;
 - `field_enum_options(revision, id, field_id, key COLLATE NOCASE, label, sort_order, archived_at)`, primary key `(revision, id)` and unique `(revision, field_id, key)`;
 - `catalogue_compatibility(from_revision, to_revision, classification, affected_ids_json, migration_name)` records the proof used when an offline mutation names an older revision;
 - `catalogue_events(id INTEGER PRIMARY KEY AUTOINCREMENT, revision, kind, actor_kind, actor_id, actor_label, before_json, after_json, migration_name, affected_items, server_time)` is append-only by trigger.
@@ -475,7 +475,7 @@ Contract phase (Phase D): a later migration drops the Notion-era columns listed 
 
 ### Persisted-catalogue migration
 
-POPS-4356 adds `0017_persisted_item_types` after the current `0016` migration. Deterministic UUIDv5 ids use the standard URL namespace `6ba7b811-9dad-11d1-80b4-00c04fd430c8` and full names `pops://inventory/type/<type-key>`, `pops://inventory/type/<type-key>/field/<field-key>` and `pops://inventory/type/<type-key>/field/<field-key>/option/<option-key>`, with every key UTF-8 percent-encoded. It creates catalogue revision 1 from the six code descriptors, verifies canonical descriptor parity, then rewrites each non-empty `items.fields` entry into `item_field_values` under the mapped field id. The existing type key maps to its type id and each migrated value records revision 1. Unknown type or field keys, invalid legacy values and any parity mismatch abort the transaction with a diagnostic; no value is dropped or guessed.
+POPS-4356 adds `0017_persisted_item_types` after the current `0016` migration. Deterministic UUIDv5 ids use the standard URL namespace `6ba7b811-9dad-11d1-80b4-00c04fd430c8` and full names `pops://inventory/type/<type-key>`, `pops://inventory/type/<type-key>/field/<field-key>` and `pops://inventory/type/<type-key>/field/<field-key>/option/<option-key>`, with every key UTF-8 percent-encoded. It creates catalogue revision 1 from the seven code descriptors, verifies canonical descriptor parity, then rewrites each non-empty `items.fields` entry into `item_field_values` under the mapped field id. The existing type key maps to its type id and each migrated value records revision 1. Unknown type or field keys, invalid legacy values and any parity mismatch abort the transaction with a diagnostic; no value is dropped or guessed.
 
 Legacy kinds map as follows: `text` to `short_text`, `choice` to `enum` with a stable option id, `flag` to `boolean`, `link` to `url`, and `measurement` to the fixed unit already declared as that field's default. Measurements in another accepted unit are converted exactly through decimal arithmetic before storage. The sole legacy `range`, bulb `Colour temperature`, becomes two optional measurement fields keyed `Colour temperature minimum` and `Colour temperature maximum`, both fixed to kelvin; its low and high values move without numeric change. Option keys are the lowercase ASCII label with non-alphanumerics collapsed to `_`; the migration rejects a collision instead of suffixing one silently.
 

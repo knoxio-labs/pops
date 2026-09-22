@@ -58,7 +58,7 @@ export function assertParentAllowed(
  * engine runs this for every update op, whatever produced the changes.
  */
 export function validateChanges(db: CommandDb, entity: LoadedEntity, changes: FieldValues): void {
-  const diff = diffAgainst(entity, changes);
+  const diff = diffAgainst(db, entity, changes);
   if (entity.kind === 'item' && diff.placement !== undefined) {
     const to = parseFieldValue(placementSchema, 'placement', diff.placement);
     assertPlacementAllowed(db, entity.row.id, to);

@@ -1,11 +1,17 @@
 import { asc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 
+import {
+  copyItemFieldValues,
+  loadProtocol1Fields,
+  resolveProtocol1TypeById,
+} from '../../catalogue/index.js';
 import { itemPhotos, items, type ItemRow } from '../../db/index.js';
 import { loadEntity, requireItem, type CommandDb } from './entities.js';
 import { CommandRejected } from './errors.js';
 import { readPlacement } from './item-fields.js';
 import { defineOp } from './op.js';
+import { protocol1FieldsAsJson } from './protocol-1-fields.js';
 import { upsertSearchIndex } from './search-index.js';
 import { changeContextFrom, recordCreate } from './write.js';
 
@@ -49,8 +55,7 @@ function insertSplitInto({ db, row, newItemId, quantity, stamp }: InsertSplitInt
     .values({
       id: newItemId,
       name: row.name,
-      typeKey: row.typeKey,
-      fields: row.fields,
+      typeId: row.typeId,
       note: row.note,
       code: null,
       externalIds: row.externalIds,
@@ -92,6 +97,11 @@ export const itemSplit = defineOp({
     if (remaining < 1) {
       throw new CommandRejected('invalid', 'a split must leave at least one item behind');
     }
+    const fields = protocol1FieldsAsJson(loadProtocol1Fields(ctx.db, row.id));
+    const type = row.typeId === null ? null : resolveProtocol1TypeById(ctx.db, row.typeId);
+    if (row.typeId !== null && type === null) {
+      throw new CommandRejected('type_unknown', `unknown type ${row.typeId}`);
+    }
 
     return {
       eventKind: 'split_from',
@@ -101,8 +111,8 @@ export const itemSplit = defineOp({
           eventKind: 'split_into',
           changes: {
             name: row.name,
-            typeKey: row.typeKey,
-            fields: JSON.parse(row.fields) as JsonValue,
+            typeKey: type?.key ?? null,
+            fields,
             note: row.note,
             externalIds: JSON.parse(row.externalIds) as JsonValue,
             quantity: args.quantity,
@@ -112,14 +122,18 @@ export const itemSplit = defineOp({
           insert: (db, stamp) =>
             insertSplitInto({ db, row, newItemId: args.newItemId, quantity: args.quantity, stamp }),
         });
+        copyItemFieldValues(effectCtx.db, {
+          fromItemId: row.id,
+          toItemId: args.newItemId,
+          now: effectCtx.now,
+        });
         copyPhotos(effectCtx.db, row.id, args.newItemId);
         upsertSearchIndex(effectCtx.db, {
           id: args.newItemId,
           name: row.name,
           code: null,
           note: row.note,
-          typeKey: row.typeKey,
-          fields: row.fields,
+          typeId: row.typeId,
           externalIds: row.externalIds,
         });
       },

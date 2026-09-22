@@ -60,6 +60,28 @@ describe('event.revert', () => {
     expect(h.item('lamp').lifecycle).toBe('active');
   });
 
+  it('refreshes the search index after reverting a persisted type and its fields', () => {
+    h.run(mutation('item.changeType', 'lamp', { typeKey: 'bulb', fields: { Fitting: 'E27' } }));
+    const changed = lastSeq('lamp');
+    expect(
+      h.raw
+        .prepare(
+          'select type_label as typeLabel, field_text as fieldText from items_fts where id = ?'
+        )
+        .get('lamp')
+    ).toEqual({ typeLabel: 'Light bulb', fieldText: 'E27' });
+
+    expect(h.run(revert('lamp', changed))).toMatchObject({ status: 'applied' });
+
+    expect(
+      h.raw
+        .prepare(
+          'select type_label as typeLabel, field_text as fieldText from items_fts where id = ?'
+        )
+        .get('lamp')
+    ).toEqual({ typeLabel: '', fieldText: '' });
+  });
+
   it('conflicts when a field of the reverted event changed since, and writes nothing', () => {
     h.run(moveTo('lamp', 'garage'));
     const superseded = lastSeq('lamp');

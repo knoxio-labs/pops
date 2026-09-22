@@ -8,7 +8,6 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { items } from '../../db/index.js';
-import { INVENTORY_TYPES, projectCatalogue } from '../../types/index.js';
 import { createItem, openSyncHarness, PROTOCOL, send, type SyncHarness } from './sync-harness.js';
 import { createTestTransport } from './test-http.js';
 
@@ -22,21 +21,25 @@ afterEach(() => h.close());
 
 describe('GET /types', () => {
   it('serves the projected catalogue with its version as the ETag', async () => {
-    const expected = projectCatalogue(INVENTORY_TYPES);
     const response = await h.api.get('/types').set(PROTOCOL);
 
     expect(response.status).toBe(200);
-    expect(response.headers['etag']).toBe(`"${expected.version}"`);
-    expect(response.body.version).toBe(expected.version);
-    expect(response.body.types.map((type: { key: string }) => type.key)).toEqual(
-      expected.types.map((type) => type.key)
-    );
+    expect(response.headers['etag']).toBe(`"${response.body.version}"`);
+    expect(response.body.types.map((type: { key: string }) => type.key)).toEqual([
+      'book',
+      'bulb',
+      'cable',
+      'charger',
+      'furniture',
+      'storage_box',
+      'tape',
+    ]);
     const box = response.body.types.find((type: { key: string }) => type.key === 'storage_box');
     expect(box.capabilities).toEqual(['containment']);
   });
 
   it('answers 304 to a matching If-None-Match and 200 to a stale one', async () => {
-    const { version } = projectCatalogue(INVENTORY_TYPES);
+    const { version } = (await h.api.get('/types').set(PROTOCOL)).body;
     const fresh = await h.api.get('/types').set({ ...PROTOCOL, 'If-None-Match': `"${version}"` });
     const stale = await h.api.get('/types').set({ ...PROTOCOL, 'If-None-Match': '"older"' });
     expect(fresh.status).toBe(304);

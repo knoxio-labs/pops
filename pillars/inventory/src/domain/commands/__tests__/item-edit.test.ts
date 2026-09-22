@@ -48,7 +48,7 @@ describe('item.edit', () => {
         { baseRevision: 3 }
       )
     );
-    expect(JSON.parse(h.item('lamp').fields)).toEqual({ Fitting: 'E27' });
+    expect(h.fields('lamp')).toEqual({ Fitting: 'E27' });
   });
 
   it('rejects a fields patch that does not fit the type', () => {

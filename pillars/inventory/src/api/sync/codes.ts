@@ -1,7 +1,7 @@
 import { and, eq, isNotNull, isNull, sql } from 'drizzle-orm';
 
+import { resolveProtocol1Type } from '../../catalogue/index.js';
 import { items } from '../../db/index.js';
-import { findType } from '../../types/index.js';
 
 import type { CommandDb } from '../../domain/commands/index.js';
 
@@ -26,11 +26,11 @@ function firstLetter(text: string): string | undefined {
 }
 
 /** The stem most codes of `typeKey`'s live items already use, ties broken alphabetically. */
-function commonStemOfType(db: CommandDb, typeKey: string): string | undefined {
+function commonStemOfType(db: CommandDb, typeId: string): string | undefined {
   const rows = db
     .select({ code: items.code })
     .from(items)
-    .where(and(eq(items.typeKey, typeKey), isNotNull(items.code), isNull(items.deletedAt)))
+    .where(and(eq(items.typeId, typeId), isNotNull(items.code), isNull(items.deletedAt)))
     .all();
   const tally = new Map<string, number>();
   for (const { code } of rows) {
@@ -48,9 +48,9 @@ function commonStemOfType(db: CommandDb, typeKey: string): string | undefined {
  */
 function chooseStem(db: CommandDb, request: SuggestRequest): string {
   if (request.stem) return request.stem;
-  const type = request.typeKey === undefined ? undefined : findType(request.typeKey);
-  const shared = type ? commonStemOfType(db, type.key) : undefined;
-  return shared ?? firstLetter(type?.name ?? '') ?? firstLetter(request.name) ?? 'X';
+  const type = request.typeKey === undefined ? null : resolveProtocol1Type(db, request.typeKey);
+  const shared = type ? commonStemOfType(db, type.id) : undefined;
+  return shared ?? firstLetter(type?.label ?? '') ?? firstLetter(request.name) ?? 'X';
 }
 
 /**

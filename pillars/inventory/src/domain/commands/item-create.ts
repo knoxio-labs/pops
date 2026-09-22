@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
+import { replaceItemFieldValues, resolveProtocol1Type } from '../../catalogue/index.js';
 import { items } from '../../db/index.js';
-import { findType, typeFieldsSchema } from '../../types/index.js';
 import { CommandRejected } from './errors.js';
 import {
   externalIdsSchema,
@@ -12,10 +12,10 @@ import {
 import { LEGACY_ITEM_FIELD_CODECS, legacyItemPatchSchema } from './legacy-item-fields.js';
 import { defineOp } from './op.js';
 import { assertPlacementAllowed } from './placement.js';
+import { assertProtocol1Fields } from './protocol-1-fields.js';
 import { upsertSearchIndex } from './search-index.js';
 
 import type { ItemInsert } from '../../db/index.js';
-import type { TypeDefinition } from '../../types/index.js';
 import type { WriteStamp, FieldValues } from './entities.js';
 import type { CommandDb } from './entities.js';
 
@@ -72,23 +72,25 @@ function legacyItemColumns(
   return columns;
 }
 
-/** The item's type, or `undefined` for an untyped item; `type_unknown` for a `typeKey` the catalogue does not have. */
-function resolveType(typeKey: string | null | undefined): TypeDefinition | undefined {
+/** The item's current published type, or `undefined` for an untyped item. */
+function resolveType(
+  db: CommandDb,
+  typeKey: string | null | undefined
+): NonNullable<ReturnType<typeof resolveProtocol1Type>> | undefined {
   if (!typeKey) return undefined;
-  const type = findType(typeKey);
+  const type = resolveProtocol1Type(db, typeKey);
   if (!type) throw new CommandRejected('type_unknown', `unknown type ${typeKey}`);
   return type;
 }
 
 /** Validate `fields` against `type` (or, untyped, require it empty: there is no schema to check it against). */
 function assertFieldsFitType(
-  type: TypeDefinition | undefined,
+  db: CommandDb,
+  type: NonNullable<ReturnType<typeof resolveProtocol1Type>> | undefined,
   fields: Record<string, unknown>
 ): void {
   if (type) {
-    if (!typeFieldsSchema(type).safeParse(fields).success) {
-      throw new CommandRejected('invalid', `fields do not fit type ${type.key}`);
-    }
+    assertProtocol1Fields(db, type.id, fields);
     return;
   }
   if (Object.keys(fields).length > 0) {
@@ -100,37 +102,39 @@ interface InsertItemArgs {
   readonly db: CommandDb;
   readonly id: string;
   readonly item: CreateItemInput;
-  readonly isContainer: boolean;
+  readonly type: NonNullable<ReturnType<typeof resolveProtocol1Type>> | undefined;
   readonly stamp: WriteStamp;
   readonly legacy?: z.infer<typeof legacyItemPatchSchema> | undefined;
   readonly code?: string | null | undefined;
   readonly sourceRef?: string | null | undefined;
 }
 
+function itemPlacementColumns(
+  item: CreateItemInput
+): Pick<ItemInsert, 'locationId' | 'containingItemId'> {
+  if (item.placement.kind === 'location') {
+    return { locationId: item.placement.locationId, containingItemId: null };
+  }
+  if (item.placement.kind === 'container') {
+    return { locationId: null, containingItemId: item.placement.itemId };
+  }
+  return { locationId: null, containingItemId: null };
+}
+
 /** Insert the new item's row at `id`, with the placement and containment its type already validated. */
-function insertItem({
-  db,
-  id,
-  item,
-  isContainer,
-  stamp,
-  legacy,
-  code,
-  sourceRef,
-}: InsertItemArgs): void {
+function insertItem({ db, id, item, type, stamp, legacy, code, sourceRef }: InsertItemArgs): void {
+  const supportsContainment = type?.capabilities.includes('containment') ?? false;
   const values: ItemInsert = {
     id,
     name: item.name,
-    typeKey: item.typeKey ?? null,
-    fields: JSON.stringify(item.fields),
+    typeId: type?.id ?? null,
     note: item.note ?? null,
     externalIds: JSON.stringify(item.externalIds),
     quantity: item.quantity,
     placementKind: item.placement.kind,
-    locationId: item.placement.kind === 'location' ? item.placement.locationId : null,
-    containingItemId: item.placement.kind === 'container' ? item.placement.itemId : null,
-    isContainer: isContainer ? 1 : 0,
-    access: isContainer ? 'open' : null,
+    ...itemPlacementColumns(item),
+    isContainer: supportsContainment ? 1 : 0,
+    access: supportsContainment ? 'open' : null,
     lastEditedTime: stamp.now,
     revision: stamp.revision,
     seq: stamp.seq,
@@ -141,6 +145,15 @@ function insertItem({
   if (code !== undefined) values.code = code;
   if (sourceRef !== undefined) values.sourceRef = sourceRef;
   db.insert(items).values(values).run();
+  if (type) {
+    replaceItemFieldValues(db, {
+      itemId: id,
+      typeId: type.id,
+      fields: item.fields,
+      catalogueRevision: type.revision,
+      now: stamp.now,
+    });
+  }
 }
 
 /**
@@ -171,8 +184,8 @@ export const itemCreate = defineOp({
       throw new CommandRejected('invalid', 'item.create needs a UUID entityId');
     }
     const { item } = args;
-    const type = resolveType(item.typeKey);
-    assertFieldsFitType(type, item.fields);
+    const type = resolveType(ctx.db, item.typeKey);
+    assertFieldsFitType(ctx.db, type, item.fields);
     assertPlacementAllowed(ctx.db, ctx.mutation.entityId, item.placement);
     const isContainer = type?.capabilities.includes('containment') ?? false;
 
@@ -180,7 +193,7 @@ export const itemCreate = defineOp({
       eventKind: 'created',
       changes: {
         name: item.name,
-        typeKey: item.typeKey ?? null,
+        typeKey: type?.key ?? null,
         fields: item.fields,
         note: item.note ?? null,
         externalIds: item.externalIds,
@@ -195,7 +208,7 @@ export const itemCreate = defineOp({
           db,
           id: ctx.mutation.entityId,
           item,
-          isContainer,
+          type,
           stamp,
           legacy: args.legacy,
           code: args.code,
@@ -207,8 +220,7 @@ export const itemCreate = defineOp({
           name: item.name,
           code: args.code ?? null,
           note: item.note ?? null,
-          typeKey: item.typeKey ?? null,
-          fields: JSON.stringify(item.fields),
+          typeId: type?.id ?? null,
           externalIds: JSON.stringify(item.externalIds),
         });
       },

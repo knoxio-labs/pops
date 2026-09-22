@@ -10,7 +10,7 @@ import { SERVICE_ACCOUNT_HEADER, type ServiceAccountVerifier } from '@pops/pilla
 import { runMutations } from '../../domain/commands/index.js';
 import { createAiClient, isPermutation, type AiClient } from '../ai/client.js';
 import { resolveActor } from '../sync/actor.js';
-import { CATALOGUE } from '../sync/catalogue.js';
+import { readProtocol1Catalogue } from '../sync/catalogue.js';
 import { readChanges } from '../sync/changes.js';
 import { suggestCodes } from '../sync/codes.js';
 import { SyncRequestError } from '../sync/errors.js';
@@ -69,13 +69,16 @@ export function makeSyncHandlers({ db, documents, verify }: SyncHandlerDeps) {
   return {
     snapshot: ({ query }: SyncReq['snapshot']) =>
       runSync(async () => {
-        const page = db.transaction((tx) => readSnapshotPage(tx, readSyncState(tx), query));
+        const { page, catalogue } = db.transaction((tx) => ({
+          page: readSnapshotPage(tx, readSyncState(tx), query),
+          catalogue: readProtocol1Catalogue(tx),
+        }));
         return {
           status: 200 as const,
           body: {
             epoch: page.epoch,
             highWaterSeq: page.highWaterSeq,
-            catalogueVersion: CATALOGUE.version,
+            catalogueVersion: catalogue.version,
             total: page.total,
             items: await projectItems(page, documents),
             locations: page.locations.map(toSyncLocation),
@@ -86,9 +89,12 @@ export function makeSyncHandlers({ db, documents, verify }: SyncHandlerDeps) {
 
     changes: ({ query }: SyncReq['changes']) =>
       runSync(async () => {
-        const page = db.transaction((tx) => {
+        const { page, catalogue } = db.transaction((tx) => {
           const rows = readChanges(tx, readSyncState(tx), query);
-          return { ...rows, syncEvents: toSyncEvents(tx, rows.events) };
+          return {
+            page: { ...rows, syncEvents: toSyncEvents(tx, rows.events) },
+            catalogue: readProtocol1Catalogue(tx),
+          };
         });
         return {
           status: 200 as const,
@@ -99,7 +105,7 @@ export function makeSyncHandlers({ db, documents, verify }: SyncHandlerDeps) {
             events: page.syncEvents,
             nextSince: page.nextSince,
             hasMore: page.hasMore,
-            catalogueVersion: CATALOGUE.version,
+            catalogueVersion: catalogue.version,
           },
         };
       }),
@@ -131,13 +137,14 @@ export function makeSyncHandlers({ db, documents, verify }: SyncHandlerDeps) {
 }
 
 /** Handlers for `types.*`: the catalogue descriptor, with its version as the ETag. */
-export function makeTypesHandlers() {
+export function makeTypesHandlers(db: InventoryDb) {
   return {
     catalogue: async ({ headers, res }: TypesReq['catalogue'] & { res: Response }) => {
-      const etag = `"${CATALOGUE.version}"`;
+      const catalogue = readProtocol1Catalogue(db);
+      const etag = `"${catalogue.version}"`;
       res.setHeader('ETag', etag);
       if (headers['if-none-match'] === etag) return { status: 304 as const, body: undefined };
-      return { status: 200 as const, body: CATALOGUE };
+      return { status: 200 as const, body: catalogue };
     },
   };
 }

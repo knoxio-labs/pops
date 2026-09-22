@@ -46,12 +46,12 @@ export function recordUpdate(
   entity: LoadedEntity,
   plan: Pick<UpdatePlan, 'eventKind' | 'changes' | 'reason' | 'compensatesSeq'>
 ): Written | null {
-  const after = diffAgainst(entity, plan.changes);
+  const after = diffAgainst(ctx.db, entity, plan.changes);
   const fields = Object.keys(after);
   if (fields.length === 0) return null;
 
   const before: FieldValues = {};
-  for (const field of fields) before[field] = currentValue(entity, field);
+  for (const field of fields) before[field] = currentValue(ctx.db, entity, field);
 
   const revision = entity.row.revision + 1;
   const seq = appendEvent(ctx.db, {

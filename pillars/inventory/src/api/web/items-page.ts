@@ -5,9 +5,10 @@
  * already served — the property the delivery plan calls "cursor stable
  * under inserts".
  */
-import { and, asc, eq, gt, isNull, type SQL } from 'drizzle-orm';
+import { and, asc, eq, gt, isNull, sql, type SQL } from 'drizzle-orm';
 import { z } from 'zod';
 
+import { resolveProtocol1Type } from '../../catalogue/index.js';
 import { items, type ItemRow } from '../../db/index.js';
 import { ValidationError } from '../shared/errors.js';
 import { decodeCursor, encodeCursor } from '../sync/cursor.js';
@@ -37,9 +38,12 @@ export interface WebItemsPage {
   readonly nextCursor: string | null;
 }
 
-function filterConditions(filter: WebItemsFilter): SQL[] {
+function filterConditions(db: CommandDb, filter: WebItemsFilter): SQL[] {
   const conditions: SQL[] = [];
-  if (filter.typeKey !== undefined) conditions.push(eq(items.typeKey, filter.typeKey));
+  if (filter.typeKey !== undefined) {
+    const type = resolveProtocol1Type(db, filter.typeKey);
+    conditions.push(type === null ? sql`0` : eq(items.typeId, type.id));
+  }
   if (filter.placementKind !== undefined) {
     conditions.push(eq(items.placementKind, filter.placementKind));
   }
@@ -78,7 +82,7 @@ export function readWebItemsPage(
       and(
         isNull(items.deletedAt),
         after === null ? undefined : gt(items.id, after),
-        ...filterConditions(filter)
+        ...filterConditions(db, filter)
       )
     )
     .orderBy(asc(items.id))

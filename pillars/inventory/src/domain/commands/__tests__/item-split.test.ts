@@ -41,6 +41,21 @@ describe('item.split', () => {
     expect(h.item('screws').code).toBe('B412');
   });
 
+  it('copies persisted field values to the split-off item', () => {
+    seedItem(h, { id: 'screws', locationId: 'shelf', quantity: 2 });
+    h.run(mutation('item.changeType', 'screws', { typeKey: 'bulb', fields: { Fitting: 'E27' } }));
+
+    const { newItemId, outcome } = splitOff(1);
+
+    expect(outcome).toMatchObject({ status: 'applied' });
+    expect(h.fields(newItemId)).toEqual({ Fitting: 'E27' });
+    expect(
+      h.raw
+        .prepare('select count(*) as count from item_field_values where item_id = ?')
+        .get(newItemId)
+    ).toEqual({ count: 1 });
+  });
+
   it('copies photos onto the new item', () => {
     seedItem(h, { id: 'screws', locationId: 'shelf', quantity: 2 });
     h.raw

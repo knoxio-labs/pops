@@ -104,7 +104,7 @@ const deletedAtCodec: ItemCodec = {
   columns: (value) => ({ deletedAt: parseFieldValue(z.string().nullable(), 'deletedAt', value) }),
 };
 
-/** An item's `fields` JSON blob as the wire and the event log spell it: an object keyed by field name. */
+/** A protocol-1 item's field projection, keyed by field name. */
 export const itemFieldsBlobSchema = z.record(z.string(), z.json());
 
 const nameCodec: ItemCodec = {
@@ -128,13 +128,6 @@ const noteCodec: ItemCodec = {
   read: (row) => row.note,
   columns: (value) => ({
     note: normalizeNote(parseFieldValue(z.string().nullable(), 'note', value)),
-  }),
-};
-
-const fieldsCodec: ItemCodec = {
-  read: (row) => JSON.parse(row.fields) as JsonValue,
-  columns: (value) => ({
-    fields: JSON.stringify(parseFieldValue(itemFieldsBlobSchema, 'fields', value)),
   }),
 };
 
@@ -162,13 +155,6 @@ const codeCodec: ItemCodec = {
   }),
 };
 
-const typeKeyCodec: ItemCodec = {
-  read: (row) => row.typeKey,
-  columns: (value) => ({
-    typeKey: parseFieldValue(z.string().min(1).nullable(), 'typeKey', value),
-  }),
-};
-
 const isContainerCodec: ItemCodec = {
   read: (row) => row.isContainer === 1,
   columns: (value) => ({ isContainer: Number(parseFieldValue(z.boolean(), 'isContainer', value)) }),
@@ -193,7 +179,9 @@ const sourceRefCodec: ItemCodec = {
  * whole; `previousPlacement` moves with it whenever an item enters or leaves
  * the hand. `fields` and `externalIds` are recorded and compared as whole
  * JSON blobs: `item.edit`'s per-key `fields` patch is resolved to the full
- * blob before it reaches the engine (see `item-edit.ts`).
+ * projection before it reaches the engine (see `item-edit.ts`). `fields`
+ * and `typeKey` live in the persisted catalogue/value store rather than
+ * columns, so `entities.ts` handles their read and write paths.
  */
 export const ITEM_FIELD_CODECS: Readonly<Record<string, ItemCodec>> = {
   placement: placementCodec,
@@ -204,11 +192,9 @@ export const ITEM_FIELD_CODECS: Readonly<Record<string, ItemCodec>> = {
   deletedAt: deletedAtCodec,
   name: nameCodec,
   note: noteCodec,
-  fields: fieldsCodec,
   externalIds: externalIdsCodec,
   quantity: quantityCodec,
   code: codeCodec,
-  typeKey: typeKeyCodec,
   isContainer: isContainerCodec,
   sourceRef: sourceRefCodec,
 };
