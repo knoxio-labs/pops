@@ -101,6 +101,18 @@ Decimals are strings, references retain a stable target ID even when the target
 is missing, and measurements retain the field's fixed unit. The precise wire,
 SQLite, compatibility and migration rules are Inventory ADR-002 D5.
 
+Generic field writes validate the complete stable-ID field set against its
+exact catalogue revision: kind, cardinality, required fields, storage authority,
+archived selections and live reference constraints are one atomic check.
+Archived enum selections and stale references remain readable when unchanged;
+reference reads add `resolved`, `deleted` or `missing` without discarding the
+target ID. Publication compatibility distinguishes additive, protocol-gated,
+migration-required and forbidden changes. Required rewrites use only the named
+`copy`, `set_default`, `map_enum`, `convert_decimal`, `replace_reference` and
+`drop_value` operations, dry-run every affected row, and append a `migrated`
+item event only after the complete candidate validates. Search rebuilds use the
+candidate catalogue during that same transition.
+
 Computed fields use the bounded, versioned expression AST from D5: no SQL,
 JavaScript, clocks or network access; at most two reference hops; publication
 rejects dependency cycles. A permitted explicit override wins without evaluating

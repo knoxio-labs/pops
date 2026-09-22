@@ -114,6 +114,6 @@ describe('0016_storage_box_dimensions', () => {
       .prepare(`SELECT field_text FROM items_fts WHERE id = 'box'`)
       .get() as { field_text: string };
 
-    expect(indexed.field_text).toBe('');
+    expect(indexed.field_text).toBe('52 L 30 kg true');
   });
 });

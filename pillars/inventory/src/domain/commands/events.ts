@@ -2,7 +2,7 @@ import { and, asc, eq, gt } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { events, type EventActorKind, type EventRow } from '../../db/index.js';
-import { actorColumns, type CommandActor } from './envelope.js';
+import { actorColumns, type EventActor } from './envelope.js';
 import { jsonValueSchema, type ConflictSource, type JsonValue } from './outcome.js';
 
 import type { CommandDb, EntityKind, FieldValues } from './entities.js';
@@ -60,7 +60,7 @@ export interface NewEvent {
   readonly after: FieldValues;
   readonly reason: string | null;
   readonly entityRevision: number;
-  readonly actor: CommandActor;
+  readonly actor: EventActor;
   readonly mutationId: string | null;
   readonly compensatesSeq: number | null;
   readonly clientTime: string | null;

@@ -4,10 +4,16 @@
  * and field values live in the persisted catalogue/value store rather than
  * columns a trigger can read (migration `0013_items_fts`).
  */
-import { sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 
-import { loadProtocol1Fields, resolveProtocol1TypeById } from '../../catalogue/index.js';
+import { parseCanonicalValue, resolvePublishedType } from '../../catalogue/index.js';
+import { itemFieldValues } from '../../db/schema.js';
 
+import type {
+  PersistedItemType,
+  PersistedItemTypeField,
+  PrimitiveWireValue,
+} from '../../catalogue/index.js';
 import type { ItemRow } from '../../db/row-types.js';
 import type { CommandDb } from './entities.js';
 
@@ -17,16 +23,43 @@ export type SearchableItem = Pick<
   'id' | 'name' | 'code' | 'note' | 'typeId' | 'externalIds'
 >;
 
-/** The type's textual field values, space-joined, for the free-text column. */
-function fieldText(db: CommandDb, row: SearchableItem): string {
-  if (row.typeId === null) return '';
-  const type = resolveProtocol1TypeById(db, row.typeId);
+function searchableValue(field: PersistedItemTypeField, value: PrimitiveWireValue): string {
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+  if ('optionId' in value) {
+    const option = field.enumOptions.find((candidate) => candidate.id === value.optionId);
+    return option?.label ?? '';
+  }
+  if ('amount' in value) return `${value.amount} ${value.unit}`;
+  return '';
+}
+
+/** The active type's searchable field values, space-joined, for the free-text column. */
+function fieldText(db: CommandDb, row: SearchableItem, type: PersistedItemType | null): string {
   if (!type) return '';
-  const fields = loadProtocol1Fields(db, row.id);
+  const rows = db
+    .select()
+    .from(itemFieldValues)
+    .where(eq(itemFieldValues.itemId, row.id))
+    .orderBy(itemFieldValues.fieldId, itemFieldValues.source, itemFieldValues.ordinal)
+    .all();
+  const rowsByField = new Map<string, typeof rows>();
+  for (const stored of rows) {
+    const fieldRows = rowsByField.get(stored.fieldId) ?? [];
+    fieldRows.push(stored);
+    rowsByField.set(stored.fieldId, fieldRows);
+  }
   const parts: string[] = [];
   for (const field of type.fields) {
-    const value = fields[field.key];
-    if (typeof value === 'string' && value.length > 0) parts.push(value);
+    const readableField = { ...field, archivedEnumOptionIds: new Set<string>() };
+    for (const stored of rowsByField.get(field.id) ?? []) {
+      const text = searchableValue(
+        field,
+        parseCanonicalValue(readableField, stored.valueJson).value
+      );
+      if (text.length > 0) parts.push(text);
+    }
   }
   return parts.join(' ');
 }
@@ -40,17 +73,23 @@ function externalIdsText(row: SearchableItem): string {
 /**
  * Write or replace `row`'s entry in `items_fts`, reflecting its current
  * name, code, note, type label and textual field and external-id values.
+ * Publication migrations supply their candidate type before it becomes active.
  * Called by every op that changes one of those (`item.create`, `item.edit`,
  * `item.changeType`, `item.setCode`, `item.split`).
  */
-export function upsertSearchIndex(db: CommandDb, row: SearchableItem): void {
-  const type = row.typeId === null ? null : resolveProtocol1TypeById(db, row.typeId);
+export function upsertSearchIndex(
+  db: CommandDb,
+  row: SearchableItem,
+  typeOverride?: PersistedItemType
+): void {
+  const type =
+    typeOverride ?? (row.typeId === null ? null : resolvePublishedType(db, { id: row.typeId }));
   db.run(sql`delete from items_fts where id = ${row.id}`);
   db.run(sql`
     insert into items_fts (id, name, code, note, type_label, field_text, external_ids)
     values (
       ${row.id}, ${row.name}, ${row.code ?? ''}, ${row.note ?? ''},
-      ${type?.label ?? ''}, ${fieldText(db, row)}, ${externalIdsText(row)}
+      ${type?.label ?? ''}, ${fieldText(db, row, type)}, ${externalIdsText(row)}
     )
   `);
 }

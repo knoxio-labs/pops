@@ -42,6 +42,34 @@ export {
   PRIMITIVE_KINDS,
   ValueValidationError,
 } from './value-codec.js';
+export {
+  findCatalogueType,
+  assertIncomingReferencesPermitType,
+  ItemFieldSetError,
+  readItemFieldValues,
+  replaceValidatedItemFieldValues,
+  validateItemFieldValues,
+  validateItemFieldValuesForType,
+} from './item-values.js';
+export type {
+  CanonicalItemFieldValueInput,
+  ItemFieldValueInput,
+  ReadItemFieldValue,
+  ReadReferenceWireValue,
+  ReferenceTargetState,
+} from './item-values.js';
+export { classifyCatalogueCompatibility } from './compatibility.js';
+export type {
+  CatalogueCompatibilityChange,
+  CatalogueCompatibilityClassification,
+  CatalogueCompatibilityResult,
+} from './compatibility.js';
+export { executeCatalogueMigration } from './migrations.js';
+export type {
+  CatalogueMigration,
+  CatalogueMigrationResult,
+  CatalogueMigrationStep,
+} from './migrations.js';
 export type {
   CanonicalValue,
   FieldCardinality,

@@ -34,6 +34,11 @@ export type CommandActor =
   | { readonly kind: 'web' }
   | { readonly kind: 'service'; readonly id: string };
 
+/** An actor accepted by append-only history, including server migrations. */
+export type EventActor =
+  | CommandActor
+  | { readonly kind: 'migration'; readonly id: string; readonly label: string };
+
 /** The `events.actor_*` columns for an actor. */
 export interface ActorColumns {
   actorKind: EventActorKind;
@@ -42,7 +47,7 @@ export interface ActorColumns {
 }
 
 /** Map an actor onto the `events.actor_*` columns. */
-export function actorColumns(actor: CommandActor): ActorColumns {
+export function actorColumns(actor: EventActor): ActorColumns {
   switch (actor.kind) {
     case 'device':
       return { actorKind: 'device', actorId: actor.id, actorLabel: actor.label };
@@ -50,6 +55,8 @@ export function actorColumns(actor: CommandActor): ActorColumns {
       return { actorKind: 'service', actorId: actor.id, actorLabel: null };
     case 'web':
       return { actorKind: 'web', actorId: null, actorLabel: null };
+    case 'migration':
+      return { actorKind: 'migration', actorId: actor.id, actorLabel: actor.label };
   }
 }
 

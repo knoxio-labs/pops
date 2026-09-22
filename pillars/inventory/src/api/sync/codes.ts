@@ -1,6 +1,6 @@
 import { and, eq, isNotNull, isNull, sql } from 'drizzle-orm';
 
-import { resolveProtocol1Type } from '../../catalogue/index.js';
+import { resolvePublishedType } from '../../catalogue/index.js';
 import { items } from '../../db/index.js';
 
 import type { CommandDb } from '../../domain/commands/index.js';
@@ -48,7 +48,8 @@ function commonStemOfType(db: CommandDb, typeId: string): string | undefined {
  */
 function chooseStem(db: CommandDb, request: SuggestRequest): string {
   if (request.stem) return request.stem;
-  const type = request.typeKey === undefined ? null : resolveProtocol1Type(db, request.typeKey);
+  const type =
+    request.typeKey === undefined ? null : resolvePublishedType(db, { key: request.typeKey });
   const shared = type ? commonStemOfType(db, type.id) : undefined;
   return shared ?? firstLetter(type?.label ?? '') ?? firstLetter(request.name) ?? 'X';
 }
