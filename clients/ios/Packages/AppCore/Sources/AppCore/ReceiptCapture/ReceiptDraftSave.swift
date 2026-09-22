@@ -154,8 +154,11 @@ public struct ReceiptPurchaseDraftFields: Hashable, Sendable {
     public let shippingIncluded: Bool
     public let items: [ReceiptSaveLine]
     public let capture: ReceiptCaptureFacts?
-    /// Chosen by this device, not by the BFM — the same key resubmitted
-    /// refuses as a retry rather than writing a second purchase.
+    /// The device-generated identity of one intended purchase creation.
+    ///
+    /// Repeating this key returns the purchase it already created without
+    /// writing a second purchase. Retrying an uncertain result keeps its key;
+    /// a genuinely new intended purchase receives a fresh key.
     public let idempotencyKey: String
 
     public init(

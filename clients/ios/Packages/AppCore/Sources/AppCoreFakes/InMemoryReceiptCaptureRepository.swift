@@ -13,7 +13,10 @@ public actor InMemoryReceiptCaptureRepository: ReceiptCaptureRepository {
     /// was sent needs more than a count.
     public private(set) var extracted: [[ReceiptPart]] = []
     public private(set) var savedDrafts: [ReceiptDraftSavePayload] = []
-    public private(set) var manualPurchases: [ReceiptManualPurchasePayload] = []
+    /// Every manual purchase creation payload, in call order.
+    public private(set) var createdManualPurchases: [ReceiptManualPurchasePayload] = []
+    /// Every manual purchase creation payload, in call order.
+    public var manualPurchases: [ReceiptManualPurchasePayload] { createdManualPurchases }
 
     private var extractionOutcomes: [Int: ReceiptExtraction]
     private var extractionFailures: [Int: RepositoryError] = [:]
@@ -78,7 +81,7 @@ public actor InMemoryReceiptCaptureRepository: ReceiptCaptureRepository {
     public func createManualPurchase(_ payload: ReceiptManualPurchasePayload) async throws
         -> ReceiptPurchase
     {
-        manualPurchases.append(payload)
+        createdManualPurchases.append(payload)
         return try manualResult.get()
     }
 }
