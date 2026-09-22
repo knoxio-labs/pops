@@ -50,7 +50,7 @@ public struct PopsSearchBar<FilterOptions: View>: View {
         filterSummary.isEmpty ? "None" : filterSummary
     }
 
-    /// Creates a search bar whose filter control opens caller-provided menu options.
+    /// Creates a filter menu, or invokes `onFilter` when an action is supplied.
     public init(
         query: Binding<String>, tint: Color, prompt: String = "Search", isFiltered: Bool,
         filterSummary: String = "", add: PopsSearchBarAdd? = nil,

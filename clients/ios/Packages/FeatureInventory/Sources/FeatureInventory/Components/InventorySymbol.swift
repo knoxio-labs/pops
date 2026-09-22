@@ -46,8 +46,6 @@ internal struct InventorySymbol: Hashable, Sendable {
     internal static let appUpdate = InventorySymbol(system: "arrow.up.circle.fill")
     internal static let device = InventorySymbol(system: "iphone")
     internal static let search = InventorySymbol(system: "magnifyingglass")
-    internal static let scan = InventorySymbol(system: "qrcode.viewfinder")
-    internal static let dictate = InventorySymbol(system: "mic")
     internal static let storeHere = InventorySymbol(system: "square.and.arrow.down")
     internal static let rename = InventorySymbol(system: "pencil")
     internal static let manage = InventorySymbol(system: "ellipsis.circle")
