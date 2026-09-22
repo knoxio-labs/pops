@@ -58,6 +58,8 @@ The assembled home switches between those states, refreshes without removing loa
 
 The archive groups each server-filtered scope into calendar months. Until a scope reaches its final cursor, only its oldest loaded month is marked incomplete; totals for that month say they are partial instead of presenting a page boundary as a complete month. Status badges answer a different question in each scope: All marks unsettled rows, while Unmatched marks only the partially matched exception.
 
+Each archive scope owns its rows, opaque cursor, first-page total, and paging state. Switching scope invalidates in-flight work without discarding either scope's loaded cache; returning to a scope resumes from its cursor. Later pages deduplicate purchase identifiers, keep the first page's server total, and expose failure only at the footer so already loaded months remain readable.
+
 Editing a saved purchase remains POPS-2458. There is no initialiser building a `ReceiptDraft` from a `ReceiptPurchase`: that summary carries a merchant, a total and a count, and a form pre-filled from it would present three line items as zero. Reusing the form requires the full detail model, rather than treating the summary as an editable purchase.
 
 ### The form, and how both entry points reach it
