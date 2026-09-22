@@ -7294,6 +7294,10 @@
                           "enum": ["draft"],
                           "type": "string"
                         },
+                        "matchedMerchantEntityId": {
+                          "nullable": true,
+                          "type": "string"
+                        },
                         "receiptUris": {
                           "items": {
                             "type": "string"
@@ -7305,7 +7309,14 @@
                           "type": "boolean"
                         }
                       },
-                      "required": ["kind", "receiptUris", "reconciled", "failures", "draft"],
+                      "required": [
+                        "kind",
+                        "receiptUris",
+                        "reconciled",
+                        "failures",
+                        "draft",
+                        "matchedMerchantEntityId"
+                      ],
                       "type": "object"
                     },
                     {

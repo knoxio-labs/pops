@@ -372,6 +372,9 @@ asserted in `src/api/__tests__/mobile-receipt-drafts.test.ts`,
   gone — see this contract's git history for `uploadReceipt`. What made it
   worth splitting is that a reading the arithmetic gate refused is still worth
   editing, and the old route could only answer with a record or with nothing.
+- **Merchant matches tolerate independent releases.** An extraction response
+  from an older purchases deployment may omit `matchedMerchantEntityId`; bfm
+  publishes that absence as `null` so the draft remains readable.
 - **Both extraction outcomes are a `200`.** A draft and `unreadable` are told
   apart by the body's `kind`, because both are purchases having read the
   upload and answered. Only a failure to get an answer at all is a non-200,

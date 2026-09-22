@@ -232,6 +232,14 @@ export const ExtractReceiptOutcomeSchema = z.discriminatedUnion('kind', [
     /** The gate's objections when `reconciled` is false; empty otherwise. */
     failures: z.array(GateFailureSchema),
     draft: ReceiptDraftSchema,
+    /**
+     * The contacts entity the printed merchant name resolved to, by the same
+     * rule `saveDraft` applies — an exact name or alias hit with nothing else
+     * tied for it. Null on no match, an unregistered or unreachable contacts
+     * pillar, or a receipt with no merchant name at all: this is a proposal
+     * the reviewer confirms or replaces, never a write.
+     */
+    matchedMerchantEntityId: z.string().nullable(),
   }),
   z.object({
     kind: z.literal('unreadable'),

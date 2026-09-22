@@ -65,6 +65,30 @@ internal struct ReceiptCaptureMappingTests {
         #expect(reading.failures.map(\.kind) == [expected])
     }
 
+    @Test("a matched merchant id reaches the reading")
+    func matchedMerchantEntityIDReadOnExtract() async throws {
+        let outcome = try await extractReceipt(
+            json: ReceiptCaptureWire.draft(matchedMerchantEntityId: "entity-bunnings")
+        )
+
+        guard case .draft(let reading) = outcome else {
+            Issue.record("expected .draft, got \(outcome)")
+            return
+        }
+        #expect(reading.matchedMerchantEntityID == "entity-bunnings")
+    }
+
+    @Test("no match reaches the reading as nil, not a fabricated proposal")
+    func noMatchedMerchantEntityIDOnExtract() async throws {
+        let outcome = try await extractReceipt(json: ReceiptCaptureWire.draft())
+
+        guard case .draft(let reading) = outcome else {
+            Issue.record("expected .draft, got \(outcome)")
+            return
+        }
+        #expect(reading.matchedMerchantEntityID == nil)
+    }
+
     /// The BFM keeps the wire's `code` open so a gate that grows a reason does
     /// not break a build already on somebody's phone.
     @Test("a gate reason invented after this build shipped still renders")

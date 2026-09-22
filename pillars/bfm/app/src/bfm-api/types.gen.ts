@@ -2631,6 +2631,7 @@ export type MobilePurchasesExtractReceiptResponses = {
           detail: string;
         }>;
         kind: 'draft';
+        matchedMerchantEntityId: string | null;
         receiptUris: Array<string>;
         reconciled: boolean;
       }

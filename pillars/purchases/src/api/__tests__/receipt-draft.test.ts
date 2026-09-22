@@ -110,9 +110,39 @@ describe('POST /receipts/extract', () => {
     // No provenance fields — the caller decides those at save time.
     expect(response.body.draft.source).toBeUndefined();
     expect(response.body.draft.ingestMethod).toBeUndefined();
+    // Nothing was asked to resolve a merchant — the default resolver knows nothing.
+    expect(response.body.matchedMerchantEntityId).toBeNull();
 
     const list = await requestOn(appWith(saying(GOOD_READING))).get('/purchases');
     expect(list.body.items).toEqual([]);
+  });
+
+  it('carries the matched merchant id when contacts recognises the printed name', async () => {
+    const known: MerchantResolver = { resolve: async () => 'entity-bunnings' };
+    const response = await extract(appWith(saying(GOOD_READING), known));
+
+    expect(response.status).toBe(200);
+    expect(response.body.matchedMerchantEntityId).toBe('entity-bunnings');
+  });
+
+  it('carries a null match when contacts does not recognise the printed name', async () => {
+    const response = await extract(appWith(saying(GOOD_READING), NO_MERCHANT));
+
+    expect(response.status).toBe(200);
+    expect(response.body.matchedMerchantEntityId).toBeNull();
+  });
+
+  it('still returns the draft when the merchant resolver throws — a contacts outage costs a link, not the draft', async () => {
+    const broken: MerchantResolver = {
+      resolve: async () => {
+        throw new Error('contacts unreachable');
+      },
+    };
+    const response = await extract(appWith(saying(GOOD_READING), broken));
+
+    expect(response.status).toBe(200);
+    expect(response.body.kind).toBe('draft');
+    expect(response.body.matchedMerchantEntityId).toBeNull();
   });
 
   it('reads an inadmissible receipt into the same draft shape, with its objections', async () => {

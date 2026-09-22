@@ -2494,6 +2494,7 @@ export type ReceiptExtractResponses = {
             | 'damaged';
         }>;
         kind: 'draft';
+        matchedMerchantEntityId: string | null;
         receiptUris: Array<string>;
         reconciled: boolean;
       }

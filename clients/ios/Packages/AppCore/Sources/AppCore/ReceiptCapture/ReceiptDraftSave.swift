@@ -28,19 +28,25 @@ public struct ReceiptDraftReading: Hashable, Sendable {
     /// Opaque facts about when and where this was captured, carried forward
     /// unread and handed back verbatim on save — see ``ReceiptCaptureFacts``.
     public let capture: ReceiptCaptureFacts?
+    /// The contacts entity the server matched the printed merchant name to.
+    /// `nil` on no match — a proposal for the reviewer to confirm, never a
+    /// decision already made.
+    public let matchedMerchantEntityID: String?
 
     public init(
         receiptUris: [String],
         reconciled: Bool,
         failures: [ReceiptGateFailure],
         extracted: ExtractedReceipt,
-        capture: ReceiptCaptureFacts?
+        capture: ReceiptCaptureFacts?,
+        matchedMerchantEntityID: String? = nil
     ) {
         self.receiptUris = receiptUris
         self.reconciled = reconciled
         self.failures = failures
         self.extracted = extracted
         self.capture = capture
+        self.matchedMerchantEntityID = matchedMerchantEntityID
     }
 }
 
