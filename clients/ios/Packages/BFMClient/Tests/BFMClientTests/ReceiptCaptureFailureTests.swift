@@ -32,6 +32,18 @@ internal struct ReceiptCaptureFailureTests {
         }
     }
 
+    private func writeFailure(_ work: () async throws -> ReceiptPurchase) async -> RepositoryError?
+    {
+        do {
+            _ = try await work()
+            return nil
+        } catch let error as RepositoryError {
+            return error
+        } catch {
+            return nil
+        }
+    }
+
     /// No credential, or one the BFM no longer honours, must end the same way
     /// a transactions call does — the session is on its way to `revoked`, not
     /// a reason to say the receipt was unreadable.
@@ -58,6 +70,20 @@ internal struct ReceiptCaptureFailureTests {
         #expect(unavailable == .unavailable)
         #expect(mismatch == .contractMismatch)
         #expect(unavailable != mismatch)
+    }
+
+    @Test("both receipt writes preserve an upstream conflict")
+    func writeConflicts() async {
+        let json = ReceiptCaptureWire.upstream(code: "upstream_conflict")
+        let draftFailure = await writeFailure {
+            try await saveDraft(.badGateway, json: json)
+        }
+        let manualFailure = await writeFailure {
+            try await createManualPurchase(.badGateway, json: json)
+        }
+
+        #expect(draftFailure == .conflict("upstream_conflict"))
+        #expect(manualFailure == .conflict("upstream_conflict"))
     }
 
     @Test("being told to slow down is not something this screen can act on")
