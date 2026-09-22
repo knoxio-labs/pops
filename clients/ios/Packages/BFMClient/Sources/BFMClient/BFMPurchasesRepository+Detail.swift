@@ -1,5 +1,4 @@
 import AppCore
-import Foundation
 import OpenAPIRuntime
 
 extension BFMPurchasesRepository {
@@ -69,13 +68,9 @@ extension BFMPurchasesRepository {
     private static func detailMerchant(
         from wire: GetPurchaseWire.MerchantPayload, printed: String?
     ) -> MerchantIdentity {
-        let printed = nonBlank(printed)
         switch wire {
         case .case1(let entity):
-            return .entity(
-                id: entity.entityId,
-                name: entity.name.flatMap(nonBlank) ?? printed ?? entity.entityId,
-                printed: printed ?? entity.entityId)
+            return entityMerchant(id: entity.entityId, name: entity.name, printed: printed)
         case .case2(let named): return .printed(named.name)
         case .case3: return .unattributed
         }

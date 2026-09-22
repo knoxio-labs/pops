@@ -43,6 +43,43 @@ internal struct PurchaseDetailMappingTests {
         #expect(detail.receiptURIs.isEmpty)
     }
 
+    @Test("a detail entity with no name falls back to the printed wording")
+    func nilEntityNameUsesPrintedWording() async throws {
+        let json = Self.detailJSON
+            .replacingOccurrences(
+                of: #""merchant":{"resolution":"name","name":"Cafe"}"#,
+                with: #""merchant":{"resolution":"entity","entityId":"entity-1","name":null}"#
+            )
+            .replacingOccurrences(
+                of: #""merchantName":"Cafe""#, with: #""merchantName":"Café till""#)
+        let repository = try BFMPurchasesRepository.stubbed(
+            StubTransport(status: .ok, json: json))
+
+        let detail = try #require(try await repository.purchaseDetail(id: "purchase-1"))
+
+        #expect(
+            detail.purchase.merchant
+                == .entity(id: "entity-1", name: "Café till", printed: "Café till"))
+    }
+
+    @Test("a detail entity with no usable names falls back to its id")
+    func blankEntityNamesUseID() async throws {
+        let json = Self.detailJSON
+            .replacingOccurrences(
+                of: #""merchant":{"resolution":"name","name":"Cafe"}"#,
+                with: #""merchant":{"resolution":"entity","entityId":"entity-1","name":null}"#
+            )
+            .replacingOccurrences(of: #""merchantName":"Cafe""#, with: #""merchantName":"   ""#)
+        let repository = try BFMPurchasesRepository.stubbed(
+            StubTransport(status: .ok, json: json))
+
+        let detail = try #require(try await repository.purchaseDetail(id: "purchase-1"))
+
+        #expect(
+            detail.purchase.merchant
+                == .entity(id: "entity-1", name: "entity-1", printed: "entity-1"))
+    }
+
     @Test("a missing detail is an answered absence")
     func missingDetail() async throws {
         let repository = try BFMPurchasesRepository.stubbed(

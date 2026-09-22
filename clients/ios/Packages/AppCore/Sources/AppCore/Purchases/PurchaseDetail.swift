@@ -19,7 +19,8 @@ public struct PurchaseDetailLine: Identifiable, Hashable, Sendable {
 /// The complete purchase representation supplied by the BFM detail contract.
 ///
 /// `receiptURIs` preserves every receipt document in server order and is empty when the purchase
-/// has none. Charges, finance links, and accounting splits are limited to fields in that contract.
+/// has none. The BFM contract supplies the five named charge totals below; it has no other charge,
+/// finance-link, or accounting-split fields for this model to carry.
 public struct PurchaseDetail: Identifiable, Hashable, Sendable {
     public var id: Purchase.ID { purchase.id }
 
