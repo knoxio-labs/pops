@@ -12,7 +12,7 @@ internal struct InventoryLocationActionFace: View {
     }
 }
 
-/// The name, the path to it with every step tappable, and the counts.
+/// The path to a place with every step tappable, and the counts.
 ///
 /// The path is one wrapping line of links rather than a row of chips, so a
 /// long place name breaks inside itself instead of pushing past the edge.
@@ -22,17 +22,6 @@ internal struct InventoryLocationHeader: View {
 
     internal var body: some View {
         VStack(alignment: .leading, spacing: PopsSpacing.xs) {
-            HStack(alignment: .firstTextBaseline, spacing: PopsSpacing.sm) {
-                InventorySymbol.location.image
-                    .font(.popsTitle)
-                    .foregroundStyle(Color.popsInventory)
-                    .accessibilityHidden(true)
-                Text(place.name)
-                    .font(.popsLargeTitle)
-                    .foregroundStyle(Color.popsForeground)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .accessibilityAddTraits(.isHeader)
-            }
             if !ancestors.isEmpty {
                 path
                     .padding(.vertical, PopsSpacing.xs)

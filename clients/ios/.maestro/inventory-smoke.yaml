@@ -50,6 +50,20 @@ name: Inventory downloads, then creates, moves, discards and undoes against the 
 - assertVisible: Garage ${output.inventory.run}
 - tapOn: 'Create'
 - assertVisible: Garage ${output.inventory.run}, Place
+- tapOn: Garage ${output.inventory.run}, Place
+- assertVisible:
+    id: 'inventory-place-title'
+- assertVisible:
+    text: 'Locations|Back'
+- assertNotVisible:
+    text: 'Locations|Back'
+    index: 1
+- assertNotVisible:
+    id: 'inventory-place-title'
+    below:
+      text: 'Locations|Back'
+- tapOn: 'Locations|Back'
+- assertVisible: Garage ${output.inventory.run}, Place
 
 # Create. The name field is found by identifier, because its label and its
 # placeholder both read "Name". A new item lands in hand.
