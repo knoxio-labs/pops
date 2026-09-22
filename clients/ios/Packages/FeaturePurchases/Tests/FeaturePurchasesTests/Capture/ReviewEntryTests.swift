@@ -43,6 +43,28 @@ internal struct ReviewEntryTests {
         #expect(entries[1].reading == unreconciled)
     }
 
+    @Test("a server-matched merchant remains a proposal in the review draft")
+    func matchedMerchant() {
+        let reading = reading(reconciled: true, matchedMerchantID: "merchant-1")
+
+        let entry = ReviewEntry.batch(from: [
+            row(id: "matched", outcome: .read(reading), byte: 1)
+        ])[0]
+
+        #expect(entry.draft.merchantResolution == .matched(id: "merchant-1"))
+    }
+
+    @Test("a reading without a matched merchant remains unresolved")
+    func unresolvedMerchant() {
+        let reading = reading(reconciled: true, matchedMerchantID: nil)
+
+        let entry = ReviewEntry.batch(from: [
+            row(id: "unresolved", outcome: .read(reading), byte: 1)
+        ])[0]
+
+        #expect(entry.draft.merchantResolution == .unresolved)
+    }
+
     @Test("an unreadable receipt starts blank without inventing a reading or status")
     func unreadableDraft() {
         let entry = ReviewEntry.batch(from: [
@@ -65,13 +87,17 @@ internal struct ReviewEntryTests {
         #expect(PurchaseReviewCopy.unreadableSubtitle == "Nothing could be read off this one.")
     }
 
-    private func reading(reconciled: Bool) -> ReceiptDraftReading {
+    private func reading(
+        reconciled: Bool,
+        matchedMerchantID: String? = nil
+    ) -> ReceiptDraftReading {
         ReceiptDraftReading(
             receiptUris: ["pops://purchases/receipt/test"],
             reconciled: reconciled,
             failures: reconciled ? [] : [.fake()],
             extracted: .fake(),
-            capture: nil)
+            capture: nil,
+            matchedMerchantEntityID: matchedMerchantID)
     }
 
     private func row(

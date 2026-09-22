@@ -42,7 +42,8 @@ public struct ReviewEntry: Identifiable, Sendable {
 
     /// Converts settled reading rows into review entries, with unreadable receipts first.
     ///
-    /// Relative order is preserved within unreadable and read entries. Passing a queued or
+    /// Relative order is preserved within unreadable and read entries. A server-matched merchant
+    /// remains a proposal in the draft rather than becoming a reader choice. Passing a queued or
     /// in-flight row is a programmer error because review can begin only after reading finishes.
     public static func batch(
         from rows: [PurchaseReadingRow],
@@ -58,7 +59,9 @@ public struct ReviewEntry: Identifiable, Sendable {
                     ReviewEntry(
                         id: row.id,
                         draft: presentation.draft(
-                            extracted: reading.extracted, failures: reading.failures),
+                            extracted: reading.extracted,
+                            failures: reading.failures,
+                            matchedMerchantID: reading.matchedMerchantEntityID),
                         origin: .read,
                         reading: reading,
                         status: reading.reconciled
