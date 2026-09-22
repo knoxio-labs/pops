@@ -2155,6 +2155,7 @@ export type MobilePurchasesCreateManualPurchaseData = {
     } | null;
     currency: string;
     discountCents?: number;
+    discountIncluded?: boolean | null;
     idempotencyKey: string;
     items: Array<{
       lineTotalCents: number;
@@ -2167,8 +2168,11 @@ export type MobilePurchasesCreateManualPurchaseData = {
     orderedAt: string;
     orderedAtOffsetMinutes?: number | null;
     shippingCents?: number;
+    shippingIncluded?: boolean | null;
     surchargeCents?: number;
+    surchargeIncluded?: boolean | null;
     taxCents?: number;
+    taxIncluded?: boolean | null;
     totalCents: number;
   };
   path?: never;
@@ -2312,6 +2316,7 @@ export type MobilePurchasesSaveReceiptDraftData = {
     } | null;
     currency: string;
     discountCents?: number;
+    discountIncluded?: boolean | null;
     documents: Array<{
       documentUri: string;
       kind: 'receipt';
@@ -2328,8 +2333,11 @@ export type MobilePurchasesSaveReceiptDraftData = {
     orderedAt: string;
     orderedAtOffsetMinutes?: number | null;
     shippingCents?: number;
+    shippingIncluded?: boolean | null;
     surchargeCents?: number;
+    surchargeIncluded?: boolean | null;
     taxCents?: number;
+    taxIncluded?: boolean | null;
     totalCents: number;
   };
   path?: never;
@@ -2587,6 +2595,7 @@ export type MobilePurchasesExtractReceiptResponses = {
           } | null;
           currency: string;
           discountCents: number;
+          discountIncluded: boolean | null;
           documents: Array<{
             documentUri: string;
             kind: 'receipt';
@@ -2602,9 +2611,12 @@ export type MobilePurchasesExtractReceiptResponses = {
           orderedAt: string;
           orderedAtOffsetMinutes: number | null;
           shippingCents: number;
+          shippingIncluded: boolean | null;
           subtotalCents: number;
           surchargeCents: number;
+          surchargeIncluded: boolean | null;
           taxCents: number;
+          taxIncluded: boolean | null;
           totalCents: number;
         };
         failures: Array<{
