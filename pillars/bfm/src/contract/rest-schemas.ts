@@ -314,6 +314,23 @@ export const MobileAddressListSchema = z.object({
 });
 
 /**
+ * One `contacts` entity, as the merchant select draws it (POPS-3753) — id and
+ * a display name, nothing else. `contacts`' own `Entity` carries a type, an
+ * ABN, avatars and more; none of it is what a merchant picker or a "you
+ * created this" confirmation shows.
+ */
+export const MobileMerchantSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+});
+
+export type MobileMerchant = z.infer<typeof MobileMerchantSchema>;
+
+export const MobileMerchantListSchema = z.object({
+  data: z.array(MobileMerchantSchema),
+});
+
+/**
  * One receipt, in order, top to bottom. Several photographs of one piece of
  * paper are one upload and one purchase, not several receipts.
  *

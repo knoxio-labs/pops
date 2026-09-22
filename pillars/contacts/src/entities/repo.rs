@@ -300,6 +300,41 @@ pub async fn lookup_bulk(pool: &SqlitePool) -> Result<Vec<EntityLookupRow>, sqlx
     .await
 }
 
+/// The same match-relevant columns as [`lookup_bulk`], narrowed to the given
+/// ids. Unknown ids are silently absent from the result rather than an error
+/// — the caller (`entities.lookup` with an `ids` filter, POPS-3925) treats
+/// "not in the result" as unresolved, the same contract `lookup_bulk`
+/// already gives a caller for an id it does not recognise.
+///
+/// The `IN (...)` list is runtime-assembled — one `?N` placeholder per id, so
+/// every VALUE still binds rather than interpolating into the string; only
+/// the placeholder COUNT varies with the (caller-capped) length of `ids`,
+/// mirroring `UpdateBuilder::execute`'s use of `AssertSqlSafe` below for the
+/// same reason.
+pub async fn lookup_by_ids(
+    pool: &SqlitePool,
+    ids: &[String],
+) -> Result<Vec<EntityLookupRow>, sqlx::Error> {
+    if ids.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let placeholders = (1..=ids.len())
+        .map(|i| format!("?{i}"))
+        .collect::<Vec<_>>()
+        .join(", ");
+    let sql = format!(
+        "SELECT id, name, aliases FROM entities WHERE id IN ({placeholders}) \
+         ORDER BY name COLLATE UNICODE_NOCASE"
+    );
+
+    let mut query = sqlx::query_as::<_, EntityLookupRow>(sqlx::AssertSqlSafe(sql));
+    for id in ids {
+        query = query.bind(id);
+    }
+    query.fetch_all(pool).await
+}
+
 /// Candidate rows for a name search — every entity whose name matches the
 /// `LIKE %text%` scan. Scoring/classification happens above the repo.
 pub async fn search_candidates(
@@ -415,12 +450,12 @@ impl UpdateBuilder {
             .collect();
         ordered.sort_by_key(|(i, _)| *i);
 
-        // The only runtime-assembled statement in this module, so the only one
-        // that needs sqlx 0.9's explicit assertion. It is safe by construction:
-        // every `SET` fragment comes from `set_text`/`set_nullable`, whose
-        // `column` argument is a literal at all seven call sites, and the
-        // placeholder indices are generated. No caller value reaches the string
-        // — values are bound below.
+        // A runtime-assembled statement, needing sqlx 0.9's explicit assertion
+        // (`lookup_by_ids` above is the other one). It is safe by
+        // construction: every `SET` fragment comes from
+        // `set_text`/`set_nullable`, whose `column` argument is a literal at
+        // all seven call sites, and the placeholder indices are generated. No
+        // caller value reaches the string — values are bound below.
         let mut query = sqlx::query(sqlx::AssertSqlSafe(sql));
         for (_, value) in ordered {
             query = query.bind(value);

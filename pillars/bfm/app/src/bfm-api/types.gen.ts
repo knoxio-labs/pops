@@ -254,6 +254,320 @@ export type MobileBootstrapResponses = {
 
 export type MobileBootstrapResponse = MobileBootstrapResponses[keyof MobileBootstrapResponses];
 
+export type MobileContactsCreateMerchantData = {
+  /**
+   * Body
+   */
+  body?: {
+    name: string;
+  };
+  path?: never;
+  query?: never;
+  url: '/mobile/contacts/merchants';
+};
+
+export type MobileContactsCreateMerchantErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code: 'invalid_cursor' | 'invalid_request';
+    message: string;
+  };
+  /**
+   * 401
+   */
+  401: {
+    code: 'invalid_token';
+    message: string;
+  };
+  /**
+   * 403
+   */
+  403:
+    | {
+        code: 'device_revoked';
+        message: string;
+      }
+    | {
+        capability: string;
+        code: 'capability_not_granted';
+        message: string;
+      };
+  /**
+   * 429
+   */
+  429: {
+    code: 'rate_limited';
+    message: string;
+    retryAfterSeconds: number;
+  };
+  /**
+   * 502
+   */
+  502: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'upstream_unsupported_media'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'upstream_unsupported_media'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+};
+
+export type MobileContactsCreateMerchantError =
+  MobileContactsCreateMerchantErrors[keyof MobileContactsCreateMerchantErrors];
+
+export type MobileContactsCreateMerchantResponses = {
+  /**
+   * 200
+   */
+  200: {
+    id: string;
+    name: string;
+  };
+};
+
+export type MobileContactsCreateMerchantResponse =
+  MobileContactsCreateMerchantResponses[keyof MobileContactsCreateMerchantResponses];
+
+export type MobileContactsSearchMerchantsData = {
+  body?: never;
+  path?: never;
+  query: {
+    q: string;
+    limit?: number;
+  };
+  url: '/mobile/contacts/merchants/search';
+};
+
+export type MobileContactsSearchMerchantsErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code: 'invalid_cursor' | 'invalid_request';
+    message: string;
+  };
+  /**
+   * 401
+   */
+  401: {
+    code: 'invalid_token';
+    message: string;
+  };
+  /**
+   * 403
+   */
+  403:
+    | {
+        code: 'device_revoked';
+        message: string;
+      }
+    | {
+        capability: string;
+        code: 'capability_not_granted';
+        message: string;
+      };
+  /**
+   * 429
+   */
+  429: {
+    code: 'rate_limited';
+    message: string;
+    retryAfterSeconds: number;
+  };
+  /**
+   * 502
+   */
+  502: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'upstream_unsupported_media'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'upstream_unsupported_media'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+};
+
+export type MobileContactsSearchMerchantsError =
+  MobileContactsSearchMerchantsErrors[keyof MobileContactsSearchMerchantsErrors];
+
+export type MobileContactsSearchMerchantsResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: Array<{
+      id: string;
+      name: string;
+    }>;
+  };
+};
+
+export type MobileContactsSearchMerchantsResponse =
+  MobileContactsSearchMerchantsResponses[keyof MobileContactsSearchMerchantsResponses];
+
+export type MobileContactsGetMerchantData = {
+  body?: never;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/mobile/contacts/merchants/{id}';
+};
+
+export type MobileContactsGetMerchantErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code: 'invalid_cursor' | 'invalid_request';
+    message: string;
+  };
+  /**
+   * 401
+   */
+  401: {
+    code: 'invalid_token';
+    message: string;
+  };
+  /**
+   * 403
+   */
+  403:
+    | {
+        code: 'device_revoked';
+        message: string;
+      }
+    | {
+        capability: string;
+        code: 'capability_not_granted';
+        message: string;
+      };
+  /**
+   * 404
+   */
+  404: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'upstream_unsupported_media'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+  /**
+   * 429
+   */
+  429: {
+    code: 'rate_limited';
+    message: string;
+    retryAfterSeconds: number;
+  };
+  /**
+   * 502
+   */
+  502: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'upstream_unsupported_media'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'upstream_unsupported_media'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+};
+
+export type MobileContactsGetMerchantError =
+  MobileContactsGetMerchantErrors[keyof MobileContactsGetMerchantErrors];
+
+export type MobileContactsGetMerchantResponses = {
+  /**
+   * 200
+   */
+  200: {
+    id: string;
+    name: string;
+  };
+};
+
+export type MobileContactsGetMerchantResponse =
+  MobileContactsGetMerchantResponses[keyof MobileContactsGetMerchantResponses];
+
 export type MobileContactsGetMerchantAddressesData = {
   body?: never;
   path: {

@@ -49,6 +49,9 @@ function contactsWith(
   };
   return {
     lookupEntities,
+    searchMerchants: unexercised,
+    getMerchant: unexercised,
+    createMerchant: unexercised,
     getMerchantAddresses: unexercised,
     createMerchantAddress: unexercised,
   };

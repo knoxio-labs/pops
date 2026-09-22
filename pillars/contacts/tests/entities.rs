@@ -383,6 +383,51 @@ async fn bulk_lookup_returns_the_whole_match_set() {
 }
 
 #[tokio::test]
+async fn bulk_lookup_narrows_to_the_given_ids() {
+    let app = app().await;
+    let acme = create_contact(&app, json!({ "name": "Acme" })).await;
+    create_contact(&app, json!({ "name": "Beta" })).await;
+    create_contact(&app, json!({ "name": "Gamma" })).await;
+
+    let (status, body) = send(
+        &app,
+        post(
+            "/entities/lookup",
+            json!({ "ids": [acme["id"].as_str().unwrap(), "unknown-id"] }),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let entities = body["entities"].as_array().unwrap();
+    assert_eq!(
+        entities.len(),
+        1,
+        "an unknown id is silently absent, not an error: {body}"
+    );
+    assert_eq!(entities[0]["name"], "Acme");
+}
+
+#[tokio::test]
+async fn bulk_lookup_with_empty_ids_still_answers_everything() {
+    let app = app().await;
+    create_contact(&app, json!({ "name": "Acme" })).await;
+    create_contact(&app, json!({ "name": "Beta" })).await;
+
+    let (status, body) = send(&app, post("/entities/lookup", json!({ "ids": [] }))).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body["entities"].as_array().unwrap().len(), 2);
+}
+
+#[tokio::test]
+async fn bulk_lookup_rejects_more_ids_than_the_cap() {
+    let app = app().await;
+    let ids: Vec<String> = (0..501).map(|i| format!("id-{i}")).collect();
+
+    let (status, body) = send(&app, post("/entities/lookup", json!({ "ids": ids }))).await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+}
+
+#[tokio::test]
 async fn search_ranks_and_caps_hits() {
     let app = app().await;
     for name in ["Acme", "Acme Corp", "The Acme Group", "Unrelated"] {

@@ -21,9 +21,18 @@ import type {
   MobileContactsCreateMerchantAddressData,
   MobileContactsCreateMerchantAddressErrors,
   MobileContactsCreateMerchantAddressResponses,
+  MobileContactsCreateMerchantData,
+  MobileContactsCreateMerchantErrors,
+  MobileContactsCreateMerchantResponses,
   MobileContactsGetMerchantAddressesData,
   MobileContactsGetMerchantAddressesErrors,
   MobileContactsGetMerchantAddressesResponses,
+  MobileContactsGetMerchantData,
+  MobileContactsGetMerchantErrors,
+  MobileContactsGetMerchantResponses,
+  MobileContactsSearchMerchantsData,
+  MobileContactsSearchMerchantsErrors,
+  MobileContactsSearchMerchantsResponses,
   MobileFinanceGetAccountData,
   MobileFinanceGetAccountErrors,
   MobileFinanceGetAccountResponses,
@@ -179,6 +188,61 @@ export const mobileBootstrap = <ThrowOnError extends boolean = false>(
     url: '/mobile/bootstrap',
     ...options,
   });
+
+/**
+ * Record a new merchant from the reader's own wording. Idempotent by name: a repeated call with the same name answers the same id rather than a conflict
+ */
+export const mobileContactsCreateMerchant = <ThrowOnError extends boolean = false>(
+  options?: Options<MobileContactsCreateMerchantData, ThrowOnError>
+): RequestResult<
+  MobileContactsCreateMerchantResponses,
+  MobileContactsCreateMerchantErrors,
+  ThrowOnError
+> =>
+  (options?.client ?? client).post<
+    MobileContactsCreateMerchantResponses,
+    MobileContactsCreateMerchantErrors,
+    ThrowOnError
+  >({
+    url: '/mobile/contacts/merchants',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
+
+/**
+ * Merchants matching free text, for the review form's merchant picker — there are hundreds, so matching happens here, not on the phone
+ */
+export const mobileContactsSearchMerchants = <ThrowOnError extends boolean = false>(
+  options: Options<MobileContactsSearchMerchantsData, ThrowOnError>
+): RequestResult<
+  MobileContactsSearchMerchantsResponses,
+  MobileContactsSearchMerchantsErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    MobileContactsSearchMerchantsResponses,
+    MobileContactsSearchMerchantsErrors,
+    ThrowOnError
+  >({ url: '/mobile/contacts/merchants/search', ...options });
+
+/**
+ * One merchant by id, for a draft that arrives already matched
+ */
+export const mobileContactsGetMerchant = <ThrowOnError extends boolean = false>(
+  options: Options<MobileContactsGetMerchantData, ThrowOnError>
+): RequestResult<
+  MobileContactsGetMerchantResponses,
+  MobileContactsGetMerchantErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    MobileContactsGetMerchantResponses,
+    MobileContactsGetMerchantErrors,
+    ThrowOnError
+  >({ url: '/mobile/contacts/merchants/{id}', ...options });
 
 /**
  * Every address recorded against one merchant, for the review screen's address picker

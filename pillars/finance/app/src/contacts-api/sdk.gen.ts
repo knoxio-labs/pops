@@ -28,6 +28,7 @@ import type {
   EntitiesListData,
   EntitiesListResponses,
   EntitiesLookupData,
+  EntitiesLookupErrors,
   EntitiesLookupResponses,
   EntitiesRemoveAvatarData,
   EntitiesRemoveAvatarErrors,
@@ -107,8 +108,8 @@ export const entitiesCreate = <ThrowOnError extends boolean = false>(
 
 export const entitiesLookup = <ThrowOnError extends boolean = false>(
   options: Options<EntitiesLookupData, ThrowOnError>
-): RequestResult<EntitiesLookupResponses, unknown, ThrowOnError> =>
-  (options.client ?? client).post<EntitiesLookupResponses, unknown, ThrowOnError>({
+): RequestResult<EntitiesLookupResponses, EntitiesLookupErrors, ThrowOnError> =>
+  (options.client ?? client).post<EntitiesLookupResponses, EntitiesLookupErrors, ThrowOnError>({
     url: '/entities/lookup',
     ...options,
     headers: {
