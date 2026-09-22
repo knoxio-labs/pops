@@ -50,8 +50,8 @@ internal struct InventoryRecentSearches: View {
             .contentShape(.rect)
         }
         .buttonStyle(.plain)
-        .inventoryGroundedSwipeRow(isActive: swiping == query)
-        .inventoryGroundedSwipeActions(
+        .popsGroundedSwipeRow(isActive: swiping == query)
+        .popsGroundedSwipeActions(
             edge: .trailing,
             onPresentationChanged: { swiping = $0 ? query : nil },
             actions: {

@@ -21,8 +21,9 @@ internal struct InventoryAddPlaceButton: View {
     internal let action: () -> Void
 
     internal var body: some View {
-        InventoryDashedActionButton(
-            title: "Add a place", symbol: InventorySymbol.location.system, action: action)
+        PopsDashedActionButton(
+            title: "Add a place", symbol: InventorySymbol.location.system,
+            tint: .popsInventory, action: action)
     }
 }
 

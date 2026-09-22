@@ -30,6 +30,16 @@ internal struct InventoryPrimitiveAdoptionTests {
         "InventoryLocationListSkeleton",
         "InventoryPageTitle",
         "inventoryCollapsingTitle",
+        "InventorySearchBar",
+        "InventorySearchBarAdd",
+        "InventoryGlassGroup",
+        "inventoryGlass",
+        "inventoryProminentGlassButton",
+        "InventoryDashedActionButton",
+        "inventoryGroundedSwipeActionsContainer",
+        "inventoryGroundedSwipeActions",
+        "inventoryGroundedSwipeRow",
+        "inventoryTitleDisplay",
     ]
 
     private static func containsDeclaration(named name: String, in source: String) throws -> Bool {

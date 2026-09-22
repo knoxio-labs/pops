@@ -89,17 +89,19 @@ internal struct InventoryLocationBrowserView: View {
 
     private var searchBar: some View {
         @Bindable var model = model
-        return InventorySearchBar(
+        return PopsSearchBar(
             query: $model.query,
+            tint: .popsInventory,
             prompt: "Search places",
             isFiltered: sort != .recorded,
             filterSummary: sort == .recorded ? "" : sort.title,
-            add: InventorySearchBarAdd(label: "New place") { model.creating = true }
-        ) {
-            Picker("Sort", selection: $sort) {
-                ForEach(InventoryLocationSort.allCases) { Text($0.title).tag($0) }
+            add: PopsSearchBarAdd(label: "New place") { model.creating = true },
+            filterOptions: {
+                Picker("Sort", selection: $sort) {
+                    ForEach(InventoryLocationSort.allCases) { Text($0.title).tag($0) }
+                }
             }
-        }
+        )
     }
 
     @ViewBuilder private func rootList(_ tree: InventoryLocationTree) -> some View {

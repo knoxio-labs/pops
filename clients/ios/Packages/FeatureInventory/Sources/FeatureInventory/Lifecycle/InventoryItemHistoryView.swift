@@ -117,7 +117,7 @@ internal struct InventoryItemHistoryView: View {
                 .background {
                     if kind != nil { Circle().fill(Color.popsInventory) }
                 }
-                .inventoryGlass(in: Circle())
+                .popsGlass(in: Circle())
                 .contentShape(Circle())
                 .popsMotion(value: kind)
         }

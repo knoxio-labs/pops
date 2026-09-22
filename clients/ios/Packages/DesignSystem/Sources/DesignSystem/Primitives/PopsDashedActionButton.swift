@@ -1,19 +1,26 @@
-import DesignSystem
 import SwiftUI
 
-/// A tall dashed outline in Inventory's colour: the one control on a screen
-/// with nothing in it yet.
-internal struct InventoryDashedActionButton: View {
-    internal let title: String
-    internal let symbol: String
-    internal let action: () -> Void
+/// A tall tinted action with a dashed outline for an otherwise empty screen.
+public struct PopsDashedActionButton: View {
+    private let title: String
+    private let symbol: String
+    private let tint: Color
+    private let action: () -> Void
     @ScaledMetric(relativeTo: .body) private var height = PopsSize.touchTarget * 3
+
+    /// Creates an empty-state action using an SF Symbol and feature accent.
+    public init(title: String, symbol: String, tint: Color, action: @escaping () -> Void) {
+        self.title = title
+        self.symbol = symbol
+        self.tint = tint
+        self.action = action
+    }
 
     private var shape: RoundedRectangle {
         RoundedRectangle(cornerRadius: PopsRadius.card, style: .continuous)
     }
 
-    internal var body: some View {
+    public var body: some View {
         Button(action: action) {
             VStack(spacing: PopsSpacing.sm) {
                 Image(systemName: symbol)
@@ -21,12 +28,12 @@ internal struct InventoryDashedActionButton: View {
                 Text(title)
                     .font(.popsHeadline)
             }
-            .foregroundStyle(Color.popsInventory)
+            .foregroundStyle(tint)
             .frame(maxWidth: .infinity, minHeight: height)
-            .background(Color.popsInventory.opacity(0.08), in: shape)
+            .background(tint.opacity(0.08), in: shape)
             .overlay {
                 shape.strokeBorder(
-                    Color.popsInventory,
+                    tint,
                     style: StrokeStyle(
                         lineWidth: PopsBorder.emphasis, dash: [PopsSpacing.sm, PopsSpacing.xs]))
             }

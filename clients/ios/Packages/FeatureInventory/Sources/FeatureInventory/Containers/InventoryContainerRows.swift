@@ -71,9 +71,9 @@ internal struct InventoryOpenContainersPanel: View {
         }
         .buttonStyle(.plain)
         .inventoryMatchedRow(id: container.id, in: rowSpace)
-        .inventoryGroundedSwipeRow(isActive: activeSwipe == container.id)
+        .popsGroundedSwipeRow(isActive: activeSwipe == container.id)
         .accessibilityElement(children: .combine)
-        .inventoryGroundedSwipeActions(
+        .popsGroundedSwipeActions(
             edge: .trailing,
             onPresentationChanged: { presented in
                 if presented {

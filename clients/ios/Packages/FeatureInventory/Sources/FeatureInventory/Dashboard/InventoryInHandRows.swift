@@ -122,8 +122,8 @@ extension View {
         onMove: @escaping () -> Void,
         onPutBack: @escaping () -> Void
     ) -> some View {
-        inventoryGroundedSwipeRow(isActive: isActive)
-            .inventoryGroundedSwipeActions(
+        popsGroundedSwipeRow(isActive: isActive)
+            .popsGroundedSwipeActions(
                 edge: .leading, onPresentationChanged: onPresentationChanged,
                 actions: {
                     Button(action: onMove) {
@@ -132,7 +132,7 @@ extension View {
                     .tint(.popsAccent)
                 }
             )
-            .inventoryGroundedSwipeActions(
+            .popsGroundedSwipeActions(
                 edge: .trailing, onPresentationChanged: onPresentationChanged,
                 actions: {
                     if canPutBack {

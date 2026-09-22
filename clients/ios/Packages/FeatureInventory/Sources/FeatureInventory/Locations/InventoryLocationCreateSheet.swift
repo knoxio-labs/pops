@@ -59,7 +59,7 @@ internal struct InventoryLocationCreateSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Create") { Task { await create() } }
-                        .inventoryProminentGlassButton()
+                        .popsProminentGlassButton()
                         .tint(.popsInventory)
                         .disabled(!isNamed || isSaving)
                 }

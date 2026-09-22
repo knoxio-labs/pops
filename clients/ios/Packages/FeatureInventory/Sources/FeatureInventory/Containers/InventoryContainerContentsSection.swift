@@ -46,7 +46,7 @@ internal struct InventoryContainerContentsSection: View {
         .popsMotion(value: contents.entries.map(\.id))
         .popsMotion(value: filter)
         .popsMotion(value: model.isFull(profile))
-        .inventoryGroundedSwipeActionsContainer()
+        .popsGroundedSwipeActionsContainer()
     }
 
     @ViewBuilder private var rows: some View {
@@ -107,10 +107,10 @@ internal struct InventoryContainerContentsSection: View {
         }
         .buttonStyle(.plain)
         .inventorySelectable(entry.id, in: $model.selection)
-        .inventoryGroundedSwipeActions(
+        .popsGroundedSwipeActions(
             edge: .leading, onPresentationChanged: { _ in }, actions: { moveAction(entry) }
         )
-        .inventoryGroundedSwipeActions(
+        .popsGroundedSwipeActions(
             edge: .trailing, onPresentationChanged: { _ in }, actions: { pickUpAction(entry) })
     }
 

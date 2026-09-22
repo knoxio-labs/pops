@@ -92,7 +92,7 @@ internal struct InventoryLocationPage: View {
     }
 
     private func actions(_ place: InventoryLocationNode) -> some View {
-        InventoryGlassGroup(spacing: PopsSpacing.lg) {
+        PopsGlassGroup(spacing: PopsSpacing.lg) {
             HStack(spacing: PopsSpacing.lg) {
                 actionButton("New place inside", symbol: .addNew) { model.creating = true }
                 actionButton("Store here", symbol: .storeHere) { model.storing = true }

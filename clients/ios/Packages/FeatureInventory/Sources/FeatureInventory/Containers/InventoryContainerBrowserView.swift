@@ -62,7 +62,7 @@ internal struct InventoryContainerBrowserView: View {
         }
         .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
         .popsCollapsingTitle("Containers")
-        .inventoryGroundedSwipeActionsContainer()
+        .popsGroundedSwipeActionsContainer()
         .background(Color.popsBackground)
         .tint(.popsInventory)
     }
@@ -85,21 +85,23 @@ internal struct InventoryContainerBrowserView: View {
 
     private var searchBar: some View {
         @Bindable var model = model
-        return InventorySearchBar(
+        return PopsSearchBar(
             query: $model.query,
+            tint: .popsInventory,
             prompt: "Search containers",
             isFiltered: model.filter != .all,
             filterSummary: model.filter == .all ? "" : model.filter.title,
-            add: InventorySearchBarAdd(label: "New container") {
+            add: PopsSearchBarAdd(label: "New container") {
                 itemForm?(.create(placement: nil))
-            }
-        ) {
-            Picker("Filter", selection: $model.filter) {
-                ForEach(InventoryContainerFilter.allCases) { option in
-                    Text(option.title).tag(option)
+            },
+            filterOptions: {
+                Picker("Filter", selection: $model.filter) {
+                    ForEach(InventoryContainerFilter.allCases) { option in
+                        Text(option.title).tag(option)
+                    }
                 }
             }
-        }
+        )
     }
 
     private func restList(_ rest: [InventoryContainerProfile]) -> some View {

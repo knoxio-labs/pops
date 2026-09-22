@@ -42,7 +42,7 @@ internal struct InventoryOpenContainersView: View {
             .padding(.horizontal, PopsSpacing.lg)
             .padding(.bottom, PopsSpacing.xxl)
         }
-        .inventoryGroundedSwipeActionsContainer()
+        .popsGroundedSwipeActionsContainer()
         .background(Color.popsBackground)
         .navigationTitle("Open containers")
         .popsTitleDisplay(large: true)

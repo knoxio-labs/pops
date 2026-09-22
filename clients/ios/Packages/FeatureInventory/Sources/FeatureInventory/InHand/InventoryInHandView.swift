@@ -54,7 +54,7 @@ internal struct InventoryInHandView: View {
             .padding(.bottom, PopsSpacing.xxl)
         }
         .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
-        .inventoryGroundedSwipeActionsContainer()
+        .popsGroundedSwipeActionsContainer()
         .popsCollapsingTitle("In hand")
         .background(Color.popsBackground)
         .inHandChrome(page, model: model, selection: $selection, moving: $moving)

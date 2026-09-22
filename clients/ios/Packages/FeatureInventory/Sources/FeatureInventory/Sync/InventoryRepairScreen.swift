@@ -135,7 +135,7 @@ internal struct InventoryRepairScreen: View {
                         .font(.popsHeadline)
                         .frame(maxWidth: .infinity, minHeight: PopsSize.touchTarget)
                 }
-                .inventoryProminentGlassButton()
+                .popsProminentGlassButton()
                 .disabled(row.repair.kind == .codeCollision && code.isEmpty)
             }
         }

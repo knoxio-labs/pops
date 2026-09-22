@@ -56,7 +56,7 @@ internal struct InventorySearchFilterSheet: View {
             }
             .inventoryTrailingBarItem {
                 Button("Done") { dismiss() }
-                    .inventoryProminentGlassButton()
+                    .popsProminentGlassButton()
             }
             .popsMotion(value: filter)
         }

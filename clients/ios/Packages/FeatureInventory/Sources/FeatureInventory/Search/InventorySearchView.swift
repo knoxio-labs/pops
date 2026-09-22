@@ -29,7 +29,7 @@ internal struct InventorySearchView: View {
         }
         .scrollDismissesKeyboard(.immediately)
         .popsCollapsingTitle("Search")
-        .inventoryGroundedSwipeActionsContainer()
+        .popsGroundedSwipeActionsContainer()
         .background(Color.popsBackground)
         .sheet(isPresented: $showingFilters) {
             InventorySearchFilterSheet(
@@ -64,8 +64,9 @@ internal struct InventorySearchView: View {
     }
 
     private var searchBar: some View {
-        InventorySearchBar(
+        PopsSearchBar(
             query: $model.query,
+            tint: .popsInventory,
             prompt: "Items, containers, places",
             isFiltered: model.filter.isActive,
             filterSummary: model.filter.summary,

@@ -67,7 +67,7 @@ public struct InventoryFlowView: View {
                 .foregroundStyle(Color.popsInventory)
                 .frame(width: scanDiameter, height: scanDiameter)
         }
-        .inventoryGlass(in: Circle())
+        .popsGlass(in: Circle())
         .accessibilityLabel("Scan an item or container label")
     }
 }

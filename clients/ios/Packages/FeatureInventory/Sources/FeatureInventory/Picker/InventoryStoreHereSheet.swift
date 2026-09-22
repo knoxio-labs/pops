@@ -172,7 +172,7 @@ internal struct InventoryStoreExistingPicker: View {
                 .contentTransition(.numericText(value: Double(model.selected.count)))
         }
         .popsMotion(value: model.selected)
-        .inventoryProminentGlassButton()
+        .popsProminentGlassButton()
         .tint(.popsInventory)
         .disabled(model.selected.isEmpty)
     }

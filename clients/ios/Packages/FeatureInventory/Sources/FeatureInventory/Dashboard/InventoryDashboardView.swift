@@ -70,7 +70,7 @@ internal struct InventoryDashboardView: View {
             .padding(.horizontal, PopsSpacing.lg)
             .padding(.bottom, PopsSpacing.xxl)
         }
-        .inventoryGroundedSwipeActionsContainer()
+        .popsGroundedSwipeActionsContainer()
         .background(Color.popsBackground)
         .refreshable { await model.refresh() }
     }

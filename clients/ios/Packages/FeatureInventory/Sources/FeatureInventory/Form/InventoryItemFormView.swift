@@ -33,7 +33,7 @@ internal struct InventoryItemFormView: View {
                         Button(model.mode.actionTitle) {
                             Task { if await model.submit() { dismiss() } }
                         }
-                        .inventoryProminentGlassButton()
+                        .popsProminentGlassButton()
                         .disabled(!model.canSubmit)
                     }
                 }

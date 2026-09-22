@@ -47,7 +47,7 @@ internal struct InventoryCountTiles: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding(PopsSpacing.sm)
-        .inventoryGlass(in: RoundedRectangle(cornerRadius: PopsRadius.card))
+        .popsGlass(in: RoundedRectangle(cornerRadius: PopsRadius.card))
         .accessibilityElement(children: .combine)
     }
 }

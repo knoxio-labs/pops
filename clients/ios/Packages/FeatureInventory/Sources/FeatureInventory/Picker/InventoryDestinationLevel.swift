@@ -48,16 +48,18 @@ internal struct InventoryDestinationLevel: View {
     }
 
     private var searchBar: some View {
-        InventorySearchBar(
-            query: $query, prompt: "Search places", isFiltered: filter != .everywhere,
-            filterSummary: filter == .everywhere ? "" : filter.title
-        ) {
-            Picker("Show", selection: $filter) {
-                ForEach(InventoryDestinationFilter.allCases) { option in
-                    Label(option.title, systemImage: option.symbol).tag(option)
+        PopsSearchBar(
+            query: $query, tint: .popsInventory, prompt: "Search places",
+            isFiltered: filter != .everywhere,
+            filterSummary: filter == .everywhere ? "" : filter.title,
+            filterOptions: {
+                Picker("Show", selection: $filter) {
+                    ForEach(InventoryDestinationFilter.allCases) { option in
+                        Label(option.title, systemImage: option.symbol).tag(option)
+                    }
                 }
             }
-        }
+        )
     }
 
     /// The open containers first, as the top level lists them, then every

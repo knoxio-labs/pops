@@ -110,7 +110,7 @@ internal struct InventoryDestinationPickerSheet: View {
                 onChoose(selection)
                 dismiss()
             }
-            .inventoryProminentGlassButton()
+            .popsProminentGlassButton()
             .tint(.popsInventory)
             .disabled(selection == nil)
         }

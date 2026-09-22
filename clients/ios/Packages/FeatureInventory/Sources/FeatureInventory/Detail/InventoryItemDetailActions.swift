@@ -13,7 +13,7 @@ internal struct InventoryItemDetailActionRow: View {
 
     internal var body: some View {
         if !actions.isEmpty {
-            InventoryGlassGroup(spacing: PopsSpacing.lg) {
+            PopsGlassGroup(spacing: PopsSpacing.lg) {
                 HStack(spacing: PopsSpacing.lg) {
                     ForEach(actions) { action in
                         button(action)

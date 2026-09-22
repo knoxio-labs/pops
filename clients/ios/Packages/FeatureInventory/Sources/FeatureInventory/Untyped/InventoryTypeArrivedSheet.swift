@@ -81,7 +81,7 @@ internal struct InventoryTypeArrivedSheet: View {
                             .contentTransition(.numericText(value: Double(model.ticked.count)))
                     }
                     .popsMotion(value: model.ticked)
-                    .inventoryProminentGlassButton()
+                    .popsProminentGlassButton()
                     .tint(.popsInventory)
                     .disabled(model.ticked.isEmpty)
                 }

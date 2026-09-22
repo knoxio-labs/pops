@@ -109,7 +109,7 @@ internal struct InventoryNewPlaceRow: View {
                 .onSubmit { add() }
             Button("Add") { add() }
                 .font(.popsHeadline)
-                .inventoryProminentGlassButton()
+                .popsProminentGlassButton()
                 .tint(.popsInventory)
                 .disabled(trimmed.isEmpty)
         }

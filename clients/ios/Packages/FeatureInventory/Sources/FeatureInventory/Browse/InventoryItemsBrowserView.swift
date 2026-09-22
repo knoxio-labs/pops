@@ -48,8 +48,9 @@ internal struct InventoryItemsBrowserView: View {
                         symbol: InventorySymbol.offline.system, tint: .popsWarning, text: offline)
                 }
                 if catalogue.records.isEmpty {
-                    InventoryDashedActionButton(
-                        title: "Add an item", symbol: InventorySymbol.item.system
+                    PopsDashedActionButton(
+                        title: "Add an item", symbol: InventorySymbol.item.system,
+                        tint: .popsInventory
                     ) { itemForm?(.create(placement: nil)) }
                     .popsFadeIn()
                 } else {
@@ -77,13 +78,14 @@ internal struct InventoryItemsBrowserView: View {
     }
 
     private var searchBar: some View {
-        InventorySearchBar(
+        PopsSearchBar(
             query: $model.query,
+            tint: .popsInventory,
             prompt: "Search items",
             isFiltered: model.filter.isActive || model.sort != .recent,
             filterSummary: model.filter.summary,
             onFilter: { showingFilters = true },
-            add: InventorySearchBarAdd(label: "New item") { itemForm?(.create(placement: nil)) })
+            add: PopsSearchBarAdd(label: "New item") { itemForm?(.create(placement: nil)) })
     }
 
     @ViewBuilder private var list: some View {

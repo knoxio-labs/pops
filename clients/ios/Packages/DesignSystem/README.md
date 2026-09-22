@@ -12,6 +12,8 @@ The **structural** primitives under `Sources/DesignSystem/Primitives/` are a dif
 
 `PopsSectionHeader`, `PopsCentredLine`, `PopsEmptyLine`, `PopsNotice` and `PopsListSkeleton` share the list's headings, placeholders and local status. `PopsPageTitle` pairs with `popsCollapsingTitle` for a title drawn inside the scroll view. `PopsMotion` provides shared springs and transitions; `popsMotion` and `popsFadeIn` respect Reduce Motion. `popsTitleDisplay` contains the iOS navigation-title platform difference.
 
+`PopsSearchBar` owns the shared Mail-style search, filter, scan, dictation and add controls while its caller supplies the feature tint and filter contents. `PopsGlassGroup`, `popsGlass(in:)` and `popsProminentGlassButton()` contain the platform glass differences. `PopsDashedActionButton` is the empty-screen action, and the `popsGroundedSwipe*` modifiers keep swipe rows above their surrounding surface while actions are open.
+
 ## The two rules
 
 Both apply to every module under `Packages/` and to `App/`, not just to this one.
