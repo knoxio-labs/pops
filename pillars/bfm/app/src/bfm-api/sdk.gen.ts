@@ -90,9 +90,15 @@ import type {
   MobilePurchasesListPurchasesData,
   MobilePurchasesListPurchasesErrors,
   MobilePurchasesListPurchasesResponses,
+  MobilePurchasesPurchaseTagsData,
+  MobilePurchasesPurchaseTagsErrors,
+  MobilePurchasesPurchaseTagsResponses,
   MobilePurchasesSaveReceiptDraftData,
   MobilePurchasesSaveReceiptDraftErrors,
   MobilePurchasesSaveReceiptDraftResponses,
+  MobilePurchasesSearchPurchasesData,
+  MobilePurchasesSearchPurchasesErrors,
+  MobilePurchasesSearchPurchasesResponses,
   OperatorIssuePairingCodeData,
   OperatorIssuePairingCodeErrors,
   OperatorIssuePairingCodeResponses,
@@ -586,6 +592,22 @@ export const mobilePurchasesGetReceiptThumbnail = <ThrowOnError extends boolean 
   >({ url: '/mobile/purchases/receipts/{sha256}/thumbnail', ...options });
 
 /**
+ * Search purchases and their line items by merchant, product name or item tag
+ */
+export const mobilePurchasesSearchPurchases = <ThrowOnError extends boolean = false>(
+  options: Options<MobilePurchasesSearchPurchasesData, ThrowOnError>
+): RequestResult<
+  MobilePurchasesSearchPurchasesResponses,
+  MobilePurchasesSearchPurchasesErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    MobilePurchasesSearchPurchasesResponses,
+    MobilePurchasesSearchPurchasesErrors,
+    ThrowOnError
+  >({ url: '/mobile/purchases/search', ...options });
+
+/**
  * The home screen figures for one calendar month
  */
 export const mobilePurchasesGetMonthSummary = <ThrowOnError extends boolean = false>(
@@ -600,6 +622,22 @@ export const mobilePurchasesGetMonthSummary = <ThrowOnError extends boolean = fa
     MobilePurchasesGetMonthSummaryErrors,
     ThrowOnError
   >({ url: '/mobile/purchases/summary', ...options });
+
+/**
+ * The item tag vocabulary in use, most-used first, for the search filter sheet
+ */
+export const mobilePurchasesPurchaseTags = <ThrowOnError extends boolean = false>(
+  options?: Options<MobilePurchasesPurchaseTagsData, ThrowOnError>
+): RequestResult<
+  MobilePurchasesPurchaseTagsResponses,
+  MobilePurchasesPurchaseTagsErrors,
+  ThrowOnError
+> =>
+  (options?.client ?? client).get<
+    MobilePurchasesPurchaseTagsResponses,
+    MobilePurchasesPurchaseTagsErrors,
+    ThrowOnError
+  >({ url: '/mobile/purchases/tags', ...options });
 
 /**
  * The fuller record behind one list row, with its lines

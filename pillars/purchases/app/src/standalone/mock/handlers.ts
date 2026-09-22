@@ -68,6 +68,7 @@ export const handlers: Readonly<Record<OperationKey, MockHandler>> = {
   'POST /purchases/{id}/items/{itemId}/inventory-item': acknowledged,
   'POST /purchases/{id}/items/{itemId}/inventory-proposal': acknowledged,
   'GET /items': ok({ items: [] }),
+  'GET /items/tags': ok({ tags: [] }),
 
   // ── Products ─────────────────────────────────────────────────────────────
   'GET /products': ok(PRODUCT_DICTIONARY),

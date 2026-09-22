@@ -1399,6 +1399,37 @@
         "tags": ["purchase"]
       }
     },
+    "/items/tags": {
+      "get": {
+        "operationId": "purchase.tagVocabulary",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "tags": {
+                      "items": {
+                        "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                        "type": "string"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": ["tags"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          }
+        },
+        "summary": "List the distinct item tags in use, most-used first",
+        "tags": ["purchase"]
+      }
+    },
     "/products": {
       "get": {
         "operationId": "product.list",
@@ -11082,7 +11113,7 @@
                           "additionalProperties": false,
                           "properties": {
                             "field": {
-                              "enum": ["source", "status", "orderedAt"],
+                              "enum": ["source", "status", "orderedAt", "tags"],
                               "type": "string"
                             },
                             "operator": {

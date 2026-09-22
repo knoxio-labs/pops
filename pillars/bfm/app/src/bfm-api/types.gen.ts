@@ -3450,6 +3450,130 @@ export type MobilePurchasesGetReceiptThumbnailResponses = {
 export type MobilePurchasesGetReceiptThumbnailResponse =
   MobilePurchasesGetReceiptThumbnailResponses[keyof MobilePurchasesGetReceiptThumbnailResponses];
 
+export type MobilePurchasesSearchPurchasesData = {
+  body?: never;
+  path?: never;
+  query: {
+    q: string;
+    status?: 'awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored';
+    tags?: Array<string>;
+  };
+  url: '/mobile/purchases/search';
+};
+
+export type MobilePurchasesSearchPurchasesErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code: 'invalid_cursor' | 'invalid_request';
+    message: string;
+  };
+  /**
+   * 401
+   */
+  401: {
+    code: 'invalid_token';
+    message: string;
+  };
+  /**
+   * 403
+   */
+  403:
+    | {
+        code: 'device_revoked';
+        message: string;
+      }
+    | {
+        capability: string;
+        code: 'capability_not_granted';
+        message: string;
+      };
+  /**
+   * 429
+   */
+  429: {
+    code: 'rate_limited';
+    message: string;
+    retryAfterSeconds: number;
+  };
+  /**
+   * 502
+   */
+  502: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'upstream_unsupported_media'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'upstream_unsupported_media'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+};
+
+export type MobilePurchasesSearchPurchasesError =
+  MobilePurchasesSearchPurchasesErrors[keyof MobilePurchasesSearchPurchasesErrors];
+
+export type MobilePurchasesSearchPurchasesResponses = {
+  /**
+   * 200
+   */
+  200: {
+    hits: Array<
+      | {
+          currency: string;
+          id: string;
+          kind: 'purchase';
+          matchField: string;
+          matchedText: string | null;
+          merchantName: string | null;
+          orderedOn: string;
+          status: string;
+          totalCents: number;
+        }
+      | {
+          currency: string;
+          id: string;
+          kind: 'item';
+          lineTotalCents: number;
+          matchField: string;
+          matchedText: string | null;
+          merchantName: string | null;
+          name: string;
+          orderedOn: string;
+          purchaseId: string;
+          quantity: number;
+          status: string;
+        }
+    >;
+  };
+};
+
+export type MobilePurchasesSearchPurchasesResponse =
+  MobilePurchasesSearchPurchasesResponses[keyof MobilePurchasesSearchPurchasesResponses];
+
 export type MobilePurchasesGetMonthSummaryData = {
   body?: never;
   path?: never;
@@ -3565,6 +3689,100 @@ export type MobilePurchasesGetMonthSummaryResponses = {
 
 export type MobilePurchasesGetMonthSummaryResponse =
   MobilePurchasesGetMonthSummaryResponses[keyof MobilePurchasesGetMonthSummaryResponses];
+
+export type MobilePurchasesPurchaseTagsData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/mobile/purchases/tags';
+};
+
+export type MobilePurchasesPurchaseTagsErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code: 'invalid_cursor' | 'invalid_request';
+    message: string;
+  };
+  /**
+   * 401
+   */
+  401: {
+    code: 'invalid_token';
+    message: string;
+  };
+  /**
+   * 403
+   */
+  403:
+    | {
+        code: 'device_revoked';
+        message: string;
+      }
+    | {
+        capability: string;
+        code: 'capability_not_granted';
+        message: string;
+      };
+  /**
+   * 429
+   */
+  429: {
+    code: 'rate_limited';
+    message: string;
+    retryAfterSeconds: number;
+  };
+  /**
+   * 502
+   */
+  502: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'upstream_unsupported_media'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'upstream_unsupported_media'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+};
+
+export type MobilePurchasesPurchaseTagsError =
+  MobilePurchasesPurchaseTagsErrors[keyof MobilePurchasesPurchaseTagsErrors];
+
+export type MobilePurchasesPurchaseTagsResponses = {
+  /**
+   * 200
+   */
+  200: {
+    tags: Array<string>;
+  };
+};
+
+export type MobilePurchasesPurchaseTagsResponse =
+  MobilePurchasesPurchaseTagsResponses[keyof MobilePurchasesPurchaseTagsResponses];
 
 export type MobilePurchasesGetPurchaseData = {
   body?: never;

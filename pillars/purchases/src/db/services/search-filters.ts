@@ -33,24 +33,37 @@ export interface SearchFilter {
 }
 
 /**
+ * {@link PurchaseScopeFilter} plus the one narrowing term that is search's
+ * alone: `tags` matches on a line's own column, not an order column, so
+ * `purchaseFilterConditions` — shared with `GET /purchases` and the roll-ups,
+ * neither of which joins to line items — cannot express it. `search.ts`
+ * reads it directly instead.
+ */
+export interface PurchaseSearchScope extends PurchaseScopeFilter {
+  readonly tags?: readonly string[];
+}
+
+/**
  * A scope, or the reason no scope could be made of the filters. Never a
  * scope with the unreadable filter dropped: a dropped filter is the defect,
  * not the fix.
  */
 export type SearchScopeResult =
-  | { readonly ok: true; readonly scope: PurchaseScopeFilter }
+  | { readonly ok: true; readonly scope: PurchaseSearchScope }
   | { readonly ok: false; readonly message: string };
 
 const OPERATORS_BY_FIELD: Readonly<Record<SearchFilterField, readonly SearchFilterOperator[]>> = {
   source: ['eq'],
   status: ['eq'],
   orderedAt: ['gte', 'lte'],
+  tags: ['eq'],
 };
 
 /** Mutable while the list is read; the result is the immutable scope. */
 interface ScopeUnderConstruction {
   readonly sources: string[];
   readonly statuses: PurchaseStatus[];
+  readonly tags: string[];
   from: string | undefined;
   to: string | undefined;
 }
@@ -114,6 +127,9 @@ function readFilter(scope: ScopeUnderConstruction, filter: SearchFilter): Refusa
       return readStatus(scope, filter.value);
     case 'orderedAt':
       return readBound(scope, filter.operator, filter.value);
+    case 'tags':
+      scope.tags.push(filter.value);
+      return null;
   }
 }
 
@@ -128,6 +144,7 @@ export function searchFilterScope(filters: readonly SearchFilter[]): SearchScope
   const scope: ScopeUnderConstruction = {
     sources: [],
     statuses: [],
+    tags: [],
     from: undefined,
     to: undefined,
   };
@@ -142,6 +159,7 @@ export function searchFilterScope(filters: readonly SearchFilter[]): SearchScope
     scope: {
       ...(scope.sources.length > 0 ? { sources: scope.sources } : {}),
       ...(scope.statuses.length > 0 ? { statuses: scope.statuses } : {}),
+      ...(scope.tags.length > 0 ? { tags: scope.tags } : {}),
       ...(scope.from === undefined ? {} : { from: scope.from }),
       ...(scope.to === undefined ? {} : { to: scope.to }),
     },

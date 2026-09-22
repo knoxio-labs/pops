@@ -15,6 +15,7 @@
 import { isGatewayOk } from '../pillars/gateway.js';
 import { decodePurchasesCursor } from '../purchases/list-cursor.js';
 import { makeMobilePurchasesDraftHandlers } from './mobile-purchases-draft-handlers.js';
+import { makeMobilePurchasesSearchHandlers } from './mobile-purchases-search-handlers.js';
 import {
   toCollectionUpstreamErrorResponse,
   toReceiptBytesErrorResponse,
@@ -78,6 +79,15 @@ export function makeMobilePurchasesHandlers(deps: MobilePurchasesHandlerDeps) {
 
       return { status: 200 as const, body: outcome.value };
     },
+
+    // `searchPurchases` and `purchaseTags` MUST be spread here, ahead of
+    // `getPurchase` below — `createExpressEndpoints` (`@ts-rest/express`)
+    // registers routes in the returned HANDLERS object's OWN key order via
+    // `for...in`, not the contract's declaration order, so a route object
+    // ordered right and a handlers object ordered wrong still lets `:id`
+    // swallow `/search` and `/tags` as an id. See `rest.ts`'s matching
+    // comment on the contract side of this same trap.
+    ...makeMobilePurchasesSearchHandlers(deps.purchases),
 
     getPurchase: async ({ params }: Req['getPurchase']) => {
       const outcome = await deps.purchases.getPurchase(params.id);

@@ -13,6 +13,7 @@ import {
   getPurchase,
   listItemsByTag,
   listPurchaseRows,
+  listTagVocabulary,
 } from '../../db/index.js';
 import { createMerchantResolver, type MerchantResolver } from '../contacts/merchant.js';
 import { paginationMeta } from '../shared/pagination.js';
@@ -171,5 +172,10 @@ export function makePurchaseHandlers(
         },
       };
     },
+
+    tagVocabulary: async () => ({
+      status: 200 as const,
+      body: { tags: [...listTagVocabulary(db)] },
+    }),
   };
 }

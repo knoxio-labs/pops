@@ -203,6 +203,100 @@ export const MobileMonthMerchantLeaderSchema = z.object({
 
 export type MobileMonthMerchantLeader = z.infer<typeof MobileMonthMerchantLeaderSchema>;
 
+/**
+ * `purchases`' own reconciliation vocabulary (`PURCHASE_STATUSES`,
+ * `pillars/purchases/src/contract/constants.ts`), restated rather than
+ * imported per ADR-040. Closed here rather than left open like a list row's
+ * own `status`: this is a QUERY PARAMETER naming one status to filter by,
+ * not a value every future row must still decode, so an unrecognised one can
+ * afford to 400 immediately instead of round-tripping to the pillar only to
+ * be refused there.
+ */
+const MOBILE_SEARCH_STATUSES = [
+  'awaiting_settlement',
+  'linked',
+  'partial',
+  'settled_cash',
+  'ignored',
+] as const;
+
+/** `GET /mobile/purchases/search`'s query. */
+export const MobileSearchQuerySchema = z.object({
+  q: z.string().trim().min(1),
+  /**
+   * Forwarded verbatim as `purchases`' `status eq` search filter — narrowing
+   * on the SERVER, because the pillar's search is itself capped per adapter
+   * and a client-side filter over a capped answer misses matches the server
+   * never sent.
+   */
+  status: z.enum(MOBILE_SEARCH_STATUSES).optional(),
+  /**
+   * Chosen item tags, forwarded as `purchases`' own `tags eq` search filter
+   * (any-of semantics: a line carrying any of them matches, and the purchase
+   * holding such a line matches through it). Absent or empty narrows nothing,
+   * exactly as sending none of `purchases`' own filter fields does.
+   */
+  tags: z.array(z.string().trim().min(1)).optional(),
+});
+
+export type MobileSearchQuery = z.infer<typeof MobileSearchQuerySchema>;
+
+/**
+ * One purchase hit: an order whose merchant matched.
+ *
+ * `matchField` and `matchedText` (POPS-4308) say WHAT matched, mirroring the
+ * producer's own `SearchHitSchema` (`pillars/purchases/src/contract/
+ * rest-search.ts`) rather than inventing a second vocabulary — a phone that
+ * highlights the matched text needs to know which field it came from and
+ * what the matched substring actually was, and the producer's ranking
+ * already carries both.
+ */
+export const MobilePurchaseSearchHitSchema = z.discriminatedUnion('kind', [
+  z.object({
+    kind: z.literal('purchase'),
+    id: z.string(),
+    merchantName: z.string().nullable(),
+    totalCents: z.int(),
+    currency: z.string(),
+    orderedOn: z.string(),
+    status: z.string(),
+    matchField: z.string(),
+    /** The matched substring itself, or null when the match carries none worth showing (e.g. a name match — the name is already on screen). */
+    matchedText: z.string().nullable(),
+  }),
+  z.object({
+    kind: z.literal('item'),
+    id: z.string(),
+    /** The order this line belongs to — a line hit is meaningless without it. */
+    purchaseId: z.string(),
+    name: z.string(),
+    quantity: z.int().min(1),
+    lineTotalCents: z.int(),
+    currency: z.string(),
+    merchantName: z.string().nullable(),
+    orderedOn: z.string(),
+    /** The order's own reconciliation status, carried onto the line (POPS-4308). */
+    status: z.string(),
+    matchField: z.string(),
+    matchedText: z.string().nullable(),
+  }),
+]);
+
+export type MobilePurchaseSearchHit = z.infer<typeof MobilePurchaseSearchHitSchema>;
+
+export const MobilePurchaseSearchResponseSchema = z.object({
+  hits: z.array(MobilePurchaseSearchHitSchema),
+});
+
+export type MobilePurchaseSearchResponse = z.infer<typeof MobilePurchaseSearchResponseSchema>;
+
+/** `GET /mobile/purchases/tags`'s response: the item tag vocabulary, most-used first. */
+export const MobilePurchaseTagsResponseSchema = z.object({
+  tags: z.array(z.string()),
+});
+
+export type MobilePurchaseTagsResponse = z.infer<typeof MobilePurchaseTagsResponseSchema>;
+
 /** The home screen's figures for one calendar month. */
 export const MobileMonthSummarySchema = z.object({
   month: z.string(),

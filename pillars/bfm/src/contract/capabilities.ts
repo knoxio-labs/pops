@@ -131,7 +131,16 @@ export const MOBILE_CAPABILITY_SCOPES: Readonly<Record<MobileCapability, readonl
   'session.read': [],
   'finance.transactions.read': ['finance.transactions'],
   'finance.accounts.read': ['finance.accounts', 'finance.checkpoints'],
-  'purchases.read': ['purchases.purchase'],
+  /**
+   * Two prefixes: reading an order and reading the page it sits on is
+   * `purchases.purchase`, and the mobile search box is a separate call
+   * into purchases' own `search.*` sub-router (`pillars/purchases/src/api/
+   * middleware/service-account-scope.ts` derives the scope straight from
+   * a contract's top-level router key, so `purchases.purchase` does not
+   * cover a route under `search`). Reading purchases now also means
+   * calling that module.
+   */
+  'purchases.read': ['purchases.purchase', 'purchases.search'],
   /**
    * The same prefix the upload leans on, because both are purchases' own
    * `receipt.*` module — the bytes are that module's artifact, written by its

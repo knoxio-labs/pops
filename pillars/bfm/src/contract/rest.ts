@@ -55,6 +55,7 @@ import { bfmDeviceContract } from './rest-device.js';
 import { mobileContactsContract } from './rest-mobile-contacts.js';
 import { mobileFinanceContract } from './rest-mobile-finance.js';
 import { mobileInventoryContract } from './rest-mobile-inventory.js';
+import { mobilePurchasesSearchRoutes } from './rest-mobile-purchases-search.js';
 import {
   MOBILE_PERIMETER_RESPONSES,
   MOBILE_REQUEST_RESPONSES,
@@ -119,9 +120,13 @@ const mobilePurchasesContract = c.router({
     summary: 'One cursor-paginated page of purchase list rows',
     metadata: requires('purchases.read'),
   },
-  // Declared ahead of `getPurchase` on purpose: both are GET at this depth,
-  // and a literal segment must be registered before the `:id` route it would
-  // otherwise be swallowed by.
+  // Declared ahead of `getPurchase` on purpose, matching the order its own
+  // handlers object must ALSO be spread in: a literal segment's route must
+  // be registered before the `:id` route it would otherwise be swallowed by
+  // — and `createExpressEndpoints` (`@ts-rest/express`) walks the HANDLERS
+  // object's own key order to decide that, via `for...in`, not this
+  // contract's. This declaration order is what a reader checks against; the
+  // handlers file is what actually has to agree with it.
   getMonthSummary: {
     method: 'GET',
     path: '/mobile/purchases/summary',
@@ -138,6 +143,7 @@ const mobilePurchasesContract = c.router({
     summary: 'The home screen figures for one calendar month',
     metadata: requires('purchases.read'),
   },
+  ...mobilePurchasesSearchRoutes,
   getPurchase: {
     method: 'GET',
     path: '/mobile/purchases/:id',

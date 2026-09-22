@@ -366,6 +366,25 @@ export type PurchaseItemsByTagResponses = {
 export type PurchaseItemsByTagResponse =
   PurchaseItemsByTagResponses[keyof PurchaseItemsByTagResponses];
 
+export type PurchaseTagVocabularyData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/items/tags';
+};
+
+export type PurchaseTagVocabularyResponses = {
+  /**
+   * 200
+   */
+  200: {
+    tags: Array<string>;
+  };
+};
+
+export type PurchaseTagVocabularyResponse =
+  PurchaseTagVocabularyResponses[keyof PurchaseTagVocabularyResponses];
+
 export type ProductListData = {
   body?: never;
   path?: never;
@@ -2955,7 +2974,7 @@ export type SearchSearchData = {
     };
     query: {
       filters?: Array<{
-        field: 'source' | 'status' | 'orderedAt';
+        field: 'source' | 'status' | 'orderedAt' | 'tags';
         operator: 'eq' | 'gte' | 'lte';
         value: string;
       }>;

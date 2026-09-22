@@ -71,6 +71,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/items/tags': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List the distinct item tags in use, most-used first */
+    get: operations['purchase.tagVocabulary'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/products': {
     parameters: {
       query?: never;
@@ -963,6 +980,28 @@ export interface operations {
               offset: number;
               total: number;
             };
+          };
+        };
+      };
+    };
+  };
+  'purchase.tagVocabulary': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            tags: string[];
           };
         };
       };
@@ -3926,7 +3965,7 @@ export interface operations {
           query: {
             filters?: {
               /** @enum {string} */
-              field: 'source' | 'status' | 'orderedAt';
+              field: 'source' | 'status' | 'orderedAt' | 'tags';
               /** @enum {string} */
               operator: 'eq' | 'gte' | 'lte';
               value: string;

@@ -38,6 +38,8 @@ export { countPurchases } from './services/purchase-count.js';
 
 export {
   listItemsByTag,
+  listTagVocabulary,
+  TAG_VOCABULARY_LIMIT,
   type TaggedItem,
   type TaggedItemPage,
 } from './services/purchase-item-tags.js';
@@ -121,6 +123,7 @@ export {
 
 export {
   searchFilterScope,
+  type PurchaseSearchScope,
   type SearchFilter,
   type SearchScopeResult,
 } from './services/search-filters.js';
