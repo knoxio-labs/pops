@@ -28,7 +28,7 @@
     "@pops/types": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "^24.13.4",
+    "@types/node": "^24.13.6",
     "@vitest/coverage-v8": "^4.1.10",
     "tsx": "^4.23.13",
     "typescript": "^6.0.3",

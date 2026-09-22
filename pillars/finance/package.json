@@ -44,7 +44,7 @@
     "generate:prompt-catalog": "tsx scripts/generate-prompt-catalog.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.125.0",
+    "@anthropic-ai/sdk": "^0.127.0",
     "@pops/ai-telemetry": "workspace:*",
     "@pops/pillar-express": "workspace:*",
     "@pops/pillar-sdk": "workspace:*",
@@ -63,7 +63,7 @@
     "@pops/contract-openapi": "workspace:*",
     "@types/better-sqlite3": "^7.6.12",
     "@types/express": "^5.0.4",
-    "@types/node": "^24.13.4",
+    "@types/node": "^24.13.6",
     "@types/supertest": "^7.2.1",
     "@vitest/coverage-v8": "^4.1.10",
     "openapi-typescript": "^7.13.0",
