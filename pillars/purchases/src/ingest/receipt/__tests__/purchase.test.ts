@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { resolveCapture } from '../capture.js';
 import { CURRENCY_UNCERTAIN } from '../currency.js';
@@ -49,6 +49,10 @@ const map = (over: Partial<ExtractedReceipt> = {}, stored: StoredReceipt[] = [ST
 };
 
 const mapped = (over: Partial<ExtractedReceipt> = {}) => map(over).purchase;
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 describe('receiptToPurchase invariants', () => {
   it('refuses to build a purchase with no evidence behind it', () => {
@@ -356,6 +360,19 @@ describe('a receipt that does not say when it happened', () => {
     const purchase = mapped({ purchasedOn: null });
     expect(purchase.orderedAt).toBe(UPLOADED_AT);
     expect(purchase.tags).toContain('date-uncertain');
+  });
+
+  it('defaults the upload time to now when the caller does not provide one', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-09-22T03:04:05.000Z'));
+    const extracted = receipt({ purchasedOn: null });
+    const gate = gateExtraction(extracted);
+    if (!gate.admissible) throw new Error('test fixture stopped reconciling');
+
+    const result = receiptToPurchase(extracted, gate, [STORED]);
+
+    expect(result.purchase.orderedAt).toBe('2026-09-22T03:04:05.000Z');
+    expect(result.purchase.tags).toContain('date-uncertain');
   });
 
   it('treats a date the receipt states badly the same as none at all', () => {

@@ -14,6 +14,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { openTempDb } from '../../../db/__tests__/helpers.js';
+import { CURRENCY_UNCERTAIN } from '../../../ingest/receipt/currency.js';
 import { DATE_UNCERTAIN, RECEIPT_SOURCE_ID } from '../../../ingest/receipt/purchase.js';
 import { persistReceiptPurchase, sameShopAlreadyRecorded } from '../receipt-persist.js';
 
@@ -86,6 +87,34 @@ describe('sameShopAlreadyRecorded', () => {
       cleanup();
     }
   });
+
+  it('matches receipts whose currency was untranscribed without matching stated currency', () => {
+    const { opened, cleanup } = openTempDb();
+    try {
+      persistReceiptPurchase(
+        opened.db,
+        receiptPurchase({ currency: 'XXX', tags: [CURRENCY_UNCERTAIN] })
+      );
+
+      const uncertain = sameShopAlreadyRecorded(
+        opened.db,
+        receiptPurchase({
+          checksum: 'other-uncertain-file',
+          currency: 'AUD',
+          tags: [CURRENCY_UNCERTAIN],
+        })
+      );
+      const stated = sameShopAlreadyRecorded(
+        opened.db,
+        receiptPurchase({ checksum: 'other-stated-file', currency: 'AUD' })
+      );
+
+      expect(uncertain).toBeDefined();
+      expect(stated).toBeUndefined();
+    } finally {
+      cleanup();
+    }
+  });
 });
 
 describe('persistReceiptPurchase', () => {
@@ -99,6 +128,27 @@ describe('persistReceiptPurchase', () => {
       expect(again.kind).toBe('refused');
       if (again.kind !== 'refused') return;
       expect(again.status).toBe(409);
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('maps an invalid receipt payload to a bad request', () => {
+    const { opened, cleanup } = openTempDb();
+    try {
+      const result = persistReceiptPurchase(
+        opened.db,
+        receiptPurchase({ orderedAt: 'not-an-instant' })
+      );
+
+      expect(result).toEqual({
+        kind: 'refused',
+        status: 400,
+        body: {
+          message: "Invalid ingest payload: orderedAt 'not-an-instant' names no instant",
+          code: 'INVALID_INGEST_PAYLOAD',
+        },
+      });
     } finally {
       cleanup();
     }

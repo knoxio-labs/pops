@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, statSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -93,6 +93,53 @@ describe('sweepUnreferencedReceipts', () => {
     try {
       const result = sweepUnreferencedReceipts(opened.db, { root });
       expect(result).toEqual({ scanned: 0, deleted: 0, kept: 0, malformed: 1 });
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('counts an extensionless file as malformed', () => {
+    root = mkdtempSync(join(tmpdir(), 'pops-receipts-sweep-'));
+    const dir = join(root, 'aa');
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, SHA_A), Buffer.from('fake'));
+    const { opened, cleanup } = openDb();
+
+    try {
+      const result = sweepUnreferencedReceipts(opened.db, { root });
+      expect(result).toEqual({ scanned: 0, deleted: 0, kept: 0, malformed: 1 });
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('ignores non-directory entries at the store root', () => {
+    root = mkdtempSync(join(tmpdir(), 'pops-receipts-sweep-'));
+    const unrelatedFile = join(root, 'metadata.json');
+    writeFileSync(unrelatedFile, Buffer.from('{}'));
+    const { opened, cleanup } = openDb();
+
+    try {
+      const result = sweepUnreferencedReceipts(opened.db, { root });
+      expect(result).toEqual({ scanned: 0, deleted: 0, kept: 0, malformed: 0 });
+      expect(() => statSync(unrelatedFile)).not.toThrow();
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('deletes an unreferenced file exactly at the retention boundary', () => {
+    root = mkdtempSync(join(tmpdir(), 'pops-receipts-sweep-'));
+    const now = new Date('2026-09-22T00:00:00.000Z');
+    const path = shardPath(SHA_A);
+    writeFileSync(path, Buffer.from('fake'));
+    const cutoff = new Date(now.getTime() - DEFAULT_RECEIPT_RETENTION_MS);
+    utimesSync(path, cutoff, cutoff);
+    const { opened, cleanup } = openDb();
+
+    try {
+      const result = sweepUnreferencedReceipts(opened.db, { root, now: () => now });
+      expect(result).toEqual({ scanned: 1, deleted: 1, kept: 0, malformed: 0 });
     } finally {
       cleanup();
     }

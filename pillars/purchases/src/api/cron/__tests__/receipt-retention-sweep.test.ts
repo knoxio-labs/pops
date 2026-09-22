@@ -51,6 +51,41 @@ describe('runOnce', () => {
     expect(result).toEqual({ scanned: 3, deleted: 1, kept: 2, malformed: 0 });
     expect(sweep).toHaveBeenCalledTimes(1);
   });
+
+  it('forwards the configured store, retention policy and clock and logs the result', async () => {
+    vi.useFakeTimers();
+    const now = (): Date => new Date('2026-09-22T00:00:00.000Z');
+    const info = vi.fn();
+    const sweep = vi.fn().mockReturnValue({ scanned: 4, deleted: 2, kept: 1, malformed: 1 });
+
+    const handle = start({
+      root: '/data/purchases/receipts',
+      retentionMs: 1234,
+      now,
+      logger: { info },
+      sweep,
+    });
+    const result = await handle.runOnce();
+
+    expect(sweep).toHaveBeenCalledWith(DB, {
+      root: '/data/purchases/receipts',
+      retentionMs: 1234,
+      now,
+    });
+    expect(info).toHaveBeenCalledWith('purchases receipt retention sweep complete', result);
+  });
+
+  it('uses the production sweep and default schedule when neither is overridden', async () => {
+    vi.useFakeTimers();
+    const handle = start({
+      root: '/path/that/does/not/exist',
+      intervalMs: undefined,
+      sweep: undefined,
+    });
+
+    await expect(handle.runOnce()).resolves.toEqual(EMPTY_RESULT);
+    expect(vi.getTimerCount()).toBe(1);
+  });
 });
 
 describe('the tick timer', () => {
@@ -99,6 +134,19 @@ describe('the tick timer', () => {
     await vi.advanceTimersByTimeAsync(1000);
     expect(sweep.mock.calls.length).toBeGreaterThan(1);
   });
+
+  it('reports a non-Error rejection as text', async () => {
+    vi.useFakeTimers();
+    const warn = vi.fn();
+    const sweep = vi.fn().mockRejectedValue('database unavailable');
+
+    start({ sweep, logger: { warn } });
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(warn).toHaveBeenCalledWith('purchases receipt retention sweep failed', {
+      error: 'database unavailable',
+    });
+  });
 });
 
 describe('drain', () => {
@@ -128,5 +176,13 @@ describe('drain', () => {
     resolvePass?.(EMPTY_RESULT);
     await drainPromise;
     expect(drained).toBe(true);
+  });
+
+  it('settles when the in-flight pass rejects', async () => {
+    const sweep = vi.fn().mockRejectedValue(new Error('locked file'));
+    const handle = start({ sweep, intervalMs: 1_000_000 });
+    handle.stop();
+
+    await expect(handle.drain()).resolves.toBeUndefined();
   });
 });
