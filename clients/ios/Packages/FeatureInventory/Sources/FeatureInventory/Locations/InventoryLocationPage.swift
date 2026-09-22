@@ -40,6 +40,7 @@ internal struct InventoryLocationPage: View {
                 } icon: {
                     InventorySymbol.location.image
                         .foregroundStyle(Color.popsInventory)
+                        .accessibilityHidden(true)
                 }
                 .labelStyle(.titleAndIcon)
                 .font(.popsHeadline)
