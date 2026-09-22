@@ -122,7 +122,10 @@ row's pulse collapses to a static skeleton when Reduce Motion is enabled.
 Merchant and address record sheets debounce searches and ask their caller for matches, rather than
 filtering a preloaded catalogue. An already resolved record remains visible before the first query;
 an empty unresolved sheet prompts for a query without making a request. Cancelling an older search
-prevents its late result from replacing the latest answer.
+prevents its late result from replacing the latest answer. The form receives separate merchant
+search, merchant preview, address list, and address preview closures. Address work reads the draft's
+current merchant identifier when it starts, so changing merchant cannot send a later lookup to the
+branch list from the previous merchant.
 
 Three rules hold the form together, and each is a value a test asserts rather than a thing the view happens to do:
 

@@ -85,7 +85,10 @@ internal struct PurchaseCapturePresentationModifier: ViewModifier {
                 if let handEntry = flow.handEntry {
                     PurchaseHandEntryView(
                         model: handEntry,
-                        merchants: [],
+                        searchMerchants: { _ in [] },
+                        merchantPreview: { _ in nil },
+                        addressesForMerchant: { _ in [] },
+                        addressPreview: { _, _ in nil },
                         onFinished: { flow.finish(savedIDs: $0) })
                 }
             }
@@ -127,7 +130,10 @@ internal struct PurchaseCapturePresentationModifier: ViewModifier {
             if let review = flow.review {
                 PurchaseReviewView(
                     model: review,
-                    merchants: [],
+                    searchMerchants: { _ in [] },
+                    merchantPreview: { _ in nil },
+                    addressesForMerchant: { _ in [] },
+                    addressPreview: { _, _ in nil },
                     onCancel: flow.cancel,
                     onFinished: { flow.finish(savedIDs: $0) })
             }

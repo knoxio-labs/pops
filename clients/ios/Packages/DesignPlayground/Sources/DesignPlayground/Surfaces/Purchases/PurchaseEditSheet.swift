@@ -78,7 +78,10 @@ internal struct PurchaseEditSheet: View {
         ReceiptDraftView(
             draft: opened,
             complaints: .hintsOnly,
-            merchants: PurchaseMerchantFixtures.all,
+            searchMerchants: { await PurchaseMerchantFixtures.search($0) },
+            merchantPreview: { await PurchaseMerchantFixtures.merchant($0) },
+            addressesForMerchant: { await PurchaseMerchantFixtures.addresses($0) },
+            addressPreview: { await PurchaseMerchantFixtures.address($0, $1) },
             lock: PurchaseEditPolicy.lock(for: detail.purchase.status),
             commit: .navigationBar,
             onChange: { changed = $0 != opened },

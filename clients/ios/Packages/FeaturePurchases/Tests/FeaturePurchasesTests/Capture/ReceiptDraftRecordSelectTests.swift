@@ -1,3 +1,4 @@
+import SwiftUI
 import Testing
 
 @testable import FeaturePurchases
@@ -86,6 +87,44 @@ internal struct ReceiptDraftRecordSelectTests {
 
         #expect(model.results == [ReceiptDraftRecord(id: "new", name: "New")])
         #expect(!model.isSearching)
+    }
+
+    @Test("address lookup reads the current merchant whenever it runs")
+    func addressLookupUsesCurrentMerchant() async {
+        let box = DraftBox(ReceiptDraft.blank().attributed(id: "merchant-old"))
+        let calls = AddressCalls()
+        let binding = Binding(
+            get: { box.draft },
+            set: { box.draft = $0 })
+
+        _ = await ReceiptDraftForm.addressRecords(
+            draft: binding,
+            addressesForMerchant: { id in await calls.addresses(id) })
+        box.draft.setMerchant(.chosen(id: "merchant-new"))
+        let records = await ReceiptDraftForm.addressRecords(
+            draft: binding,
+            addressesForMerchant: { id in await calls.addresses(id) })
+
+        #expect(await calls.merchantIDs == ["merchant-old", "merchant-new"])
+        #expect(records == [ReceiptDraftRecord(id: "address-merchant-new", name: "New Street")])
+    }
+}
+
+@MainActor
+private final class DraftBox {
+    var draft: ReceiptDraft
+
+    init(_ draft: ReceiptDraft) {
+        self.draft = draft
+    }
+}
+
+private actor AddressCalls {
+    private(set) var merchantIDs: [String] = []
+
+    func addresses(_ merchantID: String) -> [ReceiptAddressChoice] {
+        merchantIDs.append(merchantID)
+        return [ReceiptAddressChoice(id: "address-\(merchantID)", value: "New Street")]
     }
 }
 

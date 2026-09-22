@@ -12,7 +12,10 @@
             NavigationStack {
                 PurchaseReviewView(
                     model: model,
-                    merchants: [],
+                    searchMerchants: { _ in [] },
+                    merchantPreview: { _ in nil },
+                    addressesForMerchant: { _ in [] },
+                    addressPreview: { _, _ in nil },
                     onCancel: {},
                     onFinished: { _ in })
             }

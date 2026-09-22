@@ -36,7 +36,8 @@ extension ReceiptDraftForm {
     private var merchantName: String {
         if let created = draft.merchantResolution.createdValue { return created }
         let id = draft.merchantResolution.entityID
-        return merchants.first { $0.id == id }?.name ?? draft.printedMerchant.value
+        if resolvedMerchant?.id == id, let name = resolvedMerchant?.name { return name }
+        return draft.printedMerchant.value
     }
 
     /// A select, not a field.
@@ -47,18 +48,28 @@ extension ReceiptDraftForm {
     /// nothing can be reconciled or totalled against. Every route through
     /// this control ends at an entity — matched, chosen, or created.
     private var merchantField: some View {
-        let records = merchants.map { ReceiptDraftRecord(id: $0.id, name: $0.name) }
         return ReceiptDraftRecordSelect(
             label: ReceiptDraftCopy.merchantLabel,
             resolution: merchantBinding,
             printed: draft.printedMerchant.value,
-            resolvedName: merchants.first { $0.id == draft.merchantResolution.entityID }?.name,
-            search: { query in Self.matches(records, query: query) },
+            resolvedName: resolvedMerchant?.name,
+            search: { query in
+                await searchMerchants(query).map {
+                    ReceiptDraftRecord(id: $0.id, name: $0.name)
+                }
+            },
             symbol: "building.2",
             placeholder: ReceiptDraftCopy.merchantPlaceholderSelect,
             createTitle: ReceiptDraftCopy.createMerchantSection,
             note: merchantNote
         )
+        .task(id: draft.merchantResolution.entityID) {
+            guard let id = draft.merchantResolution.entityID else {
+                resolvedMerchant = nil
+                return
+            }
+            resolvedMerchant = await merchantPreview(id)
+        }
         .accessibilityIdentifier(ReceiptDraftAccessibility.merchant)
     }
 
@@ -106,29 +117,47 @@ extension ReceiptDraftForm {
     /// until there is an entity whose branches these are, and a list of every
     /// address in contacts is not a help.
     private var addressField: some View {
-        let known = merchants.first { $0.id == draft.merchantResolution.entityID }?.addresses ?? []
-        let records = known.map { ReceiptDraftRecord(id: $0.id, name: $0.value) }
+        let liveDraft = $draft
         return ReceiptDraftRecordSelect(
             label: ReceiptDraftCopy.addressLabel,
             resolution: $draft.addressResolution,
             printed: draft.printedAddress.value,
-            resolvedName: known.first { $0.id == draft.addressResolution.entityID }?.value,
-            search: { query in Self.matches(records, query: query) },
+            resolvedName: resolvedAddress?.value,
+            search: { _ in
+                await Self.addressRecords(
+                    draft: liveDraft,
+                    addressesForMerchant: addressesForMerchant)
+            },
             symbol: "mappin.and.ellipse",
             placeholder: ReceiptDraftCopy.addressPlaceholderSelect,
             createTitle: ReceiptDraftCopy.createAddressSection,
             note: hint(.address)
         )
+        .task(
+            id: [
+                draft.merchantResolution.entityID ?? "",
+                draft.addressResolution.entityID ?? "",
+            ]
+        ) {
+            guard let merchantID = draft.merchantResolution.entityID,
+                let addressID = draft.addressResolution.entityID
+            else {
+                resolvedAddress = nil
+                return
+            }
+            resolvedAddress = await addressPreview(merchantID, addressID)
+        }
         .accessibilityIdentifier(ReceiptDraftAccessibility.address)
     }
 
-    private static func matches(
-        _ records: [ReceiptDraftRecord],
-        query: String
-    ) -> [ReceiptDraftRecord] {
-        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return [] }
-        return records.filter { $0.name.localizedCaseInsensitiveContains(trimmed) }
+    internal static func addressRecords(
+        draft: Binding<ReceiptDraft>,
+        addressesForMerchant: ReceiptAddressesForMerchant
+    ) async -> [ReceiptDraftRecord] {
+        guard let merchantID = draft.wrappedValue.merchantResolution.entityID else { return [] }
+        return await addressesForMerchant(merchantID).map {
+            ReceiptDraftRecord(id: $0.id, name: $0.value)
+        }
     }
 
     /// Removes the address field rather than disabling it. A field that is
