@@ -78,6 +78,45 @@ internal struct PurchasesHomeDigest {
             .sorted { $0.orderedOn > $1.orderedOn }
     }
 
+    internal func landing(_ arriving: [Purchase]) -> PurchasesHomeDigest {
+        let landed = Self.landing(arriving, in: purchases)
+        return PurchasesHomeDigest(
+            purchases: landed,
+            allCount: allCount,
+            month: month,
+            totals: totals,
+            monthCount: monthCount,
+            delta: delta,
+            unmatched: unmatched,
+            unmatchedCount: unmatchedCount,
+            leaders: leaders,
+            recent: Array(landed.prefix(Self.recentLimit)))
+    }
+
+    private init(
+        purchases: [Purchase],
+        allCount: Int,
+        month: Date?,
+        totals: [MoneyAmount],
+        monthCount: Int,
+        delta: Delta?,
+        unmatched: [Purchase],
+        unmatchedCount: Int,
+        leaders: [Leader],
+        recent: [Purchase]
+    ) {
+        self.purchases = purchases
+        self.allCount = allCount
+        self.month = month
+        self.totals = totals
+        self.monthCount = monthCount
+        self.delta = delta
+        self.unmatched = unmatched
+        self.unmatchedCount = unmatchedCount
+        self.leaders = leaders
+        self.recent = recent
+    }
+
     private static func delta(
         latest: (month: Date, purchases: [Purchase])?,
         months: [(month: Date, purchases: [Purchase])],

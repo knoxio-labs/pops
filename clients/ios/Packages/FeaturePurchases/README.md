@@ -50,6 +50,8 @@ Saved-purchase screens share `PurchasesPresentation` for merchant names, settlem
 
 `PurchasesHomeDigest` bounds Recent and merchant leaders while keeping the server's All and Unmatched counts independent from the number of loaded rows. Its summary initializer reads monthly totals, comparisons, and aggregate merchant leaders from `PurchasesMonthSummary`; leaders remain aggregate facts and never require an invented purchase or purchase identifier.
 
+`PurchasesHomeModel` loads that summary and the first unfiltered purchase page together. Refresh failures keep the last digest visible, while a generation counter prevents an older request from replacing a newer refresh. Capture can land complete purchases immediately or report only saved identifiers; both paths highlight every saved identifier and perform one refresh, and the identifier path never fabricates purchase rows.
+
 Editing a saved purchase remains POPS-2458. There is no initialiser building a `ReceiptDraft` from a `ReceiptPurchase`: that summary carries a merchant, a total and a count, and a form pre-filled from it would present three line items as zero. Reusing the form requires the full detail model, rather than treating the summary as an editable purchase.
 
 ### The form, and how both entry points reach it
