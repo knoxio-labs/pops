@@ -22,13 +22,8 @@ internal struct PurchasesHomeScreen: View {
                 PurchasesHomeFailureView(failure: failure, onAction: act)
                     .transition(.opacity)
             case .loaded(let digest, let refresh):
-                if digest.allCount == 0 {
-                    PurchasesHomeEmptyView(onScan: scanAction)
-                        .transition(.opacity)
-                } else {
-                    content(digest, refresh: refresh)
-                        .transition(.opacity)
-                }
+                loaded(digest, refresh: refresh)
+                    .transition(.opacity)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -43,20 +38,32 @@ internal struct PurchasesHomeScreen: View {
         .accessibilityIdentifier(PurchasesAccessibility.homeRoot)
     }
 
-    private func content(_ digest: PurchasesHomeDigest, refresh: PurchasesHomeRefresh) -> some View
-    {
+    private func loaded(_ digest: PurchasesHomeDigest, refresh: PurchasesHomeRefresh) -> some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: PopsSpacing.lg) {
-                PurchasesHomeFigure(digest: digest, refresh: refresh) {
-                    Task { await model.refresh() }
+            if digest.allCount == 0 {
+                VStack(alignment: .trailing, spacing: PopsSpacing.lg) {
+                    PurchasesRefreshCapsule(refresh: refresh) {
+                        Task { await model.refresh() }
+                    }
+                    PurchasesHomeEmptyView(onScan: scanAction)
+                        .frame(maxWidth: .infinity)
                 }
-                PurchasesHomeTiles(digest: digest)
-                lists(digest)
+                .containerRelativeFrame(.vertical, alignment: .center)
+                .padding(.horizontal, PopsSpacing.lg)
+                .padding(.bottom, PopsSpacing.lg)
+            } else {
+                VStack(alignment: .leading, spacing: PopsSpacing.lg) {
+                    PurchasesHomeFigure(digest: digest, refresh: refresh) {
+                        Task { await model.refresh() }
+                    }
+                    PurchasesHomeTiles(digest: digest)
+                    lists(digest)
+                }
+                .popsMotion(value: digest.purchases.map(\.id))
+                .popsMotion(value: list)
+                .padding(.horizontal, PopsSpacing.lg)
+                .padding(.bottom, PopsSpacing.lg)
             }
-            .popsMotion(value: digest.purchases.map(\.id))
-            .popsMotion(value: list)
-            .padding(.horizontal, PopsSpacing.lg)
-            .padding(.bottom, PopsSpacing.lg)
         }
         .scrollBounceBehavior(.basedOnSize)
         .refreshable { await model.refresh() }

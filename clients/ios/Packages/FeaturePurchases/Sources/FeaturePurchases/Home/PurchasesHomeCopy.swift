@@ -50,6 +50,9 @@ extension PurchasesHomeFailureAction {
 }
 
 @MainActor internal enum PurchasesHomeCopy {
+    internal static let emptyHistory = "No purchases"
+    internal static let emptyMonth = "No purchases this month"
+
     internal static func count(_ count: Int, currencies: Int) -> String {
         let noun = count == 1 ? "purchase" : "purchases"
         let currencySuffix = currencies > 1 ? " in \(currencies) currencies" : ""

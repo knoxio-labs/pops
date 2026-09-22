@@ -64,7 +64,7 @@ internal struct PurchasesHomeEmptyView: View {
     internal var body: some View {
         ContentUnavailableView {
             Label {
-                Text("No purchases")
+                Text(PurchasesHomeCopy.emptyHistory)
             } icon: {
                 Image(systemName: "receipt")
                     .foregroundStyle(Color.popsPurchases)

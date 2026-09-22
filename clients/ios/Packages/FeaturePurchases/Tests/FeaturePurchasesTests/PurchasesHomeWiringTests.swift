@@ -41,6 +41,22 @@ internal struct PurchasesHomeWiringTests {
                 "if case .loaded = model.phase, let purchaseCapture"))
     }
 
+    @Test("the loaded empty state keeps refresh and refresh-failure feedback")
+    func emptyStateRefreshes() {
+        #expect(Self.screen.contains("private func loaded("))
+        #expect(Self.screen.contains("if digest.allCount == 0"))
+        #expect(Self.screen.contains("PurchasesRefreshCapsule(refresh: refresh)"))
+        #expect(Self.screen.contains(".refreshable { await model.refresh() }"))
+        guard let emptyBranch = Self.screen.range(of: "if digest.allCount == 0")?.lowerBound,
+            let refreshable = Self.screen.range(
+                of: ".refreshable { await model.refresh() }")?.lowerBound
+        else {
+            Issue.record("Expected the empty branch and shared refresh modifier")
+            return
+        }
+        #expect(refreshable > emptyBranch)
+    }
+
     @Test("archive tiles and recent rows use feature-local destinations")
     func destinations() {
         #expect(Self.tiles.contains("PurchasesScreenRoute.archive(.all)"))

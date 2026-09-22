@@ -26,6 +26,10 @@ internal struct PurchasesHomeFigure: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
                     .contentTransition(.numericText(value: Double(headline.minorUnits)))
+            } else if digest.monthCount == 0 {
+                Text(PurchasesHomeCopy.emptyMonth)
+                    .font(.popsTitle)
+                    .foregroundStyle(Color.popsForeground)
             }
             ForEach(digest.totals.dropFirst(), id: \.currencyCode) { total in
                 Text("and \(total.formatted())")

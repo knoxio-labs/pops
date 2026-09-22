@@ -41,6 +41,13 @@ internal struct PurchasesHomePresentationTests {
         #expect(PurchasesHomeCopy.deltaLine(nil) == nil)
     }
 
+    @Test("empty history and an empty current month say different things")
+    func emptyStates() {
+        #expect(PurchasesHomeCopy.emptyHistory == "No purchases")
+        #expect(PurchasesHomeCopy.emptyMonth == "No purchases this month")
+        #expect(PurchasesHomeCopy.emptyHistory != PurchasesHomeCopy.emptyMonth)
+    }
+
     @Test("refresh failure copy includes the last update time")
     func refreshFailureCopy() {
         #expect(PurchasesHomeCopy.refreshFailure("9:41") == "Not updated · 9:41")
