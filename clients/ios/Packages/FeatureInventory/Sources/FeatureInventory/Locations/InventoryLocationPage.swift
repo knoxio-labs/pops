@@ -30,8 +30,31 @@ internal struct InventoryLocationPage: View {
                 }
             }
         }
+        .navigationTitle(placeName)
+        .inventoryTitleDisplay(large: false)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                Label {
+                    Text(placeName)
+                        .foregroundStyle(Color.popsForeground)
+                } icon: {
+                    InventorySymbol.location.image
+                        .foregroundStyle(Color.popsInventory)
+                        .accessibilityHidden(true)
+                }
+                .labelStyle(.titleAndIcon)
+                .font(.popsHeadline)
+                .accessibilityAddTraits(.isHeader)
+                .accessibilityIdentifier("inventory-place-title")
+            }
+        }
         .task(id: generation) { await model.observe() }
         .inventoryRunnerChrome(model.runner)
+    }
+
+    private var placeName: String {
+        guard case .loaded(let tree) = model.tree.phase else { return "Place" }
+        return tree.node(model.id)?.name ?? "Place not found"
     }
 
     private func page(_ tree: InventoryLocationTree, _ place: InventoryLocationNode) -> some View {
@@ -47,7 +70,6 @@ internal struct InventoryLocationPage: View {
             .padding(.bottom, PopsSpacing.xxl)
             .inventoryMotion(value: model.shownNotice)
         }
-        .inventoryCollapsingTitle(place.name)
         .background(Color.popsBackground)
         .tint(.popsInventory)
         .pageChrome(tree, place, model: model, newName: $newName)
@@ -207,8 +229,6 @@ internal struct InventoryLocationPageSkeleton: View {
         }
         .scrollDisabled(true)
         .background(Color.popsBackground)
-        .navigationTitle("")
-        .inventoryTitleDisplay(large: false)
         .accessibilityLabel("Loading")
     }
 
