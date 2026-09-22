@@ -133,11 +133,14 @@ export type HealthResponse = {
 };
 
 /**
- * `POST /entities/lookup` body — reserved for a future field selector; an
- * empty body fetches the default match columns.
+ * `POST /entities/lookup` body. `fields` is reserved for a future field
+ * selector. `ids`, when present and non-empty, narrows the match set to
+ * those ids (POPS-3925) instead of the whole contact set; omitted or empty
+ * keeps the original "answer everything" behaviour existing callers rely on.
  */
 export type LookupBody = {
   fields?: Array<string> | null;
+  ids?: Array<string> | null;
 };
 
 /**
@@ -303,9 +306,18 @@ export type EntitiesLookupData = {
   url: '/entities/lookup';
 };
 
+export type EntitiesLookupErrors = {
+  /**
+   * More ids than the lookup cap allows
+   */
+  400: ErrorBody;
+};
+
+export type EntitiesLookupError = EntitiesLookupErrors[keyof EntitiesLookupErrors];
+
 export type EntitiesLookupResponses = {
   /**
-   * Bulk match columns
+   * Bulk match columns, optionally narrowed by ids
    */
   200: LookupResponse;
 };
