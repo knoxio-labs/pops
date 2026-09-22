@@ -3,6 +3,9 @@
 The iOS design playground: where a phone screen is designed, argued about and
 decided, on the device, before anything implements it.
 
+The capture backdrop and shell degradation surfaces embed the public
+`PurchasesFlowView` with fictional purchases, matching the app’s navigation root.
+
 It is the native half of a pair. `pillars/design` is the web playground and
 owns every screen the browser draws; this owns every screen the phone draws.
 The split is not tidiness — it is the whole point, and the reason it exists is

@@ -6,7 +6,7 @@ import SwiftUI
 /// shows behind it are reviewed against the screen it really covers.
 internal struct PurchaseCaptureBackdrop: View {
     internal var body: some View {
-        PurchasesListView(
+        PurchasesFlowView(
             dependencies: playgroundPurchasesDependencies(rows: PurchasesFixtures.all))
     }
 }

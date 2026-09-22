@@ -12,7 +12,7 @@ internal enum ShellDegradation: Hashable, Sendable {
 }
 
 /// The paired shell's own content: the degraded banner `ContentView` draws
-/// above whatever features are showing, over the real ``PurchasesListView`` —
+/// above whatever features are showing, over the real ``PurchasesFlowView`` —
 /// not a placeholder. The question a banner state exists to answer is
 /// whether it reads as a notice over usable content or as a wall in front of
 /// it, and a placeholder cannot be asked that.
@@ -28,7 +28,7 @@ internal struct ShellContentView: View {
     let degradation: ShellDegradation
 
     var body: some View {
-        PurchasesListView(
+        PurchasesFlowView(
             dependencies: playgroundPurchasesDependencies(rows: PurchasesFixtures.all)
         )
         .safeAreaInset(edge: .top) { banner }
