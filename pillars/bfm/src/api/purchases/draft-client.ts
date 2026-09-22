@@ -64,6 +64,9 @@ interface DraftWireItem {
 
 interface DraftWireBody {
   readonly merchantEntityName: string | null;
+  readonly merchantEntityId: string | null | undefined;
+  readonly merchantAddressId: string | null | undefined;
+  readonly merchantAddressName: string | null | undefined;
   readonly orderedAt: string;
   readonly orderedAtOffsetMinutes: number | null | undefined;
   readonly currency: string;
@@ -86,6 +89,9 @@ function toDraftWireBody(
 ): DraftWireBody {
   return {
     merchantEntityName: body.merchantName,
+    merchantEntityId: body.merchantEntityId,
+    merchantAddressId: body.merchantAddressId,
+    merchantAddressName: body.merchantAddressName,
     orderedAt: body.orderedAt,
     orderedAtOffsetMinutes: body.orderedAtOffsetMinutes,
     currency: body.currency,

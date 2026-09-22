@@ -254,6 +254,241 @@ export type MobileBootstrapResponses = {
 
 export type MobileBootstrapResponse = MobileBootstrapResponses[keyof MobileBootstrapResponses];
 
+export type MobileContactsGetMerchantAddressesData = {
+  body?: never;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/mobile/contacts/merchants/{id}/addresses';
+};
+
+export type MobileContactsGetMerchantAddressesErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code: 'invalid_cursor' | 'invalid_request';
+    message: string;
+  };
+  /**
+   * 401
+   */
+  401: {
+    code: 'invalid_token';
+    message: string;
+  };
+  /**
+   * 403
+   */
+  403:
+    | {
+        code: 'device_revoked';
+        message: string;
+      }
+    | {
+        capability: string;
+        code: 'capability_not_granted';
+        message: string;
+      };
+  /**
+   * 404
+   */
+  404: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'upstream_unsupported_media'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+  /**
+   * 429
+   */
+  429: {
+    code: 'rate_limited';
+    message: string;
+    retryAfterSeconds: number;
+  };
+  /**
+   * 502
+   */
+  502: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'upstream_unsupported_media'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'upstream_unsupported_media'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+};
+
+export type MobileContactsGetMerchantAddressesError =
+  MobileContactsGetMerchantAddressesErrors[keyof MobileContactsGetMerchantAddressesErrors];
+
+export type MobileContactsGetMerchantAddressesResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: Array<{
+      id: string;
+      value: string;
+    }>;
+  };
+};
+
+export type MobileContactsGetMerchantAddressesResponse =
+  MobileContactsGetMerchantAddressesResponses[keyof MobileContactsGetMerchantAddressesResponses];
+
+export type MobileContactsCreateMerchantAddressData = {
+  /**
+   * Body
+   */
+  body?: {
+    value: string;
+  };
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/mobile/contacts/merchants/{id}/addresses';
+};
+
+export type MobileContactsCreateMerchantAddressErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code: 'invalid_cursor' | 'invalid_request';
+    message: string;
+  };
+  /**
+   * 401
+   */
+  401: {
+    code: 'invalid_token';
+    message: string;
+  };
+  /**
+   * 403
+   */
+  403:
+    | {
+        code: 'device_revoked';
+        message: string;
+      }
+    | {
+        capability: string;
+        code: 'capability_not_granted';
+        message: string;
+      };
+  /**
+   * 404
+   */
+  404: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'upstream_unsupported_media'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+  /**
+   * 429
+   */
+  429: {
+    code: 'rate_limited';
+    message: string;
+    retryAfterSeconds: number;
+  };
+  /**
+   * 502
+   */
+  502: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'upstream_unsupported_media'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'upstream_unsupported_media'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+};
+
+export type MobileContactsCreateMerchantAddressError =
+  MobileContactsCreateMerchantAddressErrors[keyof MobileContactsCreateMerchantAddressErrors];
+
+export type MobileContactsCreateMerchantAddressResponses = {
+  /**
+   * 200
+   */
+  200: {
+    id: string;
+    value: string;
+  };
+};
+
+export type MobileContactsCreateMerchantAddressResponse =
+  MobileContactsCreateMerchantAddressResponses[keyof MobileContactsCreateMerchantAddressResponses];
+
 export type MobileFinanceListAccountsData = {
   body?: never;
   path?: never;
@@ -2166,6 +2401,9 @@ export type MobilePurchasesCreateManualPurchaseData = {
       quantity?: number | null;
       unitPriceCents: number;
     }>;
+    merchantAddressId?: string | null;
+    merchantAddressName?: string | null;
+    merchantEntityId?: string | null;
     merchantName: string | null;
     orderedAt: string;
     orderedAtOffsetMinutes?: number | null;
@@ -2333,6 +2571,9 @@ export type MobilePurchasesSaveReceiptDraftData = {
       quantity?: number | null;
       unitPriceCents: number;
     }>;
+    merchantAddressId?: string | null;
+    merchantAddressName?: string | null;
+    merchantEntityId?: string | null;
     merchantName: string | null;
     orderedAt: string;
     orderedAtOffsetMinutes?: number | null;
@@ -2613,6 +2854,7 @@ export type MobilePurchasesExtractReceiptResponses = {
             quantity?: number | null;
             unitPriceCents: number;
           }>;
+          merchantAddressName: string | null;
           merchantName: string | null;
           orderedAt: string;
           orderedAtOffsetMinutes: number | null;

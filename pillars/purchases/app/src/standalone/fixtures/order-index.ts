@@ -14,6 +14,8 @@ export const ORDER_INDEX_ROW: PurchaseListResponses[200]['items'][number] = {
   itemCount: ORDER.items.length,
   merchantEntityId: PURCHASE.merchantEntityId,
   merchantEntityName: PURCHASE.merchantEntityName,
+  merchantAddressId: PURCHASE.merchantAddressId,
+  merchantAddressName: PURCHASE.merchantAddressName,
   orderedAt: PURCHASE.orderedAt,
   orderedAtOffsetMinutes: PURCHASE.orderedAtOffsetMinutes,
   paymentHint: PURCHASE.paymentHint,

@@ -56,6 +56,8 @@ function entry(id: string, charges: LinkedCharge[], currency = 'AUD'): LinkedPur
       id,
       ingestMethod: 'export',
       merchantEntityId: null,
+      merchantAddressId: null,
+      merchantAddressName: null,
       merchantEntityName: 'Amazon',
       orderedAt: '2026-03-04T00:00:00.000Z',
       // An export states an instant and no place, so there is no offset to

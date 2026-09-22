@@ -19,3 +19,19 @@ export const ContactsLookupResponseSchema = z.object({
 });
 
 export type ContactsEntityLookup = z.infer<typeof ContactsEntityLookupSchema>;
+
+/** One address as contacts' `entities.addresses.list`/`.create` answer it (ADR-053). */
+export const ContactsAddressSchema = z.object({
+  id: z.string(),
+  value: z.string(),
+});
+
+export type ContactsAddress = z.infer<typeof ContactsAddressSchema>;
+
+export const ContactsAddressListResponseSchema = z.object({
+  data: z.array(ContactsAddressSchema),
+});
+
+export const ContactsAddressMutationResponseSchema = z.object({
+  data: ContactsAddressSchema,
+});

@@ -656,6 +656,8 @@ export type PurchaseListResponses = {
       id: string;
       ingestMethod: 'email' | 'export' | 'upload' | 'manual';
       itemCount: number;
+      merchantAddressId: string | null;
+      merchantAddressName: string | null;
       merchantEntityId: string | null;
       merchantEntityName: string | null;
       orderedAt: string;
@@ -751,6 +753,8 @@ export type PurchaseCreateData = {
       }>;
       url?: string | null;
     }>;
+    merchantAddressId?: string | null;
+    merchantAddressName?: string | null;
     merchantEntityId?: string | null;
     merchantEntityName?: string | null;
     orderedAt: string;
@@ -919,6 +923,8 @@ export type PurchaseCreateResponses = {
       discountIncluded: boolean | null;
       id: string;
       ingestMethod: 'email' | 'export' | 'upload' | 'manual';
+      merchantAddressId: string | null;
+      merchantAddressName: string | null;
       merchantEntityId: string | null;
       merchantEntityName: string | null;
       orderedAt: string;
@@ -1026,6 +1032,8 @@ export type PurchaseCreateManualData = {
       }>;
       url?: string | null;
     }>;
+    merchantAddressId?: string | null;
+    merchantAddressName?: string | null;
     merchantEntityId?: string | null;
     merchantEntityName?: string | null;
     orderedAt: string;
@@ -1193,6 +1201,8 @@ export type PurchaseCreateManualResponses = {
       discountIncluded: boolean | null;
       id: string;
       ingestMethod: 'email' | 'export' | 'upload' | 'manual';
+      merchantAddressId: string | null;
+      merchantAddressName: string | null;
       merchantEntityId: string | null;
       merchantEntityName: string | null;
       orderedAt: string;
@@ -1407,6 +1417,8 @@ export type PurchaseGetResponses = {
       discountIncluded: boolean | null;
       id: string;
       ingestMethod: 'email' | 'export' | 'upload' | 'manual';
+      merchantAddressId: string | null;
+      merchantAddressName: string | null;
       merchantEntityId: string | null;
       merchantEntityName: string | null;
       orderedAt: string;
@@ -1975,6 +1987,8 @@ export type ReceiptUploadResponses = {
             discountIncluded: boolean | null;
             id: string;
             ingestMethod: 'email' | 'export' | 'upload' | 'manual';
+            merchantAddressId: string | null;
+            merchantAddressName: string | null;
             merchantEntityId: string | null;
             merchantEntityName: string | null;
             orderedAt: string;
@@ -2125,6 +2139,8 @@ export type ReceiptSaveDraftData = {
       }>;
       url?: string | null;
     }>;
+    merchantAddressId?: string | null;
+    merchantAddressName?: string | null;
     merchantEntityId?: string | null;
     merchantEntityName?: string | null;
     orderedAt: string;
@@ -2291,6 +2307,8 @@ export type ReceiptSaveDraftResponses = {
       discountIncluded: boolean | null;
       id: string;
       ingestMethod: 'email' | 'export' | 'upload' | 'manual';
+      merchantAddressId: string | null;
+      merchantAddressName: string | null;
       merchantEntityId: string | null;
       merchantEntityName: string | null;
       orderedAt: string;
@@ -2454,6 +2472,8 @@ export type ReceiptExtractResponses = {
             }>;
             url?: string | null;
           }>;
+          merchantAddressId?: string | null;
+          merchantAddressName?: string | null;
           merchantEntityId?: string | null;
           merchantEntityName?: string | null;
           orderedAt: string;
@@ -2700,6 +2720,8 @@ export type ReconcileLinksResponses = {
         discountIncluded: boolean | null;
         id: string;
         ingestMethod: 'email' | 'export' | 'upload' | 'manual';
+        merchantAddressId: string | null;
+        merchantAddressName: string | null;
         merchantEntityId: string | null;
         merchantEntityName: string | null;
         orderedAt: string;

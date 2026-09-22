@@ -61,6 +61,7 @@ import {
   resolveVersion,
   shouldSelfRegister,
 } from './boot-env.js';
+import { createMobileContactsClient } from './contacts/client.js';
 import {
   startPruneCredentialsWorker,
   type PruneCredentialsWorkerHandle,
@@ -111,6 +112,7 @@ console.warn(`[bfm-api] SQLite at ${sqlitePath}`);
 const gateway = createPillarGateway();
 const finance = createMobileFinanceClient(gateway);
 const purchases = createMobilePurchasesClient(gateway);
+const contacts = createMobileContactsClient(gateway);
 
 // Its own gateway, not the shared one above: this is the one leg that must
 // send an extra header on every call, and `extraHeaders` is scoped per
@@ -154,6 +156,7 @@ const app = createBfmApiApp({
   inventory,
   inventoryMedia,
   purchases,
+  contacts,
   refreshTokenTtlMs,
   issuanceLimiter,
   pairingCodeTtlMs,

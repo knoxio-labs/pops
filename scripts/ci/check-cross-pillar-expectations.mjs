@@ -61,9 +61,14 @@
  * method a property (arrow-typed or aliased to a named function type, never
  * method-shorthand): `type ContactsRouter = { entities: { list: (input) =>
  * ...; get: (input) => ...; }; }` resolves to `entities.list` and
- * `entities.get`. That type is DECLARED IN THE SAME FILE as the call site in
- * every instance in this tree today (`resolveRouterOperations` does not look
- * elsewhere), which is also what makes the type trustworthy as an
+ * `entities.get`. A domain member can itself nest one level further, for a
+ * producer whose own operationId names a sub-resource beneath it —
+ * contacts' `entities.addresses.list`/`.create` (ADR-053) resolves the same
+ * way, one level on — and `resolveRouterOperations` recurses for as many
+ * levels as the type actually declares. That type is DECLARED IN THE SAME
+ * FILE as the call site in every instance in this tree today
+ * (`resolveRouterOperations` does not look elsewhere), which is also what
+ * makes the type trustworthy as an
  * enumeration: every router type here is documented, at its declaration, as
  * "the subset of the producer's router THIS FILE calls" — so treating its
  * keys as the full operation list is not a guess, it is reading what the
@@ -380,6 +385,30 @@ export const EXPECTATIONS = [
     // is that the batched lookup bfm's merchant-identity resolution depends
     // on (POPS-3634) still exists as a POST on this path.
     query: [],
+    usedBy: 'pillars/bfm/src/api/contacts/client.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'contacts',
+    operationId: 'entities.addresses.list',
+    path: '/entities/{id}/addresses',
+    method: 'get',
+    // The merchant id is the whole request (ADR-053) — the address picker's
+    // read leg.
+    query: [],
+    pathParams: ['id'],
+    usedBy: 'pillars/bfm/src/api/contacts/client.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'contacts',
+    operationId: 'entities.addresses.create',
+    path: '/entities/{id}/addresses',
+    method: 'post',
+    // The body (`{ value }`) is not modelled here; the id is the path param
+    // this guard can pin (ADR-053).
+    query: [],
+    pathParams: ['id'],
     usedBy: 'pillars/bfm/src/api/contacts/client.ts',
   },
   {
@@ -1591,11 +1620,49 @@ export function resolveRouterOperations(scannable, typeName) {
     const close = matchBrace(value, firstNonSpace);
     if (close === -1) continue;
     const inner = value.slice(firstNonSpace + 1, close);
-    const methods = typeLiteralMembers(inner);
-    if (methods === null) return null;
-    for (const method of methods) {
-      operations.push(`${domain.key}.${method.key}`);
+    const nested = resolveNestedOperations(inner, [domain.key]);
+    if (nested === null) return null;
+    operations.push(...nested);
+  }
+  return operations;
+}
+
+/**
+ * Walk one domain's members, one level beneath {@link resolveRouterOperations}'s
+ * own domain loop. A member whose value is itself an object type literal
+ * names a further sub-resource rather than a callable procedure — a
+ * producer's own operationId nesting one level deeper than `domain.method`,
+ * the shape contacts' `entities.addresses.list`/`.create` uses (ADR-053) for
+ * an address beneath an entity — and recurses one level on, prefixed by the
+ * key walked so far. Anything else (an arrow type, a named function-type
+ * alias) is the leaf operation `prefix.joined.with.dots`, exactly the
+ * `domain.method` shape this returned unconditionally before nesting past
+ * one level existed anywhere in this tree.
+ *
+ * @param {string} levelBody
+ * @param {string[]} prefix
+ * @returns {string[] | null}
+ */
+function resolveNestedOperations(levelBody, prefix) {
+  const members = typeLiteralMembers(levelBody);
+  if (members === null) return null;
+
+  /** @type {string[]} */
+  const operations = [];
+  for (const member of members) {
+    const value = levelBody.slice(member.valueStart, member.valueEnd);
+    const firstNonSpace = value.search(/\S/u);
+    if (firstNonSpace !== -1 && value[firstNonSpace] === '{') {
+      const close = matchBrace(value, firstNonSpace);
+      if (close !== -1) {
+        const inner = value.slice(firstNonSpace + 1, close);
+        const nested = resolveNestedOperations(inner, [...prefix, member.key]);
+        if (nested === null) return null;
+        operations.push(...nested);
+        continue;
+      }
     }
+    operations.push([...prefix, member.key].join('.'));
   }
   return operations;
 }

@@ -36,6 +36,24 @@ function clientOver(factory: PillarHandleFactory, contacts?: MobileContactsClien
   return createMobilePurchasesClient(createPillarGateway(factory), contacts);
 }
 
+/**
+ * A `MobileContactsClient` answering `lookupEntities` as given, and throwing on
+ * every method this suite never reaches, so a new method on the client is one
+ * edit here rather than one per stub.
+ */
+function contactsWith(
+  lookupEntities: MobileContactsClient['lookupEntities']
+): MobileContactsClient {
+  const unexercised = (): never => {
+    throw new Error('not exercised by this suite');
+  };
+  return {
+    lookupEntities,
+    getMerchantAddresses: unexercised,
+    createMerchantAddress: unexercised,
+  };
+}
+
 /** A `MobileContactsClient` stub that records every `lookupEntities` call. */
 function contactsSpy(names: ReadonlyMap<string, string> = new Map()): {
   client: MobileContactsClient;
@@ -44,12 +62,10 @@ function contactsSpy(names: ReadonlyMap<string, string> = new Map()): {
   const calls: (readonly string[])[] = [];
   return {
     calls,
-    client: {
-      lookupEntities: (ids) => {
-        calls.push(ids);
-        return Promise.resolve({ kind: 'ok', value: names });
-      },
-    },
+    client: contactsWith((ids) => {
+      calls.push(ids);
+      return Promise.resolve({ kind: 'ok', value: names });
+    }),
   };
 }
 
@@ -281,6 +297,25 @@ describe('saveReceiptDraft', () => {
     expect(saved?.items[0]?.listPriceCents).toBe(1500);
     expect(saved?.items[0]?.listPriceAsserted).toBe(true);
   });
+
+  it('forwards a resolved merchant and address unchanged (ADR-053, POPS-4326)', async () => {
+    const fake = createPurchasesDraftFake(purchasesDraft(), purchasesPurchaseDetail());
+    await clientOver(fake.factory).saveReceiptDraft({
+      ...SAVE_BODY,
+      merchantEntityId: 'entity-1',
+      merchantAddressId: 'addr-1',
+      merchantAddressName: '12 Example St, Sydney',
+    });
+
+    const [saved] = fake.saved as {
+      merchantEntityId?: unknown;
+      merchantAddressId?: unknown;
+      merchantAddressName?: unknown;
+    }[];
+    expect(saved?.merchantEntityId).toBe('entity-1');
+    expect(saved?.merchantAddressId).toBe('addr-1');
+    expect(saved?.merchantAddressName).toBe('12 Example St, Sydney');
+  });
 });
 
 const MANUAL_BODY = {
@@ -366,10 +401,9 @@ describe('merchant identity batching', () => {
     const readFake = createPurchasesReadFake([
       purchasesRow({ id: 'pur-1', merchantEntityId: 'ent-1', merchantEntityName: 'K mart' }),
     ]);
-    const downContacts: MobileContactsClient = {
-      lookupEntities: () =>
-        Promise.resolve({ kind: 'unavailable', pillar: 'contacts', status: 503 }),
-    };
+    const downContacts = contactsWith(() =>
+      Promise.resolve({ kind: 'unavailable', pillar: 'contacts', status: 503 })
+    );
 
     const outcome = await clientOver(readFake.factory, downContacts).listPurchases({
       limit: 10,
@@ -454,10 +488,9 @@ describe('a contacts outage never fails the purchases response', () => {
     const readFake = createPurchasesReadFake([
       purchasesRow({ id: 'pur-1', merchantEntityId: 'ent-1', merchantEntityName: 'K mart' }),
     ]);
-    const downContacts: MobileContactsClient = {
-      lookupEntities: () =>
-        Promise.resolve({ kind: 'unavailable', pillar: 'contacts', status: 503 }),
-    };
+    const downContacts = contactsWith(() =>
+      Promise.resolve({ kind: 'unavailable', pillar: 'contacts', status: 503 })
+    );
 
     const outcome = await clientOver(readFake.factory, downContacts).listPurchases({
       limit: 10,
@@ -477,10 +510,9 @@ describe('a contacts outage never fails the purchases response', () => {
     const readFake = createPurchasesReadFake([
       purchasesRow({ id: 'pur-1', merchantEntityId: 'ent-1', merchantEntityName: 'K mart' }),
     ]);
-    const erroringContacts: MobileContactsClient = {
-      lookupEntities: () =>
-        Promise.resolve({ kind: 'contract-mismatch', pillar: 'contacts', status: 502 }),
-    };
+    const erroringContacts = contactsWith(() =>
+      Promise.resolve({ kind: 'contract-mismatch', pillar: 'contacts', status: 502 })
+    );
 
     const outcome = await clientOver(readFake.factory, erroringContacts).listPurchases({
       limit: 10,
@@ -514,9 +546,7 @@ describe('a contacts outage never fails the purchases response', () => {
       // missing, this test would hang until the suite's own timeout instead
       // of failing cleanly, which is why it is asserted below rather than
       // just trusted to pass.
-      const hungContacts: MobileContactsClient = {
-        lookupEntities: () => new Promise(() => undefined),
-      };
+      const hungContacts = contactsWith(() => new Promise(() => undefined));
 
       const pending = clientOver(readFake.factory, hungContacts).listPurchases({
         limit: 10,
@@ -540,9 +570,7 @@ describe('a contacts outage never fails the purchases response', () => {
     const readFake = createPurchasesReadFake([
       purchasesRow({ id: 'pur-1', merchantEntityId: 'ent-1', merchantEntityName: 'K mart' }),
     ]);
-    const throwingContacts: MobileContactsClient = {
-      lookupEntities: () => Promise.reject(new Error('boom')),
-    };
+    const throwingContacts = contactsWith(() => Promise.reject(new Error('boom')));
 
     const outcome = await clientOver(readFake.factory, throwingContacts).listPurchases({
       limit: 10,

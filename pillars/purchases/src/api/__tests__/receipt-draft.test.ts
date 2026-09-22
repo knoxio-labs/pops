@@ -286,6 +286,29 @@ describe('POST /receipts/draft', () => {
     const response = await saveDraft(appWith(saying(GOOD_READING), known));
     expect(response.body.purchase.merchantEntityId).toBe('entity-bunnings');
   });
+
+  it('trusts a reviewer-sent merchantEntityId verbatim, bypassing merchant resolution (ADR-053, POPS-4326)', async () => {
+    const shouldNeverBeCalled: MerchantResolver = {
+      resolve: async () => {
+        throw new Error('nameMerchant must not run when the body already names an id');
+      },
+    };
+    const response = await saveDraft(appWith(saying(GOOD_READING), shouldNeverBeCalled), {
+      merchantEntityId: 'entity-picked-by-reviewer',
+    });
+    expect(response.status).toBe(200);
+    expect(response.body.purchase.merchantEntityId).toBe('entity-picked-by-reviewer');
+  });
+
+  it('persists a reviewer-picked merchantAddressId and merchantAddressName (ADR-053)', async () => {
+    const response = await saveDraft(appWith(saying(GOOD_READING)), {
+      merchantAddressId: 'addr-1',
+      merchantAddressName: '12 Example St, Sydney',
+    });
+    expect(response.status).toBe(200);
+    expect(response.body.purchase.merchantAddressId).toBe('addr-1');
+    expect(response.body.purchase.merchantAddressName).toBe('12 Example St, Sydney');
+  });
 });
 
 const createManual = (app: Express, overrides: Record<string, unknown> = {}) =>
@@ -361,5 +384,28 @@ describe('POST /purchases/manual', () => {
       source: RECEIPT_SOURCE_ID,
     });
     expect(response.body.purchase.source).toBe(MANUAL_SOURCE_ID);
+  });
+
+  it('trusts a reviewer-sent merchantEntityId verbatim, bypassing merchant resolution (ADR-053, POPS-4326)', async () => {
+    const shouldNeverBeCalled: MerchantResolver = {
+      resolve: async () => {
+        throw new Error('nameMerchant must not run when the body already names an id');
+      },
+    };
+    const response = await createManual(appWith(null, shouldNeverBeCalled), {
+      merchantEntityId: 'entity-picked-by-reviewer',
+    });
+    expect(response.status).toBe(200);
+    expect(response.body.purchase.merchantEntityId).toBe('entity-picked-by-reviewer');
+  });
+
+  it('persists a reviewer-picked merchantAddressId and merchantAddressName (ADR-053)', async () => {
+    const response = await createManual(appWith(null), {
+      merchantAddressId: 'addr-1',
+      merchantAddressName: '12 Example St, Sydney',
+    });
+    expect(response.status).toBe(200);
+    expect(response.body.purchase.merchantAddressId).toBe('addr-1');
+    expect(response.body.purchase.merchantAddressName).toBe('12 Example St, Sydney');
   });
 });

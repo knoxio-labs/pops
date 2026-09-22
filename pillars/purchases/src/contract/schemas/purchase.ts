@@ -97,6 +97,10 @@ export const PurchaseSchema = z.object({
   totalCents: CentsSchema,
   merchantEntityId: z.string().nullable(),
   merchantEntityName: z.string().nullable(),
+  /** A contacts `entity_addresses` id — the branch this purchase was made at (ADR-053). */
+  merchantAddressId: z.string().nullable(),
+  /** The printed address, kept verbatim beside {@link merchantAddressId} — see ADR-053. */
+  merchantAddressName: z.string().nullable(),
   settlementMode: SettlementModeSchema,
   paymentHint: z.string().nullable(),
   rawRef: z.string().nullable(),

@@ -166,7 +166,12 @@ export function makeReceiptDraftHandlers(
       }
 
       ensureDraftSource(db, RECEIPT_DRAFT_SOURCE);
-      const merchantEntityId = await nameMerchant(merchant, body.merchantEntityName);
+      // A reviewer who already confirmed or picked a merchant sends its id
+      // directly (ADR-053's send side, POPS-4326) — that verbatim id is
+      // trusted over a fresh name match, and no contacts round trip is spent
+      // re-deriving what the reviewer already settled.
+      const merchantEntityId =
+        body.merchantEntityId ?? (await nameMerchant(merchant, body.merchantEntityName));
       const input = toCreatePurchaseInput(
         { ...body, merchantEntityId },
         RECEIPT_SOURCE_ID,

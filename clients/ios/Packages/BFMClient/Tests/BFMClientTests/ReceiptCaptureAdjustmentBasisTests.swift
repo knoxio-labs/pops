@@ -59,6 +59,72 @@ internal struct ReceiptCaptureAdjustmentBasisTests {
         #expect(body.shippingIncluded == false)
     }
 
+    @Test(
+        "saveDraftBody sends a resolved merchant and address, and drops merchantName (ADR-053, POPS-4326)"
+    )
+    func saveDraftBodySendsResolvedMerchantAndAddress() {
+        let payload = ReceiptDraftSavePayload.fake(
+            fields: .fake(
+                merchantName: "Bunnings Warehouse",
+                merchantEntityId: "entity-1",
+                merchantAddressId: "addr-1",
+                merchantAddressText: "12 Example St, Sydney"
+            )
+        )
+
+        let body = BFMReceiptCaptureRepository.saveDraftBody(from: payload)
+
+        #expect(body.merchantEntityId == "entity-1")
+        #expect(body.merchantAddressId == "addr-1")
+        #expect(body.merchantAddressName == "12 Example St, Sydney")
+        #expect(body.merchantName == nil)
+    }
+
+    @Test("saveDraftBody falls back to merchantName when no entity was resolved or picked")
+    func saveDraftBodyFallsBackToMerchantName() {
+        let payload = ReceiptDraftSavePayload.fake(
+            fields: .fake(merchantName: "Corner Store", merchantEntityId: nil)
+        )
+
+        let body = BFMReceiptCaptureRepository.saveDraftBody(from: payload)
+
+        #expect(body.merchantName == "Corner Store")
+        #expect(body.merchantEntityId == nil)
+    }
+
+    @Test(
+        "manualBody sends a resolved merchant and address, and drops merchantName (ADR-053, POPS-4326)"
+    )
+    func manualBodySendsResolvedMerchantAndAddress() {
+        let payload = ReceiptManualPurchasePayload(
+            fields: .fake(
+                merchantName: "Bunnings Warehouse",
+                merchantEntityId: "entity-1",
+                merchantAddressId: "addr-1",
+                merchantAddressText: "12 Example St, Sydney"
+            )
+        )
+
+        let body = BFMReceiptCaptureRepository.manualBody(from: payload)
+
+        #expect(body.merchantEntityId == "entity-1")
+        #expect(body.merchantAddressId == "addr-1")
+        #expect(body.merchantAddressName == "12 Example St, Sydney")
+        #expect(body.merchantName == nil)
+    }
+
+    @Test("manualBody falls back to merchantName when no entity was resolved or picked")
+    func manualBodyFallsBackToMerchantName() {
+        let payload = ReceiptManualPurchasePayload(
+            fields: .fake(merchantName: "Corner Store", merchantEntityId: nil)
+        )
+
+        let body = BFMReceiptCaptureRepository.manualBody(from: payload)
+
+        #expect(body.merchantName == "Corner Store")
+        #expect(body.merchantEntityId == nil)
+    }
+
     @Test("extract carries a stated basis for all four flags")
     func extractCarriesBasis() async throws {
         let outcome = try await extractReceipt(

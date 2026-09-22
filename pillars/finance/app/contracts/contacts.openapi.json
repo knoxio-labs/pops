@@ -1,6 +1,73 @@
 {
   "components": {
     "schemas": {
+      "Address": {
+        "description": "The wire shape served by `GET`/`POST /entities/:id/addresses`.",
+        "properties": {
+          "entityId": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "lastEditedTime": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "entityId",
+          "value",
+          "lastEditedTime"
+        ],
+        "type": "object"
+      },
+      "AddressListResponse": {
+        "description": "`GET /entities/{id}/addresses` response body.",
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/Address"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "AddressMutation": {
+        "description": "`POST /entities/{id}/addresses` response body.",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/Address"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "data",
+          "message"
+        ],
+        "type": "object"
+      },
+      "CreateAddressBody": {
+        "description": "Body accepted by `POST /entities/:id/addresses`.",
+        "properties": {
+          "value": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "value"
+        ],
+        "type": "object"
+      },
       "CreateEntityBody": {
         "description": "Body accepted by `POST /entities`. `type` defaults to `company`; the array\nfields default to empty.\n\n`colour` deliberately has no field here: it is never client-supplied, on\ncreate or otherwise (POPS-3061 design correction). `entities::repo::create`\nassigns one at random from the fixed palette in `entities::colours`, the\nsame way `avatar_asset_id`/`poster_asset_id` are absent and assigned\nthrough their own dedicated write paths rather than this body.",
         "properties": {
@@ -734,6 +801,106 @@
         },
         "tags": [
           "crate::entities::routes"
+        ]
+      }
+    },
+    "/entities/{id}/addresses": {
+      "get": {
+        "operationId": "entities.addresses.list",
+        "parameters": [
+          {
+            "description": "Entity id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddressListResponse"
+                }
+              }
+            },
+            "description": "The entity's addresses"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "No such entity"
+          }
+        },
+        "tags": [
+          "crate::entities::addresses_routes"
+        ]
+      },
+      "post": {
+        "operationId": "entities.addresses.create",
+        "parameters": [
+          {
+            "description": "Entity id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAddressBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddressMutation"
+                }
+              }
+            },
+            "description": "Created address"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid body"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "No such entity"
+          }
+        },
+        "tags": [
+          "crate::entities::addresses_routes"
         ]
       }
     },

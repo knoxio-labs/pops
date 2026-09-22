@@ -173,6 +173,10 @@ export interface CreatePurchaseInput {
   readonly totalCents: number;
   readonly merchantEntityId?: string | null;
   readonly merchantEntityName?: string | null;
+  /** A contacts `entity_addresses` id — the branch this purchase was made at (ADR-053). */
+  readonly merchantAddressId?: string | null;
+  /** The printed address, kept verbatim beside {@link merchantAddressId} — see ADR-053. */
+  readonly merchantAddressName?: string | null;
   readonly settlementMode?: SettlementMode;
   readonly paymentHint?: string | null;
   readonly rawRef?: string | null;

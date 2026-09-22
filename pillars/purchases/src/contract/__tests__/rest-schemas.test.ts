@@ -44,6 +44,55 @@ describe('CreatePurchaseBodySchema — adjustment basis', () => {
   });
 });
 
+describe('CreatePurchaseBodySchema — merchant address (ADR-053)', () => {
+  it('accepts merchantAddressId and merchantAddressName', () => {
+    const parsed = CreatePurchaseBodySchema.parse({
+      ...MINIMAL,
+      merchantAddressId: 'addr-1',
+      merchantAddressName: '12 Example St, Sydney',
+    });
+
+    expect(parsed.merchantAddressId).toBe('addr-1');
+    expect(parsed.merchantAddressName).toBe('12 Example St, Sydney');
+  });
+
+  it('accepts an explicit null for either field', () => {
+    const parsed = CreatePurchaseBodySchema.parse({
+      ...MINIMAL,
+      merchantAddressId: null,
+      merchantAddressName: null,
+    });
+
+    expect(parsed.merchantAddressId).toBeNull();
+    expect(parsed.merchantAddressName).toBeNull();
+  });
+
+  it('parses with both omitted', () => {
+    const parsed = CreatePurchaseBodySchema.parse(MINIMAL);
+
+    expect(parsed.merchantAddressId).toBeUndefined();
+    expect(parsed.merchantAddressName).toBeUndefined();
+  });
+
+  it('rejects a non-string, non-null merchantAddressId', () => {
+    expect(() =>
+      CreatePurchaseBodySchema.parse({
+        ...MINIMAL,
+        merchantAddressId: 42,
+      })
+    ).toThrow();
+  });
+
+  it('rejects a non-string, non-null merchantAddressName', () => {
+    expect(() =>
+      CreatePurchaseBodySchema.parse({
+        ...MINIMAL,
+        merchantAddressName: 42,
+      })
+    ).toThrow();
+  });
+});
+
 const MINIMAL_ITEM = {
   name: 'Timber Pine DAR 42x19',
   unitPriceCents: 350,

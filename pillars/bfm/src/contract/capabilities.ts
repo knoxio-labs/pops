@@ -94,6 +94,17 @@ export const MOBILE_CAPABILITIES = [
    * `purchases.read`.
    */
   'inventory.write',
+  /**
+   * Read a merchant's recorded addresses (ADR-053) — what an address
+   * picker on the receipt review screen offers.
+   */
+  'contacts.entities.read',
+  /**
+   * Record a new address for a merchant (ADR-053) — its own entry rather
+   * than folded into `contacts.entities.read`, on the same reasoning
+   * `purchases.write` is not implied by `purchases.read`.
+   */
+  'contacts.entities.write',
 ] as const;
 
 export type MobileCapability = (typeof MOBILE_CAPABILITIES)[number];
@@ -163,6 +174,13 @@ export const MOBILE_CAPABILITY_SCOPES: Readonly<Record<MobileCapability, readonl
    * account beyond what reading already needed.
    */
   'inventory.write': ['inventory.sync', 'inventory.codes', 'inventory.media'],
+  /**
+   * Empty: contacts enforces no inbound scope check at all today (it is a
+   * newer, ADR-044-unaware Rust pillar), so there is nothing on bfm's
+   * service-account grant this capability leans on.
+   */
+  'contacts.entities.read': [],
+  'contacts.entities.write': [],
 };
 
 /**

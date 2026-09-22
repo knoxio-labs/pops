@@ -147,6 +147,8 @@ function insertOrder(tx: PurchasesDb, input: CreatePurchaseInput, now: string): 
       totalCents: input.totalCents,
       merchantEntityId: input.merchantEntityId ?? null,
       merchantEntityName: normalizeMerchantLabel(input.merchantEntityName),
+      merchantAddressId: input.merchantAddressId ?? null,
+      merchantAddressName: normalizeMerchantLabel(input.merchantAddressName),
       settlementMode: input.settlementMode ?? 'unknown',
       paymentHint: input.paymentHint ?? null,
       rawRef: input.rawRef ?? null,

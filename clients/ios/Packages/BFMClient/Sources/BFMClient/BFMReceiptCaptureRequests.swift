@@ -22,7 +22,14 @@ extension BFMReceiptCaptureRepository {
             },
             idempotencyKey: payload.fields.idempotencyKey,
             items: payload.fields.items.map(saveDraftItem(from:)),
-            merchantName: payload.fields.merchantName,
+            merchantAddressId: payload.fields.merchantAddressId,
+            merchantAddressName: payload.fields.merchantAddressText,
+            // `merchantName` is the free-text fallback: sent only when the
+            // reviewer has not resolved (or picked) a contacts entity, the
+            // same posture `merchantEntityId` documents on its own field.
+            merchantEntityId: payload.fields.merchantEntityId,
+            merchantName: payload.fields.merchantEntityId == nil
+                ? payload.fields.merchantName : nil,
             orderedAt: payload.fields.orderedAt,
             shippingCents: payload.fields.shippingCents,
             shippingIncluded: payload.fields.shippingIncluded,
@@ -44,7 +51,11 @@ extension BFMReceiptCaptureRepository {
             discountIncluded: payload.fields.discountIncluded,
             idempotencyKey: payload.fields.idempotencyKey,
             items: payload.fields.items.map(manualItem(from:)),
-            merchantName: payload.fields.merchantName,
+            merchantAddressId: payload.fields.merchantAddressId,
+            merchantAddressName: payload.fields.merchantAddressText,
+            merchantEntityId: payload.fields.merchantEntityId,
+            merchantName: payload.fields.merchantEntityId == nil
+                ? payload.fields.merchantName : nil,
             orderedAt: payload.fields.orderedAt,
             shippingCents: payload.fields.shippingCents,
             shippingIncluded: payload.fields.shippingIncluded,

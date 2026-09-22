@@ -20,17 +20,18 @@ server and the `emit-openapi` bin share.
 
 The HTTP surface:
 
-| Path                    | What it serves                                                                                      |
-| ----------------------- | --------------------------------------------------------------------------------------------------- |
-| `/`                     | Stub root — a plain-text identity banner so `GET /` is not a 404.                                   |
-| `/entities`             | Contact CRUD + paginated/filtered list (`GET`/`POST`).                                              |
-| `/entities/{id}`        | Single-entity read/update/delete (`GET`/`PATCH`/`DELETE`).                                          |
-| `/entities/lookup`      | Bulk match-column lookup (`POST`) — resolve many names/ids in one call.                             |
-| `/entities/{id}/avatar` | Avatar image upload (`PUT`, raw bytes + `Content-Type`) / serve (`GET`).                            |
-| `/entities/{id}/poster` | Poster image upload (`PUT`, raw bytes + `Content-Type`) / serve (`GET`).                            |
-| `/search`               | The contacts slice of unified search (`POST`) — ranked name hits.                                   |
-| `/health`               | Fleet-standard liveness envelope.                                                                   |
-| `/openapi`              | The OpenAPI document, regenerated live from the same `src/openapi.rs` source as the committed copy. |
+| Path                       | What it serves                                                                                      |
+| -------------------------- | --------------------------------------------------------------------------------------------------- |
+| `/`                        | Stub root — a plain-text identity banner so `GET /` is not a 404.                                   |
+| `/entities`                | Contact CRUD + paginated/filtered list (`GET`/`POST`).                                              |
+| `/entities/{id}`           | Single-entity read/update/delete (`GET`/`PATCH`/`DELETE`).                                          |
+| `/entities/lookup`         | Bulk match-column lookup (`POST`) — resolve many names/ids in one call.                             |
+| `/entities/{id}/addresses` | An entity's addresses (`GET`/`POST`) — one row per branch (ADR-053).                                |
+| `/entities/{id}/avatar`    | Avatar image upload (`PUT`, raw bytes + `Content-Type`) / serve (`GET`).                            |
+| `/entities/{id}/poster`    | Poster image upload (`PUT`, raw bytes + `Content-Type`) / serve (`GET`).                            |
+| `/search`                  | The contacts slice of unified search (`POST`) — ranked name hits.                                   |
+| `/health`                  | Fleet-standard liveness envelope.                                                                   |
+| `/openapi`                 | The OpenAPI document, regenerated live from the same `src/openapi.rs` source as the committed copy. |
 
 Registration is outbound: on boot (when opted in) contacts POSTs its manifest to
 the registry, then heartbeats every 10s and deregisters on `SIGTERM`/`SIGINT`.

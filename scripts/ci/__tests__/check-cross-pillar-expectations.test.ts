@@ -594,6 +594,27 @@ describe('resolveRouterOperations', () => {
     expect(resolveRouterOperations(source, 'X')).toBeNull();
   });
 
+  it('recurses one level past domain.method for a sub-resource operation (ADR-053)', () => {
+    const source =
+      'type R = { entities: { lookup: (i: unknown) => unknown; ' +
+      'addresses: { list: (i: { id: string }) => unknown; create: (i: { id: string; value: string }) => unknown; }; }; };';
+    expect(resolveRouterOperations(source, 'R')?.toSorted()).toEqual([
+      'entities.addresses.create',
+      'entities.addresses.list',
+      'entities.lookup',
+    ]);
+  });
+
+  it('recurses to whatever depth the type actually declares', () => {
+    const source = 'type R = { a: { b: { c: { d: (i: unknown) => unknown; }; }; }; };';
+    expect(resolveRouterOperations(source, 'R')).toEqual(['a.b.c.d']);
+  });
+
+  it('propagates null from a malformed member at a nested level, not a partial list', () => {
+    const source = 'type R = { entities: { addresses: { get(): Y; set(v: Z): void; }; }; };';
+    expect(resolveRouterOperations(source, 'R')).toBeNull();
+  });
+
   it('terminates rather than looping on a body that never satisfies the key: value shape', () => {
     // Regression: the member scanner used to `continue` without fully skipping
     // an unmodelled member, which a reviewer flagged as a potential infinite

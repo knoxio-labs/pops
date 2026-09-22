@@ -27,6 +27,8 @@ export const PURCHASE: PurchaseGetResponses[200]['purchase'] = {
   ingestMethod: 'email',
   merchantEntityId: 'ent_hardware_barn',
   merchantEntityName: 'Hardware Barn',
+  merchantAddressId: null,
+  merchantAddressName: null,
   orderedAt: ORDERED_AT,
   orderedAtOffsetMinutes: 600,
   paymentHint: 'card ending 4417',

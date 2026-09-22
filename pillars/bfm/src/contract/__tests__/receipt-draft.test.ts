@@ -24,6 +24,7 @@ const MINIMAL_SAVE_BODY = {
 
 const MINIMAL_DRAFT = {
   merchantName: 'Bunnings',
+  merchantAddressName: null,
   orderedAt: '2026-02-02T01:41:21.000Z',
   orderedAtOffsetMinutes: null,
   currency: 'AUD',
@@ -110,5 +111,53 @@ describe('MobileDraftLineSchema — list price', () => {
     const parsed = MobileDraftLineSchema.parse(MINIMAL_LINE);
     expect(parsed.listPriceCents).toBeUndefined();
     expect(parsed.listPriceAsserted).toBeUndefined();
+  });
+});
+
+describe('MobileSaveReceiptDraftBodySchema — merchant and address (ADR-053, POPS-4326)', () => {
+  it('round-trips a resolved merchant and address', () => {
+    const parsed = MobileSaveReceiptDraftBodySchema.parse({
+      ...MINIMAL_SAVE_BODY,
+      merchantEntityId: 'entity-1',
+      merchantAddressId: 'addr-1',
+      merchantAddressName: '12 Example St, Sydney',
+    });
+    expect(parsed.merchantEntityId).toBe('entity-1');
+    expect(parsed.merchantAddressId).toBe('addr-1');
+    expect(parsed.merchantAddressName).toBe('12 Example St, Sydney');
+  });
+
+  it('parses with all three omitted, the free-text-only fallback path', () => {
+    const parsed = MobileSaveReceiptDraftBodySchema.parse(MINIMAL_SAVE_BODY);
+    expect(parsed.merchantEntityId).toBeUndefined();
+    expect(parsed.merchantAddressId).toBeUndefined();
+    expect(parsed.merchantAddressName).toBeUndefined();
+  });
+});
+
+describe('MobileReceiptDraftSchema — the extracted address (ADR-053)', () => {
+  it('carries a printed address', () => {
+    const parsed = MobileReceiptDraftSchema.parse({
+      ...MINIMAL_DRAFT,
+      taxIncluded: null,
+      discountIncluded: null,
+      surchargeIncluded: null,
+      shippingIncluded: null,
+      merchantAddressName: '12 Example St, Sydney',
+    });
+    expect(parsed.merchantAddressName).toBe('12 Example St, Sydney');
+  });
+
+  it('rejects an omitted merchantAddressName — a definite null is required', () => {
+    const { merchantAddressName: _omit, ...withoutAddress } = MINIMAL_DRAFT;
+    expect(() =>
+      MobileReceiptDraftSchema.parse({
+        ...withoutAddress,
+        taxIncluded: null,
+        discountIncluded: null,
+        surchargeIncluded: null,
+        shippingIncluded: null,
+      })
+    ).toThrow();
   });
 });

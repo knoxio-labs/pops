@@ -5,6 +5,38 @@ export type ClientOptions = {
 };
 
 /**
+ * The wire shape served by `GET`/`POST /entities/:id/addresses`.
+ */
+export type Address = {
+  entityId: string;
+  id: string;
+  lastEditedTime: string;
+  value: string;
+};
+
+/**
+ * `GET /entities/{id}/addresses` response body.
+ */
+export type AddressListResponse = {
+  data: Array<Address>;
+};
+
+/**
+ * `POST /entities/{id}/addresses` response body.
+ */
+export type AddressMutation = {
+  data: Address;
+  message: string;
+};
+
+/**
+ * Body accepted by `POST /entities/:id/addresses`.
+ */
+export type CreateAddressBody = {
+  value: string;
+};
+
+/**
  * Body accepted by `POST /entities`. `type` defaults to `company`; the array
  * fields default to empty.
  *
@@ -373,6 +405,74 @@ export type EntitiesUpdateResponses = {
 };
 
 export type EntitiesUpdateResponse = EntitiesUpdateResponses[keyof EntitiesUpdateResponses];
+
+export type EntitiesAddressesListData = {
+  body?: never;
+  path: {
+    /**
+     * Entity id
+     */
+    id: string;
+  };
+  query?: never;
+  url: '/entities/{id}/addresses';
+};
+
+export type EntitiesAddressesListErrors = {
+  /**
+   * No such entity
+   */
+  404: ErrorBody;
+};
+
+export type EntitiesAddressesListError =
+  EntitiesAddressesListErrors[keyof EntitiesAddressesListErrors];
+
+export type EntitiesAddressesListResponses = {
+  /**
+   * The entity's addresses
+   */
+  200: AddressListResponse;
+};
+
+export type EntitiesAddressesListResponse =
+  EntitiesAddressesListResponses[keyof EntitiesAddressesListResponses];
+
+export type EntitiesAddressesCreateData = {
+  body: CreateAddressBody;
+  path: {
+    /**
+     * Entity id
+     */
+    id: string;
+  };
+  query?: never;
+  url: '/entities/{id}/addresses';
+};
+
+export type EntitiesAddressesCreateErrors = {
+  /**
+   * Invalid body
+   */
+  400: ErrorBody;
+  /**
+   * No such entity
+   */
+  404: ErrorBody;
+};
+
+export type EntitiesAddressesCreateError =
+  EntitiesAddressesCreateErrors[keyof EntitiesAddressesCreateErrors];
+
+export type EntitiesAddressesCreateResponses = {
+  /**
+   * Created address
+   */
+  201: AddressMutation;
+};
+
+export type EntitiesAddressesCreateResponse =
+  EntitiesAddressesCreateResponses[keyof EntitiesAddressesCreateResponses];
 
 export type EntitiesRemoveAvatarData = {
   body?: never;

@@ -18,6 +18,12 @@ import type {
   MobileBootstrapData,
   MobileBootstrapErrors,
   MobileBootstrapResponses,
+  MobileContactsCreateMerchantAddressData,
+  MobileContactsCreateMerchantAddressErrors,
+  MobileContactsCreateMerchantAddressResponses,
+  MobileContactsGetMerchantAddressesData,
+  MobileContactsGetMerchantAddressesErrors,
+  MobileContactsGetMerchantAddressesResponses,
   MobileFinanceGetAccountData,
   MobileFinanceGetAccountErrors,
   MobileFinanceGetAccountResponses,
@@ -172,6 +178,45 @@ export const mobileBootstrap = <ThrowOnError extends boolean = false>(
   (options?.client ?? client).get<MobileBootstrapResponses, MobileBootstrapErrors, ThrowOnError>({
     url: '/mobile/bootstrap',
     ...options,
+  });
+
+/**
+ * Every address recorded against one merchant, for the review screen's address picker
+ */
+export const mobileContactsGetMerchantAddresses = <ThrowOnError extends boolean = false>(
+  options: Options<MobileContactsGetMerchantAddressesData, ThrowOnError>
+): RequestResult<
+  MobileContactsGetMerchantAddressesResponses,
+  MobileContactsGetMerchantAddressesErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    MobileContactsGetMerchantAddressesResponses,
+    MobileContactsGetMerchantAddressesErrors,
+    ThrowOnError
+  >({ url: '/mobile/contacts/merchants/{id}/addresses', ...options });
+
+/**
+ * Record a new address for one merchant, typed by the reviewer
+ */
+export const mobileContactsCreateMerchantAddress = <ThrowOnError extends boolean = false>(
+  options: Options<MobileContactsCreateMerchantAddressData, ThrowOnError>
+): RequestResult<
+  MobileContactsCreateMerchantAddressResponses,
+  MobileContactsCreateMerchantAddressErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).post<
+    MobileContactsCreateMerchantAddressResponses,
+    MobileContactsCreateMerchantAddressErrors,
+    ThrowOnError
+  >({
+    url: '/mobile/contacts/merchants/{id}/addresses',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
   });
 
 /**

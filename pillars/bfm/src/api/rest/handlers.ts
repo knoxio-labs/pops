@@ -17,6 +17,10 @@ import {
 } from '../rate-limit.js';
 import { makeDeviceHandlers } from './device-handlers.js';
 import {
+  makeMobileContactsHandlers,
+  type MobileContactsHandlerDeps,
+} from './mobile-contacts-handlers.js';
+import {
   makeMobileFinanceHandlers,
   type MobileFinanceHandlerDeps,
 } from './mobile-finance-handlers.js';
@@ -41,7 +45,11 @@ import type { MobileBootstrapDeps } from '../mobile/bootstrap.js';
 const server: ReturnType<typeof initServer> = initServer();
 
 export interface BfmRestHandlerDeps
-  extends MobileFinanceHandlerDeps, MobileInventoryHandlerDeps, MobilePurchasesHandlerDeps {
+  extends
+    MobileContactsHandlerDeps,
+    MobileFinanceHandlerDeps,
+    MobileInventoryHandlerDeps,
+    MobilePurchasesHandlerDeps {
   /** Build version, surfaced on the health response. */
   version: string;
   /** Open handle to `bfm.db`. */
@@ -148,6 +156,7 @@ export function makeBfmRestHandlers(
         body: await buildMobileBootstrap(readDevice(res), bootstrapDeps),
       }),
     },
+    mobileContacts: makeMobileContactsHandlers(deps),
     mobileFinance: makeMobileFinanceHandlers(deps),
     mobileInventory: makeMobileInventoryHandlers(deps),
     mobilePurchases: makeMobilePurchasesHandlers(deps),

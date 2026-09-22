@@ -141,6 +141,20 @@ describe('shapeReceiptDraft — what a draft carries', () => {
   });
 });
 
+describe('shapeReceiptDraft — the branch address (ADR-053)', () => {
+  it('carries extracted.address into merchantAddressName', () => {
+    const { draft } = shape({ address: '123 Example St, Sydney NSW' });
+
+    expect(draft.merchantAddressName).toBe('123 Example St, Sydney NSW');
+  });
+
+  it('is null for a receipt with no printed address', () => {
+    const { draft } = shape({ address: null });
+
+    expect(draft.merchantAddressName).toBeNull();
+  });
+});
+
 describe('shapeReceiptDraft — what the reading could not settle', () => {
   it('tags a draft whose date nothing could read, and dates it from the upload', () => {
     // No date on the paper and no capture to borrow one from. The draft
