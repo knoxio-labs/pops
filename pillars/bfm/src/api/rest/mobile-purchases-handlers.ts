@@ -18,6 +18,7 @@ import { makeMobilePurchasesDraftHandlers } from './mobile-purchases-draft-handl
 import { makeMobilePurchasesSearchHandlers } from './mobile-purchases-search-handlers.js';
 import {
   toCollectionUpstreamErrorResponse,
+  toPurchaseUpdateErrorResponse,
   toReceiptBytesErrorResponse,
   toUpstreamErrorResponse,
 } from './upstream-error.js';
@@ -92,6 +93,13 @@ export function makeMobilePurchasesHandlers(deps: MobilePurchasesHandlerDeps) {
     getPurchase: async ({ params }: Req['getPurchase']) => {
       const outcome = await deps.purchases.getPurchase(params.id);
       if (!isGatewayOk(outcome)) return toUpstreamErrorResponse(outcome);
+
+      return { status: 200 as const, body: outcome.value };
+    },
+
+    updatePurchase: async ({ params, body }: Req['updatePurchase']) => {
+      const outcome = await deps.purchases.updatePurchase(params.id, body);
+      if (!isGatewayOk(outcome)) return toPurchaseUpdateErrorResponse(outcome);
 
       return { status: 200 as const, body: outcome.value };
     },

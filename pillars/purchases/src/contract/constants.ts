@@ -301,3 +301,29 @@ export const MIN_MATCH_CONFIDENCE = 0.5;
  * problem retry already solves (ADR-042).
  */
 export const DEFAULT_SETTLEMENT_WINDOW_DAYS = 21;
+
+/**
+ * The fields a saved-purchase edit can be recorded against — the closed
+ * vocabulary `purchase_edits.field` enforces by CHECK.
+ *
+ * Header fields (`merchant` through `surcharge`) carry a null `itemId`; the
+ * `line*` fields are scoped to one line and always carry one. `lineAdded`
+ * and `lineRemoved` mark a line's existence changing rather than one of its
+ * values, so they carry no `original` (added) or no `current` (removed).
+ */
+export const PURCHASE_EDIT_FIELDS = [
+  'merchant',
+  'orderedOn',
+  'total',
+  'subtotal',
+  'tax',
+  'shipping',
+  'discount',
+  'surcharge',
+  'lineName',
+  'lineQuantity',
+  'lineTotal',
+  'lineAdded',
+  'lineRemoved',
+] as const;
+export type PurchaseEditField = (typeof PURCHASE_EDIT_FIELDS)[number];

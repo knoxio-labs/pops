@@ -46,6 +46,11 @@ export function inventoryItemUri(id: string): string {
   return popsUri('inventory', 'item', id);
 }
 
+/** The inventory item id a `pops://inventory/item/<id>` URI names, or null if it names none. */
+export function inventoryItemIdFromUri(uri: string): string | null {
+  return INVENTORY_ITEM_URI.exec(uri)?.[1] ?? null;
+}
+
 export const InventoryProposalSchema = z.object({
   purchaseId: z.string(),
   itemId: z.string(),

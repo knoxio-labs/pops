@@ -64,6 +64,7 @@ const ACCOUNTING: PurchaseGetResponses[200]['accounting'] = {
 
 export const ORDER: PurchaseGetResponses[200] = {
   accounting: ACCOUNTING,
+  edit: null,
   purchase: PURCHASE,
   charges: [
     {

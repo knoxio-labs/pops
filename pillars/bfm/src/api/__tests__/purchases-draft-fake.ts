@@ -149,6 +149,7 @@ export function purchasesPurchaseDetail(
   return {
     kind: 'ok',
     value: {
+      edit: null,
       purchase: {
         id: overrides.id ?? 'pur-1',
         source: overrides.source ?? 'receipt',
@@ -164,6 +165,7 @@ export function purchasesPurchaseDetail(
         orderedAt: '2026-08-01T14:32:00+10:00',
         orderedAtOffsetMinutes: 600,
         status: 'awaiting_settlement',
+        updatedAt: '2026-08-01T14:32:00.000Z',
       },
       items: [],
       documents: [],

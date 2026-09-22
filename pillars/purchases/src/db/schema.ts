@@ -47,6 +47,7 @@ import type {
   purchaseLinkRejections as purchaseLinkRejectionsTable,
 } from './schema/charges.js';
 import type { purchaseDocuments as purchaseDocumentsTable } from './schema/documents.js';
+import type { purchaseEdits as purchaseEditsTable } from './schema/edits.js';
 import type {
   purchaseItemNotes as purchaseItemNotesTable,
   purchaseItems as purchaseItemsTable,
@@ -73,6 +74,7 @@ export {
 } from './schema/charges.js';
 export { purchaseCapture } from './schema/capture.js';
 export { purchaseDocuments } from './schema/documents.js';
+export { purchaseEdits } from './schema/edits.js';
 export {
   purchaseItemNotes,
   purchaseItems,
@@ -107,6 +109,8 @@ export type PurchaseMatchRuleRow = InferSelectModel<typeof purchaseMatchRulesTab
 export type PurchaseMatchRuleInsert = InferInsertModel<typeof purchaseMatchRulesTable>;
 export type PurchaseDocumentRow = InferSelectModel<typeof purchaseDocumentsTable>;
 export type PurchaseDocumentInsert = InferInsertModel<typeof purchaseDocumentsTable>;
+export type PurchaseEditRow = InferSelectModel<typeof purchaseEditsTable>;
+export type PurchaseEditInsert = InferInsertModel<typeof purchaseEditsTable>;
 export type PurchaseCaptureRow = InferSelectModel<typeof purchaseCaptureTable>;
 export type PurchaseCaptureInsert = InferInsertModel<typeof purchaseCaptureTable>;
 export type PurchaseSourceRow = InferSelectModel<typeof purchaseSourcesTable>;

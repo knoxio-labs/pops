@@ -64,6 +64,42 @@ export function resolveOrderAmount(ctx: IngestContext, input: CreateChargeInput)
  *   money that came back, doubling the error in both directions.
  */
 
+/** The adjustment components a total is checked against, and whether each is already folded into the line prices. */
+export interface AdjustmentBasis {
+  readonly discountCents?: number | null;
+  readonly surchargeCents?: number | null;
+  readonly shippingCents?: number | null;
+  readonly taxCents?: number | null;
+  readonly discountIncluded?: boolean | null;
+  readonly surchargeIncluded?: boolean | null;
+  readonly shippingIncluded?: boolean | null;
+  readonly taxIncluded?: boolean | null;
+}
+
+/**
+ * What the lines and adjustments say the total should be.
+ *
+ * Shared between `findDraftInconsistency` (a fresh draft, still shaped as
+ * the wire body) and the saved-purchase update path (a merge of stored and
+ * patched adjustments) — both ask the same question of the same four
+ * components, and a second copy of the arithmetic is a second place for it
+ * to drift from the first. An adjustment already folded into the line
+ * prices contributes nothing more; a null or undefined basis is treated as
+ * not-included.
+ */
+export function computeExpectedTotalCents(
+  lineTotalCents: number,
+  adjustments: AdjustmentBasis
+): number {
+  return (
+    lineTotalCents -
+    (adjustments.discountIncluded ? 0 : (adjustments.discountCents ?? 0)) +
+    (adjustments.surchargeIncluded ? 0 : (adjustments.surchargeCents ?? 0)) +
+    (adjustments.shippingIncluded ? 0 : (adjustments.shippingCents ?? 0)) +
+    (adjustments.taxIncluded ? 0 : (adjustments.taxCents ?? 0))
+  );
+}
+
 export function assertAllocationsFit(input: CreateChargeInput): void {
   const allocations = input.allocations ?? [];
   if (allocations.length === 0) return;

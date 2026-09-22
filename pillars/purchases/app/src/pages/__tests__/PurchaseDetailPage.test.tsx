@@ -66,6 +66,7 @@ function detail(overrides: Partial<PurchaseDetail> = {}): PurchaseDetail {
     },
     charges: [],
     documents: [],
+    edit: null,
     items: [line()],
     purchase: {
       checksum: 'sha256-abc',

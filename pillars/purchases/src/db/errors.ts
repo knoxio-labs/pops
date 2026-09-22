@@ -136,3 +136,52 @@ export class InventoryProposalConflictError extends Error {
     this.detail = detail;
   }
 }
+
+/**
+ * An edit tried to change merchant, date or total on a purchase whose
+ * status is anything but `awaiting_settlement`, `settled_cash` or
+ * `ignored` — a matched, part-matched, or unrecognised status locks those
+ * three fields because reconciliation already depends on them.
+ */
+export class PurchaseLockedError extends Error {
+  readonly purchaseId: string;
+
+  constructor(purchaseId: string) {
+    super(`Purchase ${purchaseId} is matched; merchant, date and total cannot be edited`);
+    this.name = 'PurchaseLockedError';
+    this.purchaseId = purchaseId;
+  }
+}
+
+/**
+ * An edit's `expectedUpdatedAt` did not match the row's current
+ * `updated_at` — someone else's edit landed first, and applying this one
+ * over it would silently discard theirs.
+ */
+export class PurchaseStaleError extends Error {
+  readonly purchaseId: string;
+
+  constructor(purchaseId: string) {
+    super(`Purchase ${purchaseId} was changed since this edit was opened`);
+    this.name = 'PurchaseStaleError';
+    this.purchaseId = purchaseId;
+  }
+}
+
+/**
+ * Inventory could not be reached, or refused, to clear a removed line's
+ * purchase link before the edit committed.
+ *
+ * Raised rather than swallowed: the caller must retry the WHOLE edit rather
+ * than commit it half-linked, and this is what stops the edit's transaction
+ * from ever starting.
+ */
+export class InventoryLinkClearFailedError extends Error {
+  readonly reason: string;
+
+  constructor(reason: string) {
+    super(`Could not clear inventory's purchase link before this edit: ${reason}`);
+    this.name = 'InventoryLinkClearFailedError';
+    this.reason = reason;
+  }
+}

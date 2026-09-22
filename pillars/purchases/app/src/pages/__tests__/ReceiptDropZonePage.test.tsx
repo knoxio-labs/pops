@@ -100,6 +100,7 @@ function purchaseDetail(overrides: Partial<PurchaseDetail['purchase']> = {}): Pu
     },
     charges: [],
     documents: [],
+    edit: null,
     items: [lineItem('Sourdough loaf'), lineItem('Oat milk')],
     purchase: {
       checksum: 'sha256-abc',

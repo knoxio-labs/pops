@@ -9,10 +9,13 @@ import {
   DocumentAlreadyAttachedError,
   DuplicatePurchaseError,
   InvalidIngestPayloadError,
+  InventoryLinkClearFailedError,
   InventoryProposalConflictError,
   ProductDictionaryNotFoundError,
+  PurchaseLockedError,
   PurchaseNotFoundError,
   PurchaseSourceNotFoundError,
+  PurchaseStaleError,
 } from '../../db/index.js';
 import {
   isCheckConstraintError,
@@ -65,41 +68,72 @@ export function createRequestValidationErrorHandler() {
 }
 
 export interface MappedHttpError {
-  status: 400 | 404 | 409;
+  status: 400 | 404 | 409 | 502;
   body: ErrorBody;
 }
 
-export function tryMapServiceError(err: unknown): MappedHttpError | null {
-  if (
-    err instanceof PurchaseNotFoundError ||
-    err instanceof PurchaseSourceNotFoundError ||
-    err instanceof ProductDictionaryNotFoundError
-  ) {
-    return { status: 404, body: { message: err.message, code: 'NOT_FOUND' } };
-  }
+interface ErrorMapping {
+  readonly test: (err: unknown) => boolean;
+  readonly status: MappedHttpError['status'];
+  readonly code: string;
+}
+
+/**
+ * Domain errors this pillar's service layer raises, each matched to the
+ * status and code a client acts on. A table rather than a chain of `if`s so
+ * the classification stays one line per error, however many the service
+ * layer grows.
+ */
+const ERROR_MAPPINGS: readonly ErrorMapping[] = [
+  {
+    test: (err) =>
+      err instanceof PurchaseNotFoundError ||
+      err instanceof PurchaseSourceNotFoundError ||
+      err instanceof ProductDictionaryNotFoundError,
+    status: 404,
+    code: 'NOT_FOUND',
+  },
   // Not a failure: an adapter re-ingesting a bundle it has already
   // processed lands here and treats the 409 as "already have it".
-  if (err instanceof DuplicatePurchaseError) {
-    return { status: 409, body: { message: err.message, code: 'DUPLICATE_PURCHASE' } };
-  }
+  { test: (err) => err instanceof DuplicatePurchaseError, status: 409, code: 'DUPLICATE_PURCHASE' },
   // A self-inconsistent payload is the caller's mistake. Returning 500
   // would leave an adapter unable to distinguish a bad payload from a
   // broken pillar, and reasonably retrying forever.
-  if (err instanceof InvalidIngestPayloadError) {
-    return { status: 400, body: { message: err.message, code: 'INVALID_INGEST_PAYLOAD' } };
-  }
+  {
+    test: (err) => err instanceof InvalidIngestPayloadError,
+    status: 400,
+    code: 'INVALID_INGEST_PAYLOAD',
+  },
   // The order already carries that document. A backfill re-run lands here
   // for everything it attached last time and treats it as a skip, exactly
   // as it treats the duplicate order above.
-  if (err instanceof DocumentAlreadyAttachedError) {
-    return { status: 409, body: { message: err.message, code: 'DOCUMENT_ALREADY_ATTACHED' } };
-  }
+  {
+    test: (err) => err instanceof DocumentAlreadyAttachedError,
+    status: 409,
+    code: 'DOCUMENT_ALREADY_ATTACHED',
+  },
   // The proposal was already answered. Distinct from the ingest duplicate
   // above because the caller is a review surface, not an adapter: it should
   // refresh and show the decision that already exists rather than skip.
-  if (err instanceof InventoryProposalConflictError) {
-    return { status: 409, body: { message: err.message, code: 'PROPOSAL_ALREADY_DECIDED' } };
-  }
+  {
+    test: (err) => err instanceof InventoryProposalConflictError,
+    status: 409,
+    code: 'PROPOSAL_ALREADY_DECIDED',
+  },
+  // Matched, part-matched, or unrecognised: merchant, date and total lock.
+  { test: (err) => err instanceof PurchaseLockedError, status: 409, code: 'purchase_locked' },
+  // The caller's own read of `updatedAt` is behind the row's current one.
+  { test: (err) => err instanceof PurchaseStaleError, status: 409, code: 'purchase_stale' },
+  // Inventory could not be reached, or refused, before the edit committed.
+  // Retryable: nothing here was written.
+  {
+    test: (err) => err instanceof InventoryLinkClearFailedError,
+    status: 502,
+    code: 'INVENTORY_UNAVAILABLE',
+  },
+];
+
+function mapConstraintError(err: unknown): MappedHttpError | null {
   if (isUniqueConstraintError(err)) {
     return {
       status: 409,
@@ -122,4 +156,13 @@ export function tryMapServiceError(err: unknown): MappedHttpError | null {
     };
   }
   return null;
+}
+
+export function tryMapServiceError(err: unknown): MappedHttpError | null {
+  const mapping = ERROR_MAPPINGS.find((candidate) => candidate.test(err));
+  if (mapping !== undefined) {
+    const message = err instanceof Error ? err.message : String(err);
+    return { status: mapping.status, body: { message, code: mapping.code } };
+  }
+  return mapConstraintError(err);
 }

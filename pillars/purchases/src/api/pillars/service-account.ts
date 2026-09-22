@@ -34,11 +34,12 @@ export const PURCHASES_SERVICE_ACCOUNT_NAME = 'purchases';
  * - `inventory.items` and `documents.paperless` — the nightly soft-URI
  *   reconciliation legs (`items.get`, `paperless.get`),
  *   `src/api/cron/pillar-lookup.ts`. `inventory.items` also authorises
- *   `items.create`, which `src/api/inventory/client.ts` calls when a human
- *   accepts an inventory proposal: prefix matching cannot express "read
- *   items, write none", so that leg widens what this account does to
- *   inventory without widening the list below. The list is not the record
- *   of that change and cannot be — the leg's own file, the README's
+ *   `items.create` and `items.update`, which `src/api/inventory/client.ts`
+ *   calls when a human accepts an inventory proposal and when a saved-purchase
+ *   edit removes an inventory-linked line (POPS-4268): prefix matching cannot
+ *   express "read items, write none", so those legs widen what this account
+ *   does to inventory without widening the list below. The list is not the
+ *   record of that change and cannot be — each leg's own file, the README's
  *   outbound table and this paragraph are.
  * - `contacts.entities` — receipt ingest's merchant resolution
  *   (`entities.list`), `src/api/contacts/merchant.ts`.

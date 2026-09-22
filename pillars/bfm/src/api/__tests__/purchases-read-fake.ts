@@ -207,6 +207,7 @@ export function purchasesDetail(
   return {
     kind: 'ok',
     value: {
+      edit: null,
       purchase: {
         id: overrides.id ?? 'pur-1',
         source: 'receipt',
@@ -226,6 +227,7 @@ export function purchasesDetail(
         orderedAtOffsetMinutes:
           overrides.orderedAtOffsetMinutes === undefined ? 600 : overrides.orderedAtOffsetMinutes,
         status: overrides.status ?? 'awaiting_settlement',
+        updatedAt: '2026-08-13T02:15:00.000Z',
       },
       // Nested under `item`, exactly as `PurchaseItemDetailSchema` sends it.
       // A flat line here is the fake agreeing with a schema the producer does

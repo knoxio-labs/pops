@@ -34,6 +34,11 @@ export {
   type PurchaseScopeFilter,
 } from './services/purchase-reads.js';
 
+export {
+  type PurchaseEditSummary,
+  type PurchaseFieldChange,
+} from './services/purchase-edit-reads.js';
+
 export { countPurchases } from './services/purchase-count.js';
 
 export {
@@ -50,6 +55,19 @@ export {
   confirmItemClassification,
   type ConfirmItemInput,
 } from './services/purchase-item-mutations.js';
+
+export {
+  commitPurchaseUpdate,
+  inventoryUnlinkTargets,
+  planPurchaseUpdate,
+  updatePurchase,
+  type UpdatePlan,
+} from './services/purchase-edit.js';
+
+export {
+  type UpdatePurchaseInput,
+  type UpdatePurchaseLineInput,
+} from './services/purchase-input.js';
 
 export { type MerchantIdentity } from './services/merchant-identity.js';
 

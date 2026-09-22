@@ -247,6 +247,9 @@ async function handleCreateManualPurchase(request, response) {
   const now = new Date().toISOString();
 
   const detail = {
+    // Never edited: this purchase was just created by this very request, so
+    // there is nothing an Original sheet could show yet.
+    edit: null,
     purchase: {
       id: randomUUID(),
       source: 'manual',
@@ -261,6 +264,7 @@ async function handleCreateManualPurchase(request, response) {
       orderedAt: body['orderedAt'] ?? now,
       orderedAtOffsetMinutes: body['orderedAtOffsetMinutes'] ?? null,
       status: 'linked',
+      updatedAt: now,
     },
     items: items.map((item, index) => ({
       item: {

@@ -32,6 +32,7 @@ const BASE_ROW: PurchasesListRow = {
 };
 
 const BASE_DETAIL: PurchasesDetailResponse = {
+  edit: null,
   purchase: {
     id: 'pur-1',
     source: 'receipt',
@@ -47,6 +48,7 @@ const BASE_DETAIL: PurchasesDetailResponse = {
     orderedAt: '2026-08-13T02:15:00.000Z',
     orderedAtOffsetMinutes: 600,
     status: 'awaiting_settlement',
+    updatedAt: '2026-08-13T02:15:00.000Z',
   },
   items: [],
   documents: [],
@@ -147,6 +149,52 @@ describe('merchantEntityId absent, not just null (POPS-3634 regression)', () => 
     const mobile = toMobilePurchase(parsed, new Map());
 
     expect(mobile.merchant).toEqual({ resolution: 'name', name: 'Corner Store' });
+  });
+});
+
+describe('edit and updatedAt absent, not just null (POPS-2458 regression)', () => {
+  // The same stub the merchantEntityId regression above documents answers a
+  // manually-created purchase with no `edit` or `updatedAt` key at all — the
+  // same shape a `purchases` build that predates the edit feature sends.
+  // Requiring either key turned that into a `502` for the whole detail; both
+  // now have to keep parsing it, and the mapping has to default them.
+  it('PurchasesDetailResponseSchema accepts a detail with no edit key at all', () => {
+    const { edit: _omitted, ...detailWithoutEdit } = BASE_DETAIL;
+
+    const result = PurchasesDetailResponseSchema.safeParse(detailWithoutEdit);
+
+    expect(result.success).toBe(true);
+  });
+
+  it('PurchasesDetailResponseSchema accepts a purchase with no updatedAt key at all', () => {
+    const { updatedAt: _omitted, ...purchaseWithoutUpdatedAt } = BASE_DETAIL.purchase;
+
+    const result = PurchasesDetailResponseSchema.safeParse({
+      ...BASE_DETAIL,
+      purchase: purchaseWithoutUpdatedAt,
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it('maps an absent edit and an absent updatedAt to null on the mobile wire', () => {
+    const { edit: _omittedEdit, purchase, ...rest } = BASE_DETAIL;
+    const { updatedAt: _omittedUpdatedAt, ...purchaseWithoutUpdatedAt } = purchase;
+    const parsed = PurchasesDetailResponseSchema.parse({
+      ...rest,
+      purchase: purchaseWithoutUpdatedAt,
+    });
+
+    const mobile = toMobilePurchaseDetail(parsed);
+
+    expect(mobile.edit).toBeNull();
+    expect(mobile.updatedAt).toBeNull();
+  });
+
+  it('still maps an explicit null the same way as absent', () => {
+    const mobile = toMobilePurchaseDetail(BASE_DETAIL);
+
+    expect(mobile.edit).toBeNull();
   });
 });
 
