@@ -340,6 +340,29 @@ describe('the snapshot', () => {
     expect(fake.snapshotCalls).toEqual([{ cursor: 'abc', limit: 10 }]);
   });
 
+  it('answers minimumProtocol 1 for a page from an inventory pillar that predates the rollout gate', async () => {
+    const fake = createInventoryFake({
+      snapshotResult: {
+        kind: 'ok',
+        value: {
+          epoch: 'epoch-1',
+          highWaterSeq: 42,
+          catalogueVersion: 'cat-1',
+          total: 0,
+          items: [],
+          locations: [],
+          nextCursor: null,
+        },
+      },
+    });
+    const { app, token } = openWith(fake.factory);
+
+    const res = await get(app, token, '/mobile/inventory/sync/snapshot');
+
+    expect(res.status).toBe(200);
+    expect(res.body.minimumProtocol).toBe(1);
+  });
+
   it('maps a rotated-epoch conflict to 409 resync_required, not the generic upstream-conflict fold', async () => {
     const fake = createInventoryFake({
       snapshotResult: { kind: 'conflict', pillar: 'inventory', message: 'epoch rotated' },
@@ -500,6 +523,29 @@ describe('the change feed', () => {
     expect(res.body.hasMore).toBe(true);
     expect(res.body.minimumProtocol).toBe(2);
     expect(fake.changesCalls).toEqual([{ since: 42, epoch: 'epoch-1', limit: 100 }]);
+  });
+
+  it('answers minimumProtocol 1 for a page from an inventory pillar that predates the rollout gate', async () => {
+    const fake = createInventoryFake({
+      changesResult: {
+        kind: 'ok',
+        value: {
+          epoch: 'epoch-1',
+          items: [],
+          locations: [],
+          events: [],
+          nextSince: 42,
+          hasMore: false,
+          catalogueVersion: 'cat-1',
+        },
+      },
+    });
+    const { app, token } = openWith(fake.factory);
+
+    const res = await get(app, token, '/mobile/inventory/sync/changes?since=42&epoch=epoch-1');
+
+    expect(res.status).toBe(200);
+    expect(res.body.minimumProtocol).toBe(1);
   });
 
   it('maps a foreign or rotated epoch to 409 resync_required', async () => {
