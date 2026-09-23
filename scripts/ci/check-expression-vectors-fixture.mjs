@@ -68,7 +68,35 @@ export const KNOWN_FIXTURE_COPY_PATHS = [
 const STATES = new Set(['ok', 'overridden', 'unavailable']);
 
 /**
- * @param {Record<string, any>} vector
+ * @typedef {object} VectorResult
+ * @property {unknown} [fieldId]
+ * @property {unknown} [state]
+ * @property {unknown[]} [values]
+ * @property {unknown} [reason]
+ */
+
+/**
+ * @typedef {object} VectorExpectation
+ * @property {unknown} outcome
+ * @property {unknown} [code]
+ * @property {VectorResult} [value]
+ */
+
+/**
+ * @typedef {object} ExpressionVector
+ * @property {unknown} name
+ * @property {{ fieldId?: unknown }} [field]
+ * @property {VectorExpectation} [expected]
+ */
+
+/**
+ * @typedef {object} Fixture
+ * @property {unknown} version
+ * @property {ExpressionVector[]} vectors
+ */
+
+/**
+ * @param {ExpressionVector} vector
  * @param {string} label
  * @returns {string[]}
  */
@@ -84,7 +112,7 @@ function checkExpected(vector, label) {
   const failures = [];
   if (value?.fieldId !== vector.field?.fieldId)
     failures.push(`${label}: the result does not name the vector's own field`);
-  if (!STATES.has(value?.state))
+  if (!STATES.has(String(value?.state)))
     failures.push(`${label}: result state is not ok/overridden/unavailable`);
   if (value?.state !== 'unavailable' && value?.values?.length !== 1)
     failures.push(`${label}: a value-bearing result must hold exactly one value`);
@@ -96,7 +124,7 @@ function checkExpected(vector, label) {
 /**
  * Every assertion against a parsed fixture; pure so the self-test can drive it.
  *
- * @param {{ version: unknown, vectors: unknown }} fixture
+ * @param {Fixture} fixture
  * @returns {string[]}
  */
 export function checkFixture(fixture) {
@@ -133,33 +161,60 @@ function selfTestCopySet() {
 }
 
 /**
- * @param {any} valid
- * @param {(vector: any) => any} change
+ * @param {Fixture} valid
+ * @param {(vector: ExpressionVector) => ExpressionVector} change
+ * @returns {Fixture}
  */
 function corruptFirstEvaluated(valid, change) {
   const index = valid.vectors.findIndex((vector) => vector.expected?.outcome === 'evaluated');
-  const vectors = [...valid.vectors];
-  vectors[index] = change(vectors[index]);
-  return { ...valid, vectors };
+  return {
+    ...valid,
+    vectors: valid.vectors.map((vector, at) => (at === index ? change(vector) : vector)),
+  };
 }
 
-/** @param {any} valid */
+/**
+ * @param {Fixture} valid
+ * @param {(value: VectorResult) => VectorResult} change
+ * @returns {Fixture}
+ */
+function corruptFirstResult(valid, change) {
+  return corruptFirstEvaluated(valid, (vector) => ({
+    ...vector,
+    expected: {
+      outcome: 'evaluated',
+      ...vector.expected,
+      value: change(vector.expected?.value ?? {}),
+    },
+  }));
+}
+
+/**
+ * @param {Fixture} valid
+ * @returns {boolean}
+ */
 function selfTest(valid) {
   const first = valid.vectors[0];
-  const withValue = (change) =>
-    corruptFirstEvaluated(valid, (vector) => ({
-      ...vector,
-      expected: { ...vector.expected, value: change(vector.expected.value) },
-    }));
+  if (first === undefined) {
+    console.error('SELF-TEST FAILED: the committed vector has no vectors to corrupt');
+    return false;
+  }
+  /** @type {[string, Fixture][]} */
   const corruptions = [
     ['the version pin drifted', { ...valid, version: 2 }],
     ['vectors is empty', { ...valid, vectors: [] }],
     ['two vectors share a name', { ...valid, vectors: [first, ...valid.vectors] }],
-    ['a result names another field', withValue((value) => ({ ...value, fieldId: 'other' }))],
-    ['a result state is unknown', withValue((value) => ({ ...value, state: 'stale' }))],
+    [
+      'a result names another field',
+      corruptFirstResult(valid, (value) => ({ ...value, fieldId: 'other' })),
+    ],
+    [
+      'a result state is unknown',
+      corruptFirstResult(valid, (value) => ({ ...value, state: 'stale' })),
+    ],
     [
       'a result holds two values',
-      withValue((value) => ({ ...value, state: 'ok', values: [1, 2] })),
+      corruptFirstResult(valid, (value) => ({ ...value, state: 'ok', values: [1, 2] })),
     ],
     [
       'an outcome is neither evaluated nor rejected',
@@ -182,6 +237,7 @@ function selfTest(valid) {
 
 function main() {
   const argv = process.argv.slice(2);
+  /** @type {(message: string) => never} */
   const bail = (message) => {
     console.error(message);
     process.exit(1);
@@ -197,6 +253,7 @@ function main() {
     );
     const canonical = read(CANONICAL.path);
     if (canonical === null) bail(`FAIL — ${CANONICAL.path} does not exist`);
+    /** @type {Fixture} */
     let valid;
     try {
       valid = JSON.parse(canonical);
