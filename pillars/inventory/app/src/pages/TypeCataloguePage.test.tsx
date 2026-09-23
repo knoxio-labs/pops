@@ -409,6 +409,10 @@ describe('TypeCataloguePage', () => {
     api.readCatalogue
       .mockResolvedValueOnce({ data: published, error: undefined })
       .mockResolvedValue({ data: publishedAfter, error: undefined });
+    api.patchDraft.mockResolvedValue({
+      data: { compatibility: compatibleResult, draft: draft(published.types, 2) },
+      error: undefined,
+    });
     api.publishDraft.mockResolvedValue({ data: publishedAfter, error: undefined });
     renderPage();
 
@@ -417,6 +421,11 @@ describe('TypeCataloguePage', () => {
 
     fireEvent.change(screen.getByLabelText('Type label'), { target: { value: 'Electronics v2' } });
     await waitFor(() => expect(api.previewDraft).toHaveBeenCalled());
+    expect(screen.getByRole('button', { name: 'Review and publish' })).toBeDisabled();
+    expect(screen.getByText('Compatible (unsaved)')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save type' }));
+    await waitFor(() => expect(api.patchDraft).toHaveBeenCalled());
     await waitFor(() =>
       expect(screen.getByRole('button', { name: 'Review and publish' })).toBeEnabled()
     );
@@ -427,7 +436,7 @@ describe('TypeCataloguePage', () => {
     await waitFor(() =>
       expect(api.publishDraft).toHaveBeenCalledWith({
         path: { revision: 2 },
-        body: { baseRevision: 1, expectedDraftVersion: 1, note: null, minimumProtocol: 2 },
+        body: { baseRevision: 1, expectedDraftVersion: 2, note: null, minimumProtocol: 2 },
       })
     );
     expect((await screen.findAllByText('Published revision 2')).length).toBeGreaterThan(0);
