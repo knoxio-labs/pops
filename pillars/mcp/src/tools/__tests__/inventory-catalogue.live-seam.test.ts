@@ -45,6 +45,7 @@ const publishDraft = tool('inventory.catalogue.publishDraft');
 const abandonDraft = tool('inventory.catalogue.abandonDraft');
 const catalogueGet = catalogueTools.find((entry) => entry.name === 'inventory.catalogue.get');
 if (catalogueGet === undefined) throw new Error('inventory.catalogue.get missing');
+const catalogueGetType = tool('inventory.catalogue.getType');
 
 describe('inventory catalogue MCP tools — real HTTP boundary', () => {
   let seam: LiveSeam;
@@ -56,6 +57,28 @@ describe('inventory catalogue MCP tools — real HTTP boundary', () => {
 
   afterAll(async () => {
     await seam.stop();
+  });
+
+  it('reads one type at an exact revision and reports unknown types and revisions', async () => {
+    const published = ok(await catalogueGet.handler({}));
+    const revision = (published['revision'] as { revision: number }).revision;
+    const [first] = published['types'] as { id: string; label: string }[];
+    if (first === undefined) throw new Error('the published catalogue has no types');
+
+    const read = ok(await catalogueGetType.handler({ typeId: first.id, revision }));
+    expect(read['type']).toMatchObject({ id: first.id, label: first.label });
+    expect((read['revision'] as { revision: number }).revision).toBe(revision);
+
+    const unknownType = await catalogueGetType.handler({ typeId: crypto.randomUUID() });
+    expect(unknownType.isError).toBe(true);
+    expect(text(unknownType)).toMatch(/catalogue_type_unknown/);
+
+    const unknownRevision = await catalogueGetType.handler({
+      typeId: first.id,
+      revision: revision + 1000,
+    });
+    expect(unknownRevision.isError).toBe(true);
+    expect(text(unknownRevision)).toMatch(/catalogue_revision_unknown/);
   });
 
   it('reports a missing draft as not-found through the real REST boundary', async () => {

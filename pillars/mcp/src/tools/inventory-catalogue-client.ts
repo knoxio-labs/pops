@@ -17,6 +17,7 @@ type CatalogueShape = {
   types: {
     read: {
       catalogue: (input: { revision?: number }) => unknown;
+      type: (input: { typeId: string; revision?: number }) => unknown;
       audit: (input: { before?: number; limit?: number }) => unknown;
       validateItem: (input: {
         catalogueRevision: number;

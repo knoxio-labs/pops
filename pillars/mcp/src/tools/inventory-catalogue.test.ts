@@ -29,6 +29,39 @@ describe('inventory catalogue reads', () => {
     expect(parseResult(result)).toEqual({ revision: { revision: 1 }, types: [] });
   });
 
+  it('reads one type at an exact revision', async () => {
+    const typeId = '6f1d9d7e-3b1f-4b0e-9d5c-2a7f4b1e8c21';
+
+    const result = await tool('inventory.catalogue.getType').handler({ typeId, revision: 4 });
+
+    expect(types.read.type).toHaveBeenCalledWith({ typeId, revision: 4 });
+    expect(parseResult(result)).toMatchObject({ type: { id: typeId } });
+  });
+
+  it('reads one type at the current revision when none is named', async () => {
+    const typeId = '6f1d9d7e-3b1f-4b0e-9d5c-2a7f4b1e8c21';
+
+    await tool('inventory.catalogue.getType').handler({ typeId });
+
+    expect(types.read.type).toHaveBeenCalledWith({ typeId });
+  });
+
+  it('refuses a missing or malformed type id and an invalid revision without calling inventory', async () => {
+    const getType = tool('inventory.catalogue.getType');
+
+    const missing = await getType.handler({});
+    const malformed = await getType.handler({ typeId: 'cable' });
+    const badRevision = await getType.handler({
+      typeId: '6f1d9d7e-3b1f-4b0e-9d5c-2a7f4b1e8c21',
+      revision: 0,
+    });
+
+    expect(missing.isError).toBe(true);
+    expect(malformed.isError).toBe(true);
+    expect(badRevision.isError).toBe(true);
+    expect(types.read.type).not.toHaveBeenCalled();
+  });
+
   it('forwards audit pagination', async () => {
     await tool('inventory.catalogue.audit').handler({ before: 12, limit: 25 });
 

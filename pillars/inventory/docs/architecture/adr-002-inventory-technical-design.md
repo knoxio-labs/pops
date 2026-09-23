@@ -112,6 +112,7 @@ The owner-facing REST surface is command-shaped so MCP and the web editor use th
 | Route                                           | Body / result                                                                                            |
 | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | `GET /type-catalogue?revision=`                 | current or exact immutable descriptor; `404 catalogue_revision_unknown`                                  |
+| `GET /type-catalogue/types/:typeId?revision=`   | one type as the current or exact published revision defined it; `404 catalogue_type_unknown`             |
 | `GET /type-catalogue/audit?before=&limit=`      | reverse-chronological publication and abandonment events                                                 |
 | `POST /type-catalogue/drafts`                   | `{ baseRevision }` → the new draft; conflicts if one already exists                                      |
 | `PATCH /type-catalogue/drafts/:revision`        | `{ baseRevision, expectedDraftVersion, operations[] }` → the validated draft and a compatibility preview |

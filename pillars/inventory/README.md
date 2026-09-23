@@ -348,6 +348,13 @@ minimumProtocol }`. The expected value makes concurrent operator actions a
   Draft creation, patching, publication and abandonment require the owner
   session or `inventory.types.manage`. A catalogue revision is never mutable
   after publication; stale base revisions answer `409`.
+- `GET /type-catalogue/types/:typeId?revision=` reads one type by stable id as
+  the current or an exact published revision defined it, under the same read
+  grant, and writes nothing. An older revision keeps the label, fields and
+  archive state it published. A draft, abandoned or missing revision is
+  `404 catalogue_revision_unknown`; a type that revision does not define is
+  `404 catalogue_type_unknown`. MCP exposes it as
+  `inventory.catalogue.getType`.
 - Events carry `before`/`after` keyed by wire field. A move records both
   `placement` and `previousPlacement`, each in the item row's placement
   shape (`{ kind: 'location', locationId }`, `{ kind: 'container', itemId }`,
