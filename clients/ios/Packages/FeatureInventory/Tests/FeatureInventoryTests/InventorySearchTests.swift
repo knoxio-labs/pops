@@ -26,10 +26,8 @@ internal struct InventorySearchTests {
             catalogue: Fixture.catalogue)
     }
 
-    private static func loaded(
-        _ model: InventorySearchViewModel, scanned: [String] = []
-    ) async -> Task<Void, Never> {
-        let task = Task { await model.observe(scannedIDs: scanned) }
+    private static func loaded(_ model: InventorySearchViewModel) async -> Task<Void, Never> {
+        let task = Task { await model.observe() }
         _ = await eventually { model.results != nil }
         return task
     }
@@ -85,15 +83,6 @@ internal struct InventorySearchTests {
 
         #expect(model.results?.records.isEmpty == true)
         #expect(model.hits.isEmpty)
-    }
-
-    @Test("recently scanned resolves ids in order, skipping unknown and deleted ones")
-    func scanned() async {
-        let model = InventorySearchViewModel(store: Self.store())
-        let task = await Self.loaded(model, scanned: ["rake", "missing", "gone", "hose"])
-        defer { task.cancel() }
-
-        #expect(model.results?.scanned.map(\.id) == ["rake", "hose"])
     }
 
     @Test("an empty replica is the first launch, and Download takes it to current")

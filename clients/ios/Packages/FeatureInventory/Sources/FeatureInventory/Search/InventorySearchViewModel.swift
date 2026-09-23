@@ -54,12 +54,12 @@ internal final class InventorySearchViewModel {
 
     /// Follows the store for the current key until the calling task is
     /// cancelled, keeping the last answer up until the new one arrives.
-    internal func observe(scannedIDs: [InventoryItem.ID]) async {
+    internal func observe() async {
         var answered = false
         for await results in store.observe(
             InventorySearchResults.query(
                 text: observationKey.text, includeInactive: observationKey.includeInactive,
-                scannedIDs: scannedIDs))
+                scannedIDs: []))
         {
             answered = true
             phase = .loaded(results)

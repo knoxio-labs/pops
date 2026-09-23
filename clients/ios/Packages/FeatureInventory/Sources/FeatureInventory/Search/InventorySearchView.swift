@@ -8,7 +8,6 @@ internal struct InventorySearchView: View {
     @Bindable internal var model: InventorySearchViewModel
     internal let scan: () -> Void
     @AppStorage(InventorySearchRecents.queriesKey) private var storedQueries = ""
-    @AppStorage(InventorySearchRecents.scannedKey) private var storedScanned = ""
     @State private var showingFilters = false
     @State private var session: InventorySearchSession
     /// Bumped by Retry to restart the observation after the store ended it.
@@ -44,16 +43,13 @@ internal struct InventorySearchView: View {
         }
         .tint(.popsInventory)
         .inventorySearchChrome(session, records: searchResults, store: model.store)
-        .task(
-            id: TaskKey(key: model.observationKey, scanned: storedScanned, generation: generation)
-        ) {
-            await model.observe(scannedIDs: InventorySearchRecents.decode(storedScanned))
+        .task(id: TaskKey(key: model.observationKey, generation: generation)) {
+            await model.observe()
         }
     }
 
     private struct TaskKey: Hashable {
         let key: InventoryObservationKey
-        let scanned: String
         let generation: Int
     }
 
@@ -88,12 +84,11 @@ internal struct InventorySearchView: View {
             ErrorStateView(message: InventoryCopy.unavailable) { generation += 1 }
         case .loaded(let results):
             if results.isFirstRun {
-                InventoryFirstLaunchPrompt { Task { await model.download() } }
+                InventoryNotOnPhonePrompt { Task { await model.download() } }
             } else if model.trimmedQuery.isEmpty {
                 InventoryRecentSearches(
-                    queries: recents, scanned: results.scanned,
-                    onSelect: { model.query = $0 },
-                    loadPhoto: { await model.thumbnail($0) })
+                    queries: recents, store: model.store,
+                    onSelect: { model.query = $0 })
             } else if model.hits.isEmpty {
                 PopsCentredLine(text: emptyText)
             } else {
