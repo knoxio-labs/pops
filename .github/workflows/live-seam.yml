@@ -160,6 +160,7 @@ on:
       - "pillars/purchases/**"
       - "pillars/inventory/**"
       - "pillars/mcp/src/tools/**"
+      - "pillars/mcp/src/pillar-client.ts"
       - "pillars/mcp/vitest.live-seam.config.ts"
       - "!pillars/purchases/app/**"
       - "!pillars/purchases/extension/**"
@@ -185,6 +186,7 @@ on:
       - "pillars/purchases/**"
       - "pillars/inventory/**"
       - "pillars/mcp/src/tools/**"
+      - "pillars/mcp/src/pillar-client.ts"
       - "pillars/mcp/vitest.live-seam.config.ts"
       - "!pillars/purchases/app/**"
       - "!pillars/purchases/extension/**"
@@ -242,6 +244,7 @@ jobs:
               - "pillars/registry/**"
               - "pillars/inventory/**"
               - "pillars/mcp/src/tools/**"
+              - "pillars/mcp/src/pillar-client.ts"
               - "pillars/mcp/vitest.live-seam.config.ts"
               - ".github/workflows/live-seam.yml"
 
