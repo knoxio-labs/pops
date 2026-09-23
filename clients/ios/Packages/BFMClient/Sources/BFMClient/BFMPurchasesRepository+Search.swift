@@ -6,6 +6,7 @@ extension BFMPurchasesRepository {
     public func search(
         text: String, status: PurchaseSearchStatus
     ) async throws -> [PurchaseSearchHit] {
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return [] }
         let output: SearchPurchases.Output
         do {
             output = try await client.generated.mobilePurchases_searchPurchases(

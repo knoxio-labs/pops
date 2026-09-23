@@ -44,6 +44,7 @@ public actor InMemoryPurchasesRepository: PurchasesRepository {
     public func search(
         text: String, status: PurchaseSearchStatus
     ) async throws -> [PurchaseSearchHit] {
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return [] }
         searchCalls.append((text, status))
         try beginCall()
         try await Task.sleep(for: searchDelay)
@@ -217,7 +218,6 @@ private func searchHit(_ hit: PurchaseSearchHit, matches status: PurchaseSearchS
 
 private func searchHit(_ hit: PurchaseSearchHit, matches text: String) -> Bool {
     let needle = text.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !needle.isEmpty else { return true }
     return searchableValues(for: hit).contains { $0.localizedCaseInsensitiveContains(needle) }
 }
 

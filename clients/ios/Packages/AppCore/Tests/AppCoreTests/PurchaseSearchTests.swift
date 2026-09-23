@@ -71,9 +71,21 @@ internal struct PurchaseSearchTests {
             .purchase(partial, printedMatch: nil),
         ])
 
-        let results = try await repository.search(text: "", status: .unmatched)
+        let results = try await repository.search(text: "fake", status: .unmatched)
 
         #expect(results.map(\.id) == ["purchase:waiting", "line:waiting-line"])
+    }
+
+    @Test("blank text matches nothing and records no search", arguments: ["", "   "])
+    func fakeBlankTextMatchesNothing(text: String) async throws {
+        let repository = InMemoryPurchasesRepository(hits: [
+            .purchase(Self.order(id: "waiting", status: .awaitingSettlement), printedMatch: nil)
+        ])
+
+        let results = try await repository.search(text: text, status: .unmatched)
+
+        #expect(results.isEmpty)
+        #expect(await repository.searchCalls.isEmpty)
     }
 
     private static func order(

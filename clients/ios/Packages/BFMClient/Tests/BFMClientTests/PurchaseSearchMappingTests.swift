@@ -36,6 +36,17 @@ internal struct PurchaseSearchMappingTests {
         #expect(sent.request.path == "/mobile/purchases/search?q=kmart")
     }
 
+    @Test("blank text sends no request", arguments: ["", "  \n"])
+    func blankTextSendsNoRequest(text: String) async throws {
+        let transport = StubTransport(status: .badRequest, json: "{}")
+        let repository = try BFMPurchasesRepository.stubbed(transport)
+
+        let hits = try await repository.search(text: text, status: .unmatched)
+
+        #expect(hits.isEmpty)
+        #expect(await transport.recorded.all.isEmpty)
+    }
+
     @Test("a purchase hit keeps its order context and printed match")
     func mapsPurchaseHit() async throws {
         let repository = try BFMPurchasesRepository.stubbed(
