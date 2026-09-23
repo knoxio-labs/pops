@@ -1,12 +1,8 @@
 import { useMutation } from '@tanstack/react-query';
 
 import { unwrap } from '../inventory-api-helpers';
-import {
-  typesManageAbandonDraft,
-  typesManageCreateDraft,
-  typesManagePatchDraft,
-  typesManagePublishDraft,
-} from '../inventory-api/index.js';
+import { catalogueApi } from './catalogue-api';
+import { draftBaseRevision } from './catalogue-draft';
 
 import type { QueryClient } from '@tanstack/react-query';
 import type { Dispatch, SetStateAction } from 'react';
@@ -30,16 +26,15 @@ interface PublishInput {
   };
 }
 
-function draftBaseRevision(draft: CatalogueDescriptor): number {
-  const baseRevision = draft.revision.baseRevision;
-  if (baseRevision === null) throw new Error('Draft does not name a published base revision');
-  return baseRevision;
-}
-
-function useDraftCreation(queryClient: QueryClient, published?: CatalogueDescriptor) {
+function useDraftCreation(
+  queryClient: QueryClient,
+  published: CatalogueDescriptor | undefined,
+  cancelPreview: () => void
+) {
   const createDraft = useMutation({
+    onMutate: cancelPreview,
     mutationFn: async (baseRevision: number) =>
-      unwrap(await typesManageCreateDraft({ body: { baseRevision } })),
+      unwrap(await catalogueApi.createDraft({ body: { baseRevision } })),
     onSuccess: (draft) => queryClient.setQueryData(DRAFT_KEY, draft),
   });
   return {
@@ -56,13 +51,15 @@ function useDraftCreation(queryClient: QueryClient, published?: CatalogueDescrip
 function useDraftPatching(
   queryClient: QueryClient,
   ensureDraft: () => Promise<CatalogueDescriptor>,
-  setCompatibility: Dispatch<SetStateAction<CatalogueCompatibility | null>>
+  setCompatibility: Dispatch<SetStateAction<CatalogueCompatibility | null>>,
+  cancelPreview: () => void
 ) {
   return useMutation({
+    onMutate: cancelPreview,
     mutationFn: async (operations: readonly CatalogueOperation[]) => {
       const draft = await ensureDraft();
       return unwrap(
-        await typesManagePatchDraft({
+        await catalogueApi.patchDraft({
           path: { revision: draft.revision.revision },
           body: { baseRevision: draftBaseRevision(draft), operations: [...operations] },
         })
@@ -78,13 +75,15 @@ function useDraftPatching(
 function useDraftPublication(
   queryClient: QueryClient,
   ensureDraft: () => Promise<CatalogueDescriptor>,
-  setCompatibility: Dispatch<SetStateAction<CatalogueCompatibility | null>>
+  setCompatibility: Dispatch<SetStateAction<CatalogueCompatibility | null>>,
+  cancelPreview: () => void
 ) {
   return useMutation({
+    onMutate: cancelPreview,
     mutationFn: async (input: PublishInput) => {
       const draft = await ensureDraft();
       return unwrap(
-        await typesManagePublishDraft({
+        await catalogueApi.publishDraft({
           path: { revision: draft.revision.revision },
           body: { baseRevision: draftBaseRevision(draft), ...input },
         })
@@ -102,13 +101,15 @@ function useDraftPublication(
 function useDraftAbandonment(
   queryClient: QueryClient,
   ensureDraft: () => Promise<CatalogueDescriptor>,
-  setCompatibility: Dispatch<SetStateAction<CatalogueCompatibility | null>>
+  setCompatibility: Dispatch<SetStateAction<CatalogueCompatibility | null>>,
+  cancelPreview: () => void
 ) {
   return useMutation({
+    onMutate: cancelPreview,
     mutationFn: async () => {
       const draft = await ensureDraft();
       return unwrap(
-        await typesManageAbandonDraft({
+        await catalogueApi.abandonDraft({
           path: { revision: draft.revision.revision },
           body: { baseRevision: draftBaseRevision(draft) },
         })
@@ -125,14 +126,15 @@ function useDraftAbandonment(
 export function useCatalogueMutations(
   queryClient: QueryClient,
   published: CatalogueDescriptor | undefined,
-  setCompatibility: Dispatch<SetStateAction<CatalogueCompatibility | null>>
+  setCompatibility: Dispatch<SetStateAction<CatalogueCompatibility | null>>,
+  cancelPreview: () => void
 ) {
-  const { createDraft, ensureDraft } = useDraftCreation(queryClient, published);
+  const { createDraft, ensureDraft } = useDraftCreation(queryClient, published, cancelPreview);
   return {
     createDraft,
-    patchDraft: useDraftPatching(queryClient, ensureDraft, setCompatibility),
-    publishDraft: useDraftPublication(queryClient, ensureDraft, setCompatibility),
-    abandonDraft: useDraftAbandonment(queryClient, ensureDraft, setCompatibility),
+    patchDraft: useDraftPatching(queryClient, ensureDraft, setCompatibility, cancelPreview),
+    publishDraft: useDraftPublication(queryClient, ensureDraft, setCompatibility, cancelPreview),
+    abandonDraft: useDraftAbandonment(queryClient, ensureDraft, setCompatibility, cancelPreview),
   };
 }
 
