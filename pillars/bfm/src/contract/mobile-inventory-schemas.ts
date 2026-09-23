@@ -21,6 +21,8 @@
  */
 import { z } from 'zod';
 
+import { MobileInventoryComputedValueSchema } from './mobile-inventory-computed-schemas.js';
+
 export {
   MobileInventoryCatalogueRevisionDescriptorSchema,
   type MobileInventoryCatalogueRevisionDescriptor,
@@ -95,6 +97,8 @@ export const MobileInventoryItemSchema = z.object({
   legacyType: z.string().nullable(),
   /** Canonical protocol-2 values addressed by stable field IDs. */
   fieldValues: z.array(MobileInventoryFieldValueSchema),
+  /** Effective values of the type's computed fields; empty from an inventory that predates them. */
+  computedValues: z.array(MobileInventoryComputedValueSchema).default([]),
   fields: z.record(z.string(), AnyJson),
   note: z.string().nullable(),
   code: z.string().nullable(),

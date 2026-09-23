@@ -31,6 +31,7 @@ internal enum InventoryWire {
         typeKey: String? = nil,
         legacyType: String? = nil,
         fieldValues: String = "[]",
+        computedValues: String = "[]",
         fields: String = "{}",
         note: String? = nil,
         code: String? = nil,
@@ -51,7 +52,7 @@ internal enum InventoryWire {
         "catalogueRevision":\(catalogueRevision.map(String.init) ?? "null"),\
         "typeKey":\(typeKey.map { "\"\($0)\"" } ?? "null"),\
         "legacyType":\(legacyType.map { "\"\($0)\"" } ?? "null"),\
-        "fieldValues":\(fieldValues),"fields":\(fields),\
+        "fieldValues":\(fieldValues),"computedValues":\(computedValues),"fields":\(fields),\
         "note":\(note.map { "\"\($0)\"" } ?? "null"),"code":\(code.map { "\"\($0)\"" } ?? "null"),\
         "externalIds":[],"quantity":\(quantity),"lifecycle":"\(lifecycle)",\
         "lifecycleChangedAt":\(lifecycleChangedAt.map { "\"\($0)\"" } ?? "null"),\

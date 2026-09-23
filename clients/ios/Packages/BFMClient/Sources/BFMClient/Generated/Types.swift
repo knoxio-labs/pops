@@ -20634,6 +20634,558 @@ internal enum Operations {
                             internal var catalogueRevision: Swift.Int?
                             /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/code`.
                             internal var code: Swift.String?
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload`.
+                            internal enum ComputedValuesPayloadPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case1`.
+                                internal struct Case1Payload: Codable, Hashable, Sendable {
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case1/catalogueRevision`.
+                                    internal var catalogueRevision: Swift.Int
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case1/DependenciesPayload`.
+                                    internal struct DependenciesPayloadPayload: Codable, Hashable, Sendable {
+                                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case1/DependenciesPayload/fieldId`.
+                                        internal var fieldId: Swift.String
+                                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case1/DependenciesPayload/itemId`.
+                                        internal var itemId: Swift.String
+                                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case1/DependenciesPayload/revision`.
+                                        internal var revision: Swift.Int
+                                        /// Creates a new `DependenciesPayloadPayload`.
+                                        ///
+                                        /// - Parameters:
+                                        ///   - fieldId:
+                                        ///   - itemId:
+                                        ///   - revision:
+                                        internal init(
+                                            fieldId: Swift.String,
+                                            itemId: Swift.String,
+                                            revision: Swift.Int
+                                        ) {
+                                            self.fieldId = fieldId
+                                            self.itemId = itemId
+                                            self.revision = revision
+                                        }
+                                        internal enum CodingKeys: String, CodingKey {
+                                            case fieldId
+                                            case itemId
+                                            case revision
+                                        }
+                                        internal init(from decoder: any Swift.Decoder) throws {
+                                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                                            self.fieldId = try container.decode(
+                                                Swift.String.self,
+                                                forKey: .fieldId
+                                            )
+                                            self.itemId = try container.decode(
+                                                Swift.String.self,
+                                                forKey: .itemId
+                                            )
+                                            self.revision = try container.decode(
+                                                Swift.Int.self,
+                                                forKey: .revision
+                                            )
+                                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                                "fieldId",
+                                                "itemId",
+                                                "revision"
+                                            ])
+                                        }
+                                    }
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case1/dependencies`.
+                                    internal typealias DependenciesPayload = [Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case1Payload.DependenciesPayloadPayload]
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case1/dependencies`.
+                                    internal var dependencies: Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case1Payload.DependenciesPayload
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case1/fieldId`.
+                                    internal var fieldId: Swift.String
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case1/source`.
+                                    internal enum SourcePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                        case computed = "computed"
+                                    }
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case1/source`.
+                                    internal var source: Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case1Payload.SourcePayload
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case1/state`.
+                                    internal enum StatePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                        case ok = "ok"
+                                    }
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case1/state`.
+                                    internal var state: Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case1Payload.StatePayload
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case1/traversedItemIds`.
+                                    internal var traversedItemIds: [Swift.String]
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case1/values`.
+                                    internal var values: [OpenAPIRuntime.OpenAPIValueContainer]
+                                    /// Creates a new `Case1Payload`.
+                                    ///
+                                    /// - Parameters:
+                                    ///   - catalogueRevision:
+                                    ///   - dependencies:
+                                    ///   - fieldId:
+                                    ///   - source:
+                                    ///   - state:
+                                    ///   - traversedItemIds:
+                                    ///   - values:
+                                    internal init(
+                                        catalogueRevision: Swift.Int,
+                                        dependencies: Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case1Payload.DependenciesPayload,
+                                        fieldId: Swift.String,
+                                        source: Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case1Payload.SourcePayload,
+                                        state: Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case1Payload.StatePayload,
+                                        traversedItemIds: [Swift.String],
+                                        values: [OpenAPIRuntime.OpenAPIValueContainer]
+                                    ) {
+                                        self.catalogueRevision = catalogueRevision
+                                        self.dependencies = dependencies
+                                        self.fieldId = fieldId
+                                        self.source = source
+                                        self.state = state
+                                        self.traversedItemIds = traversedItemIds
+                                        self.values = values
+                                    }
+                                    internal enum CodingKeys: String, CodingKey {
+                                        case catalogueRevision
+                                        case dependencies
+                                        case fieldId
+                                        case source
+                                        case state
+                                        case traversedItemIds
+                                        case values
+                                    }
+                                    internal init(from decoder: any Swift.Decoder) throws {
+                                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                                        self.catalogueRevision = try container.decode(
+                                            Swift.Int.self,
+                                            forKey: .catalogueRevision
+                                        )
+                                        self.dependencies = try container.decode(
+                                            Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case1Payload.DependenciesPayload.self,
+                                            forKey: .dependencies
+                                        )
+                                        self.fieldId = try container.decode(
+                                            Swift.String.self,
+                                            forKey: .fieldId
+                                        )
+                                        self.source = try container.decode(
+                                            Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case1Payload.SourcePayload.self,
+                                            forKey: .source
+                                        )
+                                        self.state = try container.decode(
+                                            Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case1Payload.StatePayload.self,
+                                            forKey: .state
+                                        )
+                                        self.traversedItemIds = try container.decode(
+                                            [Swift.String].self,
+                                            forKey: .traversedItemIds
+                                        )
+                                        self.values = try container.decode(
+                                            [OpenAPIRuntime.OpenAPIValueContainer].self,
+                                            forKey: .values
+                                        )
+                                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                            "catalogueRevision",
+                                            "dependencies",
+                                            "fieldId",
+                                            "source",
+                                            "state",
+                                            "traversedItemIds",
+                                            "values"
+                                        ])
+                                    }
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case1`.
+                                case case1(Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case1Payload)
+                                /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case2`.
+                                internal struct Case2Payload: Codable, Hashable, Sendable {
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case2/catalogueRevision`.
+                                    internal var catalogueRevision: Swift.Int
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case2/DependenciesPayload`.
+                                    internal struct DependenciesPayloadPayload: Codable, Hashable, Sendable {
+                                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case2/DependenciesPayload/fieldId`.
+                                        internal var fieldId: Swift.String
+                                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case2/DependenciesPayload/itemId`.
+                                        internal var itemId: Swift.String
+                                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case2/DependenciesPayload/revision`.
+                                        internal var revision: Swift.Int
+                                        /// Creates a new `DependenciesPayloadPayload`.
+                                        ///
+                                        /// - Parameters:
+                                        ///   - fieldId:
+                                        ///   - itemId:
+                                        ///   - revision:
+                                        internal init(
+                                            fieldId: Swift.String,
+                                            itemId: Swift.String,
+                                            revision: Swift.Int
+                                        ) {
+                                            self.fieldId = fieldId
+                                            self.itemId = itemId
+                                            self.revision = revision
+                                        }
+                                        internal enum CodingKeys: String, CodingKey {
+                                            case fieldId
+                                            case itemId
+                                            case revision
+                                        }
+                                        internal init(from decoder: any Swift.Decoder) throws {
+                                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                                            self.fieldId = try container.decode(
+                                                Swift.String.self,
+                                                forKey: .fieldId
+                                            )
+                                            self.itemId = try container.decode(
+                                                Swift.String.self,
+                                                forKey: .itemId
+                                            )
+                                            self.revision = try container.decode(
+                                                Swift.Int.self,
+                                                forKey: .revision
+                                            )
+                                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                                "fieldId",
+                                                "itemId",
+                                                "revision"
+                                            ])
+                                        }
+                                    }
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case2/dependencies`.
+                                    internal typealias DependenciesPayload = [Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case2Payload.DependenciesPayloadPayload]
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case2/dependencies`.
+                                    internal var dependencies: Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case2Payload.DependenciesPayload
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case2/fieldId`.
+                                    internal var fieldId: Swift.String
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case2/override`.
+                                    internal struct OverridePayload: Codable, Hashable, Sendable {
+                                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case2/override/catalogueRevision`.
+                                        internal var catalogueRevision: Swift.Int
+                                        /// Creates a new `OverridePayload`.
+                                        ///
+                                        /// - Parameters:
+                                        ///   - catalogueRevision:
+                                        internal init(catalogueRevision: Swift.Int) {
+                                            self.catalogueRevision = catalogueRevision
+                                        }
+                                        internal enum CodingKeys: String, CodingKey {
+                                            case catalogueRevision
+                                        }
+                                        internal init(from decoder: any Swift.Decoder) throws {
+                                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                                            self.catalogueRevision = try container.decode(
+                                                Swift.Int.self,
+                                                forKey: .catalogueRevision
+                                            )
+                                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                                "catalogueRevision"
+                                            ])
+                                        }
+                                    }
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case2/override`.
+                                    internal var override: Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case2Payload.OverridePayload
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case2/source`.
+                                    internal enum SourcePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                        case computed = "computed"
+                                    }
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case2/source`.
+                                    internal var source: Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case2Payload.SourcePayload
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case2/state`.
+                                    internal enum StatePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                        case overridden = "overridden"
+                                    }
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case2/state`.
+                                    internal var state: Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case2Payload.StatePayload
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case2/traversedItemIds`.
+                                    internal var traversedItemIds: [Swift.String]
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case2/values`.
+                                    internal var values: [OpenAPIRuntime.OpenAPIValueContainer]
+                                    /// Creates a new `Case2Payload`.
+                                    ///
+                                    /// - Parameters:
+                                    ///   - catalogueRevision:
+                                    ///   - dependencies:
+                                    ///   - fieldId:
+                                    ///   - override:
+                                    ///   - source:
+                                    ///   - state:
+                                    ///   - traversedItemIds:
+                                    ///   - values:
+                                    internal init(
+                                        catalogueRevision: Swift.Int,
+                                        dependencies: Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case2Payload.DependenciesPayload,
+                                        fieldId: Swift.String,
+                                        override: Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case2Payload.OverridePayload,
+                                        source: Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case2Payload.SourcePayload,
+                                        state: Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case2Payload.StatePayload,
+                                        traversedItemIds: [Swift.String],
+                                        values: [OpenAPIRuntime.OpenAPIValueContainer]
+                                    ) {
+                                        self.catalogueRevision = catalogueRevision
+                                        self.dependencies = dependencies
+                                        self.fieldId = fieldId
+                                        self.override = override
+                                        self.source = source
+                                        self.state = state
+                                        self.traversedItemIds = traversedItemIds
+                                        self.values = values
+                                    }
+                                    internal enum CodingKeys: String, CodingKey {
+                                        case catalogueRevision
+                                        case dependencies
+                                        case fieldId
+                                        case override
+                                        case source
+                                        case state
+                                        case traversedItemIds
+                                        case values
+                                    }
+                                    internal init(from decoder: any Swift.Decoder) throws {
+                                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                                        self.catalogueRevision = try container.decode(
+                                            Swift.Int.self,
+                                            forKey: .catalogueRevision
+                                        )
+                                        self.dependencies = try container.decode(
+                                            Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case2Payload.DependenciesPayload.self,
+                                            forKey: .dependencies
+                                        )
+                                        self.fieldId = try container.decode(
+                                            Swift.String.self,
+                                            forKey: .fieldId
+                                        )
+                                        self.override = try container.decode(
+                                            Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case2Payload.OverridePayload.self,
+                                            forKey: .override
+                                        )
+                                        self.source = try container.decode(
+                                            Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case2Payload.SourcePayload.self,
+                                            forKey: .source
+                                        )
+                                        self.state = try container.decode(
+                                            Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case2Payload.StatePayload.self,
+                                            forKey: .state
+                                        )
+                                        self.traversedItemIds = try container.decode(
+                                            [Swift.String].self,
+                                            forKey: .traversedItemIds
+                                        )
+                                        self.values = try container.decode(
+                                            [OpenAPIRuntime.OpenAPIValueContainer].self,
+                                            forKey: .values
+                                        )
+                                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                            "catalogueRevision",
+                                            "dependencies",
+                                            "fieldId",
+                                            "override",
+                                            "source",
+                                            "state",
+                                            "traversedItemIds",
+                                            "values"
+                                        ])
+                                    }
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case2`.
+                                case case2(Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case2Payload)
+                                /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case3`.
+                                internal struct Case3Payload: Codable, Hashable, Sendable {
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case3/catalogueRevision`.
+                                    internal var catalogueRevision: Swift.Int
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case3/DependenciesPayload`.
+                                    internal struct DependenciesPayloadPayload: Codable, Hashable, Sendable {
+                                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case3/DependenciesPayload/fieldId`.
+                                        internal var fieldId: Swift.String
+                                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case3/DependenciesPayload/itemId`.
+                                        internal var itemId: Swift.String
+                                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case3/DependenciesPayload/revision`.
+                                        internal var revision: Swift.Int
+                                        /// Creates a new `DependenciesPayloadPayload`.
+                                        ///
+                                        /// - Parameters:
+                                        ///   - fieldId:
+                                        ///   - itemId:
+                                        ///   - revision:
+                                        internal init(
+                                            fieldId: Swift.String,
+                                            itemId: Swift.String,
+                                            revision: Swift.Int
+                                        ) {
+                                            self.fieldId = fieldId
+                                            self.itemId = itemId
+                                            self.revision = revision
+                                        }
+                                        internal enum CodingKeys: String, CodingKey {
+                                            case fieldId
+                                            case itemId
+                                            case revision
+                                        }
+                                        internal init(from decoder: any Swift.Decoder) throws {
+                                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                                            self.fieldId = try container.decode(
+                                                Swift.String.self,
+                                                forKey: .fieldId
+                                            )
+                                            self.itemId = try container.decode(
+                                                Swift.String.self,
+                                                forKey: .itemId
+                                            )
+                                            self.revision = try container.decode(
+                                                Swift.Int.self,
+                                                forKey: .revision
+                                            )
+                                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                                "fieldId",
+                                                "itemId",
+                                                "revision"
+                                            ])
+                                        }
+                                    }
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case3/dependencies`.
+                                    internal typealias DependenciesPayload = [Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case3Payload.DependenciesPayloadPayload]
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case3/dependencies`.
+                                    internal var dependencies: Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case3Payload.DependenciesPayload
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case3/failedFieldId`.
+                                    internal var failedFieldId: Swift.String
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case3/fieldId`.
+                                    internal var fieldId: Swift.String
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case3/reason`.
+                                    internal var reason: Swift.String
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case3/source`.
+                                    internal enum SourcePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                        case computed = "computed"
+                                    }
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case3/source`.
+                                    internal var source: Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case3Payload.SourcePayload
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case3/state`.
+                                    internal enum StatePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                        case unavailable = "unavailable"
+                                    }
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case3/state`.
+                                    internal var state: Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case3Payload.StatePayload
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case3/traversedItemIds`.
+                                    internal var traversedItemIds: [Swift.String]
+                                    /// Creates a new `Case3Payload`.
+                                    ///
+                                    /// - Parameters:
+                                    ///   - catalogueRevision:
+                                    ///   - dependencies:
+                                    ///   - failedFieldId:
+                                    ///   - fieldId:
+                                    ///   - reason:
+                                    ///   - source:
+                                    ///   - state:
+                                    ///   - traversedItemIds:
+                                    internal init(
+                                        catalogueRevision: Swift.Int,
+                                        dependencies: Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case3Payload.DependenciesPayload,
+                                        failedFieldId: Swift.String,
+                                        fieldId: Swift.String,
+                                        reason: Swift.String,
+                                        source: Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case3Payload.SourcePayload,
+                                        state: Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case3Payload.StatePayload,
+                                        traversedItemIds: [Swift.String]
+                                    ) {
+                                        self.catalogueRevision = catalogueRevision
+                                        self.dependencies = dependencies
+                                        self.failedFieldId = failedFieldId
+                                        self.fieldId = fieldId
+                                        self.reason = reason
+                                        self.source = source
+                                        self.state = state
+                                        self.traversedItemIds = traversedItemIds
+                                    }
+                                    internal enum CodingKeys: String, CodingKey {
+                                        case catalogueRevision
+                                        case dependencies
+                                        case failedFieldId
+                                        case fieldId
+                                        case reason
+                                        case source
+                                        case state
+                                        case traversedItemIds
+                                    }
+                                    internal init(from decoder: any Swift.Decoder) throws {
+                                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                                        self.catalogueRevision = try container.decode(
+                                            Swift.Int.self,
+                                            forKey: .catalogueRevision
+                                        )
+                                        self.dependencies = try container.decode(
+                                            Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case3Payload.DependenciesPayload.self,
+                                            forKey: .dependencies
+                                        )
+                                        self.failedFieldId = try container.decode(
+                                            Swift.String.self,
+                                            forKey: .failedFieldId
+                                        )
+                                        self.fieldId = try container.decode(
+                                            Swift.String.self,
+                                            forKey: .fieldId
+                                        )
+                                        self.reason = try container.decode(
+                                            Swift.String.self,
+                                            forKey: .reason
+                                        )
+                                        self.source = try container.decode(
+                                            Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case3Payload.SourcePayload.self,
+                                            forKey: .source
+                                        )
+                                        self.state = try container.decode(
+                                            Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case3Payload.StatePayload.self,
+                                            forKey: .state
+                                        )
+                                        self.traversedItemIds = try container.decode(
+                                            [Swift.String].self,
+                                            forKey: .traversedItemIds
+                                        )
+                                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                            "catalogueRevision",
+                                            "dependencies",
+                                            "failedFieldId",
+                                            "fieldId",
+                                            "reason",
+                                            "source",
+                                            "state",
+                                            "traversedItemIds"
+                                        ])
+                                    }
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case3`.
+                                case case3(Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case3Payload)
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    var errors: [any Swift.Error] = []
+                                    do {
+                                        self = .case1(try .init(from: decoder))
+                                        return
+                                    } catch {
+                                        errors.append(error)
+                                    }
+                                    do {
+                                        self = .case2(try .init(from: decoder))
+                                        return
+                                    } catch {
+                                        errors.append(error)
+                                    }
+                                    do {
+                                        self = .case3(try .init(from: decoder))
+                                        return
+                                    } catch {
+                                        errors.append(error)
+                                    }
+                                    throw Swift.DecodingError.failedToDecodeOneOfSchema(
+                                        type: Self.self,
+                                        codingPath: decoder.codingPath,
+                                        errors: errors
+                                    )
+                                }
+                                internal func encode(to encoder: any Swift.Encoder) throws {
+                                    switch self {
+                                    case let .case1(value):
+                                        try value.encode(to: encoder)
+                                    case let .case2(value):
+                                        try value.encode(to: encoder)
+                                    case let .case3(value):
+                                        try value.encode(to: encoder)
+                                    }
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/computedValues`.
+                            internal typealias ComputedValuesPayload = [Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload]
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/computedValues`.
+                            internal var computedValues: Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayload
                             /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/createdAt`.
                             internal var createdAt: Swift.String
                             /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/deletedAt`.
@@ -21209,6 +21761,7 @@ internal enum Operations {
                             ///   - access:
                             ///   - catalogueRevision:
                             ///   - code:
+                            ///   - computedValues:
                             ///   - createdAt:
                             ///   - deletedAt:
                             ///   - documentTitles:
@@ -21238,6 +21791,7 @@ internal enum Operations {
                                 access: Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.AccessPayload? = nil,
                                 catalogueRevision: Swift.Int? = nil,
                                 code: Swift.String? = nil,
+                                computedValues: Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayload,
                                 createdAt: Swift.String,
                                 deletedAt: Swift.String? = nil,
                                 documentTitles: [Swift.String],
@@ -21267,6 +21821,7 @@ internal enum Operations {
                                 self.access = access
                                 self.catalogueRevision = catalogueRevision
                                 self.code = code
+                                self.computedValues = computedValues
                                 self.createdAt = createdAt
                                 self.deletedAt = deletedAt
                                 self.documentTitles = documentTitles
@@ -21297,6 +21852,7 @@ internal enum Operations {
                                 case access
                                 case catalogueRevision
                                 case code
+                                case computedValues
                                 case createdAt
                                 case deletedAt
                                 case documentTitles
@@ -21336,6 +21892,10 @@ internal enum Operations {
                                 self.code = try container.decodeIfPresent(
                                     Swift.String.self,
                                     forKey: .code
+                                )
+                                self.computedValues = try container.decode(
+                                    Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayload.self,
+                                    forKey: .computedValues
                                 )
                                 self.createdAt = try container.decode(
                                     Swift.String.self,
@@ -21441,6 +22001,7 @@ internal enum Operations {
                                     "access",
                                     "catalogueRevision",
                                     "code",
+                                    "computedValues",
                                     "createdAt",
                                     "deletedAt",
                                     "documentTitles",
@@ -22723,6 +23284,558 @@ internal enum Operations {
                             internal var catalogueRevision: Swift.Int?
                             /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/code`.
                             internal var code: Swift.String?
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload`.
+                            internal enum ComputedValuesPayloadPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case1`.
+                                internal struct Case1Payload: Codable, Hashable, Sendable {
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case1/catalogueRevision`.
+                                    internal var catalogueRevision: Swift.Int
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case1/DependenciesPayload`.
+                                    internal struct DependenciesPayloadPayload: Codable, Hashable, Sendable {
+                                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case1/DependenciesPayload/fieldId`.
+                                        internal var fieldId: Swift.String
+                                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case1/DependenciesPayload/itemId`.
+                                        internal var itemId: Swift.String
+                                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case1/DependenciesPayload/revision`.
+                                        internal var revision: Swift.Int
+                                        /// Creates a new `DependenciesPayloadPayload`.
+                                        ///
+                                        /// - Parameters:
+                                        ///   - fieldId:
+                                        ///   - itemId:
+                                        ///   - revision:
+                                        internal init(
+                                            fieldId: Swift.String,
+                                            itemId: Swift.String,
+                                            revision: Swift.Int
+                                        ) {
+                                            self.fieldId = fieldId
+                                            self.itemId = itemId
+                                            self.revision = revision
+                                        }
+                                        internal enum CodingKeys: String, CodingKey {
+                                            case fieldId
+                                            case itemId
+                                            case revision
+                                        }
+                                        internal init(from decoder: any Swift.Decoder) throws {
+                                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                                            self.fieldId = try container.decode(
+                                                Swift.String.self,
+                                                forKey: .fieldId
+                                            )
+                                            self.itemId = try container.decode(
+                                                Swift.String.self,
+                                                forKey: .itemId
+                                            )
+                                            self.revision = try container.decode(
+                                                Swift.Int.self,
+                                                forKey: .revision
+                                            )
+                                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                                "fieldId",
+                                                "itemId",
+                                                "revision"
+                                            ])
+                                        }
+                                    }
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case1/dependencies`.
+                                    internal typealias DependenciesPayload = [Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case1Payload.DependenciesPayloadPayload]
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case1/dependencies`.
+                                    internal var dependencies: Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case1Payload.DependenciesPayload
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case1/fieldId`.
+                                    internal var fieldId: Swift.String
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case1/source`.
+                                    internal enum SourcePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                        case computed = "computed"
+                                    }
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case1/source`.
+                                    internal var source: Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case1Payload.SourcePayload
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case1/state`.
+                                    internal enum StatePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                        case ok = "ok"
+                                    }
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case1/state`.
+                                    internal var state: Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case1Payload.StatePayload
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case1/traversedItemIds`.
+                                    internal var traversedItemIds: [Swift.String]
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case1/values`.
+                                    internal var values: [OpenAPIRuntime.OpenAPIValueContainer]
+                                    /// Creates a new `Case1Payload`.
+                                    ///
+                                    /// - Parameters:
+                                    ///   - catalogueRevision:
+                                    ///   - dependencies:
+                                    ///   - fieldId:
+                                    ///   - source:
+                                    ///   - state:
+                                    ///   - traversedItemIds:
+                                    ///   - values:
+                                    internal init(
+                                        catalogueRevision: Swift.Int,
+                                        dependencies: Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case1Payload.DependenciesPayload,
+                                        fieldId: Swift.String,
+                                        source: Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case1Payload.SourcePayload,
+                                        state: Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case1Payload.StatePayload,
+                                        traversedItemIds: [Swift.String],
+                                        values: [OpenAPIRuntime.OpenAPIValueContainer]
+                                    ) {
+                                        self.catalogueRevision = catalogueRevision
+                                        self.dependencies = dependencies
+                                        self.fieldId = fieldId
+                                        self.source = source
+                                        self.state = state
+                                        self.traversedItemIds = traversedItemIds
+                                        self.values = values
+                                    }
+                                    internal enum CodingKeys: String, CodingKey {
+                                        case catalogueRevision
+                                        case dependencies
+                                        case fieldId
+                                        case source
+                                        case state
+                                        case traversedItemIds
+                                        case values
+                                    }
+                                    internal init(from decoder: any Swift.Decoder) throws {
+                                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                                        self.catalogueRevision = try container.decode(
+                                            Swift.Int.self,
+                                            forKey: .catalogueRevision
+                                        )
+                                        self.dependencies = try container.decode(
+                                            Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case1Payload.DependenciesPayload.self,
+                                            forKey: .dependencies
+                                        )
+                                        self.fieldId = try container.decode(
+                                            Swift.String.self,
+                                            forKey: .fieldId
+                                        )
+                                        self.source = try container.decode(
+                                            Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case1Payload.SourcePayload.self,
+                                            forKey: .source
+                                        )
+                                        self.state = try container.decode(
+                                            Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case1Payload.StatePayload.self,
+                                            forKey: .state
+                                        )
+                                        self.traversedItemIds = try container.decode(
+                                            [Swift.String].self,
+                                            forKey: .traversedItemIds
+                                        )
+                                        self.values = try container.decode(
+                                            [OpenAPIRuntime.OpenAPIValueContainer].self,
+                                            forKey: .values
+                                        )
+                                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                            "catalogueRevision",
+                                            "dependencies",
+                                            "fieldId",
+                                            "source",
+                                            "state",
+                                            "traversedItemIds",
+                                            "values"
+                                        ])
+                                    }
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case1`.
+                                case case1(Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case1Payload)
+                                /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case2`.
+                                internal struct Case2Payload: Codable, Hashable, Sendable {
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case2/catalogueRevision`.
+                                    internal var catalogueRevision: Swift.Int
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case2/DependenciesPayload`.
+                                    internal struct DependenciesPayloadPayload: Codable, Hashable, Sendable {
+                                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case2/DependenciesPayload/fieldId`.
+                                        internal var fieldId: Swift.String
+                                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case2/DependenciesPayload/itemId`.
+                                        internal var itemId: Swift.String
+                                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case2/DependenciesPayload/revision`.
+                                        internal var revision: Swift.Int
+                                        /// Creates a new `DependenciesPayloadPayload`.
+                                        ///
+                                        /// - Parameters:
+                                        ///   - fieldId:
+                                        ///   - itemId:
+                                        ///   - revision:
+                                        internal init(
+                                            fieldId: Swift.String,
+                                            itemId: Swift.String,
+                                            revision: Swift.Int
+                                        ) {
+                                            self.fieldId = fieldId
+                                            self.itemId = itemId
+                                            self.revision = revision
+                                        }
+                                        internal enum CodingKeys: String, CodingKey {
+                                            case fieldId
+                                            case itemId
+                                            case revision
+                                        }
+                                        internal init(from decoder: any Swift.Decoder) throws {
+                                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                                            self.fieldId = try container.decode(
+                                                Swift.String.self,
+                                                forKey: .fieldId
+                                            )
+                                            self.itemId = try container.decode(
+                                                Swift.String.self,
+                                                forKey: .itemId
+                                            )
+                                            self.revision = try container.decode(
+                                                Swift.Int.self,
+                                                forKey: .revision
+                                            )
+                                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                                "fieldId",
+                                                "itemId",
+                                                "revision"
+                                            ])
+                                        }
+                                    }
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case2/dependencies`.
+                                    internal typealias DependenciesPayload = [Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case2Payload.DependenciesPayloadPayload]
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case2/dependencies`.
+                                    internal var dependencies: Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case2Payload.DependenciesPayload
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case2/fieldId`.
+                                    internal var fieldId: Swift.String
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case2/override`.
+                                    internal struct OverridePayload: Codable, Hashable, Sendable {
+                                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case2/override/catalogueRevision`.
+                                        internal var catalogueRevision: Swift.Int
+                                        /// Creates a new `OverridePayload`.
+                                        ///
+                                        /// - Parameters:
+                                        ///   - catalogueRevision:
+                                        internal init(catalogueRevision: Swift.Int) {
+                                            self.catalogueRevision = catalogueRevision
+                                        }
+                                        internal enum CodingKeys: String, CodingKey {
+                                            case catalogueRevision
+                                        }
+                                        internal init(from decoder: any Swift.Decoder) throws {
+                                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                                            self.catalogueRevision = try container.decode(
+                                                Swift.Int.self,
+                                                forKey: .catalogueRevision
+                                            )
+                                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                                "catalogueRevision"
+                                            ])
+                                        }
+                                    }
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case2/override`.
+                                    internal var override: Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case2Payload.OverridePayload
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case2/source`.
+                                    internal enum SourcePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                        case computed = "computed"
+                                    }
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case2/source`.
+                                    internal var source: Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case2Payload.SourcePayload
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case2/state`.
+                                    internal enum StatePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                        case overridden = "overridden"
+                                    }
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case2/state`.
+                                    internal var state: Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case2Payload.StatePayload
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case2/traversedItemIds`.
+                                    internal var traversedItemIds: [Swift.String]
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case2/values`.
+                                    internal var values: [OpenAPIRuntime.OpenAPIValueContainer]
+                                    /// Creates a new `Case2Payload`.
+                                    ///
+                                    /// - Parameters:
+                                    ///   - catalogueRevision:
+                                    ///   - dependencies:
+                                    ///   - fieldId:
+                                    ///   - override:
+                                    ///   - source:
+                                    ///   - state:
+                                    ///   - traversedItemIds:
+                                    ///   - values:
+                                    internal init(
+                                        catalogueRevision: Swift.Int,
+                                        dependencies: Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case2Payload.DependenciesPayload,
+                                        fieldId: Swift.String,
+                                        override: Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case2Payload.OverridePayload,
+                                        source: Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case2Payload.SourcePayload,
+                                        state: Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case2Payload.StatePayload,
+                                        traversedItemIds: [Swift.String],
+                                        values: [OpenAPIRuntime.OpenAPIValueContainer]
+                                    ) {
+                                        self.catalogueRevision = catalogueRevision
+                                        self.dependencies = dependencies
+                                        self.fieldId = fieldId
+                                        self.override = override
+                                        self.source = source
+                                        self.state = state
+                                        self.traversedItemIds = traversedItemIds
+                                        self.values = values
+                                    }
+                                    internal enum CodingKeys: String, CodingKey {
+                                        case catalogueRevision
+                                        case dependencies
+                                        case fieldId
+                                        case override
+                                        case source
+                                        case state
+                                        case traversedItemIds
+                                        case values
+                                    }
+                                    internal init(from decoder: any Swift.Decoder) throws {
+                                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                                        self.catalogueRevision = try container.decode(
+                                            Swift.Int.self,
+                                            forKey: .catalogueRevision
+                                        )
+                                        self.dependencies = try container.decode(
+                                            Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case2Payload.DependenciesPayload.self,
+                                            forKey: .dependencies
+                                        )
+                                        self.fieldId = try container.decode(
+                                            Swift.String.self,
+                                            forKey: .fieldId
+                                        )
+                                        self.override = try container.decode(
+                                            Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case2Payload.OverridePayload.self,
+                                            forKey: .override
+                                        )
+                                        self.source = try container.decode(
+                                            Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case2Payload.SourcePayload.self,
+                                            forKey: .source
+                                        )
+                                        self.state = try container.decode(
+                                            Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case2Payload.StatePayload.self,
+                                            forKey: .state
+                                        )
+                                        self.traversedItemIds = try container.decode(
+                                            [Swift.String].self,
+                                            forKey: .traversedItemIds
+                                        )
+                                        self.values = try container.decode(
+                                            [OpenAPIRuntime.OpenAPIValueContainer].self,
+                                            forKey: .values
+                                        )
+                                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                            "catalogueRevision",
+                                            "dependencies",
+                                            "fieldId",
+                                            "override",
+                                            "source",
+                                            "state",
+                                            "traversedItemIds",
+                                            "values"
+                                        ])
+                                    }
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case2`.
+                                case case2(Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case2Payload)
+                                /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case3`.
+                                internal struct Case3Payload: Codable, Hashable, Sendable {
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case3/catalogueRevision`.
+                                    internal var catalogueRevision: Swift.Int
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case3/DependenciesPayload`.
+                                    internal struct DependenciesPayloadPayload: Codable, Hashable, Sendable {
+                                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case3/DependenciesPayload/fieldId`.
+                                        internal var fieldId: Swift.String
+                                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case3/DependenciesPayload/itemId`.
+                                        internal var itemId: Swift.String
+                                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case3/DependenciesPayload/revision`.
+                                        internal var revision: Swift.Int
+                                        /// Creates a new `DependenciesPayloadPayload`.
+                                        ///
+                                        /// - Parameters:
+                                        ///   - fieldId:
+                                        ///   - itemId:
+                                        ///   - revision:
+                                        internal init(
+                                            fieldId: Swift.String,
+                                            itemId: Swift.String,
+                                            revision: Swift.Int
+                                        ) {
+                                            self.fieldId = fieldId
+                                            self.itemId = itemId
+                                            self.revision = revision
+                                        }
+                                        internal enum CodingKeys: String, CodingKey {
+                                            case fieldId
+                                            case itemId
+                                            case revision
+                                        }
+                                        internal init(from decoder: any Swift.Decoder) throws {
+                                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                                            self.fieldId = try container.decode(
+                                                Swift.String.self,
+                                                forKey: .fieldId
+                                            )
+                                            self.itemId = try container.decode(
+                                                Swift.String.self,
+                                                forKey: .itemId
+                                            )
+                                            self.revision = try container.decode(
+                                                Swift.Int.self,
+                                                forKey: .revision
+                                            )
+                                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                                "fieldId",
+                                                "itemId",
+                                                "revision"
+                                            ])
+                                        }
+                                    }
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case3/dependencies`.
+                                    internal typealias DependenciesPayload = [Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case3Payload.DependenciesPayloadPayload]
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case3/dependencies`.
+                                    internal var dependencies: Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case3Payload.DependenciesPayload
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case3/failedFieldId`.
+                                    internal var failedFieldId: Swift.String
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case3/fieldId`.
+                                    internal var fieldId: Swift.String
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case3/reason`.
+                                    internal var reason: Swift.String
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case3/source`.
+                                    internal enum SourcePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                        case computed = "computed"
+                                    }
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case3/source`.
+                                    internal var source: Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case3Payload.SourcePayload
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case3/state`.
+                                    internal enum StatePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                        case unavailable = "unavailable"
+                                    }
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case3/state`.
+                                    internal var state: Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case3Payload.StatePayload
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case3/traversedItemIds`.
+                                    internal var traversedItemIds: [Swift.String]
+                                    /// Creates a new `Case3Payload`.
+                                    ///
+                                    /// - Parameters:
+                                    ///   - catalogueRevision:
+                                    ///   - dependencies:
+                                    ///   - failedFieldId:
+                                    ///   - fieldId:
+                                    ///   - reason:
+                                    ///   - source:
+                                    ///   - state:
+                                    ///   - traversedItemIds:
+                                    internal init(
+                                        catalogueRevision: Swift.Int,
+                                        dependencies: Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case3Payload.DependenciesPayload,
+                                        failedFieldId: Swift.String,
+                                        fieldId: Swift.String,
+                                        reason: Swift.String,
+                                        source: Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case3Payload.SourcePayload,
+                                        state: Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case3Payload.StatePayload,
+                                        traversedItemIds: [Swift.String]
+                                    ) {
+                                        self.catalogueRevision = catalogueRevision
+                                        self.dependencies = dependencies
+                                        self.failedFieldId = failedFieldId
+                                        self.fieldId = fieldId
+                                        self.reason = reason
+                                        self.source = source
+                                        self.state = state
+                                        self.traversedItemIds = traversedItemIds
+                                    }
+                                    internal enum CodingKeys: String, CodingKey {
+                                        case catalogueRevision
+                                        case dependencies
+                                        case failedFieldId
+                                        case fieldId
+                                        case reason
+                                        case source
+                                        case state
+                                        case traversedItemIds
+                                    }
+                                    internal init(from decoder: any Swift.Decoder) throws {
+                                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                                        self.catalogueRevision = try container.decode(
+                                            Swift.Int.self,
+                                            forKey: .catalogueRevision
+                                        )
+                                        self.dependencies = try container.decode(
+                                            Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case3Payload.DependenciesPayload.self,
+                                            forKey: .dependencies
+                                        )
+                                        self.failedFieldId = try container.decode(
+                                            Swift.String.self,
+                                            forKey: .failedFieldId
+                                        )
+                                        self.fieldId = try container.decode(
+                                            Swift.String.self,
+                                            forKey: .fieldId
+                                        )
+                                        self.reason = try container.decode(
+                                            Swift.String.self,
+                                            forKey: .reason
+                                        )
+                                        self.source = try container.decode(
+                                            Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case3Payload.SourcePayload.self,
+                                            forKey: .source
+                                        )
+                                        self.state = try container.decode(
+                                            Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case3Payload.StatePayload.self,
+                                            forKey: .state
+                                        )
+                                        self.traversedItemIds = try container.decode(
+                                            [Swift.String].self,
+                                            forKey: .traversedItemIds
+                                        )
+                                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                            "catalogueRevision",
+                                            "dependencies",
+                                            "failedFieldId",
+                                            "fieldId",
+                                            "reason",
+                                            "source",
+                                            "state",
+                                            "traversedItemIds"
+                                        ])
+                                    }
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case3`.
+                                case case3(Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case3Payload)
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    var errors: [any Swift.Error] = []
+                                    do {
+                                        self = .case1(try .init(from: decoder))
+                                        return
+                                    } catch {
+                                        errors.append(error)
+                                    }
+                                    do {
+                                        self = .case2(try .init(from: decoder))
+                                        return
+                                    } catch {
+                                        errors.append(error)
+                                    }
+                                    do {
+                                        self = .case3(try .init(from: decoder))
+                                        return
+                                    } catch {
+                                        errors.append(error)
+                                    }
+                                    throw Swift.DecodingError.failedToDecodeOneOfSchema(
+                                        type: Self.self,
+                                        codingPath: decoder.codingPath,
+                                        errors: errors
+                                    )
+                                }
+                                internal func encode(to encoder: any Swift.Encoder) throws {
+                                    switch self {
+                                    case let .case1(value):
+                                        try value.encode(to: encoder)
+                                    case let .case2(value):
+                                        try value.encode(to: encoder)
+                                    case let .case3(value):
+                                        try value.encode(to: encoder)
+                                    }
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/computedValues`.
+                            internal typealias ComputedValuesPayload = [Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload]
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/computedValues`.
+                            internal var computedValues: Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayload
                             /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/createdAt`.
                             internal var createdAt: Swift.String
                             /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/deletedAt`.
@@ -23298,6 +24411,7 @@ internal enum Operations {
                             ///   - access:
                             ///   - catalogueRevision:
                             ///   - code:
+                            ///   - computedValues:
                             ///   - createdAt:
                             ///   - deletedAt:
                             ///   - documentTitles:
@@ -23327,6 +24441,7 @@ internal enum Operations {
                                 access: Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.AccessPayload? = nil,
                                 catalogueRevision: Swift.Int? = nil,
                                 code: Swift.String? = nil,
+                                computedValues: Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayload,
                                 createdAt: Swift.String,
                                 deletedAt: Swift.String? = nil,
                                 documentTitles: [Swift.String],
@@ -23356,6 +24471,7 @@ internal enum Operations {
                                 self.access = access
                                 self.catalogueRevision = catalogueRevision
                                 self.code = code
+                                self.computedValues = computedValues
                                 self.createdAt = createdAt
                                 self.deletedAt = deletedAt
                                 self.documentTitles = documentTitles
@@ -23386,6 +24502,7 @@ internal enum Operations {
                                 case access
                                 case catalogueRevision
                                 case code
+                                case computedValues
                                 case createdAt
                                 case deletedAt
                                 case documentTitles
@@ -23425,6 +24542,10 @@ internal enum Operations {
                                 self.code = try container.decodeIfPresent(
                                     Swift.String.self,
                                     forKey: .code
+                                )
+                                self.computedValues = try container.decode(
+                                    Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayload.self,
+                                    forKey: .computedValues
                                 )
                                 self.createdAt = try container.decode(
                                     Swift.String.self,
@@ -23530,6 +24651,7 @@ internal enum Operations {
                                     "access",
                                     "catalogueRevision",
                                     "code",
+                                    "computedValues",
                                     "createdAt",
                                     "deletedAt",
                                     "documentTitles",

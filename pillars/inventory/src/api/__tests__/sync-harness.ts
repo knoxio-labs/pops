@@ -79,6 +79,7 @@ export interface WireMutation {
   op: string;
   entityId: string;
   baseRevision: number | null;
+  catalogueRevision?: number;
   dependsOn: string[];
   clientTime: string;
   args: unknown;

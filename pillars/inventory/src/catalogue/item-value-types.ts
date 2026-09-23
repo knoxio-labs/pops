@@ -55,6 +55,8 @@ export type EffectiveItemFieldValue =
       readonly fieldId: string;
       readonly state: 'unavailable';
       readonly reason: ExpressionUnavailableReason;
+      /** The dependency whose value was missing, or this field when evaluation failed. */
+      readonly failedFieldId: string;
       readonly traversedItemIds: readonly string[];
       readonly provenance: Extract<
         EffectiveComputedValue,
