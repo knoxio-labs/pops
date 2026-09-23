@@ -41,6 +41,8 @@ internal enum MutationLogReplay {
             try replay(&entry, after: &written, in: db)
             try MutationLogRows.update(entry, in: db)
         }
+        try LocalComputedValues.refresh(
+            Set(stale.union(written).filter { $0.kind == "item" }.map(\.id)), in: db)
     }
 
     private static func replay(

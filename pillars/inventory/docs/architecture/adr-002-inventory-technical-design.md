@@ -199,16 +199,15 @@ Evaluation has three results:
 
 Absent values are exposed as `unavailable`, not as a magic zero, empty string or false. The wire reasons are `missing_dependency`, `reference_unresolved`, `reference_missing`, `reference_deleted` and `evaluation_error`, with the failing field id and traversed item ids. A dependency's unavailable reason propagates unchanged. Errors are logged with item, field and catalogue revision and are exposed as unavailable with reason `evaluation_error`; they do not fail the item response. Only the selected branch of `if`, and only the necessary side of a short-circuit boolean node, contributes a runtime missing dependency. Evaluation is deterministic against one item-read snapshot and the catalogue revision pinned by that response.
 
-When `allowOverride` is false, an explicit value for the computed field is invalid. When true, an override uses the same value grammar and cardinality as the computed result and wins without evaluating dependencies. Clearing an override deletes its value rows and immediately resumes evaluation; it does not copy the last computed value. Effective values expose provenance:
+When `allowOverride` is false, an explicit value for the computed field is invalid. When true, an override uses the same value grammar and cardinality as the computed result and wins without evaluating dependencies. Clearing an override deletes its value rows and immediately resumes evaluation; it does not copy the last computed value. An item's `fieldValues` carry only stored values and overrides; `computedValues` carries one entry per computed field of its type. `state` is closed; `reason` is an open string:
 
 ```json
-{ "fieldId": "<uuid>", "state": "value", "values": ["48.000"],
-  "provenance": { "source": "computed", "catalogueRevision": 12,
-    "dependencies": [{ "itemId": "<uuid>", "fieldId": "<uuid>", "revision": 7 }] } }
-{ "fieldId": "<uuid>", "state": "value", "values": ["50.000"],
-  "provenance": { "source": "override", "catalogueRevision": 12 } }
-{ "fieldId": "<uuid>", "state": "unavailable", "reason": "missing_dependency",
-  "provenance": { "source": "computed", "catalogueRevision": 12 } }
+{ "fieldId": "<uuid>", "source": "computed", "catalogueRevision": 12, "state": "ok", "values": ["48.000"],
+  "dependencies": [{ "itemId": "<uuid>", "fieldId": "<uuid>", "revision": 7 }], "traversedItemIds": ["<uuid>"] }
+{ "fieldId": "<uuid>", "source": "computed", "catalogueRevision": 12, "state": "overridden", "values": ["50.000"],
+  "override": { "catalogueRevision": 11 }, "dependencies": [], "traversedItemIds": [] }
+{ "fieldId": "<uuid>", "source": "computed", "catalogueRevision": 12, "state": "unavailable",
+  "reason": "missing_dependency", "failedFieldId": "<uuid>", "dependencies": [], "traversedItemIds": ["<uuid>"] }
 ```
 
 Computed results are not stored as authority. The server and replica may cache them by `(item revision, catalogue revision, dependency revisions)` and must discard the cache when any key changes. The item event log records setting and clearing overrides; ordinary dependency changes are already visible through their own item events.
@@ -222,9 +221,9 @@ The following examples are normative abbreviations of the shapes above:
 - Scalar: `{ fieldId: voltage, state: 'value', values: ['12.000'], provenance: { source: 'stored', catalogueRevision: 12 } }` for a decimal field.
 - Multi-value: `{ fieldId: protocols, state: 'value', values: [{ optionId: usbC }, { optionId: thunderbolt4 }], ... }`; order is retained.
 - Reference: `{ fieldId: storedWith, state: 'value', values: [{ targetKind: 'item', targetId: boxId, targetState: 'deleted' }], ... }`; the deleted target leaves its id present.
-- Computed: `multiply(read([], packageCount), read([], unitPrice))` over two decimal fields produces `48.000` with `source: 'computed'` and dependency revisions.
-- Overridden: the same field with explicit override `50.000` returns `50.000` with `source: 'override'`, even when `unitPrice` is absent.
-- Cleared override: deleting that override causes the next read to evaluate again and return `48.000` with `source: 'computed'`.
+- Computed: `multiply(read([], packageCount), read([], unitPrice))` over two decimal fields produces `state: 'ok'`, `48.000` and dependency revisions.
+- Overridden: the same field with explicit override `50.000` returns `state: 'overridden'`, `50.000`, even when `unitPrice` is absent.
+- Cleared override: deleting that override causes the next read to evaluate again and return `state: 'ok'`, `48.000`.
 - Unavailable: after clearing the override and removing `unitPrice`, the field returns `state: 'unavailable', reason: 'missing_dependency'`; it does not return null or the old override.
 
 **Consequences.** A new type, field, option or compatible label correction needs no deployment. A new primitive or expression node still needs an app release and protocol rollout. The seven former code definitions were bootstrap input for migration `0017_persisted_item_types` only; after publication the database is the authority and the code templates are removed. The "type arrived" sheet triggers on a published catalogue revision that adds an active type whose `legacyLabels` match `items.legacy_type`.
@@ -293,7 +292,7 @@ bfm passes the protocol header unchanged in both directions and never down-conve
 - **Data protection.** Database and media files use `FileProtectionType.completeUntilFirstUserAuthentication` so background refresh works after first unlock. The media cache directory is excluded from backup; the database is not, because it holds unsynced work.
 - **Two row layers.** `item_base` is the last server state (with revision and `seq`); `item` is the optimistic view. A feed page updates `item_base`, then rebases each affected row by replaying its pending mutations over the new base. Commands are applied locally by a Swift reducer whose behaviour is pinned to the server's by shared test vectors (`pillars/inventory/contracts/command-vectors-v1.json`, generated by the TypeScript command tests and vendored to `clients/ios/Contracts`, with the same drift guard as the refresh-message vector).
 - **Catalogue replicas.** Immutable catalogue revisions, definitions and enum options are persisted in GRDB, not flattened into Swift enums. Applying a catalogue and the first rows that name it is one transaction. Item values and queued mutations retain their catalogue revision; old revisions remain until no replica row or mutation references them. The generic editor refuses unknown primitive or expression syntax rather than dropping it on a round trip.
-- **References and computed values.** Reference ids are stored even when their targets are absent or tombstoned. The replica evaluates the same versioned AST with the same decimal library, traversal limits and shared vectors as the server. Its cache uses item, catalogue and dependency revisions and is disposable.
+- **References and computed values.** Reference ids are stored even when their targets are absent or tombstoned. The replica evaluates the same versioned AST with the same exact-decimal arithmetic, traversal limits and shared vectors (`contracts/expression-vectors-v1.json`) as the server. A server evaluation stays authoritative while it still matches the phone's rows. After a local change (an edit, an override set or cleared, an offline create) or a newer revision of something it read, the replica re-evaluates the field and its dependents over its optimistic rows. It shows the server's value as out of date only when it cannot evaluate: syntax the build does not know, or a reference to an item not yet downloaded. Local evaluations are disposable and never sent.
 - **Replay order.** Stable topological order: enqueue order, corrected so nothing precedes its dependency, as the playground's `InventoryQueue.ordered` already specifies. The drain sends batches of up to 50, holds dependents back after a failure of their dependency, and backs off exponentially from 2 s to 5 min. It runs on foreground, after each enqueue, and on an `NWPathMonitor` change to satisfied.
 - **Migrations.** `DatabaseMigrator` with append-only named migrations; a replica migration that cannot run falls back to re-snapshot while preserving the log table.
 - **Media budget.** Thumbnails for every item are kept; full-size images live in an LRU cache capped at 500 MB; photos staged on this phone are pinned until the server acknowledges them. Free space under 200 MB before staging a photo, or `SQLITE_FULL`, raises the approved "Storage full" alert.

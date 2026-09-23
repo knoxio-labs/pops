@@ -139,7 +139,8 @@ internal enum ReplicaApply {
     /// goes. The catalogue stays: it is versioned by content, not by epoch.
     private static func discardServerState(_ db: Database) throws {
         for table in ReplicaSchema.itemLayers + ReplicaSchema.fieldValueLayers
-            + ReplicaSchema.locationLayers + ["event", "item_fts", ComputedValueRows.tableName]
+            + ReplicaSchema.locationLayers
+            + ["event", "item_fts", ComputedValueRows.tableName, ComputedValueRows.localTableName]
         {
             try db.execute(sql: "DELETE FROM \(table)")
         }

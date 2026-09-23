@@ -1,9 +1,9 @@
 import AppCore
 
 /// `item-override.ts`: an explicit value that supersedes an overridable
-/// computed field, and its removal. The phone cannot evaluate expressions, so
-/// clearing an override leaves the field without a local value until the
-/// server's evaluated one arrives, rather than showing a stale result.
+/// computed field, and its removal. Clearing one resumes evaluation: the
+/// logging transaction re-evaluates the field over the phone's rows
+/// (``LocalComputedValues``) rather than showing the value it had before.
 extension LocalReducer {
     func setComputedOverride(id: String, fieldId: String, value: InventoryPrimitiveValue)
         throws -> Written
