@@ -410,6 +410,13 @@ description = "Cross-reference a gathered Huly backlog export against merged com
 #   mise run backlog:reconcile -- --issues <export.json> [--ref origin/main]
 run = "node scripts/huly-backlog-reconcile.mjs \"$@\""
 
+[tasks."implementation:evidence"]
+description = "Validate read-only criterion evidence for a canonical Huly implementation ticket"
+# The packet records the canonical implementation ticket separately from each
+# PR's synced issue. This command never changes Huly or GitHub; it only says
+# whether the supplied evidence is safe for a human to act on.
+run = "node scripts/implementation-evidence.mjs \"$@\""
+
 # ============================================================================
 # Database Management
 # ============================================================================
