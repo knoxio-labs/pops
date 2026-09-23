@@ -366,6 +366,9 @@ function purchaseId(detail) {
   return typeof id === 'string' ? id : undefined;
 }
 
+/** `purchase-reads.ts`' `listPurchases` page size when a caller omits `limit`. */
+const PILLAR_DEFAULT_LIMIT = 100;
+
 /** What ts-rest answers when a query fails the pillar's contract schema, before any handler runs. */
 const SCHEMA_REJECTION = Object.freeze({
   ok: false,
@@ -379,7 +382,7 @@ const SCHEMA_REJECTION = Object.freeze({
  */
 function readListQuery(search) {
   const rawLimit = search.get('limit');
-  const limit = rawLimit === null ? 50 : Number(rawLimit);
+  const limit = rawLimit === null ? PILLAR_DEFAULT_LIMIT : Number(rawLimit);
   if (!Number.isInteger(limit) || limit < 1 || limit > 500) {
     return SCHEMA_REJECTION;
   }

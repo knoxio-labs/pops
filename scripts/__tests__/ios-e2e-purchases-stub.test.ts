@@ -254,6 +254,29 @@ describe('the purchases stub', () => {
     }
   });
 
+  it("answers an omitted limit with the pillar's default page of 100", async () => {
+    const stub = await startPurchasesStub();
+    try {
+      const extra = 101 - seededPurchases().length;
+      for (let index = 0; index < extra; index += 1) {
+        await fetch(`${stub.url}/purchases/manual`, {
+          method: 'POST',
+          body: JSON.stringify({
+            merchantEntityName: `Shop ${String(index)}`,
+            totalCents: 100,
+            items: [{ name: 'Item', quantity: 1, lineTotalCents: 100 }],
+          }),
+        });
+      }
+
+      const body = await (await fetch(`${stub.url}/purchases`)).json();
+      expect(body.total).toBe(101);
+      expect(body.items).toHaveLength(100);
+    } finally {
+      await stub.close();
+    }
+  });
+
   it('adds a manual purchase to list and detail reads, newest first', async () => {
     const stub = await startPurchasesStub();
     try {
