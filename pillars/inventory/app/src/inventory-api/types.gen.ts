@@ -3124,6 +3124,7 @@ export type SyncChangesResponses = {
     hasMore: boolean;
     items: Array<{
       access: 'open' | 'closed' | null;
+      catalogueRevision: number | null;
       code: string | null;
       createdAt: string;
       deletedAt: string | null;
@@ -3132,6 +3133,12 @@ export type SyncChangesResponses = {
       externalIds: Array<{
         kind: string;
         value: string;
+      }>;
+      fieldValues: Array<{
+        catalogueRevision: number;
+        fieldId: string;
+        source: 'stored' | 'override';
+        values: Array<unknown>;
       }>;
       fields: {
         [key: string]: unknown;
@@ -3180,6 +3187,7 @@ export type SyncChangesResponses = {
       quantity: number;
       revision: number;
       seq: number;
+      typeId: string | null;
       typeKey: string | null;
       updatedAt: string;
     }>;
@@ -3482,6 +3490,7 @@ export type SyncSnapshotResponses = {
     highWaterSeq: number;
     items: Array<{
       access: 'open' | 'closed' | null;
+      catalogueRevision: number | null;
       code: string | null;
       createdAt: string;
       deletedAt: string | null;
@@ -3490,6 +3499,12 @@ export type SyncSnapshotResponses = {
       externalIds: Array<{
         kind: string;
         value: string;
+      }>;
+      fieldValues: Array<{
+        catalogueRevision: number;
+        fieldId: string;
+        source: 'stored' | 'override';
+        values: Array<unknown>;
       }>;
       fields: {
         [key: string]: unknown;
@@ -3538,6 +3553,7 @@ export type SyncSnapshotResponses = {
       quantity: number;
       revision: number;
       seq: number;
+      typeId: string | null;
       typeKey: string | null;
       updatedAt: string;
     }>;
@@ -5075,6 +5091,7 @@ export type WebListResponses = {
   200: {
     items: Array<{
       access: 'open' | 'closed' | null;
+      catalogueRevision: number | null;
       code: string | null;
       createdAt: string;
       deletedAt: string | null;
@@ -5083,6 +5100,12 @@ export type WebListResponses = {
       externalIds: Array<{
         kind: string;
         value: string;
+      }>;
+      fieldValues: Array<{
+        catalogueRevision: number;
+        fieldId: string;
+        source: 'stored' | 'override';
+        values: Array<unknown>;
       }>;
       fields: {
         [key: string]: unknown;
@@ -5131,6 +5154,7 @@ export type WebListResponses = {
       quantity: number;
       revision: number;
       seq: number;
+      typeId: string | null;
       typeKey: string | null;
       updatedAt: string;
     }>;
@@ -5249,6 +5273,7 @@ export type WebGetResponses = {
     };
     item: {
       access: 'open' | 'closed' | null;
+      catalogueRevision: number | null;
       code: string | null;
       createdAt: string;
       deletedAt: string | null;
@@ -5257,6 +5282,12 @@ export type WebGetResponses = {
       externalIds: Array<{
         kind: string;
         value: string;
+      }>;
+      fieldValues: Array<{
+        catalogueRevision: number;
+        fieldId: string;
+        source: 'stored' | 'override';
+        values: Array<unknown>;
       }>;
       fields: {
         [key: string]: unknown;
@@ -5305,6 +5336,7 @@ export type WebGetResponses = {
       quantity: number;
       revision: number;
       seq: number;
+      typeId: string | null;
       typeKey: string | null;
       updatedAt: string;
     };

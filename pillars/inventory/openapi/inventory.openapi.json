@@ -7926,6 +7926,13 @@
                             "nullable": true,
                             "type": "string"
                           },
+                          "catalogueRevision": {
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "nullable": true,
+                            "type": "integer"
+                          },
                           "code": {
                             "nullable": true,
                             "type": "string"
@@ -7959,6 +7966,35 @@
                                 }
                               },
                               "required": ["kind", "value"],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "fieldValues": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "catalogueRevision": {
+                                  "exclusiveMinimum": true,
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                },
+                                "fieldId": {
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                  "type": "string"
+                                },
+                                "source": {
+                                  "enum": ["stored", "override"],
+                                  "type": "string"
+                                },
+                                "values": {
+                                  "items": {},
+                                  "type": "array"
+                                }
+                              },
+                              "required": ["fieldId", "source", "catalogueRevision", "values"],
                               "type": "object"
                             },
                             "type": "array"
@@ -8141,6 +8177,12 @@
                             "minimum": -9007199254740991,
                             "type": "integer"
                           },
+                          "typeId": {
+                            "format": "uuid",
+                            "nullable": true,
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                            "type": "string"
+                          },
                           "typeKey": {
                             "nullable": true,
                             "type": "string"
@@ -8154,8 +8196,11 @@
                           "revision",
                           "seq",
                           "name",
+                          "typeId",
+                          "catalogueRevision",
                           "typeKey",
                           "legacyType",
+                          "fieldValues",
                           "fields",
                           "note",
                           "code",
@@ -9130,6 +9175,13 @@
                             "nullable": true,
                             "type": "string"
                           },
+                          "catalogueRevision": {
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "nullable": true,
+                            "type": "integer"
+                          },
                           "code": {
                             "nullable": true,
                             "type": "string"
@@ -9163,6 +9215,35 @@
                                 }
                               },
                               "required": ["kind", "value"],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "fieldValues": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "catalogueRevision": {
+                                  "exclusiveMinimum": true,
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                },
+                                "fieldId": {
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                  "type": "string"
+                                },
+                                "source": {
+                                  "enum": ["stored", "override"],
+                                  "type": "string"
+                                },
+                                "values": {
+                                  "items": {},
+                                  "type": "array"
+                                }
+                              },
+                              "required": ["fieldId", "source", "catalogueRevision", "values"],
                               "type": "object"
                             },
                             "type": "array"
@@ -9345,6 +9426,12 @@
                             "minimum": -9007199254740991,
                             "type": "integer"
                           },
+                          "typeId": {
+                            "format": "uuid",
+                            "nullable": true,
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                            "type": "string"
+                          },
                           "typeKey": {
                             "nullable": true,
                             "type": "string"
@@ -9358,8 +9445,11 @@
                           "revision",
                           "seq",
                           "name",
+                          "typeId",
+                          "catalogueRevision",
                           "typeKey",
                           "legacyType",
+                          "fieldValues",
                           "fields",
                           "note",
                           "code",
@@ -14725,6 +14815,13 @@
                             "nullable": true,
                             "type": "string"
                           },
+                          "catalogueRevision": {
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "nullable": true,
+                            "type": "integer"
+                          },
                           "code": {
                             "nullable": true,
                             "type": "string"
@@ -14758,6 +14855,35 @@
                                 }
                               },
                               "required": ["kind", "value"],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "fieldValues": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "catalogueRevision": {
+                                  "exclusiveMinimum": true,
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                },
+                                "fieldId": {
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                  "type": "string"
+                                },
+                                "source": {
+                                  "enum": ["stored", "override"],
+                                  "type": "string"
+                                },
+                                "values": {
+                                  "items": {},
+                                  "type": "array"
+                                }
+                              },
+                              "required": ["fieldId", "source", "catalogueRevision", "values"],
                               "type": "object"
                             },
                             "type": "array"
@@ -14940,6 +15066,12 @@
                             "minimum": -9007199254740991,
                             "type": "integer"
                           },
+                          "typeId": {
+                            "format": "uuid",
+                            "nullable": true,
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                            "type": "string"
+                          },
                           "typeKey": {
                             "nullable": true,
                             "type": "string"
@@ -14953,8 +15085,11 @@
                           "revision",
                           "seq",
                           "name",
+                          "typeId",
+                          "catalogueRevision",
                           "typeKey",
                           "legacyType",
+                          "fieldValues",
                           "fields",
                           "note",
                           "code",
@@ -15327,6 +15462,13 @@
                           "nullable": true,
                           "type": "string"
                         },
+                        "catalogueRevision": {
+                          "exclusiveMinimum": true,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "nullable": true,
+                          "type": "integer"
+                        },
                         "code": {
                           "nullable": true,
                           "type": "string"
@@ -15360,6 +15502,35 @@
                               }
                             },
                             "required": ["kind", "value"],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "fieldValues": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "catalogueRevision": {
+                                "exclusiveMinimum": true,
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "fieldId": {
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                "type": "string"
+                              },
+                              "source": {
+                                "enum": ["stored", "override"],
+                                "type": "string"
+                              },
+                              "values": {
+                                "items": {},
+                                "type": "array"
+                              }
+                            },
+                            "required": ["fieldId", "source", "catalogueRevision", "values"],
                             "type": "object"
                           },
                           "type": "array"
@@ -15542,6 +15713,12 @@
                           "minimum": -9007199254740991,
                           "type": "integer"
                         },
+                        "typeId": {
+                          "format": "uuid",
+                          "nullable": true,
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
                         "typeKey": {
                           "nullable": true,
                           "type": "string"
@@ -15555,8 +15732,11 @@
                         "revision",
                         "seq",
                         "name",
+                        "typeId",
+                        "catalogueRevision",
                         "typeKey",
                         "legacyType",
+                        "fieldValues",
                         "fields",
                         "note",
                         "code",

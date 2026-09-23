@@ -59,6 +59,14 @@ export const MobileInventoryProvenanceSchema = z.object({
   transactionUri: z.string().nullable(),
 });
 
+/** One canonical stable-ID field-value group relayed from inventory protocol 2. */
+export const MobileInventoryFieldValueSchema = z.object({
+  fieldId: z.uuid(),
+  source: z.enum(['stored', 'override']),
+  catalogueRevision: z.number().int().positive(),
+  values: z.array(AnyJson),
+});
+
 /**
  * Whether an item has Paperless documents. Closed: the app draws one of three
  * fixed states rather than a label it has never seen.
@@ -73,9 +81,15 @@ export const MobileInventoryItemSchema = z.object({
   revision: z.number().int(),
   seq: z.number().int(),
   name: z.string(),
+  /** Persisted type identity, independent from the display-oriented legacy key. */
+  typeId: z.uuid().nullable(),
+  /** Common source revision for the item values, or `null` for an empty/mixed set. */
+  catalogueRevision: z.number().int().positive().nullable(),
   typeKey: z.string().nullable(),
   /** The free-text type an item had before types existed; read-only, matched against a type's `legacyLabels`. */
   legacyType: z.string().nullable(),
+  /** Canonical protocol-2 values addressed by stable field IDs. */
+  fieldValues: z.array(MobileInventoryFieldValueSchema),
   fields: z.record(z.string(), AnyJson),
   note: z.string().nullable(),
   code: z.string().nullable(),

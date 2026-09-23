@@ -126,14 +126,68 @@ describe('the catalogue', () => {
   });
 });
 
+describe('protocol-2 inventory values', () => {
+  it('relays exact catalogue identities and canonical stable-ID values without reshaping them', async () => {
+    const fake = createInventoryFake({
+      snapshotResult: {
+        kind: 'ok',
+        value: {
+          epoch: 'epoch-1',
+          highWaterSeq: 1,
+          catalogueVersion: 'cat-1',
+          total: 1,
+          items: [
+            {
+              ...drillItem(),
+              typeId: '59538480-6e82-5ccc-b7be-f1cfd15b9af6',
+              catalogueRevision: 1,
+              typeKey: 'bulb',
+              fieldValues: [
+                {
+                  fieldId: '147a262c-bb7c-51bf-b617-16d354228d91',
+                  source: 'stored',
+                  catalogueRevision: 1,
+                  values: [{ amount: '800', unit: 'lm' }],
+                },
+              ],
+            },
+          ],
+          locations: [],
+          nextCursor: null,
+        },
+      },
+    });
+    const { app, token } = openWith(fake.factory);
+
+    const response = await get(app, token, '/mobile/inventory/sync/snapshot');
+
+    expect(response.status).toBe(200);
+    expect(response.body.items[0]).toMatchObject({
+      typeId: '59538480-6e82-5ccc-b7be-f1cfd15b9af6',
+      catalogueRevision: 1,
+      fieldValues: [
+        {
+          fieldId: '147a262c-bb7c-51bf-b617-16d354228d91',
+          source: 'stored',
+          catalogueRevision: 1,
+          values: [{ amount: '800', unit: 'lm' }],
+        },
+      ],
+    });
+  });
+});
+
 function drillItem(): Record<string, unknown> {
   return {
     id: 'item-1',
     revision: 1,
     seq: 3,
     name: 'Drill',
+    typeId: null,
+    catalogueRevision: null,
     typeKey: null,
     legacyType: 'Tools',
+    fieldValues: [],
     fields: {},
     note: null,
     code: null,

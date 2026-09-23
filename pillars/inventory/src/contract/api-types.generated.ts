@@ -4765,6 +4765,7 @@ export interface operations {
             items: {
               /** @enum {string|null} */
               access: 'open' | 'closed' | null;
+              catalogueRevision: number | null;
               code: string | null;
               createdAt: string;
               deletedAt: string | null;
@@ -4774,6 +4775,14 @@ export interface operations {
               externalIds: {
                 kind: string;
                 value: string;
+              }[];
+              fieldValues: {
+                catalogueRevision: number;
+                /** Format: uuid */
+                fieldId: string;
+                /** @enum {string} */
+                source: 'stored' | 'override';
+                values: unknown[];
               }[];
               fields: {
                 [key: string]: unknown;
@@ -4829,6 +4838,8 @@ export interface operations {
               quantity: number;
               revision: number;
               seq: number;
+              /** Format: uuid */
+              typeId: string | null;
               typeKey: string | null;
               updatedAt: string;
             }[];
@@ -5199,6 +5210,7 @@ export interface operations {
             items: {
               /** @enum {string|null} */
               access: 'open' | 'closed' | null;
+              catalogueRevision: number | null;
               code: string | null;
               createdAt: string;
               deletedAt: string | null;
@@ -5208,6 +5220,14 @@ export interface operations {
               externalIds: {
                 kind: string;
                 value: string;
+              }[];
+              fieldValues: {
+                catalogueRevision: number;
+                /** Format: uuid */
+                fieldId: string;
+                /** @enum {string} */
+                source: 'stored' | 'override';
+                values: unknown[];
               }[];
               fields: {
                 [key: string]: unknown;
@@ -5263,6 +5283,8 @@ export interface operations {
               quantity: number;
               revision: number;
               seq: number;
+              /** Format: uuid */
+              typeId: string | null;
               typeKey: string | null;
               updatedAt: string;
             }[];
@@ -7140,6 +7162,7 @@ export interface operations {
             items: {
               /** @enum {string|null} */
               access: 'open' | 'closed' | null;
+              catalogueRevision: number | null;
               code: string | null;
               createdAt: string;
               deletedAt: string | null;
@@ -7149,6 +7172,14 @@ export interface operations {
               externalIds: {
                 kind: string;
                 value: string;
+              }[];
+              fieldValues: {
+                catalogueRevision: number;
+                /** Format: uuid */
+                fieldId: string;
+                /** @enum {string} */
+                source: 'stored' | 'override';
+                values: unknown[];
               }[];
               fields: {
                 [key: string]: unknown;
@@ -7204,6 +7235,8 @@ export interface operations {
               quantity: number;
               revision: number;
               seq: number;
+              /** Format: uuid */
+              typeId: string | null;
               typeKey: string | null;
               updatedAt: string;
             }[];
@@ -7336,6 +7369,7 @@ export interface operations {
             item: {
               /** @enum {string|null} */
               access: 'open' | 'closed' | null;
+              catalogueRevision: number | null;
               code: string | null;
               createdAt: string;
               deletedAt: string | null;
@@ -7345,6 +7379,14 @@ export interface operations {
               externalIds: {
                 kind: string;
                 value: string;
+              }[];
+              fieldValues: {
+                catalogueRevision: number;
+                /** Format: uuid */
+                fieldId: string;
+                /** @enum {string} */
+                source: 'stored' | 'override';
+                values: unknown[];
               }[];
               fields: {
                 [key: string]: unknown;
@@ -7400,6 +7442,8 @@ export interface operations {
               quantity: number;
               revision: number;
               seq: number;
+              /** Format: uuid */
+              typeId: string | null;
               typeKey: string | null;
               updatedAt: string;
             };

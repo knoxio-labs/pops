@@ -83,6 +83,39 @@ internal struct InventorySnapshotMappingTests {
         #expect(item.fields["range-field"] == .range(InventoryRange(low: 1, high: 2, unit: "kg")))
     }
 
+    @Test("a protocol-2 item preserves its exact catalogue revision and canonical stable-ID values")
+    func protocol2Values() async throws {
+        let fieldValues = """
+            [{"fieldId":"147a262c-bb7c-51bf-b617-16d354228d91","source":"stored",\
+            "catalogueRevision":1,"values":[{"amount":"800","unit":"lm"}]}]
+            """
+        let transport = StubTransport(
+            status: .ok,
+            json: InventoryWire.snapshot(
+                items: [
+                    InventoryWire.item(
+                        typeId: "59538480-6e82-5ccc-b7be-f1cfd15b9af6",
+                        catalogueRevision: 1,
+                        fieldValues: fieldValues)
+                ]))
+        let page = try await BFMInventoryTransport.stubbed(transport).fetchSnapshot(
+            cursor: nil, limit: 250)
+
+        let item = try #require(page.items.first)
+        #expect(item.typeId == "59538480-6e82-5ccc-b7be-f1cfd15b9af6")
+        #expect(item.catalogueRevision == 1)
+        let expectedAmount = try InventoryDecimal("800")
+        #expect(
+            item.fieldValues == [
+                InventoryItemFieldEntry(
+                    fieldId: "147a262c-bb7c-51bf-b617-16d354228d91",
+                    state: .value([.measurement(amount: expectedAmount, unit: "lm")]),
+                    source: .stored,
+                    catalogueRevision: 1
+                )
+            ])
+    }
+
     @Test("the catalogue maps every field kind and an unrecognised one is a contract mismatch")
     func catalogueFieldKinds() async throws {
         let field = { (kind: String) in
