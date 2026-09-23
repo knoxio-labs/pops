@@ -112,6 +112,7 @@ The owner-facing REST surface is command-shaped so MCP and the web editor use th
 | Route                                           | Body / result                                                                                            |
 | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | `GET /type-catalogue?revision=`                 | current or exact immutable descriptor; `404 catalogue_revision_unknown`                                  |
+| `GET /type-catalogue/types/:typeId?revision=`   | one type as the current or exact published revision defined it; `404 catalogue_type_unknown`             |
 | `GET /type-catalogue/audit?before=&limit=`      | reverse-chronological publication and abandonment events                                                 |
 | `POST /type-catalogue/drafts`                   | `{ baseRevision }` → the new draft; conflicts if one already exists                                      |
 | `PATCH /type-catalogue/drafts/:revision`        | `{ baseRevision, expectedDraftVersion, operations[] }` → the validated draft and a compatibility preview |
@@ -165,7 +166,7 @@ Anything with historical use is archived, never deleted. An archived type cannot
 
 Publication classifies changes as follows:
 
-- Compatible without value migration: labels, help, order and presentation hints; adding a type; adding an optional stored field; adding an enum option; relaxing `required`; and archiving a definition while retaining its existing values as readable history.
+- Compatible without value migration: labels, help, order and presentation hints; adding a type whose fields use only primitive kinds the base already uses; adding an optional stored field; adding an enum option; relaxing `required`; and archiving a definition while retaining its existing values as readable history.
 - Compatible for data but protocol-gated: adding a primitive kind, cardinality rule, reference target kind or provenance case that an installed client may not understand. An expression node is not gated: phones carry expressions as opaque JSON and a client that cannot parse one keeps the server's evaluation (D11), so a new node degrades to "Out of date" after a local edit rather than failing. The publication sets `minimumProtocol` to the first protocol that understands it and cannot publish until D10's rollout rule is met.
 - Requires an explicit migration: making a field required, removing or remapping values instead of merely archiving their definition, narrowing reference targets, changing a computed expression in a way that changes its declared dependencies, or replacing any immutable field characteristic.
 - Forbidden: mutating or reusing an id/key, editing a published snapshot, publishing values that fail the candidate schema, or deleting audit history.
@@ -436,7 +437,7 @@ Key/value: `epoch`, `min_protocol`, `catalogue_revision`.
 
 ### `items_fts`
 
-FTS5 over `name`, `code`, `note`, `type_label`, `field_text`, `external_ids`, maintained by the command layer. It resolves labels from the published catalogue snapshot and rebuilds after `catalogue_revision` changes.
+FTS5 over `name`, `code`, `note`, `type_label`, `field_text`, `external_ids`, maintained by the command layer. It resolves labels from the published catalogue snapshot and rebuilds after `catalogue_revision` changes. `field_text` carries each computed field's effective value (the override when present, otherwise the evaluated value, nothing while unavailable); dependents re-sent by a mutation (D5) are reindexed in that mutation's transaction.
 
 `item_uploaded_files`, `item_documents`, `item_connections` and `item_fixture_connections` keep their shapes and are rebuilt only to point at `items`. `fixtures` is untouched; ADR-001's "a fixture is an item with the wired-in capability" is not part of this design.
 

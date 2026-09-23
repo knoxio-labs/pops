@@ -59,6 +59,7 @@ export const MOCK_FIXTURE_CONN = {
   createdAt: '2024-01-01T00:00:00.000Z',
 };
 
+const TYPE_ID = '6f1d9d7e-3b1f-4b0e-9d5c-2a7f4b1e8c21';
 const PAGED1 = { pagination: { total: 1, limit: 50, offset: 0, hasMore: false } };
 
 export const mockPillarInventory = {
@@ -66,6 +67,12 @@ export const mockPillarInventory = {
     types: {
       read: {
         catalogue: vi.fn().mockResolvedValue(callOk({ revision: { revision: 1 }, types: [] })),
+        type: vi.fn().mockResolvedValue(
+          callOk({
+            revision: { revision: 1 },
+            type: { id: TYPE_ID, key: 'cable', label: 'Cable' },
+          })
+        ),
         audit: vi.fn().mockResolvedValue(callOk({ events: [], nextBefore: null })),
         validateItem: vi.fn().mockResolvedValue(
           callOk({

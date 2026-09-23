@@ -87,6 +87,15 @@ export function comparePersistedFields(
   return changes;
 }
 
+function primitiveKindAdded(
+  field: PersistedItemTypeField,
+  baseKinds: ReadonlySet<string>
+): CatalogueCompatibilityChange | null {
+  return baseKinds.has(field.kind)
+    ? null
+    : change('protocol_gated', field.id, 'primitive_kind_added');
+}
+
 /** Collects compatibility changes for fields introduced by a candidate snapshot. */
 export function compareAddedFields(
   base: PersistedItemType,
@@ -98,11 +107,25 @@ export function compareAddedFields(
   for (const field of candidate.fields.filter((entry) => !baseIds.has(entry.id))) {
     if (field.required || field.storage === 'computed') {
       changes.push(change('migration_required', field.id, 'non_optional_field_added'));
-    } else if (!baseKinds.has(field.kind)) {
-      changes.push(change('protocol_gated', field.id, 'primitive_kind_added'));
     } else {
-      changes.push(change('compatible', field.id, 'optional_field_added'));
+      changes.push(
+        primitiveKindAdded(field, baseKinds) ??
+          change('compatible', field.id, 'optional_field_added')
+      );
     }
   }
   return changes;
+}
+
+/**
+ * Protocol-gates each field of a type the candidate adds whose primitive kind
+ * no base field uses, exactly as adding that field to an existing type would.
+ * A new type has no items, so its required and computed fields need no
+ * migration; the type itself is recorded as `type_added`.
+ */
+export function compareNewTypeFields(
+  candidate: PersistedItemType,
+  baseKinds: ReadonlySet<string>
+): CatalogueCompatibilityChange[] {
+  return candidate.fields.flatMap((field) => primitiveKindAdded(field, baseKinds) ?? []);
 }

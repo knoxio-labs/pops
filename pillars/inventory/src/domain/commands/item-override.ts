@@ -5,6 +5,7 @@ import { resolveCommandCatalogue, resolveCommandType } from './command-catalogue
 import { requireItem } from './entities.js';
 import { CommandRejected } from './errors.js';
 import { defineOp } from './op.js';
+import { reindexItems } from './search-index.js';
 
 import type { ItemFieldValueInput, PersistedItemTypeField } from '../../catalogue/index.js';
 import type { CommandDb, FieldValues } from './entities.js';
@@ -73,6 +74,9 @@ export const itemSetOverride = defineOp({
     return {
       eventKind: 'override_set',
       changes: overrideChanges(ctx.db, row.id, field, args.values),
+      effects(effectCtx) {
+        reindexItems(effectCtx.db, [row.id]);
+      },
     };
   },
 });
@@ -95,6 +99,9 @@ export const itemClearOverride = defineOp({
     return {
       eventKind: 'override_cleared',
       changes: overrideChanges(ctx.db, row.id, field, null),
+      effects(effectCtx) {
+        reindexItems(effectCtx.db, [row.id]);
+      },
     };
   },
 });

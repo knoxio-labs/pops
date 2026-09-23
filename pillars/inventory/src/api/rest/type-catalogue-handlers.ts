@@ -13,6 +13,7 @@ import {
   type CatalogueAuthor,
   type DraftTarget,
 } from '../../catalogue/authoring.js';
+import { readPublishedCatalogueType } from '../../catalogue/catalogue-type-read.js';
 import { loadCatalogue } from '../../catalogue/index.js';
 import { readInventoryPrincipal } from '../middleware/identity.js';
 import { compatibilityBody, runCatalogue } from './type-catalogue-responses.js';
@@ -81,6 +82,15 @@ function makeTypeCatalogueReadHandlers(db: CommandDb) {
         }
         const descriptor = toCatalogueDescriptor(db, catalogue);
         const etag = `"catalogue-${catalogue.revision.revision}"`;
+        res.setHeader('ETag', etag);
+        if (headers['if-none-match'] === etag) return { status: 304 as const, body: undefined };
+        return { status: 200 as const, body: descriptor };
+      }),
+    type: ({ params, query, headers, res }: TypesRequest['read']['type'] & { res: Response }) =>
+      runCatalogue(() => {
+        requireAuthor(res, 'read');
+        const descriptor = readPublishedCatalogueType(db, params.typeId, query.revision);
+        const etag = `"catalogue-${descriptor.revision.revision}"`;
         res.setHeader('ETag', etag);
         if (headers['if-none-match'] === etag) return { status: 304 as const, body: undefined };
         return { status: 200 as const, body: descriptor };

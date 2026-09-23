@@ -1048,6 +1048,12 @@ export const INVENTORY_ROUTES = [
     handlerFile: 'pillars/inventory/src/api/rest/type-catalogue-handlers.ts',
     handlerKey: 'audit',
   },
+  {
+    method: 'get',
+    path: '/type-catalogue/types/{typeId}',
+    handlerFile: 'pillars/inventory/src/api/rest/type-catalogue-handlers.ts',
+    handlerKey: 'type',
+  },
 ];
 
 /** Empty today: every field on every known inventory route is read. @type {AllowlistEntry[]} */

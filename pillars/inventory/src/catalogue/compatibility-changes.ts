@@ -1,4 +1,8 @@
-import { compareAddedFields, comparePersistedFields } from './compatibility-fields.js';
+import {
+  compareAddedFields,
+  compareNewTypeFields,
+  comparePersistedFields,
+} from './compatibility-fields.js';
 
 import type { PersistedCatalogue, PersistedItemType } from './catalogue-types.js';
 import type {
@@ -92,6 +96,7 @@ export function collectCatalogueChanges(
       addChange(changes, 'forbidden', type.id, 'published_type_key_reused');
     } else if (!base.types.some((entry) => entry.id === type.id)) {
       addChange(changes, 'compatible', type.id, 'type_added');
+      changes.push(...compareNewTypeFields(type, baseKinds));
     }
   }
   return changes;
