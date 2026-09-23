@@ -70,6 +70,7 @@ function useDraftPatching(
       setCompatibility({
         compatibility: result.compatibility,
         draftVersion: result.draft.revision.draftVersion,
+        isLivePreview: false,
       });
     },
   });

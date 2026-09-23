@@ -113,6 +113,21 @@ describe('PublishPanel', () => {
     expect(screen.getByText(/last preview is stale/u)).toBeInTheDocument();
   });
 
+  it('blocks publication for a live preview of an unsaved edit, even when compatible', () => {
+    renderPanel({
+      readiness: { status: 'live_preview', compatibility: compatibility('compatible') },
+    });
+
+    expect(screen.getByRole('button', { name: 'Review and publish' })).toBeDisabled();
+    expect(screen.getByText('Compatible (unsaved)')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /Live preview of an unsaved edit\. Save it to validate the persisted draft\./u
+      )
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Passed')).not.toBeInTheDocument();
+  });
+
   it('never labels a migration-required or forbidden result Passed', () => {
     renderPanel({
       readiness: { status: 'ready', compatibility: compatibility('migration_required') },

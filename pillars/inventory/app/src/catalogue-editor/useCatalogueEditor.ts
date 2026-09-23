@@ -34,6 +34,8 @@ function toReadiness(
   if (snapshot === null) return { status: 'not_previewed' };
   if (catalogue === undefined || snapshot.draftVersion !== catalogue.revision.draftVersion)
     return { status: 'stale' };
+  if (snapshot.isLivePreview)
+    return { status: 'live_preview', compatibility: snapshot.compatibility };
   return { status: 'ready', compatibility: snapshot.compatibility };
 }
 

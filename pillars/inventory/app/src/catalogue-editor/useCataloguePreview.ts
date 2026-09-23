@@ -53,6 +53,7 @@ export function useCataloguePreview(
               setCompatibility({
                 compatibility: result.compatibility,
                 draftVersion: draft.revision.draftVersion,
+                isLivePreview: true,
               });
           } catch (previewError) {
             if (sequence.current === requestSequence) setError(previewError);

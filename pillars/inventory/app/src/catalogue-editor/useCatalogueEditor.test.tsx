@@ -145,6 +145,26 @@ describe('useCatalogueEditor readiness', () => {
     await waitFor(() => expect(result.current.readiness).toEqual({ status: 'stale' }));
   });
 
+  it('never grants ready from a live preview of an unsaved edit, even when versions match', async () => {
+    api.readDraft.mockResolvedValue({ data: draft(4), error: undefined });
+    api.previewDraft.mockResolvedValue({ data: { compatibility: compatible }, error: undefined });
+    const { result } = setup();
+    await waitFor(() => expect(result.current.catalogue).toBeDefined());
+
+    act(() => {
+      result.current.previewOperation({ kind: 'put_type', id: TYPE_ID, label: 'Unsaved edit' });
+    });
+
+    await waitFor(() => expect(api.previewDraft).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(result.current.readiness).toEqual({
+        status: 'live_preview',
+        compatibility: compatible,
+      })
+    );
+    expect(api.patchDraft).not.toHaveBeenCalled();
+  });
+
   it('clears readiness back to not-previewed after reload', async () => {
     api.readDraft.mockResolvedValue({ data: draft(4), error: undefined });
     api.patchDraft.mockResolvedValue({

@@ -31,6 +31,8 @@ function summaryText(readiness: CatalogueReadiness): string {
   if (readiness.status === 'not_previewed') return 'Not yet previewed. Edit the draft to publish.';
   if (readiness.status === 'stale')
     return 'The last preview is stale. Repeat the edit to preview the current draft.';
+  if (readiness.status === 'live_preview')
+    return 'Live preview of an unsaved edit. Save it to validate the persisted draft.';
   const { compatibility } = readiness;
   return `${labels[compatibility.classification]} · ${compatibility.affectedItems} affected items · ${compatibility.affectedIds.length} affected definitions`;
 }
