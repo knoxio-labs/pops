@@ -32,8 +32,8 @@ export const EXPRESSION_BINARY_OPS = [
  * accidental thenable), and the wire key itself is not ours to rename: it
  * must match `expression-parser.ts`'s `parseConditional`.
  */
-const THEN_KEY = 'then' as const;
-const ELSE_KEY = 'else' as const;
+export const THEN_KEY = 'then' as const;
+export const ELSE_KEY = 'else' as const;
 
 const PrimitiveWireValueSchema = z.union([
   z.string(),
