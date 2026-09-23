@@ -3246,6 +3246,7 @@ export type SyncChangesResponses = {
       seq: number;
       sortOrder: number;
     }>;
+    minimumProtocol: number;
     nextSince: number;
   };
 };
@@ -3658,6 +3659,7 @@ export type SyncSnapshotResponses = {
       seq: number;
       sortOrder: number;
     }>;
+    minimumProtocol: number;
     nextCursor: string | null;
     total: number;
   };
@@ -5117,6 +5119,126 @@ export type TypesReadValidateItemResponses = {
 
 export type TypesReadValidateItemResponse =
   TypesReadValidateItemResponses[keyof TypesReadValidateItemResponses];
+
+export type TypesManageReadProtocolRolloutData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/type-catalogue/protocol-rollout';
+};
+
+export type TypesManageReadProtocolRolloutErrors = {
+  /**
+   * 401
+   */
+  401: {
+    code?: string;
+    currentDraftVersion?: number;
+    issues?: Array<{
+      code: string;
+      definitionId: string | null;
+      message: string;
+      path: string;
+    }>;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type TypesManageReadProtocolRolloutError =
+  TypesManageReadProtocolRolloutErrors[keyof TypesManageReadProtocolRolloutErrors];
+
+export type TypesManageReadProtocolRolloutResponses = {
+  /**
+   * 200
+   */
+  200: {
+    catalogueMinimumProtocol: number;
+    minimumProtocol: number;
+    supportedProtocol: number;
+  };
+};
+
+export type TypesManageReadProtocolRolloutResponse =
+  TypesManageReadProtocolRolloutResponses[keyof TypesManageReadProtocolRolloutResponses];
+
+export type TypesManageActivateProtocolRolloutData = {
+  /**
+   * Body
+   */
+  body?: {
+    expectedMinimumProtocol: number;
+    minimumProtocol: number;
+  };
+  path?: never;
+  query?: never;
+  url: '/type-catalogue/protocol-rollout';
+};
+
+export type TypesManageActivateProtocolRolloutErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    currentDraftVersion?: number;
+    issues?: Array<{
+      code: string;
+      definitionId: string | null;
+      message: string;
+      path: string;
+    }>;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 401
+   */
+  401: {
+    code?: string;
+    currentDraftVersion?: number;
+    issues?: Array<{
+      code: string;
+      definitionId: string | null;
+      message: string;
+      path: string;
+    }>;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    currentDraftVersion?: number;
+    issues?: Array<{
+      code: string;
+      definitionId: string | null;
+      message: string;
+      path: string;
+    }>;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type TypesManageActivateProtocolRolloutError =
+  TypesManageActivateProtocolRolloutErrors[keyof TypesManageActivateProtocolRolloutErrors];
+
+export type TypesManageActivateProtocolRolloutResponses = {
+  /**
+   * 200
+   */
+  200: {
+    catalogueMinimumProtocol: number;
+    minimumProtocol: number;
+    supportedProtocol: number;
+  };
+};
+
+export type TypesManageActivateProtocolRolloutResponse =
+  TypesManageActivateProtocolRolloutResponses[keyof TypesManageActivateProtocolRolloutResponses];
 
 export type TypesCatalogueData = {
   body?: never;

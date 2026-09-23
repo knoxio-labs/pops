@@ -222,6 +222,7 @@ describe('computed values', () => {
         value: {
           epoch: 'epoch-1',
           highWaterSeq: 1,
+          minimumProtocol: 2,
           catalogueVersion: 'cat-1',
           total: 1,
           items: [item],
