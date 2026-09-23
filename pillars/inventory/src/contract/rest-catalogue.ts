@@ -12,6 +12,7 @@ import {
   CataloguePreviewErrorBodySchema,
   CatalogueReadHeaders,
   ExpectedDraftVersionSchema,
+  ProtocolRolloutStateSchema,
   TypeCatalogueDescriptorSchema,
 } from './rest-catalogue-schemas.js';
 
@@ -60,6 +61,30 @@ export const inventoryCatalogueContract = c.router({
     },
   },
   manage: {
+    readProtocolRollout: {
+      method: 'GET',
+      path: '/type-catalogue/protocol-rollout',
+      responses: {
+        200: ProtocolRolloutStateSchema,
+        401: CatalogueErrorBodySchema,
+      },
+      summary: 'Read the persistent protocol minimum governing catalogue publication and sync',
+    },
+    activateProtocolRollout: {
+      method: 'POST',
+      path: '/type-catalogue/protocol-rollout',
+      body: z.object({
+        expectedMinimumProtocol: z.number().int().positive(),
+        minimumProtocol: z.number().int().positive(),
+      }),
+      responses: {
+        200: ProtocolRolloutStateSchema,
+        400: CatalogueErrorBodySchema,
+        401: CatalogueErrorBodySchema,
+        409: CatalogueErrorBodySchema,
+      },
+      summary: 'Atomically raise the inventory sync protocol minimum before catalogue publication',
+    },
     readDraft: {
       method: 'GET',
       path: '/type-catalogue/drafts/current',

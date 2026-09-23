@@ -135,6 +135,7 @@ describe('protocol-2 inventory values', () => {
         value: {
           epoch: 'epoch-1',
           highWaterSeq: 1,
+          minimumProtocol: 2,
           catalogueVersion: 'cat-1',
           total: 1,
           items: [
@@ -221,6 +222,7 @@ describe('computed values', () => {
         value: {
           epoch: 'epoch-1',
           highWaterSeq: 1,
+          minimumProtocol: 2,
           catalogueVersion: 'cat-1',
           total: 1,
           items: [item],
@@ -318,6 +320,7 @@ describe('the snapshot', () => {
         value: {
           epoch: 'epoch-1',
           highWaterSeq: 42,
+          minimumProtocol: 2,
           catalogueVersion: 'cat-1',
           total: 1,
           items: [],
@@ -332,8 +335,32 @@ describe('the snapshot', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.highWaterSeq).toBe(42);
+    expect(res.body.minimumProtocol).toBe(2);
     expect(res.body.nextCursor).toBe('opaque-cursor');
     expect(fake.snapshotCalls).toEqual([{ cursor: 'abc', limit: 10 }]);
+  });
+
+  it('answers minimumProtocol 1 for a page from an inventory pillar that predates the rollout gate', async () => {
+    const fake = createInventoryFake({
+      snapshotResult: {
+        kind: 'ok',
+        value: {
+          epoch: 'epoch-1',
+          highWaterSeq: 42,
+          catalogueVersion: 'cat-1',
+          total: 0,
+          items: [],
+          locations: [],
+          nextCursor: null,
+        },
+      },
+    });
+    const { app, token } = openWith(fake.factory);
+
+    const res = await get(app, token, '/mobile/inventory/sync/snapshot');
+
+    expect(res.status).toBe(200);
+    expect(res.body.minimumProtocol).toBe(1);
   });
 
   it('maps a rotated-epoch conflict to 409 resync_required, not the generic upstream-conflict fold', async () => {
@@ -387,6 +414,7 @@ describe('the snapshot', () => {
         value: {
           epoch: 'epoch-1',
           highWaterSeq: 3,
+          minimumProtocol: 2,
           catalogueVersion: 'cat-1',
           total: 1,
           items: [item],
@@ -413,6 +441,7 @@ describe('the snapshot', () => {
         value: {
           epoch: 'epoch-1',
           highWaterSeq: 3,
+          minimumProtocol: 2,
           catalogueVersion: 'cat-1',
           total: 1,
           items: [withoutLegacyType],
@@ -475,6 +504,7 @@ describe('the change feed', () => {
         kind: 'ok',
         value: {
           epoch: 'epoch-1',
+          minimumProtocol: 2,
           items: [],
           locations: [],
           events: [],
@@ -491,7 +521,31 @@ describe('the change feed', () => {
     expect(res.status).toBe(200);
     expect(res.body.nextSince).toBe(99);
     expect(res.body.hasMore).toBe(true);
+    expect(res.body.minimumProtocol).toBe(2);
     expect(fake.changesCalls).toEqual([{ since: 42, epoch: 'epoch-1', limit: 100 }]);
+  });
+
+  it('answers minimumProtocol 1 for a page from an inventory pillar that predates the rollout gate', async () => {
+    const fake = createInventoryFake({
+      changesResult: {
+        kind: 'ok',
+        value: {
+          epoch: 'epoch-1',
+          items: [],
+          locations: [],
+          events: [],
+          nextSince: 42,
+          hasMore: false,
+          catalogueVersion: 'cat-1',
+        },
+      },
+    });
+    const { app, token } = openWith(fake.factory);
+
+    const res = await get(app, token, '/mobile/inventory/sync/changes?since=42&epoch=epoch-1');
+
+    expect(res.status).toBe(200);
+    expect(res.body.minimumProtocol).toBe(1);
   });
 
   it('maps a foreign or rotated epoch to 409 resync_required', async () => {

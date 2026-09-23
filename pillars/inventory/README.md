@@ -276,6 +276,15 @@ the gate above derives three grants: `inventory.sync` (`GET /sync/snapshot`,
   against that exact published snapshot and the active snapshot. Only a fully
   compatible diff rebases; schema/protocol changes require refreshed
   definitions, and values invalidated by archival/replacement require repair.
+- `GET /type-catalogue/protocol-rollout` reports the persisted sync minimum,
+  this server build's supported protocol, and the published catalogue minimum.
+  An owner or `inventory.types.manage` service account raises the minimum with
+  `POST /type-catalogue/protocol-rollout { expectedMinimumProtocol,
+minimumProtocol }`. The expected value makes concurrent operator actions a
+  compare-and-swap; unsupported versions and every downgrade are refused.
+  Publication cannot name a catalogue minimum above the activated sync
+  minimum. Activation is persisted in `sync_meta`, so the request gate and
+  publication gate keep using the same authority after restart.
 - Protocol 2 item rows carry the persisted `typeId` and canonical
   stable-field-ID `fieldValues` (each with its source and catalogue revision).
   The existing `typeKey` and `fields` projection remains alongside them for
@@ -287,6 +296,11 @@ the gate above derives three grants: `inventory.sync` (`GET /sync/snapshot`,
   the persisted input (stored values and overrides); computed values never
   enter the protocol-1 `fields`. A client treats a value whose dependency
   revisions are older than its own rows as stale.
+- When a mutation changes an item that other items' computed values read
+  (tracked in `item_computed_dependencies`), those items are re-sent in the
+  same change-feed page: their `seq` moves to the mutation's, their `revision`
+  does not. At most 256 are re-sent per mutation. A client replaces a stored
+  item at the same revision when the incoming `seq` is newer.
 - The snapshot serves live items and locations in pages whose opaque cursor
   pins the high-water `seq` of the first page; the change feed then serves
   every row (tombstones included) and every event after a `seq`. A cursor or
@@ -316,6 +330,16 @@ the gate above derives three grants: `inventory.sync` (`GET /sync/snapshot`,
   gets `409 catalogue_draft_conflict` with `currentDraftVersion` and changes
   nothing, not even the audit log. Only a successful patch, publication or
   abandonment advances the version; preview never does.
+- Roll out a new protocol in this order: deploy Inventory and BFM builds that
+  understand it; release and observe the corresponding iOS build; atomically
+  raise the server minimum through the rollout endpoint; then publish the
+  draft that requires it. A rollback may restore application images while
+  their supported protocol still covers the active minimum. Never lower
+  `sync_meta.min_protocol`, restore an older database, or reseed to force a
+  rollback: published values may already use the newer vocabulary. If the
+  activation happened before publication, leave the minimum raised and deploy
+  a corrected build; if publication happened, roll forward with a compatible
+  fix.
 - `GET /type-catalogue` and `GET /type-catalogue/audit` require a Cloudflare
   Access owner session or a service account granted `inventory.types.read`.
   Draft creation, patching, publication and abandonment require the owner

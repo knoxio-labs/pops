@@ -28,6 +28,10 @@ export {
 } from './schema/catalogue-history.js';
 export { fieldEnumOptions, itemTypeFields, itemTypes } from './schema/catalogue.js';
 export {
+  computedDependencyIndexState,
+  itemComputedDependencies,
+} from './schema/item-computed-dependencies.js';
+export {
   ITEM_FIELD_VALUE_SOURCES,
   itemFieldValues,
   type ItemFieldValueSource,

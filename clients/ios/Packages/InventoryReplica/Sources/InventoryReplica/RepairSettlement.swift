@@ -162,7 +162,7 @@ internal enum RepairSettlement {
     private static func isAlreadyOnServer(_ entry: LogEntry, in db: Database) throws -> Bool {
         guard case .command = entry.command else { return false }
         var unchanged = false
-        let catalogue = try SyncMeta.read(db).storedCatalogue()
+        let catalogue = try SyncMeta.read(db).searchCatalogue(in: db)
         try db.inSavepoint {
             try MutationLogReplay.resetView(entry.entity, catalogue: catalogue, in: db)
             do {

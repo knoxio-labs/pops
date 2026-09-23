@@ -1,6 +1,161 @@
 {
   "components": {
     "schemas": {
+      "ExpressionV1": {
+        "anyOf": [
+          {
+            "additionalProperties": false,
+            "properties": {
+              "op": {
+                "enum": ["literal"],
+                "type": "string"
+              },
+              "value": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "maximum": 9007199254740991,
+                    "minimum": -9007199254740991,
+                    "type": "integer"
+                  },
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "additionalProperties": false,
+                    "properties": {
+                      "optionId": {
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                        "type": "string"
+                      }
+                    },
+                    "required": ["optionId"],
+                    "type": "object"
+                  },
+                  {
+                    "additionalProperties": false,
+                    "properties": {
+                      "amount": {
+                        "type": "string"
+                      },
+                      "unit": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["amount", "unit"],
+                    "type": "object"
+                  },
+                  {
+                    "additionalProperties": false,
+                    "properties": {
+                      "targetId": {
+                        "type": "string"
+                      },
+                      "targetKind": {
+                        "enum": ["item", "location"],
+                        "type": "string"
+                      }
+                    },
+                    "required": ["targetKind", "targetId"],
+                    "type": "object"
+                  }
+                ]
+              }
+            },
+            "required": ["op", "value"],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "fieldId": {
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                "type": "string"
+              },
+              "op": {
+                "enum": ["read"],
+                "type": "string"
+              },
+              "path": {
+                "items": {
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                  "type": "string"
+                },
+                "maxItems": 2,
+                "type": "array"
+              }
+            },
+            "required": ["op", "path", "fieldId"],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "op": {
+                "enum": ["negate", "not"],
+                "type": "string"
+              },
+              "value": {
+                "$ref": "#/components/schemas/ExpressionV1"
+              }
+            },
+            "required": ["op", "value"],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "left": {
+                "$ref": "#/components/schemas/ExpressionV1"
+              },
+              "op": {
+                "enum": [
+                  "add",
+                  "subtract",
+                  "multiply",
+                  "divide",
+                  "concat",
+                  "equal",
+                  "less_than",
+                  "and",
+                  "or"
+                ],
+                "type": "string"
+              },
+              "right": {
+                "$ref": "#/components/schemas/ExpressionV1"
+              }
+            },
+            "required": ["op", "left", "right"],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "condition": {
+                "$ref": "#/components/schemas/ExpressionV1"
+              },
+              "else": {
+                "$ref": "#/components/schemas/ExpressionV1"
+              },
+              "op": {
+                "enum": ["if"],
+                "type": "string"
+              },
+              "then": {
+                "$ref": "#/components/schemas/ExpressionV1"
+              }
+            },
+            "required": ["op", "condition", "then", "else"],
+            "type": "object"
+          }
+        ]
+      },
       "LocationTreeNode": {
         "additionalProperties": false,
         "properties": {
@@ -8511,6 +8666,12 @@
                       },
                       "type": "array"
                     },
+                    "minimumProtocol": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
                     "nextSince": {
                       "maximum": 9007199254740991,
                       "minimum": -9007199254740991,
@@ -8519,6 +8680,7 @@
                   },
                   "required": [
                     "epoch",
+                    "minimumProtocol",
                     "items",
                     "locations",
                     "events",
@@ -10000,6 +10162,12 @@
                       },
                       "type": "array"
                     },
+                    "minimumProtocol": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
                     "nextCursor": {
                       "nullable": true,
                       "type": "string"
@@ -10013,6 +10181,7 @@
                   "required": [
                     "epoch",
                     "highWaterSeq",
+                    "minimumProtocol",
                     "catalogueVersion",
                     "catalogueRevision",
                     "total",
@@ -10331,6 +10500,11 @@
                                   "type": "array"
                                 },
                                 "expression": {
+                                  "allOf": [
+                                    {
+                                      "$ref": "#/components/schemas/ExpressionV1"
+                                    }
+                                  ],
                                   "nullable": true
                                 },
                                 "expressionVersion": {
@@ -11020,6 +11194,11 @@
                                   "type": "array"
                                 },
                                 "expression": {
+                                  "allOf": [
+                                    {
+                                      "$ref": "#/components/schemas/ExpressionV1"
+                                    }
+                                  ],
                                   "nullable": true
                                 },
                                 "expressionVersion": {
@@ -11558,6 +11737,11 @@
                                   "type": "array"
                                 },
                                 "expression": {
+                                  "allOf": [
+                                    {
+                                      "$ref": "#/components/schemas/ExpressionV1"
+                                    }
+                                  ],
                                   "nullable": true
                                 },
                                 "expressionVersion": {
@@ -11945,6 +12129,11 @@
                               "type": "string"
                             },
                             "expression": {
+                              "allOf": [
+                                {
+                                  "$ref": "#/components/schemas/ExpressionV1"
+                                }
+                              ],
                               "nullable": true
                             },
                             "expressionVersion": {
@@ -12413,6 +12602,11 @@
                                       "type": "array"
                                     },
                                     "expression": {
+                                      "allOf": [
+                                        {
+                                          "$ref": "#/components/schemas/ExpressionV1"
+                                        }
+                                      ],
                                       "nullable": true
                                     },
                                     "expressionVersion": {
@@ -13187,6 +13381,11 @@
                                   "type": "array"
                                 },
                                 "expression": {
+                                  "allOf": [
+                                    {
+                                      "$ref": "#/components/schemas/ExpressionV1"
+                                    }
+                                  ],
                                   "nullable": true
                                 },
                                 "expressionVersion": {
@@ -13626,6 +13825,11 @@
                               "type": "string"
                             },
                             "expression": {
+                              "allOf": [
+                                {
+                                  "$ref": "#/components/schemas/ExpressionV1"
+                                }
+                              ],
                               "nullable": true
                             },
                             "expressionVersion": {
@@ -14720,6 +14924,11 @@
                                   "type": "array"
                                 },
                                 "expression": {
+                                  "allOf": [
+                                    {
+                                      "$ref": "#/components/schemas/ExpressionV1"
+                                    }
+                                  ],
                                   "nullable": true
                                 },
                                 "expressionVersion": {
@@ -15315,6 +15524,322 @@
         },
         "summary": "Validate and canonicalise a complete item value set without writing it",
         "tags": ["types", "read"]
+      }
+    },
+    "/type-catalogue/protocol-rollout": {
+      "get": {
+        "operationId": "types.manage.readProtocolRollout",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "catalogueMinimumProtocol": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "minimumProtocol": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "supportedProtocol": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    }
+                  },
+                  "required": ["minimumProtocol", "supportedProtocol", "catalogueMinimumProtocol"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "currentDraftVersion": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "issues": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "code": {
+                            "type": "string"
+                          },
+                          "definitionId": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "path": {
+                            "type": "string"
+                          }
+                        },
+                        "required": ["definitionId", "path", "code", "message"],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "401"
+          }
+        },
+        "summary": "Read the persistent protocol minimum governing catalogue publication and sync",
+        "tags": ["types", "manage"]
+      },
+      "post": {
+        "operationId": "types.manage.activateProtocolRollout",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "expectedMinimumProtocol": {
+                    "exclusiveMinimum": true,
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "minimumProtocol": {
+                    "exclusiveMinimum": true,
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                },
+                "required": ["expectedMinimumProtocol", "minimumProtocol"],
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "catalogueMinimumProtocol": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "minimumProtocol": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "supportedProtocol": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    }
+                  },
+                  "required": ["minimumProtocol", "supportedProtocol", "catalogueMinimumProtocol"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "currentDraftVersion": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "issues": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "code": {
+                            "type": "string"
+                          },
+                          "definitionId": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "path": {
+                            "type": "string"
+                          }
+                        },
+                        "required": ["definitionId", "path", "code", "message"],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "currentDraftVersion": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "issues": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "code": {
+                            "type": "string"
+                          },
+                          "definitionId": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "path": {
+                            "type": "string"
+                          }
+                        },
+                        "required": ["definitionId", "path", "code", "message"],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "401"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "currentDraftVersion": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "issues": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "code": {
+                            "type": "string"
+                          },
+                          "definitionId": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "path": {
+                            "type": "string"
+                          }
+                        },
+                        "required": ["definitionId", "path", "code", "message"],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "409"
+          }
+        },
+        "summary": "Atomically raise the inventory sync protocol minimum before catalogue publication",
+        "tags": ["types", "manage"]
       }
     },
     "/types": {

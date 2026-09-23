@@ -84,6 +84,66 @@ describe('FieldForm configuration branches', () => {
     expect(screen.getByRole('combobox')).toHaveTextContent(label);
   });
 
+  it.each(KIND_LABELS)('submits the %s configuration in the put_field request', (kind) => {
+    const configured = field({
+      kind,
+      cardinality: kind === 'boolean' ? 'one' : 'many',
+      fixedUnit: kind === 'measurement' ? 'cm' : null,
+      referenceKinds: kind === 'reference' ? ['item'] : [],
+      referenceTypeIds: kind === 'reference' ? [TYPE_ID] : [],
+    });
+    const onOperation = renderField(configured);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save field' }));
+
+    expect(onOperation).toHaveBeenCalledWith({
+      kind: 'put_field',
+      typeId: TYPE_ID,
+      id: configured.id,
+      label: 'Detail',
+      help: null,
+      required: false,
+      presentation: { highlighted: false },
+      fieldKind: kind,
+      cardinality: kind === 'boolean' ? 'one' : 'many',
+      storage: 'stored',
+      fixedUnit: kind === 'measurement' ? 'cm' : null,
+      referenceKinds: kind === 'reference' ? ['item'] : [],
+      referenceTypeIds: kind === 'reference' ? [TYPE_ID] : [],
+      expressionVersion: null,
+      expression: null,
+      allowOverride: false,
+    });
+  });
+
+  it('submits a trimmed fixed unit for a measurement field', () => {
+    const onOperation = renderField(field({ kind: 'measurement', fixedUnit: 'kg' }));
+
+    fireEvent.change(screen.getByLabelText('Fixed unit'), { target: { value: '  cm  ' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save field' }));
+
+    expect(onOperation).toHaveBeenCalledWith(expect.objectContaining({ fixedUnit: 'cm' }));
+  });
+
+  it('submits required, highlighted, and trimmed help text changes', () => {
+    const onOperation = renderField(field());
+
+    fireEvent.click(screen.getByLabelText('Required'));
+    fireEvent.click(screen.getByLabelText('Highlighted'));
+    fireEvent.change(screen.getByLabelText('Help text'), {
+      target: { value: '  Shown on the item detail page  ' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save field' }));
+
+    expect(onOperation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        required: true,
+        presentation: { highlighted: true },
+        help: 'Shown on the item detail page',
+      })
+    );
+  });
+
   it('renders measurement units', () => {
     renderField(field({ kind: 'measurement', fixedUnit: 'cm' }));
 

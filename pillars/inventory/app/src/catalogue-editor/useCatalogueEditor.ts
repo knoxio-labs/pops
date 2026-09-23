@@ -6,7 +6,7 @@ import { catalogueApi } from './catalogue-api';
 import { DRAFT_KEY, PUBLISHED_KEY, useCatalogueMutations } from './useCatalogueMutations';
 import { useCataloguePreview } from './useCataloguePreview';
 
-import type { CatalogueCompatibility, CatalogueDescriptor } from './types';
+import type { CatalogueDescriptor, CatalogueReadiness, CompatibilitySnapshot } from './types';
 
 async function readCurrentDraft(): Promise<CatalogueDescriptor | null> {
   try {
@@ -26,10 +26,23 @@ function useCatalogueQueries() {
   return { draftQuery, publishedQuery };
 }
 
+/** Derives publish readiness by comparing a compatibility snapshot to the live draft version. */
+function toReadiness(
+  snapshot: CompatibilitySnapshot,
+  catalogue: CatalogueDescriptor | undefined
+): CatalogueReadiness {
+  if (snapshot === null) return { status: 'not_previewed' };
+  if (catalogue === undefined || snapshot.draftVersion !== catalogue.revision.draftVersion)
+    return { status: 'stale' };
+  if (snapshot.isLivePreview)
+    return { status: 'live_preview', compatibility: snapshot.compatibility };
+  return { status: 'ready', compatibility: snapshot.compatibility };
+}
+
 /** Loads and mutates the persisted catalogue draft while keeping its published base visible. */
 export function useCatalogueEditor() {
   const queryClient = useQueryClient();
-  const [compatibility, setCompatibility] = useState<CatalogueCompatibility | null>(null);
+  const [compatibility, setCompatibility] = useState<CompatibilitySnapshot>(null);
   const [editorEpoch, setEditorEpoch] = useState(0);
   const { draftQuery, publishedQuery } = useCatalogueQueries();
   const cataloguePreview = useCataloguePreview(queryClient, setCompatibility);
@@ -62,9 +75,9 @@ export function useCatalogueEditor() {
   return {
     abandonDraft,
     catalogue,
-    compatibility,
     editorEpoch,
     error,
+    readiness: toReadiness(compatibility, catalogue),
     isLoading: publishedQuery.isLoading || draftQuery.isLoading,
     isPending,
     patchDraft,

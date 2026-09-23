@@ -4,6 +4,55 @@ export type ClientOptions = {
   baseUrl: `${string}://${string}` | (string & {});
 };
 
+export type ExpressionV1 =
+  | {
+      op: 'literal';
+      value:
+        | string
+        | number
+        | boolean
+        | {
+            optionId: string;
+          }
+        | {
+            amount: string;
+            unit: string;
+          }
+        | {
+            targetId: string;
+            targetKind: 'item' | 'location';
+          };
+    }
+  | {
+      fieldId: string;
+      op: 'read';
+      path: Array<string>;
+    }
+  | {
+      op: 'negate' | 'not';
+      value: ExpressionV1;
+    }
+  | {
+      left: ExpressionV1;
+      op:
+        | 'add'
+        | 'subtract'
+        | 'multiply'
+        | 'divide'
+        | 'concat'
+        | 'equal'
+        | 'less_than'
+        | 'and'
+        | 'or';
+      right: ExpressionV1;
+    }
+  | {
+      condition: ExpressionV1;
+      else: ExpressionV1;
+      op: 'if';
+      then: ExpressionV1;
+    };
+
 export type LocationTreeNode = {
   children: Array<LocationTreeNode>;
   id: string;
@@ -3246,6 +3295,7 @@ export type SyncChangesResponses = {
       seq: number;
       sortOrder: number;
     }>;
+    minimumProtocol: number;
     nextSince: number;
   };
 };
@@ -3658,6 +3708,7 @@ export type SyncSnapshotResponses = {
       seq: number;
       sortOrder: number;
     }>;
+    minimumProtocol: number;
     nextCursor: string | null;
     total: number;
   };
@@ -3764,7 +3815,7 @@ export type TypesReadCatalogueResponses = {
           label: string;
           sortOrder: number;
         }>;
-        expression: unknown;
+        expression: ExpressionV1 | null;
         expressionVersion: number | null;
         fixedUnit: string | null;
         help: string | null;
@@ -3984,7 +4035,7 @@ export type TypesManageCreateDraftResponses = {
           label: string;
           sortOrder: number;
         }>;
-        expression: unknown;
+        expression: ExpressionV1 | null;
         expressionVersion: number | null;
         fixedUnit: string | null;
         help: string | null;
@@ -4124,7 +4175,7 @@ export type TypesManageReadDraftResponses = {
           label: string;
           sortOrder: number;
         }>;
-        expression: unknown;
+        expression: ExpressionV1 | null;
         expressionVersion: number | null;
         fixedUnit: string | null;
         help: string | null;
@@ -4195,7 +4246,7 @@ export type TypesManagePatchDraftData = {
           allowOverride?: boolean;
           archivedAt?: string | null;
           cardinality?: 'one' | 'many';
-          expression?: unknown;
+          expression?: ExpressionV1 | null;
           expressionVersion?: number | null;
           fieldKind?:
             | 'short_text'
@@ -4410,7 +4461,7 @@ export type TypesManagePatchDraftResponses = {
             label: string;
             sortOrder: number;
           }>;
-          expression: unknown;
+          expression: ExpressionV1 | null;
           expressionVersion: number | null;
           fixedUnit: string | null;
           help: string | null;
@@ -4574,7 +4625,7 @@ export type TypesManageAbandonDraftResponses = {
           label: string;
           sortOrder: number;
         }>;
-        expression: unknown;
+        expression: ExpressionV1 | null;
         expressionVersion: number | null;
         fixedUnit: string | null;
         help: string | null;
@@ -4645,7 +4696,7 @@ export type TypesManagePreviewDraftData = {
           allowOverride?: boolean;
           archivedAt?: string | null;
           cardinality?: 'one' | 'many';
-          expression?: unknown;
+          expression?: ExpressionV1 | null;
           expressionVersion?: number | null;
           fieldKind?:
             | 'short_text'
@@ -4999,7 +5050,7 @@ export type TypesManagePublishDraftResponses = {
           label: string;
           sortOrder: number;
         }>;
-        expression: unknown;
+        expression: ExpressionV1 | null;
         expressionVersion: number | null;
         fixedUnit: string | null;
         help: string | null;
@@ -5117,6 +5168,126 @@ export type TypesReadValidateItemResponses = {
 
 export type TypesReadValidateItemResponse =
   TypesReadValidateItemResponses[keyof TypesReadValidateItemResponses];
+
+export type TypesManageReadProtocolRolloutData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/type-catalogue/protocol-rollout';
+};
+
+export type TypesManageReadProtocolRolloutErrors = {
+  /**
+   * 401
+   */
+  401: {
+    code?: string;
+    currentDraftVersion?: number;
+    issues?: Array<{
+      code: string;
+      definitionId: string | null;
+      message: string;
+      path: string;
+    }>;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type TypesManageReadProtocolRolloutError =
+  TypesManageReadProtocolRolloutErrors[keyof TypesManageReadProtocolRolloutErrors];
+
+export type TypesManageReadProtocolRolloutResponses = {
+  /**
+   * 200
+   */
+  200: {
+    catalogueMinimumProtocol: number;
+    minimumProtocol: number;
+    supportedProtocol: number;
+  };
+};
+
+export type TypesManageReadProtocolRolloutResponse =
+  TypesManageReadProtocolRolloutResponses[keyof TypesManageReadProtocolRolloutResponses];
+
+export type TypesManageActivateProtocolRolloutData = {
+  /**
+   * Body
+   */
+  body?: {
+    expectedMinimumProtocol: number;
+    minimumProtocol: number;
+  };
+  path?: never;
+  query?: never;
+  url: '/type-catalogue/protocol-rollout';
+};
+
+export type TypesManageActivateProtocolRolloutErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    currentDraftVersion?: number;
+    issues?: Array<{
+      code: string;
+      definitionId: string | null;
+      message: string;
+      path: string;
+    }>;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 401
+   */
+  401: {
+    code?: string;
+    currentDraftVersion?: number;
+    issues?: Array<{
+      code: string;
+      definitionId: string | null;
+      message: string;
+      path: string;
+    }>;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    currentDraftVersion?: number;
+    issues?: Array<{
+      code: string;
+      definitionId: string | null;
+      message: string;
+      path: string;
+    }>;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type TypesManageActivateProtocolRolloutError =
+  TypesManageActivateProtocolRolloutErrors[keyof TypesManageActivateProtocolRolloutErrors];
+
+export type TypesManageActivateProtocolRolloutResponses = {
+  /**
+   * 200
+   */
+  200: {
+    catalogueMinimumProtocol: number;
+    minimumProtocol: number;
+    supportedProtocol: number;
+  };
+};
+
+export type TypesManageActivateProtocolRolloutResponse =
+  TypesManageActivateProtocolRolloutResponses[keyof TypesManageActivateProtocolRolloutResponses];
 
 export type TypesCatalogueData = {
   body?: never;

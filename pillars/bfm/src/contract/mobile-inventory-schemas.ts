@@ -206,6 +206,7 @@ export type MobileInventoryCatalogue = z.infer<typeof MobileInventoryCatalogueSc
 export const MobileInventorySnapshotSchema = z.object({
   epoch: z.string(),
   highWaterSeq: z.number().int(),
+  minimumProtocol: z.number().int().positive().default(1),
   catalogueVersion: z.string(),
   catalogueRevision: z.number().int().positive().nullable().default(null),
   total: z.number().int(),
@@ -219,6 +220,7 @@ export type MobileInventorySnapshot = z.infer<typeof MobileInventorySnapshotSche
 /** One page of the change feed after `since`. */
 export const MobileInventoryChangesSchema = z.object({
   epoch: z.string(),
+  minimumProtocol: z.number().int().positive().default(1),
   items: z.array(MobileInventoryItemSchema),
   locations: z.array(MobileInventoryLocationSchema),
   events: z.array(MobileInventoryEventSchema),

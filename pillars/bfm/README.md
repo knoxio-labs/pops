@@ -51,6 +51,11 @@ seam in
 revision N, publishes a rename and a field replacement at N+1, then proves the
 phone-to-BFM-to-Inventory path safely rebases the rename, returns the repair
 reason for the replacement, and replays both outcomes idempotently.
+BFM always sends inventory protocol `2`, the wire shape this build understands,
+instead of replaying a phone-controlled header. Inventory's `426
+client_too_old` response passes through unchanged when an operator has raised
+the server minimum beyond this BFM build. The rollout must therefore deploy a
+BFM build supporting the new protocol before Inventory activates that minimum.
 
 `/health` answers without a database round-trip, which is why an unreachable
 `bfm.db` still reads as live.

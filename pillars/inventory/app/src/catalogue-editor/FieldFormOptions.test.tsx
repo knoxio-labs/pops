@@ -49,4 +49,43 @@ describe('EnumOptions', () => {
       archivedAt: null,
     });
   });
+
+  it('adds a new option keyed from its label at the next sort order', () => {
+    const onOperation = vi.fn();
+    render(<EnumOptions field={field} onOperation={onOperation} />);
+
+    fireEvent.change(screen.getByLabelText('Option label'), {
+      target: { value: 'Like new' },
+    });
+    expect(screen.getByLabelText('Key')).toHaveValue('like_new');
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+
+    expect(onOperation).toHaveBeenCalledWith({
+      kind: 'put_enum_option',
+      fieldId: field.id,
+      key: 'like_new',
+      label: 'Like new',
+      sortOrder: field.enumOptions.length,
+    });
+    expect(screen.getByLabelText('Option label')).toHaveValue('');
+  });
+
+  it('archives an active option instead of deleting its identity', () => {
+    const active = { ...field, enumOptions: [{ ...field.enumOptions[0]!, archivedAt: null }] };
+    const onOperation = vi.fn();
+    render(<EnumOptions field={active} onOperation={onOperation} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Archive Archived option' }));
+
+    expect(onOperation).toHaveBeenCalledWith({
+      kind: 'archive_enum_option',
+      id: active.enumOptions[0]?.id,
+    });
+  });
+
+  it('disables adding an option with a blank label', () => {
+    render(<EnumOptions field={field} onOperation={vi.fn()} />);
+
+    expect(screen.getByRole('button', { name: 'Add' })).toBeDisabled();
+  });
 });

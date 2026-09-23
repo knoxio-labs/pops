@@ -6022,6 +6022,13 @@
                       },
                       "type": "array"
                     },
+                    "minimumProtocol": {
+                      "default": 1,
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
                     "nextSince": {
                       "maximum": 9007199254740991,
                       "minimum": -9007199254740991,
@@ -6030,6 +6037,7 @@
                   },
                   "required": [
                     "epoch",
+                    "minimumProtocol",
                     "items",
                     "locations",
                     "events",
@@ -6910,6 +6918,13 @@
                       },
                       "type": "array"
                     },
+                    "minimumProtocol": {
+                      "default": 1,
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
                     "nextCursor": {
                       "nullable": true,
                       "type": "string"
@@ -6923,6 +6938,7 @@
                   "required": [
                     "epoch",
                     "highWaterSeq",
+                    "minimumProtocol",
                     "catalogueVersion",
                     "catalogueRevision",
                     "total",

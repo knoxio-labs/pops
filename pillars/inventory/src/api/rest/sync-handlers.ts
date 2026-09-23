@@ -17,7 +17,7 @@ import { suggestCodes } from '../sync/codes.js';
 import { SyncRequestError } from '../sync/errors.js';
 import { toSyncEvents } from '../sync/events.js';
 import { readItemHistory } from '../sync/history.js';
-import { readSyncState } from '../sync/meta.js';
+import { readMinProtocol, readSyncState } from '../sync/meta.js';
 import { readSnapshotPage } from '../sync/snapshot.js';
 import { projectItems, toSyncLocation } from '../sync/wire.js';
 
@@ -70,16 +70,18 @@ export function makeSyncHandlers({ db, documents, verify }: SyncHandlerDeps) {
   return {
     snapshot: ({ query }: SyncReq['snapshot']) =>
       runSync(async () => {
-        const { page, catalogue, catalogueRevision } = db.transaction((tx) => ({
+        const { page, catalogue, catalogueRevision, minimumProtocol } = db.transaction((tx) => ({
           page: readSnapshotPage(tx, readSyncState(tx), query),
           catalogue: readProtocol1Catalogue(tx),
           catalogueRevision: loadPublishedCatalogue(tx)?.revision.revision ?? null,
+          minimumProtocol: readMinProtocol(tx),
         }));
         return {
           status: 200 as const,
           body: {
             epoch: page.epoch,
             highWaterSeq: page.highWaterSeq,
+            minimumProtocol,
             catalogueVersion: catalogue.version,
             catalogueRevision,
             total: page.total,
@@ -92,18 +94,20 @@ export function makeSyncHandlers({ db, documents, verify }: SyncHandlerDeps) {
 
     changes: ({ query }: SyncReq['changes']) =>
       runSync(async () => {
-        const { page, catalogue, catalogueRevision } = db.transaction((tx) => {
+        const { page, catalogue, catalogueRevision, minimumProtocol } = db.transaction((tx) => {
           const rows = readChanges(tx, readSyncState(tx), query);
           return {
             page: { ...rows, syncEvents: toSyncEvents(tx, rows.events) },
             catalogue: readProtocol1Catalogue(tx),
             catalogueRevision: loadPublishedCatalogue(tx)?.revision.revision ?? null,
+            minimumProtocol: readMinProtocol(tx),
           };
         });
         return {
           status: 200 as const,
           body: {
             epoch: page.epoch,
+            minimumProtocol,
             items: await projectItems(page, documents),
             locations: page.locations.map(toSyncLocation),
             events: page.syncEvents,

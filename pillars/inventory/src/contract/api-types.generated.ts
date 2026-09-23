@@ -954,6 +954,24 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/type-catalogue/protocol-rollout': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Read the persistent protocol minimum governing catalogue publication and sync */
+    get: operations['types.manage.readProtocolRollout'];
+    put?: never;
+    /** Atomically raise the inventory sync protocol minimum before catalogue publication */
+    post: operations['types.manage.activateProtocolRollout'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/types': {
     parameters: {
       query?: never;
@@ -1026,6 +1044,62 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
+    ExpressionV1:
+      | {
+          /** @enum {string} */
+          op: 'literal';
+          value:
+            | string
+            | number
+            | boolean
+            | {
+                /** Format: uuid */
+                optionId: string;
+              }
+            | {
+                amount: string;
+                unit: string;
+              }
+            | {
+                targetId: string;
+                /** @enum {string} */
+                targetKind: 'item' | 'location';
+              };
+        }
+      | {
+          /** Format: uuid */
+          fieldId: string;
+          /** @enum {string} */
+          op: 'read';
+          path: string[];
+        }
+      | {
+          /** @enum {string} */
+          op: 'negate' | 'not';
+          value: components['schemas']['ExpressionV1'];
+        }
+      | {
+          left: components['schemas']['ExpressionV1'];
+          /** @enum {string} */
+          op:
+            | 'add'
+            | 'subtract'
+            | 'multiply'
+            | 'divide'
+            | 'concat'
+            | 'equal'
+            | 'less_than'
+            | 'and'
+            | 'or';
+          right: components['schemas']['ExpressionV1'];
+        }
+      | {
+          condition: components['schemas']['ExpressionV1'];
+          else: components['schemas']['ExpressionV1'];
+          /** @enum {string} */
+          op: 'if';
+          then: components['schemas']['ExpressionV1'];
+        };
     LocationTreeNode: {
       children: components['schemas']['LocationTreeNode'][];
       id: string;
@@ -4928,6 +5002,7 @@ export interface operations {
               seq: number;
               sortOrder: number;
             }[];
+            minimumProtocol: number;
             nextSince: number;
           };
         };
@@ -5432,6 +5507,7 @@ export interface operations {
               seq: number;
               sortOrder: number;
             }[];
+            minimumProtocol: number;
             nextCursor: string | null;
             total: number;
           };
@@ -5551,7 +5627,7 @@ export interface operations {
                   label: string;
                   sortOrder: number;
                 }[];
-                expression: unknown;
+                expression: components['schemas']['ExpressionV1'] | null;
                 expressionVersion: number | null;
                 fixedUnit: string | null;
                 help: string | null;
@@ -5789,7 +5865,7 @@ export interface operations {
                   label: string;
                   sortOrder: number;
                 }[];
-                expression: unknown;
+                expression: components['schemas']['ExpressionV1'] | null;
                 expressionVersion: number | null;
                 fixedUnit: string | null;
                 help: string | null;
@@ -5967,7 +6043,7 @@ export interface operations {
                   label: string;
                   sortOrder: number;
                 }[];
-                expression: unknown;
+                expression: components['schemas']['ExpressionV1'] | null;
                 expressionVersion: number | null;
                 fixedUnit: string | null;
                 help: string | null;
@@ -6093,7 +6169,7 @@ export interface operations {
                 archivedAt?: string | null;
                 /** @enum {string} */
                 cardinality?: 'one' | 'many';
-                expression?: unknown;
+                expression?: components['schemas']['ExpressionV1'] | null;
                 expressionVersion?: number | null;
                 /** @enum {string} */
                 fieldKind?:
@@ -6237,7 +6313,7 @@ export interface operations {
                     label: string;
                     sortOrder: number;
                   }[];
-                  expression: unknown;
+                  expression: components['schemas']['ExpressionV1'] | null;
                   expressionVersion: number | null;
                   fixedUnit: string | null;
                   help: string | null;
@@ -6494,7 +6570,7 @@ export interface operations {
                   label: string;
                   sortOrder: number;
                 }[];
-                expression: unknown;
+                expression: components['schemas']['ExpressionV1'] | null;
                 expressionVersion: number | null;
                 fixedUnit: string | null;
                 help: string | null;
@@ -6640,7 +6716,7 @@ export interface operations {
                 archivedAt?: string | null;
                 /** @enum {string} */
                 cardinality?: 'one' | 'many';
-                expression?: unknown;
+                expression?: components['schemas']['ExpressionV1'] | null;
                 expressionVersion?: number | null;
                 /** @enum {string} */
                 fieldKind?:
@@ -7007,7 +7083,7 @@ export interface operations {
                   label: string;
                   sortOrder: number;
                 }[];
-                expression: unknown;
+                expression: components['schemas']['ExpressionV1'] | null;
                 expressionVersion: number | null;
                 fixedUnit: string | null;
                 help: string | null;
@@ -7206,6 +7282,142 @@ export interface operations {
       };
       /** @description 401 */
       401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            currentDraftVersion?: number;
+            issues?: {
+              code: string;
+              definitionId: string | null;
+              message: string;
+              path: string;
+            }[];
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'types.manage.readProtocolRollout': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            catalogueMinimumProtocol: number;
+            minimumProtocol: number;
+            supportedProtocol: number;
+          };
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            currentDraftVersion?: number;
+            issues?: {
+              code: string;
+              definitionId: string | null;
+              message: string;
+              path: string;
+            }[];
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'types.manage.activateProtocolRollout': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          expectedMinimumProtocol: number;
+          minimumProtocol: number;
+        };
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            catalogueMinimumProtocol: number;
+            minimumProtocol: number;
+            supportedProtocol: number;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            currentDraftVersion?: number;
+            issues?: {
+              code: string;
+              definitionId: string | null;
+              message: string;
+              path: string;
+            }[];
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            currentDraftVersion?: number;
+            issues?: {
+              code: string;
+              definitionId: string | null;
+              message: string;
+              path: string;
+            }[];
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
         headers: {
           [name: string]: unknown;
         };

@@ -63,7 +63,11 @@ Each mutation runs in its own immediate transaction:
 4. **Record.** Only the fields that change are written: one event with
    `before` and `after`, then the row with the next revision and that event's
    `seq`. A plan that changes nothing writes nothing.
-5. **Store.** The outcome goes into `mutations` in the same transaction.
+5. **Re-send dependents.** Items whose computed values read an item this
+   mutation changed get that mutation's last `seq`, not a new revision, so
+   the change feed re-sends them with a fresh evaluation (at most 256;
+   `computed-dependents.ts`).
+6. **Store.** The outcome goes into `mutations` in the same transaction.
 
 An op that refuses (`CommandRejected`) or finds a conflict itself
 (`CommandConflict`) after writing has its writes rolled back with the

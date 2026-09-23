@@ -1,6 +1,18 @@
 import { Badge } from '@pops/ui';
 
-import type { CatalogueCompatibility } from './types';
+import type { CatalogueCompatibility, CatalogueReadiness } from './types';
+
+const classificationLabels: Record<CatalogueCompatibility['classification'], string> = {
+  compatible: 'Compatible',
+  protocol_gated: 'Protocol gated',
+  migration_required: 'Migration required',
+  forbidden: 'Forbidden',
+};
+
+const blockedClassifications: ReadonlySet<CatalogueCompatibility['classification']> = new Set([
+  'migration_required',
+  'forbidden',
+]);
 
 function Metric({ label, value }: { readonly label: string; readonly value: string }) {
   return (
@@ -11,22 +23,49 @@ function Metric({ label, value }: { readonly label: string; readonly value: stri
   );
 }
 
-/** Reports the producer-owned draft validation and affected-item preview. */
-export function CompatibilityPreview({
+function Placeholder({
+  badge,
+  badgeVariant,
+  detail,
+}: {
+  readonly badge: string;
+  readonly badgeVariant: 'outline' | 'destructive';
+  readonly detail: string;
+}) {
+  return (
+    <section aria-label="Dry-run validation" className="space-y-2 rounded-lg border p-4">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="font-medium">Dry-run validation</h3>
+        <Badge variant={badgeVariant}>{badge}</Badge>
+      </div>
+      <p className="text-xs text-muted-foreground">{detail}</p>
+    </section>
+  );
+}
+
+function ResultPanel({
   compatibility,
+  description,
+  suffix,
 }: {
   readonly compatibility: CatalogueCompatibility;
+  readonly description: string;
+  readonly suffix: string;
 }) {
+  const badgeVariant = blockedClassifications.has(compatibility.classification)
+    ? 'destructive'
+    : 'outline';
   return (
     <section aria-label="Dry-run validation" className="space-y-3 rounded-lg border p-4">
       <div className="flex items-center justify-between gap-3">
         <div>
           <h3 className="font-medium">Dry-run validation</h3>
-          <p className="text-xs text-muted-foreground">
-            Inventory validated the complete persisted draft.
-          </p>
+          <p className="text-xs text-muted-foreground">{description}</p>
         </div>
-        <Badge variant="outline">Passed</Badge>
+        <Badge variant={badgeVariant}>
+          {classificationLabels[compatibility.classification]}
+          {suffix}
+        </Badge>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <Metric label="Affected items" value={String(compatibility.affectedItems)} />
@@ -42,5 +81,40 @@ export function CompatibilityPreview({
         </ul>
       )}
     </section>
+  );
+}
+
+/** Reports the producer-owned draft validation and affected-item preview, or why one is missing. */
+export function CompatibilityPreview({ readiness }: { readonly readiness: CatalogueReadiness }) {
+  if (readiness.status === 'not_previewed')
+    return (
+      <Placeholder
+        badge="Not yet previewed"
+        badgeVariant="outline"
+        detail="Edit a type or field to run a dry-run preview before publishing."
+      />
+    );
+  if (readiness.status === 'stale')
+    return (
+      <Placeholder
+        badge="Stale"
+        badgeVariant="destructive"
+        detail="This preview no longer matches the current draft. Make or repeat an edit to refresh it before publishing."
+      />
+    );
+  if (readiness.status === 'live_preview')
+    return (
+      <ResultPanel
+        compatibility={readiness.compatibility}
+        description="Live preview of an unsaved edit. Save the edit to validate the persisted draft."
+        suffix=" (unsaved)"
+      />
+    );
+  return (
+    <ResultPanel
+      compatibility={readiness.compatibility}
+      description="Inventory validated the complete persisted draft."
+      suffix=""
+    />
   );
 }

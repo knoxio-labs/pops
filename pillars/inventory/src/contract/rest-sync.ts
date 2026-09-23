@@ -68,6 +68,7 @@ const PageLimit = z.coerce.number().int().min(1).max(500).default(250);
 const SnapshotResponse = z.object({
   epoch: z.string(),
   highWaterSeq: z.number().int(),
+  minimumProtocol: z.number().int().positive(),
   catalogueVersion: z.string(),
   catalogueRevision: z.number().int().positive().nullable(),
   total: z.number().int(),
@@ -78,6 +79,7 @@ const SnapshotResponse = z.object({
 
 const ChangesResponse = z.object({
   epoch: z.string(),
+  minimumProtocol: z.number().int().positive(),
   items: z.array(SyncItemSchema),
   locations: z.array(SyncLocationSchema),
   events: z.array(SyncEventSchema),

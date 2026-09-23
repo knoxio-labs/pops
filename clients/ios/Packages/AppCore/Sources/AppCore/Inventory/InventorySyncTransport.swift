@@ -75,6 +75,7 @@ public enum InventoryMutationOutcome: Hashable, Sendable {
 public struct InventorySnapshotPage: Hashable, Sendable {
     public let epoch: String
     public let highWaterSeq: Int
+    public let minimumProtocol: Int
     public let catalogueVersion: String
     public let catalogueRevision: Int?
     public let total: Int
@@ -83,12 +84,14 @@ public struct InventorySnapshotPage: Hashable, Sendable {
     public let nextCursor: String?
 
     public init(
-        epoch: String, highWaterSeq: Int, catalogueVersion: String, total: Int,
+        epoch: String, highWaterSeq: Int, minimumProtocol: Int = 1, catalogueVersion: String,
+        total: Int,
         items: [InventoryItem], locations: [InventoryLocation], nextCursor: String?,
         catalogueRevision: Int? = nil
     ) {
         self.epoch = epoch
         self.highWaterSeq = highWaterSeq
+        self.minimumProtocol = minimumProtocol
         self.catalogueVersion = catalogueVersion
         self.total = total
         self.items = items
@@ -102,6 +105,7 @@ public struct InventorySnapshotPage: Hashable, Sendable {
 /// tombstones included.
 public struct InventoryChangesPage: Hashable, Sendable {
     public let epoch: String
+    public let minimumProtocol: Int
     public let items: [InventoryItem]
     public let locations: [InventoryLocation]
     public let events: [InventoryEvent]
@@ -111,11 +115,13 @@ public struct InventoryChangesPage: Hashable, Sendable {
     public let catalogueRevision: Int?
 
     public init(
-        epoch: String, items: [InventoryItem], locations: [InventoryLocation],
+        epoch: String, minimumProtocol: Int = 1, items: [InventoryItem],
+        locations: [InventoryLocation],
         events: [InventoryEvent], nextSince: Int, hasMore: Bool, catalogueVersion: String,
         catalogueRevision: Int? = nil
     ) {
         self.epoch = epoch
+        self.minimumProtocol = minimumProtocol
         self.items = items
         self.locations = locations
         self.events = events

@@ -9,12 +9,12 @@ internal struct ComputedValuePersistenceTests {
     private static let fieldId = "volume"
 
     private static func item(
-        _ id: String, revision: Int, evaluation: InventoryComputedEvaluation,
+        _ id: String, revision: Int, seq: Int? = nil, evaluation: InventoryComputedEvaluation,
         dependencies: [InventoryValueDependency] = []
     ) -> InventoryItem {
         let plain = Fixture.item(id, revision: revision)
         return InventoryItem(
-            id: plain.id, revision: plain.revision, seq: plain.seq, name: plain.name,
+            id: plain.id, revision: plain.revision, seq: seq ?? plain.seq, name: plain.name,
             typeKey: nil,
             computedValues: [
                 InventoryComputedValue(
@@ -108,6 +108,38 @@ internal struct ComputedValuePersistenceTests {
         try replica.apply(Fixture.changes(items: [Fixture.item("shelf", revision: 2)]))
 
         #expect(try Self.display(replica, "box") == .outOfDate)
+    }
+
+    @Test("a dependent re-sent at its revision with a newer seq replaces the stale evaluation")
+    func resentDependentReplaces() throws {
+        let replica = try InventoryReplica()
+        let before = InventoryValueDependency(itemId: "shelf", fieldId: "depth", revision: 1)
+        let after = InventoryValueDependency(itemId: "shelf", fieldId: "depth", revision: 2)
+        try replica.apply(
+            Fixture.snapshot(items: [
+                Self.item(
+                    "box", revision: 3, seq: 3, evaluation: .ok(.string("6 l")),
+                    dependencies: [before]),
+                Fixture.item("shelf", revision: 1),
+            ]))
+
+        try replica.apply(
+            Fixture.changes(items: [
+                Fixture.item("shelf", revision: 2),
+                Self.item(
+                    "box", revision: 3, seq: 9, evaluation: .ok(.string("7 l")),
+                    dependencies: [after]),
+            ]))
+        #expect(try Self.display(replica, "box") == .value(.string("7 l")))
+        #expect(try replica.read(.item(id: "box"))?.seq == 9)
+
+        try replica.apply(
+            Fixture.changes(items: [
+                Self.item(
+                    "box", revision: 3, seq: 9, evaluation: .ok(.string("1 l")),
+                    dependencies: [after])
+            ]))
+        #expect(try Self.display(replica, "box") == .value(.string("7 l")))
     }
 
     @Test("a new epoch discards evaluations with the rest of the server's state")
