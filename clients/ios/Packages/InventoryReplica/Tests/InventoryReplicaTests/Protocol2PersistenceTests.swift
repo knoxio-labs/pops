@@ -93,13 +93,13 @@ internal struct Protocol2PersistenceTests {
     func catalogueArrivalReindexesSearch() throws {
         let replica = try InventoryReplica()
         try replica.apply(
-            Self.snapshot(items: [Self.item("cable", revision: 1)], revision: 1),
+            Self.snapshot(items: [Self.item("wire", revision: 1)], revision: 1),
             catalogue: Self.catalogue(revision: 1, label: "Cable"))
-        #expect(try replica.ids(.search("Cable")) == ["cable"])
+        #expect(try replica.ids(.search("Cable")) == ["wire"])
 
         try replica.store(Self.catalogue(revision: 2, label: "Lead"))
         #expect(try replica.ids(.search("Cable")).isEmpty)
-        #expect(try replica.ids(.search("Lead")) == ["cable"])
+        #expect(try replica.ids(.search("Lead")) == ["wire"])
     }
 
     @Test("ordered values retain scale and duplicate ordinals")

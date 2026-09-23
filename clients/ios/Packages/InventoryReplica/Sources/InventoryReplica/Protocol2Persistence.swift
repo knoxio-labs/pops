@@ -30,6 +30,10 @@ internal enum Protocol2CatalogueRows {
         for type in catalogue.types {
             try store(type, revision: revision.revision, in: db)
         }
+        try reindexSearch(catalogue, in: db)
+    }
+
+    static func reindexSearch(_ catalogue: InventoryCatalogueSnapshot, in db: Database) throws {
         try ReplicaSearchIndex.reindexAll(catalogue: searchableCatalogue(catalogue), in: db)
     }
 
@@ -240,6 +244,7 @@ extension InventoryReplica {
         try write { db in
             try Protocol2CatalogueRows.store(catalogue, in: db)
             try ReplicaApply.snapshot(page, now: now(), in: db)
+            try Protocol2CatalogueRows.reindexSearch(catalogue, in: db)
         }
     }
 
@@ -253,6 +258,7 @@ extension InventoryReplica {
         try write { db in
             try Protocol2CatalogueRows.store(catalogue, in: db)
             try ReplicaApply.changes(page, now: now(), in: db)
+            try Protocol2CatalogueRows.reindexSearch(catalogue, in: db)
         }
     }
 }
