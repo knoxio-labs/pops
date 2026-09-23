@@ -136,7 +136,11 @@ export function validateItemFieldValuesForType(
     validated.push(validateEntry(db, field, entry, existingItemId));
   }
   const missing = type.fields.find(
-    (field) => field.required && field.archivedAt === null && !seen.has(field.id)
+    (field) =>
+      field.storage === 'stored' &&
+      field.required &&
+      field.archivedAt === null &&
+      !seen.has(field.id)
   );
   if (missing) throw new ItemFieldSetError('required_missing', missing.id, 'requires a value');
   return validated;

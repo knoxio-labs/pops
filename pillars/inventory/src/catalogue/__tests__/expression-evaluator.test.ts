@@ -314,6 +314,7 @@ describe('evaluateExpression', () => {
       fieldId: 'upstream',
       traversedItemIds: ['root', 'remote'],
       revision: 9,
+      dependencies: [{ itemId: 'remote', fieldId: 'input', revision: 4 }],
     };
     const snapshot = expressionSnapshot(
       new Map([
@@ -330,7 +331,38 @@ describe('evaluateExpression', () => {
       reason: 'reference_unresolved',
       fieldId: 'upstream',
       traversedItemIds: ['root', 'remote'],
-      dependencies: [{ itemId: 'root', fieldId: 'computed', revision: 9 }],
+      dependencies: [
+        { itemId: 'remote', fieldId: 'input', revision: 4 },
+        { itemId: 'root', fieldId: 'computed', revision: 9 },
+      ],
+    });
+  });
+
+  it('retains transitive dependencies from a computed field read', () => {
+    const computed: SnapshotFieldValue = {
+      state: 'value',
+      value: '8.000',
+      revision: 9,
+      dependencies: [{ itemId: 'remote', fieldId: 'input', revision: 4 }],
+    };
+    const snapshot = expressionSnapshot(
+      new Map([
+        ['root', { state: 'resolved', item: item('root', new Map([['computed', computed]])) }],
+      ])
+    );
+
+    expect(
+      evaluateExpression(
+        validatedExpression({ op: 'read', path: [], fieldId: 'computed' }),
+        snapshot
+      )
+    ).toEqual({
+      state: 'value',
+      value: '8.000',
+      dependencies: [
+        { itemId: 'remote', fieldId: 'input', revision: 4 },
+        { itemId: 'root', fieldId: 'computed', revision: 9 },
+      ],
     });
   });
 });
@@ -338,13 +370,14 @@ describe('evaluateExpression', () => {
 describe('evaluateComputedValue', () => {
   it('returns an allowed override without reading dependencies', () => {
     const readItem = vi.fn(() => ({ state: 'missing' as const }));
+    const readField = vi.fn();
     const effective = evaluateComputedValue({
       allowOverride: true,
       catalogueRevision: 12,
       expression: validatedExpression({ op: 'read', path: [], fieldId: 'missing' }),
       fieldId: 'total',
       override: { state: 'value', value: '50.000' },
-      snapshot: { rootItemId: 'root', readItem },
+      snapshot: { rootItemId: 'root', readItem, readField },
     });
 
     expect(effective).toEqual({
@@ -353,6 +386,7 @@ describe('evaluateComputedValue', () => {
       provenance: { source: 'override', catalogueRevision: 12 },
     });
     expect(readItem).not.toHaveBeenCalled();
+    expect(readField).not.toHaveBeenCalled();
   });
 
   it('rejects a forbidden override and resumes computation when it is absent', () => {
@@ -384,6 +418,7 @@ describe('evaluateComputedValue', () => {
   });
 
   it('degrades arithmetic errors to unavailable evaluation_error provenance', () => {
+    const onEvaluationError = vi.fn();
     expect(
       evaluateComputedValue({
         allowOverride: false,
@@ -392,6 +427,7 @@ describe('evaluateComputedValue', () => {
         fieldId: 'ratio',
         override: { state: 'absent' },
         snapshot: emptySnapshot,
+        onEvaluationError,
       })
     ).toEqual({
       state: 'unavailable',
@@ -400,5 +436,6 @@ describe('evaluateComputedValue', () => {
       traversedItemIds: ['root'],
       provenance: { source: 'computed', catalogueRevision: 12, dependencies: [] },
     });
+    expect(onEvaluationError).toHaveBeenCalledExactlyOnceWith('division_by_zero');
   });
 });

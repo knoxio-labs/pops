@@ -8,6 +8,7 @@ import {
   replaceValidatedItemFieldValues,
   ValueValidationError,
 } from '../../catalogue/index.js';
+import { mergeActiveChanges } from './active-value-write.js';
 import { CommandRejected } from './errors.js';
 
 import type { ItemFieldValueInput } from '../../catalogue/item-values.js';
@@ -105,7 +106,10 @@ export function mergeActiveFieldPatches(
   current: readonly ItemFieldValueInput[],
   patches: readonly ActiveFieldPatch[]
 ): ItemFieldValueInput[] {
-  const merged = current.map((entry) => ({ ...entry, values: [...entry.values] }));
+  const merged: ItemFieldValueInput[] = current.map((entry) => ({
+    ...entry,
+    values: [...entry.values],
+  }));
   const seen = new Set<string>();
   for (const patch of patches) {
     if (seen.has(patch.fieldId)) {
@@ -147,13 +151,8 @@ export function writeActiveFieldValues(
   }
   const current =
     input.requestedTypeId === undefined ? currentAuthoritativeFieldValues(db, input.itemId) : [];
-  const patches = Object.entries(input.changes).map(([fieldId, value]) => ({
-    fieldId,
-    values: z.array(z.json()).min(1).nullable().parse(value),
-  }));
-  const values = mergeActiveFieldPatches(current, patches);
   if (typeId === null || typeId === undefined) {
-    if (values.length > 0)
+    if (Object.values(input.changes).some((value) => value !== null))
       throw new CommandRejected('invalid', 'an untyped item cannot carry values');
     clearItemFieldValues(db, { itemId: input.itemId });
     return;
@@ -161,6 +160,7 @@ export function writeActiveFieldValues(
   const catalogue = loadPublishedCatalogue(db);
   const type = catalogue?.types.find((entry) => entry.id === typeId);
   if (!catalogue || !type) throw new CommandRejected('type_unknown', `unknown type ${typeId}`);
+  const values = mergeActiveChanges(current, input.changes, type);
   try {
     replaceValidatedItemFieldValues(db, {
       itemId: input.itemId,

@@ -5,6 +5,7 @@ import {
 } from './expression-dependencies.js';
 import { parseExpression } from './expression-parser.js';
 import { inferExpressionType } from './expression-type-validator.js';
+import { ExpressionValidationError } from './expression-types.js';
 import { expressionFail, expressionValueType } from './expression-validation-shared.js';
 
 import type {
@@ -38,19 +39,32 @@ function validateFieldExpression(
   ownerType: PersistedItemType,
   field: PersistedItemTypeField
 ): ValidatedExpression {
-  if (field.cardinality !== 'one')
-    expressionFail(field.id, 'computed_many_forbidden', 'computed fields must use one cardinality');
-  const ast = parseFieldExpression(field);
-  const context: ExpressionValidationContext = { catalogue, ownerType, dependencies: [] };
-  const resultType = inferExpressionType(ast, context, 'expression', expressionValueType(field));
-  const dependencies = uniqueExpressionDependencies(context.dependencies);
-  if (dependencies.length > MAX_EXPRESSION_DEPENDENCIES)
-    expressionFail(
-      field.id,
-      'expression_dependencies_exceeded',
-      'may declare at most 32 dependencies'
-    );
-  return { ast, dependencies, field: { typeId: ownerType.id, fieldId: field.id }, resultType };
+  try {
+    if (field.cardinality !== 'one')
+      expressionFail(
+        field.id,
+        'computed_many_forbidden',
+        'computed fields must use one cardinality'
+      );
+    const ast = parseFieldExpression(field);
+    const context: ExpressionValidationContext = { catalogue, ownerType, dependencies: [] };
+    const resultType = inferExpressionType(ast, context, 'expression', expressionValueType(field));
+    const dependencies = uniqueExpressionDependencies(context.dependencies);
+    if (dependencies.length > MAX_EXPRESSION_DEPENDENCIES)
+      expressionFail(
+        field.id,
+        'expression_dependencies_exceeded',
+        'may declare at most 32 dependencies'
+      );
+    return { ast, dependencies, field: { typeId: ownerType.id, fieldId: field.id }, resultType };
+  } catch (error) {
+    if (!(error instanceof ExpressionValidationError) || error.definitionId !== null) throw error;
+    const prefix = `${error.path}: `;
+    const message = error.message.startsWith(prefix)
+      ? error.message.slice(prefix.length)
+      : error.message;
+    throw new ExpressionValidationError(error.code, error.path, message, field.id);
+  }
 }
 
 /** Parses, type-checks and cycle-checks every computed expression in a catalogue snapshot. */

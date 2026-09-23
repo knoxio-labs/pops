@@ -1,4 +1,9 @@
 import type { ItemFieldValueSource } from '../db/schema.js';
+import type {
+  EffectiveComputedValue,
+  ExpressionUnavailableReason,
+  EvaluatedDependency,
+} from './expression-types.js';
 import type { CanonicalValue, PrimitiveWireValue, ReferenceWireValue } from './value-types.js';
 
 /** One field's ordered values on the stable-id catalogue wire. */
@@ -30,6 +35,32 @@ export interface ReadItemFieldValue {
   readonly catalogueRevision: number;
   readonly values: readonly (PrimitiveWireValue | ReadReferenceWireValue)[];
 }
+
+/** One stored or evaluated field projected with its effective provenance. */
+export type EffectiveItemFieldValue =
+  | {
+      readonly fieldId: string;
+      readonly state: 'value';
+      readonly values: readonly (PrimitiveWireValue | ReadReferenceWireValue)[];
+      readonly provenance:
+        | { readonly source: 'stored'; readonly catalogueRevision: number }
+        | { readonly source: 'override'; readonly catalogueRevision: number }
+        | {
+            readonly source: 'computed';
+            readonly catalogueRevision: number;
+            readonly dependencies: readonly EvaluatedDependency[];
+          };
+    }
+  | {
+      readonly fieldId: string;
+      readonly state: 'unavailable';
+      readonly reason: ExpressionUnavailableReason;
+      readonly traversedItemIds: readonly string[];
+      readonly provenance: Extract<
+        EffectiveComputedValue,
+        { readonly state: 'unavailable' }
+      >['provenance'];
+    };
 
 /** A structural failure in a complete item field set. */
 export class ItemFieldSetError extends Error {

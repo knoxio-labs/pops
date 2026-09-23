@@ -1,3 +1,4 @@
+import { invalidateComputedItem } from '../../catalogue/computed-value-runtime-cache.js';
 import { checkRevision, deletedConflict } from './conflicts.js';
 import { loadEntity, type CommandDb } from './entities.js';
 import { CommandConflict, CommandRejected } from './errors.js';
@@ -140,7 +141,7 @@ export function runMutation(
 ): Outcome {
   const registry = options.registry ?? COMMAND_REGISTRY;
   const clock = options.now ?? (() => new Date().toISOString());
-  return db.transaction(
+  const outcome: Outcome = db.transaction(
     (tx) => {
       const replayed = replayOutcome(tx, mutation);
       if (replayed) return replayed;
@@ -157,6 +158,8 @@ export function runMutation(
     },
     { behavior: 'immediate' }
   );
+  if (outcome.status === 'applied') invalidateComputedItem(db, mutation.entityId);
+  return outcome;
 }
 
 /** Run mutations in array order, each in its own transaction, and return their outcomes in the same order. */

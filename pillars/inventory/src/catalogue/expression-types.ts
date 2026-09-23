@@ -72,6 +72,7 @@ export type SnapshotFieldValue =
       readonly state: 'value';
       readonly value: PrimitiveWireValue;
       readonly revision: number;
+      readonly dependencies?: readonly EvaluatedDependency[];
     }
   | {
       readonly state: 'unavailable';
@@ -79,6 +80,7 @@ export type SnapshotFieldValue =
       readonly fieldId: string;
       readonly traversedItemIds: readonly string[];
       readonly revision: number;
+      readonly dependencies?: readonly EvaluatedDependency[];
     };
 
 /** A snapshot item supplied synchronously to the deterministic evaluator. */
@@ -96,6 +98,7 @@ export interface ExpressionSnapshot {
   ) =>
     | { readonly state: 'resolved'; readonly item: ExpressionSnapshotItem }
     | { readonly state: 'unresolved' | 'missing' | 'deleted' };
+  readonly readField: (itemId: string, fieldId: string) => SnapshotFieldValue | undefined;
 }
 
 /** Raw deterministic expression outcome before wire-level error degradation. */
@@ -152,7 +155,8 @@ export class ExpressionValidationError extends Error {
   constructor(
     public readonly code: string,
     public readonly path: string,
-    message: string
+    message: string,
+    public readonly definitionId: string | null = null
   ) {
     super(`${path}: ${message}`);
     this.name = 'ExpressionValidationError';
