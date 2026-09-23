@@ -6,6 +6,8 @@
  */
 import { fakePillarHandle } from '@pops/pillar-sdk/testing';
 
+import { emptyInventoryChanges, emptyInventorySnapshot } from './inventory-fake-pages.js';
+
 import type { CallResult } from '@pops/pillar-sdk/server';
 
 import type { PillarHandleFactory } from '../pillars/gateway.js';
@@ -65,21 +67,7 @@ function makeSnapshotProcedure(
 ): (rawInput: unknown) => Promise<CallResult<unknown>> {
   return (rawInput) => {
     calls.push(readSyncCall(rawInput));
-    return Promise.resolve(
-      options.snapshotResult ?? {
-        kind: 'ok',
-        value: {
-          epoch: 'epoch-1',
-          highWaterSeq: 0,
-          minimumProtocol: 2,
-          catalogueVersion: 'cat-1',
-          total: 0,
-          items: [],
-          locations: [],
-          nextCursor: null,
-        },
-      }
-    );
+    return Promise.resolve(options.snapshotResult ?? emptyInventorySnapshot());
   };
 }
 
@@ -89,21 +77,7 @@ function makeChangesProcedure(
 ): (rawInput: unknown) => Promise<CallResult<unknown>> {
   return (rawInput) => {
     calls.push(readChangesCall(rawInput));
-    return Promise.resolve(
-      options.changesResult ?? {
-        kind: 'ok',
-        value: {
-          epoch: 'epoch-1',
-          minimumProtocol: 2,
-          items: [],
-          locations: [],
-          events: [],
-          nextSince: 0,
-          hasMore: false,
-          catalogueVersion: 'cat-1',
-        },
-      }
-    );
+    return Promise.resolve(options.changesResult ?? emptyInventoryChanges());
   };
 }
 
