@@ -88,7 +88,7 @@ export function validateMigrationSteps(
       400,
       'migration_steps_incomplete',
       'Migration steps do not cover affected live item fields',
-      issues
+      { issues }
     );
   }
 }
