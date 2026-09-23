@@ -18,6 +18,8 @@ internal struct InventoryProtocol2FieldRow: View {
 
     @ViewBuilder private var editor: some View {
         switch field.kind {
+        case .measurement:
+            InventoryFormTextRow(field.label, placeholder: field.fixedUnit ?? "amount unit", text: textBinding)
         case .boolean:
             Toggle(field.label, isOn: Binding(
                 get: { if case .boolean(let value)? = values.first { return value }; return false },
@@ -76,7 +78,13 @@ internal struct InventoryProtocol2FieldRow: View {
             guard let url = try? InventoryCanonicalURL(value) else { return [] }
             return [.url(url)]
         case .reference: return [.reference(.init(targetKind: .item, targetId: value))]
-        case .measurement, .boolean, .enumeration: return []
+        case .measurement:
+            let parts = value.split(separator: " ", maxSplits: 1).map(String.init)
+            guard let amountText = parts.first, let amount = try? InventoryDecimal(amountText) else { return [] }
+            let unit = parts.count == 2 ? parts[1] : field.fixedUnit ?? ""
+            guard !unit.isEmpty, field.fixedUnit == nil || unit == field.fixedUnit else { return [] }
+            return [.measurement(amount: amount, unit: unit)]
+        case .boolean, .enumeration: return []
         }
     }
 }
