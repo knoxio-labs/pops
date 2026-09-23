@@ -45,7 +45,12 @@ It also holds a service-account credential and one way to spend it — see
 Inventory mutations retain the phone's `catalogueRevision` while BFM relays
 them to the inventory pillar. The revision is the immutable schema against
 which an offline edit was authored; dropping it would make a queued mutation
-ambiguous after the phone downloads a newer catalogue.
+ambiguous after the phone downloads a newer catalogue. The real-process live
+seam in
+`src/api/inventory/__tests__/offline-replay.live-seam.test.ts` queues against
+revision N, publishes a rename and a field replacement at N+1, then proves the
+phone-to-BFM-to-Inventory path safely rebases the rename, returns the repair
+reason for the replacement, and replays both outcomes idempotently.
 
 `/health` answers without a database round-trip, which is why an unreachable
 `bfm.db` still reads as live.
