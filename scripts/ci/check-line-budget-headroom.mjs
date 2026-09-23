@@ -663,8 +663,6 @@ function verdictStatus(count, max, headroom) {
  * @param {number} params.headroom
  * @param {boolean} [params.preferLocal] Resolve `baseRef` locally before its
  * remote-tracking counterpart.
- * @param {boolean} [params.preferLocal] Resolve `baseRef` locally before its
- * remote-tracking counterpart.
  * @param {string} [params.headRef] The commit to project — a ref or a raw
  *   sha. Defaults to `HEAD`. A pre-push hook has to project the SHA git is
  *   actually about to send, which is not always the checked-out `HEAD` (a
