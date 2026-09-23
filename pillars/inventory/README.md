@@ -167,6 +167,12 @@ revision-checked, event-logged commands; only a computed field with
 item's cached subjects and reverse dependencies, while publication clears the
 process-local cache.
 
+The phone evaluates the same AST. `contracts/expression-vectors-v1.json` pins it
+to the server: every case runs through this parser, evaluator and sync
+projection, and the Swift evaluator must reproduce each result. Regenerate with
+`mise run fixture:expression-vectors`; the drift test and the
+`expression-vectors-fixture` CI job fail on a stale copy.
+
 Migration `0012_items_single_identity` built this from `home_inventory` and
 `containers` and dropped both. It aborts, writing nothing, when an id or a
 case-insensitive code is held twice across the two old tables; the operator

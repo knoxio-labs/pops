@@ -10,8 +10,8 @@ import type {
 
 const MAX_EXPRESSION_NODES = 128;
 const MAX_REFERENCE_HOPS = 2;
-const UNARY_OPS = new Set(['negate', 'not']);
-const BINARY_OPS = new Set([
+const UNARY = ['negate', 'not'] as const;
+const BINARY = [
   'add',
   'subtract',
   'multiply',
@@ -21,7 +21,18 @@ const BINARY_OPS = new Set([
   'less_than',
   'and',
   'or',
-]);
+] as const;
+const UNARY_OPS: ReadonlySet<string> = new Set(UNARY);
+const BINARY_OPS: ReadonlySet<string> = new Set(BINARY);
+
+/** Every node `op` expression version 1 accepts; clients must evaluate each one. */
+export const EXPRESSION_V1_OPS: readonly ExpressionV1['op'][] = [
+  'literal',
+  'read',
+  ...UNARY,
+  ...BINARY,
+  'if',
+];
 
 interface ParseState {
   nodes: number;
