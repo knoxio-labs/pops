@@ -390,4 +390,152 @@ describe('TypeCataloguePage', () => {
     );
     expect(screen.queryByText('This draft changed elsewhere')).not.toBeInTheDocument();
   });
+
+  it('publishes only after a preview tied to the current draft, then returns to published', async () => {
+    const publishedAfter: Catalogue = {
+      ...published,
+      revision: {
+        ...published.revision,
+        minimumProtocol: 2,
+        published: {
+          actor: { id: null, kind: 'web', label: 'Owner' },
+          at: '2026-09-23T01:00:00.000Z',
+          note: 'Adds a field',
+        },
+        revision: 2,
+      },
+    };
+    api.readDraft.mockResolvedValue({ data: draft(), error: undefined });
+    api.readCatalogue
+      .mockResolvedValueOnce({ data: published, error: undefined })
+      .mockResolvedValue({ data: publishedAfter, error: undefined });
+    api.publishDraft.mockResolvedValue({ data: publishedAfter, error: undefined });
+    renderPage();
+
+    await screen.findByDisplayValue('Electronics');
+    expect(screen.getByRole('button', { name: 'Review and publish' })).toBeDisabled();
+
+    fireEvent.change(screen.getByLabelText('Type label'), { target: { value: 'Electronics v2' } });
+    await waitFor(() => expect(api.previewDraft).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Review and publish' })).toBeEnabled()
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Review and publish' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Publish revision' }));
+
+    await waitFor(() =>
+      expect(api.publishDraft).toHaveBeenCalledWith({
+        path: { revision: 2 },
+        body: { baseRevision: 1, expectedDraftVersion: 1, note: null, minimumProtocol: 2 },
+      })
+    );
+    expect((await screen.findAllByText('Published revision 2')).length).toBeGreaterThan(0);
+    expect(screen.getByText('No draft')).toBeInTheDocument();
+    expect(toasts.success).toHaveBeenCalledWith('Catalogue published');
+  });
+
+  it('reorders a field through the outline move controls', async () => {
+    const second = {
+      ...published.types[0]!.fields[0]!,
+      id: '44444444-4444-4444-8444-444444444444',
+      key: 'model',
+      label: 'Model',
+      sortOrder: 1,
+    };
+    const typeWithFields = {
+      ...published.types[0]!,
+      fields: [published.types[0]!.fields[0]!, second],
+    };
+    api.readDraft.mockResolvedValue({ data: draft([typeWithFields]), error: undefined });
+    api.patchDraft.mockResolvedValue({
+      data: {
+        compatibility: compatibleResult,
+        draft: draft([{ ...typeWithFields, fields: [second, published.types[0]!.fields[0]!] }]),
+      },
+      error: undefined,
+    });
+    renderPage();
+
+    await screen.findAllByText('Electronics');
+    fireEvent.click(screen.getByRole('button', { name: 'Continue to fields' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Move Model up' }));
+
+    await waitFor(() =>
+      expect(api.patchDraft).toHaveBeenCalledWith(
+        expect.objectContaining({
+          body: expect.objectContaining({
+            operations: [
+              {
+                kind: 'reorder',
+                definition: 'field',
+                parentId: TYPE_ID,
+                ids: [second.id, FIELD_ID],
+              },
+            ],
+          }),
+        })
+      )
+    );
+  });
+
+  it('archives a field through the confirmation dialog', async () => {
+    api.readDraft.mockResolvedValue({ data: draft(), error: undefined });
+    api.patchDraft.mockResolvedValue({
+      data: {
+        compatibility: compatibleResult,
+        draft: draft([
+          {
+            ...published.types[0]!,
+            fields: [{ ...published.types[0]!.fields[0]!, archivedAt: '2026-09-23T00:00:00.000Z' }],
+          },
+        ]),
+      },
+      error: undefined,
+    });
+    renderPage();
+
+    await screen.findAllByText('Electronics');
+    fireEvent.click(screen.getByRole('button', { name: 'Continue to fields' }));
+    fireEvent.click(await screen.findByText('Manufacturer'));
+    fireEvent.click(screen.getByRole('button', { name: 'Archive field' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Archive' }));
+
+    await waitFor(() =>
+      expect(api.patchDraft).toHaveBeenCalledWith(
+        expect.objectContaining({
+          body: expect.objectContaining({ operations: [{ kind: 'archive_field', id: FIELD_ID }] }),
+        })
+      )
+    );
+  });
+
+  it('surfaces a forbidden catalogue error and preserves the unsaved edit', async () => {
+    api.readDraft.mockResolvedValue({ data: draft(), error: undefined });
+    api.patchDraft.mockRejectedValue(
+      new InventoryApiError('You cannot edit this catalogue', 403, 'catalogue_forbidden')
+    );
+    renderPage();
+
+    await screen.findByDisplayValue('Electronics');
+    fireEvent.change(screen.getByLabelText('Type label'), { target: { value: 'Blocked edit' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save type' }));
+
+    expect(await screen.findByText('You cannot edit this catalogue')).toBeInTheDocument();
+    expect(screen.queryByText('This draft changed elsewhere')).not.toBeInTheDocument();
+    expect(screen.getByDisplayValue('Blocked edit')).toBeInTheDocument();
+  });
+
+  it('surfaces an unavailable server error and preserves the unsaved edit', async () => {
+    api.readDraft.mockResolvedValue({ data: draft(), error: undefined });
+    api.patchDraft.mockRejectedValue(new InventoryApiError('inventory API returned no data', 503));
+    renderPage();
+
+    await screen.findByDisplayValue('Electronics');
+    fireEvent.change(screen.getByLabelText('Type label'), { target: { value: 'Retry me' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save type' }));
+
+    expect(await screen.findByText('inventory API returned no data')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Retry me')).toBeInTheDocument();
+  });
 });
