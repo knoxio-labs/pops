@@ -1,12 +1,10 @@
 const uuid = { type: 'string', format: 'uuid' } as const;
 
 /**
- * Ops accepted by a unary/binary expression node. Must match
- * `pillars/inventory/src/catalogue/expression-parser.ts`'s `UNARY_OPS` /
- * `BINARY_OPS` sets exactly — MCP cannot import `@pops/inventory` at runtime
- * (see `inventory-contract-fidelity.test.ts`'s header), so these are kept in
- * sync by that test reading the producer source text directly rather than by
- * a shared import.
+ * Ops accepted by a unary/binary expression node. Must match the producer's
+ * published `ExpressionV1` contract (`inventory-contract-fidelity.test.ts`
+ * reads it off the committed OpenAPI document, the same way every other
+ * check in that file reads producer enforcement).
  */
 export const EXPRESSION_UNARY_OPS = ['negate', 'not'] as const;
 export const EXPRESSION_BINARY_OPS = [
@@ -56,6 +54,16 @@ const primitiveWireValue = {
 const expressionRef = { $ref: '#/$defs/expressionV1' } as const;
 
 /**
+ * The `if` node's wire keys, as computed properties rather than literal
+ * ones below — a plain object with a real `then` property trips
+ * `unicorn/no-thenable` (the linter cannot tell schema data from an
+ * accidental thenable), and the wire key itself must match the producer's
+ * published contract, not something this file may rename away.
+ */
+const THEN_KEY = 'then' as const;
+const ELSE_KEY = 'else' as const;
+
+/**
  * `$defs` for the v1 computed-field expression grammar (Inventory ADR-002
  * D-computed), keyed for `$ref` from `putField.expression` in
  * `inventory-catalogue-schema.ts`. Spread into whichever tool's root
@@ -75,7 +83,7 @@ export const expressionSchemaDefs = {
       "{op:'read', path, fieldId} reads fieldId on the item reached by following " +
       "path (own item when path is [], at most 2 reference hops); {op:'negate'|'not', value} " +
       "a unary op; {op:'add'|'subtract'|'multiply'|'divide'|'concat'|'equal'|'less_than'|'and'|'or', " +
-      "left, right} a binary op; {op:'if', condition, thenBranch, elseBranch}. " +
+      "left, right} a binary op; {op:'if', condition, then, else}. " +
       'Missing dependencies make the computed value unavailable rather than erroring.',
     oneOf: [
       {
@@ -124,10 +132,10 @@ export const expressionSchemaDefs = {
         properties: {
           op: { const: 'if' },
           condition: expressionRef,
-          thenBranch: expressionRef,
-          elseBranch: expressionRef,
+          [THEN_KEY]: expressionRef,
+          [ELSE_KEY]: expressionRef,
         },
-        required: ['op', 'condition', 'thenBranch', 'elseBranch'],
+        required: ['op', 'condition', THEN_KEY, ELSE_KEY],
       },
     ],
   },

@@ -48,9 +48,9 @@ export type ExpressionV1 =
     }
   | {
       condition: ExpressionV1;
-      elseBranch: ExpressionV1;
+      else: ExpressionV1;
       op: 'if';
-      thenBranch: ExpressionV1;
+      then: ExpressionV1;
     };
 
 export type LocationTreeNode = {

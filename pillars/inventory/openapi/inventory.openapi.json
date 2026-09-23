@@ -138,18 +138,18 @@
               "condition": {
                 "$ref": "#/components/schemas/ExpressionV1"
               },
-              "elseBranch": {
+              "else": {
                 "$ref": "#/components/schemas/ExpressionV1"
               },
               "op": {
                 "enum": ["if"],
                 "type": "string"
               },
-              "thenBranch": {
+              "then": {
                 "$ref": "#/components/schemas/ExpressionV1"
               }
             },
-            "required": ["op", "condition", "thenBranch", "elseBranch"],
+            "required": ["op", "condition", "then", "else"],
             "type": "object"
           }
         ]

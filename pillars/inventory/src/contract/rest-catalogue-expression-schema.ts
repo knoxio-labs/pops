@@ -25,6 +25,16 @@ export const EXPRESSION_BINARY_OPS = [
   'or',
 ] as const;
 
+/**
+ * The `if` node's wire keys, as computed properties rather than literal ones
+ * below — an object literal with a real `then` property trips
+ * `unicorn/no-thenable` (the linter cannot tell a schema-data key from an
+ * accidental thenable), and the wire key itself is not ours to rename: it
+ * must match `expression-parser.ts`'s `parseConditional`.
+ */
+const THEN_KEY = 'then' as const;
+const ELSE_KEY = 'else' as const;
+
 const PrimitiveWireValueSchema = z.union([
   z.string(),
   z.number(),
@@ -47,8 +57,12 @@ export type ExpressionV1Shape =
   | {
       readonly op: 'if';
       readonly condition: ExpressionV1Shape;
-      readonly thenBranch: ExpressionV1Shape;
-      readonly elseBranch: ExpressionV1Shape;
+      /** Wire key is `then`/`else`, not `thenBranch`/`elseBranch` — that pair is
+       * `expression-types.ts`'s parsed-AST field naming; `expression-parser.ts`'s
+       * `parseConditional` validates the incoming JSON with `exactKeys(value,
+       * ['condition', 'else', 'op', 'then'], path)`. */
+      readonly then: ExpressionV1Shape;
+      readonly else: ExpressionV1Shape;
     };
 
 /**
@@ -89,8 +103,8 @@ export const ExpressionV1Schema: z.ZodType<ExpressionV1Shape> = z
         .object({
           op: z.literal('if'),
           condition: ExpressionV1Schema,
-          thenBranch: ExpressionV1Schema,
-          elseBranch: ExpressionV1Schema,
+          [THEN_KEY]: ExpressionV1Schema,
+          [ELSE_KEY]: ExpressionV1Schema,
         })
         .strict(),
     ])

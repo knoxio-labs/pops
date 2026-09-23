@@ -1077,10 +1077,10 @@ export interface components {
         }
       | {
           condition: components['schemas']['ExpressionV1'];
-          elseBranch: components['schemas']['ExpressionV1'];
+          else: components['schemas']['ExpressionV1'];
           /** @enum {string} */
           op: 'if';
-          thenBranch: components['schemas']['ExpressionV1'];
+          then: components['schemas']['ExpressionV1'];
         };
     LocationTreeNode: {
       children: components['schemas']['LocationTreeNode'][];
