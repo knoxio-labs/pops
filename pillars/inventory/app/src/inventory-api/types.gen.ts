@@ -4979,6 +4979,7 @@ export type TypesReadValidateItemErrors = {
    */
   400: {
     code?: string;
+    currentDraftVersion?: number;
     issues?: Array<{
       code: string;
       definitionId: string | null;
@@ -4993,6 +4994,7 @@ export type TypesReadValidateItemErrors = {
    */
   401: {
     code?: string;
+    currentDraftVersion?: number;
     issues?: Array<{
       code: string;
       definitionId: string | null;

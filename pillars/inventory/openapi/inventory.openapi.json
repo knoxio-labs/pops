@@ -14753,6 +14753,12 @@
                     "code": {
                       "type": "string"
                     },
+                    "currentDraftVersion": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
                     "issues": {
                       "items": {
                         "additionalProperties": false,
@@ -14798,6 +14804,12 @@
                   "properties": {
                     "code": {
                       "type": "string"
+                    },
+                    "currentDraftVersion": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "issues": {
                       "items": {

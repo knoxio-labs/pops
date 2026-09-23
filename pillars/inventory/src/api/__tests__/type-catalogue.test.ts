@@ -264,6 +264,7 @@ describe('type catalogue owner API', () => {
 
     const typePatch = await api.patch(`/type-catalogue/drafts/${draftRevision}`).send({
       baseRevision,
+      expectedDraftVersion: createdDraft.body.revision.draftVersion,
       operations: [{ kind: 'put_type', key: 'api_tool', label: 'API tool' }],
     });
     expect(typePatch.status, JSON.stringify(typePatch.body)).toBe(200);
@@ -274,6 +275,7 @@ describe('type catalogue owner API', () => {
     const typeId = type.id;
     const fieldPatch = await api.patch(`/type-catalogue/drafts/${draftRevision}`).send({
       baseRevision,
+      expectedDraftVersion: typePatch.body.draft.revision.draftVersion,
       operations: [
         {
           kind: 'put_field',
@@ -294,7 +296,7 @@ describe('type catalogue owner API', () => {
     const fieldId = field.id;
     const published = await api
       .post(`/type-catalogue/drafts/${draftRevision}/publish`)
-      .send({ baseRevision });
+      .send({ baseRevision, expectedDraftVersion: fieldPatch.body.draft.revision.draftVersion });
     expect(published.status, JSON.stringify(published.body)).toBe(200);
 
     const create = await api

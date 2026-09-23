@@ -7076,6 +7076,7 @@ export interface operations {
         content: {
           'application/json': {
             code?: string;
+            currentDraftVersion?: number;
             issues?: {
               code: string;
               definitionId: string | null;
@@ -7095,6 +7096,7 @@ export interface operations {
         content: {
           'application/json': {
             code?: string;
+            currentDraftVersion?: number;
             issues?: {
               code: string;
               definitionId: string | null;
