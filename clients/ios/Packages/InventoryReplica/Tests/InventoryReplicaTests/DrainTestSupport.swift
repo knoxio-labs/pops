@@ -1,42 +1,9 @@
 import AppCore
+import AppCoreFakes
 import Foundation
 import Synchronization
 
 @testable import InventoryReplica
-
-/// A network path a test switches by hand.
-internal final class FakeReachability: InventoryReachability {
-    private struct State {
-        var isSatisfied: Bool
-        var listeners: [AsyncStream<Bool>.Continuation] = []
-    }
-
-    private let state: Mutex<State>
-
-    init(satisfied: Bool) {
-        state = Mutex(State(isSatisfied: satisfied))
-    }
-
-    var isSatisfied: Bool { state.withLock { $0.isSatisfied } }
-
-    func updates() -> AsyncStream<Bool> {
-        let (stream, continuation) = AsyncStream<Bool>.makeStream()
-        let current = state.withLock { state in
-            state.listeners.append(continuation)
-            return state.isSatisfied
-        }
-        continuation.yield(current)
-        return stream
-    }
-
-    func set(_ satisfied: Bool) {
-        let listeners = state.withLock { state in
-            state.isSatisfied = satisfied
-            return state.listeners
-        }
-        for listener in listeners { listener.yield(satisfied) }
-    }
-}
 
 /// A clock whose sleeps end when the test says: each sleep is announced on
 /// `requests`, and waits for `release()`.
@@ -73,12 +40,12 @@ internal struct DrainHarness {
     let drain: InventoryDrain
     let replica: InventoryReplica
     let transport: FakeSyncTransport
-    let reachability: FakeReachability
+    let reachability: ScriptedNetworkReachability
     let clock: ManualDrainClock
 
     init(
         replica: InventoryReplica, batchSize: Int = 50,
-        reachability: FakeReachability = FakeReachability(satisfied: true),
+        reachability: ScriptedNetworkReachability = ScriptedNetworkReachability(satisfied: true),
         mintMutationId: @escaping @Sendable () -> String = { UUID().uuidString.lowercased() },
         submit: @escaping FakeSyncTransport.SubmitHandler
     ) {

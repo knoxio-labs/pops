@@ -17,8 +17,7 @@ name: Transactions that cannot be fetched say so, and are not an empty list
 # below has to be the difference between a working federation and a broken one,
 # and a list that was empty all along would make every assertion after this
 # pass without proving anything.
-- assertVisible:
-    id: 'transactions-list'
+- runFlow: subflows/open-transactions.yaml
 - assertVisible:
     id: 'transaction-row-e2e-groceries'
 
@@ -33,6 +32,7 @@ name: Transactions that cannot be fetched say so, and are not an empty list
 # somebody opens the app and the rows are not there.
 - stopApp
 - launchApp
+- runFlow: subflows/select-transactions.yaml
 
 # `TransactionsCopy.message(for: .unavailable)`, in full. The sentence this
 # whole state exists for: "finance is down" and "you have no transactions" are

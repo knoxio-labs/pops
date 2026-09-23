@@ -5,6 +5,7 @@ import { FieldFormProvider } from './FieldFormContext';
 import { FieldFormIdentity } from './FieldFormIdentity';
 import { EnumOptions } from './FieldFormOptions';
 import { useFieldFormState } from './useFieldFormState';
+import { useOperationPreview } from './useOperationPreview';
 
 import type { FieldFormContextValue } from './FieldFormContext';
 import type { CatalogueField, CatalogueOperation, CatalogueType } from './types';
@@ -15,6 +16,7 @@ interface FieldFormProps {
   readonly onArchive?: () => void;
   readonly onRestore?: () => void;
   readonly onOperation: (operation: CatalogueOperation) => void;
+  readonly onPreview?: (operation: CatalogueOperation) => void;
   readonly published: boolean;
   readonly type: CatalogueType;
   readonly types: readonly CatalogueType[];
@@ -23,13 +25,15 @@ interface FieldFormProps {
 /** Creates or edits stored, enum, reference, and closed-expression computed fields. */
 export function FieldForm(props: FieldFormProps) {
   const state = useFieldFormState(props);
+  const operation = state.valid ? createOperation(state.context, props.type.id) : null;
+  useOperationPreview(operation, props.onPreview);
   return (
     <FieldFormProvider value={state.context}>
       <form
         className="space-y-5"
         onSubmit={(event) => {
           event.preventDefault();
-          if (state.valid) props.onOperation(createOperation(state.context, props.type.id));
+          if (operation !== null) props.onOperation(operation);
         }}
       >
         <FieldFormIdentity onKeyChange={state.changeKey} onLabelChange={state.changeLabel} />

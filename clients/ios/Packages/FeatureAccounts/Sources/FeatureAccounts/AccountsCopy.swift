@@ -43,6 +43,8 @@ internal enum AccountsCopy {
             return "This device is no longer signed in."
         case .contractMismatch:
             return "This version of Pops cannot read what the server sent. Update the app."
+        case .conflict:
+            return "That change conflicts with something already saved."
         case .transport:
             return "Could not reach the server. Check your connection and try again."
         case .dependencyNotBound:

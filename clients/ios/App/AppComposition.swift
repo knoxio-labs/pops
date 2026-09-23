@@ -35,6 +35,8 @@ import os
 internal final class AppComposition {
     internal let session: SessionStore
     internal let shell: AppShellModel
+    /// The process-wide network path shared by network-aware features.
+    internal let networkReachability = NetworkPathReachability()
 
     /// Where a scanned or opened ``PopsURI`` resolves to a screen.
     ///
@@ -214,7 +216,7 @@ internal final class AppComposition {
         do {
             let store = LocalFirstInventoryStore(
                 replica: try openInventoryReplica(device), transport: transport,
-                reachability: NetworkPathReachability())
+                reachability: networkReachability)
             synchronizeInventory = { await store.synchronize() }
             return store
         } catch InventoryStorageError.full {

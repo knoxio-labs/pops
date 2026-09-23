@@ -7,7 +7,7 @@ import {
   itemTypeFields,
   itemTypes,
 } from '../db/schema.js';
-import { applyOperation } from './authoring-operations.js';
+import { applyDraftOperations } from './authoring-draft-operations.js';
 import {
   currentPublished,
   json,
@@ -15,10 +15,7 @@ import {
   requireCurrentDraft,
 } from './authoring-shared.js';
 import { CatalogueApiError } from './authoring-types.js';
-import { validateCatalogue } from './authoring-validation.js';
 import { toCatalogueDescriptor } from './authoring-wire.js';
-import { countCompatibilityAffectedItems } from './compatibility-preview.js';
-import { classifyCatalogueCompatibility } from './compatibility.js';
 
 import type { CommandDb } from '../domain/commands/index.js';
 import type { CatalogueAuthor, CatalogueDescriptor, DraftOperation } from './authoring-types.js';
@@ -26,6 +23,7 @@ import type { CatalogueCompatibilityResult } from './compatibility.js';
 
 export { readCatalogueAudit, toCatalogueDescriptor } from './authoring-wire.js';
 export { publishCatalogueDraft } from './authoring-publication.js';
+export { previewCatalogueDraft } from './authoring-draft-operations.js';
 export { CatalogueApiError } from './authoring-types.js';
 export type { CataloguePublicationInput } from './authoring-publication.js';
 export type {
@@ -144,21 +142,7 @@ export function patchCatalogueDraft(
   draft: CatalogueDescriptor;
   compatibility: CatalogueCompatibilityResult & { readonly affectedItems: number };
 } {
-  return db.transaction((tx) => {
-    requireCurrentDraft(tx, revision, baseRevision);
-    for (const operation of operations) applyOperation(tx, revision, operation);
-    const draft = requireCatalogue(tx, revision, ['draft']);
-    validateCatalogue(draft);
-    const base = requireCatalogue(tx, baseRevision, ['published']);
-    const compatibility = classifyCatalogueCompatibility(base, draft);
-    return {
-      draft: toCatalogueDescriptor(tx, draft),
-      compatibility: {
-        ...compatibility,
-        affectedItems: countCompatibilityAffectedItems(tx, base, draft, compatibility.affectedIds),
-      },
-    };
-  });
+  return db.transaction((tx) => applyDraftOperations(tx, revision, baseRevision, operations));
 }
 
 /** Abandons a draft while retaining its immutable definition rows and audit. */

@@ -30,6 +30,9 @@ internal struct FailingHomeRepository: PurchasesRepository {
 
     func monthSummary(for: Date) async throws -> PurchasesMonthSummary { throw error }
     func purchaseDetail(id: Purchase.ID) async throws -> PurchaseDetail? { throw error }
+    func updatePurchase(id: Purchase.ID, _ update: PurchaseUpdate) async throws -> PurchaseDetail? {
+        throw error
+    }
     func receiptThumbnail(sha256: String) async throws -> ReceiptImage? { throw error }
     func receiptImage(sha256: String) async throws -> ReceiptImage? { throw error }
 }
@@ -45,6 +48,10 @@ internal struct CancellingHomeRepository: PurchasesRepository {
     }
 
     func purchaseDetail(id: Purchase.ID) async throws -> PurchaseDetail? {
+        throw CancellationError()
+    }
+
+    func updatePurchase(id: Purchase.ID, _ update: PurchaseUpdate) async throws -> PurchaseDetail? {
         throw CancellationError()
     }
 
@@ -81,6 +88,9 @@ internal actor MutableHomeRepository: PurchasesRepository {
     }
 
     func purchaseDetail(id: Purchase.ID) async throws -> PurchaseDetail? { nil }
+    func updatePurchase(id: Purchase.ID, _ update: PurchaseUpdate) async throws -> PurchaseDetail? {
+        nil
+    }
 
     func receiptThumbnail(sha256: String) async throws -> ReceiptImage? { nil }
 
@@ -160,6 +170,9 @@ internal actor SequencedHomeRepository: PurchasesRepository {
     }
 
     func purchaseDetail(id: Purchase.ID) async throws -> PurchaseDetail? { nil }
+    func updatePurchase(id: Purchase.ID, _ update: PurchaseUpdate) async throws -> PurchaseDetail? {
+        nil
+    }
 
     func receiptThumbnail(sha256: String) async throws -> ReceiptImage? { nil }
 

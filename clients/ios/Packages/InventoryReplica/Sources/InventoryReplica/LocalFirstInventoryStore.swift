@@ -38,7 +38,7 @@ public final class LocalFirstInventoryStore: InventoryStore, Sendable {
         pageSize: Int = 250,
         mintMutationId: @escaping @Sendable () -> String = { UUID().uuidString.lowercased() },
         now: @escaping @Sendable () -> Date = { Date() },
-        reachability: (any InventoryReachability)? = nil,
+        reachability: (any NetworkReachability)? = nil,
         drainClock: any InventoryDrainClock = SystemDrainClock()
     ) {
         let online = OnlineInventoryStore(

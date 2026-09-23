@@ -1,5 +1,4 @@
 import AppCore
-import Foundation
 import GRDB
 
 private struct StoredOptionValue: Codable {

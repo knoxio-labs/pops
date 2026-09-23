@@ -4163,6 +4163,20 @@ export type TypesManagePatchDraftErrors = {
     }>;
     message: string;
     messageKey?: string;
+    preview?: {
+      baseRevision: number;
+      compatibility: {
+        affectedIds: Array<string>;
+        affectedItems: number;
+        changes: Array<{
+          classification: 'compatible' | 'protocol_gated' | 'migration_required' | 'forbidden';
+          code: string;
+          definitionId: string;
+        }>;
+        classification: 'compatible' | 'protocol_gated' | 'migration_required' | 'forbidden';
+      };
+      draftRevision: number;
+    };
   };
   /**
    * 401
@@ -4205,6 +4219,20 @@ export type TypesManagePatchDraftErrors = {
     }>;
     message: string;
     messageKey?: string;
+    preview?: {
+      baseRevision: number;
+      compatibility: {
+        affectedIds: Array<string>;
+        affectedItems: number;
+        changes: Array<{
+          classification: 'compatible' | 'protocol_gated' | 'migration_required' | 'forbidden';
+          code: string;
+          definitionId: string;
+        }>;
+        classification: 'compatible' | 'protocol_gated' | 'migration_required' | 'forbidden';
+      };
+      draftRevision: number;
+    };
   };
 };
 
@@ -4476,6 +4504,202 @@ export type TypesManageAbandonDraftResponses = {
 
 export type TypesManageAbandonDraftResponse =
   TypesManageAbandonDraftResponses[keyof TypesManageAbandonDraftResponses];
+
+export type TypesManagePreviewDraftData = {
+  /**
+   * Body
+   */
+  body?: {
+    baseRevision: number;
+    operations: Array<
+      | {
+          archivedAt?: string | null;
+          capabilities?: Array<string>;
+          description?: string | null;
+          id?: string;
+          key?: string;
+          kind: 'put_type';
+          label?: string;
+          legacyLabels?: Array<string>;
+          presentation?: {
+            [key: string]: unknown;
+          };
+          sortOrder?: number;
+        }
+      | {
+          allowOverride?: boolean;
+          archivedAt?: string | null;
+          cardinality?: 'one' | 'many';
+          expression?: unknown;
+          expressionVersion?: number | null;
+          fieldKind?:
+            | 'short_text'
+            | 'long_text'
+            | 'integer'
+            | 'decimal'
+            | 'boolean'
+            | 'enum'
+            | 'measurement'
+            | 'date'
+            | 'date_time'
+            | 'url'
+            | 'reference';
+          fixedUnit?: string | null;
+          help?: string | null;
+          id?: string;
+          key?: string;
+          kind: 'put_field';
+          label?: string;
+          presentation?: {
+            [key: string]: unknown;
+          };
+          referenceKinds?: Array<'item' | 'location'>;
+          referenceTypeIds?: Array<string>;
+          required?: boolean;
+          sortOrder?: number;
+          storage?: 'stored' | 'computed';
+          typeId: string;
+        }
+      | {
+          archivedAt?: string | null;
+          fieldId: string;
+          id?: string;
+          key?: string;
+          kind: 'put_enum_option';
+          label?: string;
+          sortOrder?: number;
+        }
+      | {
+          id: string;
+          kind: 'archive_type' | 'archive_field' | 'archive_enum_option';
+        }
+      | {
+          definition: 'type' | 'field' | 'enum_option';
+          ids: Array<string>;
+          kind: 'reorder';
+          parentId?: string | null;
+        }
+    >;
+  };
+  path: {
+    revision: number;
+  };
+  query?: never;
+  url: '/type-catalogue/drafts/{revision}/preview';
+};
+
+export type TypesManagePreviewDraftErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    issues?: Array<{
+      code: string;
+      definitionId: string | null;
+      message: string;
+      path: string;
+    }>;
+    message: string;
+    messageKey?: string;
+    preview?: {
+      baseRevision: number;
+      compatibility: {
+        affectedIds: Array<string>;
+        affectedItems: number;
+        changes: Array<{
+          classification: 'compatible' | 'protocol_gated' | 'migration_required' | 'forbidden';
+          code: string;
+          definitionId: string;
+        }>;
+        classification: 'compatible' | 'protocol_gated' | 'migration_required' | 'forbidden';
+      };
+      draftRevision: number;
+    };
+  };
+  /**
+   * 401
+   */
+  401: {
+    code?: string;
+    issues?: Array<{
+      code: string;
+      definitionId: string | null;
+      message: string;
+      path: string;
+    }>;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    issues?: Array<{
+      code: string;
+      definitionId: string | null;
+      message: string;
+      path: string;
+    }>;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    issues?: Array<{
+      code: string;
+      definitionId: string | null;
+      message: string;
+      path: string;
+    }>;
+    message: string;
+    messageKey?: string;
+    preview?: {
+      baseRevision: number;
+      compatibility: {
+        affectedIds: Array<string>;
+        affectedItems: number;
+        changes: Array<{
+          classification: 'compatible' | 'protocol_gated' | 'migration_required' | 'forbidden';
+          code: string;
+          definitionId: string;
+        }>;
+        classification: 'compatible' | 'protocol_gated' | 'migration_required' | 'forbidden';
+      };
+      draftRevision: number;
+    };
+  };
+};
+
+export type TypesManagePreviewDraftError =
+  TypesManagePreviewDraftErrors[keyof TypesManagePreviewDraftErrors];
+
+export type TypesManagePreviewDraftResponses = {
+  /**
+   * 200
+   */
+  200: {
+    baseRevision: number;
+    compatibility: {
+      affectedIds: Array<string>;
+      affectedItems: number;
+      changes: Array<{
+        classification: 'compatible' | 'protocol_gated' | 'migration_required' | 'forbidden';
+        code: string;
+        definitionId: string;
+      }>;
+      classification: 'compatible' | 'protocol_gated' | 'migration_required' | 'forbidden';
+    };
+    draftRevision: number;
+  };
+};
+
+export type TypesManagePreviewDraftResponse =
+  TypesManagePreviewDraftResponses[keyof TypesManagePreviewDraftResponses];
 
 export type TypesManagePublishDraftData = {
   /**

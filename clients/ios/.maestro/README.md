@@ -49,6 +49,9 @@ lane rather than passing it having driven nothing.
 That glob is one directory deep, which is what keeps `subflows/` out of it.
 Everything in there is called through `runFlow` and takes values from its
 caller, so driven on its own it would fail on the ones nobody passed it.
+`select-transactions.yaml` and `open-transactions.yaml` keep the
+secondary-feature route through More consistent across healthy and error-state
+flows that need the Transactions screen.
 
 ## Why Maestro and not XCUITest
 

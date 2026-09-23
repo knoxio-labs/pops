@@ -3,6 +3,7 @@ import type { z } from 'zod';
 import type { CatalogueMigrationStepSchema } from '../contract/rest-catalogue-migration-schemas.js';
 import type { CatalogueDraftOperationSchema } from '../contract/rest-catalogue-schemas.js';
 import type { PersistedItemTypeField } from './catalogue-types.js';
+import type { CatalogueCompatibilityResult } from './compatibility-types.js';
 
 export type DraftOperation = z.infer<typeof CatalogueDraftOperationSchema>;
 export type MigrationStepInput = z.infer<typeof CatalogueMigrationStepSchema>;
@@ -36,6 +37,13 @@ export interface CatalogueIssue {
   readonly message: string;
 }
 
+/** Revision-bound compatibility evidence returned by a non-mutating catalogue preview. */
+export interface CataloguePreviewDiagnostics {
+  readonly baseRevision: number;
+  readonly draftRevision: number;
+  readonly compatibility: CatalogueCompatibilityResult & { readonly affectedItems: number };
+}
+
 /** An HTTP-shaped catalogue authoring failure. */
 export class CatalogueApiError extends Error {
   /**
@@ -47,11 +55,19 @@ export class CatalogueApiError extends Error {
     readonly status: 400 | 401 | 404 | 409,
     readonly code: string,
     message: string,
-    readonly issues: readonly CatalogueIssue[] = []
+    options: {
+      readonly issues?: readonly CatalogueIssue[];
+      readonly preview?: CataloguePreviewDiagnostics;
+    } = {}
   ) {
     super(message);
     this.name = 'CatalogueApiError';
+    this.issues = options.issues ?? [];
+    this.preview = options.preview;
   }
+
+  readonly issues: readonly CatalogueIssue[];
+  readonly preview: CataloguePreviewDiagnostics | undefined;
 }
 
 /** Wire-ready actor metadata from a revision row. */

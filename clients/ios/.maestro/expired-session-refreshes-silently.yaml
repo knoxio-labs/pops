@@ -19,8 +19,7 @@ name: An expired access token is renewed without the screen noticing
     env:
       SERVER_URL: ${CONTROL_BASE_URL}
 
-- assertVisible:
-    id: 'transactions-list'
+- runFlow: subflows/open-transactions.yaml
 
 # Everything is healthy at this point, so the banner must not be up. It is also
 # drawn ABOVE the list, and a late arrival would move the row out from under

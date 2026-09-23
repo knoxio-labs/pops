@@ -1,4 +1,5 @@
 import AppCore
+import AppCoreFakes
 import Synchronization
 import Testing
 
@@ -16,7 +17,7 @@ private final class EventLog: Sendable {
 
 /// A usable path that never reports a change, so nothing but the store's own
 /// requests starts a drain pass.
-private struct QuietReachability: InventoryReachability {
+private struct QuietReachability: NetworkReachability {
     var isSatisfied: Bool { true }
 
     func updates() -> AsyncStream<Bool> {
@@ -40,7 +41,8 @@ internal struct LocalFirstStoreSynchronizeTests {
         return LocalFirstInventoryStore(
             replica: replica, transport: FakeSyncTransport(script),
             mintMutationId: SyncFixture.mutationIds(), now: { Fixture.created },
-            reachability: FakeReachability(satisfied: true), drainClock: ManualDrainClock())
+            reachability: ScriptedNetworkReachability(satisfied: true),
+            drainClock: ManualDrainClock())
     }
 
     @Test("when synchronize returns, a change logged before it has been sent and applied")

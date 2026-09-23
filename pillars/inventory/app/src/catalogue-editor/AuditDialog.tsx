@@ -3,8 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@pops/ui';
 
 import { unwrap } from '../inventory-api-helpers';
-import { typesReadAudit } from '../inventory-api/index.js';
 import { AuditEvents } from './AuditEvents';
+import { catalogueApi } from './catalogue-api';
 
 interface AuditDialogProps {
   readonly onOpenChange: (open: boolean) => void;
@@ -15,7 +15,7 @@ interface AuditDialogProps {
 export function AuditDialog({ onOpenChange, open }: AuditDialogProps) {
   const query = useQuery({
     queryKey: ['inventory', 'type-catalogue', 'audit'],
-    queryFn: async () => unwrap(await typesReadAudit({ query: { limit: 100 } })),
+    queryFn: async () => unwrap(await catalogueApi.readAudit({ query: { limit: 100 } })),
     enabled: open,
   });
   return (

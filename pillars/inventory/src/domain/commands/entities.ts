@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import {
@@ -9,12 +9,8 @@ import {
 import { clearItemFieldValues } from '../../catalogue/protocol-1-copy.js';
 import { loadProtocol1Fields } from '../../catalogue/protocol-1-read.js';
 import { replaceItemFieldValues } from '../../catalogue/protocol-1-values.js';
-import { items, locations } from '../../db/schema.js';
-import {
-  currentActiveFieldValue,
-  isActiveFieldName,
-  writeActiveFieldValues,
-} from './active-catalogue-values.js';
+import { itemFieldValues, items, locations } from '../../db/schema.js';
+import { isActiveFieldName } from './active-field-key.js';
 import { CommandRejected } from './errors.js';
 import { itemFieldsBlobSchema, ITEM_FIELD_CODECS, parseFieldValue } from './item-fields.js';
 import { LEGACY_ITEM_FIELD_CODECS } from './legacy-item-fields.js';
@@ -85,7 +81,7 @@ export function isWritableField(kind: EntityKind, field: string): boolean {
 export function currentValue(db: CommandDb, entity: LoadedEntity, field: string): JsonValue {
   if (entity.kind === 'item') {
     if (field === 'fields') return protocol1FieldsAsJson(loadProtocol1Fields(db, entity.row.id));
-    if (isActiveFieldName(field)) return currentActiveFieldValue(db, entity.row.id, field);
+    if (isActiveFieldName(field)) return currentDynamicValue(db, entity.row.id, field);
     if (field === 'typeId') return entity.row.typeId;
     if (field === 'typeKey') {
       if (entity.row.typeId === null) return null;
@@ -100,6 +96,20 @@ export function currentValue(db: CommandDb, entity: LoadedEntity, field: string)
   const codec = LOCATION_FIELD_CODECS[field];
   if (!codec) throw new CommandRejected('invalid', `location has no writable field ${field}`);
   return codec.read(entity.row);
+}
+
+function currentDynamicValue(db: CommandDb, itemId: string, fieldId: string): JsonValue {
+  const rows = db
+    .select({ source: itemFieldValues.source, valueJson: itemFieldValues.valueJson })
+    .from(itemFieldValues)
+    .where(and(eq(itemFieldValues.itemId, itemId), eq(itemFieldValues.fieldId, fieldId)))
+    .orderBy(itemFieldValues.source, itemFieldValues.ordinal)
+    .all();
+  const stored = rows.filter((row) => row.source === 'stored');
+  const selected = stored.length > 0 ? stored : rows;
+  return selected.length === 0
+    ? null
+    : z.array(z.json()).parse(selected.map((row) => JSON.parse(row.valueJson)));
 }
 
 /** What a write stamps on the row besides the changed fields. */
@@ -214,18 +224,6 @@ export function writeEntity(
       .where(eq(items.id, entity.row.id))
       .run();
     replaceProtocol1Fields(db, entity, changes, stamp.now);
-    const activeChanges = Object.fromEntries(
-      Object.entries(changes).filter(([field]) => isActiveFieldName(field))
-    );
-    if (changes['typeId'] !== undefined || Object.keys(activeChanges).length > 0) {
-      writeActiveFieldValues(db, {
-        itemId: entity.row.id,
-        currentTypeId: entity.row.typeId,
-        requestedTypeId: changes['typeId'],
-        changes: activeChanges,
-        now: stamp.now,
-      });
-    }
     return;
   }
   db.update(locations)

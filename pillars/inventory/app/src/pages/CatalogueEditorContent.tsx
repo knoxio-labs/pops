@@ -19,7 +19,10 @@ export function CatalogueEditorContent({
   readonly onOperation: (operation: CatalogueOperation) => void;
   readonly page: Page;
 }) {
-  if (page.mode === 'new-type') return <TypeForm isPending={page.isPending} onSave={onOperation} />;
+  if (page.mode === 'new-type')
+    return (
+      <TypeForm isPending={page.isPending} onPreview={page.previewOperation} onSave={onOperation} />
+    );
   if (page.mode === 'type') return <TypeEditor page={page} onOperation={onOperation} />;
   return <FieldEditor page={page} onOperation={onOperation} />;
 }
@@ -36,9 +39,10 @@ function TypeEditor({
   return (
     <>
       <TypeForm
-        key={type.id}
+        key={`${type.id}-${page.editorEpoch}`}
         type={type}
         isPending={page.isPending}
+        onPreview={page.previewOperation}
         onSave={onOperation}
         onArchive={() =>
           page.setArchiveTarget({
@@ -100,6 +104,7 @@ function FieldFormContent({
         published={false}
         isPending={page.isPending}
         onOperation={onOperation}
+        onPreview={page.previewOperation}
       />
     );
   if (field === undefined)
@@ -111,13 +116,14 @@ function FieldFormContent({
     );
   return (
     <FieldForm
-      key={field.id}
+      key={`${field.id}-${page.editorEpoch}`}
       field={field}
       type={type}
       types={page.types}
       published={page.selectedFieldIsPublished}
       isPending={page.isPending}
       onOperation={onOperation}
+      onPreview={page.previewOperation}
       onArchive={() =>
         page.setArchiveTarget({
           kind: 'field',

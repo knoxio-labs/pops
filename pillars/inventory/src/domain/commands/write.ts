@@ -1,3 +1,5 @@
+import { writeActiveFieldValues } from './active-catalogue-values.js';
+import { isActiveFieldName } from './active-field-key.js';
 import { diffAgainst } from './conflicts.js';
 import {
   currentValue,
@@ -19,6 +21,26 @@ export interface ChangeContext {
   readonly mutationId: string | null;
   readonly clientTime: string | null;
   readonly now: string;
+}
+
+function writeActiveValues(
+  db: CommandDb,
+  entity: LoadedEntity,
+  changes: FieldValues,
+  now: string
+): void {
+  if (entity.kind !== 'item') return;
+  const dynamic = Object.fromEntries(
+    Object.entries(changes).filter(([field]) => isActiveFieldName(field))
+  );
+  if (changes['typeId'] === undefined && Object.keys(dynamic).length === 0) return;
+  writeActiveFieldValues(db, {
+    itemId: entity.row.id,
+    currentTypeId: entity.row.typeId,
+    requestedTypeId: changes['typeId'],
+    changes: dynamic,
+    now,
+  });
 }
 
 /** Derive a {@link ChangeContext} from the context an `effects` hook receives. */
@@ -69,6 +91,7 @@ export function recordUpdate(
     serverTime: ctx.now,
   });
   writeEntity(ctx.db, entity, after, { revision, seq, now: ctx.now });
+  writeActiveValues(ctx.db, entity, after, ctx.now);
   return { revision, seq };
 }
 

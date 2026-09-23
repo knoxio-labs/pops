@@ -6,13 +6,22 @@ public struct PurchaseDetailLine: Identifiable, Hashable, Sendable {
     public let name: String
     public let quantity: Int
     public let lineTotal: MoneyAmount
+    /// Whether removing this line also removes an Inventory association.
+    public let hasInventoryLink: Bool
 
     /// Creates an itemized purchase line.
-    public init(id: String, name: String, quantity: Int, lineTotal: MoneyAmount) {
+    public init(
+        id: String,
+        name: String,
+        quantity: Int,
+        lineTotal: MoneyAmount,
+        hasInventoryLink: Bool = false
+    ) {
         self.id = id
         self.name = name
         self.quantity = quantity
         self.lineTotal = lineTotal
+        self.hasInventoryLink = hasInventoryLink
     }
 }
 
@@ -33,6 +42,9 @@ public struct PurchaseDetail: Identifiable, Hashable, Sendable {
     public let source: String
     public let lines: [PurchaseDetailLine]
     public let receiptURIs: [String]
+    public let edit: PurchaseEdit?
+    /// The server's verbatim compare-and-swap token for an update, when supplied.
+    public let updatedAt: String?
 
     /// Creates a complete purchase detail while preserving receipt document order.
     public init(
@@ -44,7 +56,9 @@ public struct PurchaseDetail: Identifiable, Hashable, Sendable {
         surcharge: MoneyAmount,
         source: String,
         lines: [PurchaseDetailLine],
-        receiptURIs: [String]
+        receiptURIs: [String],
+        edit: PurchaseEdit? = nil,
+        updatedAt: String? = nil
     ) {
         self.purchase = purchase
         self.subtotal = subtotal
@@ -55,6 +69,8 @@ public struct PurchaseDetail: Identifiable, Hashable, Sendable {
         self.source = source
         self.lines = lines
         self.receiptURIs = receiptURIs
+        self.edit = edit
+        self.updatedAt = updatedAt
     }
 }
 

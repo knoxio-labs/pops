@@ -65,6 +65,7 @@ name: The root screen says why nothing is usable, and Try again leaves it
 # The seeded row, reached only if `AppShellModel.surface` re-admitted
 # `transactions` to `available` — a screen that merely stopped complaining
 # would not fetch anything to show here.
+- runFlow: subflows/open-transactions.yaml
 - assertVisible:
     id: 'transaction-row-e2e-groceries'
 - assertNotVisible: 'Transactions is not available right now.'

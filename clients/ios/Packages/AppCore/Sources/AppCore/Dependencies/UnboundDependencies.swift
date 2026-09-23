@@ -51,6 +51,10 @@ internal struct UnboundPurchasesRepository: PurchasesRepository {
         throw RepositoryError.dependencyNotBound
     }
 
+    func updatePurchase(id: Purchase.ID, _ update: PurchaseUpdate) async throws -> PurchaseDetail? {
+        throw RepositoryError.dependencyNotBound
+    }
+
     func receiptThumbnail(sha256: String) async throws -> ReceiptImage? {
         throw RepositoryError.dependencyNotBound
     }

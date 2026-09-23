@@ -122,6 +122,20 @@ a migration step. Publication dry-runs every derived affected row and appends a
 `migrated` item event only after the complete candidate validates. Search
 rebuilds use the candidate catalogue during that same transition.
 
+`POST /type-catalogue/drafts/:revision/preview` applies the proposed operation
+batch inside a rolled-back transaction. It returns fresh compatibility and
+affected-item diagnostics bound to the exact base and draft revisions without
+changing the persisted draft. Blocked validation responses retain every
+definition-level issue and the same revision-bound compatibility and affected
+item evidence in the standard error envelope.
+
+`POST /type-catalogue/drafts/:revision/preview` applies the proposed operation
+batch inside a rolled-back transaction. It returns fresh compatibility and
+affected-item diagnostics bound to the exact base and draft revisions without
+changing the persisted draft. Blocked validation responses retain every
+definition-level issue and the same revision-bound compatibility and affected
+item evidence in the standard error envelope.
+
 Computed fields use the bounded, versioned expression AST from D5: no SQL,
 JavaScript, clocks or network access; at most two reference hops; publication
 rejects dependency cycles. A permitted explicit override wins without evaluating
@@ -157,9 +171,15 @@ creates the single draft on the first write, resumes it after reload through
 stale-base, compatibility, archive, abandonment, audit, and publication
 states. Each successful draft patch includes the producer-counted live items
 affected by its changed definitions, so the publication review does not
-reimplement catalogue validation in the browser. Published field identity and shape stay locked; incompatible changes
-must be expressed as a replacement and an explicit named migration rather
-than edited in place.
+reimplement catalogue validation in the browser. Existing drafts also preview
+pending form edits through the non-mutating preview endpoint after a short
+debounce; sequenced responses prevent older diagnostics from replacing newer
+ones, and the editor never patches a draft merely to preview it. A stale-draft reload clears
+the rejected mutation, refetches both published and draft snapshots, and
+rebuilds the open form from the persisted draft without replaying the rejected
+operation. Published field identity and shape stay locked; incompatible
+changes must be expressed as a replacement and an explicit named migration
+rather than edited in place.
 
 ## Registration
 
@@ -231,10 +251,6 @@ the gate above derives three grants: `inventory.sync` (`GET /sync/snapshot`,
   that revision to be the active publication and reject stale input with
   `catalogue_changed`; compatibility proofs can widen that gate without ever
   silently reinterpreting a write against another snapshot.
-- Protocol 2 item rows carry the persisted `typeId` and canonical
-  stable-field-ID `fieldValues` (each with its source and catalogue revision).
-  The existing `typeKey` and `fields` projection remains alongside them for
-  protocol-1 readers during the transition.
 - The snapshot serves live items and locations in pages whose opaque cursor
   pins the high-water `seq` of the first page; the change feed then serves
   every row (tombstones included) and every event after a `seq`. A cursor or

@@ -25,9 +25,14 @@ internal struct PurchaseDetailMappingTests {
             detail.lines == [
                 PurchaseDetailLine(
                     id: "line-1", name: "Coffee", quantity: 2,
-                    lineTotal: MoneyAmount(minorUnits: 1_275, currencyCode: "AUD"))
+                    lineTotal: MoneyAmount(minorUnits: 1_275, currencyCode: "AUD"),
+                    hasInventoryLink: true)
             ])
         #expect(detail.receiptURIs == ["pops://receipt/b", "pops://receipt/a"])
+        #expect(detail.updatedAt == "opaque-version-token")
+        #expect(detail.edit?.changes.first?.field == .merchant)
+        #expect(detail.edit?.changes.first?.original == "Old Cafe")
+        #expect(detail.edit?.changes.first?.current == "Cafe")
     }
 
     @Test("an empty receipt list stays empty rather than using the compatibility URI")
@@ -41,6 +46,33 @@ internal struct PurchaseDetailMappingTests {
         let detail = try #require(try await repository.purchaseDetail(id: "purchase-1"))
 
         #expect(detail.receiptURIs.isEmpty)
+    }
+
+    @Test("a null edit remains absent while the opaque update token is retained")
+    func nullEdit() async throws {
+        let json = Self.detailJSON.replacingOccurrences(
+            of: Self.editJSON,
+            with: #""edit":null"#)
+        let repository = try BFMPurchasesRepository.stubbed(
+            StubTransport(status: .ok, json: json))
+
+        let detail = try #require(try await repository.purchaseDetail(id: "purchase-1"))
+
+        #expect(detail.edit == nil)
+        #expect(detail.updatedAt == "opaque-version-token")
+    }
+
+    @Test("legacy detail lines without link metadata remain unlinked")
+    func absentInventoryLink() async throws {
+        let json = Self.detailJSON.replacingOccurrences(
+            of: #""hasInventoryLink":true,"#,
+            with: "")
+        let repository = try BFMPurchasesRepository.stubbed(
+            StubTransport(status: .ok, json: json))
+
+        let detail = try #require(try await repository.purchaseDetail(id: "purchase-1"))
+
+        #expect(detail.lines.first?.hasInventoryLink == false)
     }
 
     @Test("a detail entity with no name falls back to the printed wording")
@@ -107,14 +139,25 @@ internal struct PurchaseDetailMappingTests {
         }
     }
 
-    private static let detailJSON = """
-        {"currency":"AUD","discountCents":50,"id":"purchase-1","itemCount":2,
-        "items":[{"id":"line-1","lineTotalCents":1275,"name":"Coffee","quantity":2}],
+    private static let detailJSON = [
+        """
+        {"currency":"AUD","discountCents":50,
+        """,
+        editJSON,
+        """
+        ,"id":"purchase-1","itemCount":2,
+        "items":[{"hasInventoryLink":true,"id":"line-1","lineTotalCents":1275,"name":"Coffee","quantity":2}],
         "merchant":{"resolution":"name","name":"Cafe"},"merchantName":"Cafe",
         "orderedAt":"2026-09-20T10:00:00+10:00","orderedOn":"2026-09-20",
         "receiptUri":"compatibility-only",
         "receiptUris":["pops://receipt/b","pops://receipt/a"],
         "shippingCents":200,"source":"receipt","status":"linked","subtotalCents":1000,
-        "surchargeCents":25,"taxCents":100,"totalCents":1275}
-        """
+        "surchargeCents":25,"taxCents":100,"totalCents":1275,
+        "updatedAt":"opaque-version-token"}
+        """,
+    ].joined()
+
+    private static let editJSON =
+        #""edit":{"editedAt":"2026-09-20T10:05:00.000Z","changes":["#
+        + #"{"field":"merchant","itemId":null,"original":"Old Cafe","current":"Cafe"}]}"#
 }

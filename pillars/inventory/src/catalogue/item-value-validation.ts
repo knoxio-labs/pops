@@ -38,7 +38,7 @@ function existingValueJson(
 function canonicalizeWrite(
   field: PersistedItemTypeField,
   value: unknown,
-  existing: ReadonlySet<string>
+  remainingExisting: Map<string, number>
 ): CanonicalValue {
   try {
     return canonicalizeValue(field, value);
@@ -48,7 +48,11 @@ function canonicalizeWrite(
         { ...field, archivedEnumOptionIds: new Set<string>() },
         value
       );
-      if (existing.has(canonical.valueJson)) return canonical;
+      const remaining = remainingExisting.get(canonical.valueJson) ?? 0;
+      if (remaining > 0) {
+        remainingExisting.set(canonical.valueJson, remaining - 1);
+        return canonical;
+      }
     }
     throw error;
   }
@@ -79,11 +83,15 @@ function validateEntry(
   assertShape(field, entry);
   const existing = existingValueJson(db, existingItemId, field.id, entry.source);
   const existingSet = new Set(existing);
+  const remainingExisting = new Map<string, number>();
+  for (const valueJson of existing) {
+    remainingExisting.set(valueJson, (remainingExisting.get(valueJson) ?? 0) + 1);
+  }
   if (field.archivedAt !== null && existing.length === 0) {
     throw new ItemFieldSetError('field_archived', field.id, 'cannot receive new values');
   }
   const values = entry.values.map((value) => {
-    const canonical = canonicalizeWrite(field, value, existingSet);
+    const canonical = canonicalizeWrite(field, value, remainingExisting);
     if (!existingSet.has(canonical.valueJson)) assertReferenceTarget(db, field, canonical.value);
     return canonical;
   });

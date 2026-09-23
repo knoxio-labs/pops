@@ -69,6 +69,8 @@ internal enum TransactionsCopy {
             // build cannot read, and no amount of retrying changes which build
             // is on the phone.
             return "This version of Pops cannot read what the server sent. Update the app."
+        case .conflict:
+            return "That change conflicts with something already saved."
         case .transport:
             // The payload is a diagnostic and stays out of this. Nobody holding
             // a phone can act on a URLError code.

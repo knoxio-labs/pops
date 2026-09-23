@@ -16,12 +16,9 @@ export function issue(
 }
 
 export function failIssues(issues: readonly CatalogueIssue[]): never {
-  throw new CatalogueApiError(
-    400,
-    'catalogue_validation_failed',
-    'Catalogue validation failed',
-    issues
-  );
+  throw new CatalogueApiError(400, 'catalogue_validation_failed', 'Catalogue validation failed', {
+    issues,
+  });
 }
 
 export function requireCatalogue(

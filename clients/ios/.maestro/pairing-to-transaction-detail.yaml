@@ -23,8 +23,7 @@ name: Pair this device, then open a transaction
 # credentials and asks the BFM what to show — and every `assertVisible` below
 # retries until the element is there or Maestro gives up, which is the whole
 # reason this file has no sleeps in it.
-- assertVisible:
-    id: 'transactions-list'
+- runFlow: subflows/open-transactions.yaml
 
 # The federation behind this flow is healthy, so this banner must not be on
 # screen — and this is the assertion that found the first thing this flow ever

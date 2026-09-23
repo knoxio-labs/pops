@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { FieldForm } from './FieldForm';
@@ -6,6 +6,19 @@ import { FieldForm } from './FieldForm';
 import type { CatalogueField, CatalogueType } from './types';
 
 const TYPE_ID = '11111111-1111-4111-8111-111111111111';
+const KIND_LABELS = [
+  ['short_text', 'Short text'],
+  ['long_text', 'Long text'],
+  ['integer', 'Integer'],
+  ['decimal', 'Decimal'],
+  ['boolean', 'Yes / no'],
+  ['enum', 'Options'],
+  ['measurement', 'Measurement'],
+  ['date', 'Date'],
+  ['date_time', 'Date and time'],
+  ['url', 'URL'],
+  ['reference', 'Reference'],
+] as const satisfies readonly (readonly [CatalogueField['kind'], string])[];
 
 function field(overrides: Partial<CatalogueField> = {}): CatalogueField {
   return {
@@ -48,21 +61,29 @@ function type(fields: CatalogueField[]): CatalogueType {
   };
 }
 
-function renderField(target: CatalogueField, siblings: CatalogueField[] = []) {
+function renderField(target: CatalogueField, siblings: CatalogueField[] = [], published = false) {
   const itemType = type([target, ...siblings]);
+  const onOperation = vi.fn();
   render(
     <FieldForm
       field={target}
       isPending={false}
-      onOperation={vi.fn()}
-      published={false}
+      onOperation={onOperation}
+      published={published}
       type={itemType}
       types={[itemType]}
     />
   );
+  return onOperation;
 }
 
 describe('FieldForm configuration branches', () => {
+  it.each(KIND_LABELS)('selects the %s primitive as %s', (kind, label) => {
+    renderField(field({ kind, fixedUnit: kind === 'measurement' ? 'cm' : null }));
+
+    expect(screen.getByRole('combobox')).toHaveTextContent(label);
+  });
+
   it('renders measurement units', () => {
     renderField(field({ kind: 'measurement', fixedUnit: 'cm' }));
 
@@ -124,5 +145,57 @@ describe('FieldForm configuration branches', () => {
     expect(screen.queryByText('Reference targets')).not.toBeInTheDocument();
     expect(screen.queryByText('Operation')).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Options' })).not.toBeInTheDocument();
+  });
+
+  it('normalises boolean fields to one value even when legacy data says many', () => {
+    const target = field({ kind: 'boolean', cardinality: 'many' });
+    const onOperation = renderField(target);
+
+    expect(screen.getByLabelText('One')).toBeChecked();
+    expect(screen.getByLabelText('Many')).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Save field' }));
+
+    expect(onOperation).toHaveBeenCalledWith(
+      expect.objectContaining({ cardinality: 'one', fieldKind: 'boolean' })
+    );
+  });
+
+  it('preserves mixed item and location reference targets', () => {
+    const target = field({
+      kind: 'reference',
+      referenceKinds: ['item', 'location'],
+      referenceTypeIds: [TYPE_ID],
+    });
+    const onOperation = renderField(target);
+
+    expect(screen.getByLabelText('Inventory item')).toBeChecked();
+    expect(screen.getByLabelText('Location')).toBeChecked();
+    expect(screen.getByLabelText('Equipment')).toBeChecked();
+    fireEvent.click(screen.getByRole('button', { name: 'Save field' }));
+
+    expect(onOperation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        referenceKinds: ['item', 'location'],
+        referenceTypeIds: [TYPE_ID],
+      })
+    );
+  });
+
+  it('locks every published measurement shape control while leaving its label editable', () => {
+    renderField(field({ kind: 'measurement', fixedUnit: 'kg' }), [], true);
+
+    expect(screen.getByLabelText('Field label')).toBeEnabled();
+    expect(screen.getByLabelText('Key')).toBeDisabled();
+    expect(screen.getByRole('combobox')).toBeDisabled();
+    expect(screen.getByLabelText('One')).toBeDisabled();
+    expect(screen.getByLabelText('Many')).toBeDisabled();
+    expect(screen.getByLabelText('Fixed unit')).toBeDisabled();
+    expect(screen.getByText('Published shape is locked')).toBeInTheDocument();
+  });
+
+  it('blocks a computed field with no eligible operands', () => {
+    renderField(field({ storage: 'computed' }));
+
+    expect(screen.getByRole('button', { name: 'Save field' })).toBeDisabled();
   });
 });
