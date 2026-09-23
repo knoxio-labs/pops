@@ -12,6 +12,7 @@ const catalogue: CatalogueDescriptor = {
     baseRevision: 6,
     created: { actor: { id: null, kind: 'web', label: 'Owner' }, at: '2026-09-23T00:00:00.000Z' },
     minimumProtocol: 2,
+    draftVersion: 1,
     published: null,
     revision: 7,
     status: 'draft',

@@ -1,13 +1,18 @@
-import { catalogueClient } from './inventory-catalogue-client.js';
-import { requiredObjectArray, requiredPositiveInteger } from './inventory-catalogue-input.js';
+import { catalogueClient, mapDraftCallResult } from './inventory-catalogue-client.js';
+import {
+  expectedDraftVersionSchema,
+  requiredObjectArray,
+  requiredPositiveInteger,
+} from './inventory-catalogue-input.js';
 import { catalogueOperationSchema } from './inventory-catalogue-schema.js';
-import { mapCallResult, toolError } from './utils.js';
+import { toolError } from './utils.js';
 
 import type { ToolDef } from './tool-def.js';
 
 type DraftOperationInput = {
   readonly revision: number;
   readonly baseRevision: number;
+  readonly expectedDraftVersion: number;
   readonly operations: Record<string, unknown>[];
 };
 
@@ -21,6 +26,7 @@ export const catalogueDraftOperationInputSchema: ToolDef['inputSchema'] = {
       minimum: 1,
       description: 'Published revision the draft is based on',
     },
+    expectedDraftVersion: expectedDraftVersionSchema,
     operations: {
       type: 'array',
       items: catalogueOperationSchema,
@@ -28,7 +34,7 @@ export const catalogueDraftOperationInputSchema: ToolDef['inputSchema'] = {
       maxItems: 100,
     },
   },
-  required: ['revision', 'baseRevision', 'operations'],
+  required: ['revision', 'baseRevision', 'expectedDraftVersion', 'operations'],
 };
 
 /** Parses a complete draft operation batch from MCP arguments. */
@@ -41,6 +47,8 @@ export function catalogueDraftOperationInput(
   if (!revision.ok) return revision;
   const baseRevision = requiredPositiveInteger(args, 'baseRevision');
   if (!baseRevision.ok) return baseRevision;
+  const expectedDraftVersion = requiredPositiveInteger(args, 'expectedDraftVersion');
+  if (!expectedDraftVersion.ok) return expectedDraftVersion;
   const operations = requiredObjectArray(args, 'operations');
   if (!operations.ok) return operations;
   return {
@@ -48,6 +56,7 @@ export function catalogueDraftOperationInput(
     value: {
       revision: revision.value,
       baseRevision: baseRevision.value,
+      expectedDraftVersion: expectedDraftVersion.value,
       operations: operations.value,
     },
   };
@@ -57,11 +66,11 @@ export function catalogueDraftOperationInput(
 export const cataloguePreviewDraft: ToolDef = {
   name: 'inventory.catalogue.previewDraft',
   description:
-    'Validate catalogue operations and return revision-bound compatibility diagnostics without changing the draft.',
+    'Validate catalogue operations and return revision-bound compatibility diagnostics without changing the draft or its revision.draftVersion. Refused with catalogue_draft_conflict when expectedDraftVersion is stale.',
   inputSchema: catalogueDraftOperationInputSchema,
   handler: async (args) => {
     const input = catalogueDraftOperationInput(args);
     if (!input.ok) return toolError(input.error);
-    return mapCallResult(await catalogueClient().manage.previewDraft(input.value));
+    return mapDraftCallResult(await catalogueClient().manage.previewDraft(input.value));
   },
 };

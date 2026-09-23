@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { unwrap } from '../inventory-api-helpers';
 import { catalogueApi } from './catalogue-api';
-import { draftBaseRevision } from './catalogue-draft';
+import { draftPreconditions } from './catalogue-draft';
 import { DRAFT_KEY } from './useCatalogueMutations';
 
 import type { QueryClient } from '@tanstack/react-query';
@@ -44,7 +44,7 @@ export function useCataloguePreview(
               await catalogueApi.previewDraft({
                 path: { revision: draft.revision.revision },
                 body: {
-                  baseRevision: draftBaseRevision(draft),
+                  ...draftPreconditions(draft),
                   operations: [operation],
                 },
               })

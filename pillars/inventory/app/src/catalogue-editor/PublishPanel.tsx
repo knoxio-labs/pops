@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Alert, AlertDescription, AlertTitle, Badge, Button } from '@pops/ui';
 
 import { InventoryApiError } from '../inventory-api-helpers';
+import { isStaleDraftCode } from './catalogue-draft';
 import { CompatibilityPreview } from './CompatibilityPreview';
 import { PublishDialog } from './PublishDialog';
 
@@ -137,7 +138,7 @@ function PublishError({
   readonly onReload: () => void;
 }) {
   if (error === null) return null;
-  if (error.code === 'catalogue_conflict')
+  if (isStaleDraftCode(error.code))
     return (
       <Alert variant="destructive">
         <AlertTitle>This draft changed elsewhere</AlertTitle>

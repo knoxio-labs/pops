@@ -2,7 +2,7 @@ import { useMutation } from '@tanstack/react-query';
 
 import { unwrap } from '../inventory-api-helpers';
 import { catalogueApi } from './catalogue-api';
-import { draftBaseRevision } from './catalogue-draft';
+import { draftPreconditions } from './catalogue-draft';
 
 import type { QueryClient } from '@tanstack/react-query';
 import type { Dispatch, SetStateAction } from 'react';
@@ -61,7 +61,7 @@ function useDraftPatching(
       return unwrap(
         await catalogueApi.patchDraft({
           path: { revision: draft.revision.revision },
-          body: { baseRevision: draftBaseRevision(draft), operations: [...operations] },
+          body: { ...draftPreconditions(draft), operations: [...operations] },
         })
       );
     },
@@ -85,7 +85,7 @@ function useDraftPublication(
       return unwrap(
         await catalogueApi.publishDraft({
           path: { revision: draft.revision.revision },
-          body: { baseRevision: draftBaseRevision(draft), ...input },
+          body: { ...draftPreconditions(draft), ...input },
         })
       );
     },
@@ -111,7 +111,7 @@ function useDraftAbandonment(
       return unwrap(
         await catalogueApi.abandonDraft({
           path: { revision: draft.revision.revision },
-          body: { baseRevision: draftBaseRevision(draft) },
+          body: draftPreconditions(draft),
         })
       );
     },

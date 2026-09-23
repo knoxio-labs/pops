@@ -24,52 +24,60 @@ function publishCustomType(harness: Harness): {
 } {
   const created = createCatalogueDraft(harness.db, 1, AUTHOR);
   const revision = created.revision.revision;
-  const withType = patchCatalogueDraft(harness.db, revision, 1, [
-    {
-      kind: 'put_type',
-      key: 'custom_device',
-      label: 'Custom device',
-      capabilities: ['containment'],
-    },
-  ]);
+  const withType = patchCatalogueDraft(
+    harness.db,
+    { revision, baseRevision: 1, expectedDraftVersion: created.revision.draftVersion },
+    [
+      {
+        kind: 'put_type',
+        key: 'custom_device',
+        label: 'Custom device',
+        capabilities: ['containment'],
+      },
+    ]
+  );
   const type = withType.draft.types.find((entry) => entry.key === 'custom_device');
   if (!type) throw new Error('custom type was not created');
   const cable = withType.draft.types.find((entry) => entry.key === 'cable');
   if (!cable) throw new Error('cable type is unavailable');
-  const withField = patchCatalogueDraft(harness.db, revision, 1, [
-    {
-      kind: 'put_field',
-      typeId: type.id,
-      key: 'serial',
-      label: 'Serial',
-      fieldKind: 'short_text',
-      cardinality: 'one',
-      required: true,
-      storage: 'stored',
-    },
-    {
-      kind: 'put_field',
-      typeId: type.id,
-      key: 'notes',
-      label: 'Notes',
-      fieldKind: 'long_text',
-      cardinality: 'one',
-      required: false,
-      storage: 'stored',
-    },
-    {
-      kind: 'put_field',
-      typeId: type.id,
-      key: 'connected_to',
-      label: 'Connected to',
-      fieldKind: 'reference',
-      cardinality: 'one',
-      required: false,
-      storage: 'stored',
-      referenceKinds: ['item'],
-      referenceTypeIds: [cable.id],
-    },
-  ]);
+  const withField = patchCatalogueDraft(
+    harness.db,
+    { revision, baseRevision: 1, expectedDraftVersion: withType.draft.revision.draftVersion },
+    [
+      {
+        kind: 'put_field',
+        typeId: type.id,
+        key: 'serial',
+        label: 'Serial',
+        fieldKind: 'short_text',
+        cardinality: 'one',
+        required: true,
+        storage: 'stored',
+      },
+      {
+        kind: 'put_field',
+        typeId: type.id,
+        key: 'notes',
+        label: 'Notes',
+        fieldKind: 'long_text',
+        cardinality: 'one',
+        required: false,
+        storage: 'stored',
+      },
+      {
+        kind: 'put_field',
+        typeId: type.id,
+        key: 'connected_to',
+        label: 'Connected to',
+        fieldKind: 'reference',
+        cardinality: 'one',
+        required: false,
+        storage: 'stored',
+        referenceKinds: ['item'],
+        referenceTypeIds: [cable.id],
+      },
+    ]
+  );
   const fields = withField.draft.types.find((entry) => entry.id === type.id)?.fields;
   const field = fields?.find((entry) => entry.key === 'serial');
   const notesField = fields?.find((entry) => entry.key === 'notes');
@@ -77,7 +85,12 @@ function publishCustomType(harness: Harness): {
   if (!field) throw new Error('custom field was not created');
   if (!notesField) throw new Error('custom notes field was not created');
   if (!referenceField) throw new Error('custom reference field was not created');
-  publishCatalogueDraft(harness.db, revision, { baseRevision: 1, note: null }, AUTHOR);
+  publishCatalogueDraft(
+    harness.db,
+    revision,
+    { baseRevision: 1, expectedDraftVersion: withField.draft.revision.draftVersion, note: null },
+    AUTHOR
+  );
   return {
     revision,
     typeId: type.id,
@@ -91,8 +104,17 @@ function publishCustomType(harness: Harness): {
 function archiveType(harness: Harness, typeId: string, baseRevision: number): number {
   const created = createCatalogueDraft(harness.db, baseRevision, AUTHOR);
   const revision = created.revision.revision;
-  patchCatalogueDraft(harness.db, revision, baseRevision, [{ kind: 'archive_type', id: typeId }]);
-  publishCatalogueDraft(harness.db, revision, { baseRevision, note: null }, AUTHOR);
+  const archived = patchCatalogueDraft(
+    harness.db,
+    { revision, baseRevision, expectedDraftVersion: created.revision.draftVersion },
+    [{ kind: 'archive_type', id: typeId }]
+  );
+  publishCatalogueDraft(
+    harness.db,
+    revision,
+    { baseRevision, expectedDraftVersion: archived.draft.revision.draftVersion, note: null },
+    AUTHOR
+  );
   return revision;
 }
 

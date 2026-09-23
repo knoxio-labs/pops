@@ -131,7 +131,7 @@ describe('type catalogue owner API', () => {
     const draftRevision = draftResponse.body.revision.revision;
 
     expect(draftResponse.status).toBe(201);
-    expect(draftResponse.body.revision.status).toBe('draft');
+    expect(draftResponse.body.revision).toMatchObject({ status: 'draft', draftVersion: 1 });
 
     const resumedDraft = await api.get('/type-catalogue/drafts/current');
 
@@ -140,6 +140,7 @@ describe('type catalogue owner API', () => {
 
     const patch = await api.patch(`/type-catalogue/drafts/${draftRevision}`).send({
       baseRevision,
+      expectedDraftVersion: draftResponse.body.revision.draftVersion,
       operations: [
         { kind: 'put_type', id: type.id, label: 'Updated label' },
         {
@@ -155,15 +156,18 @@ describe('type catalogue owner API', () => {
     });
 
     expect(patch.status).toBe(200);
+    expect(patch.body.draft.revision.draftVersion).toBe(2);
     expect(patch.body.draft.types.find((entry: { id: string }) => entry.id === type.id).label).toBe(
       'Updated label'
     );
     expect(patch.body.compatibility.classification).toBe('compatible');
     expect(patch.body.compatibility.affectedItems).toBe(1);
 
-    const published = await api
-      .post(`/type-catalogue/drafts/${draftRevision}/publish`)
-      .send({ baseRevision, note: 'Owner update' });
+    const published = await api.post(`/type-catalogue/drafts/${draftRevision}/publish`).send({
+      baseRevision,
+      expectedDraftVersion: patch.body.draft.revision.draftVersion,
+      note: 'Owner update',
+    });
 
     expect(published.status).toBe(200);
     expect(published.body.revision.status).toBe('published');
@@ -202,6 +206,7 @@ describe('type catalogue owner API', () => {
 
     const preview = await api.post(`/type-catalogue/drafts/${revision}/preview`).send({
       baseRevision,
+      expectedDraftVersion: created.body.revision.draftVersion,
       operations: [
         {
           kind: 'put_field',
@@ -218,6 +223,7 @@ describe('type catalogue owner API', () => {
 
     expect(preview.status).toBe(200);
     expect(preview.body).toMatchObject({ baseRevision, draftRevision: revision });
+    expect(persisted.body.revision.draftVersion).toBe(created.body.revision.draftVersion);
     expect(preview.body.compatibility).toMatchObject({
       classification: 'compatible',
       affectedItems: 1,
@@ -239,6 +245,7 @@ describe('type catalogue owner API', () => {
 
     const preview = await api.post(`/type-catalogue/drafts/${revision}/preview`).send({
       baseRevision,
+      expectedDraftVersion: created.body.revision.draftVersion,
       operations: [
         {
           kind: 'put_field',
@@ -293,6 +300,7 @@ describe('type catalogue owner API', () => {
 
     const migrationRequired = await api.post(`/type-catalogue/drafts/${revision}/preview`).send({
       baseRevision,
+      expectedDraftVersion: created.body.revision.draftVersion,
       operations: [
         {
           kind: 'put_field',
@@ -304,6 +312,7 @@ describe('type catalogue owner API', () => {
     });
     const forbidden = await api.post(`/type-catalogue/drafts/${revision}/preview`).send({
       baseRevision,
+      expectedDraftVersion: created.body.revision.draftVersion,
       operations: [
         {
           kind: 'put_field',
@@ -334,6 +343,7 @@ describe('type catalogue owner API', () => {
     const revision = createdDraft.body.revision.revision;
     const created = await api.patch(`/type-catalogue/drafts/${revision}`).send({
       baseRevision,
+      expectedDraftVersion: createdDraft.body.revision.draftVersion,
       operations: [{ kind: 'put_type', key: 'test_equipment', label: 'Test equipment' }],
     });
     const type = created.body.draft.types.find(
@@ -342,14 +352,17 @@ describe('type catalogue owner API', () => {
 
     const stale = await api.patch(`/type-catalogue/drafts/${revision}`).send({
       baseRevision: baseRevision + 1,
+      expectedDraftVersion: created.body.draft.revision.draftVersion,
       operations: [{ kind: 'put_type', id: type.id, label: 'Stale label' }],
     });
     const edited = await api.patch(`/type-catalogue/drafts/${revision}`).send({
       baseRevision,
+      expectedDraftVersion: created.body.draft.revision.draftVersion,
       operations: [{ kind: 'put_type', id: type.id, label: 'Edited equipment' }],
     });
     const archived = await api.patch(`/type-catalogue/drafts/${revision}`).send({
       baseRevision,
+      expectedDraftVersion: edited.body.draft.revision.draftVersion,
       operations: [{ kind: 'archive_type', id: type.id }],
     });
 
@@ -380,7 +393,7 @@ describe('type catalogue owner API', () => {
 
     const abandoned = await api
       .post(`/type-catalogue/drafts/${revision}/abandon`)
-      .send({ baseRevision });
+      .send({ baseRevision, expectedDraftVersion: draft.body.revision.draftVersion });
     const audit = await api.get('/type-catalogue/audit').query({ limit: 10 });
 
     expect(abandoned.status).toBe(200);

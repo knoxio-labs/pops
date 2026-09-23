@@ -23,6 +23,7 @@ interface PreparedMigration {
   readonly api: BoundAgent;
   readonly baseRevision: number;
   readonly draftRevision: number;
+  readonly draftVersion: number;
   readonly affectedTypeIds: readonly string[];
   readonly affectedFieldIds: readonly string[];
   readonly steps: readonly CatalogueMigrationStep[];
@@ -34,6 +35,7 @@ interface PreparedContainmentMigration {
   readonly api: BoundAgent;
   readonly baseRevision: number;
   readonly draftRevision: number;
+  readonly draftVersion: number;
   readonly typeId: string;
 }
 
@@ -84,6 +86,7 @@ async function prepareRequiredFieldMigration(seedItems = true): Promise<Prepared
   const fieldKeys = affectedTypes.map((type) => `required_${type.key}`);
   const patch = await api.patch(`/type-catalogue/drafts/${draftRevision}`).send({
     baseRevision,
+    expectedDraftVersion: created.body.revision.draftVersion,
     operations: affectedTypes.map((type, index) => ({
       kind: 'put_field',
       typeId: type.id,
@@ -107,6 +110,7 @@ async function prepareRequiredFieldMigration(seedItems = true): Promise<Prepared
     api,
     baseRevision,
     draftRevision,
+    draftVersion: patch.body.draft.revision.draftVersion as number,
     affectedTypeIds: affectedTypes.map((type) => type.id),
     affectedFieldIds,
     steps: affectedFieldIds.map((fieldId, index) => ({
@@ -150,11 +154,18 @@ async function prepareContainmentMigration(
   }
   const created = await api.post('/type-catalogue/drafts').send({ baseRevision });
   const draftRevision = created.body.revision.revision as number;
-  await api.patch(`/type-catalogue/drafts/${draftRevision}`).send({
+  const patch = await api.patch(`/type-catalogue/drafts/${draftRevision}`).send({
     baseRevision,
+    expectedDraftVersion: created.body.revision.draftVersion,
     operations: [{ kind: 'put_type', id: type.id, capabilities: [] }],
   });
-  return { api, baseRevision, draftRevision, typeId: type.id };
+  return {
+    api,
+    baseRevision,
+    draftRevision,
+    draftVersion: patch.body.draft.revision.draftVersion as number,
+    typeId: type.id,
+  };
 }
 
 async function publish(
@@ -167,6 +178,7 @@ async function publish(
 ) {
   return prepared.api.post(`/type-catalogue/drafts/${prepared.draftRevision}/publish`).send({
     baseRevision: prepared.baseRevision,
+    expectedDraftVersion: prepared.draftVersion,
     migration: {
       name: 'required-fields',
       fromRevision: prepared.baseRevision,
@@ -184,6 +196,7 @@ async function publishContainment(
 ) {
   return prepared.api.post(`/type-catalogue/drafts/${prepared.draftRevision}/publish`).send({
     baseRevision: prepared.baseRevision,
+    expectedDraftVersion: prepared.draftVersion,
     migration: {
       name: 'remove-containment',
       fromRevision: prepared.baseRevision,

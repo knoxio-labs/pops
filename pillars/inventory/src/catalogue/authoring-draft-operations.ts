@@ -1,5 +1,6 @@
+import { claimCurrentDraft } from './authoring-draft-version.js';
 import { applyOperation } from './authoring-operations.js';
-import { requireCatalogue, requireCurrentDraft } from './authoring-shared.js';
+import { requireCatalogue } from './authoring-shared.js';
 import { CatalogueApiError } from './authoring-types.js';
 import { validateCatalogue } from './authoring-validation.js';
 import { toCatalogueDescriptor } from './authoring-wire.js';
@@ -19,14 +20,21 @@ export interface DraftOperationResult {
   readonly compatibility: CatalogueCompatibilityResult & { readonly affectedItems: number };
 }
 
+/** Identifies the draft an operation batch targets and the version the caller last read. */
+export interface DraftTarget {
+  readonly revision: number;
+  readonly baseRevision: number;
+  readonly expectedDraftVersion: number;
+}
+
 /** Applies and validates one operation batch inside the caller's transaction. */
 export function applyDraftOperations(
   db: CommandDb,
-  revision: number,
-  baseRevision: number,
+  target: DraftTarget,
   operations: readonly DraftOperation[]
 ): DraftOperationResult {
-  requireCurrentDraft(db, revision, baseRevision);
+  const { revision, baseRevision, expectedDraftVersion } = target;
+  claimCurrentDraft(db, revision, baseRevision, expectedDraftVersion);
   for (const operation of operations) applyOperation(db, revision, operation);
   const draft = requireCatalogue(db, revision, ['draft']);
   const base = requireCatalogue(db, baseRevision, ['published']);
@@ -65,13 +73,13 @@ class PreviewRollback extends Error {
 /** Validates operations and computes compatibility while rolling back every draft write. */
 export function previewCatalogueDraft(
   db: CommandDb,
-  revision: number,
-  baseRevision: number,
+  target: DraftTarget,
   operations: readonly DraftOperation[]
 ): CataloguePreviewDiagnostics {
+  const { revision, baseRevision } = target;
   try {
     db.transaction((tx) => {
-      throw new PreviewRollback(applyDraftOperations(tx, revision, baseRevision, operations));
+      throw new PreviewRollback(applyDraftOperations(tx, target, operations));
     });
   } catch (error) {
     if (error instanceof PreviewRollback) {
