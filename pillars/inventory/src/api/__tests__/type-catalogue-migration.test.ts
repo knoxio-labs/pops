@@ -231,6 +231,7 @@ describe('catalogue publication migration coverage', () => {
 
     expect(response.status).toBe(400);
     expect(response.body.code).toBe('migration_coverage_mismatch');
+    expect(response.body.issues).not.toHaveLength(0);
     await expectPublicationRolledBack(prepared);
   });
 
@@ -265,6 +266,7 @@ describe('catalogue publication migration coverage', () => {
 
     expect(response.status).toBe(400);
     expect(response.body.code).toBe('migration_steps_incomplete');
+    expect(response.body.issues).not.toHaveLength(0);
     await expectPublicationRolledBack(prepared);
   });
 
