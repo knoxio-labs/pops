@@ -124,6 +124,21 @@ internal struct PurchaseReviewViewModelTests {
         #expect(model.savedPurchaseIDs == ["saved"])
     }
 
+    @Test("finished IDs appear only once nothing remains, in save order")
+    func finishedIDsWaitForTheLastEntry() async {
+        let repository = ReviewWriteRepository(results: [
+            .success(.fake(id: "one")), .failure(.transport("offline")),
+        ])
+        let model = makeModel([entry(id: "one"), entry(id: "two")], repository: repository)
+        #expect(model.finishedIDs == nil)
+
+        await model.save()
+        #expect(model.finishedIDs == nil)
+
+        model.discard("two")
+        #expect(model.finishedIDs == ["one"])
+    }
+
     @Test("a conflict blocks another save until its entry is discarded")
     func conflictBlocksUntilDiscard() async {
         let repository = ReviewWriteRepository(results: [
