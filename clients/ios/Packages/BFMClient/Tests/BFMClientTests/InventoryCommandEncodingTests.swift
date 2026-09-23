@@ -105,8 +105,10 @@ internal struct InventoryCommandEncodingTests {
                             fieldId: "field-reference",
                             values: [
                                 .reference(
-                                    .init(targetKind: .item, targetId: "target-1", targetState: .deleted))
-                            ])
+                                    .init(
+                                        targetKind: .item, targetId: "target-1",
+                                        targetState: .deleted))
+                            ]),
                     ], placement: .hand)))
 
         #expect(envelope.op == "item.create")

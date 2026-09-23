@@ -96,14 +96,18 @@ extension OnlineInventoryStore {
     private func apply(_ page: InventorySnapshotPage) async throws {
         guard let revision = page.catalogueRevision else { return try replica.apply(page) }
         let catalogue = try await transport.fetchCatalogue(revision: revision)
-        guard catalogue.revision.revision == revision else { throw RepositoryError.contractMismatch }
+        guard catalogue.revision.revision == revision else {
+            throw RepositoryError.contractMismatch
+        }
         try replica.apply(page, catalogue: catalogue)
     }
 
     private func apply(_ page: InventoryChangesPage) async throws {
         guard let revision = page.catalogueRevision else { return try replica.apply(page) }
         let catalogue = try await transport.fetchCatalogue(revision: revision)
-        guard catalogue.revision.revision == revision else { throw RepositoryError.contractMismatch }
+        guard catalogue.revision.revision == revision else {
+            throw RepositoryError.contractMismatch
+        }
         try replica.apply(page, catalogue: catalogue)
     }
 

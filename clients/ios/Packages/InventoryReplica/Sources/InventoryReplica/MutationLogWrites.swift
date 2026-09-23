@@ -173,7 +173,9 @@ internal enum MutationLogWrites {
         return latest.sorted()
     }
 
-    private static func catalogueRevision(for command: LoggedCommand, in db: Database) throws -> Int {
+    private static func catalogueRevision(
+        for command: LoggedCommand, in db: Database
+    ) throws -> Int {
         guard case .command(let inventoryCommand) = command,
             let revision = inventoryCommand.protocol2CatalogueRevision
         else { return try SyncMeta.read(db).catalogueRevision ?? 1 }

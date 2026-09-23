@@ -37,7 +37,8 @@ internal enum StoredCommand: Codable, Equatable {
         id: String, name: String?, note: StoredNoteUpdate, fields: [String: StoredFieldPatch],
         externalIds: [StoredExternalIdentifier]?)
     case changeItemType(id: String, typeKey: String, fields: [String: StoredFieldValue])
-    case editProtocol2Item(id: String, catalogueRevision: Int, values: [InventoryProtocol2FieldPatch])
+    case editProtocol2Item(
+        id: String, catalogueRevision: Int, values: [InventoryProtocol2FieldPatch])
     case changeProtocol2ItemType(
         id: String, catalogueRevision: Int, typeId: String,
         values: [InventoryProtocol2FieldValue])

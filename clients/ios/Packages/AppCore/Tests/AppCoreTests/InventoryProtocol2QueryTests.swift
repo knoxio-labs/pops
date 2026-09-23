@@ -2,8 +2,10 @@ import AppCore
 import Testing
 
 @Suite("Inventory protocol 2 catalogue query")
-struct InventoryProtocol2QueryTests {
-    @Test("reads the exact immutable protocol-2 catalogue without changing the legacy catalogue query")
+internal struct InventoryProtocol2QueryTests {
+    @Test(
+        "reads the exact immutable protocol-2 catalogue without changing the legacy catalogue query"
+    )
     func readsProtocol2Catalogue() {
         let snapshot = InventoryCatalogueSnapshot(
             revision: InventoryCatalogueRevision(revision: 7, minimumProtocol: 2), types: [])
@@ -26,7 +28,9 @@ struct InventoryProtocol2QueryTests {
     private struct Source: InventoryQuerySource {
         let snapshot: InventoryCatalogueSnapshot
 
-        func inventoryCatalogue() -> InventoryCatalogue { .init(version: "legacy", units: [], types: []) }
+        func inventoryCatalogue() -> InventoryCatalogue {
+            .init(version: "legacy", units: [], types: [])
+        }
         func inventoryProtocol2Catalogue() -> InventoryCatalogueSnapshot? { snapshot }
         func inventoryItem(id: String) -> InventoryItem? { nil }
         func inventoryItem(withCode code: String) -> InventoryItem? { nil }
@@ -51,7 +55,9 @@ struct InventoryProtocol2QueryTests {
     }
 
     private struct Protocol1Source: InventoryQuerySource {
-        func inventoryCatalogue() -> InventoryCatalogue { .init(version: "legacy", units: [], types: []) }
+        func inventoryCatalogue() -> InventoryCatalogue {
+            .init(version: "legacy", units: [], types: [])
+        }
         func inventoryItem(id: String) -> InventoryItem? { nil }
         func inventoryItem(withCode code: String) -> InventoryItem? { nil }
         func inventoryLocation(id: String) -> InventoryLocation? { nil }

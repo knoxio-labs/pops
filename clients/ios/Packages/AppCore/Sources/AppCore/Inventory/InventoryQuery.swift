@@ -55,9 +55,9 @@ public protocol InventoryQuerySource: Sendable {
     func inventoryAwaitingTypeArrivals() -> [String]
 }
 
-public extension InventoryQuerySource {
+extension InventoryQuerySource {
     /// Protocol-1 sources have no immutable stable-ID catalogue to expose.
-    func inventoryProtocol2Catalogue() -> InventoryCatalogueSnapshot? { nil }
+    public func inventoryProtocol2Catalogue() -> InventoryCatalogueSnapshot? { nil }
 }
 
 /// A read `InventoryStore.observe(_:)` can serve, typed by the value it

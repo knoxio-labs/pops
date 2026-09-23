@@ -28,17 +28,15 @@ internal enum BFMInventoryCommandEncoding {
     /// `switch`; a `switch` reads plainer for a one-line-per-case mapping,
     /// so this keeps that shape split three ways instead.
     private static func op(for command: InventoryCommand) -> String {
-        itemWriteOp(for: command) ?? itemAuxOp(for: command) ?? locationOrEventOp(for: command)
+        protocol2ItemWriteOp(for: command) ?? itemWriteOp(for: command)
+            ?? itemAuxOp(for: command) ?? locationOrEventOp(for: command)
     }
 
     private static func itemWriteOp(for command: InventoryCommand) -> String? {
         switch command {
         case .createItem: "item.create"
-        case .createProtocol2Item: "item.create"
         case .editItem: "item.edit"
-        case .editProtocol2Item: "item.edit"
         case .changeItemType: "item.changeType"
-        case .changeProtocol2ItemType: "item.changeType"
         case .setItemCode: "item.setCode"
         case .moveItem: "item.move"
         case .setItemAccess: "item.setAccess"
@@ -74,6 +72,7 @@ internal enum BFMInventoryCommandEncoding {
     }
 
     private static func args(for command: InventoryCommand) throws -> [String: (any Sendable)?] {
+        if let args = try protocol2ItemWriteArgs(for: command) { return args }
         if let args = try itemWriteArgs(for: command) { return args }
         if let args = try itemAuxArgs(for: command) { return args }
         return try locationOrEventArgs(for: command)
@@ -84,15 +83,10 @@ internal enum BFMInventoryCommandEncoding {
     ) throws -> [String: (any Sendable)?]? {
         switch command {
         case .createItem(let item): try ["item": itemArgs(item)]
-        case .createProtocol2Item(let item): try ["item": protocol2ItemArgs(item)]
         case .editItem(_, let name, let note, let fields, let externalIds):
             try editArgs(name: name, note: note, fields: fields, externalIds: externalIds)
-        case .editProtocol2Item(_, _, let values):
-            try ["values": protocol2Patches(values)]
         case .changeItemType(_, let typeKey, let fields):
             try ["typeKey": typeKey, "fields": fieldsBlob(fields)]
-        case .changeProtocol2ItemType(_, _, let typeId, let values):
-            try ["typeId": typeId, "values": protocol2Values(values)]
         case .setItemCode(_, let code): ["code": code]
         case .moveItem(_, let to, let verb): ["to": placementArgs(to), "verb": verb.wireValue]
         case .setItemAccess(_, let access): ["access": access.wireValue]
@@ -145,65 +139,6 @@ internal enum BFMInventoryCommandEncoding {
         ]
     }
 
-    private static func protocol2ItemArgs(_ item: InventoryNewProtocol2Item) throws
-        -> [String: (any Sendable)?]
-    {
-        try [
-            "name": item.name,
-            "typeId": item.typeId,
-            "values": protocol2Values(item.values),
-            "note": item.note,
-            "externalIds": externalIdArgs(item.externalIds),
-            "quantity": item.quantity,
-            "placement": placementArgs(item.placement),
-        ]
-    }
-
-    private static func protocol2Values(_ values: [InventoryProtocol2FieldValue]) throws
-        -> [(any Sendable)?]
-    {
-        try values.map { value in
-            let encodedValues = try value.values.map(protocol2Value)
-            let encoded: [String: (any Sendable)?] = [
-                "fieldId": value.fieldId,
-                "values": encodedValues,
-            ]
-            return encoded
-        }
-    }
-
-    private static func protocol2Patches(_ patches: [InventoryProtocol2FieldPatch]) throws
-        -> [(any Sendable)?]
-    {
-        try patches.map { patch in
-            var encoded: [String: (any Sendable)?] = ["fieldId": patch.fieldId]
-            if let values = patch.values {
-                encoded["values"] = try values.map(protocol2Value)
-            } else {
-                encoded.updateValue(nil, forKey: "values")
-            }
-            return encoded
-        }
-    }
-
-    private static func protocol2Value(_ value: InventoryPrimitiveValue) throws -> any Sendable {
-        switch value {
-        case .string(let text): text
-        case .integer(let integer): Int(integer.value)
-        case .decimal(let decimal): decimal.text
-        case .boolean(let value): value
-        case .enumeration(let optionId): ["optionId": optionId]
-        case .measurement(let amount, let unit): ["amount": amount.text, "unit": unit]
-        case .date(let date): date.text
-        case .dateTime(let dateTime): dateTime.text
-        case .url(let url): url.text
-        case .reference(let reference): [
-            "targetKind": reference.targetKind.rawValue,
-            "targetId": reference.targetId,
-        ]
-        }
-    }
-
     /// `note` and `fields` follow `item.edit`'s own patch semantics
     /// (`pillars/inventory/src/domain/commands/item-edit.ts`): an absent key
     /// leaves the field untouched, so ``InventoryFieldUpdate/unchanged`` and
@@ -226,11 +161,11 @@ internal enum BFMInventoryCommandEncoding {
         return args
     }
 
-    private static func externalIdArgs(_ ids: [InventoryExternalIdentifier]) -> [(any Sendable)?] {
+    internal static func externalIdArgs(_ ids: [InventoryExternalIdentifier]) -> [(any Sendable)?] {
         ids.map { ["kind": $0.kind, "value": $0.value] }
     }
 
-    private static func placementArgs(_ placement: InventoryPlacement) -> [String: (any Sendable)?]
+    internal static func placementArgs(_ placement: InventoryPlacement) -> [String: (any Sendable)?]
     {
         switch placement {
         case .location(let id): ["kind": "location", "locationId": id]
