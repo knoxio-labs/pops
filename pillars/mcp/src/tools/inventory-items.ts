@@ -1,5 +1,6 @@
 import { getPillar } from '../pillar-client.js';
 import { itemDeleteTool } from './inventory-item-delete.js';
+import { itemOverrideTools } from './inventory-item-overrides.js';
 import { itemWriteTools } from './inventory-items-write.js';
 import { mapCallResult, optBool, optNum, optStr, reqStr, toolError } from './utils.js';
 
@@ -33,7 +34,7 @@ function placementKind(value: unknown): 'location' | 'container' | 'hand' | unde
 const itemsList: ToolDef = {
   name: 'inventory.items.list',
   description:
-    'List protocol-2 inventory items with stable typeId, catalogueRevision and fieldValues. Read inventory.catalogue.get before interpreting field IDs.',
+    'List protocol-2 inventory items with stable typeId, catalogueRevision, fieldValues (stored values and overrides) and computedValues (each computed field: state ok, overridden or unavailable with a reason and failedFieldId, plus the dependencies and items it read). Read inventory.catalogue.get before interpreting field IDs.',
   inputSchema: {
     type: 'object',
     additionalProperties: false,
@@ -64,7 +65,7 @@ const itemsList: ToolDef = {
 const itemGet: ToolDef = {
   name: 'inventory.items.get',
   description:
-    'Get one protocol-2 item, including revision, stable typeId, catalogueRevision, fieldValues and history. Read the matching catalogue revision before editing values.',
+    'Get one protocol-2 item, including revision, stable typeId, catalogueRevision, fieldValues, computedValues (state ok, overridden or unavailable, with reason, failedFieldId, dependencies and traversedItemIds) and history. Read the matching catalogue revision before editing values; change a computed field only through inventory.items.setOverride and clearOverride.',
   inputSchema: {
     type: 'object',
     additionalProperties: false,
@@ -92,5 +93,6 @@ export const itemTools: readonly ToolDef[] = [
   itemsList,
   itemGet,
   ...itemWriteTools,
+  ...itemOverrideTools,
   itemDeleteTool,
 ];
