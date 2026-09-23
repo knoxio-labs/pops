@@ -84,6 +84,12 @@ SwiftUI without adding a receipt-page ceiling; upload size remains the only boun
 arrives as one ordered receipt and is refused only when it has no pages or when some photographed
 pages could not be prepared. Replacing a page swaps it at the same receipt position.
 
+The production page viewer reads and deletes through `PurchaseStagingModel`. Its Replace menu marks
+the current page as pending before handing scan, photo, or file presentation to the capture flow,
+so a returned page keeps the original receipt identity and position. The design playground's grid
+still owns a raw `StagedReceipts` value; its local viewer cannot be exchanged for this model-backed
+viewer without disconnecting deletion from the grid.
+
 Before reading starts, each staged receipt becomes a `StagedReceiptForReading`: its stable receipt
 identity plus its parts in page order, without mutable staging layout. `PurchaseReadingRow` then
 tracks queued, active, readable, and terminally unreadable outcomes while retaining a full

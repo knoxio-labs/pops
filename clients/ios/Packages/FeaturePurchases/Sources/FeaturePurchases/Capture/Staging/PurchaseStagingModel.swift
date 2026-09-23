@@ -24,6 +24,7 @@ public final class PurchaseStagingModel {
 
     internal var groups: [StagedReceipt] { staged.groups }
     internal var loose: [StagedPage] { staged.loose }
+    internal var receipts: [StagedReceipt] { staged.receipts }
     internal var everyPage: [StagedPage] { staged.everyPage }
     internal var count: Int { staged.count }
     internal var isEmpty: Bool { staged.isEmpty }
