@@ -45,6 +45,7 @@ internal final class InventoryItemFormModel {
     internal private(set) var catalogue = InventoryCatalogue(version: "", units: [], types: [])
     /// The active immutable catalogue used by the protocol-2 field editor.
     internal private(set) var protocol2Catalogue: InventoryCatalogueSnapshot?
+    internal var protocol2Draft: InventoryProtocol2Draft?
     internal private(set) var isOffline = false
     /// False until the final action is pressed once: a form that reddens a
     /// field before anybody has typed opens accusing.
@@ -118,6 +119,19 @@ internal final class InventoryItemFormModel {
 
     internal var fields: [InventoryFieldDefinition] {
         InventoryItemFormSubmission.declaredFields(of: draft, in: catalogue)
+    }
+
+    internal var protocol2Type: InventoryCatalogueType? {
+        guard let draft = protocol2Draft else { return nil }
+        return protocol2Catalogue?.types.first(where: { $0.id == draft.typeId })
+    }
+
+    internal func selectProtocol2Type(_ typeId: String) {
+        guard var draft = protocol2Draft, draft.typeId != typeId else { return }
+        draft.typeId = typeId
+        draft.values = [:]
+        draft.touched = []
+        protocol2Draft = draft
     }
 
     /// Follows the store for as long as the form is open.
@@ -204,6 +218,17 @@ internal final class InventoryItemFormModel {
     }
 
     private var commands: [InventoryCommand] {
+        if let protocol2 = protocol2Draft, let type = protocol2Type {
+            switch mode {
+            case .create:
+                let all = InventoryItemFormSubmission.protocol2Create(draft, protocol2: protocol2, type: type)
+                return created ? Array(all.dropFirst()) : all
+            case .edit:
+                guard let original else { return [] }
+                return InventoryItemFormSubmission.protocol2Edit(
+                    draft, protocol2: protocol2, type: type, original: original)
+            }
+        }
         switch mode {
         case .create:
             let all = InventoryItemFormSubmission.create(draft, catalogue: catalogue)
@@ -230,6 +255,9 @@ internal final class InventoryItemFormModel {
         switch request {
         case .create:
             draft.placementName = context.placementName
+            if let catalogue = context.protocol2Catalogue, let type = catalogue.types.first {
+                protocol2Draft = .init(typeId: type.id, catalogueRevision: catalogue.revision.revision)
+            }
             phase = .ready
         case .edit:
             guard let item = context.item else {
@@ -237,6 +265,10 @@ internal final class InventoryItemFormModel {
                 return
             }
             draft = InventoryItemDraft(editing: item, placementName: context.placementName)
+            if let catalogue = context.protocol2Catalogue, let typeId = item.typeId {
+                protocol2Draft = .init(
+                    typeId: typeId, catalogueRevision: catalogue.revision.revision, item: item)
+            }
             phase = .ready
         }
     }

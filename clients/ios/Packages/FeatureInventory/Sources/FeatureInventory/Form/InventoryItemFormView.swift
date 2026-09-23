@@ -110,17 +110,35 @@ internal struct InventoryItemFormView: View {
                 "Name", placeholder: "Name", text: $model.draft.name,
                 identifier: InventoryAccessibility.itemNameField)
             InventoryFormDestinationRow(draft: $model.draft)
-            InventoryFormTypeRow(
-                types: model.catalogue.types, offersNone: model.offersNoType,
-                typeKey: $model.draft.typeKey)
+            if let catalogue = model.protocol2Catalogue, let selected = model.protocol2Draft {
+                Picker("Type", selection: Binding(
+                    get: { selected.typeId }, set: { model.selectProtocol2Type($0) })) {
+                    ForEach(catalogue.types) { type in
+                        Text(type.label).tag(type.id)
+                    }
+                }
+                .pickerStyle(.menu)
+            } else {
+                InventoryFormTypeRow(
+                    types: model.catalogue.types, offersNone: model.offersNoType,
+                    typeKey: $model.draft.typeKey)
+            }
             InventoryFormQuantityRow(count: $model.draft.quantity)
-            ForEach(model.fields) { field in
-                InventoryFormFieldRow(
-                    field: field,
-                    entry: model.draft.entry(for: field, units: model.catalogue.units),
-                    units: InventoryFormUnits.options(for: field, in: model.catalogue.units)
-                ) { model.draft.set($0, for: field) }
-                .transition(.opacity)
+            if let type = model.protocol2Type, let draft = model.protocol2Draft {
+                ForEach(type.fields) { field in
+                    InventoryProtocol2FieldRow(field: field, values: draft.values(for: field)) {
+                        model.protocol2Draft?.set($0, for: field)
+                    }
+                }
+            } else {
+                ForEach(model.fields) { field in
+                    InventoryFormFieldRow(
+                        field: field,
+                        entry: model.draft.entry(for: field, units: model.catalogue.units),
+                        units: InventoryFormUnits.options(for: field, in: model.catalogue.units)
+                    ) { model.draft.set($0, for: field) }
+                    .transition(.opacity)
+                }
             }
         } footer: {
             footer(for: identityIssues)
