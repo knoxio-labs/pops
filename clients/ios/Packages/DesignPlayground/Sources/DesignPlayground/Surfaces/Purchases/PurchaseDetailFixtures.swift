@@ -1,4 +1,5 @@
 import AppCore
+import FeaturePurchases
 import Foundation
 
 /// Saved purchases for the detail, shaped like what the archive holds.
@@ -19,8 +20,9 @@ internal enum PurchaseDetailFixtures {
         StagedPage(
             id: "dp-\(index)",
             label: "Page \(index + 1)",
-            media: .jpeg,
-            bytes: sheets.isEmpty ? nil : sheets[index % sheets.count]
+            part: ReceiptPart(
+                mediaType: .jpeg,
+                data: sheets.isEmpty ? Data() : sheets[index % sheets.count])
         )
     }
 

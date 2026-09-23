@@ -1,5 +1,6 @@
 import AppCore
 import DesignSystem
+import FeaturePurchases
 import SwiftUI
 
 /// What was picked, as the files themselves, in the sheet the capture flow
@@ -212,7 +213,7 @@ internal struct PurchaseStagingGrid: View {
 
     private func add(_ label: String, media: ReceiptMediaType) {
         added += 1
-        staged.add(PurchaseCaptureSurfaces.page(100 + added, label, media: media))
+        staged.add([PurchaseCaptureSurfaces.page(100 + added, label, media: media)])
     }
 
     private func tile(_ page: StagedPage, width: CGFloat, caption: String?) -> some View {

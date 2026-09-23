@@ -1,5 +1,6 @@
 import AppCore
 import DesignSystem
+import FeaturePurchases
 import SwiftUI
 
 /// What one staged receipt has become, so far.

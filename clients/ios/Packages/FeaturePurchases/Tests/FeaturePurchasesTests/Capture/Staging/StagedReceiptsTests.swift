@@ -1,7 +1,8 @@
 import AppCore
+import Foundation
 import Testing
 
-@testable import DesignPlayground
+@testable import FeaturePurchases
 
 /// The staging grid groups by dragging, so every rearrangement is one of these
 /// four and none of them is reachable from a unit test through the gesture.
@@ -11,7 +12,10 @@ import Testing
 @Suite("Staged receipts")
 internal struct StagedReceiptsTests {
     private func page(_ id: String) -> StagedPage {
-        StagedPage(id: id, label: "\(id).HEIC", media: .jpeg, bytes: nil)
+        StagedPage(
+            id: id,
+            label: "\(id).HEIC",
+            part: ReceiptPart(mediaType: .jpeg, data: Data()))
     }
 
     private func staged(_ groups: [String: [String]]) -> StagedReceipts {
@@ -134,18 +138,18 @@ internal struct StagedReceiptsTests {
     func addArrivesLoose() {
         var receipts = staged(["r1": ["a", "b"]])
 
-        receipts.add(page("c"))
+        receipts.add([page("c"), page("d")])
 
-        #expect(shape(receipts) == [["a", "b"], ["c"]])
-        #expect(receipts.loose.map(\.id) == ["c"])
+        #expect(shape(receipts) == [["a", "b"], ["c"], ["d"]])
+        #expect(receipts.loose.map(\.id) == ["c", "d"])
     }
 
     @Test("adding a page that is already staged does not stage it twice")
     func addIgnoresARepeat() {
         var receipts = staged(["r1": ["a", "b"]])
 
-        receipts.add(page("b"))
+        receipts.add([page("b"), page("c"), page("c")])
 
-        #expect(shape(receipts) == [["a", "b"]])
+        #expect(shape(receipts) == [["a", "b"], ["c"]])
     }
 }
