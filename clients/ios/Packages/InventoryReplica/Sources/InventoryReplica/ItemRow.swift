@@ -57,6 +57,7 @@ internal enum ItemRow {
                 try Protocol2FieldValueRows.read(
                     itemId: id, from: "item_field_value", in: $0)
             } ?? [],
+            computedValues: try db.map { try ComputedValueRows.read(itemId: id, in: $0) } ?? [],
             legacyType: try row.decode(forColumn: "legacy_type"),
             fields: try StoredFieldValue.decodeFields(try row.decode(forColumn: "fields")),
             note: try row.decode(forColumn: "note"), code: try row.decode(forColumn: "code"),
