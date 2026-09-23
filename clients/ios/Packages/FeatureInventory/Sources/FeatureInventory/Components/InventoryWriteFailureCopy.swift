@@ -43,6 +43,10 @@ extension InventoryCopy {
         case .illegalTransition: "It cannot go from where it is now to that, so nothing changed."
         case .typeUnknown: "This build does not know that type yet, so nothing changed."
         case .mediaMissing: "A photo did not finish uploading, so nothing changed."
+        case .catalogueUpdateRequired:
+            "The item's fields changed since this was opened. Sync, then try again."
+        case .catalogueRepairRequired:
+            "A field this change used was archived or replaced, so nothing changed."
         case .invalid, .unrecognised: "The server would not take that change. Nothing changed."
         }
     }

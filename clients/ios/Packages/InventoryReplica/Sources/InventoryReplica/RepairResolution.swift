@@ -7,6 +7,7 @@ internal enum RepairResolution: String {
     case relabelled
     case restored
     case retried
+    case rebased
     case discardedMine = "discarded_mine"
     case letGo = "let_go"
     case removed
@@ -16,7 +17,7 @@ internal enum RepairResolution: String {
     static func lettingGo(_ kind: StoredRepairKind) -> Self {
         switch kind {
         case .field, .codeCollision: .discardedMine
-        case .deleted, .rejected: .letGo
+        case .deleted, .rejected, .catalogueChanged: .letGo
         case .photoFailed: .removed
         }
     }
@@ -28,6 +29,7 @@ internal enum RepairResolution: String {
         case .relabelled: code.map { "Relabelled \($0)" } ?? "Relabelled"
         case .restored: "Restored"
         case .retried: "Photo retried"
+        case .rebased: "Sent with current fields"
         case .discardedMine: "Discarded mine"
         case .letGo: "Let go"
         case .removed: "Photo removed"

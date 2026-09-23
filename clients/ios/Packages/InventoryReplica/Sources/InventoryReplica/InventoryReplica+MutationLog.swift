@@ -129,6 +129,11 @@ extension InventoryReplica {
     /// staged again and logged again under a new id from `mintMutationId`,
     /// once; after that, or without the bytes, it opens a failed photo
     /// repair.
+    ///
+    /// Catalogue revisions: a change answered `catalogue_update_required` is
+    /// logged again under a new id from `mintMutationId` and held until a
+    /// newer catalogue arrives (``CatalogueUpdates``); one answered
+    /// `catalogue_repair_required` opens the `catalogueChanged` repair.
     public func recordOutcomes(
         _ result: InventoryMutationBatchResult,
         mintMutationId: () -> String = { UUID().uuidString.lowercased() }
@@ -138,6 +143,12 @@ extension InventoryReplica {
             var restaged: Set<EntityRef> = []
             for (id, outcome) in result.outcomes {
                 guard var entry = try MutationLogRows.entry(mutationId: id, in: db) else {
+                    continue
+                }
+                if try CatalogueUpdates.holdForUpdate(
+                    outcome, of: entry, mint: mintMutationId, in: db)
+                {
+                    restaged.formUnion(entry.touched.union([entry.entity]))
                     continue
                 }
                 if try MediaOutcomes.restagedAfterMissing(

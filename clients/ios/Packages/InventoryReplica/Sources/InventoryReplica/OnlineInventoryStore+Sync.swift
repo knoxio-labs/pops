@@ -94,21 +94,36 @@ extension OnlineInventoryStore {
     }
 
     private func apply(_ page: InventorySnapshotPage) async throws {
+        try Self.requireSupported(page.minimumProtocol)
         guard let revision = page.catalogueRevision else { return try replica.apply(page) }
-        let catalogue = try await transport.fetchCatalogue(revision: revision)
-        guard catalogue.revision.revision == revision else {
-            throw RepositoryError.contractMismatch
-        }
-        try replica.apply(page, catalogue: catalogue)
+        try replica.apply(page, catalogue: try await pinnedCatalogue(revision))
     }
 
     private func apply(_ page: InventoryChangesPage) async throws {
+        try Self.requireSupported(page.minimumProtocol)
         guard let revision = page.catalogueRevision else { return try replica.apply(page) }
+        try replica.apply(page, catalogue: try await pinnedCatalogue(revision))
+    }
+
+    /// The exact revision a page names, fetched before the page is applied
+    /// so its rows and cursor are never stored against a catalogue this
+    /// phone does not hold. Any other revision (a race with a publish) is a
+    /// mismatch, and nothing is applied; the next refresh asks again.
+    private func pinnedCatalogue(_ revision: Int) async throws -> InventoryCatalogueSnapshot {
         let catalogue = try await transport.fetchCatalogue(revision: revision)
         guard catalogue.revision.revision == revision else {
             throw RepositoryError.contractMismatch
         }
-        try replica.apply(page, catalogue: catalogue)
+        try Self.requireSupported(catalogue.revision.minimumProtocol)
+        return catalogue
+    }
+
+    /// A page or catalogue this build is too old to read is refused as the
+    /// server's own `426` is, so it shows as blocked (`appTooOld`).
+    private static func requireSupported(_ minimumProtocol: Int) throws {
+        guard minimumProtocol <= supportedProtocol else {
+            throw InventorySyncTransportError.clientTooOld
+        }
     }
 
     func noteReached() {

@@ -14,7 +14,13 @@ import Synchronization
 /// - `perform(_:)` sends the command as a one-mutation batch and returns only
 ///   once the server has applied it; the replica is untouched until then, and
 ///   caught up from the feed before it returns. Anything else the server
-///   answers is thrown as ``InventoryCommandError``.
+///   answers is thrown as ``InventoryCommandError``. It carries the
+///   catalogue revision the command was authored against; answered
+///   `catalogue_update_required`, it refreshes and sends the command once
+///   more against the newer revision the refresh stored.
+/// - A page, or the pinned catalogue a page names, whose `minimumProtocol` is
+///   above ``supportedProtocol`` is refused before anything is applied, and
+///   shows as blocked (`appTooOld`).
 /// - `undo(_:)` sends `event.revert` for the event the receipt's change wrote.
 /// - A `409 resync_required`, or a feed page from another epoch, discards
 ///   every server row and takes a fresh snapshot, so nothing stale survives
@@ -28,6 +34,9 @@ import Synchronization
 /// order they were asked for, so two of them never page into the replica at
 /// once.
 public final class OnlineInventoryStore: InventoryStore, Sendable {
+    /// The newest sync protocol this build speaks.
+    static let supportedProtocol = 2
+
     let replica: InventoryReplica
     let transport: any InventorySyncTransport
     let pageSize: Int
@@ -66,11 +75,17 @@ public final class OnlineInventoryStore: InventoryStore, Sendable {
     }
 
     public func perform(_ command: InventoryCommand) async throws -> InventoryReceipt {
-        let mutation = InventoryOutboundMutation(
+        var mutation = InventoryOutboundMutation(
             mutationId: mintMutationId(), command: command,
             baseRevision: try baseRevision(for: command), dependsOn: [], clientTime: now(),
-            catalogueRevision: try replica.syncPosition().storedCatalogueRevision ?? 1)
-        let outcome = try await submit(mutation)
+            catalogueRevision: try catalogueRevision(for: command))
+        var outcome = try await submit(mutation)
+        if case .rejected(.catalogueUpdateRequired, _) = outcome,
+            let moved = try await movedToNewerCatalogue(mutation)
+        {
+            mutation = moved
+            outcome = try await submit(mutation)
+        }
         guard case .applied(let revision, let seq, _) = outcome else {
             throw Self.failure(for: outcome)
         }
@@ -110,6 +125,12 @@ public final class OnlineInventoryStore: InventoryStore, Sendable {
     /// blocked, and the next refresh tries again.
     public func refresh() async {
         try? await sequencer.run { try await self.refreshNow() }
+    }
+
+    /// ``refresh()``, throwing what stopped it, for a caller that has to know
+    /// whether the server was reached (a change waiting on a newer catalogue).
+    func refreshThrowing() async throws {
+        try await sequencer.run { try await self.refreshNow() }
     }
 
     /// ``download()``'s one-at-a-time rule, for a resync the drain asks for.
@@ -157,6 +178,47 @@ public final class OnlineInventoryStore: InventoryStore, Sendable {
             throw RepositoryError.contractMismatch
         }
         return outcome
+    }
+
+    /// The catalogue revision the command is judged against: the one a
+    /// protocol-2 command was authored against, and otherwise the one the
+    /// replica holds, or none. Never a revision nobody saw: a computed
+    /// override needs one, and without a stored catalogue it is refused
+    /// before anything is sent.
+    private func catalogueRevision(for command: InventoryCommand) throws -> Int? {
+        if let authored = command.protocol2CatalogueRevision { return authored }
+        let stored = try replica.syncPosition().storedCatalogueRevision
+        switch command {
+        case .setComputedOverride, .clearComputedOverride:
+            guard let stored else {
+                throw InventoryCommandError.rejected(
+                    reason: .catalogueUpdateRequired,
+                    message: "no catalogue revision is on this phone; refresh and try again")
+            }
+            return stored
+        default:
+            return stored
+        }
+    }
+
+    /// `catalogue_update_required`: refreshes, and answers the mutation moved
+    /// onto the newer revision the refresh stored, under a new id (the server
+    /// answers an id it has seen with its stored outcome). Nil, so the
+    /// refusal is thrown, when the refresh brought nothing newer. A refresh
+    /// that finds this build too old for the catalogue throws, which also
+    /// shows as blocked.
+    private func movedToNewerCatalogue(_ mutation: InventoryOutboundMutation) async throws
+        -> InventoryOutboundMutation?
+    {
+        try await refreshThrowing()
+        guard let active = try replica.syncPosition().storedCatalogueRevision,
+            active > mutation.catalogueRevision ?? 0
+        else { return nil }
+        return InventoryOutboundMutation(
+            mutationId: mintMutationId(),
+            command: mutation.command.movedTo(catalogueRevision: active),
+            baseRevision: mutation.baseRevision, dependsOn: mutation.dependsOn,
+            clientTime: mutation.clientTime, catalogueRevision: active)
     }
 
     /// The revision the replica holds for the command's entity (D8). A
