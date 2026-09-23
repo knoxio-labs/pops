@@ -150,7 +150,12 @@ internal struct InventoryItemDetailFacts: View {
                 .foregroundStyle(Color.popsMutedForeground)
             Text(field.value)
                 .font(.popsBody)
-                .foregroundStyle(Color.popsForeground)
+                .foregroundStyle(field.source.isMuted ? Color.popsMutedForeground : .popsForeground)
+            if let caption = field.source.caption {
+                Text(caption)
+                    .font(.popsCaption)
+                    .foregroundStyle(Color.popsMutedForeground)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)

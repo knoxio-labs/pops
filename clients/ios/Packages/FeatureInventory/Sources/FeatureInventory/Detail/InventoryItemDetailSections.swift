@@ -68,7 +68,12 @@ internal struct InventoryItemDetailFieldsSection: View {
     @ViewBuilder internal var body: some View {
         if !fields.isEmpty {
             InventoryItemDetailGroup("Details") {
-                ForEach(fields) { InventoryPropertyLine(key: $0.label, value: $0.value) }
+                ForEach(fields) {
+                    InventoryPropertyLine(
+                        key: $0.label, value: $0.value,
+                        tone: $0.source.isMuted ? .popsMutedForeground : .popsForeground,
+                        caption: $0.source.caption)
+                }
             }
         }
     }

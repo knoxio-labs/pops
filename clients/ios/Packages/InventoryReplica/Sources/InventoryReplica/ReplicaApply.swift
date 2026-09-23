@@ -98,6 +98,7 @@ internal enum ReplicaApply {
                 arguments: StatementArguments(try ItemRow.values(of: item)))
             try Protocol2FieldValueRows.replace(
                 itemId: item.id, entries: item.fieldValues, in: "item_field_value_base", db)
+            try ComputedValueRows.replace(itemId: item.id, values: item.computedValues, in: db)
             changed.insert(.item(item.id))
         }
         for location in locations {
@@ -125,7 +126,7 @@ internal enum ReplicaApply {
     /// goes. The catalogue stays: it is versioned by content, not by epoch.
     private static func discardServerState(_ db: Database) throws {
         for table in ReplicaSchema.itemLayers + ReplicaSchema.fieldValueLayers
-            + ReplicaSchema.locationLayers + ["event", "item_fts"]
+            + ReplicaSchema.locationLayers + ["event", "item_fts", ComputedValueRows.tableName]
         {
             try db.execute(sql: "DELETE FROM \(table)")
         }

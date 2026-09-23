@@ -89,6 +89,7 @@ internal struct InventoryPropertyLine: View {
     internal let key: String
     internal let value: String
     internal var tone: Color = .popsForeground
+    internal var caption: String?
 
     internal var body: some View {
         ViewThatFits(in: .horizontal) {
@@ -113,9 +114,16 @@ internal struct InventoryPropertyLine: View {
     }
 
     private var valueText: some View {
-        Text(value)
-            .font(.popsBody.weight(.medium))
-            .foregroundStyle(tone)
+        VStack(alignment: .trailing, spacing: PopsSpacing.xs) {
+            Text(value)
+                .font(.popsBody.weight(.medium))
+                .foregroundStyle(tone)
+            if let caption {
+                Text(caption)
+                    .font(.popsCaption)
+                    .foregroundStyle(Color.popsMutedForeground)
+            }
+        }
     }
 }
 

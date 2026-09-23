@@ -53,6 +53,7 @@ internal func bumped(
         typeId: typeId.resolved(against: item.typeId),
         typeKey: item.typeKey,
         fieldValues: fieldValues.resolved(against: item.fieldValues),
+        computedValues: item.computedValues,
         legacyType: item.legacyType,
         fields: fields.resolved(against: item.fields),
         note: note.resolved(against: item.note),

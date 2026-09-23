@@ -30,6 +30,7 @@ internal struct InventoryProtocol2ItemDetailTests {
                 "Renamed target", "Old connector (Retired)",
                 "Unavailable because the referenced record is missing",
             ])
+        #expect(detail.otherFields.map(\.source) == [.recorded, .recorded, .unavailable])
     }
 
     @Test("a deleted reference remains a readable stale identity")
@@ -97,15 +98,22 @@ internal struct InventoryProtocol2ItemDetailTests {
                     fieldId: enumField.id,
                     state: .value([.enumeration(optionId: retired.id)]), source: .stored,
                     catalogueRevision: 4),
-                InventoryItemFieldEntry(
-                    fieldId: computedField.id,
-                    state: .unavailable(reason: .referenceMissing), source: .computed,
-                    catalogueRevision: 4),
-            ], placement: .hand, createdAt: FormFixture.epoch, updatedAt: FormFixture.epoch)
+            ],
+            computedValues: [missingReference(computed: computedField, reference: referenceField)],
+            placement: .hand, createdAt: FormFixture.epoch, updatedAt: FormFixture.epoch)
         let target = InventoryItem(
             id: "target", revision: 2, seq: 2, name: "Renamed target", typeKey: nil,
             placement: .hand, createdAt: FormFixture.epoch, updatedAt: FormFixture.epoch)
         return DynamicFixture(type: type, item: item, target: target)
+    }
+
+    private static func missingReference(
+        computed: InventoryCatalogueField, reference: InventoryCatalogueField
+    ) -> InventoryComputedValue {
+        InventoryComputedValue(
+            fieldId: computed.id, catalogueRevision: 4,
+            evaluation: .unavailable(reason: "reference_missing", failedFieldId: reference.id),
+            dependencies: [], traversedItemIds: ["item-1", "target"], evaluatedItemRevision: 1)
     }
 
     private static func field(

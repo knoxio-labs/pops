@@ -45,8 +45,30 @@ internal struct InventoryDetailField: Identifiable, Equatable {
     internal let key: String
     internal let label: String
     internal let value: String
+    internal var source: InventoryDetailFieldSource = .recorded
 
     internal var id: String { key }
+}
+
+/// Where a line's value comes from, which decides how it is drawn: a
+/// calculated or overridden value says so under it, and a value the phone
+/// cannot vouch for is muted.
+internal enum InventoryDetailFieldSource: Equatable {
+    case recorded
+    case calculated
+    case overridden
+    case unavailable
+    case outOfDate
+
+    internal var caption: String? {
+        switch self {
+        case .calculated: "Calculated"
+        case .overridden: "Overridden"
+        case .recorded, .unavailable, .outOfDate: nil
+        }
+    }
+
+    internal var isMuted: Bool { self == .unavailable || self == .outOfDate }
 }
 
 /// A photograph by content hash, and what the lightbox captions it with.

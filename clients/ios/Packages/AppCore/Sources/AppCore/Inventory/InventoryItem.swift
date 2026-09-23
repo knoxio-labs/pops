@@ -97,6 +97,10 @@ public struct InventoryItem: Identifiable, Hashable, Sendable {
     /// Stable-ID protocol-2 values, ordered as the server returned them.
     /// Empty while the replica is reading the protocol-1 compatibility projection.
     public let fieldValues: [InventoryItemFieldEntry]
+    /// The server's evaluation of each computed field of the item's type.
+    /// Read through ``InventoryComputedValue/display(in:revisionOf:)``,
+    /// which accounts for this phone's own changes since.
+    public let computedValues: [InventoryComputedValue]
     /// The free-text type the item carried before types existed, kept
     /// read-only by the migration and never set by any command. Only an
     /// untyped item's is ever consulted: it is what a newly arrived type's
@@ -129,6 +133,7 @@ public struct InventoryItem: Identifiable, Hashable, Sendable {
         typeId: String? = nil,
         typeKey: String?,
         fieldValues: [InventoryItemFieldEntry] = [],
+        computedValues: [InventoryComputedValue] = [],
         legacyType: String? = nil,
         fields: [String: InventoryFieldValue] = [:],
         note: String? = nil,
@@ -156,6 +161,7 @@ public struct InventoryItem: Identifiable, Hashable, Sendable {
         self.typeId = typeId
         self.typeKey = typeKey
         self.fieldValues = fieldValues
+        self.computedValues = computedValues
         self.legacyType = legacyType
         self.fields = fields
         self.note = note

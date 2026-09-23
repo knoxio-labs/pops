@@ -33,13 +33,17 @@ internal struct InventoryDetailFields: Equatable {
     }
 
     internal init(
-        entries: [InventoryItemFieldEntry], type: InventoryCatalogueType,
-        source: any InventoryQuerySource
+        item: InventoryItem, type: InventoryCatalogueType, source: any InventoryQuerySource
     ) {
+        let entries = item.fieldValues
         let definitions = Dictionary(uniqueKeysWithValues: type.fields.map { ($0.id, $0) })
         let values = Dictionary(uniqueKeysWithValues: entries.map { ($0.fieldId, $0) })
         let line = { (field: InventoryCatalogueField) -> InventoryDetailField? in
-            values[field.id].map {
+            if field.storage == .computed {
+                return InventoryComputedDetailLine(item: item, type: type, source: source)
+                    .line(for: field)
+            }
+            return values[field.id].map {
                 InventoryDetailField(
                     key: field.id, label: field.label,
                     value: Self.protocol2Display($0, field: field, source: source))
@@ -92,20 +96,26 @@ internal struct InventoryDetailFields: Equatable {
         case .value(let values):
             return InventoryProtocol2Display.text(
                 for: values, field: field,
-                referenceLabel: { reference in
-                    guard reference.targetState != .deleted, reference.targetState != .missing
-                    else { return nil }
-                    switch reference.targetKind {
-                    case .item:
-                        return source.inventoryItem(id: reference.targetId).flatMap {
-                            $0.isDeleted ? nil : $0.name
-                        }
-                    case .location:
-                        return source.inventoryLocation(id: reference.targetId).flatMap {
-                            $0.isDeleted ? nil : $0.name
-                        }
-                    }
-                })
+                referenceLabel: { referenceLabel($0, source: source) })
+        }
+    }
+
+    /// A reference's display name, nil when its target is gone or unknown.
+    internal static func referenceLabel(
+        _ reference: InventoryReferenceValue, source: any InventoryQuerySource
+    ) -> String? {
+        guard reference.targetState != .deleted, reference.targetState != .missing else {
+            return nil
+        }
+        switch reference.targetKind {
+        case .item:
+            return source.inventoryItem(id: reference.targetId).flatMap {
+                $0.isDeleted ? nil : $0.name
+            }
+        case .location:
+            return source.inventoryLocation(id: reference.targetId).flatMap {
+                $0.isDeleted ? nil : $0.name
+            }
         }
     }
 

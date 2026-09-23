@@ -128,6 +128,7 @@ internal enum ReplicaSchema {
         registerMedia(in: &migrator)
         registerTypeArrivals(in: &migrator)
         registerCataloguePersistence(in: &migrator)
+        ComputedValueRows.register(in: &migrator)
         return migrator
     }
 
