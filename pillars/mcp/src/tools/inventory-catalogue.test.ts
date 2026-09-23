@@ -37,6 +37,18 @@ describe('inventory catalogue reads', () => {
 });
 
 describe('inventory catalogue draft management', () => {
+  it('instructs callers to read exact revisions before every authoring write', () => {
+    for (const name of [
+      'inventory.catalogue.createDraft',
+      'inventory.catalogue.patchDraft',
+      'inventory.catalogue.previewDraft',
+      'inventory.catalogue.publishDraft',
+      'inventory.catalogue.abandonDraft',
+    ]) {
+      expect(tool(name).description).toContain('Read inventory.catalogue.');
+    }
+  });
+
   it('advertises the complete discriminated operation and migration schemas', () => {
     expect(tool('inventory.catalogue.patchDraft').inputSchema).toMatchObject({
       properties: {

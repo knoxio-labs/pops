@@ -49,7 +49,7 @@ const catalogueReadDraft: ToolDef = {
 const catalogueCreateDraft: ToolDef = {
   name: 'inventory.catalogue.createDraft',
   description:
-    'Create the one editable catalogue draft from the current published revision. The draft starts at revision.draftVersion 1.',
+    'Read inventory.catalogue.get first, then create the one editable catalogue draft from that published revision. The draft starts at revision.draftVersion 1.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -69,7 +69,7 @@ const catalogueCreateDraft: ToolDef = {
 const cataloguePatchDraft: ToolDef = {
   name: 'inventory.catalogue.patchDraft',
   description:
-    'Apply validated operations to a catalogue draft atomically and preview publication compatibility. Refused with catalogue_draft_conflict when expectedDraftVersion is stale; the returned draft carries the next revision.draftVersion.',
+    'Read inventory.catalogue.readDraft first, then apply validated operations at its exact draft and base revisions, atomically, and preview publication compatibility. Refused with catalogue_draft_conflict when expectedDraftVersion is stale; the returned draft carries the next revision.draftVersion.',
   inputSchema: catalogueDraftOperationInputSchema,
   handler: async (args) => {
     const input = catalogueDraftOperationInput(args);
@@ -81,7 +81,7 @@ const cataloguePatchDraft: ToolDef = {
 const cataloguePublishDraft: ToolDef = {
   name: 'inventory.catalogue.publishDraft',
   description:
-    'Publish a validated catalogue draft atomically, optionally with a named value migration.',
+    'Read inventory.catalogue.readDraft and previewDraft first, then publish that exact draft atomically, optionally with a named value migration.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -126,7 +126,8 @@ const cataloguePublishDraft: ToolDef = {
 
 const catalogueAbandonDraft: ToolDef = {
   name: 'inventory.catalogue.abandonDraft',
-  description: 'Abandon a catalogue draft while retaining the attempt in audit history.',
+  description:
+    'Read inventory.catalogue.readDraft first, then abandon that exact draft while retaining the attempt in audit history.',
   inputSchema: {
     type: 'object',
     properties: {

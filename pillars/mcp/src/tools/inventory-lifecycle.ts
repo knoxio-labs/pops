@@ -24,7 +24,7 @@ function setAccessTool(name: string, access: 'open' | 'closed'): ToolDef {
       if (!id) return toolError('Missing required field: id');
       return mapCallResult(
         await withCurrentRevision(id, (baseRevision) =>
-          sendItemMutation(id, 'item.setAccess', { access }, baseRevision)
+          sendItemMutation({ entityId: id, op: 'item.setAccess', args: { access }, baseRevision })
         )
       );
     },
@@ -49,7 +49,7 @@ const itemsSetFull: ToolDef = {
     if (full === undefined) return toolError('Missing required field: full');
     return mapCallResult(
       await withCurrentRevision(id, (baseRevision) =>
-        sendItemMutation(id, 'item.setFull', { full }, baseRevision)
+        sendItemMutation({ entityId: id, op: 'item.setFull', args: { full }, baseRevision })
       )
     );
   },
@@ -72,12 +72,12 @@ const itemsDiscard: ToolDef = {
     const reason = optStr(args, 'reason');
     return mapCallResult(
       await withCurrentRevision(id, (baseRevision) =>
-        sendItemMutation(
-          id,
-          'item.setLifecycle',
-          { lifecycle: 'discarded', ...(reason !== undefined ? { reason } : {}) },
-          baseRevision
-        )
+        sendItemMutation({
+          entityId: id,
+          op: 'item.setLifecycle',
+          args: { lifecycle: 'discarded', ...(reason !== undefined ? { reason } : {}) },
+          baseRevision,
+        })
       )
     );
   },
@@ -95,7 +95,14 @@ const itemsRestore: ToolDef = {
   handler: async (args) => {
     const id = reqStr(args, 'id');
     if (!id) return toolError('Missing required field: id');
-    return mapCallResult(await sendItemMutation(id, 'item.restoreDeleted', {}, null));
+    return mapCallResult(
+      await sendItemMutation({
+        entityId: id,
+        op: 'item.restoreDeleted',
+        args: {},
+        baseRevision: null,
+      })
+    );
   },
 };
 

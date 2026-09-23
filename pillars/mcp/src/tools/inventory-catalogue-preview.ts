@@ -66,7 +66,7 @@ export function catalogueDraftOperationInput(
 export const cataloguePreviewDraft: ToolDef = {
   name: 'inventory.catalogue.previewDraft',
   description:
-    'Validate catalogue operations and return revision-bound compatibility diagnostics without changing the draft or its revision.draftVersion. Refused with catalogue_draft_conflict when expectedDraftVersion is stale.',
+    'Read inventory.catalogue.readDraft first, then validate operations at its exact revisions and return compatibility diagnostics without changing the draft or its revision.draftVersion. Refused with catalogue_draft_conflict when expectedDraftVersion is stale.',
   inputSchema: catalogueDraftOperationInputSchema,
   handler: async (args) => {
     const input = catalogueDraftOperationInput(args);

@@ -12,7 +12,7 @@ lookup, so a name is the whole routing table.
 
 ## Invariants every handler upholds
 
-These hold across all 62 tools; a new adapter that breaks one is a bug even
+These hold across all 64 tools; a new adapter that breaks one is a bug even
 though nothing enforces it mechanically.
 
 - **Required args are checked before the pillar is called.** `reqStr` (or an
@@ -68,6 +68,17 @@ though nothing enforces it mechanically.
   editing, publication and abandonment. Preview returns the same revision-bound
   compatibility, issue and affected-item diagnostics as the REST API without
   changing the persisted draft.
+- `inventory.items.*` uses the protocol-2 generic item contract. Reads expose
+  stable `typeId`, `catalogueRevision` and field IDs. Create, edit and type
+  changes require the caller's observed catalogue revision; edit, type change
+  and delete also require the observed item revision. A caller may retain and
+  resend `mutationId` after an uncertain response, so retries converge on the
+  producer's idempotency boundary instead of creating a second command.
+- `inventory.items.validate` calls the producer's authoritative value validator
+  without writing item values, audit rows or sync changes. Read the catalogue
+  definition first, send its exact revision and source-tagged values, and use
+  the returned field-specific issues to repair enum, reference, cardinality and
+  primitive failures before a mutation.
 
 ## Not here
 

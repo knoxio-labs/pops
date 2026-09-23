@@ -67,6 +67,14 @@ export const mockPillarInventory = {
       read: {
         catalogue: vi.fn().mockResolvedValue(callOk({ revision: { revision: 1 }, types: [] })),
         audit: vi.fn().mockResolvedValue(callOk({ events: [], nextBefore: null })),
+        validateItem: vi.fn().mockResolvedValue(
+          callOk({
+            valid: true,
+            catalogueRevision: 1,
+            typeId: crypto.randomUUID(),
+            fieldValues: [],
+          })
+        ),
       },
       manage: {
         readDraft: vi.fn().mockResolvedValue(callOk({ revision: { revision: 2 }, types: [] })),
@@ -132,7 +140,12 @@ export const mockPillarInventory = {
       listForItem: vi.fn().mockResolvedValue(callOk({ data: [MOCK_FIXTURE_CONN], ...PAGED1 })),
     },
     web: {
-      get: vi.fn().mockResolvedValue(callOk({ item: { id: 'item_1', revision: 1 } })),
+      list: vi.fn().mockResolvedValue(callOk({ items: [], nextCursor: null })),
+      get: vi
+        .fn()
+        .mockResolvedValue(
+          callOk({ item: { id: 'item_1', revision: 1, fieldValues: [] }, history: { events: [] } })
+        ),
     },
     sync: {
       mutations: vi.fn().mockResolvedValue(
