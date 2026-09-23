@@ -23,7 +23,7 @@ const primitiveWireValue = {
   description:
     'A stored primitive value: string, safe integer, boolean, {optionId} for an enum, ' +
     '{amount, unit} for a fixed-unit measurement, or {targetKind, targetId} for a reference. ' +
-    'A decimal literal (e.g. 2.5) is not a number here — encode it as a string, same as any ' +
+    'A decimal literal (e.g. 2.5) is not a number here — encode it as a string, like every ' +
     'other stored decimal amount.',
   oneOf: [
     { type: 'string' },
