@@ -153,4 +153,41 @@ internal struct MutationLogRebaseTests {
         #expect(try replica.read(.item(id: "lamp"))?.name == "Desk lamp")
         #expect(try replica.outboundMutations().map(\.mutationId) == ["m1"])
     }
+
+    /// `resetView` (called for every rebased row) reindexes search through
+    /// `SyncMeta.searchCatalogue(in:)`, which for a protocol-2 replica must
+    /// resolve the stored protocol-2 revision rather than the never-written
+    /// protocol-1 `catalogue` field. A feed page that never carries a
+    /// catalogue still puts its item through this path, so this stays
+    /// independent of the reindex `InventoryReplica.apply(_:catalogue:)`
+    /// does directly.
+    @Test("a feed change under a protocol-2 catalogue keeps the item's type-label search text")
+    func feedRebaseKeepsProtocol2TypeLabel() throws {
+        let typeId = "dddddddd-dddd-4ddd-8ddd-dddddddddddd"
+        let replica = try InventoryReplica()
+        let catalogue = InventoryCatalogueSnapshot(
+            revision: InventoryCatalogueRevision(revision: 1, minimumProtocol: 2),
+            types: [InventoryCatalogueType(id: typeId, key: "gadget", label: "Gadget", sortOrder: 0)]
+        )
+        let item = InventoryItem(
+            id: "widget-9", revision: 1, seq: 1, name: "Item Nine", typeId: typeId,
+            typeKey: "gadget", placement: .hand, createdAt: Fixture.created,
+            updatedAt: Fixture.created)
+        let page = InventorySnapshotPage(
+            epoch: Fixture.epoch, highWaterSeq: 10, catalogueVersion: "catalogue-1", total: 1,
+            items: [item], locations: [], nextCursor: nil, catalogueRevision: 1)
+        try replica.apply(page, catalogue: catalogue)
+        #expect(try replica.ids(.search("Gadget")) == ["widget-9"])
+
+        let moved = InventoryItem(
+            id: "widget-9", revision: 2, seq: 2, name: "Item Nine", typeId: typeId,
+            typeKey: "gadget", placement: .location("shelf"), createdAt: Fixture.created,
+            updatedAt: Fixture.created.addingTimeInterval(1))
+        let changes = InventoryChangesPage(
+            epoch: Fixture.epoch, items: [moved], locations: [], events: [], nextSince: 20,
+            hasMore: false, catalogueVersion: "catalogue-1", catalogueRevision: 1)
+        try replica.apply(changes)
+
+        #expect(try replica.ids(.search("Gadget")) == ["widget-9"])
+    }
 }
