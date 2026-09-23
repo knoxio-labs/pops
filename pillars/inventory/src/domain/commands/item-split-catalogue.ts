@@ -39,7 +39,11 @@ function activeSplitFields(db: CommandDb, row: ItemRow, revision: number): Resol
   const fieldValues = activeStoredChanges(values);
   if (row.typeId === null) return { mode: 'active', changes: { typeId: null, ...fieldValues } };
   const type = resolveCommandType(resolution, row.typeId).active;
-  assertCommandFieldValues(db, resolution, { typeId: type.id, values });
+  assertCommandFieldValues(db, resolution, {
+    typeId: type.id,
+    values,
+    existingItemId: row.id,
+  });
   return {
     mode: 'active',
     changes: { typeId: type.id, ...fieldValues },
@@ -77,6 +81,7 @@ export function persistSplitCatalogue(input: {
   ) {
     replaceValidatedItemFieldValues(db, {
       itemId: newItemId,
+      existingItemId: row.id,
       typeId: row.typeId,
       fields: catalogue.activeValues,
       catalogueRevision: catalogue.activeRevision,

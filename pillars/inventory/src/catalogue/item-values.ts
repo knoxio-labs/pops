@@ -56,18 +56,26 @@ function insertCanonicalValues(
   }
 }
 
-/** Validates and atomically replaces every authoritative value for an item. */
+/**
+ * Validates and atomically replaces every authoritative value for an item.
+ * `existingItemId` may name a source item whose retained archived values are
+ * being copied; otherwise validation compares against the destination item.
+ */
 export function replaceValidatedItemFieldValues(
   db: CommandDb,
   input: {
     readonly itemId: string;
+    readonly existingItemId?: string;
     readonly typeId: string;
     readonly catalogueRevision: number;
     readonly fields: readonly ItemFieldValueInput[];
     readonly now: string;
   }
 ): readonly CanonicalItemFieldValueInput[] {
-  const validated = validateItemFieldValues(db, { ...input, existingItemId: input.itemId });
+  const validated = validateItemFieldValues(db, {
+    ...input,
+    existingItemId: input.existingItemId ?? input.itemId,
+  });
   return db.transaction((tx) => {
     tx.delete(itemFieldValues).where(eq(itemFieldValues.itemId, input.itemId)).run();
     insertCanonicalValues(tx, {

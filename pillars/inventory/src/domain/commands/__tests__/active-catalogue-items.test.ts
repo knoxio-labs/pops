@@ -145,6 +145,14 @@ function replaceField(
   return revision;
 }
 
+function archiveField(harness: Harness, fieldId: string, baseRevision: number): number {
+  const created = createCatalogueDraft(harness.db, baseRevision, AUTHOR);
+  const revision = created.revision.revision;
+  patchCatalogueDraft(harness.db, revision, baseRevision, [{ kind: 'archive_field', id: fieldId }]);
+  publishCatalogueDraft(harness.db, revision, { baseRevision, note: null }, AUTHOR);
+  return revision;
+}
+
 function increaseMinimumProtocol(harness: Harness, baseRevision: number): number {
   const created = createCatalogueDraft(harness.db, baseRevision, AUTHOR);
   const revision = created.revision.revision;
@@ -481,6 +489,56 @@ describe('active catalogue item commands', () => {
     expect(
       harness.raw.prepare(`SELECT count(*) AS count FROM events WHERE entity_id = ?`).get(itemId)
     ).toEqual({ count: 1 });
+  });
+
+  it('splits an item while retaining a value from an archived field', () => {
+    const harness = openHarness();
+    const catalogue = publishCustomType(harness);
+    const itemId = randomUUID();
+    const newItemId = randomUUID();
+    harness.run(
+      mutation(
+        'item.create',
+        itemId,
+        {
+          item: {
+            name: 'Custom sensor pair',
+            quantity: 2,
+            typeId: catalogue.typeId,
+            values: [
+              { fieldId: catalogue.fieldId, values: ['SN-1'] },
+              { fieldId: catalogue.notesFieldId, values: ['retained'] },
+            ],
+          },
+        },
+        { baseRevision: null, catalogueRevision: catalogue.revision }
+      )
+    );
+    const activeRevision = archiveField(harness, catalogue.notesFieldId, catalogue.revision);
+
+    const outcome = harness.run(
+      mutation(
+        'item.split',
+        itemId,
+        { newItemId, quantity: 1 },
+        { baseRevision: 1, catalogueRevision: activeRevision }
+      )
+    );
+
+    expect(outcome).toMatchObject({ status: 'applied', revision: 2 });
+    expect(harness.item(itemId).quantity).toBe(1);
+    expect(harness.item(newItemId)).toMatchObject({
+      quantity: 1,
+      typeId: catalogue.typeId,
+    });
+    const copied = readItemFieldValues(harness.db, newItemId);
+    expect(copied).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ fieldId: catalogue.fieldId, values: ['SN-1'] }),
+        expect.objectContaining({ fieldId: catalogue.notesFieldId, values: ['retained'] }),
+      ])
+    );
+    expect(copied.every((entry) => entry.catalogueRevision === activeRevision)).toBe(true);
   });
 
   it('requires refreshed definitions before replay across a protocol-gated publication', () => {
