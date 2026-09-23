@@ -167,7 +167,9 @@ internal struct MutationLogRebaseTests {
         let replica = try InventoryReplica()
         let catalogue = InventoryCatalogueSnapshot(
             revision: InventoryCatalogueRevision(revision: 1, minimumProtocol: 2),
-            types: [InventoryCatalogueType(id: typeId, key: "gadget", label: "Gadget", sortOrder: 0)]
+            types: [
+                InventoryCatalogueType(id: typeId, key: "gadget", label: "Gadget", sortOrder: 0)
+            ]
         )
         let item = InventoryItem(
             id: "widget-9", revision: 1, seq: 1, name: "Item Nine", typeId: typeId,
