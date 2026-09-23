@@ -121,7 +121,9 @@ the built-in types during rollout.
 Archived enum selections and stale references remain readable when unchanged;
 reference reads add `resolved`, `deleted` or `missing` without discarding the
 target ID. Publication compatibility distinguishes additive, protocol-gated,
-migration-required and forbidden changes. Required rewrites use only the named
+migration-required and forbidden changes. A new type is judged by its fields:
+one whose primitive kind the base catalogue never used is protocol-gated, as
+adding that field to an existing type is. Required rewrites use only the named
 `copy`, `set_default`, `map_enum`, `convert_decimal`, `replace_reference` and
 `drop_value` operations. The server derives the exact affected type and field
 sets from the base-to-draft compatibility diff; a submitted migration cannot

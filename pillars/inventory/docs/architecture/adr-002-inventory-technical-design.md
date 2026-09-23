@@ -166,7 +166,7 @@ Anything with historical use is archived, never deleted. An archived type cannot
 
 Publication classifies changes as follows:
 
-- Compatible without value migration: labels, help, order and presentation hints; adding a type; adding an optional stored field; adding an enum option; relaxing `required`; and archiving a definition while retaining its existing values as readable history.
+- Compatible without value migration: labels, help, order and presentation hints; adding a type whose fields use only primitive kinds the base already uses; adding an optional stored field; adding an enum option; relaxing `required`; and archiving a definition while retaining its existing values as readable history.
 - Compatible for data but protocol-gated: adding a primitive kind, cardinality rule, reference target kind, expression node or provenance case that an installed client may not understand. The publication sets `minimumProtocol` to the first protocol that understands it and cannot publish until D10's rollout rule is met.
 - Requires an explicit migration: making a field required, removing or remapping values instead of merely archiving their definition, narrowing reference targets, changing a computed expression in a way that changes its declared dependencies, or replacing any immutable field characteristic.
 - Forbidden: mutating or reusing an id/key, editing a published snapshot, publishing values that fail the candidate schema, or deleting audit history.
