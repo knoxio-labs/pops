@@ -25,7 +25,7 @@ extension InventoryItemDetail {
         let events = source.inventoryItemHistory(itemId: id)
         let fields =
             protocol2Type.map {
-                InventoryDetailFields(entries: item.fieldValues, type: $0, source: source)
+                InventoryDetailFields(item: item, type: $0, source: source)
             } ?? InventoryDetailFields(values: item.fields, type: type)
         record = InventoryDetailRecord(
             id: item.id, name: item.name, typeName: protocol2Type?.label ?? type?.name,
