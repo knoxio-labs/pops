@@ -1,0 +1,6 @@
+appId: com.knoxiolabs.pops.local
+name: Open Transactions from More
+---
+- runFlow: select-transactions.yaml
+- assertVisible:
+    id: 'transactions-list'
