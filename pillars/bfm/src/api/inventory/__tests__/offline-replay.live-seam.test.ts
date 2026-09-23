@@ -36,7 +36,10 @@ const INVENTORY_PILLAR_ID = 'inventory';
 
 const serviceAccountSchema = z.object({ plaintextKey: z.string().min(1) });
 const catalogueDescriptorSchema = z.object({
-  revision: z.object({ revision: z.number().int().positive() }),
+  revision: z.object({
+    revision: z.number().int().positive(),
+    draftVersion: z.number().int().positive(),
+  }),
   types: z.array(
     z.object({
       id: z.string().uuid(),
@@ -113,18 +116,34 @@ async function publishRevision(
   baseRevision: number,
   operations: readonly CatalogueOperation[]
 ): Promise<number> {
-  const revision = await createDraft(baseUrl, apiKey, baseRevision);
-  await patchDraft(baseUrl, apiKey, baseRevision, revision, operations);
-  await publishDraft(baseUrl, apiKey, baseRevision, revision);
-  return revision;
+  const created = await createDraft(baseUrl, apiKey, baseRevision);
+  const patched = await patchDraft(
+    baseUrl,
+    apiKey,
+    baseRevision,
+    created.revision.revision,
+    created.revision.draftVersion,
+    operations
+  );
+  await publishDraft(
+    baseUrl,
+    apiKey,
+    baseRevision,
+    created.revision.revision,
+    patched.revision.draftVersion
+  );
+  return created.revision.revision;
 }
 
-async function createDraft(baseUrl: string, apiKey: string, baseRevision: number): Promise<number> {
-  const created = await parseJson(
+async function createDraft(
+  baseUrl: string,
+  apiKey: string,
+  baseRevision: number
+): Promise<z.infer<typeof catalogueDescriptorSchema>> {
+  return parseJson(
     await inventoryJson(baseUrl, apiKey, '/type-catalogue/drafts', 'POST', { baseRevision }),
     catalogueDescriptorSchema
   );
-  return created.revision.revision;
 }
 
 async function patchDraft(
@@ -132,11 +151,13 @@ async function patchDraft(
   apiKey: string,
   baseRevision: number,
   revision: number,
+  expectedDraftVersion: number,
   operations: readonly CatalogueOperation[]
 ): Promise<z.infer<typeof catalogueDescriptorSchema>> {
   const patched = await parseJson(
     await inventoryJson(baseUrl, apiKey, `/type-catalogue/drafts/${String(revision)}`, 'PATCH', {
       baseRevision,
+      expectedDraftVersion,
       operations,
     }),
     patchedCatalogueSchema
@@ -148,7 +169,8 @@ async function publishDraft(
   baseUrl: string,
   apiKey: string,
   baseRevision: number,
-  revision: number
+  revision: number,
+  expectedDraftVersion: number
 ): Promise<void> {
   await parseJson(
     await inventoryJson(
@@ -156,48 +178,61 @@ async function publishDraft(
       apiKey,
       `/type-catalogue/drafts/${String(revision)}/publish`,
       'POST',
-      { baseRevision, note: 'Offline replay live seam' }
+      { baseRevision, expectedDraftVersion, note: 'Offline replay live seam' }
     ),
     catalogueDescriptorSchema
   );
 }
 
 async function publishFixture(baseUrl: string, apiKey: string): Promise<PublishedFixture> {
-  const authoredRevision = await createDraft(baseUrl, apiKey, 1);
-  const withType = await patchDraft(baseUrl, apiKey, 1, authoredRevision, [
-    { kind: 'put_type', key: 'offline_device', label: 'Offline device' },
-  ]);
+  const created = await createDraft(baseUrl, apiKey, 1);
+  const authoredRevision = created.revision.revision;
+  const withType = await patchDraft(
+    baseUrl,
+    apiKey,
+    1,
+    authoredRevision,
+    created.revision.draftVersion,
+    [{ kind: 'put_type', key: 'offline_device', label: 'Offline device' }]
+  );
   const typeId = withType.types.find((type) => type.key === 'offline_device')?.id;
   if (typeId === undefined) throw new Error('offline device type was not created');
-  const withFields = await patchDraft(baseUrl, apiKey, 1, authoredRevision, [
-    {
-      kind: 'put_field',
-      typeId,
-      key: 'serial',
-      label: 'Serial',
-      fieldKind: 'short_text',
-      cardinality: 'one',
-      required: false,
-      storage: 'stored',
-    },
-    {
-      kind: 'put_field',
-      typeId,
-      key: 'legacy_tag',
-      label: 'Legacy tag',
-      fieldKind: 'short_text',
-      cardinality: 'one',
-      required: false,
-      storage: 'stored',
-    },
-  ]);
+  const withFields = await patchDraft(
+    baseUrl,
+    apiKey,
+    1,
+    authoredRevision,
+    withType.revision.draftVersion,
+    [
+      {
+        kind: 'put_field',
+        typeId,
+        key: 'serial',
+        label: 'Serial',
+        fieldKind: 'short_text',
+        cardinality: 'one',
+        required: false,
+        storage: 'stored',
+      },
+      {
+        kind: 'put_field',
+        typeId,
+        key: 'legacy_tag',
+        label: 'Legacy tag',
+        fieldKind: 'short_text',
+        cardinality: 'one',
+        required: false,
+        storage: 'stored',
+      },
+    ]
+  );
   const fields = withFields.types.find((type) => type.id === typeId)?.fields;
   const renamedFieldId = fields?.find((field) => field.key === 'serial')?.id;
   const archivedFieldId = fields?.find((field) => field.key === 'legacy_tag')?.id;
   if (renamedFieldId === undefined || archivedFieldId === undefined) {
     throw new Error('offline replay fields were not created');
   }
-  await publishDraft(baseUrl, apiKey, 1, authoredRevision);
+  await publishDraft(baseUrl, apiKey, 1, authoredRevision, withFields.revision.draftVersion);
   const activeRevision = await publishRevision(baseUrl, apiKey, authoredRevision, [
     { kind: 'put_field', id: renamedFieldId, typeId, label: 'Asset serial' },
     { kind: 'archive_field', id: archivedFieldId },
