@@ -35,8 +35,14 @@ let package = Package(
     // is where the calls that carry the generated types live. `AppCore` depends
     // on nothing, so the edge points the same way every other one in this tree
     // does.
+    //
+    // `InventoryReplica` is a test-only edge, and the other implementation
+    // package it may name: `BFMClientTests` drives `OnlineInventoryStore`
+    // through this package's real decodes against a stub transport, which
+    // only this package's internal initialiser can inject.
     dependencies: [
         .package(path: "../AppCore"),
+        .package(path: "../InventoryReplica"),
         .package(url: "https://github.com/apple/swift-openapi-runtime", exact: "1.12.0"),
         .package(url: "https://github.com/apple/swift-openapi-urlsession", exact: "1.3.1"),
     ],
@@ -56,6 +62,7 @@ let package = Package(
                 "BFMClient",
                 "AppCore",
                 .product(name: "AppCoreFakes", package: "AppCore"),
+                .product(name: "InventoryReplica", package: "InventoryReplica"),
                 .product(name: "OpenAPIRuntime", package: "swift-openapi-runtime"),
             ],
             swiftSettings: strictSwiftSettings

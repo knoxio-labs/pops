@@ -35,6 +35,11 @@ internal enum InventoryDrainPass: Equatable, Sendable {
 ///   doubling, at most 5 minutes.
 /// - After a pass that applied anything, the change feed is read so the
 ///   applied changes settle.
+/// - A change answered `catalogue_update_required` waits for a newer
+///   catalogue: before the next batch the feed is read, which stores the
+///   active revision, and the change is moved onto it and sent, or opens
+///   the `catalogueChanged` repair when it no longer fits. A catalogue this
+///   build is too old for blocks the pass (`appTooOld`).
 /// - Before each batch, photos staged on this phone are uploaded, oldest
 ///   first; an attach of one waits until it is on the server. `413` and
 ///   `415` fail the photo, and every attach waiting on it opens the failed
@@ -199,6 +204,7 @@ internal final class InventoryDrain: Sendable {
         do {
             try replica.requeueInFlight()
             while true {
+                if let stopped = try await settleChangesAwaitingCatalogue() { return stopped }
                 if let stopped = try await uploadStagedPhotos() { return stopped }
                 let batch = try replica.outboundMutations(limit: batchSize, excluding: deferred)
                 guard !batch.isEmpty else { break }

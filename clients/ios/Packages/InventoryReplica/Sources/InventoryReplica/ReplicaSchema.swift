@@ -129,6 +129,7 @@ internal enum ReplicaSchema {
         registerTypeArrivals(in: &migrator)
         registerCataloguePersistence(in: &migrator)
         ComputedValueRows.register(in: &migrator)
+        registerCatalogueUpdateHold(in: &migrator)
         return migrator
     }
 

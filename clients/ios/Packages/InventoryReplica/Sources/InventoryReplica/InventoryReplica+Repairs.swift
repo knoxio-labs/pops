@@ -20,7 +20,11 @@ extension InventoryReplica {
     /// - a record deleted elsewhere is re-sent behind a new
     ///   `item.restoreDeleted`;
     /// - a failed photo's attach is sent again, behind a fresh upload of
-    ///   the bytes when this phone staged them.
+    ///   the bytes when this phone staged them;
+    /// - a change that no longer fits the catalogue (`catalogueChanged`) is
+    ///   moved onto the replica's current revision and sent against it, or
+    ///   refused with ``AppCore/InventoryRejectedReason/catalogueRepairRequired``
+    ///   naming what still does not fit.
     ///
     /// Letting go (`discardMine`, and either choice on a refusal the design
     /// has no repair for) drops the change, releases what depended on it,

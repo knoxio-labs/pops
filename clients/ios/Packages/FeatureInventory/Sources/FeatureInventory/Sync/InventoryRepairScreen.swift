@@ -108,7 +108,7 @@ internal struct InventoryRepairScreen: View {
                 .frame(minHeight: PopsSize.touchTarget)
                 .disabled(model.outcome != nil)
             }
-        case .photoFailed, .deletedElsewhere, .unrecognised:
+        case .photoFailed, .deletedElsewhere, .catalogueChanged, .unrecognised:
             EmptyView()
         }
     }

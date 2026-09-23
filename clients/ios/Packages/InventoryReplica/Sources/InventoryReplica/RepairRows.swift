@@ -18,12 +18,16 @@ internal enum StoredRepairKind: String {
     case codeCollision = "code_collision"
     case deleted
     case photoFailed = "photo_failed"
+    case catalogueChanged = "catalogue_changed"
     case rejected
 
     /// Nil for an outcome that opens no repair. A photo attach refused
     /// because the server does not have the bytes (`media_missing`, or the
     /// phone's own refusal of a photo whose upload failed) is a failed
-    /// photo, which Retry and Remove settle; every other refusal is let go.
+    /// photo, which Retry and Remove settle. A change that no longer fits
+    /// the active catalogue (`catalogue_repair_required`) is
+    /// `catalogueChanged`, which can be sent again against the current
+    /// definitions. Every other refusal is let go.
     init?(_ outcome: StoredOutcome, command: LoggedCommand) {
         switch outcome {
         case .conflictField: self = .field
@@ -34,6 +38,8 @@ internal enum StoredRepairKind: String {
                 StagedUploadFailure.photoRejectionReasons.contains(reason)
             {
                 self = .photoFailed
+            } else if reason == InventoryRejectedReason.catalogueRepairRequired.storageValue {
+                self = .catalogueChanged
             } else {
                 self = .rejected
             }
@@ -90,9 +96,21 @@ internal struct StoredRepair {
         case .rejected(let reason, _):
             return InventoryRepair(
                 id: mutationId, entityKind: entityKind, entityId: entity.id,
-                kind: kind == .photoFailed ? .photoFailed : .unrecognised(reason), openedAt: opened)
+                kind: Self.rejectedKind(kind, reason: reason), openedAt: opened)
         case .applied, .deferred:
             return nil
+        }
+    }
+}
+
+extension StoredRepair {
+    fileprivate static func rejectedKind(_ kind: StoredRepairKind, reason: String)
+        -> InventoryRepairKind
+    {
+        switch kind {
+        case .photoFailed: .photoFailed
+        case .catalogueChanged: .catalogueChanged
+        case .field, .codeCollision, .deleted, .rejected: .unrecognised(reason)
         }
     }
 }
