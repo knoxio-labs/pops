@@ -80,7 +80,7 @@ internal enum InventorySyncFilter: String, CaseIterable, Identifiable, Sendable 
 /// independent and all of them must hold. Inactive records (retired,
 /// discarded, lost, destroyed) are left out unless `includesInactive` is on,
 /// whatever else is set.
-internal struct InventorySearchFilter: Equatable, Sendable {
+public struct InventorySearchFilter: Equatable, Sendable {
     internal var placement = InventoryPlacementFilter.any
     internal var containerState = InventoryContainerStateFilter.any
     internal var type: InventoryTypeName?
@@ -88,6 +88,9 @@ internal struct InventorySearchFilter: Equatable, Sendable {
     internal var missing = InventoryMissingFilter.nothing
     internal var sync = InventorySyncFilter.any
     internal var includesInactive = false
+
+    /// Creates a filter that includes active records in every placement.
+    public init() {}
 
     internal var isActive: Bool { self != InventorySearchFilter() }
 

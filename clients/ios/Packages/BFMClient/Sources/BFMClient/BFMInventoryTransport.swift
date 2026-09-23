@@ -94,10 +94,12 @@ public struct BFMInventoryTransport: InventorySyncTransport {
                 for: .rateLimited, operation: CatalogueRevision.id)
         case .badGateway(let upstream):
             throw BFMInventoryFailureMapping.repositoryError(
-                for: .upstream(code: try upstream.body.json.code.rawValue), operation: CatalogueRevision.id)
+                for: .upstream(code: try upstream.body.json.code.rawValue),
+                operation: CatalogueRevision.id)
         case .serviceUnavailable(let upstream):
             throw BFMInventoryFailureMapping.repositoryError(
-                for: .upstream(code: try upstream.body.json.code.rawValue), operation: CatalogueRevision.id)
+                for: .upstream(code: try upstream.body.json.code.rawValue),
+                operation: CatalogueRevision.id)
         case .undocumented(let status, _):
             throw BFMInventoryFailureMapping.repositoryError(
                 for: .undocumented(status), operation: CatalogueRevision.id)
