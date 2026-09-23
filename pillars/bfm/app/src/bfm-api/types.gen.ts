@@ -2260,6 +2260,7 @@ export type MobileInventoryChangesResponses = {
     hasMore: boolean;
     items: Array<{
       access: 'open' | 'closed' | null;
+      catalogueRevision: number | null;
       code: string | null;
       createdAt: string;
       deletedAt: string | null;
@@ -2268,6 +2269,12 @@ export type MobileInventoryChangesResponses = {
       externalIds: Array<{
         kind: string;
         value: string;
+      }>;
+      fieldValues: Array<{
+        catalogueRevision: number;
+        fieldId: string;
+        source: 'stored' | 'override';
+        values: Array<unknown>;
       }>;
       fields: {
         [key: string]: unknown;
@@ -2316,6 +2323,7 @@ export type MobileInventoryChangesResponses = {
       quantity: number;
       revision: number;
       seq: number;
+      typeId: string | null;
       typeKey: string | null;
       updatedAt: string;
     }>;
@@ -2448,6 +2456,7 @@ export type MobileInventorySnapshotResponses = {
     highWaterSeq: number;
     items: Array<{
       access: 'open' | 'closed' | null;
+      catalogueRevision: number | null;
       code: string | null;
       createdAt: string;
       deletedAt: string | null;
@@ -2456,6 +2465,12 @@ export type MobileInventorySnapshotResponses = {
       externalIds: Array<{
         kind: string;
         value: string;
+      }>;
+      fieldValues: Array<{
+        catalogueRevision: number;
+        fieldId: string;
+        source: 'stored' | 'override';
+        values: Array<unknown>;
       }>;
       fields: {
         [key: string]: unknown;
@@ -2504,6 +2519,7 @@ export type MobileInventorySnapshotResponses = {
       quantity: number;
       revision: number;
       seq: number;
+      typeId: string | null;
       typeKey: string | null;
       updatedAt: string;
     }>;
