@@ -47,6 +47,15 @@ internal struct AppDependenciesTests {
         }
     }
 
+    @Test("an unbound purchases update fails rather than pretending the purchase is missing")
+    func unboundPurchaseUpdateFails() async {
+        await #expect(throws: RepositoryError.dependencyNotBound) {
+            try await AppDependencies.unbound.purchases.updatePurchase(
+                id: "purchase-1",
+                PurchaseUpdate(lines: [], expectedUpdatedAt: "opaque-token"))
+        }
+    }
+
     @Test("a bound accounts container hands back what it was given")
     func boundAccountsContainerResolves() async throws {
         let repository = InMemoryAccountsRepository(rows: Account.fakes(count: 2))

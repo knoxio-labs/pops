@@ -59,7 +59,7 @@ internal final class InventoryDrain: Sendable {
 
     let replica: InventoryReplica
     let online: OnlineInventoryStore
-    private let reachability: any InventoryReachability
+    private let reachability: any NetworkReachability
     private let clock: any InventoryDrainClock
     private let batchSize: Int
     private let now: @Sendable () -> Date
@@ -80,7 +80,7 @@ internal final class InventoryDrain: Sendable {
     init(
         replica: InventoryReplica,
         online: OnlineInventoryStore,
-        reachability: any InventoryReachability,
+        reachability: any NetworkReachability,
         clock: any InventoryDrainClock,
         batchSize: Int = 50,
         now: @escaping @Sendable () -> Date,

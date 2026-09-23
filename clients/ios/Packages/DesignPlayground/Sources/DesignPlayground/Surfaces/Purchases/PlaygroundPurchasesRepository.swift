@@ -37,6 +37,10 @@ internal struct PlaygroundPurchasesRepository: PurchasesRepository {
 
     func purchaseDetail(id: Purchase.ID) async throws -> AppCore.PurchaseDetail? { nil }
 
+    func updatePurchase(
+        id: Purchase.ID, _ update: PurchaseUpdate
+    ) async throws -> AppCore.PurchaseDetail? { nil }
+
     func receiptThumbnail(sha256: String) async throws -> AppCore.ReceiptImage? { nil }
 
     func receiptImage(sha256: String) async throws -> AppCore.ReceiptImage? { nil }

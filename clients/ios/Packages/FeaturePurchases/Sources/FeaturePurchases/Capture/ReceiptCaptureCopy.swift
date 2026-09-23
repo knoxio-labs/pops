@@ -312,6 +312,8 @@ internal enum ReceiptResultCopy {
             return "This device is no longer signed in."
         case .contractMismatch:
             return "This version of Pops cannot read what the server sent. Update the app."
+        case .conflict:
+            return "This looks like it was already saved."
         case .transport:
             return "Could not reach the server. Check your connection and try again."
         case .dependencyNotBound:

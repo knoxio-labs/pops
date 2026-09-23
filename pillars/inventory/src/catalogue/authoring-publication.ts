@@ -43,9 +43,11 @@ function requireMigration(
       409,
       'catalogue_change_forbidden',
       'The draft contains a forbidden published-identity change',
-      compatibility.changes.map((change) =>
-        issue(change.definitionId, '$', change.code, change.code)
-      )
+      {
+        issues: compatibility.changes.map((change) =>
+          issue(change.definitionId, '$', change.code, change.code)
+        ),
+      }
     );
   }
   const migration = migrationInput(input, fromRevision, toRevision);
@@ -54,9 +56,11 @@ function requireMigration(
       409,
       'catalogue_migration_required',
       'Publication requires a named value migration',
-      compatibility.changes.map((change) =>
-        issue(change.definitionId, '$', change.code, change.code)
-      )
+      {
+        issues: compatibility.changes.map((change) =>
+          issue(change.definitionId, '$', change.code, change.code)
+        ),
+      }
     );
   }
   if (migration !== undefined && compatibility.classification !== 'migration_required') {

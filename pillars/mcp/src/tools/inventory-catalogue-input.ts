@@ -16,6 +16,25 @@ export function requiredPositiveInteger(
   return { ok: true, value };
 }
 
+/** Parses an optional positive integer, with an inclusive upper bound when supplied. */
+export function optionalPositiveInteger(
+  args: Record<string, unknown>,
+  key: string,
+  maximum?: number
+): Parsed<number | undefined> {
+  const value = args[key];
+  if (value === undefined) return { ok: true, value: undefined };
+  if (
+    typeof value !== 'number' ||
+    !Number.isInteger(value) ||
+    value <= 0 ||
+    (maximum !== undefined && value > maximum)
+  ) {
+    return { ok: false, error: `Invalid field: ${key}` };
+  }
+  return { ok: true, value };
+}
+
 /** Parses a non-empty array whose members are JSON-style objects. */
 export function requiredObjectArray(
   args: Record<string, unknown>,

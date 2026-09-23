@@ -16,6 +16,8 @@ The **structural** primitives under `Sources/DesignSystem/Primitives/` are a dif
 
 `popsTrailingBarItem` places a screen action at the trailing edge of its navigation bar. `popsBottomBar` groups secondary controls in the platform bottom toolbar. Their iOS placements and host-toolchain fallbacks live together in `PopsBarItemsPlatform.swift`.
 
+`PopsZoomablePhoto` adds pinch, pan and double-tap inspection around `PopsPhoto`. `PopsPagedPhotoViewer` pages through encoded images with a native position indicator while keeping zoom state local to each image, and can report page changes when a feature loads imagery on demand. Both take image bytes directly and carry no receipt or purchases model, so capture and detail features can share them without importing one another. `popsStage(item:content:)` presents a full-screen feature stage on iOS and a host-compatible sheet during package tests.
+
 ## The two rules
 
 Both apply to every module under `Packages/` and to `App/`, not just to this one.

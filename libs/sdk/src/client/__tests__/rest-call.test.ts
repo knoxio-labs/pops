@@ -193,6 +193,31 @@ describe('performRestCall — response / error mapping', () => {
     });
   });
 
+  it('preserves structured producer diagnostics on a bad request', async () => {
+    const issues = [{ path: 'types.0.fields.1', message: 'Field key is duplicated' }];
+    const { fetchImpl } = recordingRest(() =>
+      jsonOk(
+        {
+          message: 'catalogue validation failed',
+          code: 'catalogue_validation',
+          issues,
+          affectedItems: 7,
+        },
+        400
+      )
+    );
+
+    const result = await performRestCall(ctx(['settings', 'getMany'], {}, fetchImpl));
+
+    expect(result).toEqual({
+      kind: 'bad-request',
+      pillar: 'registry',
+      message: 'catalogue validation failed',
+      code: 'catalogue_validation',
+      details: { issues, affectedItems: 7 },
+    });
+  });
+
   it('maps 409 → conflict', async () => {
     const { fetchImpl } = recordingRest(() => jsonOk({ message: 'already exists' }, 409));
     const result = await performRestCall(

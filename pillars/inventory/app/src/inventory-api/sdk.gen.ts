@@ -186,6 +186,9 @@ import type {
   TypesManagePatchDraftData,
   TypesManagePatchDraftErrors,
   TypesManagePatchDraftResponses,
+  TypesManagePreviewDraftData,
+  TypesManagePreviewDraftErrors,
+  TypesManagePreviewDraftResponses,
   TypesManagePublishDraftData,
   TypesManagePublishDraftErrors,
   TypesManagePublishDraftResponses,
@@ -1128,6 +1131,25 @@ export const typesManageAbandonDraft = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     url: '/type-catalogue/drafts/{revision}/abandon',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Validate draft operations and preview compatibility without mutating the draft
+ */
+export const typesManagePreviewDraft = <ThrowOnError extends boolean = false>(
+  options: Options<TypesManagePreviewDraftData, ThrowOnError>
+): RequestResult<TypesManagePreviewDraftResponses, TypesManagePreviewDraftErrors, ThrowOnError> =>
+  (options.client ?? client).post<
+    TypesManagePreviewDraftResponses,
+    TypesManagePreviewDraftErrors,
+    ThrowOnError
+  >({
+    url: '/type-catalogue/drafts/{revision}/preview',
     ...options,
     headers: {
       'Content-Type': 'application/json',

@@ -1,6 +1,15 @@
 import { z } from 'zod';
 
 import { loadProtocol1Fields, resolveProtocol1TypeById } from '../../catalogue/index.js';
+import {
+  activeFieldPatchSchema,
+  activePatchChanges,
+  assertActiveFieldValues,
+  currentAuthoritativeFieldValues,
+  mergeActiveFieldPatches,
+  requireActiveCatalogue,
+  requireActiveType,
+} from './active-catalogue-values.js';
 import { requireItem, type FieldValues } from './entities.js';
 import { CommandRejected } from './errors.js';
 import { externalIdsSchema, normalizeNote } from './item-fields.js';
@@ -9,6 +18,7 @@ import { defineOp } from './op.js';
 import { assertProtocol1Fields, protocol1FieldsAsJson } from './protocol-1-fields.js';
 import { upsertSearchIndex } from './search-index.js';
 
+import type { ItemFieldValueInput } from '../../catalogue/index.js';
 import type { CommandDb } from './entities.js';
 import type { JsonValue } from './outcome.js';
 
@@ -28,6 +38,7 @@ const editArgs = z.object({
     .optional()
     .transform((value) => (value === undefined ? undefined : normalizeNote(value))),
   fields: fieldsPatchSchema.optional(),
+  values: z.array(activeFieldPatchSchema).optional(),
   externalIds: externalIdsSchema.optional(),
   /**
    * A patch over the legacy provenance and value columns (POPS-4053): the
@@ -37,6 +48,7 @@ const editArgs = z.object({
    */
   legacy: legacyItemPatchSchema.optional(),
 });
+type EditArgs = z.infer<typeof editArgs>;
 
 /**
  * Merge a per-key patch into a stored `fields` blob: a `null` value removes
@@ -80,12 +92,53 @@ function resolveNextFields(
   return next;
 }
 
+function resolveNextActiveValues(
+  db: CommandDb,
+  row: { readonly id: string; readonly typeId: string | null },
+  catalogueRevision: number,
+  patches: z.infer<typeof activeFieldPatchSchema>[] | undefined
+): ItemFieldValueInput[] {
+  requireActiveCatalogue(db, catalogueRevision);
+  const type = row.typeId === null ? null : requireActiveType(db, catalogueRevision, row.typeId);
+  const current = currentAuthoritativeFieldValues(db, row.id);
+  if (patches === undefined) return current;
+  if (type === null) {
+    if (patches.some((patch) => patch.values !== null)) {
+      throw new CommandRejected('invalid', 'an untyped item cannot carry values');
+    }
+    return [];
+  }
+  const values = mergeActiveFieldPatches(current, patches);
+  assertActiveFieldValues(db, type, values, row.id);
+  return values;
+}
+
+function catalogueEditChanges(
+  db: CommandDb,
+  row: { readonly id: string; readonly typeId: string | null },
+  args: EditArgs,
+  catalogueRevision: number | undefined
+): FieldValues {
+  if (catalogueRevision === undefined) {
+    if (args.values !== undefined) {
+      throw new CommandRejected('invalid', 'stable values require catalogueRevision');
+    }
+    if (args.fields === undefined) return {};
+    return { fields: resolveNextFields(db, row, args.fields) };
+  }
+  if (args.fields !== undefined) {
+    throw new CommandRejected('invalid', 'named fields are only supported by protocol 1');
+  }
+  resolveNextActiveValues(db, row, catalogueRevision, args.values);
+  return args.values === undefined ? {} : activePatchChanges(args.values);
+}
+
 /**
- * `item.edit { name?, note?, fields?, externalIds?, legacy? }`: change the
- * fields a type does not own. `fields` is a per-key patch over the stored
- * blob, not a replacement, so an edit never has to resend every value a form
- * did not touch; the merged result is still validated against the item's
- * type (or required empty, untyped). `legacy` is a flat patch over the
+ * `item.edit { name?, note?, values?, externalIds?, legacy? }`: change the
+ * fields a type does not own. Protocol 2 `values` patches stable field IDs;
+ * `null` clears an optional stored value and omissions remain unchanged.
+ * Protocol 1 `fields` is the equivalent named-key patch. The complete merged
+ * result is validated against the selected catalogue revision. `legacy` is a flat patch over the
  * provenance and value columns the legacy `/items` routes still expose
  * (POPS-4053) — every key it carries is applied field-by-field through the
  * engine's own conflict check, exactly like `name` or `note`. Omitted
@@ -102,13 +155,10 @@ export const itemEdit = defineOp({
     const nextName = args.name ?? row.name;
     const nextNote = args.note !== undefined ? args.note : row.note;
     const nextExternalIds = args.externalIds ?? (JSON.parse(row.externalIds) as JsonValue);
-    const nextFields = resolveNextFields(ctx.db, row, args.fields);
-
-    const changes: FieldValues = {};
+    const changes = catalogueEditChanges(ctx.db, row, args, ctx.mutation.catalogueRevision);
     if (args.name !== undefined) changes['name'] = args.name;
     if (args.note !== undefined) changes['note'] = args.note;
     if (args.externalIds !== undefined) changes['externalIds'] = args.externalIds;
-    if (args.fields !== undefined) changes['fields'] = nextFields;
     if (args.legacy !== undefined) {
       for (const [field, value] of Object.entries(args.legacy)) {
         if (value !== undefined) changes[field] = value as JsonValue;

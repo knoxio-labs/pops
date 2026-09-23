@@ -5,6 +5,7 @@ import {
   CatalogueApiError,
   createCatalogueDraft,
   patchCatalogueDraft,
+  previewCatalogueDraft,
   publishCatalogueDraft,
   readCatalogueAudit,
   readCurrentCatalogueDraft,
@@ -13,6 +14,7 @@ import {
 } from '../../catalogue/authoring.js';
 import { loadCatalogue } from '../../catalogue/index.js';
 import { readInventoryPrincipal } from '../middleware/identity.js';
+import { compatibilityBody, runCatalogue } from './type-catalogue-responses.js';
 
 import type { ServerInferRequest } from '@ts-rest/core';
 import type { Response } from 'express';
@@ -22,40 +24,6 @@ import type { CommandDb } from '../../domain/commands/index.js';
 
 type TypesRequest = ServerInferRequest<typeof inventoryTypesContract>;
 type PrincipalResponse = Response;
-
-type CatalogueFailure = {
-  status: 400 | 401 | 404 | 409;
-  body: {
-    message: string;
-    code: string;
-    issues?: {
-      definitionId: string | null;
-      path: string;
-      code: string;
-      message: string;
-    }[];
-  };
-};
-
-function failure(error: CatalogueApiError): CatalogueFailure {
-  return {
-    status: error.status,
-    body: {
-      message: error.message,
-      code: error.code,
-      ...(error.issues.length === 0 ? {} : { issues: [...error.issues] }),
-    },
-  };
-}
-
-async function runCatalogue<T>(operation: () => T | Promise<T>): Promise<T | CatalogueFailure> {
-  try {
-    return await operation();
-  } catch (error) {
-    if (error instanceof CatalogueApiError) return failure(error);
-    throw error;
-  }
-}
 
 function requireAuthor(response: PrincipalResponse, scope: 'read' | 'manage'): CatalogueAuthor {
   const principal = readInventoryPrincipal(response);
@@ -82,17 +50,6 @@ function requireAuthor(response: PrincipalResponse, scope: 'read' | 'manage'): C
     'catalogue_unauthorised',
     'This endpoint requires an owner session or service-account grant'
   );
-}
-
-function compatibilityBody(
-  result: Awaited<ReturnType<typeof patchCatalogueDraft>>['compatibility']
-) {
-  return {
-    classification: result.classification,
-    affectedIds: [...result.affectedIds],
-    affectedItems: result.affectedItems,
-    changes: result.changes.map((change) => ({ ...change })),
-  };
 }
 
 function makeTypeCatalogueReadHandlers(db: CommandDb) {
@@ -145,6 +102,28 @@ function makeTypeCatalogueManageHandlers(db: CommandDb) {
         return {
           status: 200 as const,
           body: { draft: result.draft, compatibility: compatibilityBody(result.compatibility) },
+        };
+      }),
+    previewDraft: ({
+      params,
+      body,
+      res,
+    }: TypesRequest['manage']['previewDraft'] & { res: Response }) =>
+      runCatalogue(() => {
+        requireAuthor(res, 'manage');
+        const preview = previewCatalogueDraft(
+          db,
+          params.revision,
+          body.baseRevision,
+          body.operations
+        );
+        return {
+          status: 200 as const,
+          body: {
+            baseRevision: preview.baseRevision,
+            draftRevision: preview.draftRevision,
+            compatibility: compatibilityBody(preview.compatibility),
+          },
         };
       }),
     publishDraft: ({
