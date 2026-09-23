@@ -50,6 +50,7 @@ internal actor DetailRepositoryDouble: PurchasesRepository {
     private var thumbnailCalls: [String] = []
     private var imageCalls: [String] = []
     private var detailCallWaiters: [(Int, CheckedContinuation<Void, Never>)] = []
+    private var thumbnailCallWaiters: [(Int, CheckedContinuation<Void, Never>)] = []
     private var imageCallWaiters: [(Int, CheckedContinuation<Void, Never>)] = []
 
     internal init(
@@ -77,6 +78,11 @@ internal actor DetailRepositoryDouble: PurchasesRepository {
         await withCheckedContinuation { imageCallWaiters.append((count, $0)) }
     }
 
+    internal func waitForThumbnailCalls(_ count: Int) async {
+        if thumbnailCalls.count >= count { return }
+        await withCheckedContinuation { thumbnailCallWaiters.append((count, $0)) }
+    }
+
     internal func purchases(
         after: String?, statusFilter: PurchaseStatusFilter
     ) async throws -> PurchasePage {
@@ -98,6 +104,7 @@ internal actor DetailRepositoryDouble: PurchasesRepository {
 
     internal func receiptThumbnail(sha256: String) async throws -> ReceiptImage? {
         thumbnailCalls.append(sha256)
+        resumeThumbnailWaiters()
         return try await thumbnails[sha256, default: .value(nil)].resolve()
     }
 
@@ -116,6 +123,12 @@ internal actor DetailRepositoryDouble: PurchasesRepository {
     private func resumeImageWaiters() {
         let ready = imageCallWaiters.filter { imageCalls.count >= $0.0 }
         imageCallWaiters.removeAll { imageCalls.count >= $0.0 }
+        for waiter in ready { waiter.1.resume() }
+    }
+
+    private func resumeThumbnailWaiters() {
+        let ready = thumbnailCallWaiters.filter { thumbnailCalls.count >= $0.0 }
+        thumbnailCallWaiters.removeAll { thumbnailCalls.count >= $0.0 }
         for waiter in ready { waiter.1.resume() }
     }
 }

@@ -19,7 +19,7 @@ internal struct PurchaseDetailViewModelTests {
             thumbnails: ["first": .gated(late, first), "second": .value(second)])
         let model = self.model(repository)
         let loading = Task { await model.load() }
-        await Task.yield()
+        await repository.waitForThumbnailCalls(1)
         await late.open()
         await loading.value
 
