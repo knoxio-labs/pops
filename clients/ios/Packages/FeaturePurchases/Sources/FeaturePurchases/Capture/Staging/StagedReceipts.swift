@@ -125,6 +125,17 @@ public struct StagedReceipts: Hashable, Sendable {
         _ = take([id])
     }
 
+    internal mutating func replace(_ pageID: String, with page: StagedPage) -> Bool {
+        guard
+            let receiptIndex = receipts.firstIndex(where: { receipt in
+                receipt.pages.contains { $0.id == pageID }
+            }),
+            let pageIndex = receipts[receiptIndex].pages.firstIndex(where: { $0.id == pageID })
+        else { return false }
+        receipts[receiptIndex].pages[pageIndex] = page
+        return true
+    }
+
     private mutating func take(_ ids: Set<String>) -> [StagedPage] {
         var taken: [StagedPage] = []
         var remaining: [StagedReceipt] = []

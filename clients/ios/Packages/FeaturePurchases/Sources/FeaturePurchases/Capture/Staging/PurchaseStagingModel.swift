@@ -1,3 +1,5 @@
+import AppCore
+import Foundation
 import Observation
 
 /// Observable state for arranging pages into receipts before reading begins.
@@ -7,6 +9,9 @@ import Observation
 @MainActor @Observable
 public final class PurchaseStagingModel {
     private var staged: StagedReceipts
+    private var pendingReplacementID: String?
+
+    internal private(set) var refusal: ReceiptCaptureProblem?
 
     /// Creates empty staging state.
     public init() {
@@ -37,5 +42,46 @@ public final class PurchaseStagingModel {
 
     internal func delete(_ id: String) {
         staged.delete(id)
+    }
+
+    internal func acknowledgeRefusal() {
+        refusal = nil
+    }
+
+    internal func addScanned(_ parts: [ReceiptPart], pageCount: Int) {
+        guard pageCount != 0 else {
+            refusal = .noPages
+            return
+        }
+        guard parts.count == pageCount else {
+            refusal = .unpreparedPages
+            return
+        }
+        refusal = nil
+        let receiptID = UUID().uuidString
+        let pages = parts.enumerated().map { index, part in
+            StagedPage(
+                id: "\(receiptID)-\(index)",
+                label: "Scan page \(index + 1)",
+                part: part)
+        }
+        staged = StagedReceipts(
+            staged.receipts + [StagedReceipt(id: receiptID, pages: pages)])
+    }
+
+    internal var readingInput: [StagedReceiptForReading] {
+        staged.receipts.map { receipt in
+            StagedReceiptForReading(id: receipt.id, parts: receipt.pages.map(\.part))
+        }
+    }
+
+    internal func beginReplacing(_ pageID: String) {
+        pendingReplacementID = everyPage.contains { $0.id == pageID } ? pageID : nil
+    }
+
+    internal func replaceIfPending(with page: StagedPage) -> Bool {
+        guard let pendingReplacementID else { return false }
+        self.pendingReplacementID = nil
+        return staged.replace(pendingReplacementID, with: page)
     }
 }
