@@ -1,6 +1,6 @@
 import Foundation
 
-/// How the server evaluated one computed field.
+/// How one computed field evaluated, on the server or on this phone.
 public enum InventoryComputedEvaluation: Codable, Hashable, Sendable {
     /// The expression's value.
     case ok(InventoryPrimitiveValue)
@@ -15,8 +15,9 @@ public enum InventoryComputedEvaluation: Codable, Hashable, Sendable {
     case unavailable(reason: String, failedFieldId: String)
 }
 
-/// One computed field's effective value, as the server evaluated it for the
-/// item revision `evaluatedItemRevision`.
+/// One computed field's effective value, as evaluated for the item revision
+/// `evaluatedItemRevision`: by the server, or by this phone over its own rows
+/// (``InventoryComputedDefinition``) when the server's no longer matches them.
 public struct InventoryComputedValue: Codable, Hashable, Sendable {
     public let fieldId: String
     public let catalogueRevision: Int
@@ -48,14 +49,14 @@ public struct InventoryComputedValue: Codable, Hashable, Sendable {
 }
 
 /// What a computed field shows now, once this phone's own changes are taken
-/// into account. The phone never evaluates an expression, so it never shows
-/// a result it cannot vouch for.
+/// into account. It never shows a result the evaluation cannot vouch for.
 public enum InventoryComputedDisplay: Hashable, Sendable {
     case value(InventoryPrimitiveValue)
     case overridden(InventoryPrimitiveValue)
     case unavailable(reason: String, failedFieldId: String)
-    /// The evaluation read data that has changed since: a local edit to the
-    /// item, a cleared override, or a newer revision of an item it depends on.
+    /// The evaluation read data that has changed since, and the phone could
+    /// not evaluate it again: a local edit to the item, a cleared override,
+    /// or a newer revision of an item it depends on.
     case outOfDate
 }
 
@@ -66,7 +67,9 @@ extension InventoryComputedValue {
     ///   - item: the item carrying this value, as the phone shows it, local
     ///     changes included. An override it holds for the field wins.
     ///   - revisionOf: the revision the phone holds for another item, nil when
-    ///     it holds none.
+    ///     it holds none. Only a revision newer than the one read makes the
+    ///     value out of date; an older one means the evaluation is ahead of the
+    ///     phone's copy, not behind it.
     public func display(in item: InventoryItem, revisionOf: (String) -> Int?)
         -> InventoryComputedDisplay
     {
@@ -79,7 +82,10 @@ extension InventoryComputedValue {
         if case .overridden = evaluation { return .outOfDate }
         guard item.revision == evaluatedItemRevision else { return .outOfDate }
         let otherDependencyChanged = dependencies.contains { dependency in
-            dependency.itemId != item.id && revisionOf(dependency.itemId) != dependency.revision
+            guard dependency.itemId != item.id, let held = revisionOf(dependency.itemId) else {
+                return false
+            }
+            return held > dependency.revision
         }
         if otherDependencyChanged { return .outOfDate }
         switch evaluation {

@@ -42,6 +42,8 @@ internal enum MutationLogWrites {
             change: application.change, attempts: 0, createdAt: storedDate(time),
             lastAttemptAt: nil)
         try MutationLogRows.insert(entry, in: db)
+        try LocalComputedValues.refresh(
+            Set(application.touched.filter { $0.kind == "item" }.map(\.id)), in: db)
         return application
     }
 
