@@ -5,7 +5,8 @@ import OpenAPIRuntime
 internal func protocol2Catalogue(
     from payload: Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload
 ) throws -> InventoryCatalogueSnapshot {
-    guard let status = InventoryCatalogueRevisionStatus(rawValue: payload.revision.status.rawValue) else {
+    guard let status = InventoryCatalogueRevisionStatus(rawValue: payload.revision.status.rawValue)
+    else {
         throw RepositoryError.contractMismatch
     }
     let revision = InventoryCatalogueRevision(
@@ -28,18 +29,20 @@ internal func protocol2Catalogue(
 }
 
 private func protocol2Field(
-    from wire: Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.TypesPayloadPayload.FieldsPayloadPayload
+    from wire: Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload
+        .TypesPayloadPayload.FieldsPayloadPayload
 ) throws -> InventoryCatalogueField {
     guard let kind = InventoryPrimitiveKind(rawValue: wire.kind.rawValue),
         let cardinality = InventoryFieldCardinality(rawValue: wire.cardinality.rawValue),
         let storage = InventoryFieldStorage(rawValue: wire.storage.rawValue)
     else { throw RepositoryError.contractMismatch }
-    let targetKinds = try Set(wire.referenceKinds.map {
-        guard let kind = InventoryReferenceTargetKind(rawValue: $0.rawValue) else {
-            throw RepositoryError.contractMismatch
-        }
-        return kind
-    })
+    let targetKinds = try Set(
+        wire.referenceKinds.map {
+            guard let kind = InventoryReferenceTargetKind(rawValue: $0.rawValue) else {
+                throw RepositoryError.contractMismatch
+            }
+            return kind
+        })
     return InventoryCatalogueField(
         id: wire.id, typeId: wire.typeId, key: wire.key, label: wire.label, help: wire.help,
         sortOrder: wire.sortOrder, kind: kind, cardinality: cardinality, required: wire.required,
@@ -47,7 +50,8 @@ private func protocol2Field(
         references: InventoryReferenceConstraint(
             targetKinds: targetKinds, targetTypeIds: Set(wire.referenceTypeIds)),
         expressionVersion: wire.expressionVersion,
-        expression: try wire.expression.map(protocol2JSON(from:)), allowOverride: wire.allowOverride,
+        expression: try wire.expression.map(protocol2JSON(from:)),
+        allowOverride: wire.allowOverride,
         presentation: try protocol2JSON(object: wire.presentation.additionalProperties),
         archivedAt: wire.archivedAt,
         enumOptions: wire.enumOptions.map {
