@@ -1,5 +1,6 @@
 import { createCatalogueDraft, patchCatalogueDraft, publishCatalogueDraft } from '../authoring.js';
 
+import type { ExpressionV1Shape } from '../../contract/rest-catalogue-expression-schema.js';
 import type { CommandDb } from '../../domain/commands/entities.js';
 import type { CatalogueDescriptor, DraftOperation } from '../authoring-types.js';
 import type { DraftTarget } from '../authoring.js';
@@ -67,7 +68,7 @@ function reference(owner: string, key: string, targetTypeId: string): DraftOpera
 function computed(
   owner: string,
   key: string,
-  expression: unknown,
+  expression: ExpressionV1Shape,
   allowOverride = false
 ): DraftOperation {
   return {
