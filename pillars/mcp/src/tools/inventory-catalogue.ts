@@ -1,24 +1,35 @@
 import { catalogueClient } from './inventory-catalogue-client.js';
 import {
   optionalObject,
-  requiredObjectArray,
+  optionalPositiveInteger,
   requiredPositiveInteger,
 } from './inventory-catalogue-input.js';
-import { catalogueReadTools } from './inventory-catalogue-read.js';
 import {
-  catalogueMigrationSchema,
-  catalogueOperationSchema,
-} from './inventory-catalogue-schema.js';
-import { mapCallResult, nullStr, optNum, optStr, toolError } from './utils.js';
+  catalogueDraftOperationInput,
+  catalogueDraftOperationInputSchema,
+  cataloguePreviewDraft,
+} from './inventory-catalogue-preview.js';
+import { catalogueReadTools } from './inventory-catalogue-read.js';
+import { catalogueMigrationSchema } from './inventory-catalogue-schema.js';
+import { mapCallResult, nullStr, optStr, toolError } from './utils.js';
 
 import type { ToolDef } from './tool-def.js';
+
+const catalogueReadDraft: ToolDef = {
+  name: 'inventory.catalogue.readDraft',
+  description: 'Read the current editable catalogue draft so an interrupted edit can resume.',
+  inputSchema: { type: 'object', properties: {} },
+  handler: async () => mapCallResult(await catalogueClient().manage.readDraft()),
+};
 
 const catalogueCreateDraft: ToolDef = {
   name: 'inventory.catalogue.createDraft',
   description: 'Create the one editable catalogue draft from the current published revision.',
   inputSchema: {
     type: 'object',
-    properties: { baseRevision: { type: 'number', description: 'Current published revision' } },
+    properties: {
+      baseRevision: { type: 'integer', minimum: 1, description: 'Current published revision' },
+    },
     required: ['baseRevision'],
   },
   handler: async (args) => {
@@ -34,34 +45,11 @@ const cataloguePatchDraft: ToolDef = {
   name: 'inventory.catalogue.patchDraft',
   description:
     'Apply validated operations to a catalogue draft and preview publication compatibility.',
-  inputSchema: {
-    type: 'object',
-    properties: {
-      revision: { type: 'number', description: 'Draft revision' },
-      baseRevision: { type: 'number', description: 'Published revision the draft is based on' },
-      operations: {
-        type: 'array',
-        items: catalogueOperationSchema,
-        minItems: 1,
-        maxItems: 100,
-      },
-    },
-    required: ['revision', 'baseRevision', 'operations'],
-  },
+  inputSchema: catalogueDraftOperationInputSchema,
   handler: async (args) => {
-    const revision = requiredPositiveInteger(args, 'revision');
-    if (!revision.ok) return toolError(revision.error);
-    const baseRevision = requiredPositiveInteger(args, 'baseRevision');
-    if (!baseRevision.ok) return toolError(baseRevision.error);
-    const operations = requiredObjectArray(args, 'operations');
-    if (!operations.ok) return toolError(operations.error);
-    return mapCallResult(
-      await catalogueClient().manage.patchDraft({
-        revision: revision.value,
-        baseRevision: baseRevision.value,
-        operations: operations.value,
-      })
-    );
+    const input = catalogueDraftOperationInput(args);
+    if (!input.ok) return toolError(input.error);
+    return mapCallResult(await catalogueClient().manage.patchDraft(input.value));
   },
 };
 
@@ -72,10 +60,18 @@ const cataloguePublishDraft: ToolDef = {
   inputSchema: {
     type: 'object',
     properties: {
-      revision: { type: 'number', description: 'Draft revision' },
-      baseRevision: { type: 'number', description: 'Published revision the draft is based on' },
+      revision: { type: 'integer', minimum: 1, description: 'Draft revision' },
+      baseRevision: {
+        type: 'integer',
+        minimum: 1,
+        description: 'Published revision the draft is based on',
+      },
       note: { type: ['string', 'null'], description: 'Publication note' },
-      minimumProtocol: { type: 'number', description: 'Minimum client protocol for this revision' },
+      minimumProtocol: {
+        type: 'integer',
+        minimum: 1,
+        description: 'Minimum client protocol for this revision',
+      },
       migrationName: { type: 'string', description: 'Registered server migration name' },
       migration: catalogueMigrationSchema,
     },
@@ -89,14 +85,15 @@ const cataloguePublishDraft: ToolDef = {
     const migration = optionalObject(args, 'migration');
     if (!migration.ok) return toolError(migration.error);
     const note = nullStr(args, 'note');
-    const minimumProtocol = optNum(args, 'minimumProtocol');
+    const minimumProtocol = optionalPositiveInteger(args, 'minimumProtocol');
+    if (!minimumProtocol.ok) return toolError(minimumProtocol.error);
     const migrationName = optStr(args, 'migrationName');
     return mapCallResult(
       await catalogueClient().manage.publishDraft({
         revision: revision.value,
         baseRevision: baseRevision.value,
         ...(note !== undefined ? { note } : {}),
-        ...(minimumProtocol !== undefined ? { minimumProtocol } : {}),
+        ...(minimumProtocol.value !== undefined ? { minimumProtocol: minimumProtocol.value } : {}),
         ...(migrationName !== undefined ? { migrationName } : {}),
         ...(migration.value !== undefined ? { migration: migration.value } : {}),
       })
@@ -110,8 +107,12 @@ const catalogueAbandonDraft: ToolDef = {
   inputSchema: {
     type: 'object',
     properties: {
-      revision: { type: 'number', description: 'Draft revision' },
-      baseRevision: { type: 'number', description: 'Published revision the draft is based on' },
+      revision: { type: 'integer', minimum: 1, description: 'Draft revision' },
+      baseRevision: {
+        type: 'integer',
+        minimum: 1,
+        description: 'Published revision the draft is based on',
+      },
     },
     required: ['revision', 'baseRevision'],
   },
@@ -131,8 +132,10 @@ const catalogueAbandonDraft: ToolDef = {
 
 export const catalogueTools: readonly ToolDef[] = [
   ...catalogueReadTools,
+  catalogueReadDraft,
   catalogueCreateDraft,
   cataloguePatchDraft,
+  cataloguePreviewDraft,
   cataloguePublishDraft,
   catalogueAbandonDraft,
 ];

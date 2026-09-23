@@ -903,6 +903,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/type-catalogue/drafts/{revision}/preview': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Validate draft operations and preview compatibility without mutating the draft */
+    post: operations['types.manage.previewDraft'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/type-catalogue/drafts/{revision}/publish': {
     parameters: {
       query?: never;
@@ -6136,6 +6153,30 @@ export interface operations {
             }[];
             message: string;
             messageKey?: string;
+            preview?: {
+              baseRevision: number;
+              compatibility: {
+                affectedIds: string[];
+                affectedItems: number;
+                changes: {
+                  /** @enum {string} */
+                  classification:
+                    | 'compatible'
+                    | 'protocol_gated'
+                    | 'migration_required'
+                    | 'forbidden';
+                  code: string;
+                  definitionId: string;
+                }[];
+                /** @enum {string} */
+                classification:
+                  | 'compatible'
+                  | 'protocol_gated'
+                  | 'migration_required'
+                  | 'forbidden';
+              };
+              draftRevision: number;
+            };
           };
         };
       };
@@ -6193,6 +6234,30 @@ export interface operations {
             }[];
             message: string;
             messageKey?: string;
+            preview?: {
+              baseRevision: number;
+              compatibility: {
+                affectedIds: string[];
+                affectedItems: number;
+                changes: {
+                  /** @enum {string} */
+                  classification:
+                    | 'compatible'
+                    | 'protocol_gated'
+                    | 'migration_required'
+                    | 'forbidden';
+                  code: string;
+                  definitionId: string;
+                }[];
+                /** @enum {string} */
+                classification:
+                  | 'compatible'
+                  | 'protocol_gated'
+                  | 'migration_required'
+                  | 'forbidden';
+              };
+              draftRevision: number;
+            };
           };
         };
       };
@@ -6376,6 +6441,263 @@ export interface operations {
             }[];
             message: string;
             messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'types.manage.previewDraft': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        revision: number;
+      };
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          baseRevision: number;
+          operations: (
+            | {
+                archivedAt?: string | null;
+                capabilities?: string[];
+                description?: string | null;
+                /** Format: uuid */
+                id?: string;
+                key?: string;
+                /** @enum {string} */
+                kind: 'put_type';
+                label?: string;
+                legacyLabels?: string[];
+                presentation?: {
+                  [key: string]: unknown;
+                };
+                sortOrder?: number;
+              }
+            | {
+                allowOverride?: boolean;
+                archivedAt?: string | null;
+                /** @enum {string} */
+                cardinality?: 'one' | 'many';
+                expression?: unknown;
+                expressionVersion?: number | null;
+                /** @enum {string} */
+                fieldKind?:
+                  | 'short_text'
+                  | 'long_text'
+                  | 'integer'
+                  | 'decimal'
+                  | 'boolean'
+                  | 'enum'
+                  | 'measurement'
+                  | 'date'
+                  | 'date_time'
+                  | 'url'
+                  | 'reference';
+                fixedUnit?: string | null;
+                help?: string | null;
+                /** Format: uuid */
+                id?: string;
+                key?: string;
+                /** @enum {string} */
+                kind: 'put_field';
+                label?: string;
+                presentation?: {
+                  [key: string]: unknown;
+                };
+                referenceKinds?: ('item' | 'location')[];
+                referenceTypeIds?: string[];
+                required?: boolean;
+                sortOrder?: number;
+                /** @enum {string} */
+                storage?: 'stored' | 'computed';
+                /** Format: uuid */
+                typeId: string;
+              }
+            | {
+                archivedAt?: string | null;
+                /** Format: uuid */
+                fieldId: string;
+                /** Format: uuid */
+                id?: string;
+                key?: string;
+                /** @enum {string} */
+                kind: 'put_enum_option';
+                label?: string;
+                sortOrder?: number;
+              }
+            | {
+                /** Format: uuid */
+                id: string;
+                /** @enum {string} */
+                kind: 'archive_type' | 'archive_field' | 'archive_enum_option';
+              }
+            | {
+                /** @enum {string} */
+                definition: 'type' | 'field' | 'enum_option';
+                ids: string[];
+                /** @enum {string} */
+                kind: 'reorder';
+                /** Format: uuid */
+                parentId?: string | null;
+              }
+          )[];
+        };
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            baseRevision: number;
+            compatibility: {
+              affectedIds: string[];
+              affectedItems: number;
+              changes: {
+                /** @enum {string} */
+                classification:
+                  | 'compatible'
+                  | 'protocol_gated'
+                  | 'migration_required'
+                  | 'forbidden';
+                code: string;
+                definitionId: string;
+              }[];
+              /** @enum {string} */
+              classification: 'compatible' | 'protocol_gated' | 'migration_required' | 'forbidden';
+            };
+            draftRevision: number;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            issues?: {
+              code: string;
+              definitionId: string | null;
+              message: string;
+              path: string;
+            }[];
+            message: string;
+            messageKey?: string;
+            preview?: {
+              baseRevision: number;
+              compatibility: {
+                affectedIds: string[];
+                affectedItems: number;
+                changes: {
+                  /** @enum {string} */
+                  classification:
+                    | 'compatible'
+                    | 'protocol_gated'
+                    | 'migration_required'
+                    | 'forbidden';
+                  code: string;
+                  definitionId: string;
+                }[];
+                /** @enum {string} */
+                classification:
+                  | 'compatible'
+                  | 'protocol_gated'
+                  | 'migration_required'
+                  | 'forbidden';
+              };
+              draftRevision: number;
+            };
+          };
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            issues?: {
+              code: string;
+              definitionId: string | null;
+              message: string;
+              path: string;
+            }[];
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            issues?: {
+              code: string;
+              definitionId: string | null;
+              message: string;
+              path: string;
+            }[];
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            issues?: {
+              code: string;
+              definitionId: string | null;
+              message: string;
+              path: string;
+            }[];
+            message: string;
+            messageKey?: string;
+            preview?: {
+              baseRevision: number;
+              compatibility: {
+                affectedIds: string[];
+                affectedItems: number;
+                changes: {
+                  /** @enum {string} */
+                  classification:
+                    | 'compatible'
+                    | 'protocol_gated'
+                    | 'migration_required'
+                    | 'forbidden';
+                  code: string;
+                  definitionId: string;
+                }[];
+                /** @enum {string} */
+                classification:
+                  | 'compatible'
+                  | 'protocol_gated'
+                  | 'migration_required'
+                  | 'forbidden';
+              };
+              draftRevision: number;
+            };
           };
         };
       };

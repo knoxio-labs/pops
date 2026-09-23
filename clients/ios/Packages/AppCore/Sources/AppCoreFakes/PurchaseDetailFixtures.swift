@@ -7,9 +7,12 @@ extension PurchaseDetailLine {
         id: String = "line-1",
         name: String = "Fake item",
         quantity: Int = 1,
-        lineTotal: MoneyAmount = MoneyAmount(minorUnits: 500, currencyCode: "AUD")
+        lineTotal: MoneyAmount = MoneyAmount(minorUnits: 500, currencyCode: "AUD"),
+        hasInventoryLink: Bool = false
     ) -> PurchaseDetailLine {
-        PurchaseDetailLine(id: id, name: name, quantity: quantity, lineTotal: lineTotal)
+        PurchaseDetailLine(
+            id: id, name: name, quantity: quantity, lineTotal: lineTotal,
+            hasInventoryLink: hasInventoryLink)
     }
 }
 
@@ -24,7 +27,9 @@ extension PurchaseDetail {
         surcharge: MoneyAmount = MoneyAmount(minorUnits: 0, currencyCode: "AUD"),
         source: String = "manual",
         lines: [PurchaseDetailLine] = [.fake()],
-        receiptURIs: [String] = []
+        receiptURIs: [String] = [],
+        edit: PurchaseEdit? = nil,
+        updatedAt: String? = nil
     ) -> PurchaseDetail {
         PurchaseDetail(
             purchase: purchase,
@@ -35,7 +40,9 @@ extension PurchaseDetail {
             surcharge: surcharge,
             source: source,
             lines: lines,
-            receiptURIs: receiptURIs
+            receiptURIs: receiptURIs,
+            edit: edit,
+            updatedAt: updatedAt
         )
     }
 }

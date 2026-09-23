@@ -1,8 +1,13 @@
 import { z } from 'zod';
 
-import { replaceItemFieldValues, resolveProtocol1Type } from '../../catalogue/index.js';
 import { items } from '../../db/index.js';
+import { activeFieldValueSchema, activeStoredChanges } from './active-catalogue-values.js';
 import { CommandRejected } from './errors.js';
+import {
+  persistCreateCatalogueValues,
+  resolveCreateCatalogue,
+  type CreateCatalogue,
+} from './item-create-catalogue.js';
 import {
   externalIdsSchema,
   itemFieldsBlobSchema,
@@ -12,7 +17,6 @@ import {
 import { LEGACY_ITEM_FIELD_CODECS, legacyItemPatchSchema } from './legacy-item-fields.js';
 import { defineOp } from './op.js';
 import { assertPlacementAllowed } from './placement.js';
-import { assertProtocol1Fields } from './protocol-1-fields.js';
 import { upsertSearchIndex } from './search-index.js';
 
 import type { ItemInsert } from '../../db/index.js';
@@ -23,7 +27,9 @@ const createArgs = z.object({
   item: z.object({
     name: z.string().trim().min(1),
     typeKey: z.string().min(1).nullish(),
+    typeId: z.string().min(1).nullish(),
     fields: itemFieldsBlobSchema.default({}),
+    values: z.array(activeFieldValueSchema).optional(),
     /** Empty or whitespace-only becomes `null`; otherwise kept exactly as sent (POPS-4053). */
     note: z.string().nullish().transform(normalizeNote),
     externalIds: externalIdsSchema.default([]),
@@ -72,37 +78,11 @@ function legacyItemColumns(
   return columns;
 }
 
-/** The item's current published type, or `undefined` for an untyped item. */
-function resolveType(
-  db: CommandDb,
-  typeKey: string | null | undefined
-): NonNullable<ReturnType<typeof resolveProtocol1Type>> | undefined {
-  if (!typeKey) return undefined;
-  const type = resolveProtocol1Type(db, typeKey);
-  if (!type) throw new CommandRejected('type_unknown', `unknown type ${typeKey}`);
-  return type;
-}
-
-/** Validate `fields` against `type` (or, untyped, require it empty: there is no schema to check it against). */
-function assertFieldsFitType(
-  db: CommandDb,
-  type: NonNullable<ReturnType<typeof resolveProtocol1Type>> | undefined,
-  fields: Record<string, unknown>
-): void {
-  if (type) {
-    assertProtocol1Fields(db, type.id, fields);
-    return;
-  }
-  if (Object.keys(fields).length > 0) {
-    throw new CommandRejected('invalid', 'an untyped item cannot carry fields');
-  }
-}
-
 interface InsertItemArgs {
   readonly db: CommandDb;
   readonly id: string;
   readonly item: CreateItemInput;
-  readonly type: NonNullable<ReturnType<typeof resolveProtocol1Type>> | undefined;
+  readonly catalogue: CreateCatalogue;
   readonly stamp: WriteStamp;
   readonly legacy?: z.infer<typeof legacyItemPatchSchema> | undefined;
   readonly code?: string | null | undefined;
@@ -122,7 +102,17 @@ function itemPlacementColumns(
 }
 
 /** Insert the new item's row at `id`, with the placement and containment its type already validated. */
-function insertItem({ db, id, item, type, stamp, legacy, code, sourceRef }: InsertItemArgs): void {
+function insertItem({
+  db,
+  id,
+  item,
+  catalogue,
+  stamp,
+  legacy,
+  code,
+  sourceRef,
+}: InsertItemArgs): void {
+  const { type } = catalogue;
   const supportsContainment = type?.capabilities.includes('containment') ?? false;
   const values: ItemInsert = {
     id,
@@ -145,23 +135,16 @@ function insertItem({ db, id, item, type, stamp, legacy, code, sourceRef }: Inse
   if (code !== undefined) values.code = code;
   if (sourceRef !== undefined) values.sourceRef = sourceRef;
   db.insert(items).values(values).run();
-  if (type) {
-    replaceItemFieldValues(db, {
-      itemId: id,
-      typeId: type.id,
-      fields: item.fields,
-      catalogueRevision: type.revision,
-      now: stamp.now,
-    });
-  }
+  persistCreateCatalogueValues({ db, itemId: id, fields: item.fields, catalogue, now: stamp.now });
 }
 
 /**
  * `item.create { item, legacy?, code?, sourceRef? }`: mint a new item at the
  * id the client already chose (`entityId`, validated as a UUID here since
- * new ids are exactly what D6 requires clients to mint). `typeKey` absent
- * leaves the item untyped, in which case `fields` must be empty: there is no
- * schema to validate it against. `is_container`, `access` and `is_full` are
+ * new ids are exactly what D6 requires clients to mint). Protocol 1 uses
+ * `typeKey` and named `fields`; protocol 2 pins the active catalogue and uses
+ * stable `typeId` and `values`. An absent type leaves the item untyped, in
+ * which case its values must be empty. `is_container`, `access` and `is_full` are
  * never taken from the client; they follow from the type's `containment`
  * capability (ADR-002 D1).
  *
@@ -184,8 +167,8 @@ export const itemCreate = defineOp({
       throw new CommandRejected('invalid', 'item.create needs a UUID entityId');
     }
     const { item } = args;
-    const type = resolveType(ctx.db, item.typeKey);
-    assertFieldsFitType(ctx.db, type, item.fields);
+    const catalogue = resolveCreateCatalogue(ctx.db, item, ctx.mutation.catalogueRevision);
+    const { type } = catalogue;
     assertPlacementAllowed(ctx.db, ctx.mutation.entityId, item.placement);
     const isContainer = type?.capabilities.includes('containment') ?? false;
 
@@ -193,8 +176,12 @@ export const itemCreate = defineOp({
       eventKind: 'created',
       changes: {
         name: item.name,
-        typeKey: type?.key ?? null,
-        fields: item.fields,
+        ...(catalogue.mode === 'legacy'
+          ? { typeKey: type?.key ?? null, fields: item.fields }
+          : {
+              typeId: type?.id ?? null,
+              ...activeStoredChanges(catalogue.values),
+            }),
         note: item.note ?? null,
         externalIds: item.externalIds,
         quantity: item.quantity,
@@ -208,7 +195,7 @@ export const itemCreate = defineOp({
           db,
           id: ctx.mutation.entityId,
           item,
-          type,
+          catalogue,
           stamp,
           legacy: args.legacy,
           code: args.code,

@@ -104,14 +104,37 @@ SQLite, compatibility and migration rules are Inventory ADR-002 D5.
 Generic field writes validate the complete stable-ID field set against its
 exact catalogue revision: kind, cardinality, required fields, storage authority,
 archived selections and live reference constraints are one atomic check.
+Generic item mutations carry the active `catalogueRevision`, address types and
+fields by stable ID, and persist through the same validated replacement path as
+the catalogue value API. A stale revision is rejected as `catalogue_changed`;
+it never falls back to the revision-1 projection. Mutations that omit
+`catalogueRevision` retain the named `typeKey`/`fields` protocol-1 contract for
+the built-in types during rollout.
 Archived enum selections and stale references remain readable when unchanged;
 reference reads add `resolved`, `deleted` or `missing` without discarding the
 target ID. Publication compatibility distinguishes additive, protocol-gated,
 migration-required and forbidden changes. Required rewrites use only the named
 `copy`, `set_default`, `map_enum`, `convert_decimal`, `replace_reference` and
-`drop_value` operations, dry-run every affected row, and append a `migrated`
-item event only after the complete candidate validates. Search rebuilds use the
-candidate catalogue during that same transition.
+`drop_value` operations. The server derives the exact affected type and field
+sets from the base-to-draft compatibility diff; a submitted migration cannot
+narrow or widen that set, and every changed field on a live affected type needs
+a migration step. Publication dry-runs every derived affected row and appends a
+`migrated` item event only after the complete candidate validates. Search
+rebuilds use the candidate catalogue during that same transition.
+
+`POST /type-catalogue/drafts/:revision/preview` applies the proposed operation
+batch inside a rolled-back transaction. It returns fresh compatibility and
+affected-item diagnostics bound to the exact base and draft revisions without
+changing the persisted draft. Blocked validation responses retain every
+definition-level issue and the same revision-bound compatibility and affected
+item evidence in the standard error envelope.
+
+`POST /type-catalogue/drafts/:revision/preview` applies the proposed operation
+batch inside a rolled-back transaction. It returns fresh compatibility and
+affected-item diagnostics bound to the exact base and draft revisions without
+changing the persisted draft. Blocked validation responses retain every
+definition-level issue and the same revision-bound compatibility and affected
+item evidence in the standard error envelope.
 
 Computed fields use the bounded, versioned expression AST from D5: no SQL,
 JavaScript, clocks or network access; at most two reference hops; publication
@@ -148,9 +171,15 @@ creates the single draft on the first write, resumes it after reload through
 stale-base, compatibility, archive, abandonment, audit, and publication
 states. Each successful draft patch includes the producer-counted live items
 affected by its changed definitions, so the publication review does not
-reimplement catalogue validation in the browser. Published field identity and shape stay locked; incompatible changes
-must be expressed as a replacement and an explicit named migration rather
-than edited in place.
+reimplement catalogue validation in the browser. Existing drafts also preview
+pending form edits through the non-mutating preview endpoint after a short
+debounce; sequenced responses prevent older diagnostics from replacing newer
+ones, and the editor never patches a draft merely to preview it. A stale-draft reload clears
+the rejected mutation, refetches both published and draft snapshots, and
+rebuilds the open form from the persisted draft without replaying the rejected
+operation. Published field identity and shape stay locked; incompatible
+changes must be expressed as a replacement and an explicit named migration
+rather than edited in place.
 
 ## Registration
 
@@ -218,8 +247,10 @@ the gate above derives three grants: `inventory.sync` (`GET /sync/snapshot`,
 - Protocol and catalogue revision are independent. Catalogue, snapshot, feed and
   mutation shapes carry `catalogueRevision`; a phone downloads an immutable
   revision before applying rows that name it, and an offline mutation pins the
-  revision used to validate it. The server accepts that mutation only when its
-  compatibility record proves the referenced definitions unchanged.
+  revision used to validate it. Generic stable-ID commands currently require
+  that revision to be the active publication and reject stale input with
+  `catalogue_changed`; compatibility proofs can widen that gate without ever
+  silently reinterpreting a write against another snapshot.
 - Protocol 2 item rows carry the persisted `typeId` and canonical
   stable-field-ID `fieldValues` (each with its source and catalogue revision).
   The existing `typeKey` and `fields` projection remains alongside them for

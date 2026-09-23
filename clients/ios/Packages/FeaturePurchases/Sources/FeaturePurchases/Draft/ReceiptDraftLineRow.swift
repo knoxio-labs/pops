@@ -20,18 +20,22 @@ internal struct ReceiptDraftLineRow: View {
 
     @Binding internal var line: ReceiptDraftLine
     internal let problem: String?
+    internal let removalNotice: String?
     internal let remove: () -> Void
 
     /// Whether the second tier is showing. Opens itself for a line that has
     /// something in it, so nothing the paper said is hidden behind a tap — it
     /// is the empty ones that stay shut, and those are the majority.
     @State private var showsDetails: Bool
+    @State private var confirmingRemoval = false
 
     internal init(
-        line: Binding<ReceiptDraftLine>, problem: String?, remove: @escaping () -> Void
+        line: Binding<ReceiptDraftLine>, problem: String?, removalNotice: String? = nil,
+        remove: @escaping () -> Void
     ) {
         _line = line
         self.problem = problem
+        self.removalNotice = removalNotice
         self.remove = remove
         _showsDetails = State(initialValue: line.wrappedValue.hasQualifiers)
     }
@@ -179,7 +183,9 @@ internal struct ReceiptDraftLineRow: View {
     }
 
     private var removeButton: some View {
-        Button(action: remove) {
+        Button {
+            if removalNotice == nil { remove() } else { confirmingRemoval = true }
+        } label: {
             Image(systemName: "minus.circle")
                 .font(.popsBody)
                 .foregroundStyle(Color.popsMutedForeground)
@@ -189,6 +195,14 @@ internal struct ReceiptDraftLineRow: View {
         .contentShape(Rectangle())
         .accessibilityLabel(ReceiptDraftCopy.removeItem(line.description.value))
         .accessibilityIdentifier(ReceiptDraftAccessibility.removeItem)
+        .confirmationDialog(
+            "Remove this item?", isPresented: $confirmingRemoval, titleVisibility: .visible
+        ) {
+            Button("Remove", role: .destructive, action: remove)
+            Button("Keep item", role: .cancel) {}
+        } message: {
+            if let removalNotice { Text(removalNotice) }
+        }
     }
 
     /// How much of the row the amount may take when the row is still a row.

@@ -32,8 +32,7 @@ public struct ReceiptDraftView: View {
     private let hostDraft: Binding<ReceiptDraft>?
 
     private let opened: ReceiptDraft
-    private let title: String?
-    private let subtitle: String?
+    private let title, subtitle: String?
     private let status: Status?
     private let parts: [ReceiptPart]
     private let complaints: ComplaintStyle
@@ -43,10 +42,13 @@ public struct ReceiptDraftView: View {
     private let lock: ReceiptDraftLock?
     private let commit: ReceiptDraftCommit
     private let onChange: ((ReceiptDraft) -> Void)?
+    private let lineRemovalNotice: ((String) -> String?)?
+    private let formPresentation: ReceiptDraftForm.Presentation
+    private let saveEligibility: (ReceiptDraft) -> Bool
     private let isSaving: Bool
     private let save: ((ReceiptDraft) -> Void)?
 
-    private init(
+    internal init(
         owned draft: ReceiptDraft,
         host: Binding<ReceiptDraft>?,
         title: String?,
@@ -60,6 +62,9 @@ public struct ReceiptDraftView: View {
         lock: ReceiptDraftLock?,
         commit: ReceiptDraftCommit,
         onChange: ((ReceiptDraft) -> Void)?,
+        lineRemovalNotice: ((String) -> String?)?,
+        formPresentation: ReceiptDraftForm.Presentation,
+        saveEligibility: @escaping (ReceiptDraft) -> Bool,
         isSaving: Bool,
         save: ((ReceiptDraft) -> Void)?
     ) {
@@ -77,6 +82,9 @@ public struct ReceiptDraftView: View {
         self.lock = lock
         self.commit = commit
         self.onChange = onChange
+        self.lineRemovalNotice = lineRemovalNotice
+        self.formPresentation = formPresentation
+        self.saveEligibility = saveEligibility
         self.isSaving = isSaving
         self.save = save
     }
@@ -185,7 +193,9 @@ public struct ReceiptDraftView: View {
             if complaints != .belowForm { complaint }
             if title != nil || subtitle != nil { heading }
             if let lock { ReceiptDraftLockNotice(lock: lock) }
-            ReceiptDraftForm(draft: editing, merchants: merchants, lock: lock)
+            ReceiptDraftForm(
+                draft: editing, merchants: merchants, lock: lock,
+                lineRemovalNotice: lineRemovalNotice, presentation: formPresentation)
             if complaints == .belowForm { complaint }
         }
     }
@@ -246,24 +256,9 @@ public struct ReceiptDraftView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    /// Whether either save can be pressed. Held while one is in flight, which
-    /// is half of what stops a double tap creating two purchases. Public so a
-    /// host committing from its own navigation bar gates on the same rule.
-    public static func canSave(_ draft: ReceiptDraft, isSaving: Bool) -> Bool {
-        draft.isSaveable && !isSaving
-    }
-
-    /// The same rule, plus the navigation bar's: there has to be something
-    /// new to write.
-    internal static func canSave(
-        _ draft: ReceiptDraft, isSaving: Bool, changedFrom opened: ReceiptDraft
-    ) -> Bool {
-        canSave(draft, isSaving: isSaving) && draft != opened
-    }
-
     private var navigationSave: some View {
         Button(isSaving ? ReceiptDraftCopy.saving : ReceiptDraftCopy.saveInBar) { save?(draft) }
-            .disabled(!Self.canSave(draft, isSaving: isSaving, changedFrom: opened))
+            .disabled(!canSave(draft, requiringChange: true))
             .accessibilityIdentifier(ReceiptDraftAccessibility.saveButton)
             .receiptDraftProminentBarButton()
     }
@@ -277,17 +272,21 @@ public struct ReceiptDraftView: View {
             PopsButton(
                 isSaving ? ReceiptDraftCopy.saving : ReceiptDraftCopy.save, prominence: .prominent
             ) { save?(draft) }
-            .disabled(!Self.canSave(draft, isSaving: isSaving))
+            .disabled(!canSave(draft))
             .accessibilityIdentifier(ReceiptDraftAccessibility.saveButton)
             if let addAnother {
                 PopsButton(ReceiptDraftCopy.saveAndAddAnother) { addAnother.action(draft) }
-                    .disabled(!Self.canSave(draft, isSaving: isSaving))
+                    .disabled(!canSave(draft))
                     .accessibilityIdentifier(ReceiptDraftAccessibility.saveAndAddAnotherButton)
             }
             if let secondaryAction {
                 PopsButton(secondaryAction.title, action: secondaryAction.action)
             }
         }
+    }
+
+    private func canSave(_ draft: ReceiptDraft, requiringChange: Bool = false) -> Bool {
+        saveEligibility(draft) && !isSaving && (!requiringChange || draft != opened)
     }
 }
 
@@ -322,6 +321,8 @@ extension ReceiptDraftView {
     ///   - commit: where Save is drawn. See ``ReceiptDraftCommit``.
     ///   - onChange: called with the draft after every edit, so a host that
     ///     owns the cancel can tell whether leaving loses anything.
+    ///   - lineRemovalNotice: returns confirmation copy for a line that has
+    ///     consequences beyond this draft, or `nil` to remove it immediately.
     public init(
         draft: ReceiptDraft,
         title: String? = nil,
@@ -335,6 +336,7 @@ extension ReceiptDraftView {
         lock: ReceiptDraftLock? = nil,
         commit: ReceiptDraftCommit = .actionBar,
         onChange: ((ReceiptDraft) -> Void)? = nil,
+        lineRemovalNotice: ((String) -> String?)? = nil,
         isSaving: Bool = false,
         save: ((ReceiptDraft) -> Void)? = nil
     ) {
@@ -342,7 +344,9 @@ extension ReceiptDraftView {
             owned: draft, host: nil, title: title, subtitle: subtitle, status: status,
             complaints: complaints, merchants: merchants, parts: parts,
             secondaryAction: secondaryAction, addAnother: addAnother, lock: lock,
-            commit: commit, onChange: onChange, isSaving: isSaving, save: save)
+            commit: commit, onChange: onChange, lineRemovalNotice: lineRemovalNotice,
+            formPresentation: .receiptReading, saveEligibility: { $0.isSaveable },
+            isSaving: isSaving, save: save)
     }
 
     /// The same form over a draft the host owns, for a host that commits from
@@ -366,21 +370,8 @@ extension ReceiptDraftView {
             owned: draft.wrappedValue, host: draft, title: title, subtitle: subtitle,
             status: status, complaints: complaints, merchants: merchants, parts: parts,
             secondaryAction: secondaryAction, addAnother: addAnother, lock: nil,
-            commit: .actionBar, onChange: nil, isSaving: isSaving, save: save)
-    }
-}
-
-extension View {
-    /// The commit in a sheet's bar, drawn as the platform's prominent glass so
-    /// it reads as the sheet's one call to action. The glass style is
-    /// iOS-only; the host toolchain that runs this package's tests stands in
-    /// with the bordered prominent one.
-    @ViewBuilder
-    fileprivate func receiptDraftProminentBarButton() -> some View {
-        #if os(iOS)
-            buttonStyle(.glassProminent)
-        #else
-            buttonStyle(.borderedProminent)
-        #endif
+            commit: .actionBar, onChange: nil, lineRemovalNotice: nil,
+            formPresentation: .receiptReading, saveEligibility: { $0.isSaveable },
+            isSaving: isSaving, save: save)
     }
 }

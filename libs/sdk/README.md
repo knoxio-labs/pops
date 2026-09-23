@@ -98,7 +98,8 @@ quietly.
 
 HTTP failures classified as `not-found`, `conflict`, `bad-request`,
 `unauthorized`, `refused` or `rate-limited` preserve a non-empty string `code`
-from the producer's JSON error envelope alongside `message`. Both are optional;
+from the producer's JSON error envelope alongside `message`. Additional envelope fields are
+preserved under `details` so callers retain validation issues and impact counts. All are optional;
 non-JSON bodies supply neither, and non-string fields are ignored. Consumers can distinguish
 failures within one kind without parsing human-readable messages. Retry and
 status classification are unchanged, including `Retry-After` on rate limits.

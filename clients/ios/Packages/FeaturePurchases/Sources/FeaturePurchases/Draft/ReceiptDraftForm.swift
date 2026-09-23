@@ -20,6 +20,13 @@ import SwiftUI
 /// (``PopsTextField`` says why at more length): the shape of the paper
 /// survives, and every value is live from the first frame.
 internal struct ReceiptDraftForm: View {
+    internal enum Presentation: Hashable, Sendable {
+        case receiptReading
+        case savedPurchase
+
+        internal var showsCaptureOnlyFields: Bool { self == .receiptReading }
+    }
+
     @Binding internal var draft: ReceiptDraft
     /// Merchants that can be picked. Empty falls back to free text, which is
     /// what this form did before pickers and what it must still do on a
@@ -28,6 +35,11 @@ internal struct ReceiptDraftForm: View {
     /// Fields a saved purchase holds read-only. `nil` for a reading, which is
     /// editable everywhere.
     internal var lock: ReceiptDraftLock?
+    /// Confirmation copy for removing a line with effects outside the draft.
+    internal var lineRemovalNotice: ((String) -> String?)?
+    /// Controls which fields are shown when the persistence target cannot
+    /// store every fact captured from a receipt.
+    internal var presentation: Presentation = .receiptReading
 
     internal var body: some View {
         VStack(alignment: .leading, spacing: PopsSpacing.lg) {
@@ -89,6 +101,7 @@ extension ReceiptDraftForm {
                     line: $line,
                     problem: draft.problem(forLine: line.id) == nil
                         ? nil : ReceiptDraftCopy.lineAmountMissing,
+                    removalNotice: lineRemovalNotice?(line.id),
                     remove: { draft.removeLine(id: line.id) }
                 )
             }
@@ -171,25 +184,31 @@ extension ReceiptDraftForm {
                 alignment: .trailing,
                 keyboard: .decimal
             )
-            HStack(spacing: PopsSpacing.sm) {
-                Toggle(ReceiptDraftCopy.includedLabel, isOn: adjustment.isIncluded)
-                    .font(.popsCaption)
-                    .foregroundStyle(Color.popsMutedForeground)
-                // Only a row the reader added can be taken away. One the model
-                // read is a fact about the paper, and removing it would be
-                // editing the reading rather than correcting it — emptying the
-                // amount is how you say it was misread.
-                if !adjustment.wrappedValue.wasExtracted {
-                    Button {
-                        draft.removeAdjustment(id: adjustment.wrappedValue.id)
-                    } label: {
-                        Image(systemName: "minus.circle")
-                            .foregroundStyle(Color.popsMutedForeground)
-                    }
-                    .accessibilityLabel(
-                        ReceiptDraftCopy.removeAdjustment(adjustment.wrappedValue.kind.label))
+            if presentation.showsCaptureOnlyFields {
+                HStack(spacing: PopsSpacing.sm) {
+                    Toggle(ReceiptDraftCopy.includedLabel, isOn: adjustment.isIncluded)
+                        .font(.popsCaption)
+                        .foregroundStyle(Color.popsMutedForeground)
+                    removeAdjustmentButton(adjustment)
                 }
+            } else if !adjustment.wrappedValue.wasExtracted {
+                removeAdjustmentButton(adjustment)
             }
+        }
+    }
+
+    @ViewBuilder private func removeAdjustmentButton(
+        _ adjustment: Binding<ReceiptDraftAdjustment>
+    ) -> some View {
+        if !adjustment.wrappedValue.wasExtracted {
+            Button {
+                draft.removeAdjustment(id: adjustment.wrappedValue.id)
+            } label: {
+                Image(systemName: "minus.circle")
+                    .foregroundStyle(Color.popsMutedForeground)
+            }
+            .accessibilityLabel(
+                ReceiptDraftCopy.removeAdjustment(adjustment.wrappedValue.kind.label))
         }
     }
 

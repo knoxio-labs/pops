@@ -32,37 +32,130 @@ extension BFMPurchasesRepository {
     }
 
     private func detail(from wire: GetPurchaseWire) throws -> PurchaseDetail {
+        try detail(
+            from: DetailValues(
+                id: wire.id,
+                merchant: Self.detailMerchant(from: wire.merchant, printed: wire.merchantName),
+                orderedOn: wire.orderedOn,
+                totalCents: wire.totalCents,
+                currency: wire.currency,
+                itemCount: wire.itemCount,
+                receiptURI: wire.receiptUri,
+                status: wire.status,
+                subtotalCents: wire.subtotalCents,
+                taxCents: wire.taxCents,
+                shippingCents: wire.shippingCents,
+                discountCents: wire.discountCents,
+                surchargeCents: wire.surchargeCents,
+                source: wire.source,
+                lines: wire.items.map {
+                    DetailLineValues(
+                        id: $0.id, name: $0.name, quantity: $0.quantity,
+                        lineTotalCents: $0.lineTotalCents,
+                        hasInventoryLink: $0.hasInventoryLink ?? false)
+                },
+                receiptURIs: wire.receiptUris,
+                edit: try Self.edit(from: wire.edit),
+                updatedAt: wire.updatedAt))
+    }
+
+    func detail(from wire: UpdatePurchaseWire) throws -> PurchaseDetail {
+        try detail(
+            from: DetailValues(
+                id: wire.id,
+                merchant: Self.detailMerchant(from: wire.merchant, printed: wire.merchantName),
+                orderedOn: wire.orderedOn,
+                totalCents: wire.totalCents,
+                currency: wire.currency,
+                itemCount: wire.itemCount,
+                receiptURI: wire.receiptUri,
+                status: wire.status,
+                subtotalCents: wire.subtotalCents,
+                taxCents: wire.taxCents,
+                shippingCents: wire.shippingCents,
+                discountCents: wire.discountCents,
+                surchargeCents: wire.surchargeCents,
+                source: wire.source,
+                lines: wire.items.map {
+                    DetailLineValues(
+                        id: $0.id, name: $0.name, quantity: $0.quantity,
+                        lineTotalCents: $0.lineTotalCents,
+                        hasInventoryLink: $0.hasInventoryLink ?? false)
+                },
+                receiptURIs: wire.receiptUris,
+                edit: try Self.edit(from: wire.edit),
+                updatedAt: wire.updatedAt))
+    }
+
+    private func detail(from wire: DetailValues) throws -> PurchaseDetail {
         guard let orderedOn = Self.day(from: wire.orderedOn, in: timeZone()) else {
             throw RepositoryError.contractMismatch
         }
-        let currency = wire.currency
         let purchase = Purchase(
             id: wire.id,
-            merchant: Self.detailMerchant(from: wire.merchant, printed: wire.merchantName),
+            merchant: wire.merchant,
             orderedOn: orderedOn,
-            total: MoneyAmount(minorUnits: wire.totalCents, currencyCode: currency),
+            total: MoneyAmount(minorUnits: wire.totalCents, currencyCode: wire.currency),
             itemCount: wire.itemCount,
-            receiptURI: wire.receiptUri,
+            receiptURI: wire.receiptURI,
             status: PurchaseSettlement(wire: wire.status)
         )
         return PurchaseDetail(
             purchase: purchase,
-            subtotal: MoneyAmount(minorUnits: wire.subtotalCents, currencyCode: currency),
-            tax: MoneyAmount(minorUnits: wire.taxCents, currencyCode: currency),
-            shipping: MoneyAmount(minorUnits: wire.shippingCents, currencyCode: currency),
-            discount: MoneyAmount(minorUnits: wire.discountCents, currencyCode: currency),
-            surcharge: MoneyAmount(minorUnits: wire.surchargeCents, currencyCode: currency),
+            subtotal: MoneyAmount(
+                minorUnits: wire.subtotalCents, currencyCode: wire.currency),
+            tax: MoneyAmount(minorUnits: wire.taxCents, currencyCode: wire.currency),
+            shipping: MoneyAmount(
+                minorUnits: wire.shippingCents, currencyCode: wire.currency),
+            discount: MoneyAmount(
+                minorUnits: wire.discountCents, currencyCode: wire.currency),
+            surcharge: MoneyAmount(
+                minorUnits: wire.surchargeCents, currencyCode: wire.currency),
             source: wire.source,
-            lines: wire.items.map {
+            lines: wire.lines.map {
                 PurchaseDetailLine(
                     id: $0.id,
                     name: $0.name,
                     quantity: $0.quantity,
                     lineTotal: MoneyAmount(
-                        minorUnits: $0.lineTotalCents, currencyCode: currency))
+                        minorUnits: $0.lineTotalCents, currencyCode: wire.currency),
+                    hasInventoryLink: $0.hasInventoryLink)
             },
-            receiptURIs: wire.receiptUris
+            receiptURIs: wire.receiptURIs,
+            edit: wire.edit,
+            updatedAt: wire.updatedAt
         )
+    }
+
+    private static func edit(from wire: GetPurchaseWire.EditPayload?) throws -> PurchaseEdit? {
+        guard let wire else { return nil }
+        return try edit(
+            editedAt: wire.editedAt,
+            changes: wire.changes.map {
+                PurchaseFieldChange(
+                    field: PurchaseEditField(wire: $0.field), itemID: $0.itemId,
+                    original: $0.original, current: $0.current)
+            })
+    }
+
+    private static func edit(from wire: UpdatePurchaseWire.EditPayload?) throws -> PurchaseEdit? {
+        guard let wire else { return nil }
+        return try edit(
+            editedAt: wire.editedAt,
+            changes: wire.changes.map {
+                PurchaseFieldChange(
+                    field: PurchaseEditField(wire: $0.field), itemID: $0.itemId,
+                    original: $0.original, current: $0.current)
+            })
+    }
+
+    private static func edit(
+        editedAt: String, changes: [PurchaseFieldChange]
+    ) throws -> PurchaseEdit {
+        guard let date = ISO8601Instant.parse(editedAt) else {
+            throw RepositoryError.contractMismatch
+        }
+        return PurchaseEdit(editedAt: date, changes: changes)
     }
 
     private static func detailMerchant(
@@ -75,7 +168,49 @@ extension BFMPurchasesRepository {
         case .case3: return .unattributed
         }
     }
+
+    private static func detailMerchant(
+        from wire: UpdatePurchaseWire.MerchantPayload, printed: String?
+    ) -> MerchantIdentity {
+        switch wire {
+        case .case1(let entity):
+            return entityMerchant(id: entity.entityId, name: entity.name, printed: printed)
+        case .case2(let named): return .printed(named.name)
+        case .case3: return .unattributed
+        }
+    }
+}
+
+private struct DetailValues {
+    let id: String
+    let merchant: MerchantIdentity
+    let orderedOn: String
+    let totalCents: Int
+    let currency: String
+    let itemCount: Int
+    let receiptURI: String?
+    let status: String
+    let subtotalCents: Int
+    let taxCents: Int
+    let shippingCents: Int
+    let discountCents: Int
+    let surchargeCents: Int
+    let source: String
+    let lines: [DetailLineValues]
+    let receiptURIs: [String]
+    let edit: PurchaseEdit?
+    let updatedAt: String?
+}
+
+private struct DetailLineValues {
+    let id: String
+    let name: String
+    let quantity: Int
+    let lineTotalCents: Int
+    let hasInventoryLink: Bool
 }
 
 private typealias GetPurchase = Operations.MobilePurchases_getPurchase
 private typealias GetPurchaseWire = GetPurchase.Output.Ok.Body.JsonPayload
+internal typealias UpdatePurchaseWire =
+    Operations.MobilePurchases_updatePurchase.Output.Ok.Body.JsonPayload

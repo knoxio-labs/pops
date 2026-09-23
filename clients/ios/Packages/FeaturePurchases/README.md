@@ -2,7 +2,7 @@
 
 Purchase browsing, receipt capture and the shared draft form.
 
-`PurchasesFlowView` is the Purchases tab. It owns one navigation stack rooted at the purchases home and resolves feature-local archive and detail routes. Cross-feature links use the public `PurchasesRoute` and install `purchasesDestinations(dependencies:)` on their own stack. The current detail destination draws `ContentUnavailableView`; its repository read lands separately. The existing Receipts tab continues to own capture while the home asks the app host to present that flow through `purchaseCapture`.
+`PurchasesFlowView` is the Purchases tab. It owns one navigation stack rooted at the purchases home and resolves feature-local archive and detail routes. Cross-feature links use the public `PurchasesRoute` and install `purchasesDestinations(dependencies:)` on their own stack. The existing Receipts tab continues to own capture while the home asks the app host to present that flow through `purchaseCapture`.
 
 ## Capture and the draft form
 
@@ -42,7 +42,17 @@ Four decisions carry the rest of it, and each is a rule the screens landing next
 
 ### Stored purchases and the shared form
 
-The Purchases tab renders the saved-purchase list with `PurchaseStatusFilter.all`; capture and draft creation use the receipt repository. Stored receipt presentation needs the typed detail repository and UI integration tracked by POPS-3708. The mobile detail and receipt-byte routes already exist.
+The Purchases tab renders the saved-purchase list with `PurchaseStatusFilter.all`; capture and draft creation use the receipt repository. A detail model reads the complete purchase and resolves stored receipt thumbnails concurrently while retaining their original document indexes. A failed page is omitted without shifting the pages that follow it, so opening a visible thumbnail still requests the corresponding receipt URI. Detail reads, refreshes, saves, and full-image requests each reject stale responses by generation; a failed refresh keeps the loaded purchase visible.
+
+The detail presentation uses the saved merchant identity, day, total, settlement state, receipt lines, and server charge components. Its totals foot appears only when at least one adjustment exists, currencies remain explicit when foreign to the reader, and an unknown settlement remains visible verbatim. Loading uses the final layout's shimmering shapes, and initial failures offer Retry only for transport and availability failures.
+
+An edited detail carries a purchases-tinted notice with the edit date. Original appears only when the server retained field changes; its sheet labels header fields by meaning, current lines by their present one-based position, removed lines as Removed, and fields from a newer server by their raw name. Added lines omit the nonexistent original row.
+
+The production detail loads every phase through its model, keeps failed refreshes over the saved content, and exposes live Edit and Share actions only with a loaded purchase. Its receipt plate opens the tapped page in the shared full-screen pager; each swipe requests that page's full image while missing imagery retains its placeholder and page position.
+
+Saved-purchase editing maps the full detail into the shared receipt draft while retaining every saved line identifier. Matched, partially matched, and unknown settlement states lock merchant, date, and total; line and adjustment edits remain available. A submitted update carries the complete desired line set and the detail's opaque compare-and-swap token, omits unchanged header fields, and sends no request payload when no permitted value changed. Removing a line omits it from that desired set, and an Inventory-linked line carries the exact unlink notice before removal.
+
+The edit sheet commits from the navigation bar and asks before losing a changed draft. Saving holds the form against duplicate requests; a failure keeps every field for Keep editing or Retry, while locked and stale conflicts name their different recovery paths. A confirmed save notifies the detail host once with the server's replacement and then closes.
 
 Saved-purchase screens share `PurchasesPresentation` for merchant names, settlement labels and tones, calendar grouping, and per-currency totals. Unknown settlement labels remain visible verbatim, and totals in different currencies never become one invented amount. `PurchaseMark`, `PurchaseStatusBadge`, and `PurchaseHeroWash` carry the approved visual vocabulary into the feature without depending on the design playground.
 
@@ -87,11 +97,11 @@ Feature-owned controls request capture through the optional `purchaseCapture` en
 
 Money is parsed once, in `ReceiptDraftSaveMapping`, using `AppCore`'s `ReceiptMoneyText` — the same parser regardless of which of the two calls the result feeds. A field that will not parse (a stray letter, a date not in `YYYY-MM-DD[ HH:MM]`) is refused locally, before either call, as a `ReceiptDraftSaveError` the form's own alert names — never sent as an invented number.
 
-### Showing the receipt, and what is still missing
+### Showing the receipt
 
-The pages on the result screen are the bytes the phone is holding — what the camera produced and what was uploaded, kept by `ReceiptResultViewModel.parts` after the call precisely so the reading can be checked against them. Nothing fetches anything.
+The pages on the result screen are the bytes the phone is holding — what the camera produced and what was uploaded, kept by `ReceiptResultViewModel.parts` after the call precisely so the reading can be checked against them. Stored purchase details instead resolve their ordered `receiptURIs` through `PurchasesRepository`: thumbnails fill the header and opening one requests the full image for that URI.
 
-This feature does not fetch a receipt captured elsewhere or before the app was relaunched. BFM serves stored receipt bytes and thumbnails, and its generated Swift client exposes `getPurchase`, `getReceipt` and `getReceiptThumbnail`; the handwritten purchases repository and detail UI still need to consume them (POPS-3708). The `unreadable` outcome carries `receiptCount`, not stored-part URIs. `ReceiptDraftReading.receiptUris` identifies the stored parts a save attaches; those references are not drawable bytes and this screen does not resolve them.
+The `unreadable` capture outcome carries `receiptCount`, not stored-part URIs. `ReceiptDraftReading.receiptUris` identifies the stored parts a save attaches; those references become drawable only after the resulting saved purchase is read through the detail repository.
 
 A page that is not a drawable image — the contract admits PDF and plain text — draws a plate with a glyph saying which it is, decided by `ReceiptPageMedia`.
 

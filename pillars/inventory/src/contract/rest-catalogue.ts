@@ -7,6 +7,7 @@ import {
   CatalogueCompatibilitySchema,
   CatalogueDraftOperationSchema,
   CatalogueErrorBodySchema,
+  CataloguePreviewErrorBodySchema,
   CatalogueReadHeaders,
   TypeCatalogueDescriptorSchema,
 } from './rest-catalogue-schemas.js';
@@ -80,12 +81,33 @@ export const inventoryCatalogueContract = c.router({
           draft: TypeCatalogueDescriptorSchema,
           compatibility: CatalogueCompatibilitySchema,
         }),
-        400: CatalogueErrorBodySchema,
+        400: CataloguePreviewErrorBodySchema,
         401: CatalogueErrorBodySchema,
         404: CatalogueErrorBodySchema,
-        409: CatalogueErrorBodySchema,
+        409: CataloguePreviewErrorBodySchema,
       },
       summary: 'Apply validated operations to a draft and preview publication compatibility',
+    },
+    previewDraft: {
+      method: 'POST',
+      path: '/type-catalogue/drafts/:revision/preview',
+      pathParams: z.object({ revision: z.coerce.number().int().positive() }),
+      body: z.object({
+        baseRevision: z.number().int().positive(),
+        operations: z.array(CatalogueDraftOperationSchema).min(1).max(100),
+      }),
+      responses: {
+        200: z.object({
+          baseRevision: z.number().int().positive(),
+          draftRevision: z.number().int().positive(),
+          compatibility: CatalogueCompatibilitySchema,
+        }),
+        400: CataloguePreviewErrorBodySchema,
+        401: CatalogueErrorBodySchema,
+        404: CatalogueErrorBodySchema,
+        409: CataloguePreviewErrorBodySchema,
+      },
+      summary: 'Validate draft operations and preview compatibility without mutating the draft',
     },
     publishDraft: {
       method: 'POST',

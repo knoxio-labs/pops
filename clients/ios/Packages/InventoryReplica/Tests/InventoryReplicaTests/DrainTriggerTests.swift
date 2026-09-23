@@ -1,4 +1,5 @@
 import AppCore
+import AppCoreFakes
 import Testing
 
 @testable import InventoryReplica
@@ -91,7 +92,7 @@ internal struct DrainTriggerTests {
     @Test("the network path becoming satisfied sends what was queued while it was not")
     func reachabilityRegainedDrains() async throws {
         let (submissions, submitted) = AsyncStream<([String], Bool)>.makeStream()
-        let reachability = FakeReachability(satisfied: false)
+        let reachability = ScriptedNetworkReachability(satisfied: false)
         let submit: FakeSyncTransport.SubmitHandler = { mutations in
             submitted.yield((mutations.map(\.mutationId), reachability.isSatisfied))
             return SyncFixture.applied(mutations, revision: 5, seq: 30)
@@ -122,7 +123,8 @@ internal struct DrainTriggerTests {
         let store = LocalFirstInventoryStore(
             replica: try MutationLogPerformTests.replica(), transport: FakeSyncTransport(script),
             mintMutationId: SyncFixture.mutationIds(), now: { Self.time },
-            reachability: FakeReachability(satisfied: true), drainClock: ManualDrainClock())
+            reachability: ScriptedNetworkReachability(satisfied: true),
+            drainClock: ManualDrainClock())
         var arrivals = submissions.makeAsyncIterator()
 
         _ = try await store.perform(.setItemQuantity(id: "lamp", quantity: 2))

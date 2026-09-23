@@ -56,6 +56,7 @@ name: A pillar answering something unreadable reads differently from unavailable
 
 - tapOn: 'Try again'
 
+- runFlow: subflows/open-transactions.yaml
 - assertVisible:
     id: 'transaction-row-e2e-groceries'
 - assertNotVisible: 'Transactions needs a newer version of this app.'

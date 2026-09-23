@@ -13,8 +13,10 @@ extension ReceiptDraftForm {
             } else {
                 merchantField
             }
-            if !draft.online { addressField }
-            onlineToggle
+            if presentation.showsCaptureOnlyFields {
+                if !draft.online { addressField }
+                onlineToggle
+            }
             if lock?.locks(.date) == true {
                 ReceiptDraftLockedRow(label: ReceiptDraftCopy.dateLabel, value: draft.date.value)
             } else {

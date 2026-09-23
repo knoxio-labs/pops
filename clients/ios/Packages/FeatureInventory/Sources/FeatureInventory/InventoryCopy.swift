@@ -19,6 +19,8 @@ internal enum InventoryCopy {
             "This phone is no longer signed in, so nothing changed."
         case .contractMismatch:
             "The server would not take that change. Nothing changed."
+        case .conflict:
+            "Something else changed first, so nothing changed."
         case .dependencyNotBound:
             "Inventory is not set up in this build, so nothing changed."
         }
