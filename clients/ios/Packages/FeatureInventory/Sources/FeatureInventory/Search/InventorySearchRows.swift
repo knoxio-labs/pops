@@ -19,15 +19,13 @@ public struct InventorySearchRows: View {
     }
 
     public var body: some View {
-        PopsListPanel {
-            PopsDividedRows(rows: results) { result in
-                InventorySearchHitRow(
-                    hit: result.hit,
-                    query: query,
-                    loadPhoto: { await session.thumbnail($0) }
-                )
-                .inventorySelectable(result.recordID, in: $session.selection)
-            }
+        InventorySelectionPanel(rows: results) { result in
+            InventorySearchHitRow(
+                hit: result.hit,
+                query: query,
+                loadPhoto: { await session.thumbnail($0) }
+            )
+            .inventorySelectable(result.recordID, in: $session.selection)
         }
     }
 }
