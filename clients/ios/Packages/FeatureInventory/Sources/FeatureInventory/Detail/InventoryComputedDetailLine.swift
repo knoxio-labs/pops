@@ -53,13 +53,8 @@ internal struct InventoryComputedDetailLine {
     }
 
     private func unavailableText(reason: String, failedFieldId: String) -> String {
-        guard let known = InventoryValueUnavailableReason(rawValue: reason) else {
-            return "Unavailable"
+        InventoryProtocol2Display.unavailable(reason: reason, failedFieldId: failedFieldId) { id in
+            type.fields.first { $0.id == id }?.label
         }
-        let missing = type.fields.first { $0.id == failedFieldId }
-        if known == .missingDependency, let missing {
-            return "Unavailable until \(missing.label) is set"
-        }
-        return InventoryProtocol2Display.unavailable(known)
     }
 }

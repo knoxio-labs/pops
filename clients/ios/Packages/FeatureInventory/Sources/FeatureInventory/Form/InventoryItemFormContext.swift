@@ -12,6 +12,11 @@ internal struct InventoryItemFormContext: Equatable, Sendable {
     /// The item being edited; nil for a create, and for an edit whose item
     /// has gone.
     internal let item: InventoryItem?
+    /// Each computed field's evaluation reconciled with this phone's own
+    /// changes (``InventoryComputedValue/display(in:revisionOf:)``), by field
+    /// ID. Empty for a create: nothing has been evaluated for an item that
+    /// does not exist on the server yet.
+    internal let computedDisplays: [String: InventoryComputedDisplay]
     /// The name of where the item is (edit) or where it was opened from
     /// (create).
     internal let placementName: String?
@@ -42,10 +47,23 @@ internal struct InventoryItemFormContext: Equatable, Sendable {
                 catalogue: source.inventoryCatalogue(),
                 protocol2Catalogue: source.inventoryProtocol2Catalogue(),
                 protocol2ReferenceTargets: referenceTargets(in: source), isOffline: isOffline,
-                item: item,
+                item: item, computedDisplays: computedDisplays(of: item, in: source),
                 placementName: placement.flatMap { name(of: $0, in: source) },
                 photoUploads: source.inventoryPhotoUploads())
         }
+    }
+
+    private static func computedDisplays(
+        of item: InventoryItem?, in source: any InventoryQuerySource
+    ) -> [String: InventoryComputedDisplay] {
+        guard let item else { return [:] }
+        return Dictionary(
+            uniqueKeysWithValues: item.computedValues.map { computed in
+                (
+                    computed.fieldId,
+                    computed.display(in: item) { source.inventoryItem(id: $0)?.revision }
+                )
+            })
     }
 
     private static func referenceTargets(

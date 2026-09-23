@@ -47,6 +47,9 @@ internal final class InventoryItemFormModel {
     internal private(set) var protocol2Catalogue: InventoryCatalogueSnapshot?
     internal var protocol2Draft: InventoryProtocol2Draft?
     internal private(set) var protocol2ReferenceTargets: [InventoryProtocol2ReferenceTarget] = []
+    /// Each computed field's current display state, by field ID. See
+    /// ``InventoryItemFormContext/computedDisplays``.
+    internal private(set) var protocol2ComputedDisplays: [String: InventoryComputedDisplay] = [:]
     internal private(set) var isOffline = false
     /// False until the final action is pressed once: a form that reddens a
     /// field before anybody has typed opens accusing.
@@ -242,6 +245,7 @@ extension InventoryItemFormModel {
         catalogue = context.catalogue
         protocol2Catalogue = context.protocol2Catalogue
         protocol2ReferenceTargets = context.protocol2ReferenceTargets
+        protocol2ComputedDisplays = context.computedDisplays
         original = context.item
         photoUploads = context.photoUploads
         followStoreUploads()
@@ -294,7 +298,7 @@ extension InventoryItemFormModel {
         }
     }
 
-    private func record(_ error: Error) {
+    internal func record(_ error: Error) {
         guard let reported = InventoryWriteFailure.reporting(error) else { return }
         failure = reported
     }

@@ -5,18 +5,33 @@ import SwiftUI
 internal struct InventoryProtocol2FieldRow: View {
     let field: InventoryCatalogueField
     let entries: [InventoryProtocol2DraftEntry]
-    let computedValues: [InventoryPrimitiveValue]
-    let unavailableReason: InventoryValueUnavailableReason?
+    /// The server's evaluation reconciled with this phone's own changes, nil
+    /// when the field has never been evaluated (an item still being created)
+    /// or the field is not computed.
+    let computedDisplay: InventoryComputedDisplay?
+    /// Whether an override can be set or cleared right now: only once the
+    /// item exists, since the reducer requires it (there is nothing to
+    /// override before Create has run).
+    let overridesEnabled: Bool
     let referenceTargets: [InventoryProtocol2ReferenceTarget]
+    /// The label of another field on this type, for naming what a computed
+    /// field is waiting on.
+    let dependencyLabel: (String) -> String?
     let setText: (String, String) -> Void
     let setValue: (InventoryPrimitiveValue?, String) -> Void
     let setReferenceKind: (InventoryReferenceTargetKind, String) -> Void
     let add: () -> Void
     let remove: (String) -> Void
     let move: (String, Int) -> Void
+    let setOverride: (InventoryPrimitiveValue) -> Void
+    let clearOverride: () -> Void
+
+    @State private var overrideEntry: InventoryProtocol2DraftEntry?
 
     @ViewBuilder var body: some View {
-        if field.storage == .computed || field.archivedAt != nil {
+        if field.storage == .computed {
+            computedRow
+        } else if field.archivedAt != nil {
             LabeledContent(field.label) { Text(readOnlyText) }
                 .accessibilityElement(children: .combine)
         } else if field.cardinality == .many {
@@ -60,179 +75,98 @@ internal struct InventoryProtocol2FieldRow: View {
 }
 
 extension InventoryProtocol2FieldRow {
-    @ViewBuilder private func editor(
-        _ entry: InventoryProtocol2DraftEntry, label: String
-    ) -> some View {
-        switch field.kind {
-        case .boolean:
-            Picker(label, selection: scalarSelection(entry)) {
-                Text("Not recorded").tag("")
-                Text("Yes").tag("true")
-                Text("No").tag("false")
-            }
-            .pickerStyle(.menu)
-        case .enumeration:
-            Picker(label, selection: enumSelection(entry)) {
-                Text("Not recorded").tag("")
-                ForEach(enumOptions(for: entry)) { option in
-                    Text(option.archivedAt == nil ? option.label : "\(option.label) (Retired)")
-                        .tag(option.id)
-                }
-            }
-            .pickerStyle(.menu)
-        case .reference:
-            referenceEditor(entry, label: label)
-        case .longText:
-            longTextEditor(entry, label: label)
-        case .measurement:
-            measurementEditor(entry, label: label)
-        default:
-            InventoryFormTextRow(
-                label, placeholder: field.help ?? "Not recorded", text: textBinding(entry))
-        }
-        if let issue = entry.issue {
-            Text(issue)
-                .font(.popsCaption)
-                .foregroundStyle(Color.popsDestructive)
-                .accessibilityLabel("\(field.label): \(issue)")
-        }
+    private var computedFieldRow: InventoryProtocol2ComputedFieldRow {
+        InventoryProtocol2ComputedFieldRow(
+            field: field, display: computedDisplay, overridesEnabled: overridesEnabled)
     }
 
-    private func longTextEditor(
-        _ entry: InventoryProtocol2DraftEntry, label: String
-    ) -> some View {
-        LabeledContent(label) {
-            TextField(
-                field.help ?? "Not recorded", text: textBinding(entry), axis: .vertical
-            )
-            .lineLimit(1...8)
-            .multilineTextAlignment(.trailing)
-        }
-    }
-
-    private func measurementEditor(
-        _ entry: InventoryProtocol2DraftEntry, label: String
-    ) -> some View {
-        LabeledContent(label) {
-            HStack(spacing: PopsSpacing.sm) {
-                TextField("Not recorded", text: textBinding(entry))
-                    .multilineTextAlignment(.trailing)
-                    .inventoryDecimalKeyboard()
-                if let unit = field.fixedUnit {
-                    Text(unit).foregroundStyle(Color.popsMutedForeground)
-                }
-            }
-        }
-    }
-
-    private func referenceEditor(
-        _ entry: InventoryProtocol2DraftEntry, label: String
-    ) -> some View {
-        let allowed = InventoryProtocol2ReferenceTargets.allowed(
-            for: field, among: referenceTargets)
-        let current = referenceValue(entry)
-        let kinds = field.references.targetKinds.sorted { $0.rawValue < $1.rawValue }
-        let selectedKind = entry.referenceKind ?? current?.targetKind ?? kinds.first ?? .item
-        return LabeledContent(label) {
-            HStack(spacing: PopsSpacing.sm) {
-                if kinds.count > 1 {
-                    Picker(
-                        "Kind",
-                        selection: Binding(
-                            get: { selectedKind },
-                            set: { setReferenceKind($0, entry.id) })
-                    ) {
-                        ForEach(kinds, id: \.self) { Text($0.label).tag($0) }
-                    }
-                    .pickerStyle(.menu)
-                }
-                Picker(
-                    "Record",
-                    selection: referenceSelection(
-                        entry, allowed: allowed, selectedKind: selectedKind)
-                ) {
-                    Text("Not recorded").tag("")
-                    if let current,
-                        !allowed.contains(where: {
-                            $0.kind == current.targetKind && $0.id == current.targetId
-                        })
-                    {
-                        Text(readOnlyReference(current)).tag(current.targetId)
-                    }
-                    ForEach(allowed.filter { $0.kind == selectedKind }) { target in
-                        Text(target.label).tag(target.id)
+    @ViewBuilder private var computedRow: some View {
+        let row = computedFieldRow
+        if let overrideEntry {
+            overrideEditor(overrideEntry)
+        } else {
+            LabeledContent {
+                HStack(spacing: PopsSpacing.sm) {
+                    Text(
+                        row.text(
+                            referenceLabel: referenceLabelLookup, dependencyLabel: dependencyLabel)
+                    )
+                    .foregroundStyle(row.isMuted ? Color.popsMutedForeground : .popsForeground)
+                    if row.canStartOverride {
+                        Button {
+                            self.overrideEntry = InventoryProtocol2DraftEntry(id: "override")
+                        } label: {
+                            Image(systemName: "pencil.circle")
+                        }
+                        .buttonStyle(.borderless)
+                        .accessibilityLabel("Override \(field.label)")
+                    } else if row.canClearOverride {
+                        Button(action: clearOverride) {
+                            Image(systemName: "arrow.uturn.backward.circle")
+                        }
+                        .buttonStyle(.borderless)
+                        .accessibilityLabel("Clear \(field.label) override")
                     }
                 }
-                .pickerStyle(.menu)
+            } label: {
+                VStack(alignment: .leading, spacing: PopsSpacing.xs) {
+                    Text(field.label)
+                    if let caption = row.caption {
+                        Text(caption)
+                            .font(.popsCaption)
+                            .foregroundStyle(Color.popsMutedForeground)
+                    }
+                }
             }
+            .accessibilityElement(children: .combine)
         }
     }
 
-    private func referenceSelection(
-        _ entry: InventoryProtocol2DraftEntry,
-        allowed: [InventoryProtocol2ReferenceTarget],
-        selectedKind: InventoryReferenceTargetKind
-    ) -> Binding<String> {
-        Binding(
-            get: { referenceValue(entry)?.targetId ?? "" },
-            set: { id in
-                let target = allowed.first { $0.id == id && $0.kind == selectedKind }
-                setValue(target.map { .reference($0.value) }, entry.id)
-            })
+    private func overrideEditor(_ entry: InventoryProtocol2DraftEntry) -> some View {
+        VStack(alignment: .leading, spacing: PopsSpacing.sm) {
+            InventoryProtocol2ValueEditor(
+                field: field, entry: entry, label: field.label, referenceTargets: referenceTargets,
+                setText: { overrideEntry?.setText($0, for: field) },
+                setValue: { overrideEntry?.setValue($0) },
+                setReferenceKind: { overrideEntry?.setReferenceKind($0) })
+            HStack {
+                Button("Cancel") { overrideEntry = nil }
+                    .buttonStyle(.borderless)
+                Spacer()
+                Button("Set override") {
+                    guard let value = entry.value else { return }
+                    setOverride(value)
+                    overrideEntry = nil
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(entry.value == nil)
+            }
+        }
+        .padding(.vertical, PopsSpacing.xs)
     }
+}
 
-    private func textBinding(_ entry: InventoryProtocol2DraftEntry) -> Binding<String> {
-        Binding(get: { entry.input }, set: { setText($0, entry.id) })
-    }
-
-    private func scalarSelection(_ entry: InventoryProtocol2DraftEntry) -> Binding<String> {
-        Binding(
-            get: { entry.value.map(InventoryProtocol2ValueText.input) ?? "" },
-            set: { choice in
-                setValue(choice.isEmpty ? nil : .boolean(choice == "true"), entry.id)
-            })
-    }
-
-    private func enumSelection(_ entry: InventoryProtocol2DraftEntry) -> Binding<String> {
-        Binding(
-            get: {
-                guard case .enumeration(let id)? = entry.value else { return "" }
-                return id
-            },
-            set: { setValue($0.isEmpty ? nil : .enumeration(optionId: $0), entry.id) })
-    }
-
-    private func enumOptions(
-        for entry: InventoryProtocol2DraftEntry
-    ) -> [InventoryCatalogueOption] {
-        let selected: String?
-        if case .enumeration(let id)? = entry.value { selected = id } else { selected = nil }
-        return InventoryProtocol2EnumOptions.selectable(for: field, retaining: selected)
-    }
-
-    private func referenceValue(
-        _ entry: InventoryProtocol2DraftEntry
-    ) -> InventoryReferenceValue? {
-        guard case .reference(let value)? = entry.value else { return nil }
-        return value
+extension InventoryProtocol2FieldRow {
+    private func editor(
+        _ entry: InventoryProtocol2DraftEntry, label: String
+    ) -> some View {
+        InventoryProtocol2ValueEditor(
+            field: field, entry: entry, label: label, referenceTargets: referenceTargets,
+            setText: { setText($0, entry.id) },
+            setValue: { setValue($0, entry.id) },
+            setReferenceKind: { setReferenceKind($0, entry.id) })
     }
 
     private var readOnlyText: String {
-        if let unavailableReason {
-            return InventoryProtocol2Display.unavailable(unavailableReason)
-        }
-        let values = field.storage == .computed ? computedValues : entries.compactMap(\.value)
-        return InventoryProtocol2Display.text(
-            for: values, field: field,
-            referenceLabel: { reference in
-                referenceTargets.first {
-                    $0.kind == reference.targetKind && $0.id == reference.targetId
-                }?.label
-            })
+        InventoryProtocol2Display.text(
+            for: entries.compactMap(\.value), field: field, referenceLabel: referenceLabelLookup)
     }
 
-    private func readOnlyReference(_ reference: InventoryReferenceValue) -> String {
-        InventoryProtocol2Display.text(
-            for: [.reference(reference)], field: field, referenceLabel: { _ in nil })
+    private var referenceLabelLookup: (InventoryReferenceValue) -> String? {
+        { reference in
+            referenceTargets.first {
+                $0.kind == reference.targetKind && $0.id == reference.targetId
+            }?.label
+        }
     }
 }
