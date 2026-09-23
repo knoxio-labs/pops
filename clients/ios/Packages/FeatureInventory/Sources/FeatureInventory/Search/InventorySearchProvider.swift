@@ -8,6 +8,14 @@ public struct InventorySearchResult: Identifiable, Equatable, Sendable {
     /// The stable record-or-place identifier.
     public var id: String { hit.id }
 
+    /// The Inventory record identifier, or nil when this result is a place.
+    public var recordID: InventoryItem.ID? { hit.recordID }
+
+    internal var record: InventoryRecord? {
+        guard case .record(let record) = hit else { return nil }
+        return record
+    }
+
     internal init(_ hit: InventorySearchHit) {
         self.hit = hit
     }
