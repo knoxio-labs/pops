@@ -8,14 +8,14 @@ import { DRAFT_KEY } from './useCatalogueMutations';
 import type { QueryClient } from '@tanstack/react-query';
 import type { Dispatch, SetStateAction } from 'react';
 
-import type { CatalogueCompatibility, CatalogueDescriptor, CatalogueOperation } from './types';
+import type { CatalogueDescriptor, CatalogueOperation, CompatibilitySnapshot } from './types';
 
 const PREVIEW_DELAY_MS = 250;
 
 /** Debounces non-mutating draft previews and ignores responses superseded by newer edits. */
 export function useCataloguePreview(
   queryClient: QueryClient,
-  setCompatibility: Dispatch<SetStateAction<CatalogueCompatibility | null>>
+  setCompatibility: Dispatch<SetStateAction<CompatibilitySnapshot>>
 ) {
   const sequence = useRef(0);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -49,7 +49,11 @@ export function useCataloguePreview(
                 },
               })
             );
-            if (sequence.current === requestSequence) setCompatibility(result.compatibility);
+            if (sequence.current === requestSequence)
+              setCompatibility({
+                compatibility: result.compatibility,
+                draftVersion: draft.revision.draftVersion,
+              });
           } catch (previewError) {
             if (sequence.current === requestSequence) setError(previewError);
           }

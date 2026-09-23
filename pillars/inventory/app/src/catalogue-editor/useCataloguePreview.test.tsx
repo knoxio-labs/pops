@@ -120,7 +120,7 @@ describe('useCataloguePreview', () => {
     await act(async () => first.resolve(response(compatible)));
 
     expect(setCompatibility).toHaveBeenCalledTimes(1);
-    expect(setCompatibility).toHaveBeenCalledWith(forbidden);
+    expect(setCompatibility).toHaveBeenCalledWith({ compatibility: forbidden, draftVersion: 3 });
   });
 
   it('ignores a superseded preview error', async () => {

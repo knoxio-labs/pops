@@ -8,11 +8,11 @@ import { isStaleDraftCode } from './catalogue-draft';
 import { CompatibilityPreview } from './CompatibilityPreview';
 import { PublishDialog } from './PublishDialog';
 
-import type { CatalogueCompatibility, CatalogueDescriptor } from './types';
+import type { CatalogueCompatibility, CatalogueDescriptor, CatalogueReadiness } from './types';
 
 interface PublishPanelProps {
   readonly catalogue: CatalogueDescriptor;
-  readonly compatibility: CatalogueCompatibility | null;
+  readonly readiness: CatalogueReadiness;
   readonly error: unknown;
   readonly isPending: boolean;
   readonly onAbandon: () => void;
@@ -27,10 +27,27 @@ const labels: Record<CatalogueCompatibility['classification'], string> = {
   forbidden: 'Forbidden',
 };
 
+function summaryText(readiness: CatalogueReadiness): string {
+  if (readiness.status === 'not_previewed') return 'Not yet previewed. Edit the draft to publish.';
+  if (readiness.status === 'stale')
+    return 'The last preview is stale. Repeat the edit to preview the current draft.';
+  const { compatibility } = readiness;
+  return `${labels[compatibility.classification]} · ${compatibility.affectedItems} affected items · ${compatibility.affectedIds.length} affected definitions`;
+}
+
+/** True once a preview tied to the current draft proves the draft is safe to publish. */
+function canPublish(readiness: CatalogueReadiness): boolean {
+  return (
+    readiness.status === 'ready' &&
+    readiness.compatibility.classification !== 'migration_required' &&
+    readiness.compatibility.classification !== 'forbidden'
+  );
+}
+
 /** Summarises draft compatibility and owns the final publication review dialog. */
 export function PublishPanel({
   catalogue,
-  compatibility,
+  readiness,
   error,
   isPending,
   onAbandon,
@@ -41,9 +58,7 @@ export function PublishPanel({
   const apiError = error instanceof InventoryApiError ? error : null;
   if (catalogue.revision.status !== 'draft')
     return <PublishedPanel catalogue={catalogue} error={apiError} onReload={onReload} />;
-  const blocked =
-    compatibility?.classification === 'migration_required' ||
-    compatibility?.classification === 'forbidden';
+  const blocked = !canPublish(readiness);
   return (
     <>
       <PublishError error={apiError} onReload={onReload} />
@@ -56,11 +71,7 @@ export function PublishPanel({
           )}
           <div>
             <p className="text-sm font-medium">Draft revision {catalogue.revision.revision}</p>
-            <p className="text-xs text-muted-foreground">
-              {compatibility === null
-                ? 'Resume editing or review the persisted draft.'
-                : `${labels[compatibility.classification]} · ${compatibility.affectedItems} affected items · ${compatibility.affectedIds.length} affected definitions`}
-            </p>
+            <p className="text-xs text-muted-foreground">{summaryText(readiness)}</p>
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -73,8 +84,12 @@ export function PublishPanel({
           </Button>
         </div>
       </div>
-      {compatibility !== null && <CompatibilityPreview compatibility={compatibility} />}
-      {blocked && compatibility !== null && <BlockedNotice compatibility={compatibility} />}
+      <CompatibilityPreview readiness={readiness} />
+      {readiness.status === 'ready' &&
+        (readiness.compatibility.classification === 'migration_required' ||
+          readiness.compatibility.classification === 'forbidden') && (
+          <BlockedNotice compatibility={readiness.compatibility} />
+        )}
       <PublishDialog
         catalogue={catalogue}
         isPending={isPending}

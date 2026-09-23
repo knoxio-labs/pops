@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { InventoryApiError } from '../inventory-api-helpers';
 import { PublishPanel } from './PublishPanel';
 
-import type { CatalogueCompatibility, CatalogueDescriptor } from './types';
+import type { CatalogueCompatibility, CatalogueDescriptor, CatalogueReadiness } from './types';
 
 const catalogue: CatalogueDescriptor = {
   revision: {
@@ -37,19 +37,21 @@ function compatibility(
   };
 }
 
-function renderPanel({
-  classification = 'compatible',
-  error = null,
-}: {
-  readonly classification?: CatalogueCompatibility['classification'];
-  readonly error?: unknown;
-} = {}) {
+function renderPanel(
+  {
+    error = null,
+    readiness,
+  }: {
+    readonly error?: unknown;
+    readonly readiness: CatalogueReadiness;
+  } = { readiness: { status: 'not_previewed' } }
+) {
   const onPublish = vi.fn();
   const onReload = vi.fn();
   render(
     <PublishPanel
       catalogue={catalogue}
-      compatibility={compatibility(classification)}
+      readiness={readiness}
       error={error}
       isPending={false}
       onAbandon={vi.fn()}
@@ -62,19 +64,29 @@ function renderPanel({
 
 describe('PublishPanel', () => {
   it('shows a complete protocol-gated preview without blocking publication review', () => {
-    renderPanel({ classification: 'protocol_gated' });
+    renderPanel({
+      readiness: { status: 'ready', compatibility: compatibility('protocol_gated') },
+    });
 
     expect(
       screen.getByText('Protocol gated · 12 affected items · 1 affected definitions')
     ).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Dry-run validation' })).toBeInTheDocument();
+    expect(screen.getByText('Protocol gated')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Review and publish' })).toBeEnabled();
+  });
+
+  it('shows a compatible preview and allows publication review', () => {
+    renderPanel({ readiness: { status: 'ready', compatibility: compatibility('compatible') } });
+
+    expect(screen.getByRole('button', { name: 'Review and publish' })).toBeEnabled();
+    expect(screen.getAllByText('Compatible').length).toBeGreaterThan(0);
   });
 
   it.each(['migration_required', 'forbidden'] as const)(
     'blocks publication for %s compatibility',
     (classification) => {
-      renderPanel({ classification });
+      renderPanel({ readiness: { status: 'ready', compatibility: compatibility(classification) } });
 
       expect(screen.getByRole('button', { name: 'Review and publish' })).toBeDisabled();
       expect(
@@ -85,8 +97,34 @@ describe('PublishPanel', () => {
     }
   );
 
+  it('blocks publication for a resumed draft that has never been previewed', () => {
+    renderPanel({ readiness: { status: 'not_previewed' } });
+
+    expect(screen.getByRole('button', { name: 'Review and publish' })).toBeDisabled();
+    expect(screen.getByText('Not yet previewed')).toBeInTheDocument();
+    expect(screen.queryByText('Passed')).not.toBeInTheDocument();
+  });
+
+  it('blocks publication when the last preview no longer matches the current draft', () => {
+    renderPanel({ readiness: { status: 'stale' } });
+
+    expect(screen.getByRole('button', { name: 'Review and publish' })).toBeDisabled();
+    expect(screen.getByText('Stale')).toBeInTheDocument();
+    expect(screen.getByText(/last preview is stale/u)).toBeInTheDocument();
+  });
+
+  it('never labels a migration-required or forbidden result Passed', () => {
+    renderPanel({
+      readiness: { status: 'ready', compatibility: compatibility('migration_required') },
+    });
+
+    expect(screen.queryByText('Passed')).not.toBeInTheDocument();
+    expect(screen.getAllByText('Migration required').length).toBeGreaterThan(0);
+  });
+
   it('renders every structured validation issue returned by Inventory', () => {
     renderPanel({
+      readiness: { status: 'not_previewed' },
       error: new InventoryApiError('Catalogue validation failed', 400, 'catalogue_invalid', [
         {
           code: 'fixed_unit_required',
@@ -109,7 +147,9 @@ describe('PublishPanel', () => {
   });
 
   it('validates publication protocol and trims the submitted note', () => {
-    const { onPublish } = renderPanel({ classification: 'protocol_gated' });
+    const { onPublish } = renderPanel({
+      readiness: { status: 'ready', compatibility: compatibility('protocol_gated') },
+    });
     fireEvent.click(screen.getByRole('button', { name: 'Review and publish' }));
     fireEvent.change(screen.getByLabelText('Publication note'), {
       target: { value: '  Adds date-time fields  ' },

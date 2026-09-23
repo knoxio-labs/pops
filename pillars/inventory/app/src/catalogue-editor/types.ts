@@ -19,6 +19,23 @@ export type CatalogueOperation = NonNullable<
 /** Compatibility proof returned after a draft edit. */
 export type CatalogueCompatibility = TypesManagePatchDraftResponses[200]['compatibility'];
 
+/** A compatibility result tagged with the draft version it was computed against. */
+export type CompatibilitySnapshot = {
+  readonly compatibility: CatalogueCompatibility;
+  readonly draftVersion: number;
+} | null;
+
+/**
+ * Publication readiness derived by comparing a {@link CompatibilitySnapshot} against the
+ * draft's live version. `stale` means a preview exists but no longer reflects the current
+ * draft (it was taken against an earlier draft version); `not_previewed` means no preview
+ * has ever been taken for this draft, including one just resumed from persistence.
+ */
+export type CatalogueReadiness =
+  | { readonly status: 'not_previewed' }
+  | { readonly status: 'stale' }
+  | { readonly status: 'ready'; readonly compatibility: CatalogueCompatibility };
+
 /** Converts an owner-facing label into the stable-key candidate shown by create forms. */
 export function catalogueKeyFromLabel(label: string): string {
   return label
