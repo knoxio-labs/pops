@@ -174,7 +174,8 @@ internal struct OnlineStoreDownloadTests {
         #expect(transport.calls.catalogueRequests == [nil])
     }
 
-    @Test("a protocol-2 page is invisible until its exact catalogue arrives, then retry commits both")
+    @Test(
+        "a protocol-2 page is invisible until its exact catalogue arrives, then retry commits both")
     func protocol2CatalogueFailureRetriesAtomically() async throws {
         let item = InventoryItem(
             id: "typed", revision: 1, seq: 1, catalogueRevision: 2, name: "Typed",
@@ -192,7 +193,9 @@ internal struct OnlineStoreDownloadTests {
         }
         let harness = try Self.store(script)
 
-        await #expect(throws: RepositoryError.contractMismatch) { try await harness.store.download() }
+        await #expect(throws: RepositoryError.contractMismatch) {
+            try await harness.store.download()
+        }
         #expect(try harness.replica.read(.item(id: "typed")) == nil)
 
         harness.transport.update {
