@@ -33,11 +33,6 @@ export type ActiveFieldValue = z.infer<typeof activeFieldValueSchema>;
 /** Parsed per-field stable-ID edit input. */
 export type ActiveFieldPatch = z.infer<typeof activeFieldPatchSchema>;
 
-/** Whether an event/change key is a stable catalogue field ID. */
-export function isActiveFieldName(field: string): boolean {
-  return z.uuid().safeParse(field).success;
-}
-
 function rejectValue(error: unknown): never {
   if (error instanceof ValueValidationError) {
     const reason =
@@ -116,15 +111,6 @@ export function currentAuthoritativeFieldValues(
     source: entry.source,
     values: entry.values.map((value) => writableValue(value as JsonValue)),
   }));
-}
-
-/** Reads one stored dynamic field as its event/conflict value. */
-export function currentActiveFieldValue(db: CommandDb, itemId: string, fieldId: string): JsonValue {
-  const entries = currentAuthoritativeFieldValues(db, itemId).filter(
-    (candidate) => candidate.fieldId === fieldId
-  );
-  const entry = entries.find((candidate) => candidate.source === 'stored') ?? entries[0];
-  return entry ? z.array(z.json()).parse(entry.values) : null;
 }
 
 /** Projects a complete stored value set onto stable field-ID event keys. */

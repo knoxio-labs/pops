@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { isActiveFieldName } from './active-catalogue-values.js';
+import { isActiveFieldName } from './active-field-key.js';
 import { conflictSinceSeq } from './conflicts.js';
 import { isWritableField, loadEntity, type CommandDb, type FieldValues } from './entities.js';
 import { CommandConflict, CommandRejected } from './errors.js';
