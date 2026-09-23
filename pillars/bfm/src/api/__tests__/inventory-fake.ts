@@ -71,6 +71,7 @@ function makeSnapshotProcedure(
         value: {
           epoch: 'epoch-1',
           highWaterSeq: 0,
+          minimumProtocol: 2,
           catalogueVersion: 'cat-1',
           total: 0,
           items: [],
@@ -93,6 +94,7 @@ function makeChangesProcedure(
         kind: 'ok',
         value: {
           epoch: 'epoch-1',
+          minimumProtocol: 2,
           items: [],
           locations: [],
           events: [],

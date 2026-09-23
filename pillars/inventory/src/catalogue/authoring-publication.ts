@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm';
 
 import { catalogueRevisions } from '../db/schema.js';
+import { readMinimumProtocol } from '../protocol/rollout.js';
 import { claimCurrentDraft } from './authoring-draft-version.js';
 import { migrationInput } from './authoring-migration.js';
 import { writePublication } from './authoring-publication-write.js';
@@ -91,6 +92,14 @@ export function publishCatalogueDraft(
         .run();
     }
     const { base, candidate, compatibility } = publicationCompatibility(tx, revision, input);
+    const activeMinimumProtocol = readMinimumProtocol(tx);
+    if (candidate.revision.minimumProtocol > activeMinimumProtocol) {
+      throw new CatalogueApiError(
+        409,
+        'protocol_rollout_required',
+        `Activate inventory protocol ${candidate.revision.minimumProtocol} before publishing this catalogue; the active minimum is ${activeMinimumProtocol}`
+      );
+    }
     validateCatalogue(candidate);
     const migration = requireMigration(compatibility, input, input.baseRevision, revision);
     return writePublication({

@@ -20,6 +20,7 @@ internal struct InventorySnapshotMappingTests {
         ).fetchSnapshot(cursor: nil, limit: 250)
 
         #expect(page.highWaterSeq == 10)
+        #expect(page.minimumProtocol == 2)
         #expect(page.items.map(\.id) == ["item-1"])
         #expect(page.items.first?.name == "Lamp")
         #expect(page.locations.map(\.id) == ["loc-1"])

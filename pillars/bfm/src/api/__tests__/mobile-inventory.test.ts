@@ -135,6 +135,7 @@ describe('protocol-2 inventory values', () => {
         value: {
           epoch: 'epoch-1',
           highWaterSeq: 1,
+          minimumProtocol: 2,
           catalogueVersion: 'cat-1',
           total: 1,
           items: [
@@ -318,6 +319,7 @@ describe('the snapshot', () => {
         value: {
           epoch: 'epoch-1',
           highWaterSeq: 42,
+          minimumProtocol: 2,
           catalogueVersion: 'cat-1',
           total: 1,
           items: [],
@@ -332,6 +334,7 @@ describe('the snapshot', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.highWaterSeq).toBe(42);
+    expect(res.body.minimumProtocol).toBe(2);
     expect(res.body.nextCursor).toBe('opaque-cursor');
     expect(fake.snapshotCalls).toEqual([{ cursor: 'abc', limit: 10 }]);
   });
@@ -387,6 +390,7 @@ describe('the snapshot', () => {
         value: {
           epoch: 'epoch-1',
           highWaterSeq: 3,
+          minimumProtocol: 2,
           catalogueVersion: 'cat-1',
           total: 1,
           items: [item],
@@ -413,6 +417,7 @@ describe('the snapshot', () => {
         value: {
           epoch: 'epoch-1',
           highWaterSeq: 3,
+          minimumProtocol: 2,
           catalogueVersion: 'cat-1',
           total: 1,
           items: [withoutLegacyType],
@@ -475,6 +480,7 @@ describe('the change feed', () => {
         kind: 'ok',
         value: {
           epoch: 'epoch-1',
+          minimumProtocol: 2,
           items: [],
           locations: [],
           events: [],
@@ -491,6 +497,7 @@ describe('the change feed', () => {
     expect(res.status).toBe(200);
     expect(res.body.nextSince).toBe(99);
     expect(res.body.hasMore).toBe(true);
+    expect(res.body.minimumProtocol).toBe(2);
     expect(fake.changesCalls).toEqual([{ since: 42, epoch: 'epoch-1', limit: 100 }]);
   });
 

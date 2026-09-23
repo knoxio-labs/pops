@@ -2382,6 +2382,7 @@ export type MobileInventoryChangesResponses = {
       seq: number;
       sortOrder: number;
     }>;
+    minimumProtocol: number;
     nextSince: number;
   };
 };
@@ -2624,6 +2625,7 @@ export type MobileInventorySnapshotResponses = {
       seq: number;
       sortOrder: number;
     }>;
+    minimumProtocol: number;
     nextCursor: string | null;
     total: number;
   };

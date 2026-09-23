@@ -79,7 +79,7 @@ internal enum InventoryWire {
         items: [String] = [], locations: [String] = [], nextCursor: String = "null"
     ) -> String {
         """
-        {"epoch":"epoch-1","highWaterSeq":10,"catalogueVersion":"v1","total":\(items.count),\
+        {"epoch":"epoch-1","highWaterSeq":10,"minimumProtocol":2,"catalogueVersion":"v1","total":\(items.count),\
         "items":[\(items.joined(separator: ","))],"locations":[\(locations.joined(separator: ","))],\
         "nextCursor":\(nextCursor)}
         """
@@ -90,7 +90,7 @@ internal enum InventoryWire {
         nextSince: Int = 11, hasMore: Bool = false
     ) -> String {
         """
-        {"epoch":"epoch-1","items":[\(items.joined(separator: ","))],\
+        {"epoch":"epoch-1","minimumProtocol":2,"items":[\(items.joined(separator: ","))],\
         "locations":[\(locations.joined(separator: ","))],"events":[\(events.joined(separator: ","))],\
         "nextSince":\(nextSince),"hasMore":\(hasMore),"catalogueVersion":"v1"}
         """

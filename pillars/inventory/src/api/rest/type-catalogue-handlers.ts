@@ -13,7 +13,13 @@ import {
   type CatalogueAuthor,
   type DraftTarget,
 } from '../../catalogue/authoring.js';
-import { loadCatalogue } from '../../catalogue/index.js';
+import { loadCatalogue, loadPublishedCatalogue } from '../../catalogue/index.js';
+import {
+  activateMinimumProtocol,
+  ProtocolRolloutError,
+  readMinimumProtocol,
+  SUPPORTED_INVENTORY_PROTOCOL,
+} from '../../protocol/rollout.js';
 import { readInventoryPrincipal } from '../middleware/identity.js';
 import { compatibilityBody, runCatalogue } from './type-catalogue-responses.js';
 import { validateCatalogueItemPayload } from './type-catalogue-validation.js';
@@ -99,7 +105,38 @@ function makeTypeCatalogueReadHandlers(db: CommandDb) {
 }
 
 function makeTypeCatalogueManageHandlers(db: CommandDb) {
+  const rolloutState = () => {
+    const catalogue = loadPublishedCatalogue(db);
+    if (catalogue === null) throw new Error('Inventory has no published catalogue');
+    return {
+      minimumProtocol: readMinimumProtocol(db),
+      supportedProtocol: SUPPORTED_INVENTORY_PROTOCOL,
+      catalogueMinimumProtocol: catalogue.revision.minimumProtocol,
+    };
+  };
+
   return {
+    readProtocolRollout: ({
+      res,
+    }: TypesRequest['manage']['readProtocolRollout'] & { res: Response }) =>
+      runCatalogue(() => {
+        requireAuthor(res, 'manage');
+        return { status: 200 as const, body: rolloutState() };
+      }),
+    activateProtocolRollout: ({
+      body,
+      res,
+    }: TypesRequest['manage']['activateProtocolRollout'] & { res: Response }) =>
+      runCatalogue(() => {
+        requireAuthor(res, 'manage');
+        try {
+          activateMinimumProtocol(db, body.expectedMinimumProtocol, body.minimumProtocol);
+        } catch (error) {
+          if (!(error instanceof ProtocolRolloutError)) throw error;
+          throw new CatalogueApiError(error.status, error.code, error.message);
+        }
+        return { status: 200 as const, body: rolloutState() };
+      }),
     readDraft: ({ res }: TypesRequest['manage']['readDraft'] & { res: Response }) =>
       runCatalogue(() => {
         requireAuthor(res, 'manage');
