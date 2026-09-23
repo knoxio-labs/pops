@@ -37,7 +37,7 @@ internal struct PurchaseCaptureEntryTests {
             ])
     }
 
-    @Test("the environment defaults capture to unavailable")
+    @Test("the environment defaults capture to unavailable", .requiresCompiledColorCatalog)
     func environmentDefault() throws {
         let unavailable = try #require(Self.render(CaptureAvailabilityProbe()))
         let available = try #require(

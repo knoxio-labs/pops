@@ -45,9 +45,7 @@ public enum PurchaseCaptureSource: String, CaseIterable, Identifiable, Sendable 
 
 /// A host-owned presentation action for the purchase capture flow.
 ///
-/// The host reports a completed run once with every saved purchase identifier in save order.
-/// Cancelling after a partial save still reports those identifiers; a run that saved nothing does
-/// not report completion.
+/// It only opens capture at a source; what the host does once the run ends is the host's own.
 public struct PurchaseCapturePresenter: Sendable {
     private let present: @MainActor @Sendable (PurchaseCaptureSource) -> Void
 
@@ -64,9 +62,5 @@ public struct PurchaseCapturePresenter: Sendable {
 
 extension EnvironmentValues {
     /// The host capture presenter, or `nil` when capture is not offered.
-    ///
-    /// When a run finishes, the host calls its completion once with every saved purchase identifier
-    /// in save order, including after a cancellation that follows a partial save. An empty run does
-    /// not call the completion.
     @Entry public var purchaseCapture: PurchaseCapturePresenter?
 }
