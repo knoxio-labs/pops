@@ -1,6 +1,6 @@
 name: Live Seam
 
-# Runs the three "live seam" integration suites — the ones each pillar's
+# Runs the live seam integration suites — the ones each pillar's
 # `vitest.config.ts` excludes from the default `pnpm test` (the
 # `**/*.live-seam.test.ts` pattern) because they boot 2-3 real pillar
 # processes over loopback HTTP via `@pops/pillar-sdk/testing`
@@ -17,6 +17,9 @@ name: Live Seam
 #     replaced by a fixture-driven fake HTTP server (no real model call) and
 #     its service-account gate flipped to mandatory for the run, so the
 #     `X-API-Key` grant is actually proved rather than assumed.
+#   - pillars/bfm/src/api/inventory/__tests__/offline-replay.live-seam.test.ts
+#     boots registry + inventory + bfm and replays revision-pinned mutations
+#     through the phone route after compatible and incompatible publications.
 # Each is normally run by hand via that pillar's `pnpm test:live-seam`.
 #
 # ADVISORY, NOT REQUIRED — deliberately, for a bake-in period. None of the
@@ -48,7 +51,7 @@ name: Live Seam
 #
 # EACH JOB'S FILTER LISTS WHAT CAN ACTUALLY REACH ITS SEAM: the SDK harness
 # every suite depends on, that suite's own consumer/producer module pair, and
-# registry — all three suites boot a real registry process for discovery, so
+# registry — all four suites boot a real registry process for discovery, so
 # a registry change that breaks self-registration or resolution in a way its
 # own unit suite and docker-build.yml's /health-only smoke probe can't see
 # (neither drives a real cross-pillar `pillar()` call) is exactly the kind of
@@ -58,13 +61,13 @@ name: Live Seam
 # consumer module each suite actually calls through
 # (`recipes/send-to-list`, `retrieval` + `thalamus`), which already has its
 # own unit-quality.yml coverage for everything outside these seams. The
-# bfm entry follows the same shape: narrowed to `pillars/bfm/src/api/purchases/**`
-# (the consumer leg the suite calls through) rather than the whole pillar —
+# bfm entry follows the same shape: narrowed to its `purchases/**` and
+# `inventory/**` consumer legs rather than the whole pillar —
 # it was the whole tree until this comment, which is what let 16 of the last
-# 100 commits (bfm work with no bearing on the purchases leg — auth, mobile
-# finance, device pairing) select this workflow. The route-wiring glue this
-# narrower filter does NOT cover (contract/rest.ts, api/rest/mobile-purchases-
-# handlers.ts, app.ts, auth/access-token.ts) is the same gap the food and
+# 100 commits (bfm work with no bearing on either leg — auth, mobile finance,
+# device pairing) select this workflow. The route-wiring glue this narrower
+# filter does NOT cover (contract/rest.ts, the mobile purchases/inventory
+# handlers, app.ts, auth/access-token.ts) is the same gap the food and
 # cerebrum entries already accept: a break there is a break in bfm's own
 # handler/contract shape, which bfm's unit-quality.yml suite already catches
 # before this workflow would ever get a chance to.
@@ -91,8 +94,8 @@ name: Live Seam
 # `mobile-purchases-handlers.ts` / `app.ts` situation again, independently
 # confirmed rather than inferred from the same shape.
 #
-# `pillars/finance/**` and `pillars/purchases/**` are each still whole-tree,
-# and that is a decision, not an oversight, made the same way for both:
+# `pillars/finance/**`, `pillars/purchases/**` and `pillars/inventory/**` are
+# each still whole-tree, and that is a decision, not an oversight:
 #
 # `pillars/finance/**` — pre-existing, kept as-is. The cerebrum -> finance
 # seam drives cerebrum's real `/index/reindex-sources`, which walks finance
@@ -119,6 +122,11 @@ name: Live Seam
 # Excluding that quintet is what took the last-100-commits purchases-touching
 # count from 29 down to 20.
 #
+# `pillars/inventory/**` — the offline replay seam crosses catalogue
+# publication, command validation, sync HTTP, schema projection and the pillar
+# database. Narrowing that producer to one directory would omit a real part of
+# the path the test exists to cover.
+#
 # No `merge_group` trigger: that trigger exists so a workflow behind a
 # REQUIRED context reports on the merge queue's ref instead of stranding the
 # queue entry (.github/workflows/README.md, "The merge queue" section). An
@@ -140,8 +148,10 @@ on:
       - "pillars/cerebrum/vitest.live-seam.config.ts"
       - "pillars/finance/**"
       - "pillars/bfm/src/api/purchases/**"
+      - "pillars/bfm/src/api/inventory/**"
       - "pillars/bfm/vitest.live-seam.config.ts"
       - "pillars/purchases/**"
+      - "pillars/inventory/**"
       - "!pillars/purchases/app/**"
       - "!pillars/purchases/extension/**"
       - "!pillars/purchases/README.md"
@@ -161,8 +171,10 @@ on:
       - "pillars/cerebrum/vitest.live-seam.config.ts"
       - "pillars/finance/**"
       - "pillars/bfm/src/api/purchases/**"
+      - "pillars/bfm/src/api/inventory/**"
       - "pillars/bfm/vitest.live-seam.config.ts"
       - "pillars/purchases/**"
+      - "pillars/inventory/**"
       - "!pillars/purchases/app/**"
       - "!pillars/purchases/extension/**"
       - "!pillars/purchases/README.md"
@@ -203,8 +215,10 @@ jobs:
               - "libs/sdk/**"
               - "pillars/registry/**"
               - "pillars/bfm/src/api/purchases/**"
+              - "pillars/bfm/src/api/inventory/**"
               - "pillars/bfm/vitest.live-seam.config.ts"
               - "pillars/purchases/**"
+              - "pillars/inventory/**"
               - "!pillars/purchases/app/**"
               - "!pillars/purchases/extension/**"
               - "!pillars/purchases/README.md"
