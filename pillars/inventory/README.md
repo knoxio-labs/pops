@@ -166,6 +166,8 @@ revision-checked, event-logged commands; only a computed field with
 `allowOverride` accepts them. Every applied item command invalidates both the
 item's cached subjects and reverse dependencies, while publication clears the
 process-local cache.
+Search indexes each computed field's effective value: the override when one
+exists, otherwise the evaluated value, and nothing while it is unavailable.
 
 Migration `0012_items_single_identity` built this from `home_inventory` and
 `containers` and dropped both. It aborts, writing nothing, when an id or a
@@ -299,8 +301,9 @@ minimumProtocol }`. The expected value makes concurrent operator actions a
 - When a mutation changes an item that other items' computed values read
   (tracked in `item_computed_dependencies`), those items are re-sent in the
   same change-feed page: their `seq` moves to the mutation's, their `revision`
-  does not. At most 256 are re-sent per mutation. A client replaces a stored
-  item at the same revision when the incoming `seq` is newer.
+  does not, and their search entries are rewritten with the fresh evaluation
+  in the same transaction. At most 256 are re-sent per mutation. A client
+  replaces a stored item at the same revision when the incoming `seq` is newer.
 - The snapshot serves live items and locations in pages whose opaque cursor
   pins the high-water `seq` of the first page; the change feed then serves
   every row (tombstones included) and every event after a `seq`. A cursor or

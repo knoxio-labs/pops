@@ -436,7 +436,7 @@ Key/value: `epoch`, `min_protocol`, `catalogue_revision`.
 
 ### `items_fts`
 
-FTS5 over `name`, `code`, `note`, `type_label`, `field_text`, `external_ids`, maintained by the command layer. It resolves labels from the published catalogue snapshot and rebuilds after `catalogue_revision` changes.
+FTS5 over `name`, `code`, `note`, `type_label`, `field_text`, `external_ids`, maintained by the command layer. It resolves labels from the published catalogue snapshot and rebuilds after `catalogue_revision` changes. `field_text` carries each computed field's effective value (the override when present, otherwise the evaluated value, nothing while unavailable); dependents re-sent by a mutation (D5) are reindexed in that mutation's transaction.
 
 `item_uploaded_files`, `item_documents`, `item_connections` and `item_fixture_connections` keep their shapes and are rebuilt only to point at `items`. `fixtures` is untouched; ADR-001's "a fixture is an item with the wired-in capability" is not part of this design.
 
