@@ -8,6 +8,7 @@ import {
   publishCatalogueDraft,
 } from '../../../catalogue/authoring.js';
 import { readItemFieldValues } from '../../../catalogue/index.js';
+import { activateMinimumProtocol } from '../../../protocol/rollout.js';
 import { mutation, openHarness, seedItem } from './test-utils.js';
 
 import type { Harness } from './test-utils.js';
@@ -278,6 +279,7 @@ function archiveField(harness: Harness, fieldId: string, baseRevision: number): 
 }
 
 function increaseMinimumProtocol(harness: Harness, baseRevision: number): number {
+  activateMinimumProtocol(harness.db, 1, 2);
   const created = createCatalogueDraft(harness.db, baseRevision, AUTHOR);
   const revision = created.revision.revision;
   publishCatalogueDraft(
