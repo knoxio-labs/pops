@@ -104,14 +104,23 @@ SQLite, compatibility and migration rules are Inventory ADR-002 D5.
 Generic field writes validate the complete stable-ID field set against its
 exact catalogue revision: kind, cardinality, required fields, storage authority,
 archived selections and live reference constraints are one atomic check.
+Generic item mutations carry the active `catalogueRevision`, address types and
+fields by stable ID, and persist through the same validated replacement path as
+the catalogue value API. A stale revision is rejected as `catalogue_changed`;
+it never falls back to the revision-1 projection. Mutations that omit
+`catalogueRevision` retain the named `typeKey`/`fields` protocol-1 contract for
+the built-in types during rollout.
 Archived enum selections and stale references remain readable when unchanged;
 reference reads add `resolved`, `deleted` or `missing` without discarding the
 target ID. Publication compatibility distinguishes additive, protocol-gated,
 migration-required and forbidden changes. Required rewrites use only the named
 `copy`, `set_default`, `map_enum`, `convert_decimal`, `replace_reference` and
-`drop_value` operations, dry-run every affected row, and append a `migrated`
-item event only after the complete candidate validates. Search rebuilds use the
-candidate catalogue during that same transition.
+`drop_value` operations. The server derives the exact affected type and field
+sets from the base-to-draft compatibility diff; a submitted migration cannot
+narrow or widen that set, and every changed field on a live affected type needs
+a migration step. Publication dry-runs every derived affected row and appends a
+`migrated` item event only after the complete candidate validates. Search
+rebuilds use the candidate catalogue during that same transition.
 
 Computed fields use the bounded, versioned expression AST from D5: no SQL,
 JavaScript, clocks or network access; at most two reference hops; publication
@@ -218,8 +227,10 @@ the gate above derives three grants: `inventory.sync` (`GET /sync/snapshot`,
 - Protocol and catalogue revision are independent. Catalogue, snapshot, feed and
   mutation shapes carry `catalogueRevision`; a phone downloads an immutable
   revision before applying rows that name it, and an offline mutation pins the
-  revision used to validate it. The server accepts that mutation only when its
-  compatibility record proves the referenced definitions unchanged.
+  revision used to validate it. Generic stable-ID commands currently require
+  that revision to be the active publication and reject stale input with
+  `catalogue_changed`; compatibility proofs can widen that gate without ever
+  silently reinterpreting a write against another snapshot.
 - Protocol 2 item rows carry the persisted `typeId` and canonical
   stable-field-ID `fieldValues` (each with its source and catalogue revision).
   The existing `typeKey` and `fields` projection remains alongside them for

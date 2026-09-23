@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { isActiveFieldName } from './active-catalogue-values.js';
 import { conflictSinceSeq } from './conflicts.js';
 import { isWritableField, loadEntity, type CommandDb, type FieldValues } from './entities.js';
 import { CommandConflict, CommandRejected } from './errors.js';
@@ -17,6 +18,10 @@ const INDEXED_ITEM_FIELDS: ReadonlySet<string> = new Set([
   'fields',
   'externalIds',
 ]);
+
+function isIndexedItemField(field: string): boolean {
+  return INDEXED_ITEM_FIELDS.has(field) || isActiveFieldName(field);
+}
 
 const revertArgs = z.object({ seq: z.number().int().min(1) });
 
@@ -88,7 +93,7 @@ export const eventRevert = defineOp({
       effects(effectContext) {
         if (
           event.entityKind !== 'item' ||
-          !event.fields.some((field) => INDEXED_ITEM_FIELDS.has(field))
+          !event.fields.some((field) => isIndexedItemField(field))
         ) {
           return;
         }
