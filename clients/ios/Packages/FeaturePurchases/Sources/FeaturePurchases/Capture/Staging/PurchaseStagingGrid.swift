@@ -155,7 +155,10 @@ extension PurchaseStagingGrid {
 
     private var addTile: some View {
         Menu {
-            Button("Scan", systemImage: PurchaseCaptureSource.scan.symbol) { onAdd(.scan) }
+            Button(
+                PurchaseCaptureSource.scan.title,
+                systemImage: PurchaseCaptureSource.scan.symbol
+            ) { onAdd(.scan) }
             Button(
                 PurchaseCaptureSource.photos.title,
                 systemImage: PurchaseCaptureSource.photos.symbol
