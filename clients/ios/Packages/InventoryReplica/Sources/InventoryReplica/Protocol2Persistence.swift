@@ -30,7 +30,6 @@ internal enum Protocol2CatalogueRows {
         for type in catalogue.types {
             try store(type, revision: revision.revision, in: db)
         }
-        try reindexSearch(catalogue, in: db)
     }
 
     static func reindexSearch(_ catalogue: InventoryCatalogueSnapshot, in db: Database) throws {
@@ -226,6 +225,7 @@ extension InventoryReplica {
             var meta = try SyncMeta.read(db)
             meta.catalogueRevision = catalogue.revision.revision
             try meta.write(db)
+            try Protocol2CatalogueRows.reindexSearch(catalogue, in: db)
         }
     }
 
