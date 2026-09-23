@@ -70,3 +70,30 @@ export type {
   ValueFieldDefinition,
   ValueValidationCode,
 } from './value-codec.js';
+export { ComputedValueCache } from './expression-cache.js';
+export type { ComputedCacheSubject } from './expression-cache.js';
+export {
+  assertAcyclicExpressionGraph,
+  buildExpressionDependencyGraph,
+  collectInvalidatedExpressions,
+  expressionFieldKey,
+} from './expression-dependencies.js';
+export { evaluateComputedValue } from './computed-values.js';
+export { evaluateExpression } from './expression-evaluator.js';
+export { parseExpression } from './expression-parser.js';
+export { validateCatalogueExpressions } from './expression-validator.js';
+export {
+  ExpressionValidationError,
+  type EffectiveComputedValue,
+  type EvaluatedDependency,
+  type ExpressionDependency,
+  type ExpressionEvaluation,
+  type ExpressionFieldKey,
+  type ExpressionSnapshot,
+  type ExpressionSnapshotItem,
+  type ExpressionUnavailableReason,
+  type ExpressionV1,
+  type ExpressionValueType,
+  type SnapshotFieldValue,
+  type ValidatedExpression,
+} from './expression-types.js';
