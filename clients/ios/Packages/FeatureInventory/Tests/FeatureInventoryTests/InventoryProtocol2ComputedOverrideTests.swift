@@ -78,15 +78,14 @@ internal struct InventoryProtocol2ComputedOverrideTests {
         #expect(!row.canClearOverride)
     }
 
-    @Test("setting an override dispatches item.setOverride and clearing dispatches item.clearOverride")
+    @Test("setting then clearing an override dispatches item.setOverride, then item.clearOverride")
     func setThenClear() async throws {
         let opened = await Self.opened(Self.item(computed: [Self.volume: .ok(.string("6 l"))]))
         defer { opened.loading.cancel() }
 
         await opened.form.setComputedOverride(.string("9 l"), for: Self.volume)
-        guard case .setComputedOverride(let id, let fieldId, let value)? = opened.store.performed
-            .first
-        else {
+        let performed = opened.store.performed
+        guard case .setComputedOverride(let id, let fieldId, let value)? = performed.first else {
             Issue.record("expected item.setOverride")
             return
         }
@@ -95,14 +94,13 @@ internal struct InventoryProtocol2ComputedOverrideTests {
         #expect(value == .string("9 l"))
 
         await opened.form.clearComputedOverride(for: Self.volume)
-        guard case .clearComputedOverride(let clearedId, let clearedFieldId)? = opened.store
-            .performed.last
+        guard case .clearComputedOverride(let id, let fieldId)? = opened.store.performed.last
         else {
             Issue.record("expected item.clearOverride")
             return
         }
-        #expect(clearedId == "box")
-        #expect(clearedFieldId == Self.volume.id)
+        #expect(id == "box")
+        #expect(fieldId == Self.volume.id)
     }
 
     @Test("an override value composes and clears the same way a stored entry does")
