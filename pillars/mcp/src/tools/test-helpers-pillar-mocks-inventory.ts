@@ -69,6 +69,7 @@ export const mockPillarInventory = {
         audit: vi.fn().mockResolvedValue(callOk({ events: [], nextBefore: null })),
       },
       manage: {
+        readDraft: vi.fn().mockResolvedValue(callOk({ revision: { revision: 2 }, types: [] })),
         createDraft: vi.fn().mockResolvedValue(callOk({ revision: { revision: 2 }, types: [] })),
         patchDraft: vi.fn().mockResolvedValue(
           callOk({

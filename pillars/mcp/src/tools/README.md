@@ -64,8 +64,8 @@ though nothing enforces it mechanically.
 - `inventory.catalogue.*` completes the persisted type-catalogue authoring
   workflow without database access. The MCP service account needs
   `inventory.types.read` for catalogue and audit reads, and
-  `inventory.types.manage` for draft creation, editing, publication and
-  abandonment.
+  `inventory.types.manage` for draft recovery, creation, editing, publication
+  and abandonment.
 
 ## Not here
 

@@ -37,6 +37,30 @@ describe('inventory catalogue reads', () => {
 });
 
 describe('inventory catalogue draft management', () => {
+  it('reads the current draft for recovery without inventing a revision', async () => {
+    const result = await tool('inventory.catalogue.readDraft').handler({});
+
+    expect(types.manage.readDraft).toHaveBeenCalledWith();
+    expect(parseResult(result)).toEqual({ revision: { revision: 2 }, types: [] });
+  });
+
+  it('preserves a missing-draft failure instead of treating it as an empty draft', async () => {
+    types.manage.readDraft.mockResolvedValueOnce({
+      kind: 'upstream',
+      pillar: 'inventory',
+      status: 404,
+      message: 'catalogue draft not found',
+    });
+
+    const result = await tool('inventory.catalogue.readDraft').handler({});
+
+    expect(result.isError).toBe(true);
+    expect(result.content[0]).toMatchObject({
+      type: 'text',
+      text: 'catalogue draft not found',
+    });
+  });
+
   it('creates a draft from the named published revision', async () => {
     await tool('inventory.catalogue.createDraft').handler({ baseRevision: 4 });
 

@@ -13,6 +13,13 @@ import { mapCallResult, nullStr, optNum, optStr, toolError } from './utils.js';
 
 import type { ToolDef } from './tool-def.js';
 
+const catalogueReadDraft: ToolDef = {
+  name: 'inventory.catalogue.readDraft',
+  description: 'Read the current editable catalogue draft so an interrupted edit can resume.',
+  inputSchema: { type: 'object', properties: {} },
+  handler: async () => mapCallResult(await catalogueClient().manage.readDraft()),
+};
+
 const catalogueCreateDraft: ToolDef = {
   name: 'inventory.catalogue.createDraft',
   description: 'Create the one editable catalogue draft from the current published revision.',
@@ -131,6 +138,7 @@ const catalogueAbandonDraft: ToolDef = {
 
 export const catalogueTools: readonly ToolDef[] = [
   ...catalogueReadTools,
+  catalogueReadDraft,
   catalogueCreateDraft,
   cataloguePatchDraft,
   cataloguePublishDraft,
