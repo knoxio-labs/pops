@@ -9,6 +9,7 @@ import {
 import { rebuildSearchIndexForCatalogue } from '../domain/commands/search-index.js';
 import { json, requireCatalogue } from './authoring-shared.js';
 import { toCatalogueDescriptor } from './authoring-wire.js';
+import { rebuildComputedDependencyIndex } from './computed-dependency-index.js';
 import { executeCatalogueMigrationInTransaction, type CatalogueMigration } from './migrations.js';
 
 import type { CommandDb } from '../domain/commands/index.js';
@@ -30,7 +31,7 @@ export interface PublicationWriteContext {
   readonly migration: CatalogueMigration | undefined;
 }
 
-/** Commits the catalogue revision, audit event, migration and search rebuild. */
+/** Commits the catalogue revision, audit event, migration, search and computed-dependency rebuilds. */
 export function writePublication(context: PublicationWriteContext): CatalogueDescriptor {
   const { db, revision, input, author, base, candidate, compatibility, migration } = context;
   const now = new Date().toISOString();
@@ -81,5 +82,6 @@ export function writePublication(context: PublicationWriteContext): CatalogueDes
     })
     .run();
   rebuildSearchIndexForCatalogue(db, published);
+  rebuildComputedDependencyIndex(db, published);
   return after;
 }

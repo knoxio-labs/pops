@@ -7,8 +7,12 @@ import GRDB
 ///
 /// Rows are upserted by revision (ADR-002 D9): a row whose revision is not
 /// above the stored one is ignored, which is what makes a snapshot page that
-/// raced a feed page, or a page delivered twice, harmless. A tombstone is an
-/// ordinary newer revision carrying `deletedAt`; the row stays so a remembered
+/// raced a feed page, or a page delivered twice, harmless. The one exception
+/// is an item the server re-sent at the same revision with a newer `seq`
+/// because an item its computed values read changed: nothing it owns moved,
+/// but its evaluations did, so it replaces the stored row like a newer one.
+/// A tombstone is an ordinary newer revision carrying `deletedAt`; the row
+/// stays so a remembered
 /// previous placement can still say its target was deleted, and every query
 /// filters it out.
 internal enum ReplicaApply {
@@ -92,7 +96,7 @@ internal enum ReplicaApply {
     ) throws -> Set<EntityRef> {
         var changed: Set<EntityRef> = []
         for item in items {
-            guard try isNewer(item.revision, id: item.id, in: "item_base", db) else { continue }
+            guard try isNewer(item, in: db) else { continue }
             try db.execute(
                 sql: upsertSQL(ItemRow.columns, into: "item_base"),
                 arguments: StatementArguments(try ItemRow.values(of: item)))
@@ -111,6 +115,15 @@ internal enum ReplicaApply {
             changed.insert(.location(location.id))
         }
         return changed
+    }
+
+    private static func isNewer(_ item: InventoryItem, in db: Database) throws -> Bool {
+        let stored = try Row.fetchOne(
+            db, sql: "SELECT revision, seq FROM item_base WHERE id = ?", arguments: [item.id])
+        guard let stored else { return true }
+        let revision: Int = stored["revision"]
+        let seq: Int = stored["seq"]
+        return item.revision > revision || (item.revision == revision && item.seq > seq)
     }
 
     private static func isNewer(_ revision: Int, id: String, in table: String, _ db: Database)

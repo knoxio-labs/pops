@@ -296,6 +296,11 @@ minimumProtocol }`. The expected value makes concurrent operator actions a
   the persisted input (stored values and overrides); computed values never
   enter the protocol-1 `fields`. A client treats a value whose dependency
   revisions are older than its own rows as stale.
+- When a mutation changes an item that other items' computed values read
+  (tracked in `item_computed_dependencies`), those items are re-sent in the
+  same change-feed page: their `seq` moves to the mutation's, their `revision`
+  does not. At most 256 are re-sent per mutation. A client replaces a stored
+  item at the same revision when the incoming `seq` is newer.
 - The snapshot serves live items and locations in pages whose opaque cursor
   pins the high-water `seq` of the first page; the change feed then serves
   every row (tombstones included) and every event after a `seq`. A cursor or

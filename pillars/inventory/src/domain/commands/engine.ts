@@ -1,4 +1,9 @@
 import { invalidateComputedItem } from '../../catalogue/computed-value-runtime-cache.js';
+import {
+  DEFAULT_COMPUTED_DEPENDENT_LIMIT,
+  latestSeq,
+  resendComputedDependents,
+} from './computed-dependents.js';
 import { checkRevision, deletedConflict } from './conflicts.js';
 import { loadEntity, type CommandDb } from './entities.js';
 import { CommandConflict, CommandRejected } from './errors.js';
@@ -17,6 +22,8 @@ export interface EngineOptions {
   readonly now?: () => string;
   /** The ops dispatched by name. Defaults to every op the pillar defines. */
   readonly registry?: OpRegistry;
+  /** Cap on computed dependents one mutation re-sends. Defaults to {@link DEFAULT_COMPUTED_DEPENDENT_LIMIT}. */
+  readonly computedDependentLimit?: number;
 }
 
 interface Dispatch {
@@ -129,6 +136,8 @@ function decide(d: Dispatch, registry: OpRegistry): StoredOutcome {
  *   revision, applied, its event appended and the row stamped with the new
  *   revision and `seq`; the outcome is stored in `mutations` in the same
  *   transaction as the row and the event.
+ * - An applied mutation re-sends, in the same transaction, the items whose
+ *   computed values read an item it changed (`resendComputedDependents`).
  *
  * Errors other than a refusal or a conflict (a bug, a broken database)
  * propagate with nothing written.
@@ -152,7 +161,15 @@ export function runMutation(
         return { mutationId: mutation.mutationId, status: 'deferred', waitingOn };
       }
       const now = clock();
+      const sinceSeq = latestSeq(tx);
       const outcome = decide({ db: tx, mutation, actor, now }, registry);
+      if (outcome.status === 'applied') {
+        resendComputedDependents(
+          tx,
+          sinceSeq,
+          options.computedDependentLimit ?? DEFAULT_COMPUTED_DEPENDENT_LIMIT
+        );
+      }
       storeOutcome(tx, { mutation, actor, outcome, now });
       return outcome;
     },
