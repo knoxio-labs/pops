@@ -108,6 +108,23 @@ internal struct PurchaseReviewViewModelTests {
         #expect(model.savedPurchaseIDs == ["saved"])
     }
 
+    @Test("a cancelled write is not a failure, and the retry replays its key")
+    func cancellationIsNotFailure() async {
+        let repository = ReviewWriteRepository(
+            results: [.success(.fake(id: "unused")), .success(.fake(id: "saved"))],
+            cancelling: [1])
+        let model = makeModel([entry(id: "one")], repository: repository)
+
+        await model.save()
+        #expect(model.saving == .idle)
+        #expect(model.savedPurchaseIDs.isEmpty)
+
+        await model.save()
+        #expect(
+            await repository.savedDrafts.map(\.fields.idempotencyKey) == ["key-1", "key-1"])
+        #expect(model.savedPurchaseIDs == ["saved"])
+    }
+
     @Test("a conflict blocks another save until its entry is discarded")
     func conflictBlocksUntilDiscard() async {
         let repository = ReviewWriteRepository(results: [
@@ -239,15 +256,18 @@ private actor ReviewWriteRepository: ReceiptCaptureRepository {
 
     private let results: [Result<ReceiptPurchase, RepositoryError>]
     private let gated: Set<Int>
+    private let cancelled: Set<Int>
     private var held: [CheckedContinuation<Void, Never>] = []
     private var waiters: [(count: Int, continuation: CheckedContinuation<Void, Never>)] = []
 
     fileprivate init(
         results: [Result<ReceiptPurchase, RepositoryError>] = [],
-        gating: Set<Int> = []
+        gating: Set<Int> = [],
+        cancelling: Set<Int> = []
     ) {
         self.results = results
         gated = gating
+        cancelled = cancelling
     }
 
     fileprivate func extract(_ parts: [ReceiptPart]) async throws -> ReceiptExtraction {
@@ -284,6 +304,7 @@ private actor ReviewWriteRepository: ReceiptCaptureRepository {
         if gated.contains(call) {
             await withCheckedContinuation { held.append($0) }
         }
+        if cancelled.contains(call) { throw CancellationError() }
         guard results.indices.contains(call - 1) else {
             throw RepositoryError.transport("write script exhausted")
         }

@@ -82,6 +82,9 @@ internal final class PurchaseReviewViewModel {
                 savedPurchaseIDs.append(purchase.id)
                 saveKeys[item.entry.id] = nil
                 saving = .saving(done: written)
+            } catch let error where error.isCancellation {
+                saving = .idle
+                return
             } catch let error as ReceiptDraftSaveError {
                 saving = .failed(
                     id: item.entry.id,
