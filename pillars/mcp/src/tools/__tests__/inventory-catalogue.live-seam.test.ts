@@ -46,6 +46,16 @@ const abandonDraft = tool('inventory.catalogue.abandonDraft');
 const catalogueGet = catalogueTools.find((entry) => entry.name === 'inventory.catalogue.get');
 if (catalogueGet === undefined) throw new Error('inventory.catalogue.get missing');
 
+async function freshDraft(
+  catalogueGetTool: ToolDef,
+  createDraftTool: ToolDef
+): Promise<{ revision: number; baseRevision: number; draftVersion: number }> {
+  const published = ok(await catalogueGetTool.handler({}));
+  const baseRevision = (published['revision'] as { revision: number }).revision;
+  const created = draftRevision(ok(await createDraftTool.handler({ baseRevision })));
+  return { ...created, baseRevision };
+}
+
 describe('inventory catalogue MCP tools — real HTTP boundary', () => {
   let seam: LiveSeam;
 
@@ -215,6 +225,108 @@ describe('inventory catalogue MCP tools — real HTTP boundary', () => {
       revision: created.revision,
       baseRevision,
       expectedDraftVersion: created.draftVersion,
+    });
+  });
+
+  describe('malformed operation payloads, per kind, through the real REST boundary', () => {
+    function issuePaths(body: string): string[] {
+      const jsonStart = body.indexOf('{');
+      const parsed = JSON.parse(body.slice(jsonStart)) as {
+        issues?: { path: (string | number)[] }[];
+      };
+      return (parsed.issues ?? []).map((issue) => issue.path.join('.'));
+    }
+
+    it.each([
+      {
+        name: 'put_type',
+        operation: { kind: 'put_type', sortOrder: 'not-a-number' },
+        expectedPath: 'operations.0.sortOrder',
+      },
+      {
+        name: 'put_field (missing typeId)',
+        operation: { kind: 'put_field', label: 'Missing type' },
+        expectedPath: 'operations.0.typeId',
+      },
+      {
+        name: 'put_enum_option (missing fieldId)',
+        operation: { kind: 'put_enum_option', label: 'Missing field' },
+        expectedPath: 'operations.0.fieldId',
+      },
+      {
+        name: 'archive_field (missing id)',
+        operation: { kind: 'archive_field' },
+        expectedPath: 'operations.0.id',
+      },
+      {
+        name: 'reorder (missing ids)',
+        operation: { kind: 'reorder', definition: 'field' },
+        expectedPath: 'operations.0.ids',
+      },
+    ])(
+      'refuses a malformed $name operation with an actionable issue',
+      async ({ operation, expectedPath }) => {
+        seam.useDefaultKey();
+        const draft = await freshDraft(catalogueGet, createDraft);
+        try {
+          const result = await patchDraft.handler({
+            revision: draft.revision,
+            baseRevision: draft.baseRevision,
+            expectedDraftVersion: draft.draftVersion,
+            operations: [operation],
+          });
+          expect(result.isError).toBe(true);
+          expect(issuePaths(text(result))).toContain(expectedPath);
+        } finally {
+          await abandonDraft.handler({
+            revision: draft.revision,
+            baseRevision: draft.baseRevision,
+            expectedDraftVersion: draft.draftVersion,
+          });
+        }
+      }
+    );
+  });
+
+  describe('fractional and out-of-bounds revisions', () => {
+    it('refuses a fractional revision on catalogue.get with an actionable message, not a generic bad-request', async () => {
+      seam.useDefaultKey();
+      const result = await catalogueGet.handler({ revision: 1.5 });
+      expect(result.isError).toBe(true);
+      expect(text(result)).toMatch(/revision/i);
+      expect(text(result)).not.toMatch(/bad-request/);
+    });
+
+    it('refuses a zero or negative revision on catalogue.get', async () => {
+      seam.useDefaultKey();
+      const zero = await catalogueGet.handler({ revision: 0 });
+      expect(zero.isError).toBe(true);
+      expect(text(zero)).toMatch(/revision/i);
+
+      const negative = await catalogueGet.handler({ revision: -3 });
+      expect(negative.isError).toBe(true);
+      expect(text(negative)).toMatch(/revision/i);
+    });
+
+    it('refuses a fractional expectedDraftVersion on patchDraft', async () => {
+      seam.useDefaultKey();
+      const draft = await freshDraft(catalogueGet, createDraft);
+      try {
+        const result = await patchDraft.handler({
+          revision: draft.revision,
+          baseRevision: draft.baseRevision,
+          expectedDraftVersion: draft.draftVersion + 0.5,
+          operations: [{ kind: 'put_type', label: 'Fractional expectedDraftVersion' }],
+        });
+        expect(result.isError).toBe(true);
+        expect(text(result)).toMatch(/expectedDraftVersion/);
+      } finally {
+        await abandonDraft.handler({
+          revision: draft.revision,
+          baseRevision: draft.baseRevision,
+          expectedDraftVersion: draft.draftVersion,
+        });
+      }
     });
   });
 
