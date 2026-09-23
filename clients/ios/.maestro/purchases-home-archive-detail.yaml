@@ -1,0 +1,69 @@
+appId: com.knoxiolabs.pops.local
+name: Purchases home opens both archive scopes and a full detail
+---
+- clearState
+- clearKeychain
+- launchApp
+
+- assertVisible:
+    id: 'pairing-code-field'
+
+# Purchases must be reachable before pairing because bootstrap starts as soon
+# as the credentials land. The control plane owns that switch and forwards the
+# paired app to the same real BFM every other flow uses.
+- runScript: scripts/receipts-become-available.js
+- assertTrue: ${output.receipts.status == 200}
+- assertTrue: ${output.receipts.state.purchasesReachable == true}
+
+- runFlow:
+    file: subflows/enter-the-pairing-details.yaml
+    env:
+      SERVER_URL: ${CONTROL_BASE_URL}
+
+- assertVisible:
+    id: 'transactions-list'
+- tapOn: 'Purchases'
+
+# The figure comes from the month-summary request. The tiles carry server
+# counts; in particular, one current-month unmatched purchase differs from the
+# two unsettled rows in the first archive page.
+- assertVisible: 'A\$12\.50'
+- assertVisible:
+    id: 'purchases-home-unmatched'
+    text: '1, Unmatched'
+- assertVisible:
+    id: 'purchases-home-all'
+    text: '3, All purchases'
+
+- tapOn:
+    id: 'purchases-home-unmatched'
+- assertVisible: 'Unmatched'
+- assertVisible: 'Corner Store.*'
+- assertNotVisible: 'Hardware Shop.*'
+
+- tapOn: 'Corner Store.*'
+- assertVisible:
+    id: 'purchase-detail'
+- assertVisible:
+    id: 'purchase-detail'
+    text: 'Awaiting a bank match'
+- assertVisible:
+    id: 'purchase-detail'
+    text: 'Items'
+- assertVisible:
+    id: 'purchase-detail'
+    text: 'Breakfast, A\$12\.50'
+
+# Back returns to the archive with its scope intact. Switching the segmented
+# control to All must reveal the linked fixture that Unmatched excluded.
+- tapOn:
+    id: 'BackButton'
+- assertVisible: 'Corner Store.*'
+- tapOn: 'All'
+- assertVisible: 'Hardware Shop.*'
+
+- scrollUntilVisible:
+    direction: DOWN
+    element:
+      text: 'Everything since July 2026'
+- assertVisible: 'Everything since July 2026'

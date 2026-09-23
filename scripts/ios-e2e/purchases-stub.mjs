@@ -88,9 +88,14 @@ export const UPLOAD_OPERATION_ID = 'receipt.upload';
  */
 export const MANUAL_OPERATION_ID = 'purchase.createManual';
 
-/** The operations used by the mobile purchase history and detail routes. */
+/** The operation used by the mobile purchase history route. */
 export const LIST_OPERATION_ID = 'purchase.list';
+
+/** The operation used by the mobile purchase detail route. */
 export const DETAIL_OPERATION_ID = 'purchase.get';
+
+/** The operation used by the mobile purchases home figures. */
+export const MONTH_SUMMARY_OPERATION_ID = 'analytics.monthSummary';
 
 /**
  * purchases' committed OpenAPI snapshot.
@@ -168,6 +173,14 @@ export function detailRoute(document) {
 }
 
 /**
+ * @param {Record<string, unknown>} document purchases' OpenAPI snapshot
+ * @returns {{ method: string, path: string }}
+ */
+export function monthSummaryRoute(document) {
+  return routeFor(document, MONTH_SUMMARY_OPERATION_ID);
+}
+
+/**
  * The shape both snapshot readers accept for one pillar on the registry —
  * shared with `upstream-stub.mjs`'s finance entry so the two can sit in the
  * same `pillars` array.
@@ -213,7 +226,11 @@ export function purchasesRegistryEntry({ baseUrl, now }) {
         tag: 'contract-purchases@v1.0.0',
       },
       routes: {
-        queries: [`purchases.${LIST_OPERATION_ID}`, `purchases.${DETAIL_OPERATION_ID}`],
+        queries: [
+          `purchases.${LIST_OPERATION_ID}`,
+          `purchases.${DETAIL_OPERATION_ID}`,
+          `purchases.${MONTH_SUMMARY_OPERATION_ID}`,
+        ],
         mutations: [`purchases.${UPLOAD_OPERATION_ID}`, `purchases.${MANUAL_OPERATION_ID}`],
         subscriptions: [],
       },
@@ -504,6 +521,96 @@ function handleListPurchases(url, response, store) {
 }
 
 /**
+ * @param {number} totalCents
+ * @param {string} status
+ * @returns {Record<string, number>}
+ */
+function accounting(totalCents, status) {
+  const matchedCents = status === 'linked' ? totalCents : 0;
+  const awaitingImportCents = status === 'awaiting_settlement' ? totalCents : 0;
+  return {
+    totalCents,
+    matchedCents,
+    awaitingImportCents,
+    residualCents: totalCents - matchedCents - awaitingImportCents,
+    refundedCents: 0,
+    netSpendCents: totalCents,
+  };
+}
+
+/**
+ * @param {Record<string, unknown>[]} rows
+ * @returns {Record<string, unknown>[]}
+ */
+function currencyTotals(rows) {
+  const totals = new Map();
+  for (const row of rows) {
+    const currency = String(row['currency']);
+    const current = totals.get(currency) ?? {
+      orderCount: 0,
+      accounting: accounting(0, 'linked'),
+    };
+    current.orderCount += 1;
+    const rowAccounting = accounting(Number(row['totalCents']), String(row['status']));
+    for (const key of Object.keys(current.accounting)) {
+      current.accounting[key] += rowAccounting[key];
+    }
+    totals.set(currency, current);
+  }
+  return [...totals.entries()].map(([currency, total]) => ({
+    currency,
+    orderCount: total.orderCount,
+    accounting: total.accounting,
+  }));
+}
+
+/**
+ * @param {URL} url
+ * @param {import('node:http').ServerResponse} response
+ * @param {Array<Record<string, unknown>>} store
+ */
+function handleMonthSummary(url, response, store) {
+  const month = url.searchParams.get('month');
+  if (month === null || !/^\d{4}-(?:0[1-9]|1[0-2])$/u.test(month)) {
+    json(response, 400, { code: 'INVALID_QUERY', message: 'month must be YYYY-MM' });
+    return;
+  }
+
+  const rows = store.map(listRow);
+  const inMonth = rows.filter((row) => String(row['orderedAt']).startsWith(month));
+  const previousDate = new Date(`${month}-01T00:00:00.000Z`);
+  previousDate.setUTCMonth(previousDate.getUTCMonth() - 1);
+  const previousMonth = previousDate.toISOString().slice(0, 7);
+  const previous = rows.filter((row) => String(row['orderedAt']).startsWith(previousMonth));
+  const leaders = new Map();
+  for (const row of inMonth) {
+    const name = row['merchantEntityName'];
+    if (typeof name !== 'string') continue;
+    const key = `${String(row['currency'])}\0${name}`;
+    const current = leaders.get(key) ?? {
+      merchant: { resolution: 'name', entityId: null, name },
+      currency: String(row['currency']),
+      netSpendCents: 0,
+      orderCount: 0,
+    };
+    current.netSpendCents += Number(row['totalCents']);
+    current.orderCount += 1;
+    leaders.set(key, current);
+  }
+
+  json(response, 200, {
+    month,
+    totals: currencyTotals(inMonth),
+    purchaseCount: inMonth.length,
+    previousMonthTotals: previous.length === 0 ? null : currencyTotals(previous),
+    unmatchedCount: inMonth.filter((row) =>
+      ['awaiting_settlement', 'partial'].includes(String(row['status']))
+    ).length,
+    merchantLeaders: [...leaders.values()],
+  });
+}
+
+/**
  * Answers `POST /purchases/manual` the way `purchases` itself does: a
  * `PurchaseDetailResponseSchema`-shaped record
  * (`pillars/bfm/src/api/purchases/list-wire.ts`), echoing back the fields the
@@ -614,6 +721,7 @@ export async function startPurchasesStub({
   const manual = manualRoute(contract);
   const list = listRoute(contract);
   const detail = detailRoute(contract);
+  const monthSummary = monthSummaryRoute(contract);
   const store = seededPurchases();
 
   let reachable = false;
@@ -654,6 +762,11 @@ export async function startPurchasesStub({
       return;
     }
 
+    if (request.method === monthSummary.method && url.pathname === monthSummary.path) {
+      handleMonthSummary(url, response, store);
+      return;
+    }
+
     const detailId =
       request.method === detail.method ? pathParameter(detail.path, url.pathname) : null;
     if (detailId !== null) {
@@ -672,7 +785,7 @@ export async function startPurchasesStub({
     json(response, 404, {
       message:
         `ios-e2e purchases stub serves nothing at ${request.method} ${url.pathname}. ` +
-        'It answers the purchase list, detail and manual-create routes; receipt upload remains ' +
+        'It answers purchase list, detail, month-summary and manual-create routes; receipt upload remains ' +
         "unserved on purpose — see this file's header.",
     });
   });
