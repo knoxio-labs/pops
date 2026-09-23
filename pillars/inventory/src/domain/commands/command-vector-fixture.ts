@@ -84,6 +84,7 @@ function seedComputedOverrides(db: InventoryDb): void {
     draft.revision.revision,
     {
       baseRevision: 1,
+      expectedDraftVersion: draft.revision.draftVersion,
       note: null,
       migration: {
         name: 'add-computed-vector',

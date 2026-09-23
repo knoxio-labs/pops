@@ -28,12 +28,17 @@ function publishComputedType(harness: Harness): {
 } {
   const created = createCatalogueDraft(harness.db, 1, AUTHOR);
   const revision = created.revision.revision;
-  const withType = patchCatalogueDraft(harness.db, revision, 1, [
+  const target = (draft: { readonly revision: { readonly draftVersion: number } }) => ({
+    revision,
+    baseRevision: 1,
+    expectedDraftVersion: draft.revision.draftVersion,
+  });
+  const withType = patchCatalogueDraft(harness.db, target(created), [
     { kind: 'put_type', key: 'computed_device', label: 'Computed device' },
   ]);
   const type = withType.draft.types.find((entry) => entry.key === 'computed_device');
   if (type === undefined) throw new Error('computed type was not created');
-  const withInput = patchCatalogueDraft(harness.db, revision, 1, [
+  const withInput = patchCatalogueDraft(harness.db, target(withType.draft), [
     {
       kind: 'put_field',
       typeId: type.id,
@@ -54,7 +59,7 @@ function publishComputedType(harness: Harness): {
     left: { op: 'read', path: [], fieldId: input.id },
     right: { op: 'literal', value: 2 },
   } as const;
-  const withComputed = patchCatalogueDraft(harness.db, revision, 1, [
+  const withComputed = patchCatalogueDraft(harness.db, target(withInput.draft), [
     {
       kind: 'put_field',
       typeId: type.id,
@@ -88,7 +93,12 @@ function publishComputedType(harness: Harness): {
   if (computed === undefined || locked === undefined) {
     throw new Error('computed fields were not created');
   }
-  publishCatalogueDraft(harness.db, revision, { baseRevision: 1, note: null }, AUTHOR);
+  publishCatalogueDraft(
+    harness.db,
+    revision,
+    { baseRevision: 1, expectedDraftVersion: withComputed.draft.revision.draftVersion, note: null },
+    AUTHOR
+  );
   return {
     revision,
     typeId: type.id,
@@ -139,7 +149,11 @@ describe('computed field override commands', () => {
       publishCatalogueDraft(
         harness.db,
         draft.revision.revision,
-        { baseRevision: catalogue.revision, note: null },
+        {
+          baseRevision: catalogue.revision,
+          expectedDraftVersion: draft.revision.draftVersion,
+          note: null,
+        },
         AUTHOR
       )
     ).toThrow(CatalogueApiError);
@@ -147,7 +161,11 @@ describe('computed field override commands', () => {
       publishCatalogueDraft(
         harness.db,
         draft.revision.revision,
-        { baseRevision: catalogue.revision, note: null },
+        {
+          baseRevision: catalogue.revision,
+          expectedDraftVersion: draft.revision.draftVersion,
+          note: null,
+        },
         AUTHOR
       );
     } catch (error) {
