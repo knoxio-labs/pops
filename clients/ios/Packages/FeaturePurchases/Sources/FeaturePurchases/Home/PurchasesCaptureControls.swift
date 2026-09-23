@@ -8,7 +8,7 @@ internal struct PurchasesCaptureControls: View {
     internal var body: some View {
         HStack(spacing: PopsSpacing.md) {
             Menu {
-                ForEach(PurchaseCaptureEntry.Source.added) { source in
+                ForEach(PurchaseCaptureSource.added) { source in
                     Button(source.title, systemImage: source.symbol) { presenter(source) }
                 }
             } label: {
@@ -24,14 +24,14 @@ internal struct PurchasesCaptureControls: View {
             Button {
                 presenter(.scan)
             } label: {
-                Image(systemName: PurchaseCaptureEntry.Source.scan.symbol)
+                Image(systemName: PurchaseCaptureSource.scan.symbol)
                     .font(.popsTitle)
                     .foregroundStyle(Color.popsPurchases)
                     .frame(width: diameter, height: diameter)
             }
             .buttonStyle(.plain)
             .popsGlass(in: Circle())
-            .accessibilityLabel(PurchaseCaptureEntry.Source.scan.title)
+            .accessibilityLabel(PurchaseCaptureSource.scan.title)
             .accessibilityIdentifier(PurchasesAccessibility.scan)
         }
         .padding(.trailing, PopsSpacing.xl)
