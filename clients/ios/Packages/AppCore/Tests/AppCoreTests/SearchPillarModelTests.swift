@@ -12,7 +12,6 @@ internal struct SearchPillarModelTests {
         let model = SearchPillarModel(provider: provider)
 
         model.ask("  ", filter: "all")
-        await Task.yield()
 
         #expect(await provider.askedQueries().isEmpty)
         #expect(model.answer == .current)
