@@ -298,6 +298,22 @@ run = [
   "mise run fixture:command-vectors:vendor",
 ]
 
+# The expression-vectors fixture (Inventory ADR-002 D11) is the same
+# arrangement as the command vectors: the pillar's evaluator produces the
+# results, `clients/ios` vendors them for the Swift evaluator (ADR-043).
+[tasks."fixture:expression-vectors:vendor"]
+description = "Re-vendor the inventory expression-vectors fixture into the iOS client"
+dir = "{{config_root}}"
+run = "cp pillars/inventory/contracts/expression-vectors-v1.json clients/ios/Contracts/expression-vectors-v1.json"
+
+[tasks."fixture:expression-vectors"]
+description = "Regenerate the inventory expression-vectors fixture from the evaluator, and re-vendor it"
+dir = "{{config_root}}"
+run = [
+  "pnpm --filter @pops/inventory run generate:expression-vectors",
+  "mise run fixture:expression-vectors:vendor",
+]
+
 # The iOS app icon's layers are generated, not drawn. The task lives here rather
 # than under `clients/ios` because it writes into both Icon Composer bundles and
 # its palette is asserted against `libs/sdk`'s nav enum — three units, so it

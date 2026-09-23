@@ -86,7 +86,7 @@ export {
 } from './expression-dependencies.js';
 export { evaluateComputedValue } from './computed-values.js';
 export { evaluateExpression } from './expression-evaluator.js';
-export { parseExpression } from './expression-parser.js';
+export { EXPRESSION_V1_OPS, parseExpression } from './expression-parser.js';
 export { validateCatalogueExpressions } from './expression-validator.js';
 export {
   ExpressionValidationError,

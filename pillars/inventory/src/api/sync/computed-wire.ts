@@ -22,7 +22,12 @@ function overrideRevision(persisted: readonly ReadItemFieldValue[], fieldId: str
   return override.catalogueRevision;
 }
 
-function toComputedWire(
+/**
+ * Projects one effective computed value onto the sync wire. `persisted` must
+ * hold the override row when `value` is overridden; its revision is reported.
+ * `ok` reports the root and every item a dependency names as traversed.
+ */
+export function toComputedWire(
   itemId: string,
   value: EffectiveItemFieldValue,
   persisted: readonly ReadItemFieldValue[]
