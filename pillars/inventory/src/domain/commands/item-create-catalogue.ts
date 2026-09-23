@@ -3,12 +3,12 @@ import {
   replaceValidatedItemFieldValues,
   resolveProtocol1Type,
 } from '../../catalogue/index.js';
+import { storedFieldValues } from './active-catalogue-values.js';
 import {
-  assertActiveFieldValues,
-  requireActiveCatalogue,
-  requireActiveType,
-  storedFieldValues,
-} from './active-catalogue-values.js';
+  assertCommandFieldValues,
+  resolveCommandCatalogue,
+  resolveCommandType,
+} from './command-catalogue.js';
 import { CommandRejected } from './errors.js';
 import { assertProtocol1Fields } from './protocol-1-fields.js';
 
@@ -61,14 +61,14 @@ function resolveLegacyType(db: CommandDb, input: CreateCatalogueInput): CreateCa
   return { mode: 'legacy', type };
 }
 
-/** Resolves and validates one create against legacy revision 1 or the active catalogue. */
+/** Resolves and validates one create against legacy revision 1 or a safely rebased catalogue. */
 export function resolveCreateCatalogue(
   db: CommandDb,
   input: CreateCatalogueInput,
   catalogueRevision: number | undefined
 ): CreateCatalogue {
   if (catalogueRevision === undefined) return resolveLegacyType(db, input);
-  requireActiveCatalogue(db, catalogueRevision);
+  const resolution = resolveCommandCatalogue(db, catalogueRevision);
   if (input.typeKey !== null && input.typeKey !== undefined) {
     throw new CommandRejected('invalid', 'typeKey is only supported by protocol 1');
   }
@@ -79,11 +79,16 @@ export function resolveCreateCatalogue(
   if (input.typeId === null || input.typeId === undefined) {
     if (values.length > 0)
       throw new CommandRejected('invalid', 'an untyped item cannot carry values');
-    return { mode: 'active', type: undefined, revision: catalogueRevision, values };
+    return {
+      mode: 'active',
+      type: undefined,
+      revision: resolution.active.revision.revision,
+      values,
+    };
   }
-  const type = requireActiveType(db, catalogueRevision, input.typeId);
-  assertActiveFieldValues(db, type, values);
-  return { mode: 'active', type, revision: catalogueRevision, values };
+  const type = resolveCommandType(resolution, input.typeId).active;
+  assertCommandFieldValues(db, resolution, { typeId: input.typeId, values });
+  return { mode: 'active', type, revision: resolution.active.revision.revision, values };
 }
 
 /** Persists already-validated create values through the matching protocol path. */

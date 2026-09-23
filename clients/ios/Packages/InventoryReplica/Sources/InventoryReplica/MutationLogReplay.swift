@@ -34,7 +34,7 @@ internal enum MutationLogReplay {
                 try MutationLogRows.update(entry, in: db)
             }
         }
-        let catalogue = try SyncMeta.read(db).storedCatalogue()
+        let catalogue = try SyncMeta.read(db).searchCatalogue(in: db)
         for ref in stale { try resetView(ref, catalogue: catalogue, in: db) }
         var written: Set<EntityRef> = []
         for var entry in entries {

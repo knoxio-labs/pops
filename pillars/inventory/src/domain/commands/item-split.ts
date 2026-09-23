@@ -1,23 +1,12 @@
 import { asc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 
-import {
-  copyItemFieldValues,
-  loadProtocol1Fields,
-  resolveProtocol1TypeById,
-} from '../../catalogue/index.js';
 import { itemPhotos, items, type ItemRow } from '../../db/index.js';
-import {
-  activeStoredChanges,
-  currentAuthoritativeFieldValues,
-  requireActiveCatalogue,
-  requireActiveType,
-} from './active-catalogue-values.js';
-import { loadEntity, requireItem, type CommandDb, type FieldValues } from './entities.js';
+import { loadEntity, requireItem, type CommandDb } from './entities.js';
 import { CommandRejected } from './errors.js';
 import { readPlacement } from './item-fields.js';
+import { persistSplitCatalogue, resolveSplitCatalogue } from './item-split-catalogue.js';
 import { defineOp } from './op.js';
-import { protocol1FieldsAsJson } from './protocol-1-fields.js';
 import { upsertSearchIndex } from './search-index.js';
 import { changeContextFrom, recordCreate } from './write.js';
 
@@ -80,30 +69,6 @@ function insertSplitInto({ db, row, newItemId, quantity, stamp }: InsertSplitInt
     .run();
 }
 
-function legacySplitFields(db: CommandDb, row: ItemRow): FieldValues {
-  const fields = protocol1FieldsAsJson(loadProtocol1Fields(db, row.id));
-  if (row.typeId === null) return { typeKey: null, fields };
-  const type = resolveProtocol1TypeById(db, row.typeId);
-  if (!type) throw new CommandRejected('type_unknown', `unknown type ${row.typeId}`);
-  return { typeKey: type.key, fields };
-}
-
-function activeSplitFields(db: CommandDb, row: ItemRow, revision: number): FieldValues {
-  requireActiveCatalogue(db, revision);
-  const fieldValues = activeStoredChanges(currentAuthoritativeFieldValues(db, row.id));
-  if (row.typeId === null) return { typeId: null, ...fieldValues };
-  const type = requireActiveType(db, revision, row.typeId);
-  return { typeId: type.id, ...fieldValues };
-}
-
-function splitCatalogueFields(
-  db: CommandDb,
-  row: ItemRow,
-  revision: number | undefined
-): FieldValues {
-  return revision === undefined ? legacySplitFields(db, row) : activeSplitFields(db, row, revision);
-}
-
 /**
  * `item.split { newItemId, quantity }`: split `quantity` of `entityId`'s
  * count off into a new item at `newItemId`, minted by the client. The new
@@ -127,7 +92,7 @@ export const itemSplit = defineOp({
     if (remaining < 1) {
       throw new CommandRejected('invalid', 'a split must leave at least one item behind');
     }
-    const catalogueFields = splitCatalogueFields(ctx.db, row, ctx.mutation.catalogueRevision);
+    const catalogue = resolveSplitCatalogue(ctx.db, row, ctx.mutation.catalogueRevision);
 
     return {
       eventKind: 'split_from',
@@ -137,7 +102,7 @@ export const itemSplit = defineOp({
           eventKind: 'split_into',
           changes: {
             name: row.name,
-            ...catalogueFields,
+            ...catalogue.changes,
             note: row.note,
             externalIds: JSON.parse(row.externalIds) as JsonValue,
             quantity: args.quantity,
@@ -147,9 +112,11 @@ export const itemSplit = defineOp({
           insert: (db, stamp) =>
             insertSplitInto({ db, row, newItemId: args.newItemId, quantity: args.quantity, stamp }),
         });
-        copyItemFieldValues(effectCtx.db, {
-          fromItemId: row.id,
-          toItemId: args.newItemId,
+        persistSplitCatalogue({
+          db: effectCtx.db,
+          row,
+          newItemId: args.newItemId,
+          catalogue,
           now: effectCtx.now,
         });
         copyPhotos(effectCtx.db, row.id, args.newItemId);

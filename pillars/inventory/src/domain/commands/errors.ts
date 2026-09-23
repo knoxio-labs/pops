@@ -8,6 +8,8 @@ export const REJECTION_REASONS = [
   'invalid',
   'type_unknown',
   'catalogue_changed',
+  'catalogue_update_required',
+  'catalogue_repair_required',
   'cycle',
   'target_missing',
   'reference_type_mismatch',

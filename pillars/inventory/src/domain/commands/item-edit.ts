@@ -4,12 +4,14 @@ import { loadProtocol1Fields, resolveProtocol1TypeById } from '../../catalogue/i
 import {
   activeFieldPatchSchema,
   activePatchChanges,
-  assertActiveFieldValues,
   currentAuthoritativeFieldValues,
   mergeActiveFieldPatches,
-  requireActiveCatalogue,
-  requireActiveType,
 } from './active-catalogue-values.js';
+import {
+  assertCommandFieldValues,
+  resolveCommandCatalogue,
+  resolveCommandType,
+} from './command-catalogue.js';
 import { requireItem, type FieldValues } from './entities.js';
 import { CommandRejected } from './errors.js';
 import { externalIdsSchema, normalizeNote } from './item-fields.js';
@@ -98,8 +100,8 @@ function resolveNextActiveValues(
   catalogueRevision: number,
   patches: z.infer<typeof activeFieldPatchSchema>[] | undefined
 ): ItemFieldValueInput[] {
-  requireActiveCatalogue(db, catalogueRevision);
-  const type = row.typeId === null ? null : requireActiveType(db, catalogueRevision, row.typeId);
+  const resolution = resolveCommandCatalogue(db, catalogueRevision);
+  const type = row.typeId === null ? null : resolveCommandType(resolution, row.typeId).active;
   const current = currentAuthoritativeFieldValues(db, row.id);
   if (patches === undefined) return current;
   if (type === null) {
@@ -109,7 +111,11 @@ function resolveNextActiveValues(
     return [];
   }
   const values = mergeActiveFieldPatches(current, patches);
-  assertActiveFieldValues(db, type, values, row.id);
+  assertCommandFieldValues(db, resolution, {
+    typeId: type.id,
+    values,
+    existingItemId: row.id,
+  });
   return values;
 }
 

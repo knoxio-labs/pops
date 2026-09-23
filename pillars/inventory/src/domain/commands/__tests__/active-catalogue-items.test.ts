@@ -118,6 +118,75 @@ function archiveType(harness: Harness, typeId: string, baseRevision: number): nu
   return revision;
 }
 
+function publishRenamedDefinitions(
+  harness: Harness,
+  catalogue: ReturnType<typeof publishCustomType>
+): number {
+  const created = createCatalogueDraft(harness.db, catalogue.revision, AUTHOR);
+  const revision = created.revision.revision;
+  patchCatalogueDraft(harness.db, revision, catalogue.revision, [
+    { kind: 'put_type', id: catalogue.typeId, label: 'Renamed custom device' },
+    {
+      kind: 'put_field',
+      id: catalogue.fieldId,
+      typeId: catalogue.typeId,
+      label: 'Renamed serial',
+    },
+  ]);
+  publishCatalogueDraft(
+    harness.db,
+    revision,
+    { baseRevision: catalogue.revision, note: null },
+    AUTHOR
+  );
+  return revision;
+}
+
+function replaceField(
+  harness: Harness,
+  typeId: string,
+  fieldId: string,
+  baseRevision: number
+): number {
+  const created = createCatalogueDraft(harness.db, baseRevision, AUTHOR);
+  const revision = created.revision.revision;
+  patchCatalogueDraft(harness.db, revision, baseRevision, [
+    { kind: 'archive_field', id: fieldId },
+    {
+      kind: 'put_field',
+      typeId,
+      key: 'replacement_serial',
+      label: 'Replacement serial',
+      fieldKind: 'short_text',
+      cardinality: 'one',
+      required: false,
+      storage: 'stored',
+    },
+  ]);
+  publishCatalogueDraft(harness.db, revision, { baseRevision, note: null }, AUTHOR);
+  return revision;
+}
+
+function archiveField(harness: Harness, fieldId: string, baseRevision: number): number {
+  const created = createCatalogueDraft(harness.db, baseRevision, AUTHOR);
+  const revision = created.revision.revision;
+  patchCatalogueDraft(harness.db, revision, baseRevision, [{ kind: 'archive_field', id: fieldId }]);
+  publishCatalogueDraft(harness.db, revision, { baseRevision, note: null }, AUTHOR);
+  return revision;
+}
+
+function increaseMinimumProtocol(harness: Harness, baseRevision: number): number {
+  const created = createCatalogueDraft(harness.db, baseRevision, AUTHOR);
+  const revision = created.revision.revision;
+  publishCatalogueDraft(
+    harness.db,
+    revision,
+    { baseRevision, minimumProtocol: 2, note: null },
+    AUTHOR
+  );
+  return revision;
+}
+
 describe('active catalogue item commands', () => {
   it('creates, edits, searches and changes a custom revision-2 type by stable IDs', () => {
     const harness = openHarness();
@@ -256,7 +325,7 @@ describe('active catalogue item commands', () => {
         { baseRevision: null, catalogueRevision: 1 }
       )
     );
-    expect(stale).toMatchObject({ status: 'rejected', reason: 'catalogue_changed' });
+    expect(stale).toMatchObject({ status: 'rejected', reason: 'type_unknown' });
     expect(
       harness.raw.prepare(`SELECT count(*) AS count FROM items WHERE id = ?`).get(staleId)
     ).toEqual({ count: 0 });
@@ -339,5 +408,188 @@ describe('active catalogue item commands', () => {
     expect(outcome).toMatchObject({ status: 'applied' });
     expect(harness.fields(itemId)).toEqual({ Fitting: 'E27' });
     expect(readItemFieldValues(harness.db, itemId)[0]?.catalogueRevision).toBe(1);
+  });
+
+  it('does not invent revision 1 for a stable-id command without an authored revision', () => {
+    const harness = openHarness();
+    const catalogue = publishCustomType(harness);
+    const itemId = randomUUID();
+
+    const outcome = harness.run(
+      mutation(
+        'item.create',
+        itemId,
+        {
+          item: {
+            name: 'Unpinned sensor',
+            typeId: catalogue.typeId,
+            values: [{ fieldId: catalogue.fieldId, values: ['unsafe'] }],
+          },
+        },
+        { baseRevision: null }
+      )
+    );
+
+    expect(outcome).toMatchObject({ status: 'rejected', reason: 'invalid' });
+    expect(
+      harness.raw.prepare(`SELECT count(*) AS count FROM items WHERE id = ?`).get(itemId)
+    ).toEqual({ count: 0 });
+  });
+
+  it('rebases a rename-only offline create and stores the active revision idempotently', () => {
+    const harness = openHarness();
+    const catalogue = publishCustomType(harness);
+    const itemId = randomUUID();
+    const queued = mutation(
+      'item.create',
+      itemId,
+      {
+        item: {
+          name: 'Queued sensor',
+          typeId: catalogue.typeId,
+          values: [{ fieldId: catalogue.fieldId, values: ['queued'] }],
+        },
+      },
+      { baseRevision: null, catalogueRevision: catalogue.revision }
+    );
+    const activeRevision = publishRenamedDefinitions(harness, catalogue);
+
+    const first = harness.run(queued);
+    const replayed = harness.run(queued);
+
+    expect(first).toMatchObject({ status: 'applied', revision: 1 });
+    expect(replayed).toEqual(first);
+    expect(readItemFieldValues(harness.db, itemId)).toEqual([
+      {
+        fieldId: catalogue.fieldId,
+        source: 'stored',
+        catalogueRevision: activeRevision,
+        values: ['queued'],
+      },
+    ]);
+    expect(
+      harness.raw.prepare(`SELECT count(*) AS count FROM events WHERE entity_id = ?`).get(itemId)
+    ).toEqual({ count: 1 });
+  });
+
+  it('retains an offline edit for repair when its stable field is replaced', () => {
+    const harness = openHarness();
+    const catalogue = publishCustomType(harness);
+    const itemId = randomUUID();
+    harness.run(
+      mutation(
+        'item.create',
+        itemId,
+        {
+          item: {
+            name: 'Custom sensor',
+            typeId: catalogue.typeId,
+            values: [{ fieldId: catalogue.fieldId, values: ['before'] }],
+          },
+        },
+        { baseRevision: null, catalogueRevision: catalogue.revision }
+      )
+    );
+    const queued = mutation(
+      'item.edit',
+      itemId,
+      { values: [{ fieldId: catalogue.fieldId, values: ['offline'] }] },
+      { baseRevision: 1, catalogueRevision: catalogue.revision }
+    );
+    replaceField(harness, catalogue.typeId, catalogue.fieldId, catalogue.revision);
+
+    const first = harness.run(queued);
+    const replayed = harness.run(queued);
+
+    expect(first).toMatchObject({
+      status: 'rejected',
+      reason: 'catalogue_repair_required',
+    });
+    expect(replayed).toEqual(first);
+    expect(harness.item(itemId).revision).toBe(1);
+    expect(readItemFieldValues(harness.db, itemId)[0]?.values).toEqual(['before']);
+    expect(
+      harness.raw.prepare(`SELECT count(*) AS count FROM events WHERE entity_id = ?`).get(itemId)
+    ).toEqual({ count: 1 });
+  });
+
+  it('splits an item while retaining a value from an archived field', () => {
+    const harness = openHarness();
+    const catalogue = publishCustomType(harness);
+    const itemId = randomUUID();
+    const newItemId = randomUUID();
+    harness.run(
+      mutation(
+        'item.create',
+        itemId,
+        {
+          item: {
+            name: 'Custom sensor pair',
+            quantity: 2,
+            typeId: catalogue.typeId,
+            values: [
+              { fieldId: catalogue.fieldId, values: ['SN-1'] },
+              { fieldId: catalogue.notesFieldId, values: ['retained'] },
+            ],
+          },
+        },
+        { baseRevision: null, catalogueRevision: catalogue.revision }
+      )
+    );
+    const activeRevision = archiveField(harness, catalogue.notesFieldId, catalogue.revision);
+
+    const outcome = harness.run(
+      mutation(
+        'item.split',
+        itemId,
+        { newItemId, quantity: 1 },
+        { baseRevision: 1, catalogueRevision: activeRevision }
+      )
+    );
+
+    expect(outcome).toMatchObject({ status: 'applied', revision: 2 });
+    expect(harness.item(itemId).quantity).toBe(1);
+    expect(harness.item(newItemId)).toMatchObject({
+      quantity: 1,
+      typeId: catalogue.typeId,
+    });
+    const copied = readItemFieldValues(harness.db, newItemId);
+    expect(copied).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ fieldId: catalogue.fieldId, values: ['SN-1'] }),
+        expect.objectContaining({ fieldId: catalogue.notesFieldId, values: ['retained'] }),
+      ])
+    );
+    expect(copied.every((entry) => entry.catalogueRevision === activeRevision)).toBe(true);
+  });
+
+  it('requires refreshed definitions before replay across a protocol-gated publication', () => {
+    const harness = openHarness();
+    const catalogue = publishCustomType(harness);
+    const itemId = randomUUID();
+    const queued = mutation(
+      'item.create',
+      itemId,
+      {
+        item: {
+          name: 'Queued sensor',
+          typeId: catalogue.typeId,
+          values: [{ fieldId: catalogue.fieldId, values: ['queued'] }],
+        },
+      },
+      { baseRevision: null, catalogueRevision: catalogue.revision }
+    );
+    const activeRevision = increaseMinimumProtocol(harness, catalogue.revision);
+
+    const outcome = harness.run(queued);
+
+    expect(outcome).toMatchObject({
+      status: 'rejected',
+      reason: 'catalogue_update_required',
+      message: expect.stringContaining(`rebased to ${activeRevision}`),
+    });
+    expect(
+      harness.raw.prepare(`SELECT count(*) AS count FROM items WHERE id = ?`).get(itemId)
+    ).toEqual({ count: 0 });
   });
 });
