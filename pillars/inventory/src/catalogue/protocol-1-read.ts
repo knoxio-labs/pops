@@ -76,7 +76,7 @@ export function loadProtocol1Fields(db: CommandDb, itemId: string): Protocol1Fie
   const item = db.select({ typeId: items.typeId }).from(items).where(eq(items.id, itemId)).get();
   if (!item?.typeId) return {};
   const type = resolveProtocol1TypeById(db, item.typeId);
-  if (!type) throw new Protocol1ValueError('type', `does not exist: ${item.typeId}`);
+  if (!type) return {};
   const rows = db
     .select()
     .from(itemFieldValues)

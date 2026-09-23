@@ -16,6 +16,7 @@ import {
 import { loadCatalogue } from '../../catalogue/index.js';
 import { readInventoryPrincipal } from '../middleware/identity.js';
 import { compatibilityBody, runCatalogue } from './type-catalogue-responses.js';
+import { validateCatalogueItemPayload } from './type-catalogue-validation.js';
 
 import type { ServerInferRequest } from '@ts-rest/core';
 import type { Response } from 'express';
@@ -88,6 +89,11 @@ function makeTypeCatalogueReadHandlers(db: CommandDb) {
         requireAuthor(res, 'read');
         const page = readCatalogueAudit(db, query.before, query.limit);
         return { status: 200 as const, body: page };
+      }),
+    validateItem: ({ body, res }: TypesRequest['read']['validateItem'] & { res: Response }) =>
+      runCatalogue(() => {
+        requireAuthor(res, 'read');
+        return { status: 200 as const, body: validateCatalogueItemPayload(db, body) };
       }),
   };
 }

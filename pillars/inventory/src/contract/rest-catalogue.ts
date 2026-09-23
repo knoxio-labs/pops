@@ -7,6 +7,8 @@ import {
   CatalogueCompatibilitySchema,
   CatalogueDraftOperationSchema,
   CatalogueErrorBodySchema,
+  CatalogueItemValidationBodySchema,
+  CatalogueItemValidationResultSchema,
   CataloguePreviewErrorBodySchema,
   CatalogueReadHeaders,
   ExpectedDraftVersionSchema,
@@ -44,6 +46,17 @@ export const inventoryCatalogueContract = c.router({
         401: CatalogueErrorBodySchema,
       },
       summary: 'Read catalogue publication and abandonment audit events newest first',
+    },
+    validateItem: {
+      method: 'POST',
+      path: '/type-catalogue/items/validate',
+      body: CatalogueItemValidationBodySchema,
+      responses: {
+        200: CatalogueItemValidationResultSchema,
+        400: CatalogueErrorBodySchema,
+        401: CatalogueErrorBodySchema,
+      },
+      summary: 'Validate and canonicalise a complete item value set without writing it',
     },
   },
   manage: {

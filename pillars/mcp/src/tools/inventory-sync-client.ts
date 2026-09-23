@@ -22,11 +22,10 @@ import type { PillarHandle } from '@pops/pillar-sdk/server';
 const INVENTORY_PROTOCOL_HEADER = 'pops-inventory-protocol';
 
 /**
- * The sync wire shape this build understands. Mirrors the producer's own
- * seeded minimum (`min_protocol` in `0012_items_single_identity.sql`); raise
- * both together if the mapping here ever depends on a newer shape.
+ * The sync wire shape this build understands. Protocol 2 is required for
+ * stable type IDs, catalogue revisions and canonical field values.
  */
-const INVENTORY_SYNC_PROTOCOL_VERSION = '1';
+const INVENTORY_SYNC_PROTOCOL_VERSION = '2';
 
 /** One mutation, exactly as `POST /sync/mutations` expects it on the wire. */
 export interface InventoryMutationEnvelope {
@@ -34,9 +33,24 @@ export interface InventoryMutationEnvelope {
   op: string;
   entityId: string;
   baseRevision: number | null;
+  catalogueRevision?: number;
   dependsOn: string[];
   clientTime: string;
   args: unknown;
+}
+
+/** Retry identity and immutable catalogue pin for one item mutation. */
+export interface ItemMutationOptions {
+  readonly mutationId?: string;
+  readonly catalogueRevision?: number;
+}
+
+/** Complete request for one inventory command mutation. */
+export interface ItemMutationRequest extends ItemMutationOptions {
+  readonly entityId: string;
+  readonly op: string;
+  readonly args: unknown;
+  readonly baseRevision: number | null;
 }
 
 /** One mutation's result, as the sync protocol reports it. */
@@ -73,24 +87,24 @@ export async function fetchItemRevision(id: string): Promise<CallResult<number>>
 
 /**
  * Send one command as a one-mutation batch and return its outcome.
- * `mutationId` is minted fresh per call: MCP tools are one-shot LLM actions,
- * not a queued replica replaying the same change until it is acknowledged,
- * so there is no idempotency key worth preserving across a retry.
+ * A caller-supplied `mutationId` is preserved so a network retry receives the
+ * producer's stored outcome without applying the mutation twice. Other MCP
+ * tools omit it and receive a fresh one-shot identity.
  */
 export async function sendItemMutation(
-  entityId: string,
-  op: string,
-  args: unknown,
-  baseRevision: number | null
+  request: ItemMutationRequest
 ): Promise<CallResult<MutationOutcome>> {
   const envelope: InventoryMutationEnvelope = {
-    mutationId: crypto.randomUUID(),
-    op,
-    entityId,
-    baseRevision,
+    mutationId: request.mutationId ?? crypto.randomUUID(),
+    op: request.op,
+    entityId: request.entityId,
+    baseRevision: request.baseRevision,
+    ...(request.catalogueRevision === undefined
+      ? {}
+      : { catalogueRevision: request.catalogueRevision }),
     dependsOn: [],
     clientTime: new Date().toISOString(),
-    args,
+    args: request.args,
   };
   const result = await inventorySync().sync.mutations({ mutations: [envelope] });
   if (result.kind !== 'ok') return result;

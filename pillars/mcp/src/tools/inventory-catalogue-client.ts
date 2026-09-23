@@ -7,12 +7,23 @@ import type { CallResult, PillarHandle } from '@pops/pillar-sdk/client';
 
 type CatalogueOperation = Record<string, unknown>;
 type CatalogueMigration = Record<string, unknown>;
+type ItemFieldValue = {
+  fieldId: string;
+  source: 'stored' | 'override';
+  values: readonly unknown[];
+};
 
 type CatalogueShape = {
   types: {
     read: {
       catalogue: (input: { revision?: number }) => unknown;
       audit: (input: { before?: number; limit?: number }) => unknown;
+      validateItem: (input: {
+        catalogueRevision: number;
+        typeId: string;
+        existingItemId?: string;
+        fieldValues: readonly ItemFieldValue[];
+      }) => unknown;
     };
     manage: {
       readDraft: () => unknown;

@@ -4954,6 +4954,78 @@ export type TypesManagePublishDraftResponses = {
 export type TypesManagePublishDraftResponse =
   TypesManagePublishDraftResponses[keyof TypesManagePublishDraftResponses];
 
+export type TypesReadValidateItemData = {
+  /**
+   * Body
+   */
+  body?: {
+    catalogueRevision: number;
+    existingItemId?: string;
+    fieldValues: Array<{
+      fieldId: string;
+      source: 'stored' | 'override';
+      values: Array<unknown>;
+    }>;
+    typeId: string;
+  };
+  path?: never;
+  query?: never;
+  url: '/type-catalogue/items/validate';
+};
+
+export type TypesReadValidateItemErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    issues?: Array<{
+      code: string;
+      definitionId: string | null;
+      message: string;
+      path: string;
+    }>;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 401
+   */
+  401: {
+    code?: string;
+    issues?: Array<{
+      code: string;
+      definitionId: string | null;
+      message: string;
+      path: string;
+    }>;
+    message: string;
+    messageKey?: string;
+  };
+};
+
+export type TypesReadValidateItemError =
+  TypesReadValidateItemErrors[keyof TypesReadValidateItemErrors];
+
+export type TypesReadValidateItemResponses = {
+  /**
+   * 200
+   */
+  200: {
+    catalogueRevision: number;
+    fieldValues: Array<{
+      fieldId: string;
+      source: 'stored' | 'override';
+      values: Array<unknown>;
+    }>;
+    typeId: string;
+    valid: true;
+  };
+};
+
+export type TypesReadValidateItemResponse =
+  TypesReadValidateItemResponses[keyof TypesReadValidateItemResponses];
+
 export type TypesCatalogueData = {
   body?: never;
   headers?: {

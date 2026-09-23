@@ -2,6 +2,8 @@ import { z } from 'zod';
 
 import { CatalogueActorSchema } from './rest-catalogue-audit-schema.js';
 import { ErrorBodySchema } from './rest-schemas.js';
+
+const AnyJson = z.unknown();
 export const CataloguePrimitiveKindSchema = z.enum([
   'short_text',
   'long_text',
@@ -80,6 +82,29 @@ const CatalogueDefinitionTypeSchema = z.object({
 export const TypeCatalogueDescriptorSchema = z.object({
   revision: CatalogueRevisionSchema,
   types: z.array(CatalogueDefinitionTypeSchema),
+});
+
+/** One complete stable-ID value group accepted by catalogue-aware item validation. */
+export const CatalogueItemFieldValueSchema = z.object({
+  fieldId: z.uuid(),
+  source: z.enum(['stored', 'override']),
+  values: z.array(AnyJson).min(1),
+});
+
+/** A non-mutating item payload checked against one immutable catalogue revision. */
+export const CatalogueItemValidationBodySchema = z.object({
+  catalogueRevision: z.number().int().positive(),
+  typeId: z.uuid(),
+  existingItemId: z.string().min(1).optional(),
+  fieldValues: z.array(CatalogueItemFieldValueSchema),
+});
+
+/** Canonical values returned after successful non-mutating item validation. */
+export const CatalogueItemValidationResultSchema = z.object({
+  valid: z.literal(true),
+  catalogueRevision: z.number().int().positive(),
+  typeId: z.uuid(),
+  fieldValues: z.array(CatalogueItemFieldValueSchema),
 });
 
 const CatalogueCompatibilityChangeSchema = z.object({

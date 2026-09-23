@@ -937,6 +937,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/type-catalogue/items/validate': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Validate and canonicalise a complete item value set without writing it */
+    post: operations['types.read.validateItem'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/types': {
     parameters: {
       query?: never;
@@ -6990,6 +7007,94 @@ export interface operations {
           'application/json': {
             code?: string;
             currentDraftVersion?: number;
+            issues?: {
+              code: string;
+              definitionId: string | null;
+              message: string;
+              path: string;
+            }[];
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'types.read.validateItem': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          catalogueRevision: number;
+          existingItemId?: string;
+          fieldValues: {
+            /** Format: uuid */
+            fieldId: string;
+            /** @enum {string} */
+            source: 'stored' | 'override';
+            values: unknown[];
+          }[];
+          /** Format: uuid */
+          typeId: string;
+        };
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            catalogueRevision: number;
+            fieldValues: {
+              /** Format: uuid */
+              fieldId: string;
+              /** @enum {string} */
+              source: 'stored' | 'override';
+              values: unknown[];
+            }[];
+            /** Format: uuid */
+            typeId: string;
+            /** @enum {boolean} */
+            valid: true;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            issues?: {
+              code: string;
+              definitionId: string | null;
+              message: string;
+              path: string;
+            }[];
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
             issues?: {
               code: string;
               definitionId: string | null;

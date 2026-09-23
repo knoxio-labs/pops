@@ -27,12 +27,12 @@ const itemsMove: ToolDef = {
     if (!locationId) return toolError('Missing required field: locationId');
     return mapCallResult(
       await withCurrentRevision(id, (baseRevision) =>
-        sendItemMutation(
-          id,
-          'item.move',
-          { to: { kind: 'location', locationId }, verb: 'move' },
-          baseRevision
-        )
+        sendItemMutation({
+          entityId: id,
+          op: 'item.move',
+          args: { to: { kind: 'location', locationId }, verb: 'move' },
+          baseRevision,
+        })
       )
     );
   },
@@ -56,12 +56,12 @@ const itemsStore: ToolDef = {
     if (!containerId) return toolError('Missing required field: containerId');
     return mapCallResult(
       await withCurrentRevision(id, (baseRevision) =>
-        sendItemMutation(
-          id,
-          'item.move',
-          { to: { kind: 'container', itemId: containerId }, verb: 'store' },
-          baseRevision
-        )
+        sendItemMutation({
+          entityId: id,
+          op: 'item.move',
+          args: { to: { kind: 'container', itemId: containerId }, verb: 'store' },
+          baseRevision,
+        })
       )
     );
   },
@@ -80,7 +80,12 @@ const itemsPickUp: ToolDef = {
     if (!id) return toolError('Missing required field: id');
     return mapCallResult(
       await withCurrentRevision(id, (baseRevision) =>
-        sendItemMutation(id, 'item.move', { to: { kind: 'hand' }, verb: 'pick_up' }, baseRevision)
+        sendItemMutation({
+          entityId: id,
+          op: 'item.move',
+          args: { to: { kind: 'hand' }, verb: 'pick_up' },
+          baseRevision,
+        })
       )
     );
   },

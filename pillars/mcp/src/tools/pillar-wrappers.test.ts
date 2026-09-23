@@ -16,7 +16,7 @@ import { cerebrumTools } from './cerebrum.js';
 import { contacts, finance } from './finance-client.js';
 import { connectionTools } from './inventory-connections.js';
 import { fixtures } from './inventory-fixtures-write.js';
-import { items } from './inventory-items-write.js';
+import { itemTools } from './inventory-items.js';
 import { locationTools } from './inventory-locations.js';
 import { mediaTools } from './media.js';
 import { purchasesTools } from './purchases.js';
@@ -75,9 +75,9 @@ describe('pillar client wrappers resolve to [domain, proc] operationIds', () => 
     expect(h.lastPath()).toEqual(['entities', 'list']);
   });
 
-  it('items() → items.list', async () => {
-    await items().list({});
-    expect(h.lastPath()).toEqual(['items', 'list']);
+  it('inventory items.list tool → web.list', async () => {
+    await handlerFor(itemTools, 'inventory.items.list')({});
+    expect(h.lastPath()).toEqual(['web', 'list']);
   });
 
   it('fixtures() → fixtures.list', async () => {

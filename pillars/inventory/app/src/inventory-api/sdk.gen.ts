@@ -201,6 +201,9 @@ import type {
   TypesReadCatalogueData,
   TypesReadCatalogueErrors,
   TypesReadCatalogueResponses,
+  TypesReadValidateItemData,
+  TypesReadValidateItemErrors,
+  TypesReadValidateItemResponses,
   WebGetData,
   WebGetErrors,
   WebGetResponses,
@@ -1173,6 +1176,25 @@ export const typesManagePublishDraft = <ThrowOnError extends boolean = false>(
     headers: {
       'Content-Type': 'application/json',
       ...options.headers,
+    },
+  });
+
+/**
+ * Validate and canonicalise a complete item value set without writing it
+ */
+export const typesReadValidateItem = <ThrowOnError extends boolean = false>(
+  options?: Options<TypesReadValidateItemData, ThrowOnError>
+): RequestResult<TypesReadValidateItemResponses, TypesReadValidateItemErrors, ThrowOnError> =>
+  (options?.client ?? client).post<
+    TypesReadValidateItemResponses,
+    TypesReadValidateItemErrors,
+    ThrowOnError
+  >({
+    url: '/type-catalogue/items/validate',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
     },
   });
 

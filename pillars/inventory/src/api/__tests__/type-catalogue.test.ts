@@ -55,6 +55,11 @@ function apiFor(mode: 'web' | 'service' | 'none', scopes: readonly string[] = []
     selfBaseUrl: 'http://localhost:3002',
     serviceAccountVerifier: verifier(scopes),
     identityResolver: identity(mode, scopes),
+    documents: {
+      getPaperlessStatus: () =>
+        Promise.resolve({ configured: false, available: false, baseUrl: null }),
+      searchPaperlessDocuments: () => Promise.resolve([]),
+    },
   });
   return transport.requestOn(app);
 }
@@ -113,6 +118,72 @@ describe('type catalogue owner API', () => {
     expect(read.status).toBe(200);
     expect(readDraft.status).toBe(403);
     expect(create.status).toBe(403);
+  });
+
+  it('validates an item payload through the read scope without mutating persisted state', async () => {
+    const api = apiFor('service', ['inventory.types.read']);
+    const catalogue = await api.get('/type-catalogue').set('x-api-key', SERVICE_KEY);
+    const type = catalogue.body.types[0];
+    const before = {
+      revisions: inventoryDb.raw.prepare('SELECT count(*) AS count FROM catalogue_revisions').get(),
+      items: inventoryDb.raw.prepare('SELECT count(*) AS count FROM items').get(),
+      values: inventoryDb.raw.prepare('SELECT count(*) AS count FROM item_field_values').get(),
+    };
+
+    const response = await api
+      .post('/type-catalogue/items/validate')
+      .set('x-api-key', SERVICE_KEY)
+      .send({
+        catalogueRevision: catalogue.body.revision.revision,
+        typeId: type.id,
+        fieldValues: [],
+      });
+    const after = {
+      revisions: inventoryDb.raw.prepare('SELECT count(*) AS count FROM catalogue_revisions').get(),
+      items: inventoryDb.raw.prepare('SELECT count(*) AS count FROM items').get(),
+      values: inventoryDb.raw.prepare('SELECT count(*) AS count FROM item_field_values').get(),
+    };
+
+    expect(response.status, JSON.stringify(response.body)).toBe(200);
+    expect(response.body).toEqual({
+      valid: true,
+      catalogueRevision: catalogue.body.revision.revision,
+      typeId: type.id,
+      fieldValues: [],
+    });
+    expect(after).toEqual(before);
+  });
+
+  it('returns structured item validation failures without disclosing internal rows', async () => {
+    const api = apiFor('web');
+    const catalogue = await api.get('/type-catalogue');
+    const type = catalogue.body.types[0];
+
+    const response = await api.post('/type-catalogue/items/validate').send({
+      catalogueRevision: catalogue.body.revision.revision,
+      typeId: type.id,
+      fieldValues: [
+        {
+          fieldId: '00000000-0000-4000-8000-000000000001',
+          source: 'stored',
+          values: ['unexpected'],
+        },
+      ],
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      message: 'field 00000000-0000-4000-8000-000000000001: is not declared',
+      code: 'item_validation_failed',
+      issues: [
+        {
+          definitionId: '00000000-0000-4000-8000-000000000001',
+          path: 'fieldValues.00000000-0000-4000-8000-000000000001',
+          code: 'field_unknown',
+          message: 'field 00000000-0000-4000-8000-000000000001: is not declared',
+        },
+      ],
+    });
   });
 
   it('creates, edits, publishes, and audits a draft for the owner', async () => {
@@ -181,6 +252,116 @@ describe('type catalogue owner API', () => {
       kind: 'published',
       actor: { kind: 'web', id: OWNER_EMAIL },
     });
+  });
+
+  it('authors a type, creates its item, and edits stable values entirely through APIs', async () => {
+    const api = apiFor('web');
+    const itemId = '30000000-0000-4000-8000-000000000001';
+    const current = await api.get('/type-catalogue');
+    const baseRevision = current.body.revision.revision;
+    const createdDraft = await api.post('/type-catalogue/drafts').send({ baseRevision });
+    const draftRevision = createdDraft.body.revision.revision;
+
+    const typePatch = await api.patch(`/type-catalogue/drafts/${draftRevision}`).send({
+      baseRevision,
+      operations: [{ kind: 'put_type', key: 'api_tool', label: 'API tool' }],
+    });
+    expect(typePatch.status, JSON.stringify(typePatch.body)).toBe(200);
+    const type = typePatch.body.draft.types.find(
+      (entry: { key: string }) => entry.key === 'api_tool'
+    );
+    if (type === undefined) throw new Error('authored type missing from draft');
+    const typeId = type.id;
+    const fieldPatch = await api.patch(`/type-catalogue/drafts/${draftRevision}`).send({
+      baseRevision,
+      operations: [
+        {
+          kind: 'put_field',
+          typeId,
+          key: 'serial',
+          label: 'Serial',
+          fieldKind: 'short_text',
+          cardinality: 'one',
+          storage: 'stored',
+        },
+      ],
+    });
+    expect(fieldPatch.status, JSON.stringify(fieldPatch.body)).toBe(200);
+    const field = fieldPatch.body.draft.types
+      .find((entry: { id: string }) => entry.id === typeId)
+      ?.fields.find((entry: { key: string }) => entry.key === 'serial');
+    if (field === undefined) throw new Error('authored field missing from draft');
+    const fieldId = field.id;
+    const published = await api
+      .post(`/type-catalogue/drafts/${draftRevision}/publish`)
+      .send({ baseRevision });
+    expect(published.status, JSON.stringify(published.body)).toBe(200);
+
+    const create = await api
+      .post('/sync/mutations')
+      .set('Pops-Inventory-Protocol', '2')
+      .send({
+        mutations: [
+          {
+            mutationId: '40000000-0000-4000-8000-000000000001',
+            op: 'item.create',
+            entityId: itemId,
+            baseRevision: null,
+            catalogueRevision: draftRevision,
+            dependsOn: [],
+            clientTime: '2026-09-23T00:00:00.000Z',
+            args: {
+              item: {
+                name: 'API-authored item',
+                typeId,
+                values: [{ fieldId, values: ['first'] }],
+              },
+            },
+          },
+        ],
+      });
+    expect(create.status, JSON.stringify(create.body)).toBe(200);
+    expect(create.body.outcomes[0]).toMatchObject({ status: 'applied', revision: 1 });
+
+    const edit = await api
+      .post('/sync/mutations')
+      .set('Pops-Inventory-Protocol', '2')
+      .send({
+        mutations: [
+          {
+            mutationId: '40000000-0000-4000-8000-000000000002',
+            op: 'item.edit',
+            entityId: itemId,
+            baseRevision: 1,
+            catalogueRevision: draftRevision,
+            dependsOn: [],
+            clientTime: '2026-09-23T00:01:00.000Z',
+            args: { name: 'Edited API item', values: [{ fieldId, values: ['second'] }] },
+          },
+        ],
+      });
+    expect(edit.status, JSON.stringify(edit.body)).toBe(200);
+    expect(edit.body.outcomes[0]).toMatchObject({ status: 'applied', revision: 2 });
+
+    const snapshot = await api.get('/sync/snapshot').set('Pops-Inventory-Protocol', '2');
+    expect(snapshot.status, JSON.stringify(snapshot.body)).toBe(200);
+    expect(snapshot.body.items).toContainEqual(
+      expect.objectContaining({
+        id: itemId,
+        revision: 2,
+        name: 'Edited API item',
+        typeId,
+        catalogueRevision: draftRevision,
+        fieldValues: [
+          {
+            fieldId,
+            source: 'stored',
+            catalogueRevision: draftRevision,
+            values: ['second'],
+          },
+        ],
+      })
+    );
   });
 
   it('reports when there is no draft to resume', async () => {

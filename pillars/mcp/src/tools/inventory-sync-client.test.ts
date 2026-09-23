@@ -31,7 +31,7 @@ describe('fetchItemRevision', () => {
 });
 
 describe('sendItemMutation', () => {
-  it('builds a one-mutation batch with a fresh mutationId and current clientTime', async () => {
+  it('preserves caller retry identity and catalogue revision in a one-mutation batch', async () => {
     inventory.sync.mutations.mockResolvedValue(
       callOk({
         outcomes: [
@@ -41,28 +41,57 @@ describe('sendItemMutation', () => {
       })
     );
     const before = Date.now();
-    await sendItemMutation('item_1', 'item.setFull', { full: true }, 1);
+    await sendItemMutation({
+      entityId: 'item_1',
+      op: 'item.setFull',
+      args: { full: true },
+      baseRevision: 1,
+      mutationId: '10000000-0000-4000-8000-000000000001',
+      catalogueRevision: 7,
+    });
     const call = inventory.sync.mutations.mock.calls[0]?.[0];
     const mutation = call.mutations[0];
     expect(mutation.op).toBe('item.setFull');
     expect(mutation.entityId).toBe('item_1');
     expect(mutation.baseRevision).toBe(1);
+    expect(mutation.catalogueRevision).toBe(7);
     expect(mutation.dependsOn).toEqual([]);
     expect(mutation.args).toEqual({ full: true });
-    expect(typeof mutation.mutationId).toBe('string');
-    expect(mutation.mutationId.length).toBeGreaterThan(0);
+    expect(mutation.mutationId).toBe('10000000-0000-4000-8000-000000000001');
     expect(Date.parse(mutation.clientTime)).toBeGreaterThanOrEqual(before);
+  });
+
+  it('mints a fresh mutation identity for callers that do not supply one', async () => {
+    await sendItemMutation({
+      entityId: 'item_1',
+      op: 'item.setFull',
+      args: { full: true },
+      baseRevision: 1,
+    });
+    const mutation = inventory.sync.mutations.mock.calls[0]?.[0].mutations[0];
+    expect(mutation.mutationId).toMatch(/^[0-9a-f-]{36}$/u);
+    expect(mutation.catalogueRevision).toBeUndefined();
   });
 
   it('returns bad-request when the batch reports no outcome at all', async () => {
     inventory.sync.mutations.mockResolvedValue(callOk({ outcomes: [], highWaterSeq: 1 }));
-    const result = await sendItemMutation('item_1', 'item.setFull', { full: true }, 1);
+    const result = await sendItemMutation({
+      entityId: 'item_1',
+      op: 'item.setFull',
+      args: { full: true },
+      baseRevision: 1,
+    });
     expect(result.kind).toBe('bad-request');
   });
 
   it('passes a transport failure through untouched', async () => {
     inventory.sync.mutations.mockResolvedValue({ kind: 'unavailable', pillar: 'inventory' });
-    const result = await sendItemMutation('item_1', 'item.setFull', { full: true }, 1);
+    const result = await sendItemMutation({
+      entityId: 'item_1',
+      op: 'item.setFull',
+      args: { full: true },
+      baseRevision: 1,
+    });
     expect(result).toEqual({ kind: 'unavailable', pillar: 'inventory' });
   });
 });

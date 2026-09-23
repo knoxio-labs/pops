@@ -283,6 +283,12 @@ the gate above derives three grants: `inventory.sync` (`GET /sync/snapshot`,
   phone the change is recorded against, and is believed only from a caller
   whose account holds `inventory.sync`; no key records `web`, any other key
   `service:<account>`.
+- `POST /type-catalogue/items/validate` accepts the same stable type, field and
+  source IDs as item mutations and runs the authoritative value validator
+  against an exact published catalogue revision. It returns canonical values
+  and field-specific diagnostics without writing item values, audit records or
+  sync changes, and requires the same `inventory.types.read` grant as catalogue
+  inspection.
 - Catalogue authoring does not pass through bfm. Inventory exposes a shared
   owner-only draft/publish surface for MCP and the web editor; bfm relays only
   immutable catalogue reads. `GET /type-catalogue/drafts/current` lets an
