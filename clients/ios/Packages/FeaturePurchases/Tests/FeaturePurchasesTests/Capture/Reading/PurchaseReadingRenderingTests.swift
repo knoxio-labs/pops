@@ -1,5 +1,4 @@
 import AppCore
-import AppCoreFakes
 import DesignSystemTestSupport
 import Foundation
 import SwiftUI

@@ -1,6 +1,5 @@
 import AppCore
 import AppCoreFakes
-import Foundation
 import Synchronization
 import Testing
 
@@ -125,6 +124,21 @@ internal struct PurchaseReviewViewModelTests {
         #expect(model.savedPurchaseIDs == ["saved"])
     }
 
+    @Test("finished IDs appear only once nothing remains, in save order")
+    func finishedIDsWaitForTheLastEntry() async {
+        let repository = ReviewWriteRepository(results: [
+            .success(.fake(id: "one")), .failure(.transport("offline")),
+        ])
+        let model = makeModel([entry(id: "one"), entry(id: "two")], repository: repository)
+        #expect(model.finishedIDs == nil)
+
+        await model.save()
+        #expect(model.finishedIDs == nil)
+
+        model.discard("two")
+        #expect(model.finishedIDs == ["one"])
+    }
+
     @Test("a conflict blocks another save until its entry is discarded")
     func conflictBlocksUntilDiscard() async {
         let repository = ReviewWriteRepository(results: [
@@ -190,46 +204,5 @@ internal struct PurchaseReviewViewModelTests {
                     id: "one",
                     reason: ReceiptDraftCopy.message(for: .unparseableAmount),
                     retryable: false))
-    }
-
-    private func makeModel(
-        _ entries: [ReviewEntry],
-        repository: ReviewWriteRepository,
-        keys: KeySequence = KeySequence()
-    ) -> PurchaseReviewViewModel {
-        PurchaseReviewViewModel(
-            entries: entries, repository: repository, makeIdempotencyKey: keys.next)
-    }
-
-    private func entry(
-        id: String,
-        origin: ReviewOrigin = .read,
-        flagged: Bool = false,
-        saveable: Bool = true
-    ) -> ReviewEntry {
-        let reading = ReceiptDraftReading(
-            receiptUris: ["pops://purchases/receipt/\(id)"],
-            reconciled: !flagged,
-            failures: flagged ? [.fake()] : [],
-            extracted: .fake(),
-            capture: nil,
-            matchedMerchantEntityID: "merchant-1")
-        var draft = ReceiptDraftPresentation().draft(
-            extracted: reading.extracted,
-            failures: reading.failures,
-            matchedMerchantID: reading.matchedMerchantEntityID)
-        if !saveable { draft.total.value = "" }
-        return ReviewEntry(
-            id: id,
-            draft: draft,
-            origin: origin,
-            reading: origin == .read ? reading : nil,
-            status: flagged
-                ? ReceiptDraftView.Status(
-                    tone: .warning,
-                    heading: PurchaseReviewCopy.needsReviewHeading,
-                    message: PurchaseReviewCopy.needsReviewMessage)
-                : nil,
-            parts: [.fake()])
     }
 }
