@@ -49,17 +49,7 @@ internal struct PurchasePageViewer: View {
     }
 
     private var location: String? {
-        guard let page,
-            let receiptIndex = model.receipts.firstIndex(where: {
-                $0.pages.contains { $0.id == page.id }
-            })
-        else { return nil }
-        let receipt = model.receipts[receiptIndex]
-        let name = "Receipt \(receiptIndex + 1)"
-        guard receipt.pages.count > 1,
-            let pageIndex = receipt.pages.firstIndex(where: { $0.id == page.id })
-        else { return "\(name) · on its own" }
-        return "\(name) · photo \(pageIndex + 1) of \(receipt.pages.count)"
+        PurchasePageViewerLogic.location(of: current, in: model.receipts)
     }
 
     private var header: some View {
@@ -94,10 +84,9 @@ internal struct PurchasePageViewer: View {
     }
 
     private func step(_ delta: Int) {
-        guard let index else { return }
-        let next = index + delta
-        guard pages.indices.contains(next) else { return }
-        current = pages[next].id
+        if let next = PurchasePageViewerLogic.step(from: current, by: delta, in: pages) {
+            current = next
+        }
     }
 
     private var actions: some View {
@@ -143,8 +132,7 @@ internal struct PurchasePageViewer: View {
 
     private func replace(using action: (StagedPage) -> Void) {
         guard let page else { return }
-        model.beginReplacing(page.id)
-        action(page)
+        PurchasePageViewerLogic.replace(page, in: model, using: action)
     }
 
     private func circle(_ symbol: String, action: @escaping () -> Void) -> some View {
