@@ -25,13 +25,11 @@ name: A second feature earns a tab, and receipt capture says why it cannot open 
     env:
       SERVER_URL: ${CONTROL_BASE_URL}
 
-# The first tab, and the reason this assertion is here rather than assumed: a
-# `TabView` with no explicit selection shows its first tab, so reaching the
-# transactions list is how this flow knows the root drew a switcher rather than
-# the single-feature screen — and that finance is still healthy, which is what
-# makes the tap below a navigation rather than a recovery.
+# Purchases is the first primary tab. Reaching it proves the root drew the
+# switcher and that the purchase service is healthy before this flow changes
+# tabs.
 - assertVisible:
-    id: 'transactions-list'
+    id: 'purchases-home'
 
 # The tab bar itself, which exists only at two or more usable features
 # (`ContentView.features`). Its label is `RootCopy.name(of:)`'s, shared with the
@@ -77,6 +75,4 @@ name: A second feature earns a tab, and receipt capture says why it cannot open 
 
 # The other tab still goes back. A switcher that can only be crossed once is a
 # worse root than the single-feature screen it replaced.
-- tapOn: 'Transactions'
-- assertVisible:
-    id: 'transactions-list'
+- runFlow: subflows/open-transactions.yaml

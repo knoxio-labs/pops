@@ -10,7 +10,7 @@ A capability more than one feature needs also lives here, for the same reason a 
 
 `Navigation/PopsURI.swift` mirrors `libs/sdk/src/soft-uri.ts`'s `parseSoftUri`: the fleet-wide grammar `pops://<pillar>/<type>/<id>` that a printed label or a `pops://` URL encodes, parsed identically on both platforms because one prints what the other scans. `EntityRouter` is the composition root's map from a parsed `(pillar, type)` pair to whichever feature claims it — the same "only the composition root may know about more than one feature" rule `Route.swift` states for in-app navigation, so it lives here rather than in a feature. A pair nothing has registered is not an error: `EntityRouteOutcome.unsupported(pillar:)` is the approved one-line hand-off, because a label can outlive the app version that printed it, or point at a pillar this build never drew a screen for. `EntityRouterRegistry` is the plain dictionary-backed default implementation; the app target owns registering each feature's handlers into it at startup.
 
-`RepositoryError` is shared across every repository seam rather than given a per-feature copy — the failure modes a screen renders around (the pillar is down, the session is gone, the response does not match this build) do not change shape with the domain behind the call.
+`RepositoryError` is shared across every repository seam rather than given a per-feature copy — the failure modes a screen renders around (the pillar is down, the session is gone, the response does not match this build) do not change shape with the domain behind the call. Conflicts retain the server's machine-readable reason so callers can distinguish a locked record from a stale compare-and-swap token without treating either as a network retry.
 
 ## Inventory protocol 2 values
 
@@ -28,9 +28,11 @@ Universal search names its pillars, scopes, answer phases, chip states and recen
 
 The in-memory transaction and purchase repositories page through opaque cursors they minted themselves, reject caller-derived and stale cursors, count calls, and can fail a chosen call. Replacing their rows invalidates every outstanding cursor so a refresh starts from the first page. Purchase cursor identities are never recycled, including when two filters end at the same offset.
 
-`PurchasesRepository` accepts `PurchaseStatusFilter.all` or `.unsettled`; the latter mirrors the mobile wire's single status filter without exposing generated types. `PurchasePage.totalCount` is optional because the BFM supplies it only on a first page. Callers retain that first value while later pages carry `nil`. The in-memory repository filters before applying its cursor and binds every cursor to the filter that minted it.
+`PurchasesRepository` accepts `PurchaseStatusFilter.all` or `.unsettled`; the latter mirrors the mobile wire's single status filter without exposing generated types. `PurchasePage.totalCount` is optional because the BFM supplies it only on a first page. Callers retain that first value while later pages carry `nil`. The in-memory repository filters before applying its cursor and binds every cursor to the filter that minted it. Updates carry a complete desired line set and an opaque compare-and-swap token; omitted header values preserve their current values in the fake. Retained lines also preserve their Inventory-link flag, while newly added lines begin unlinked.
 
 `PurchasesMonthSummary` keeps gross and net amounts grouped by currency, carries an optional previous-month comparison, and represents merchant leaders as aggregates rather than fabricated purchases. The purchase fake accepts a seeded summary and applies the same numbered failure schedule to page and summary calls.
+
+`PurchaseEdit` retains the server's ordered field history, including field names introduced after the app shipped. `PurchaseUpdate` carries the complete desired line set and the detail's verbatim update token so the repository can reject stale edits without the app normalising its spelling or precision.
 
 Purchase details keep their ordered receipt URI list separate from the list row's compatibility URI. Receipt reads return decoded bytes with the server media type. The purchase fake seeds details and receipt bytes independently; page, summary, detail, thumbnail, and full-image calls all increment the same one-based call counter before applying scheduled failures.
 

@@ -13,8 +13,7 @@ name: A device revoked mid-use lands back on pairing, and says why
     env:
       SERVER_URL: ${CONTROL_BASE_URL}
 
-- assertVisible:
-    id: 'transactions-list'
+- runFlow: subflows/open-transactions.yaml
 - assertVisible:
     id: 'transaction-row-e2e-groceries'
 
