@@ -8,6 +8,7 @@ import { ValueValidationError } from '../value-codec.js';
 const TYPE_ID = '10000000-0000-5000-8000-000000000001';
 const CABLE_TYPE_ID = 'b5ea5cd3-73b3-56dc-92e1-374eac720990';
 const OPTION_ID = '20000000-0000-5000-8000-000000000001';
+const ACTIVE_OPTION_ID = '20000000-0000-5000-8000-000000000002';
 const FIELD_IDS = {
   short: '30000000-0000-5000-8000-000000000001',
   long: '30000000-0000-5000-8000-000000000002',
@@ -90,9 +91,67 @@ function publishRevisionTwo(harness: ReturnType<typeof openHarness>): void {
     .run(OPTION_ID, FIELD_IDS.enum);
   harness.raw
     .prepare(
+      `INSERT INTO field_enum_options
+         (revision, id, field_id, key, label, sort_order, archived_at)
+       VALUES (2, ?, ?, 'active', 'Active', 1, NULL)`
+    )
+    .run(ACTIVE_OPTION_ID, FIELD_IDS.enum);
+  harness.raw
+    .prepare(
       `UPDATE catalogue_revisions
        SET status = 'published', published_actor_kind = 'web', published_at = 'now'
        WHERE revision = 2`
+    )
+    .run();
+}
+
+/**
+ * Publishes a revision 3 that restores the previously retired enum option,
+ * reusing the same stable type/field IDs so existing item values remain valid.
+ */
+function publishRevisionThreeWithRestoredOption(harness: ReturnType<typeof openHarness>): void {
+  harness.raw
+    .prepare(
+      `INSERT INTO catalogue_revisions
+         (revision, base_revision, status, minimum_protocol, created_actor_kind, created_at)
+       VALUES (3, 2, 'draft', 2, 'web', 'now')`
+    )
+    .run();
+  harness.raw
+    .prepare(
+      `INSERT INTO item_types
+         (revision, id, key, label, sort_order, capabilities_json, legacy_labels_json, presentation_json)
+       VALUES (3, ?, 'dynamic', 'Dynamic', 0, '[]', '[]', '{}')`
+    )
+    .run(TYPE_ID);
+  harness.raw
+    .prepare(
+      `INSERT INTO item_type_fields
+         (revision, id, type_id, key, label, sort_order, kind, cardinality, required,
+          storage, fixed_unit, reference_kinds_json, reference_type_ids_json, allow_override,
+          presentation_json, archived_at)
+       VALUES (3, ?, ?, 'enum', 'enum', 0, 'enum', 'many', 0, 'stored', NULL, '[]', '[]', 0, '{}', NULL)`
+    )
+    .run(FIELD_IDS.enum, TYPE_ID);
+  harness.raw
+    .prepare(
+      `INSERT INTO field_enum_options
+         (revision, id, field_id, key, label, sort_order, archived_at)
+       VALUES (3, ?, ?, 'retired', 'Retired', 0, NULL)`
+    )
+    .run(OPTION_ID, FIELD_IDS.enum);
+  harness.raw
+    .prepare(
+      `INSERT INTO field_enum_options
+         (revision, id, field_id, key, label, sort_order, archived_at)
+       VALUES (3, ?, ?, 'active', 'Active', 1, NULL)`
+    )
+    .run(ACTIVE_OPTION_ID, FIELD_IDS.enum);
+  harness.raw
+    .prepare(
+      `UPDATE catalogue_revisions
+       SET status = 'published', published_actor_kind = 'web', published_at = 'now'
+       WHERE revision = 3`
     )
     .run();
 }
@@ -281,6 +340,144 @@ describe('validateItemFieldValues', () => {
         ],
       })
     ).toThrow(/archived/u);
+  });
+
+  it('retains a retired multiset regardless of reordering, partial removal, or mixing with active options', () => {
+    const harness = openHarness();
+    const existingId = '40000000-0000-4000-8000-000000000013';
+    seedItem(harness, { id: existingId });
+    publishRevisionTwo(harness);
+    harness.db
+      .insert(itemFieldValues)
+      .values([
+        {
+          itemId: existingId,
+          fieldId: FIELD_IDS.enum,
+          source: 'stored',
+          ordinal: 0,
+          valueJson: JSON.stringify({ optionId: OPTION_ID }),
+          catalogueRevision: 2,
+          createdAt: 'now',
+          updatedAt: 'now',
+        },
+        {
+          itemId: existingId,
+          fieldId: FIELD_IDS.enum,
+          source: 'stored',
+          ordinal: 1,
+          valueJson: JSON.stringify({ optionId: OPTION_ID }),
+          catalogueRevision: 2,
+          createdAt: 'now',
+          updatedAt: 'now',
+        },
+        {
+          itemId: existingId,
+          fieldId: FIELD_IDS.enum,
+          source: 'stored',
+          ordinal: 2,
+          valueJson: JSON.stringify({ optionId: ACTIVE_OPTION_ID }),
+          catalogueRevision: 2,
+          createdAt: 'now',
+          updatedAt: 'now',
+        },
+      ])
+      .run();
+    const retired = { optionId: OPTION_ID };
+    const active = { optionId: ACTIVE_OPTION_ID };
+
+    expect(
+      validateItemFieldValues(harness.db, {
+        typeId: TYPE_ID,
+        catalogueRevision: 2,
+        existingItemId: existingId,
+        fields: [{ fieldId: FIELD_IDS.enum, source: 'stored', values: [active, retired, retired] }],
+      })
+    ).toHaveLength(1);
+    expect(
+      validateItemFieldValues(harness.db, {
+        typeId: TYPE_ID,
+        catalogueRevision: 2,
+        existingItemId: existingId,
+        fields: [{ fieldId: FIELD_IDS.enum, source: 'stored', values: [retired, active] }],
+      })
+    ).toHaveLength(1);
+  });
+
+  it('rejects a newly added retired occurrence for an item that never held it', () => {
+    const harness = openHarness();
+    const existingId = '40000000-0000-4000-8000-000000000014';
+    seedItem(harness, { id: existingId });
+    publishRevisionTwo(harness);
+    harness.db
+      .insert(itemFieldValues)
+      .values({
+        itemId: existingId,
+        fieldId: FIELD_IDS.enum,
+        source: 'stored',
+        ordinal: 0,
+        valueJson: JSON.stringify({ optionId: ACTIVE_OPTION_ID }),
+        catalogueRevision: 2,
+        createdAt: 'now',
+        updatedAt: 'now',
+      })
+      .run();
+
+    expect(() =>
+      validateItemFieldValues(harness.db, {
+        typeId: TYPE_ID,
+        catalogueRevision: 2,
+        existingItemId: existingId,
+        fields: [
+          {
+            fieldId: FIELD_IDS.enum,
+            source: 'stored',
+            values: [{ optionId: ACTIVE_OPTION_ID }, { optionId: OPTION_ID }],
+          },
+        ],
+      })
+    ).toThrow(/archived/u);
+    expect(() =>
+      validateItemFieldValues(harness.db, {
+        typeId: TYPE_ID,
+        catalogueRevision: 2,
+        fields: [{ fieldId: FIELD_IDS.enum, source: 'stored', values: [{ optionId: OPTION_ID }] }],
+      })
+    ).toThrow(/archived/u);
+  });
+
+  it('allows unrestricted use of an enum option once a later revision restores it', () => {
+    const harness = openHarness();
+    const existingId = '40000000-0000-4000-8000-000000000015';
+    seedItem(harness, { id: existingId });
+    publishRevisionTwo(harness);
+    harness.db
+      .insert(itemFieldValues)
+      .values({
+        itemId: existingId,
+        fieldId: FIELD_IDS.enum,
+        source: 'stored',
+        ordinal: 0,
+        valueJson: JSON.stringify({ optionId: OPTION_ID }),
+        catalogueRevision: 2,
+        createdAt: 'now',
+        updatedAt: 'now',
+      })
+      .run();
+    publishRevisionThreeWithRestoredOption(harness);
+
+    expect(
+      validateItemFieldValues(harness.db, {
+        typeId: TYPE_ID,
+        catalogueRevision: 3,
+        fields: [
+          {
+            fieldId: FIELD_IDS.enum,
+            source: 'stored',
+            values: [{ optionId: OPTION_ID }, { optionId: OPTION_ID }],
+          },
+        ],
+      })
+    ).toHaveLength(1);
   });
 
   it('keeps reference identities while reporting resolved, deleted, and missing targets', () => {
