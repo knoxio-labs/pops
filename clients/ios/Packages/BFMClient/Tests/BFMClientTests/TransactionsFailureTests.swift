@@ -64,7 +64,7 @@ internal struct TransactionsFailureTests {
         arguments: [
             ("upstream_degraded", RepositoryError.unavailable),
             ("upstream_misconfigured", RepositoryError.unavailable),
-            ("upstream_conflict", RepositoryError.transport("")),
+            ("upstream_conflict", RepositoryError.conflict("upstream_conflict")),
             ("not_found", RepositoryError.transport("")),
         ]
     )

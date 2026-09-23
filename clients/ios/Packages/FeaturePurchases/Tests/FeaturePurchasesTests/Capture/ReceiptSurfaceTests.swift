@@ -205,19 +205,6 @@ internal struct ReceiptCaptureProblemCopyTests {
     }
 }
 
-@Suite("Receipt repository failure copy")
-internal struct ReceiptRepositoryFailureCopyTests {
-    @Test("a conflict is explained as saved state rather than a network failure")
-    func conflictDiffersFromTransport() {
-        let message: (RepositoryError) -> String = ReceiptResultCopy.message(for:)
-        let conflict = message(.conflict("purchase_locked"))
-        let transport = message(.transport("offline"))
-
-        #expect(!conflict.isEmpty)
-        #expect(conflict != transport)
-    }
-}
-
 /// The one layout decision on these screens that is not the framework's.
 @Suite("Line item layout")
 internal struct ReceiptLineLayoutTests {

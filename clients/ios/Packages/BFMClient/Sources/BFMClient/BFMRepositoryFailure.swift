@@ -33,13 +33,13 @@ internal enum BFMRepositoryFailure {
     }
 
     /// The BFM's upstream vocabulary, collapsed onto what a screen can do
-    /// about it — but not past the one distinction that matters.
+    /// about it — but not past the three distinctions that matter.
     ///
-    /// `upstream_unavailable` and `upstream_contract_mismatch` must not
-    /// converge. The first is "the pillar behind this is not answering",
-    /// worth retrying; the second is "it answered something this build
-    /// cannot read", which is not, and which a screen renders as a different
-    /// sentence with a different next action.
+    /// `upstream_unavailable`, `upstream_contract_mismatch`, and
+    /// `upstream_conflict` must not converge. The first is "the pillar behind
+    /// this is not answering", worth retrying; the second is "it answered
+    /// something this build cannot read"; the third is a write collision that
+    /// preserves its wire reason because retrying the same input cannot work.
     ///
     /// `upstream_misconfigured` joins the unavailable side rather than the
     /// mismatch one: a pillar whose configuration is wrong is not serving,
@@ -53,6 +53,8 @@ internal enum BFMRepositoryFailure {
             return .unavailable
         case "upstream_contract_mismatch":
             return .contractMismatch
+        case "upstream_conflict":
+            return .conflict(code)
         default:
             return .transport("\(operation): upstream \(code)")
         }

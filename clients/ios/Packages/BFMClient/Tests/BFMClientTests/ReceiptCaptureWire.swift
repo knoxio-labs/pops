@@ -31,6 +31,18 @@ internal func saveDraft(
         .saveDraft(payload)
 }
 
+/// Creates a manual purchase through a stubbed transport, for suites that
+/// read what `createManualPurchase` mapped a response into.
+internal func createManualPurchase(
+    _ status: HTTPResponse.Status = .ok,
+    json: String,
+    payload: ReceiptManualPurchasePayload = .fake()
+) async throws -> ReceiptPurchase {
+    try await BFMReceiptCaptureRepository
+        .stubbed(StubTransport(status: status, json: json))
+        .createManualPurchase(payload)
+}
+
 /// The bodies `POST /mobile/purchases/receipts/extract`,
 /// `POST /mobile/purchases/receipts` and `POST /mobile/purchases/manual` can
 /// answer with, written as the JSON the BFM actually sends rather than built

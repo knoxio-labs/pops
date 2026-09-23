@@ -109,6 +109,7 @@ internal enum PurchasesHomeFailure: String, CaseIterable, Identifiable, Sendable
     case unavailable
     case unauthorized
     case contractMismatch
+    case conflict
     case transport
     case dependencyNotBound
 
@@ -117,7 +118,7 @@ internal enum PurchasesHomeFailure: String, CaseIterable, Identifiable, Sendable
         case .unavailable: self = .unavailable
         case .unauthorized: self = .unauthorized
         case .contractMismatch: self = .contractMismatch
-        case .conflict: self = .contractMismatch
+        case .conflict: self = .conflict
         case .transport: self = .transport
         case .dependencyNotBound: self = .dependencyNotBound
         case nil: self = .transport

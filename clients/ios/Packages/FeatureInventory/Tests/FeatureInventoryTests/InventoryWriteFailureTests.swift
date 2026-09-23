@@ -142,6 +142,15 @@ internal struct InventoryWriteFailureTests {
                 == InventoryCopy.message(for: .repository(.transport("x"))))
     }
 
+    @Test("a repository conflict is calm and distinct from a retryable network failure")
+    func repositoryConflictCopy() {
+        let conflict = InventoryCopy.message(for: .repository(.conflict("already_saved")))
+        let transport = InventoryCopy.message(for: .repository(.transport("offline")))
+
+        #expect(!conflict.isEmpty)
+        #expect(conflict != transport)
+    }
+
     @Test("cancellation is not a failure anybody is told about")
     func cancellationIsSilent() {
         #expect(InventoryWriteFailure.reporting(CancellationError()) == nil)

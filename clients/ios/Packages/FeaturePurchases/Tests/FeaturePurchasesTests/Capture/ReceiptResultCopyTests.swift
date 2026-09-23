@@ -16,6 +16,7 @@ internal struct ReceiptResultCopyTests {
         .unavailable,
         .unauthorized,
         .contractMismatch,
+        .conflict("already_saved"),
         .transport("URLError -1009"),
         .dependencyNotBound,
     ]
@@ -43,6 +44,15 @@ internal struct ReceiptResultCopyTests {
     @Test("a transport failure's diagnostic does not reach the reader")
     func diagnosticsStayOutOfCopy() {
         #expect(!ReceiptResultCopy.message(for: .transport("URLError -1009")).contains("-1009"))
+    }
+
+    @Test("a conflict reads as saved state rather than a retryable network failure")
+    func conflictDiffersFromTransport() {
+        let conflict = ReceiptResultCopy.message(for: .conflict("already_saved"))
+        let transport = ReceiptResultCopy.message(for: .transport("offline"))
+
+        #expect(conflict == "This looks like it was already saved.")
+        #expect(conflict != transport)
     }
 
     @Test("every gate failure kind says something, and no two say the same thing")
