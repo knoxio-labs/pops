@@ -191,5 +191,15 @@ describe('inventory MCP schema fidelity', () => {
     expect(mcpUnaryOps.toSorted()).toEqual(producerUnaryOps.toSorted());
     expect(mcpBinaryOps.toSorted()).toEqual(producerBinaryOps.toSorted());
     expect(mcpReadPath).toMatchObject({ maxItems: property(producerReadPath, 'maxItems') });
+
+    const everyOp = (variants: readonly unknown[]) =>
+      variants.flatMap((variant) => opValues(variant) ?? []).toSorted();
+    expect(everyOp(mcpVariants)).toEqual(everyOp(producerVariants));
+    const producerValues = property(
+      property(findByOp(producerVariants, 'coalesce'), 'properties'),
+      'values'
+    );
+    const mcpValues = property(property(findByOp(mcpVariants, 'coalesce'), 'properties'), 'values');
+    expect(mcpValues).toMatchObject({ minItems: property(producerValues, 'minItems') });
   });
 });

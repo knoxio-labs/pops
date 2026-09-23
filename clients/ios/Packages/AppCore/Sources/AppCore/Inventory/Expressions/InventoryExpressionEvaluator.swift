@@ -37,6 +37,7 @@ public struct InventoryExpressionEvaluator {
         case .binary(let op, let left, let right): return binary(op, left, right)
         case .conditional(let condition, let then, let otherwise):
             return conditional(condition, then: then, otherwise: otherwise)
+        case .coalesce(let values): return coalesce(values)
         }
     }
 

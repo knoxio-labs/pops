@@ -1099,6 +1099,11 @@ export interface components {
           /** @enum {string} */
           op: 'if';
           then: components['schemas']['ExpressionV1'];
+        }
+      | {
+          /** @enum {string} */
+          op: 'coalesce';
+          values: components['schemas']['ExpressionV1'][];
         };
     LocationTreeNode: {
       children: components['schemas']['LocationTreeNode'][];

@@ -17,6 +17,7 @@ public enum InventoryExpressionOp: String, CaseIterable, Hashable, Sendable {
     case and
     case or
     case conditional = "if"
+    case coalesce
 }
 
 /// A parsed computed-field expression (Inventory ADR-002 D5, version 1).
@@ -31,6 +32,8 @@ public indirect enum InventoryExpression: Hashable, Sendable {
     case unary(InventoryExpressionOp, InventoryExpression)
     case binary(InventoryExpressionOp, InventoryExpression, InventoryExpression)
     case conditional(InventoryExpression, then: InventoryExpression, otherwise: InventoryExpression)
+    /// The first of two or more expressions that has a value.
+    case coalesce([InventoryExpression])
 
     /// The most nodes one expression may contain.
     public static let maximumNodes = 128
@@ -44,6 +47,7 @@ public indirect enum InventoryExpression: Hashable, Sendable {
         case .read: return .read
         case .unary(let op, _), .binary(let op, _, _): return op
         case .conditional: return .conditional
+        case .coalesce: return .coalesce
         }
     }
 
@@ -55,6 +59,8 @@ public indirect enum InventoryExpression: Hashable, Sendable {
         case .binary(let op, let left, let right): return left.ops.union(right.ops).union([op])
         case .conditional(let condition, let then, let otherwise):
             return condition.ops.union(then.ops).union(otherwise.ops).union([.conditional])
+        case .coalesce(let values):
+            return values.reduce(into: [.coalesce]) { $0.formUnion($1.ops) }
         }
     }
 

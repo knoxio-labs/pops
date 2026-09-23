@@ -30,6 +30,7 @@ internal struct InventoryExpressionParser {
             return .literal(try Self.literal(object["value"] ?? .null, at: "\(path).value"))
         case .read?: return try Self.read(object, at: path)
         case .conditional?: return try conditional(object, at: path)
+        case .coalesce?: return try coalesce(object, at: path)
         case let op? where Self.unary.contains(op):
             try Self.exactKeys(object, ["op", "value"], at: path)
             return .unary(op, try child(object, "value", at: path))
@@ -55,6 +56,21 @@ internal struct InventoryExpressionParser {
         let condition = try child(object, "condition", at: path)
         let then = try child(object, "then", at: path)
         return .conditional(condition, then: then, otherwise: try child(object, "else", at: path))
+    }
+
+    private mutating func coalesce(_ object: [String: InventoryJSON], at path: String)
+        throws(InventoryExpressionRejection) -> InventoryExpression
+    {
+        try Self.exactKeys(object, ["op", "values"], at: path)
+        guard case .array(let values)? = object["values"], values.count >= 2 else {
+            throw InventoryExpressionRejection(
+                code: "expression_arity_invalid", path: "\(path).values")
+        }
+        var parsed: [InventoryExpression] = []
+        for (index, value) in values.enumerated() {
+            parsed.append(try node(value, at: "\(path).values.\(index)"))
+        }
+        return .coalesce(parsed)
     }
 
     private static func read(_ object: [String: InventoryJSON], at path: String)

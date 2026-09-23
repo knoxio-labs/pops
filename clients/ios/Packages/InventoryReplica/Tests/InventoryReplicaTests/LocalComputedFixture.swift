@@ -59,6 +59,23 @@ internal enum LocalComputedFixture {
                 ])
         ])
 
+    /// The catalogue with one computed field's expression replaced.
+    static func catalogue(replacing fieldId: String, with expression: InventoryJSON)
+        -> InventoryCatalogueSnapshot
+    {
+        let types = catalogue.types.map { type in
+            InventoryCatalogueType(
+                id: type.id, key: type.key, label: type.label, sortOrder: type.sortOrder,
+                fields: type.fields.map { candidate in
+                    guard candidate.id == fieldId else { return candidate }
+                    return field(
+                        fieldId, key: candidate.key, kind: candidate.kind, expression: expression,
+                        allowOverride: candidate.allowOverride)
+                })
+        }
+        return InventoryCatalogueSnapshot(revision: catalogue.revision, types: types)
+    }
+
     static func decimal(_ text: String) throws -> InventoryPrimitiveValue {
         .decimal(try InventoryDecimal(text))
     }

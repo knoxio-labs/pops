@@ -82,6 +82,7 @@ describe('expression vectors', () => {
       )
     );
     expect([...rejected].toSorted()).toEqual([
+      'expression_arity_invalid',
       'expression_node_invalid',
       'expression_nodes_exceeded',
       'expression_op_unknown',

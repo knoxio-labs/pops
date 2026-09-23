@@ -32,6 +32,7 @@ export const EXPRESSION_V1_OPS: readonly ExpressionV1['op'][] = [
   ...UNARY,
   ...BINARY,
   'if',
+  'coalesce',
 ];
 
 interface ParseState {
@@ -161,6 +162,21 @@ function parseConditional(
   };
 }
 
+function parseCoalesce(
+  value: Record<string, unknown>,
+  path: string,
+  state: ParseState
+): ExpressionV1 {
+  exactKeys(value, ['op', 'values'], path);
+  const values = value['values'];
+  if (!Array.isArray(values) || values.length < 2)
+    fail(`${path}.values`, 'expression_arity_invalid', 'coalesce needs at least two values');
+  return {
+    op: 'coalesce',
+    values: values.map((entry, index) => parseNode(entry, `${path}.values.${index}`, state)),
+  };
+}
+
 function parseRead(value: Record<string, unknown>, path: string): ExpressionV1 {
   exactKeys(value, ['fieldId', 'op', 'path'], path);
   if (typeof value['fieldId'] !== 'string' || value['fieldId'].length === 0)
@@ -186,6 +202,7 @@ function parseNode(value: unknown, path: string, state: ParseState): ExpressionV
   if (typeof op === 'string' && UNARY_OPS.has(op)) return parseUnary(op, object, path, state);
   if (typeof op === 'string' && BINARY_OPS.has(op)) return parseBinary(op, object, path, state);
   if (op === 'if') return parseConditional(object, path, state);
+  if (op === 'coalesce') return parseCoalesce(object, path, state);
   return fail(`${path}.op`, 'expression_op_unknown', 'is not an expression-v1 operation');
 }
 
