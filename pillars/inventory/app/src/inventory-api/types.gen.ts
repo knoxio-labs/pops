@@ -4,6 +4,55 @@ export type ClientOptions = {
   baseUrl: `${string}://${string}` | (string & {});
 };
 
+export type ExpressionV1 =
+  | {
+      op: 'literal';
+      value:
+        | string
+        | number
+        | boolean
+        | {
+            optionId: string;
+          }
+        | {
+            amount: string;
+            unit: string;
+          }
+        | {
+            targetId: string;
+            targetKind: 'item' | 'location';
+          };
+    }
+  | {
+      fieldId: string;
+      op: 'read';
+      path: Array<string>;
+    }
+  | {
+      op: 'negate' | 'not';
+      value: ExpressionV1;
+    }
+  | {
+      left: ExpressionV1;
+      op:
+        | 'add'
+        | 'subtract'
+        | 'multiply'
+        | 'divide'
+        | 'concat'
+        | 'equal'
+        | 'less_than'
+        | 'and'
+        | 'or';
+      right: ExpressionV1;
+    }
+  | {
+      condition: ExpressionV1;
+      elseBranch: ExpressionV1;
+      op: 'if';
+      thenBranch: ExpressionV1;
+    };
+
 export type LocationTreeNode = {
   children: Array<LocationTreeNode>;
   id: string;
@@ -3764,7 +3813,7 @@ export type TypesReadCatalogueResponses = {
           label: string;
           sortOrder: number;
         }>;
-        expression: unknown;
+        expression: ExpressionV1 | null;
         expressionVersion: number | null;
         fixedUnit: string | null;
         help: string | null;
@@ -3984,7 +4033,7 @@ export type TypesManageCreateDraftResponses = {
           label: string;
           sortOrder: number;
         }>;
-        expression: unknown;
+        expression: ExpressionV1 | null;
         expressionVersion: number | null;
         fixedUnit: string | null;
         help: string | null;
@@ -4124,7 +4173,7 @@ export type TypesManageReadDraftResponses = {
           label: string;
           sortOrder: number;
         }>;
-        expression: unknown;
+        expression: ExpressionV1 | null;
         expressionVersion: number | null;
         fixedUnit: string | null;
         help: string | null;
@@ -4195,7 +4244,7 @@ export type TypesManagePatchDraftData = {
           allowOverride?: boolean;
           archivedAt?: string | null;
           cardinality?: 'one' | 'many';
-          expression?: unknown;
+          expression?: ExpressionV1 | null;
           expressionVersion?: number | null;
           fieldKind?:
             | 'short_text'
@@ -4410,7 +4459,7 @@ export type TypesManagePatchDraftResponses = {
             label: string;
             sortOrder: number;
           }>;
-          expression: unknown;
+          expression: ExpressionV1 | null;
           expressionVersion: number | null;
           fixedUnit: string | null;
           help: string | null;
@@ -4574,7 +4623,7 @@ export type TypesManageAbandonDraftResponses = {
           label: string;
           sortOrder: number;
         }>;
-        expression: unknown;
+        expression: ExpressionV1 | null;
         expressionVersion: number | null;
         fixedUnit: string | null;
         help: string | null;
@@ -4645,7 +4694,7 @@ export type TypesManagePreviewDraftData = {
           allowOverride?: boolean;
           archivedAt?: string | null;
           cardinality?: 'one' | 'many';
-          expression?: unknown;
+          expression?: ExpressionV1 | null;
           expressionVersion?: number | null;
           fieldKind?:
             | 'short_text'
@@ -4999,7 +5048,7 @@ export type TypesManagePublishDraftResponses = {
           label: string;
           sortOrder: number;
         }>;
-        expression: unknown;
+        expression: ExpressionV1 | null;
         expressionVersion: number | null;
         fixedUnit: string | null;
         help: string | null;
