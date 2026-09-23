@@ -156,6 +156,55 @@ describe('implementation evidence', () => {
     expect(() => readEvidencePacket(input)).toThrow(/cannot defer/u);
   });
 
+  it.each(['partial', 'deferred'] as const)(
+    'refuses %s evidence deferred to its own implementation ticket',
+    (state) => {
+      const input = packet();
+      input.pullRequests[0]!.evidence[0]!.state = state;
+      input.pullRequests[0]!.evidence[0]!.deferredTicket = 'POPS-4387';
+      expect(() => readEvidencePacket(input)).toThrow(/different ticket/u);
+    }
+  );
+
+  it.each(['failed', 'failure', 'skipped', 'fail', 'skip'])(
+    'refuses a complete record whose result reads as %s',
+    (result) => {
+      const input = packet();
+      input.pullRequests[0]!.evidence[0]!.result = result;
+      expect(() => readEvidencePacket(input)).toThrow(/not a passing result/u);
+    }
+  );
+
+  it('refuses a complete record whose result starts with a failing word regardless of case or detail', () => {
+    const input = packet();
+    input.pullRequests[0]!.evidence[0]!.result = 'FAILED: assertion mismatch on line 42';
+    expect(() => readEvidencePacket(input)).toThrow(/not a passing result/u);
+  });
+
+  it('accepts a complete record whose result merely mentions a prior failure that was since fixed', () => {
+    const input = packet();
+    input.pullRequests[0]!.evidence[0]!.result = 'passed after fixing the earlier failed run';
+    expect(() => readEvidencePacket(input)).not.toThrow();
+  });
+
+  it.each(['error: none found, all green', 'blocked column renders correctly, verified'])(
+    'accepts a passing result that happens to start with an ambiguous word like %s',
+    (result) => {
+      const input = packet();
+      input.pullRequests[0]!.evidence[0]!.result = result;
+      expect(() => readEvidencePacket(input)).not.toThrow();
+    }
+  );
+
+  it('allows a failed or skipped result for non-complete evidence states', () => {
+    const input = packet();
+    input.pullRequests[0]!.evidence[0]!.state = 'partial';
+    input.pullRequests[0]!.evidence[0]!.result = 'failed on the concurrent-write case';
+    input.pullRequests[0]!.evidence[0]!.deferredTicket = 'POPS-6000';
+    const assessment = assessImplementationEvidence(readEvidencePacket(input));
+    expect(assessment).toMatchObject({ status: 'blocked', canAutomate: false });
+  });
+
   it('blocks ambiguous duplicate evidence rather than choosing a PR', () => {
     const input = packet();
     input.pullRequests[1]!.evidence[0]!.criterion = 'association';

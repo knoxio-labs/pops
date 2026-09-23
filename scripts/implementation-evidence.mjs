@@ -12,10 +12,12 @@
  * its implementation, test, revision, environment, result, and limitations.
  *
  * `partial` and `deferred` records require a different Huly ticket and a
- * limitation. Duplicate evidence is ambiguous and never becomes automatic
- * completion. A human may record an override with both an approver and a
- * rationale, but the resulting verdict still says that automation is blocked:
- * only a person may perform the state change.
+ * limitation. A `complete` record whose result reads as failed or skipped is
+ * rejected outright: the declared state can never override what the result
+ * actually says happened. Duplicate evidence is ambiguous and never becomes
+ * automatic completion. A human may record an override with both an approver
+ * and a rationale, but the resulting verdict still says that automation is
+ * blocked: only a person may perform the state change.
  *
  * Usage:
  *   node scripts/implementation-evidence.mjs --evidence <packet.json>
@@ -29,6 +31,7 @@ import { readFlag } from './cli-flags.mjs';
 
 const TICKET_RE = /^[A-Z][A-Z0-9_]*-\d+$/u;
 const REVISION_RE = /^[0-9a-f]{7,64}$/iu;
+const FAILING_RESULT_RE = /^(failed|failure|fail|skipped|skip)\b/iu;
 
 export const HELP = `Usage: node scripts/implementation-evidence.mjs --evidence <packet.json> [--json]
        node scripts/implementation-evidence.mjs --self-test
@@ -37,8 +40,10 @@ Validates a read-only packet for one canonical implementation ticket. Every PR
 must name that ticket and a different PR-sync issue. Each criterion needs one
 evidence record containing implementation, test, revision, environment,
 result, limitations, and state. Partial or deferred work must name a different
-follow-up ticket. Ambiguous or incomplete evidence never authorizes automation;
-an override records a named human rationale but remains human-only.`;
+follow-up ticket. A complete record needs a passing result: a failed or
+skipped result is rejected even when state says complete. Ambiguous or
+incomplete evidence never authorizes automation; an override records a named
+human rationale but remains human-only.`;
 
 /**
  * @typedef {'complete' | 'partial' | 'deferred'} EvidenceState
@@ -116,6 +121,23 @@ function positiveInteger(value, where) {
 function evidenceState(value, where) {
   if (value !== 'complete' && value !== 'partial' && value !== 'deferred') {
     throw new Error(`${where} must be complete, partial, or deferred`);
+  }
+  return value;
+}
+
+/**
+ * A record marked `complete` asserts the criterion passed. A failed or
+ * skipped result is never completion evidence, regardless of the declared
+ * state: the state alone cannot promise an outcome the result contradicts.
+ *
+ * @param {string} value
+ * @param {EvidenceState} state
+ * @param {string} where
+ * @returns {string}
+ */
+function completionResult(value, state, where) {
+  if (state === 'complete' && FAILING_RESULT_RE.test(value)) {
+    throw new Error(`${where}.result is complete but reports "${value}", not a passing result`);
   }
   return value;
 }
@@ -222,7 +244,11 @@ export function readEvidencePacket(parsed) {
             'environment',
             `PR #${number}.evidence[${evidenceIndex}]`
           ),
-          result: requiredText(item, 'result', `PR #${number}.evidence[${evidenceIndex}]`),
+          result: completionResult(
+            requiredText(item, 'result', `PR #${number}.evidence[${evidenceIndex}]`),
+            state,
+            `PR #${number}.evidence[${evidenceIndex}]`
+          ),
           limitations: requiredText(
             item,
             'limitations',
