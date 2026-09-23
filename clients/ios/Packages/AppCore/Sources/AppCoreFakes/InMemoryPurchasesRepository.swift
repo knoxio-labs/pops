@@ -4,8 +4,11 @@ import Foundation
 /// A ``PurchasesRepository`` backed by an array, with server-shaped paging and failures.
 public actor InMemoryPurchasesRepository: PurchasesRepository {
     public private(set) var callCount = 0
+    public private(set) var searchCalls: [(text: String, status: PurchaseSearchStatus)] = []
 
     private var rows: [Purchase]
+    private let hits: [PurchaseSearchHit]
+    private let searchDelay: Duration
     private let pageSize: Int
     private var failures: [Int: RepositoryError] = [:]
     private var mintedCursors: [String: CursorRecord] = [:]
@@ -22,16 +25,32 @@ public actor InMemoryPurchasesRepository: PurchasesRepository {
     /// Creates a repository whose pages contain at most `pageSize` purchases.
     public init(
         rows: [Purchase] = [],
+        hits: [PurchaseSearchHit] = [],
+        searchDelay: Duration = .zero,
         pageSize: Int = 5,
         summary: PurchasesMonthSummary = .empty,
         details: [PurchaseDetail] = [],
         receipts: [String: ReceiptImage] = [:]
     ) {
         self.rows = rows
+        self.hits = hits
+        self.searchDelay = searchDelay
         self.pageSize = max(1, pageSize)
         self.summary = summary
         self.details = Dictionary(uniqueKeysWithValues: details.map { ($0.id, $0) })
         self.receipts = receipts
+    }
+
+    public func search(
+        text: String, status: PurchaseSearchStatus
+    ) async throws -> [PurchaseSearchHit] {
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return [] }
+        searchCalls.append((text, status))
+        try beginCall()
+        try await Task.sleep(for: searchDelay)
+        return hits.filter { hit in
+            searchHit(hit, matches: status) && searchHit(hit, matches: text)
+        }
     }
 
     /// Replaces the rows and invalidates cursors minted for the previous list.
@@ -183,5 +202,38 @@ public actor InMemoryPurchasesRepository: PurchasesRepository {
             throw RepositoryError.contractMismatch
         }
         return minted.offset
+    }
+}
+
+private func searchHit(_ hit: PurchaseSearchHit, matches status: PurchaseSearchStatus) -> Bool {
+    switch status {
+    case .any: true
+    case .unmatched: hit.order.status == .awaitingSettlement
+    case .matched: hit.order.status == .linked
+    case .partial: hit.order.status == .partial
+    case .cash: hit.order.status == .settledCash
+    case .ignored: hit.order.status == .ignored
+    }
+}
+
+private func searchHit(_ hit: PurchaseSearchHit, matches text: String) -> Bool {
+    let needle = text.trimmingCharacters(in: .whitespacesAndNewlines)
+    return searchableValues(for: hit).contains { $0.localizedCaseInsensitiveContains(needle) }
+}
+
+private func searchableValues(for hit: PurchaseSearchHit) -> [String] {
+    switch hit {
+    case .purchase(let order, let printedMatch):
+        merchantNames(order.merchant) + [printedMatch].compactMap { $0 }
+    case .line(_, let name, _, _, let order, let tagMatch):
+        [name] + merchantNames(order.merchant) + [tagMatch].compactMap { $0 }
+    }
+}
+
+private func merchantNames(_ merchant: MerchantIdentity) -> [String] {
+    switch merchant {
+    case .entity(_, let name, let printed): [name, printed]
+    case .printed(let printed): [printed]
+    case .unattributed: []
     }
 }

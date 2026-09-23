@@ -11,6 +11,12 @@ internal struct PlaygroundPurchasesRepository: PurchasesRepository {
     let failure: RepositoryError?
     let hangs: Bool
 
+    func search(
+        text: String, status: AppCore.PurchaseSearchStatus
+    ) async throws -> [AppCore.PurchaseSearchHit] {
+        []
+    }
+
     func purchases(
         after cursor: String?, statusFilter: PurchaseStatusFilter
     ) async throws -> PurchasePage {

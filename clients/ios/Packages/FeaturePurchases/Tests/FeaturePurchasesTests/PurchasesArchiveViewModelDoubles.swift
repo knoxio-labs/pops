@@ -68,6 +68,10 @@ internal actor ArchiveRepository: PurchasesRepository {
         return try await responses.removeFirst().value()
     }
 
+    internal func search(
+        text: String, status: PurchaseSearchStatus
+    ) async throws -> [PurchaseSearchHit] { [] }
+
     internal func monthSummary(for: Date) async throws -> PurchasesMonthSummary {
         .empty
     }

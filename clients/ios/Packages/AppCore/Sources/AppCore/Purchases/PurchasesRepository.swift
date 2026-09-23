@@ -2,6 +2,10 @@ import Foundation
 
 /// The purchase records the phone can read.
 public protocol PurchasesRepository: Sendable {
+    /// Searches purchase and line matches, narrowed by settlement status on the server.
+    /// Blank or whitespace-only text matches nothing and sends no request.
+    func search(text: String, status: PurchaseSearchStatus) async throws -> [PurchaseSearchHit]
+
     /// Reads one filtered page after an opaque cursor, or the first page when it is nil.
     func purchases(
         after cursor: String?, statusFilter: PurchaseStatusFilter
