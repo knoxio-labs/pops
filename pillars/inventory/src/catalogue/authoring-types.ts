@@ -11,6 +11,7 @@ export type MigrationStepInput = z.infer<typeof CatalogueMigrationStepSchema>;
 /** Input contract for publishing a validated catalogue draft. */
 export interface CataloguePublicationInput {
   readonly baseRevision: number;
+  readonly expectedDraftVersion: number;
   readonly note: string | null;
   readonly minimumProtocol?: number;
   readonly migrationName?: string;
@@ -58,16 +59,20 @@ export class CatalogueApiError extends Error {
     options: {
       readonly issues?: readonly CatalogueIssue[];
       readonly preview?: CataloguePreviewDiagnostics;
+      readonly currentDraftVersion?: number;
     } = {}
   ) {
     super(message);
     this.name = 'CatalogueApiError';
     this.issues = options.issues ?? [];
     this.preview = options.preview;
+    this.currentDraftVersion = options.currentDraftVersion;
   }
 
   readonly issues: readonly CatalogueIssue[];
   readonly preview: CataloguePreviewDiagnostics | undefined;
+  /** The draft's persisted version when a caller's expected draft version lost a race. */
+  readonly currentDraftVersion: number | undefined;
 }
 
 /** Wire-ready actor metadata from a revision row. */
@@ -83,6 +88,8 @@ export interface CatalogueRevisionWire {
   readonly baseRevision: number | null;
   readonly status: 'draft' | 'published' | 'abandoned';
   readonly minimumProtocol: number;
+  /** Optimistic-concurrency token; advances on every successful draft mutation. */
+  readonly draftVersion: number;
   readonly created: { readonly actor: CatalogueActor; readonly at: string };
   readonly published: {
     readonly actor: CatalogueActor;

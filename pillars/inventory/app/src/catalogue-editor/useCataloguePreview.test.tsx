@@ -24,6 +24,7 @@ const draft: CatalogueDescriptor = {
       at: '2026-09-23T00:00:00.000Z',
     },
     minimumProtocol: 2,
+    draftVersion: 3,
     published: null,
     revision: 5,
     status: 'draft',
@@ -101,7 +102,7 @@ describe('useCataloguePreview', () => {
     expect(api.previewDraft).toHaveBeenCalledTimes(1);
     expect(api.previewDraft).toHaveBeenCalledWith({
       path: { revision: 5 },
-      body: { baseRevision: 4, operations: [secondOperation] },
+      body: { baseRevision: 4, expectedDraftVersion: 3, operations: [secondOperation] },
     });
   });
 

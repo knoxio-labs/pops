@@ -182,8 +182,8 @@ affected by its changed definitions, so the publication review does not
 reimplement catalogue validation in the browser. Existing drafts also preview
 pending form edits through the non-mutating preview endpoint after a short
 debounce; sequenced responses prevent older diagnostics from replacing newer
-ones, and the editor never patches a draft merely to preview it. A stale-draft reload clears
-the rejected mutation, refetches both published and draft snapshots, and
+ones, and the editor never patches a draft merely to preview it. A stale-draft reload (a
+stale base or a stale `draftVersion`) clears the rejected mutation, refetches both published and draft snapshots, and
 rebuilds the open form from the persisted draft without replaying the rejected
 operation. Published field identity and shape stay locked; incompatible
 changes must be expressed as a replacement and an explicit named migration
@@ -280,6 +280,12 @@ the gate above derives three grants: `inventory.sync` (`GET /sync/snapshot`,
   immutable catalogue reads. `GET /type-catalogue/drafts/current` lets an
   owner resume the one in-progress draft after a reload or another authoring
   session; it returns `404 catalogue_draft_missing` when no draft exists.
+- Every draft descriptor carries `revision.draftVersion`, starting at 1. Patch,
+  preview, publish and abandon require it back as `expectedDraftVersion`; the
+  version check and the whole mutation share one transaction, so a stale caller
+  gets `409 catalogue_draft_conflict` with `currentDraftVersion` and changes
+  nothing, not even the audit log. Only a successful patch, publication or
+  abandonment advances the version; preview never does.
 - `GET /type-catalogue` and `GET /type-catalogue/audit` require a Cloudflare
   Access owner session or a service account granted `inventory.types.read`.
   Draft creation, patching, publication and abandonment require the owner

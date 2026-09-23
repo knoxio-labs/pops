@@ -51,6 +51,7 @@ const published: Catalogue = {
       at: '2026-09-22T00:00:00.000Z',
     },
     minimumProtocol: 2,
+    draftVersion: 1,
     published: {
       actor: { id: null, kind: 'migration', label: 'bootstrap' },
       at: '2026-09-22T00:00:00.000Z',
@@ -98,11 +99,12 @@ const published: Catalogue = {
   ],
 };
 
-function draft(types: Catalogue['types'] = published.types): Catalogue {
+function draft(types: Catalogue['types'] = published.types, draftVersion = 1): Catalogue {
   return {
     revision: {
       ...published.revision,
       baseRevision: 1,
+      draftVersion,
       published: null,
       revision: 2,
       status: 'draft',
@@ -121,6 +123,13 @@ function Wrapper({ children }: { children: ReactNode }) {
 function renderPage() {
   return render(<TypeCataloguePage />, { wrapper: Wrapper });
 }
+
+const compatibleResult = {
+  affectedIds: [],
+  affectedItems: 0,
+  changes: [],
+  classification: 'compatible',
+} as const;
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -194,6 +203,7 @@ describe('TypeCataloguePage', () => {
       expect.objectContaining({
         body: expect.objectContaining({
           baseRevision: 1,
+          expectedDraftVersion: 1,
           operations: [expect.objectContaining({ kind: 'put_type', key: 'musical_instruments' })],
         }),
         path: { revision: 2 },
@@ -225,6 +235,7 @@ describe('TypeCataloguePage', () => {
         path: { revision: 2 },
         body: {
           baseRevision: 1,
+          expectedDraftVersion: 1,
           operations: [
             expect.objectContaining({
               id: TYPE_ID,
@@ -303,5 +314,80 @@ describe('TypeCataloguePage', () => {
 
     expect(await screen.findByDisplayValue('Recovered after retry')).toBeInTheDocument();
     expect(api.patchDraft).toHaveBeenCalledTimes(1);
+  });
+
+  it('sends each edit against the draft version the previous edit returned', async () => {
+    const renamed = (label: string, version: number) =>
+      draft([{ ...published.types[0]!, label, revision: 2 }], version);
+    api.readDraft.mockResolvedValue({ data: draft(published.types, 4), error: undefined });
+    api.patchDraft
+      .mockResolvedValueOnce({
+        data: { compatibility: compatibleResult, draft: renamed('First save', 5) },
+        error: undefined,
+      })
+      .mockResolvedValueOnce({
+        data: { compatibility: compatibleResult, draft: renamed('Second save', 6) },
+        error: undefined,
+      });
+    renderPage();
+
+    await screen.findByDisplayValue('Electronics');
+    fireEvent.change(screen.getByLabelText('Type label'), { target: { value: 'First save' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save type' }));
+    await screen.findByDisplayValue('First save');
+    fireEvent.change(screen.getByLabelText('Type label'), { target: { value: 'Second save' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save type' }));
+
+    await waitFor(() => expect(api.patchDraft).toHaveBeenCalledTimes(2));
+    expect(api.patchDraft).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ body: expect.objectContaining({ expectedDraftVersion: 4 }) })
+    );
+    expect(api.patchDraft).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ body: expect.objectContaining({ expectedDraftVersion: 5 }) })
+    );
+  });
+
+  it('reloads after losing a draft-version race and retries against the reloaded version', async () => {
+    const newer = draft([{ ...published.types[0]!, label: 'Saved by another editor' }], 3);
+    api.readDraft
+      .mockResolvedValueOnce({ data: draft(published.types, 2), error: undefined })
+      .mockResolvedValueOnce({ data: newer, error: undefined });
+    api.patchDraft
+      .mockResolvedValueOnce({
+        data: undefined,
+        error: {
+          code: 'catalogue_draft_conflict',
+          currentDraftVersion: 3,
+          message: 'Catalogue draft 2 is at version 3, not 2',
+        },
+        response: new Response(null, { status: 409 }),
+      })
+      .mockResolvedValueOnce({
+        data: {
+          compatibility: compatibleResult,
+          draft: draft([{ ...published.types[0]!, label: 'Retried label' }], 4),
+        },
+        error: undefined,
+      });
+    renderPage();
+
+    await screen.findByDisplayValue('Electronics');
+    fireEvent.change(screen.getByLabelText('Type label'), { target: { value: 'Lost label' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save type' }));
+    expect(await screen.findByText('This draft changed elsewhere')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Reload' }));
+    const reloaded = await screen.findByDisplayValue('Saved by another editor');
+    fireEvent.change(reloaded, { target: { value: 'Retried label' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save type' }));
+
+    await waitFor(() => expect(api.patchDraft).toHaveBeenCalledTimes(2));
+    expect(api.patchDraft).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        body: expect.objectContaining({ baseRevision: 1, expectedDraftVersion: 3 }),
+      })
+    );
+    expect(screen.queryByText('This draft changed elsewhere')).not.toBeInTheDocument();
   });
 });

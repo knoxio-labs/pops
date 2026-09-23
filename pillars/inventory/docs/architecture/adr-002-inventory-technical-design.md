@@ -97,7 +97,7 @@ Types, fields and enum options each receive a server-minted UUIDv4 `id`. The id 
 
 After first publication, a type's id/key, a field's id/key/kind/cardinality/storage mode/fixed unit/reference constraint, and an option's id/key are immutable across revisions. Type capabilities may change only through a migration because they materialise core columns such as `is_container`. Labels, help, order, presentation hints and legacy labels may change in a later snapshot; `required`, expressions and archive state follow the compatibility rules below.
 
-A catalogue revision is a complete immutable snapshot. The server exposes one published revision and at most one editable draft based on it. Creating a draft copies the published definition rows under a new revision id. Every draft mutation carries `baseRevision`; a stale base is `409 catalogue_conflict`. Publication runs in one `BEGIN IMMEDIATE` transaction:
+A catalogue revision is a complete immutable snapshot. The server exposes one published revision and at most one editable draft based on it. Creating a draft copies the published definition rows under a new revision id. Every draft mutation carries `baseRevision`; a stale base is `409 catalogue_conflict`. It also carries `expectedDraftVersion`, the draft's `revision.draftVersion` as the caller last read it: the version advances on every successful patch, publication and abandonment by a compare-and-swap inside the mutation's own transaction, and a stale version is `409 catalogue_draft_conflict` with `currentDraftVersion`, changing nothing (POPS-4406). Publication runs in one `BEGIN IMMEDIATE` transaction:
 
 1. verify that the draft still names the current published revision;
 2. type-check every definition and computed expression, build the dependency graph and reject cycles or resource-limit violations;
@@ -109,14 +109,14 @@ Clients therefore see either the previous snapshot or the complete new snapshot.
 
 The owner-facing REST surface is command-shaped so MCP and the web editor use the same atomic boundary:
 
-| Route                                           | Body / result                                                                      |
-| ----------------------------------------------- | ---------------------------------------------------------------------------------- |
-| `GET /type-catalogue?revision=`                 | current or exact immutable descriptor; `404 catalogue_revision_unknown`            |
-| `GET /type-catalogue/audit?before=&limit=`      | reverse-chronological publication and abandonment events                           |
-| `POST /type-catalogue/drafts`                   | `{ baseRevision }` → the new draft; conflicts if one already exists                |
-| `PATCH /type-catalogue/drafts/:revision`        | `{ baseRevision, operations[] }` → the validated draft and a compatibility preview |
-| `POST /type-catalogue/drafts/:revision/publish` | `{ baseRevision, note, migrationName? }` → the published descriptor                |
-| `POST /type-catalogue/drafts/:revision/abandon` | `{ baseRevision }` → the abandoned revision                                        |
+| Route                                           | Body / result                                                                                            |
+| ----------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `GET /type-catalogue?revision=`                 | current or exact immutable descriptor; `404 catalogue_revision_unknown`                                  |
+| `GET /type-catalogue/audit?before=&limit=`      | reverse-chronological publication and abandonment events                                                 |
+| `POST /type-catalogue/drafts`                   | `{ baseRevision }` → the new draft; conflicts if one already exists                                      |
+| `PATCH /type-catalogue/drafts/:revision`        | `{ baseRevision, expectedDraftVersion, operations[] }` → the validated draft and a compatibility preview |
+| `POST /type-catalogue/drafts/:revision/publish` | `{ baseRevision, expectedDraftVersion, note, migrationName? }` → the published descriptor                |
+| `POST /type-catalogue/drafts/:revision/abandon` | `{ baseRevision, expectedDraftVersion }` → the abandoned revision                                        |
 
 Draft operations are `put_type`, `put_field`, `put_enum_option`, `archive_type`, `archive_field`, `archive_enum_option` and `reorder`. A `put` creates when `id` is absent (the server returns its id) and updates mutable attributes when `id` is present; it cannot replace immutable attributes. Every response returns structured validation errors with the definition id, JSON path and code. Reads require `inventory.types.read`; all draft and publication commands require either a verified owner web session or a service account with `inventory.types.manage`. Bare in-network browser traffic is `401` on this sub-router even while D12 keeps `requireCredential: false` for the pillar's existing routes. bfm receives only the immutable read route and never the authoring surface.
 

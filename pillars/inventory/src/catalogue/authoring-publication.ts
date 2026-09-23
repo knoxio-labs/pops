@@ -1,9 +1,10 @@
 import { eq } from 'drizzle-orm';
 
 import { catalogueRevisions } from '../db/schema.js';
+import { claimCurrentDraft } from './authoring-draft-version.js';
 import { migrationInput } from './authoring-migration.js';
 import { writePublication } from './authoring-publication-write.js';
-import { issue, requireCatalogue, requireCurrentDraft } from './authoring-shared.js';
+import { issue, requireCatalogue } from './authoring-shared.js';
 import { CatalogueApiError } from './authoring-types.js';
 import { validateCatalogue } from './authoring-validation.js';
 import { toCatalogueDescriptor } from './authoring-wire.js';
@@ -81,7 +82,7 @@ export function publishCatalogueDraft(
   author: CatalogueAuthor
 ): CatalogueDescriptor {
   return db.transaction((tx) => {
-    requireCurrentDraft(tx, revision, input.baseRevision);
+    claimCurrentDraft(tx, revision, input.baseRevision, input.expectedDraftVersion);
     if (input.minimumProtocol !== undefined) {
       tx.update(catalogueRevisions)
         .set({ minimumProtocol: input.minimumProtocol })

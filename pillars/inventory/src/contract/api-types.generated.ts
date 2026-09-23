@@ -5385,6 +5385,7 @@ export interface operations {
                 };
                 at: string;
               };
+              draftVersion: number;
               minimumProtocol: number;
               published: {
                 actor: {
@@ -5479,6 +5480,7 @@ export interface operations {
         content: {
           'application/json': {
             code?: string;
+            currentDraftVersion?: number;
             issues?: {
               code: string;
               definitionId: string | null;
@@ -5498,6 +5500,7 @@ export interface operations {
         content: {
           'application/json': {
             code?: string;
+            currentDraftVersion?: number;
             issues?: {
               code: string;
               definitionId: string | null;
@@ -5563,6 +5566,7 @@ export interface operations {
         content: {
           'application/json': {
             code?: string;
+            currentDraftVersion?: number;
             issues?: {
               code: string;
               definitionId: string | null;
@@ -5619,6 +5623,7 @@ export interface operations {
                 };
                 at: string;
               };
+              draftVersion: number;
               minimumProtocol: number;
               published: {
                 actor: {
@@ -5706,6 +5711,7 @@ export interface operations {
         content: {
           'application/json': {
             code?: string;
+            currentDraftVersion?: number;
             issues?: {
               code: string;
               definitionId: string | null;
@@ -5725,6 +5731,7 @@ export interface operations {
         content: {
           'application/json': {
             code?: string;
+            currentDraftVersion?: number;
             issues?: {
               code: string;
               definitionId: string | null;
@@ -5744,6 +5751,7 @@ export interface operations {
         content: {
           'application/json': {
             code?: string;
+            currentDraftVersion?: number;
             issues?: {
               code: string;
               definitionId: string | null;
@@ -5793,6 +5801,7 @@ export interface operations {
                 };
                 at: string;
               };
+              draftVersion: number;
               minimumProtocol: number;
               published: {
                 actor: {
@@ -5880,6 +5889,7 @@ export interface operations {
         content: {
           'application/json': {
             code?: string;
+            currentDraftVersion?: number;
             issues?: {
               code: string;
               definitionId: string | null;
@@ -5899,6 +5909,7 @@ export interface operations {
         content: {
           'application/json': {
             code?: string;
+            currentDraftVersion?: number;
             issues?: {
               code: string;
               definitionId: string | null;
@@ -5926,6 +5937,7 @@ export interface operations {
       content: {
         'application/json': {
           baseRevision: number;
+          expectedDraftVersion: number;
           operations: (
             | {
                 archivedAt?: string | null;
@@ -6059,6 +6071,7 @@ export interface operations {
                   };
                   at: string;
                 };
+                draftVersion: number;
                 minimumProtocol: number;
                 published: {
                   actor: {
@@ -6147,6 +6160,7 @@ export interface operations {
         content: {
           'application/json': {
             code?: string;
+            currentDraftVersion?: number;
             issues?: {
               code: string;
               definitionId: string | null;
@@ -6190,6 +6204,7 @@ export interface operations {
         content: {
           'application/json': {
             code?: string;
+            currentDraftVersion?: number;
             issues?: {
               code: string;
               definitionId: string | null;
@@ -6209,6 +6224,7 @@ export interface operations {
         content: {
           'application/json': {
             code?: string;
+            currentDraftVersion?: number;
             issues?: {
               code: string;
               definitionId: string | null;
@@ -6228,6 +6244,7 @@ export interface operations {
         content: {
           'application/json': {
             code?: string;
+            currentDraftVersion?: number;
             issues?: {
               code: string;
               definitionId: string | null;
@@ -6279,6 +6296,7 @@ export interface operations {
       content: {
         'application/json': {
           baseRevision: number;
+          expectedDraftVersion: number;
         };
       };
     };
@@ -6310,6 +6328,7 @@ export interface operations {
                 };
                 at: string;
               };
+              draftVersion: number;
               minimumProtocol: number;
               published: {
                 actor: {
@@ -6397,6 +6416,7 @@ export interface operations {
         content: {
           'application/json': {
             code?: string;
+            currentDraftVersion?: number;
             issues?: {
               code: string;
               definitionId: string | null;
@@ -6416,6 +6436,7 @@ export interface operations {
         content: {
           'application/json': {
             code?: string;
+            currentDraftVersion?: number;
             issues?: {
               code: string;
               definitionId: string | null;
@@ -6435,6 +6456,7 @@ export interface operations {
         content: {
           'application/json': {
             code?: string;
+            currentDraftVersion?: number;
             issues?: {
               code: string;
               definitionId: string | null;
@@ -6462,6 +6484,7 @@ export interface operations {
       content: {
         'application/json': {
           baseRevision: number;
+          expectedDraftVersion: number;
           operations: (
             | {
                 archivedAt?: string | null;
@@ -6587,6 +6610,7 @@ export interface operations {
         content: {
           'application/json': {
             code?: string;
+            currentDraftVersion?: number;
             issues?: {
               code: string;
               definitionId: string | null;
@@ -6630,6 +6654,7 @@ export interface operations {
         content: {
           'application/json': {
             code?: string;
+            currentDraftVersion?: number;
             issues?: {
               code: string;
               definitionId: string | null;
@@ -6649,6 +6674,7 @@ export interface operations {
         content: {
           'application/json': {
             code?: string;
+            currentDraftVersion?: number;
             issues?: {
               code: string;
               definitionId: string | null;
@@ -6668,6 +6694,7 @@ export interface operations {
         content: {
           'application/json': {
             code?: string;
+            currentDraftVersion?: number;
             issues?: {
               code: string;
               definitionId: string | null;
@@ -6719,6 +6746,7 @@ export interface operations {
       content: {
         'application/json': {
           baseRevision: number;
+          expectedDraftVersion: number;
           migration?: {
             affectedFieldIds: string[];
             affectedTypeIds: string[];
@@ -6813,6 +6841,7 @@ export interface operations {
                 };
                 at: string;
               };
+              draftVersion: number;
               minimumProtocol: number;
               published: {
                 actor: {
@@ -6900,6 +6929,7 @@ export interface operations {
         content: {
           'application/json': {
             code?: string;
+            currentDraftVersion?: number;
             issues?: {
               code: string;
               definitionId: string | null;
@@ -6919,6 +6949,7 @@ export interface operations {
         content: {
           'application/json': {
             code?: string;
+            currentDraftVersion?: number;
             issues?: {
               code: string;
               definitionId: string | null;
@@ -6938,6 +6969,7 @@ export interface operations {
         content: {
           'application/json': {
             code?: string;
+            currentDraftVersion?: number;
             issues?: {
               code: string;
               definitionId: string | null;
@@ -6957,6 +6989,7 @@ export interface operations {
         content: {
           'application/json': {
             code?: string;
+            currentDraftVersion?: number;
             issues?: {
               code: string;
               definitionId: string | null;

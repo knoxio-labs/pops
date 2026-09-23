@@ -9,6 +9,7 @@ import {
   CatalogueErrorBodySchema,
   CataloguePreviewErrorBodySchema,
   CatalogueReadHeaders,
+  ExpectedDraftVersionSchema,
   TypeCatalogueDescriptorSchema,
 } from './rest-catalogue-schemas.js';
 
@@ -74,6 +75,7 @@ export const inventoryCatalogueContract = c.router({
       pathParams: z.object({ revision: z.coerce.number().int().positive() }),
       body: z.object({
         baseRevision: z.number().int().positive(),
+        expectedDraftVersion: ExpectedDraftVersionSchema,
         operations: z.array(CatalogueDraftOperationSchema).min(1).max(100),
       }),
       responses: {
@@ -94,6 +96,7 @@ export const inventoryCatalogueContract = c.router({
       pathParams: z.object({ revision: z.coerce.number().int().positive() }),
       body: z.object({
         baseRevision: z.number().int().positive(),
+        expectedDraftVersion: ExpectedDraftVersionSchema,
         operations: z.array(CatalogueDraftOperationSchema).min(1).max(100),
       }),
       responses: {
@@ -115,6 +118,7 @@ export const inventoryCatalogueContract = c.router({
       pathParams: z.object({ revision: z.coerce.number().int().positive() }),
       body: z.object({
         baseRevision: z.number().int().positive(),
+        expectedDraftVersion: ExpectedDraftVersionSchema,
         note: z.string().trim().max(2_000).nullable().optional(),
         minimumProtocol: z.number().int().positive().optional(),
         migrationName: z.string().trim().min(1).max(200).optional(),
@@ -133,7 +137,10 @@ export const inventoryCatalogueContract = c.router({
       method: 'POST',
       path: '/type-catalogue/drafts/:revision/abandon',
       pathParams: z.object({ revision: z.coerce.number().int().positive() }),
-      body: z.object({ baseRevision: z.number().int().positive() }),
+      body: z.object({
+        baseRevision: z.number().int().positive(),
+        expectedDraftVersion: ExpectedDraftVersionSchema,
+      }),
       responses: {
         200: TypeCatalogueDescriptorSchema,
         401: CatalogueErrorBodySchema,

@@ -11,6 +11,7 @@ import {
   readCurrentCatalogueDraft,
   toCatalogueDescriptor,
   type CatalogueAuthor,
+  type DraftTarget,
 } from '../../catalogue/authoring.js';
 import { loadCatalogue } from '../../catalogue/index.js';
 import { readInventoryPrincipal } from '../middleware/identity.js';
@@ -50,6 +51,17 @@ function requireAuthor(response: PrincipalResponse, scope: 'read' | 'manage'): C
     'catalogue_unauthorised',
     'This endpoint requires an owner session or service-account grant'
   );
+}
+
+function draftTarget(
+  params: { readonly revision: number },
+  body: { readonly baseRevision: number; readonly expectedDraftVersion: number }
+): DraftTarget {
+  return {
+    revision: params.revision,
+    baseRevision: body.baseRevision,
+    expectedDraftVersion: body.expectedDraftVersion,
+  };
 }
 
 function makeTypeCatalogueReadHandlers(db: CommandDb) {
@@ -98,7 +110,7 @@ function makeTypeCatalogueManageHandlers(db: CommandDb) {
     patchDraft: ({ params, body, res }: TypesRequest['manage']['patchDraft'] & { res: Response }) =>
       runCatalogue(() => {
         requireAuthor(res, 'manage');
-        const result = patchCatalogueDraft(db, params.revision, body.baseRevision, body.operations);
+        const result = patchCatalogueDraft(db, draftTarget(params, body), body.operations);
         return {
           status: 200 as const,
           body: { draft: result.draft, compatibility: compatibilityBody(result.compatibility) },
@@ -111,12 +123,7 @@ function makeTypeCatalogueManageHandlers(db: CommandDb) {
     }: TypesRequest['manage']['previewDraft'] & { res: Response }) =>
       runCatalogue(() => {
         requireAuthor(res, 'manage');
-        const preview = previewCatalogueDraft(
-          db,
-          params.revision,
-          body.baseRevision,
-          body.operations
-        );
+        const preview = previewCatalogueDraft(db, draftTarget(params, body), body.operations);
         return {
           status: 200 as const,
           body: {
@@ -152,7 +159,7 @@ function makeTypeCatalogueManageHandlers(db: CommandDb) {
         const author = requireAuthor(res, 'manage');
         return {
           status: 200 as const,
-          body: abandonCatalogueDraft(db, params.revision, body.baseRevision, author),
+          body: abandonCatalogueDraft(db, draftTarget(params, body), author),
         };
       }),
   };
