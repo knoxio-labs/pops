@@ -140,7 +140,15 @@ Computed fields use the bounded, versioned expression AST from D5: no SQL,
 JavaScript, clocks or network access; at most two reference hops; publication
 rejects dependency cycles. A permitted explicit override wins without evaluating
 dependencies, clearing it resumes evaluation, and every effective value tells a
-client whether it is stored, computed, overridden or unavailable.
+client whether it is stored, computed, overridden or unavailable. The expression
+core parses only version 1's closed nodes, caps trees at 128 nodes and 32 stable
+type/field dependencies, resolves reference reads across every permitted target
+type, and rejects direct, transitive and reference-mediated cycles. Evaluation is
+synchronous against one supplied item snapshot, uses exact integer, decimal and
+fixed-unit measurement arithmetic, and short-circuits boolean and conditional
+branches before attempting their reads. Its disposable LRU cache has no clock:
+entries match exact item, catalogue and dependency revisions, with direct
+dependency, item and catalogue invalidation primitives for command and feed paths.
 
 Migration `0012_items_single_identity` built this from `home_inventory` and
 `containers` and dropped both. It aborts, writing nothing, when an id or a
