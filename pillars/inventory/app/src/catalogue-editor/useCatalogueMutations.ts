@@ -7,7 +7,7 @@ import { draftPreconditions } from './catalogue-draft';
 import type { QueryClient } from '@tanstack/react-query';
 import type { Dispatch, SetStateAction } from 'react';
 
-import type { CatalogueCompatibility, CatalogueDescriptor, CatalogueOperation } from './types';
+import type { CatalogueDescriptor, CatalogueOperation, CompatibilitySnapshot } from './types';
 
 const PUBLISHED_KEY = ['inventory', 'type-catalogue', 'published'] as const;
 const DRAFT_KEY = ['inventory', 'type-catalogue', 'draft'] as const;
@@ -51,7 +51,7 @@ function useDraftCreation(
 function useDraftPatching(
   queryClient: QueryClient,
   ensureDraft: () => Promise<CatalogueDescriptor>,
-  setCompatibility: Dispatch<SetStateAction<CatalogueCompatibility | null>>,
+  setCompatibility: Dispatch<SetStateAction<CompatibilitySnapshot>>,
   cancelPreview: () => void
 ) {
   return useMutation({
@@ -67,7 +67,11 @@ function useDraftPatching(
     },
     onSuccess: (result) => {
       queryClient.setQueryData(DRAFT_KEY, result.draft);
-      setCompatibility(result.compatibility);
+      setCompatibility({
+        compatibility: result.compatibility,
+        draftVersion: result.draft.revision.draftVersion,
+        isLivePreview: false,
+      });
     },
   });
 }
@@ -75,7 +79,7 @@ function useDraftPatching(
 function useDraftPublication(
   queryClient: QueryClient,
   ensureDraft: () => Promise<CatalogueDescriptor>,
-  setCompatibility: Dispatch<SetStateAction<CatalogueCompatibility | null>>,
+  setCompatibility: Dispatch<SetStateAction<CompatibilitySnapshot>>,
   cancelPreview: () => void
 ) {
   return useMutation({
@@ -101,7 +105,7 @@ function useDraftPublication(
 function useDraftAbandonment(
   queryClient: QueryClient,
   ensureDraft: () => Promise<CatalogueDescriptor>,
-  setCompatibility: Dispatch<SetStateAction<CatalogueCompatibility | null>>,
+  setCompatibility: Dispatch<SetStateAction<CompatibilitySnapshot>>,
   cancelPreview: () => void
 ) {
   return useMutation({
@@ -126,7 +130,7 @@ function useDraftAbandonment(
 export function useCatalogueMutations(
   queryClient: QueryClient,
   published: CatalogueDescriptor | undefined,
-  setCompatibility: Dispatch<SetStateAction<CatalogueCompatibility | null>>,
+  setCompatibility: Dispatch<SetStateAction<CompatibilitySnapshot>>,
   cancelPreview: () => void
 ) {
   const { createDraft, ensureDraft } = useDraftCreation(queryClient, published, cancelPreview);

@@ -54,7 +54,7 @@ export function TypeCatalogueLayout({ onAbandon, onOperation, onPublish, page }:
             <CatalogueEditorContent page={page} onOperation={onOperation} />
             <PublishPanel
               catalogue={page.catalogue}
-              compatibility={page.compatibility}
+              readiness={page.readiness}
               error={page.error}
               isPending={page.isPending}
               onReload={() => void page.reload()}
