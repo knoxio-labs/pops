@@ -47,6 +47,17 @@ const NULL_SHA = /^0+$/u;
 const MAIN_REF = 'refs/heads/main';
 
 /**
+ * The ordinary branch target. A stacked branch replaces this with the base
+ * declared by its `branch.<name>.merge` configuration.
+ */
+const DEFAULT_CHECK_BASE = Object.freeze({
+  ref: 'origin/main',
+  budgetBase: 'main',
+  fetchRemote: 'origin',
+  fetchBranch: 'main',
+});
+
+/**
  * @typedef {object} RefUpdate
  * @property {string} localRef
  * @property {string} localSha
@@ -108,6 +119,47 @@ export function peelToCommits(updates, resolveCommit) {
     const commit = resolveCommit(`${update.localSha}^{commit}`);
     return commit === undefined ? update : { ...update, localSha: commit };
   });
+}
+
+/**
+ * Resolve the ref a checked-out branch should validate against.
+ *
+ * Git stores a branch's declared base in `branch.<name>.merge`. A branch that
+ * points at itself, `main`, or has no declaration is an ordinary branch and
+ * keeps the repository-wide `origin/main` target. A different merge ref is a
+ * stacked child and is checked against that immediate parent instead.
+ *
+ * @param {object} params
+ * @param {string | undefined} params.branchName
+ * @param {string | undefined} params.remoteName
+ * @param {string | undefined} params.mergeRef
+ * @returns {{ref: string, budgetBase: string, fetchRemote: string | undefined, fetchBranch: string | undefined, preferLocal?: boolean}}
+ */
+export function resolveCheckBase({ branchName, remoteName, mergeRef }) {
+  if (branchName === undefined || mergeRef === undefined) return DEFAULT_CHECK_BASE;
+
+  const mergeBranch = mergeRef.replace(/^refs\/heads\//u, '');
+  if (mergeBranch === '' || mergeBranch === branchName || mergeBranch === 'main') {
+    return DEFAULT_CHECK_BASE;
+  }
+
+  const remote = remoteName === undefined || remoteName === '' ? 'origin' : remoteName;
+  if (remote === '.') {
+    return {
+      ref: mergeBranch,
+      budgetBase: mergeBranch,
+      fetchRemote: undefined,
+      fetchBranch: undefined,
+      preferLocal: true,
+    };
+  }
+
+  return {
+    ref: `${remote}/${mergeBranch}`,
+    budgetBase: remote === 'origin' ? mergeBranch : `${remote}/${mergeBranch}`,
+    fetchRemote: remote,
+    fetchBranch: mergeBranch,
+  };
 }
 
 /**
@@ -189,6 +241,7 @@ function readStdin() {
  * @param {object} params
  * @param {RefUpdate[]} params.updates
  * @param {string | undefined} params.headSha
+ * @param {{ref: string, budgetBase: string, fetchRemote: string | undefined, fetchBranch: string | undefined, preferLocal?: boolean}} [params.base]
  * @param {string} params.repoDir The repo being pushed, passed to the
  *   line-budget check as `--repo` so it analyses this tree's git history
  *   rather than defaulting to its own module location.
@@ -197,7 +250,15 @@ function readStdin() {
  * @param {(line: string) => void} params.err
  * @returns {number} exit code
  */
-export function orchestrate({ updates, headSha, repoDir, run, out, err }) {
+export function orchestrate({
+  updates,
+  headSha,
+  repoDir,
+  base = DEFAULT_CHECK_BASE,
+  run,
+  out,
+  err,
+}) {
   const plans = planPushChecks(updates, headSha);
 
   const mismatches = plans.filter((p) => p.kind === 'mismatch');
@@ -224,17 +285,19 @@ export function orchestrate({ updates, headSha, repoDir, run, out, err }) {
     return 0;
   }
 
-  const fetch = run('git', ['fetch', 'origin', 'main', '--quiet']);
-  if (fetch.status !== 0) {
-    err('pre-push: git fetch origin main failed.');
-    return 1;
+  if (base.fetchRemote !== undefined && base.fetchBranch !== undefined) {
+    const fetch = run('git', ['fetch', base.fetchRemote, base.fetchBranch, '--quiet']);
+    if (fetch.status !== 0) {
+      err(`pre-push: git fetch ${base.fetchRemote} ${base.fetchBranch} failed.`);
+      return 1;
+    }
   }
 
   for (const plan of toCheck) {
-    const mergeTree = run('git', ['merge-tree', '--write-tree', 'origin/main', plan.sha]);
+    const mergeTree = run('git', ['merge-tree', '--write-tree', base.ref, plan.sha]);
     if (mergeTree.status !== 0) {
       err(
-        `pre-push: ${plan.localRef} (${plan.sha}) conflicts with origin/main — rebase before pushing.`
+        `pre-push: ${plan.localRef} (${plan.sha}) conflicts with ${base.ref} — rebase before pushing.`
       );
       return 1;
     }
@@ -242,7 +305,8 @@ export function orchestrate({ updates, headSha, repoDir, run, out, err }) {
     const budget = run('node', [
       budgetCheckScript,
       '--base',
-      'main',
+      base.budgetBase,
+      ...(base.preferLocal === true ? ['--prefer-local'] : []),
       '--head',
       plan.sha,
       '--repo',
@@ -256,13 +320,17 @@ export function orchestrate({ updates, headSha, repoDir, run, out, err }) {
 
 /**
  * @param {string} cwd
- * @returns {(cmd: string, args: string[]) => { status: number | null }}
+ * @returns {{ref: string, budgetBase: string, fetchRemote: string | undefined, fetchBranch: string | undefined}}
  */
-function makeRealRun(cwd) {
-  return (cmd, args) => {
-    const result = spawnSync(cmd, args, { cwd, stdio: 'inherit', env: gitEnv() });
-    return { status: result.status };
-  };
+function checkedOutBase(cwd) {
+  const branchName = tryGit(['symbolic-ref', '--quiet', '--short', 'HEAD'], cwd);
+  if (branchName === undefined) return DEFAULT_CHECK_BASE;
+
+  return resolveCheckBase({
+    branchName,
+    remoteName: tryGit(['config', '--get', `branch.${branchName}.remote`], cwd),
+    mergeRef: tryGit(['config', '--get', `branch.${branchName}.merge`], cwd),
+  });
 }
 
 function main() {
@@ -296,12 +364,24 @@ function main() {
   const code = orchestrate({
     updates: peelToCommits(updates, (revision) => tryGit(['rev-parse', revision], repoDir)),
     headSha,
+    base: checkedOutBase(repoDir),
     repoDir,
     run: makeRealRun(repoDir),
     out: (line) => console.log(line),
     err: (line) => console.error(line),
   });
   process.exit(code);
+}
+
+/**
+ * @param {string} cwd
+ * @returns {(cmd: string, args: string[]) => { status: number | null }}
+ */
+function makeRealRun(cwd) {
+  return (cmd, args) => {
+    const result = spawnSync(cmd, args, { cwd, stdio: 'inherit', env: gitEnv() });
+    return { status: result.status };
+  };
 }
 
 /**

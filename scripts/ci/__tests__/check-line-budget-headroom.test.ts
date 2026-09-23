@@ -297,6 +297,32 @@ describe(
       const { skippedReason } = evaluate({ cwd: dir, baseRef: 'does-not-exist', headroom: 10 });
       expect(skippedReason).toBeDefined();
     });
+
+    it('prefers a local stacked parent over a stale remote-tracking ref with the same name', () => {
+      const dir = makeRepo();
+      commit(dir, 'shared.ts', body(10), 'ancestor');
+      const staleParent = execFileSync('git', ['rev-parse', 'HEAD'], {
+        cwd: dir,
+        encoding: 'utf8',
+        env: gitEnv(),
+      }).trim();
+      execFileSync('git', ['checkout', '-q', '-b', 'parent'], { cwd: dir, env: gitEnv() });
+      commit(dir, 'shared.ts', `${body(10)}console.error(998);\n`, 'local parent');
+      execFileSync('git', ['update-ref', 'refs/remotes/origin/parent', staleParent], {
+        cwd: dir,
+        env: gitEnv(),
+      });
+      execFileSync('git', ['checkout', '-q', '-b', 'feature'], { cwd: dir, env: gitEnv() });
+      commit(dir, 'shared.ts', `${body(10)}console.error(998);\nconsole.error(999);\n`, 'feature');
+
+      const { resolvedBase } = evaluate({
+        cwd: dir,
+        baseRef: 'parent',
+        headroom: 10,
+        preferLocal: true,
+      });
+      expect(resolvedBase).toBe('parent');
+    });
   }
 );
 

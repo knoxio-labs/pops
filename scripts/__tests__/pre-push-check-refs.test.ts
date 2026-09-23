@@ -21,6 +21,7 @@ import {
   parseRefUpdates,
   peelToCommits,
   planPushChecks,
+  resolveCheckBase,
 } from '../pre-push-check-refs.mjs';
 
 const REAL_SUBPROCESS_TIMEOUT_MS = 60_000;
@@ -194,6 +195,65 @@ describe('planPushChecks', () => {
   });
 });
 
+describe('resolveCheckBase', () => {
+  it('keeps ordinary branches on origin/main when no base is declared', () => {
+    expect(
+      resolveCheckBase({ branchName: 'topic', remoteName: 'origin', mergeRef: undefined })
+    ).toEqual({
+      ref: 'origin/main',
+      budgetBase: 'main',
+      fetchRemote: 'origin',
+      fetchBranch: 'main',
+    });
+  });
+
+  it('keeps a branch based on main on the ordinary target', () => {
+    expect(
+      resolveCheckBase({
+        branchName: 'topic',
+        remoteName: 'origin',
+        mergeRef: 'refs/heads/main',
+      })
+    ).toEqual({
+      ref: 'origin/main',
+      budgetBase: 'main',
+      fetchRemote: 'origin',
+      fetchBranch: 'main',
+    });
+  });
+
+  it('uses a checked-out child branch’s declared immediate parent', () => {
+    expect(
+      resolveCheckBase({
+        branchName: 'child',
+        remoteName: 'origin',
+        mergeRef: 'refs/heads/parent',
+      })
+    ).toEqual({
+      ref: 'origin/parent',
+      budgetBase: 'parent',
+      fetchRemote: 'origin',
+      fetchBranch: 'parent',
+    });
+  });
+
+  it('supports a local base declaration without trying to fetch it', () => {
+    expect(
+      resolveCheckBase({
+        branchName: 'child',
+        remoteName: '.',
+        mergeRef: 'refs/heads/parent',
+      })
+    ).toEqual({
+      ref: 'parent',
+      budgetBase: 'parent',
+      fetchRemote: undefined,
+      fetchBranch: undefined,
+      preferLocal: true,
+    });
+  });
+});
+
 describe('orchestrate()', () => {
   const headSha = 'a'.repeat(40);
   const otherSha = 'b'.repeat(40);
@@ -280,6 +340,69 @@ describe('orchestrate()', () => {
     expect(ran[2]?.args[ran[2]!.args.indexOf('--head') + 1]).toBe(headSha);
     expect(ran[2]?.args).toContain('--repo');
     expect(ran[2]?.args[ran[2]!.args.indexOf('--repo') + 1]).toBe('/some/repo');
+  });
+
+  it('on a stacked push, fetches and checks the declared immediate parent', () => {
+    const { run, ran } = record();
+    const code = orchestrate({
+      updates: [
+        {
+          localRef: 'refs/heads/child',
+          localSha: headSha,
+          remoteRef: 'refs/heads/child',
+          remoteSha: NULL_SHA,
+        },
+      ],
+      headSha,
+      base: {
+        ref: 'origin/parent',
+        budgetBase: 'parent',
+        fetchRemote: 'origin',
+        fetchBranch: 'parent',
+      },
+      repoDir: '/some/repo',
+      run,
+      out: () => {},
+      err: () => {},
+    });
+    expect(code).toBe(0);
+    expect(ran[0]).toEqual({ cmd: 'git', args: ['fetch', 'origin', 'parent', '--quiet'] });
+    expect(ran[1]).toEqual({
+      cmd: 'git',
+      args: ['merge-tree', '--write-tree', 'origin/parent', headSha],
+    });
+    expect(ran[2]?.args).toContain('parent');
+    expect(ran[2]?.args[ran[2]!.args.indexOf('--base') + 1]).toBe('parent');
+  });
+
+  it('tells the line-budget check to prefer a local-only stacked parent', () => {
+    const { run, ran } = record();
+    const code = orchestrate({
+      updates: [
+        {
+          localRef: 'refs/heads/child',
+          localSha: headSha,
+          remoteRef: 'refs/heads/child',
+          remoteSha: NULL_SHA,
+        },
+      ],
+      headSha,
+      base: {
+        ref: 'parent',
+        budgetBase: 'parent',
+        fetchRemote: undefined,
+        fetchBranch: undefined,
+        preferLocal: true,
+      },
+      repoDir: '/some/repo',
+      run,
+      out: () => {},
+      err: () => {},
+    });
+    expect(code).toBe(0);
+    expect(ran).toHaveLength(2);
+    expect(ran[0]).toEqual({ cmd: 'git', args: ['merge-tree', '--write-tree', 'parent', headSha] });
+    expect(ran[1]?.args).toContain('--prefer-local');
   });
 
   it('fails, and never reaches the line-budget check, when merge-tree conflicts', () => {
@@ -489,6 +612,45 @@ describe(
       const topicSha = rev(dir);
 
       const stdin = `refs/heads/topic ${topicSha} refs/heads/topic ${NULL_SHA}\n`;
+      const result = run(dir, stdin);
+
+      expect(result.status).toBe(0);
+    });
+
+    it('end-to-end: a checked-out child uses its declared parent instead of origin/main', () => {
+      const dir = makeRepo();
+      const originDir = mkdtempSync(join(tmpdir(), 'pre-push-check-refs-origin-'));
+      repos.push(originDir);
+      execFileSync('git', ['init', '--bare', '-q', '--initial-branch=main'], {
+        cwd: originDir,
+        env: gitEnv(),
+      });
+      execFileSync('git', ['remote', 'add', 'origin', originDir], { cwd: dir, env: gitEnv() });
+
+      commit(dir, 'shared.ts', 'const value = "root";\n', 'root');
+      execFileSync('git', ['push', '-q', 'origin', 'main'], { cwd: dir, env: gitEnv() });
+
+      execFileSync('git', ['checkout', '-q', '-b', 'parent'], { cwd: dir, env: gitEnv() });
+      commit(dir, 'shared.ts', 'const value = "parent";\n', 'parent change');
+      execFileSync('git', ['push', '-q', 'origin', 'parent'], { cwd: dir, env: gitEnv() });
+
+      execFileSync('git', ['checkout', '-q', 'main'], { cwd: dir, env: gitEnv() });
+      commit(dir, 'shared.ts', 'const value = "main";\n', 'main change');
+      execFileSync('git', ['push', '-q', 'origin', 'main'], { cwd: dir, env: gitEnv() });
+
+      execFileSync('git', ['checkout', '-q', '-b', 'child', 'parent'], {
+        cwd: dir,
+        env: gitEnv(),
+      });
+      commit(dir, 'child.ts', 'const child = true;\n', 'child change');
+      execFileSync('git', ['config', 'branch.child.remote', 'origin'], { cwd: dir, env: gitEnv() });
+      execFileSync('git', ['config', 'branch.child.merge', 'refs/heads/parent'], {
+        cwd: dir,
+        env: gitEnv(),
+      });
+
+      const childSha = rev(dir);
+      const stdin = `refs/heads/child ${childSha} refs/heads/child ${NULL_SHA}\n`;
       const result = run(dir, stdin);
 
       expect(result.status).toBe(0);
