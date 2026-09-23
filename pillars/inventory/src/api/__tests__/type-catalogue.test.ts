@@ -382,9 +382,12 @@ describe('type catalogue owner API', () => {
       catalogueMinimumProtocol: 1,
     });
 
-    const premature = await api
-      .post(`/type-catalogue/drafts/${draftRevision}/publish`)
-      .send({ baseRevision, minimumProtocol: 2, note: 'Protocol 2 vocabulary' });
+    const premature = await api.post(`/type-catalogue/drafts/${draftRevision}/publish`).send({
+      baseRevision,
+      minimumProtocol: 2,
+      note: 'Protocol 2 vocabulary',
+      expectedDraftVersion: draft.body.revision.draftVersion,
+    });
     const draftAfterRefusal = await api.get('/type-catalogue/drafts/current');
 
     expect(premature.status).toBe(409);
@@ -432,9 +435,12 @@ describe('type catalogue owner API', () => {
     expect(protocol1.body.code).toBe('client_too_old');
     expect(protocol2.status).toBe(200);
 
-    const published = await restarted
-      .post(`/type-catalogue/drafts/${draftRevision}/publish`)
-      .send({ baseRevision, minimumProtocol: 2, note: 'Protocol 2 vocabulary' });
+    const published = await restarted.post(`/type-catalogue/drafts/${draftRevision}/publish`).send({
+      baseRevision,
+      minimumProtocol: 2,
+      note: 'Protocol 2 vocabulary',
+      expectedDraftVersion: draft.body.revision.draftVersion,
+    });
     expect(published.status).toBe(200);
 
     const snapshot = await restarted.get('/sync/snapshot').set({ 'Pops-Inventory-Protocol': '2' });
