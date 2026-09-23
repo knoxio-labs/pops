@@ -94,7 +94,8 @@ completed writes and keeps flagged, unseen or currently invalid drafts from bein
 `PurchaseReadingViewModel` keeps those rows in staged order and starts at most two extractions at a
 time. Each completed call opens the next queued receipt, including after an unreadable result or a
 repository failure, so one bad receipt cannot stall the batch. Cancelling the reading task starts no
-further calls and leaves receipts that never started queued. A reading batch is one-shot: another
+further calls: reads already in flight settle with their result, and receipts that never started,
+or whose read the cancellation interrupted, stay queued. A reading batch is one-shot: another
 `start()` call does not submit the same receipt again.
 
 `ReceiptDraftView` is a reading — or a blank purchase — as something the reader may change: the pages above (empty for a manual entry), the outcome's status header, then the same groups in the same order — who and when, the items in a column, what adjusts them, the total in `popsAmount` — with every value in a `PopsTextField` instead of a `Text`. The bar's prominent action is Save; whichever the entry point's own "start again" action is sits beside it at the standard weight, which is what `PopsButtonProminence` exists for. A host that commits from its own navigation bar passes no `save`, so there is no bar, and hands the form a `Binding` to its draft so it can gate its Save on `ReceiptDraftView.canSave` as the reader types.

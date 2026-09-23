@@ -68,8 +68,23 @@ internal struct PurchaseReadingViewModelTests {
 
         let calls = await repository.calledKeys()
         #expect(calls == [1, 2])
+        #expect(model.rows.prefix(2).allSatisfy { $0.outcome == .read(Self.reading) })
         #expect(model.rows.dropFirst(2).allSatisfy { $0.outcome == .queued })
         #expect(!model.isFinished)
+    }
+
+    @Test("a read the cancellation interrupted returns to queued, never stuck reading")
+    func cancelledReadRequeues() async {
+        let repository = ReadingGate(answers: [1: .cancelled, 2: .cancelled])
+        let model = PurchaseReadingViewModel(receipts: inputs(3), repository: repository)
+        let task = Task { await model.start() }
+        await repository.waitForCallCount(2)
+        task.cancel()
+        await repository.release(1)
+        await repository.release(2)
+        await task.value
+
+        #expect(model.rows.allSatisfy { $0.outcome == .queued })
     }
 
     @Test("start is one-shot while active and after completion")
@@ -140,6 +155,7 @@ private actor ReadingGate: ReceiptCaptureRepository {
         case draft
         case unreadable(String)
         case failure(RepositoryError)
+        case cancelled
     }
 
     private let answers: [UInt8: Answer]
@@ -172,6 +188,8 @@ private actor ReadingGate: ReceiptCaptureRepository {
             return .unreadable(receiptCount: 1, reason: reason)
         case .failure(let error):
             throw error
+        case .cancelled:
+            throw CancellationError()
         }
     }
 
@@ -197,7 +215,8 @@ private actor ReadingGate: ReceiptCaptureRepository {
     }
 
     internal func peakConcurrency() -> Int { peak }
-    internal func calledKeys() -> [UInt8] { calls }
+    /// Called keys in ascending order: concurrent reads reach the repository in no fixed order.
+    internal func calledKeys() -> [UInt8] { calls.sorted() }
 
     private func resumeCallWaiters() {
         let ready = callWaiters.filter { calls.count >= $0.0 }

@@ -39,13 +39,9 @@ internal final class PurchaseReadingViewModel {
             }
 
             while let completion = await group.next() {
-                guard !Task.isCancelled else {
-                    group.cancelAll()
-                    return
-                }
                 rows[completion.index].outcome = outcome(for: completion.result)
 
-                guard nextIndex < rows.count else { continue }
+                guard !Task.isCancelled, nextIndex < rows.count else { continue }
                 schedule(nextIndex, in: &group)
                 nextIndex += 1
             }
@@ -73,6 +69,8 @@ internal final class PurchaseReadingViewModel {
             return .unreadable(reason: reason)
         case .failed(let error):
             return .unreadable(reason: ReceiptResultCopy.message(for: error))
+        case .cancelled:
+            return .queued
         }
     }
 
@@ -83,6 +81,7 @@ internal final class PurchaseReadingViewModel {
         do {
             return .extracted(try await repository.extract(parts))
         } catch {
+            if error is CancellationError || Task.isCancelled { return .cancelled }
             return .failed(RepositoryError.describing(error))
         }
     }
@@ -96,4 +95,5 @@ private struct ReadingCompletion: Sendable {
 private enum ReadingResult: Sendable {
     case extracted(ReceiptExtraction)
     case failed(RepositoryError)
+    case cancelled
 }
