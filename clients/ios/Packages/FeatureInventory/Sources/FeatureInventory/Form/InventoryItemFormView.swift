@@ -111,9 +111,17 @@ internal struct InventoryItemFormView: View {
                 identifier: InventoryAccessibility.itemNameField)
             InventoryFormDestinationRow(draft: $model.draft)
             if let catalogue = model.protocol2Catalogue, let selected = model.protocol2Draft {
-                Picker("Type", selection: Binding(
-                    get: { selected.typeId }, set: { model.selectProtocol2Type($0) })) {
-                    ForEach(catalogue.types) { type in
+                Picker(
+                    "Type",
+                    selection: Binding(
+                        get: { selected.typeId },
+                        set: { model.selectProtocol2Type($0) })
+                ) {
+                    ForEach(
+                        catalogue.types.filter {
+                            $0.archivedAt == nil || $0.id == selected.typeId
+                        }
+                    ) { type in
                         Text(type.label).tag(type.id)
                     }
                 }
@@ -125,10 +133,29 @@ internal struct InventoryItemFormView: View {
             }
             InventoryFormQuantityRow(count: $model.draft.quantity)
             if let type = model.protocol2Type, let draft = model.protocol2Draft {
-                ForEach(type.fields) { field in
-                    InventoryProtocol2FieldRow(field: field, values: draft.values(for: field)) {
-                        model.protocol2Draft?.set($0, for: field)
+                ForEach(
+                    type.fields.filter {
+                        $0.archivedAt == nil || !draft.values(for: $0).isEmpty
+                            || draft.unavailableReason(for: $0) != nil
                     }
+                ) { field in
+                    InventoryProtocol2FieldRow(
+                        field: field, entries: draft.draftEntries(for: field),
+                        computedValues: draft.values(for: field),
+                        unavailableReason: draft.unavailableReason(for: field),
+                        referenceTargets: model.protocol2ReferenceTargets,
+                        setText: { value, id in
+                            model.protocol2Draft?.setText(value, entryId: id, for: field)
+                        },
+                        setValue: { value, id in
+                            model.protocol2Draft?.setValue(value, entryId: id, for: field)
+                        },
+                        setReferenceKind: { kind, id in
+                            model.protocol2Draft?.setReferenceKind(kind, entryId: id, for: field)
+                        },
+                        add: { model.addProtocol2Value(for: field) },
+                        remove: { model.protocol2Draft?.removeEntry(id: $0, for: field) },
+                        move: { model.protocol2Draft?.moveEntry(id: $0, by: $1, for: field) })
                 }
             } else {
                 ForEach(model.fields) { field in
@@ -141,7 +168,7 @@ internal struct InventoryItemFormView: View {
                 }
             }
         } footer: {
-            footer(for: identityIssues)
+            footer(for: identityIssues, additional: protocol2IssueMessages)
         }
     }
 
@@ -180,10 +207,18 @@ internal struct InventoryItemFormView: View {
         }
     }
 
+    private var protocol2IssueMessages: [String] {
+        guard model.showsValidation else { return [] }
+        return model.protocol2Issues.map(\.message)
+    }
+
     @ViewBuilder
-    private func footer(for issues: [InventoryDraftIssue]) -> some View {
-        if !issues.isEmpty {
-            Text(issues.map(\.message).joined(separator: "\n"))
+    private func footer(
+        for issues: [InventoryDraftIssue], additional: [String] = []
+    ) -> some View {
+        let messages = issues.map(\.message) + additional
+        if !messages.isEmpty {
+            Text(messages.joined(separator: "\n"))
                 .foregroundStyle(Color.popsDestructive)
         }
     }

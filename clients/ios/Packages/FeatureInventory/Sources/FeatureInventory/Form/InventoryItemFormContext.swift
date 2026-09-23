@@ -7,6 +7,7 @@ internal struct InventoryItemFormContext: Equatable, Sendable {
     internal let catalogue: InventoryCatalogue
     /// The immutable stable-ID catalogue that matches protocol-2 item values.
     internal let protocol2Catalogue: InventoryCatalogueSnapshot?
+    internal let protocol2ReferenceTargets: [InventoryProtocol2ReferenceTarget]
     internal let isOffline: Bool
     /// The item being edited; nil for a create, and for an edit whose item
     /// has gone.
@@ -39,10 +40,26 @@ internal struct InventoryItemFormContext: Equatable, Sendable {
             }
             return InventoryItemFormContext(
                 catalogue: source.inventoryCatalogue(),
-                protocol2Catalogue: source.inventoryProtocol2Catalogue(), isOffline: isOffline, item: item,
+                protocol2Catalogue: source.inventoryProtocol2Catalogue(),
+                protocol2ReferenceTargets: referenceTargets(in: source), isOffline: isOffline,
+                item: item,
                 placementName: placement.flatMap { name(of: $0, in: source) },
                 photoUploads: source.inventoryPhotoUploads())
         }
+    }
+
+    private static func referenceTargets(
+        in source: any InventoryQuerySource
+    ) -> [InventoryProtocol2ReferenceTarget] {
+        let items = source.inventoryItems(includeInactive: true).filter { !$0.isDeleted }.map {
+            InventoryProtocol2ReferenceTarget(
+                kind: .item, id: $0.id, label: $0.name, typeId: $0.typeId)
+        }
+        let locations = source.inventoryLocationTree().filter { !$0.isDeleted }.map {
+            InventoryProtocol2ReferenceTarget(
+                kind: .location, id: $0.id, label: $0.name, typeId: nil)
+        }
+        return items + locations
     }
 
     /// The item already wearing `code`, other than the one being entered.

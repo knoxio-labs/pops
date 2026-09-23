@@ -170,8 +170,12 @@ extension InventorySyncPage {
             return "This was deleted on another device."
         case .photoFailed:
             return "This photo could not be uploaded."
-        case .unrecognised:
-            return "This change needs a person to look at it."
+        case .unrecognised(let reason):
+            if reason == "invalid" || reason == "type_unknown" {
+                return "This change no longer matches the catalogue. "
+                    + "Edit the item, then let this change go."
+            }
+            return "The server rejected this change. Review the item, then let this change go."
         }
     }
 }

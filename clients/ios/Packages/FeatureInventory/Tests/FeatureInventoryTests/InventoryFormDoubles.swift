@@ -11,6 +11,7 @@ internal struct FormFixtureSource: InventoryQuerySource {
     var items: [InventoryItem] = []
     var locations: [InventoryLocation] = []
     var catalogue = InventoryCatalogue(version: "test", units: [], types: [])
+    var protocol2Catalogue: InventoryCatalogueSnapshot?
     var status: InventoryReplicaStatus = .current
     var photoUploads: [String: InventoryPhotoUpload] = [:]
 
@@ -46,6 +47,7 @@ internal struct FormFixtureSource: InventoryQuerySource {
     func inventoryItemHistory(itemId: String) -> [InventoryEvent] { [] }
     func inventoryLocationHistory(locationId: String) -> [InventoryEvent] { [] }
     func inventoryCatalogue() -> InventoryCatalogue { catalogue }
+    func inventoryProtocol2Catalogue() -> InventoryCatalogueSnapshot? { protocol2Catalogue }
     func inventorySyncLedger() -> InventoryReplicaSyncLedger { InventoryReplicaSyncLedger() }
     func inventoryReplicaStatus() -> InventoryReplicaStatus { status }
     func inventoryPhotoUploads() -> [String: InventoryPhotoUpload] { photoUploads }

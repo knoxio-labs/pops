@@ -33,7 +33,7 @@ Everything the dashboard links to has its own screen: item detail (POPS-4062), c
 
 ## The item form
 
-New item and Edit item are one sheet (`Form/`), installed once over the whole stack by `InventoryFlowView`. A screen opens it through the `inventoryItemForm` environment value with an `InventoryItemFormRequest`; nothing pushes it as a route. Its fields are drawn from the catalogue descriptor the store serves, so a type the server adds renders without an app release.
+New item and Edit item are one sheet (`Form/`), installed once over the whole stack by `InventoryFlowView`. A screen opens it through the `inventoryItemForm` environment value with an `InventoryItemFormRequest`; nothing pushes it as a route. Protocol 2 fields are drawn from the cached catalogue by stable type, field and option IDs, so a type the server adds renders without an app release. Stored primitive fields support one or ordered-many values; reference choices come from the replica and obey the catalogue's kind and item-type constraints. The same cached catalogue validates online and offline writes. Retired options remain readable but cannot be newly selected, computed values stay read-only, and catalogue rejections in Sync identify the queued item that must be edited or discarded. A protocol 1 catalogue keeps the existing keyed form path.
 
 Two things it reaches for belong to other screens, and it asks for them rather than owning them:
 
