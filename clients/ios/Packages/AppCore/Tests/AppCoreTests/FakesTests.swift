@@ -249,6 +249,23 @@ internal struct FakesTests {
         let purchase = try await repository.createManualPurchase(payload)
 
         #expect(purchase == .fake(id: "purchase-2"))
-        #expect(await repository.manualPurchases == [payload])
+        #expect(await repository.createdManualPurchases == [payload])
+    }
+
+    @Test("manual purchase calls are recorded in order with their idempotency keys")
+    func receiptCaptureFakeRecordsManualPurchaseKeys() async throws {
+        let repository = InMemoryReceiptCaptureRepository(
+            manualResult: .success(.fake(id: "purchase")))
+        let first = ReceiptManualPurchasePayload.fake(
+            fields: .fake(idempotencyKey: "manual-key-1"))
+        let second = ReceiptManualPurchasePayload.fake(
+            fields: .fake(idempotencyKey: "manual-key-2"))
+
+        _ = try await repository.createManualPurchase(first)
+        _ = try await repository.createManualPurchase(second)
+
+        let recorded = await repository.createdManualPurchases
+        #expect(recorded == [first, second])
+        #expect(recorded.map(\.fields.idempotencyKey) == ["manual-key-1", "manual-key-2"])
     }
 }

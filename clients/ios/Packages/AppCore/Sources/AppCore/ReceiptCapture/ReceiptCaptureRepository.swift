@@ -21,12 +21,20 @@ public protocol ReceiptCaptureRepository: Sendable {
 
     /// Persists a reviewed, possibly corrected receipt-derived draft.
     ///
-    /// - Throws: ``RepositoryError``, including for a repeated
-    ///   ``ReceiptDraftSavePayload/idempotencyKey`` — the caller mints a
-    ///   fresh one for a genuinely new save, never resends one that failed.
+    /// Repeating a payload's idempotency key returns the purchase that key
+    /// already created without writing a second purchase. A caller therefore
+    /// retains the key while retrying one uncertain save and mints a new key
+    /// only for a new intended purchase.
+    ///
+    /// - Throws: ``RepositoryError`` when persistence cannot return a purchase.
     func saveDraft(_ payload: ReceiptDraftSavePayload) async throws -> ReceiptPurchase
 
     /// Persists a purchase typed by hand — no receipt, no photograph.
+    ///
+    /// Repeating a payload's idempotency key returns the purchase that key
+    /// already created without writing a second purchase. A caller therefore
+    /// retains the key while retrying one uncertain save and mints a new key
+    /// only for a new intended purchase.
     func createManualPurchase(_ payload: ReceiptManualPurchasePayload) async throws
         -> ReceiptPurchase
 }
