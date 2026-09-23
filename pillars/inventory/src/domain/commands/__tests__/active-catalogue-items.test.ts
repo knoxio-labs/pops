@@ -124,19 +124,31 @@ function publishRenamedDefinitions(
 ): number {
   const created = createCatalogueDraft(harness.db, catalogue.revision, AUTHOR);
   const revision = created.revision.revision;
-  patchCatalogueDraft(harness.db, revision, catalogue.revision, [
-    { kind: 'put_type', id: catalogue.typeId, label: 'Renamed custom device' },
+  const patched = patchCatalogueDraft(
+    harness.db,
     {
-      kind: 'put_field',
-      id: catalogue.fieldId,
-      typeId: catalogue.typeId,
-      label: 'Renamed serial',
+      revision,
+      baseRevision: catalogue.revision,
+      expectedDraftVersion: created.revision.draftVersion,
     },
-  ]);
+    [
+      { kind: 'put_type', id: catalogue.typeId, label: 'Renamed custom device' },
+      {
+        kind: 'put_field',
+        id: catalogue.fieldId,
+        typeId: catalogue.typeId,
+        label: 'Renamed serial',
+      },
+    ]
+  );
   publishCatalogueDraft(
     harness.db,
     revision,
-    { baseRevision: catalogue.revision, note: null },
+    {
+      baseRevision: catalogue.revision,
+      expectedDraftVersion: patched.draft.revision.draftVersion,
+      note: null,
+    },
     AUTHOR
   );
   return revision;
@@ -150,28 +162,46 @@ function replaceField(
 ): number {
   const created = createCatalogueDraft(harness.db, baseRevision, AUTHOR);
   const revision = created.revision.revision;
-  patchCatalogueDraft(harness.db, revision, baseRevision, [
-    { kind: 'archive_field', id: fieldId },
-    {
-      kind: 'put_field',
-      typeId,
-      key: 'replacement_serial',
-      label: 'Replacement serial',
-      fieldKind: 'short_text',
-      cardinality: 'one',
-      required: false,
-      storage: 'stored',
-    },
-  ]);
-  publishCatalogueDraft(harness.db, revision, { baseRevision, note: null }, AUTHOR);
+  const patched = patchCatalogueDraft(
+    harness.db,
+    { revision, baseRevision, expectedDraftVersion: created.revision.draftVersion },
+    [
+      { kind: 'archive_field', id: fieldId },
+      {
+        kind: 'put_field',
+        typeId,
+        key: 'replacement_serial',
+        label: 'Replacement serial',
+        fieldKind: 'short_text',
+        cardinality: 'one',
+        required: false,
+        storage: 'stored',
+      },
+    ]
+  );
+  publishCatalogueDraft(
+    harness.db,
+    revision,
+    { baseRevision, expectedDraftVersion: patched.draft.revision.draftVersion, note: null },
+    AUTHOR
+  );
   return revision;
 }
 
 function archiveField(harness: Harness, fieldId: string, baseRevision: number): number {
   const created = createCatalogueDraft(harness.db, baseRevision, AUTHOR);
   const revision = created.revision.revision;
-  patchCatalogueDraft(harness.db, revision, baseRevision, [{ kind: 'archive_field', id: fieldId }]);
-  publishCatalogueDraft(harness.db, revision, { baseRevision, note: null }, AUTHOR);
+  const patched = patchCatalogueDraft(
+    harness.db,
+    { revision, baseRevision, expectedDraftVersion: created.revision.draftVersion },
+    [{ kind: 'archive_field', id: fieldId }]
+  );
+  publishCatalogueDraft(
+    harness.db,
+    revision,
+    { baseRevision, expectedDraftVersion: patched.draft.revision.draftVersion, note: null },
+    AUTHOR
+  );
   return revision;
 }
 
@@ -181,7 +211,12 @@ function increaseMinimumProtocol(harness: Harness, baseRevision: number): number
   publishCatalogueDraft(
     harness.db,
     revision,
-    { baseRevision, minimumProtocol: 2, note: null },
+    {
+      baseRevision,
+      minimumProtocol: 2,
+      expectedDraftVersion: created.revision.draftVersion,
+      note: null,
+    },
     AUTHOR
   );
   return revision;
