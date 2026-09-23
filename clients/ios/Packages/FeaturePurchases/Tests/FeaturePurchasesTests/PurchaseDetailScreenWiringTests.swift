@@ -1,8 +1,6 @@
 import Foundation
 import Testing
 
-@testable import FeaturePurchases
-
 @Suite("Purchase detail screen wiring")
 internal struct PurchaseDetailScreenWiringTests {
     @Test("the task loads and every model phase has a production state")
