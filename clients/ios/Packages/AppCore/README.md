@@ -27,6 +27,7 @@ Universal search names its pillars, scopes, answer phases, chip states and recen
 `SearchPillarModel` owns one provider's debounce, generation guard and retry state. It retains earlier rows while a refinement is pending, caps them only in the All scope, and records network or download availability separately from ordinary request failure. `ScriptedSearchProvider` gives feature tests queued event streams and observable cancellation without a transport stub.
 
 `NetworkReachability` is the process-wide network-path seam used by both replica drains and network-backed search. Its live implementation wraps `NWPathMonitor`; its scripted fake publishes the current value first to every independent stream and removes a listener when that stream terminates.
+The in-memory merchant directory searches seeded names case-insensitively, records create call counts, and makes created merchants and merchant-scoped addresses available to later reads. Feature tests can therefore exercise lazy merchant and address lookup without a transport stub.
 
 The in-memory transaction and purchase repositories page through opaque cursors they minted themselves, reject caller-derived and stale cursors, count calls, and can fail a chosen call. Replacing their rows invalidates every outstanding cursor so a refresh starts from the first page. Purchase cursor identities are never recycled, including when two filters end at the same offset.
 
