@@ -11,7 +11,10 @@ run-name: >-
 # the merge group's run said: `scripts/ci/testflight-ship-sha.mjs` picks the
 # newest pushed commit whose merge-group iOS job actually ran and passed, and
 # ships nothing if the newest one that ran did not pass. A merge that touches
-# no iOS input has its lane scoped out, so there is nothing to ship.
+# no iOS input has its lane scoped out, so there is nothing to ship. With the
+# merge queue off (POPS-4439) there is no merge-group run, so the picker falls
+# back to the `pull_request` run on the head of the PR the commit landed from.
+# That lane skips the analyzer and the UI flow, so such a build has passed less.
 #
 # Both apps ship from every run. `DesignPlayground` depends on every Feature
 # package and on AppCore and DesignSystem, so the two apps share nearly every
