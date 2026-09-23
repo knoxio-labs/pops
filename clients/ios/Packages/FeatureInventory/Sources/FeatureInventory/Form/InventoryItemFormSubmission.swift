@@ -44,7 +44,10 @@ internal enum InventoryItemFormSubmission {
                     id: original.id, catalogueRevision: protocol2.catalogueRevision,
                     values: protocol2.patches(for: type)))
         }
-        if let edit = editCommand(draft, original: original, catalogue: .init(version: "", units: [], types: []), retyped: false) {
+        if let edit = editCommand(
+            draft, original: original, catalogue: .init(version: "", units: [], types: []),
+            retyped: false)
+        {
             commands.append(edit)
         }
         if draft.code.normalized != original.code {
