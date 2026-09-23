@@ -67,7 +67,11 @@ though nothing enforces it mechanically.
   `inventory.types.manage` for draft recovery, creation, non-mutating preview,
   editing, publication and abandonment. Preview returns the same revision-bound
   compatibility, issue and affected-item diagnostics as the REST API without
-  changing the persisted draft.
+  changing the persisted draft. `put_field`'s `expression` input schema is the
+  full v1 computed-field grammar (literal, same-item or bounded reference
+  `read`, unary/binary ops, `if`) mirrored from
+  `pillars/inventory/src/catalogue/expression-types.ts`, checked for drift by
+  `inventory-contract-fidelity.test.ts` — not an unconstrained blob.
 - `inventory.items.*` uses the protocol-2 generic item contract. Reads expose
   stable `typeId`, `catalogueRevision` and field IDs. Create, edit and type
   changes require the caller's observed catalogue revision; edit, type change

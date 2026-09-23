@@ -1,3 +1,11 @@
+import { nullableExpression } from './inventory-catalogue-expression-schema.js';
+
+export {
+  EXPRESSION_BINARY_OPS,
+  EXPRESSION_UNARY_OPS,
+  expressionSchemaDefs,
+} from './inventory-catalogue-expression-schema.js';
+
 const uuid = { type: 'string', format: 'uuid' } as const;
 const nullableString = { type: ['string', 'null'] } as const;
 const archivedAt = { type: ['string', 'null'] } as const;
@@ -59,7 +67,7 @@ const putField = {
     },
     referenceTypeIds: { type: 'array', maxItems: 100, items: uuid },
     expressionVersion: { type: ['integer', 'null'], minimum: 1 },
-    expression: {},
+    expression: nullableExpression,
     allowOverride: { type: 'boolean' },
     presentation,
     archivedAt,

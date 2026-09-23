@@ -4,7 +4,7 @@ import {
   requiredObjectArray,
   requiredPositiveInteger,
 } from './inventory-catalogue-input.js';
-import { catalogueOperationSchema } from './inventory-catalogue-schema.js';
+import { catalogueOperationSchema, expressionSchemaDefs } from './inventory-catalogue-schema.js';
 import { toolError } from './utils.js';
 
 import type { ToolDef } from './tool-def.js';
@@ -19,6 +19,7 @@ type DraftOperationInput = {
 /** Shared MCP schema for mutating or non-mutating draft operation batches. */
 export const catalogueDraftOperationInputSchema: ToolDef['inputSchema'] = {
   type: 'object',
+  $defs: expressionSchemaDefs,
   properties: {
     revision: { type: 'integer', minimum: 1, description: 'Draft revision' },
     baseRevision: {
