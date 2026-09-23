@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest';
 const { allTools } = await import('./index.js');
 
 describe('allTools', () => {
-  it('exports exactly 61 tools', () => {
-    expect(allTools).toHaveLength(61);
+  it('exports exactly 62 tools', () => {
+    expect(allTools).toHaveLength(62);
   });
 
   it('includes all inventory write tools', () => {
@@ -38,6 +38,7 @@ describe('allTools', () => {
       'inventory.catalogue.audit',
       'inventory.catalogue.createDraft',
       'inventory.catalogue.patchDraft',
+      'inventory.catalogue.previewDraft',
       'inventory.catalogue.publishDraft',
       'inventory.catalogue.abandonDraft',
     ]) {

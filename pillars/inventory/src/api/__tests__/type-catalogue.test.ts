@@ -186,6 +186,146 @@ describe('type catalogue owner API', () => {
     expect(response.body.code).toBe('catalogue_draft_missing');
   });
 
+  it('previews fresh compatibility without persisting proposed operations', async () => {
+    const api = apiFor('web');
+    const current = await api.get('/type-catalogue');
+    const baseRevision = current.body.revision.revision;
+    const type = current.body.types[0];
+    inventoryDb.raw
+      .prepare(
+        `INSERT INTO items (id, name, type_id, placement_kind, last_edited_time, seq)
+         VALUES ('preview-item', 'Preview item', ?, 'hand', '2026-09-23T00:00:00.000Z', 1)`
+      )
+      .run(type.id);
+    const created = await api.post('/type-catalogue/drafts').send({ baseRevision });
+    const revision = created.body.revision.revision;
+
+    const preview = await api.post(`/type-catalogue/drafts/${revision}/preview`).send({
+      baseRevision,
+      operations: [
+        {
+          kind: 'put_field',
+          typeId: type.id,
+          key: 'preview_only',
+          label: 'Preview only',
+          fieldKind: 'short_text',
+          cardinality: 'one',
+          storage: 'stored',
+        },
+      ],
+    });
+    const persisted = await api.get('/type-catalogue/drafts/current');
+
+    expect(preview.status).toBe(200);
+    expect(preview.body).toMatchObject({ baseRevision, draftRevision: revision });
+    expect(preview.body.compatibility).toMatchObject({
+      classification: 'compatible',
+      affectedItems: 1,
+    });
+    expect(
+      persisted.body.types
+        .flatMap((entry: { fields: { key: string }[] }) => entry.fields)
+        .some((field: { key: string }) => field.key === 'preview_only')
+    ).toBe(false);
+  });
+
+  it('returns every preview validation issue and rolls back the invalid candidate', async () => {
+    const api = apiFor('web');
+    const current = await api.get('/type-catalogue');
+    const baseRevision = current.body.revision.revision;
+    const type = current.body.types[0];
+    const created = await api.post('/type-catalogue/drafts').send({ baseRevision });
+    const revision = created.body.revision.revision;
+
+    const preview = await api.post(`/type-catalogue/drafts/${revision}/preview`).send({
+      baseRevision,
+      operations: [
+        {
+          kind: 'put_field',
+          typeId: type.id,
+          key: 'invalid_preview',
+          label: 'Invalid preview',
+          fieldKind: 'short_text',
+          cardinality: 'many',
+          storage: 'stored',
+          fixedUnit: 'V',
+          referenceKinds: ['item'],
+          referenceTypeIds: ['00000000-0000-4000-8000-000000000001'],
+        },
+      ],
+    });
+    const persisted = await api.get('/type-catalogue/drafts/current');
+
+    expect(preview.status, JSON.stringify(preview.body)).toBe(400);
+    expect(preview.body.code).toBe('catalogue_validation_failed');
+    expect(preview.body.preview).toMatchObject({
+      baseRevision,
+      draftRevision: revision,
+      compatibility: { affectedItems: 0 },
+    });
+    expect(preview.body.issues.map((issue: { code: string }) => issue.code)).toEqual([
+      'unit_forbidden',
+      'reference_forbidden',
+      'type_unknown',
+    ]);
+    expect(
+      persisted.body.types
+        .flatMap((entry: { fields: { key: string }[] }) => entry.fields)
+        .some((field: { key: string }) => field.key === 'invalid_preview')
+    ).toBe(false);
+  });
+
+  it('serializes migration-required and forbidden preview diagnostics', async () => {
+    const api = apiFor('web');
+    const current = await api.get('/type-catalogue');
+    const baseRevision = current.body.revision.revision;
+    const fields = current.body.types.flatMap(
+      (type: { id: string; fields: { id: string; kind: string; required: boolean }[] }) =>
+        type.fields.map((field) => ({ ...field, typeId: type.id }))
+    );
+    const optionalField = fields.find((field: { required: boolean }) => !field.required);
+    const textField = fields.find((field: { kind: string }) => field.kind === 'short_text');
+    expect(optionalField).toBeDefined();
+    expect(textField).toBeDefined();
+    if (optionalField === undefined || textField === undefined) return;
+    const created = await api.post('/type-catalogue/drafts').send({ baseRevision });
+    const revision = created.body.revision.revision;
+
+    const migrationRequired = await api.post(`/type-catalogue/drafts/${revision}/preview`).send({
+      baseRevision,
+      operations: [
+        {
+          kind: 'put_field',
+          id: optionalField.id,
+          typeId: optionalField.typeId,
+          required: true,
+        },
+      ],
+    });
+    const forbidden = await api.post(`/type-catalogue/drafts/${revision}/preview`).send({
+      baseRevision,
+      operations: [
+        {
+          kind: 'put_field',
+          id: textField.id,
+          typeId: textField.typeId,
+          fieldKind: 'long_text',
+        },
+      ],
+    });
+
+    expect(migrationRequired.status, JSON.stringify(migrationRequired.body)).toBe(200);
+    expect(migrationRequired.body.compatibility).toMatchObject({
+      classification: 'migration_required',
+      changes: [{ code: 'field_became_required' }],
+    });
+    expect(forbidden.status, JSON.stringify(forbidden.body)).toBe(400);
+    expect(forbidden.body.preview.compatibility).toMatchObject({
+      classification: 'forbidden',
+      changes: [{ code: 'immutable_shape' }],
+    });
+  });
+
   it('creates, edits, rejects a stale edit, and archives a type atomically', async () => {
     const api = apiFor('web');
     const current = await api.get('/type-catalogue');

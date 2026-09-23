@@ -19,6 +19,11 @@ type CatalogueShape = {
         baseRevision: number;
         operations: CatalogueOperation[];
       }) => unknown;
+      previewDraft: (input: {
+        revision: number;
+        baseRevision: number;
+        operations: CatalogueOperation[];
+      }) => unknown;
       publishDraft: (input: {
         revision: number;
         baseRevision: number;
