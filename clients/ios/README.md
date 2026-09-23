@@ -215,13 +215,14 @@ Feature tabs own their navigation stacks. `PurchasesFlowView` is the Purchases t
 
 Artefacts this app and the BFM must agree on byte for byte, kept outside any one package because more than one module will assert against them and because the BFM asserts against the same bytes from TypeScript.
 
-Three files, and the direction is not the same for all three — it follows whoever can say what the right answer is:
+The direction is not the same for every file — it follows whoever can say what the right answer is:
 
 - `device-signature-v1.json` — the ECDSA P-256 encoding vector, asserted from Swift and from Node. **Canonical here**: only CryptoKit can produce a real signature. See [Packages/Auth/README.md](Packages/Auth/README.md#the-encoding-contract).
 - `refresh-message-v1.json` — the exact bytes a refresh request is signed over. **Vendored**: the format is the BFM's to define and the BFM is the party that rejects a wrong one, so it generates the vector and this is a copy. See [Packages/Auth/README.md](Packages/Auth/README.md#the-signed-message).
+- `expression-vectors-v1.json` — computed-field expressions and the exact result the inventory pillar's evaluator gives each. **Vendored**: the server's evaluator is the reference, and AppCore's Swift evaluator is pinned to it. See [Packages/AppCore/README.md](Packages/AppCore/README.md#computed-field-expressions).
 - `bfm.openapi.json` — a byte-identical copy of the BFM's OpenAPI snapshot, and the input the Swift client is generated from. **Vendored.** See [Packages/BFMClient/README.md](Packages/BFMClient/README.md).
 
-The rule underneath all three is the same: the consumer keeps a copy inside its own boundary and a CI guard fails on drift, because ADR-043 forbids a unit reading a path inside another. The BFM's copies live at [`pillars/bfm/contracts/`](../../pillars/bfm/contracts).
+The rule underneath all of them is the same: the consumer keeps a copy inside its own boundary and a CI guard fails on drift, because ADR-043 forbids a unit reading a path inside another. The BFM's copies live at [`pillars/bfm/contracts/`](../../pillars/bfm/contracts).
 
 Regenerate either vector from the repo root, never from inside one unit — `mise run fixture:device-signature` for the first (it re-vendors as its second step; `mise run fixture:device-signature:generate` from here writes this copy alone and leaves the guard red), `mise run fixture:refresh-message` for the second. Only the first is expensive to re-run: ECDSA draws a fresh nonce per signature, so it replaces reviewed bytes with unreviewed ones. The refresh-message vector is derived from fixed inputs and rewrites itself identically.
 
