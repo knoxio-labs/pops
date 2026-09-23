@@ -17,6 +17,7 @@ import {
   DEFAULT_DEVICE_CAPABILITIES,
   serialiseDeviceCapabilities,
 } from '../../contract/capabilities.js';
+import { MobileInventoryItemSchema } from '../../contract/mobile-inventory-schemas.js';
 import { deviceRow } from '../../db/__tests__/helpers.js';
 import { devices } from '../../db/index.js';
 import { mintAccessToken } from '../auth/access-token.js';
@@ -174,6 +175,105 @@ describe('protocol-2 inventory values', () => {
         },
       ],
     });
+  });
+});
+
+describe('computed values', () => {
+  const itemId = 'item-1';
+  const computedFieldId = '2d8a3c1e-5b7f-4e2a-9c61-0f3d2b8a7e14';
+  const inputFieldId = '7c1e9a42-3d5b-4f86-a0e2-94b1c6d8f357';
+  const computedStates = [
+    {
+      fieldId: computedFieldId,
+      source: 'computed',
+      catalogueRevision: 3,
+      state: 'ok',
+      values: [{ amount: '6', unit: 'l' }],
+      dependencies: [{ itemId, fieldId: inputFieldId, revision: 4 }],
+      traversedItemIds: [itemId],
+    },
+    {
+      fieldId: computedFieldId,
+      source: 'computed',
+      catalogueRevision: 3,
+      state: 'overridden',
+      values: [{ amount: '7', unit: 'l' }],
+      override: { catalogueRevision: 2 },
+      dependencies: [],
+      traversedItemIds: [],
+    },
+    {
+      fieldId: computedFieldId,
+      source: 'computed',
+      catalogueRevision: 3,
+      state: 'unavailable',
+      reason: 'a_reason_this_build_has_never_seen',
+      failedFieldId: inputFieldId,
+      dependencies: [],
+      traversedItemIds: [itemId, 'item-2'],
+    },
+  ];
+
+  function snapshotWith(item: Record<string, unknown>) {
+    return createInventoryFake({
+      snapshotResult: {
+        kind: 'ok',
+        value: {
+          epoch: 'epoch-1',
+          highWaterSeq: 1,
+          catalogueVersion: 'cat-1',
+          total: 1,
+          items: [item],
+          locations: [],
+          nextCursor: null,
+        },
+      },
+    });
+  }
+
+  it.each(computedStates)('relays a $state computed value field for field', async (computed) => {
+    const fake = snapshotWith({ ...drillItem(), computedValues: [computed] });
+    const { app, token } = openWith(fake.factory);
+
+    const response = await get(app, token, '/mobile/inventory/sync/snapshot');
+
+    expect(response.status).toBe(200);
+    expect(response.body.items[0].computedValues).toEqual([computed]);
+  });
+
+  it('answers an empty list for an item from an inventory that predates computed values', async () => {
+    const fake = snapshotWith(drillItem());
+    const { app, token } = openWith(fake.factory);
+
+    const response = await get(app, token, '/mobile/inventory/sync/snapshot');
+
+    expect(response.status).toBe(200);
+    expect(response.body.items[0].computedValues).toEqual([]);
+  });
+
+  it('refuses a computed state the phone could not draw', () => {
+    expect(
+      MobileInventoryItemSchema.safeParse({
+        ...drillItem(),
+        computedValues: [{ ...computedStates[0], state: 'stale' }],
+      }).success
+    ).toBe(false);
+  });
+
+  it('refuses an overridden value that lost its override provenance', () => {
+    const withoutOverride = {
+      fieldId: computedFieldId,
+      source: 'computed',
+      catalogueRevision: 3,
+      state: 'overridden',
+      values: [{ amount: '7', unit: 'l' }],
+      dependencies: [],
+      traversedItemIds: [],
+    };
+    expect(
+      MobileInventoryItemSchema.safeParse({ ...drillItem(), computedValues: [withoutOverride] })
+        .success
+    ).toBe(false);
   });
 });
 

@@ -4768,6 +4768,64 @@ export interface operations {
               access: 'open' | 'closed' | null;
               catalogueRevision: number | null;
               code: string | null;
+              computedValues: (
+                | {
+                    catalogueRevision: number;
+                    dependencies: {
+                      /** Format: uuid */
+                      fieldId: string;
+                      itemId: string;
+                      revision: number;
+                    }[];
+                    /** Format: uuid */
+                    fieldId: string;
+                    /** @enum {string} */
+                    source: 'computed';
+                    /** @enum {string} */
+                    state: 'ok';
+                    traversedItemIds: string[];
+                    values: unknown[];
+                  }
+                | {
+                    catalogueRevision: number;
+                    dependencies: {
+                      /** Format: uuid */
+                      fieldId: string;
+                      itemId: string;
+                      revision: number;
+                    }[];
+                    /** Format: uuid */
+                    fieldId: string;
+                    override: {
+                      catalogueRevision: number;
+                    };
+                    /** @enum {string} */
+                    source: 'computed';
+                    /** @enum {string} */
+                    state: 'overridden';
+                    traversedItemIds: string[];
+                    values: unknown[];
+                  }
+                | {
+                    catalogueRevision: number;
+                    dependencies: {
+                      /** Format: uuid */
+                      fieldId: string;
+                      itemId: string;
+                      revision: number;
+                    }[];
+                    /** Format: uuid */
+                    failedFieldId: string;
+                    /** Format: uuid */
+                    fieldId: string;
+                    reason: string;
+                    /** @enum {string} */
+                    source: 'computed';
+                    /** @enum {string} */
+                    state: 'unavailable';
+                    traversedItemIds: string[];
+                  }
+              )[];
               createdAt: string;
               deletedAt: string | null;
               documentTitles: string[];
@@ -5214,6 +5272,64 @@ export interface operations {
               access: 'open' | 'closed' | null;
               catalogueRevision: number | null;
               code: string | null;
+              computedValues: (
+                | {
+                    catalogueRevision: number;
+                    dependencies: {
+                      /** Format: uuid */
+                      fieldId: string;
+                      itemId: string;
+                      revision: number;
+                    }[];
+                    /** Format: uuid */
+                    fieldId: string;
+                    /** @enum {string} */
+                    source: 'computed';
+                    /** @enum {string} */
+                    state: 'ok';
+                    traversedItemIds: string[];
+                    values: unknown[];
+                  }
+                | {
+                    catalogueRevision: number;
+                    dependencies: {
+                      /** Format: uuid */
+                      fieldId: string;
+                      itemId: string;
+                      revision: number;
+                    }[];
+                    /** Format: uuid */
+                    fieldId: string;
+                    override: {
+                      catalogueRevision: number;
+                    };
+                    /** @enum {string} */
+                    source: 'computed';
+                    /** @enum {string} */
+                    state: 'overridden';
+                    traversedItemIds: string[];
+                    values: unknown[];
+                  }
+                | {
+                    catalogueRevision: number;
+                    dependencies: {
+                      /** Format: uuid */
+                      fieldId: string;
+                      itemId: string;
+                      revision: number;
+                    }[];
+                    /** Format: uuid */
+                    failedFieldId: string;
+                    /** Format: uuid */
+                    fieldId: string;
+                    reason: string;
+                    /** @enum {string} */
+                    source: 'computed';
+                    /** @enum {string} */
+                    state: 'unavailable';
+                    traversedItemIds: string[];
+                  }
+              )[];
               createdAt: string;
               deletedAt: string | null;
               documentTitles: string[];
@@ -7199,6 +7315,64 @@ export interface operations {
               access: 'open' | 'closed' | null;
               catalogueRevision: number | null;
               code: string | null;
+              computedValues: (
+                | {
+                    catalogueRevision: number;
+                    dependencies: {
+                      /** Format: uuid */
+                      fieldId: string;
+                      itemId: string;
+                      revision: number;
+                    }[];
+                    /** Format: uuid */
+                    fieldId: string;
+                    /** @enum {string} */
+                    source: 'computed';
+                    /** @enum {string} */
+                    state: 'ok';
+                    traversedItemIds: string[];
+                    values: unknown[];
+                  }
+                | {
+                    catalogueRevision: number;
+                    dependencies: {
+                      /** Format: uuid */
+                      fieldId: string;
+                      itemId: string;
+                      revision: number;
+                    }[];
+                    /** Format: uuid */
+                    fieldId: string;
+                    override: {
+                      catalogueRevision: number;
+                    };
+                    /** @enum {string} */
+                    source: 'computed';
+                    /** @enum {string} */
+                    state: 'overridden';
+                    traversedItemIds: string[];
+                    values: unknown[];
+                  }
+                | {
+                    catalogueRevision: number;
+                    dependencies: {
+                      /** Format: uuid */
+                      fieldId: string;
+                      itemId: string;
+                      revision: number;
+                    }[];
+                    /** Format: uuid */
+                    failedFieldId: string;
+                    /** Format: uuid */
+                    fieldId: string;
+                    reason: string;
+                    /** @enum {string} */
+                    source: 'computed';
+                    /** @enum {string} */
+                    state: 'unavailable';
+                    traversedItemIds: string[];
+                  }
+              )[];
               createdAt: string;
               deletedAt: string | null;
               documentTitles: string[];
@@ -7406,6 +7580,64 @@ export interface operations {
               access: 'open' | 'closed' | null;
               catalogueRevision: number | null;
               code: string | null;
+              computedValues: (
+                | {
+                    catalogueRevision: number;
+                    dependencies: {
+                      /** Format: uuid */
+                      fieldId: string;
+                      itemId: string;
+                      revision: number;
+                    }[];
+                    /** Format: uuid */
+                    fieldId: string;
+                    /** @enum {string} */
+                    source: 'computed';
+                    /** @enum {string} */
+                    state: 'ok';
+                    traversedItemIds: string[];
+                    values: unknown[];
+                  }
+                | {
+                    catalogueRevision: number;
+                    dependencies: {
+                      /** Format: uuid */
+                      fieldId: string;
+                      itemId: string;
+                      revision: number;
+                    }[];
+                    /** Format: uuid */
+                    fieldId: string;
+                    override: {
+                      catalogueRevision: number;
+                    };
+                    /** @enum {string} */
+                    source: 'computed';
+                    /** @enum {string} */
+                    state: 'overridden';
+                    traversedItemIds: string[];
+                    values: unknown[];
+                  }
+                | {
+                    catalogueRevision: number;
+                    dependencies: {
+                      /** Format: uuid */
+                      fieldId: string;
+                      itemId: string;
+                      revision: number;
+                    }[];
+                    /** Format: uuid */
+                    failedFieldId: string;
+                    /** Format: uuid */
+                    fieldId: string;
+                    reason: string;
+                    /** @enum {string} */
+                    source: 'computed';
+                    /** @enum {string} */
+                    state: 'unavailable';
+                    traversedItemIds: string[];
+                  }
+              )[];
               createdAt: string;
               deletedAt: string | null;
               documentTitles: string[];

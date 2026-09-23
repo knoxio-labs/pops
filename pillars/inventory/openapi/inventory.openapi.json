@@ -7944,6 +7944,237 @@
                             "nullable": true,
                             "type": "string"
                           },
+                          "computedValues": {
+                            "items": {
+                              "oneOf": [
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "catalogueRevision": {
+                                      "exclusiveMinimum": true,
+                                      "maximum": 9007199254740991,
+                                      "minimum": 0,
+                                      "type": "integer"
+                                    },
+                                    "dependencies": {
+                                      "items": {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "fieldId": {
+                                            "format": "uuid",
+                                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                            "type": "string"
+                                          },
+                                          "itemId": {
+                                            "type": "string"
+                                          },
+                                          "revision": {
+                                            "maximum": 9007199254740991,
+                                            "minimum": -9007199254740991,
+                                            "type": "integer"
+                                          }
+                                        },
+                                        "required": ["itemId", "fieldId", "revision"],
+                                        "type": "object"
+                                      },
+                                      "type": "array"
+                                    },
+                                    "fieldId": {
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                      "type": "string"
+                                    },
+                                    "source": {
+                                      "enum": ["computed"],
+                                      "type": "string"
+                                    },
+                                    "state": {
+                                      "enum": ["ok"],
+                                      "type": "string"
+                                    },
+                                    "traversedItemIds": {
+                                      "items": {
+                                        "type": "string"
+                                      },
+                                      "type": "array"
+                                    },
+                                    "values": {
+                                      "items": {},
+                                      "maxItems": 1,
+                                      "minItems": 1,
+                                      "type": "array"
+                                    }
+                                  },
+                                  "required": [
+                                    "fieldId",
+                                    "source",
+                                    "catalogueRevision",
+                                    "dependencies",
+                                    "traversedItemIds",
+                                    "state",
+                                    "values"
+                                  ],
+                                  "type": "object"
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "catalogueRevision": {
+                                      "exclusiveMinimum": true,
+                                      "maximum": 9007199254740991,
+                                      "minimum": 0,
+                                      "type": "integer"
+                                    },
+                                    "dependencies": {
+                                      "items": {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "fieldId": {
+                                            "format": "uuid",
+                                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                            "type": "string"
+                                          },
+                                          "itemId": {
+                                            "type": "string"
+                                          },
+                                          "revision": {
+                                            "maximum": 9007199254740991,
+                                            "minimum": -9007199254740991,
+                                            "type": "integer"
+                                          }
+                                        },
+                                        "required": ["itemId", "fieldId", "revision"],
+                                        "type": "object"
+                                      },
+                                      "type": "array"
+                                    },
+                                    "fieldId": {
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                      "type": "string"
+                                    },
+                                    "override": {
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "catalogueRevision": {
+                                          "exclusiveMinimum": true,
+                                          "maximum": 9007199254740991,
+                                          "minimum": 0,
+                                          "type": "integer"
+                                        }
+                                      },
+                                      "required": ["catalogueRevision"],
+                                      "type": "object"
+                                    },
+                                    "source": {
+                                      "enum": ["computed"],
+                                      "type": "string"
+                                    },
+                                    "state": {
+                                      "enum": ["overridden"],
+                                      "type": "string"
+                                    },
+                                    "traversedItemIds": {
+                                      "items": {
+                                        "type": "string"
+                                      },
+                                      "type": "array"
+                                    },
+                                    "values": {
+                                      "items": {},
+                                      "maxItems": 1,
+                                      "minItems": 1,
+                                      "type": "array"
+                                    }
+                                  },
+                                  "required": [
+                                    "fieldId",
+                                    "source",
+                                    "catalogueRevision",
+                                    "dependencies",
+                                    "traversedItemIds",
+                                    "state",
+                                    "values",
+                                    "override"
+                                  ],
+                                  "type": "object"
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "catalogueRevision": {
+                                      "exclusiveMinimum": true,
+                                      "maximum": 9007199254740991,
+                                      "minimum": 0,
+                                      "type": "integer"
+                                    },
+                                    "dependencies": {
+                                      "items": {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "fieldId": {
+                                            "format": "uuid",
+                                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                            "type": "string"
+                                          },
+                                          "itemId": {
+                                            "type": "string"
+                                          },
+                                          "revision": {
+                                            "maximum": 9007199254740991,
+                                            "minimum": -9007199254740991,
+                                            "type": "integer"
+                                          }
+                                        },
+                                        "required": ["itemId", "fieldId", "revision"],
+                                        "type": "object"
+                                      },
+                                      "type": "array"
+                                    },
+                                    "failedFieldId": {
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                      "type": "string"
+                                    },
+                                    "fieldId": {
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                      "type": "string"
+                                    },
+                                    "reason": {
+                                      "type": "string"
+                                    },
+                                    "source": {
+                                      "enum": ["computed"],
+                                      "type": "string"
+                                    },
+                                    "state": {
+                                      "enum": ["unavailable"],
+                                      "type": "string"
+                                    },
+                                    "traversedItemIds": {
+                                      "items": {
+                                        "type": "string"
+                                      },
+                                      "type": "array"
+                                    }
+                                  },
+                                  "required": [
+                                    "fieldId",
+                                    "source",
+                                    "catalogueRevision",
+                                    "dependencies",
+                                    "traversedItemIds",
+                                    "state",
+                                    "reason",
+                                    "failedFieldId"
+                                  ],
+                                  "type": "object"
+                                }
+                              ]
+                            },
+                            "type": "array"
+                          },
                           "createdAt": {
                             "type": "string"
                           },
@@ -8208,6 +8439,7 @@
                           "typeKey",
                           "legacyType",
                           "fieldValues",
+                          "computedValues",
                           "fields",
                           "note",
                           "code",
@@ -9201,6 +9433,237 @@
                             "nullable": true,
                             "type": "string"
                           },
+                          "computedValues": {
+                            "items": {
+                              "oneOf": [
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "catalogueRevision": {
+                                      "exclusiveMinimum": true,
+                                      "maximum": 9007199254740991,
+                                      "minimum": 0,
+                                      "type": "integer"
+                                    },
+                                    "dependencies": {
+                                      "items": {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "fieldId": {
+                                            "format": "uuid",
+                                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                            "type": "string"
+                                          },
+                                          "itemId": {
+                                            "type": "string"
+                                          },
+                                          "revision": {
+                                            "maximum": 9007199254740991,
+                                            "minimum": -9007199254740991,
+                                            "type": "integer"
+                                          }
+                                        },
+                                        "required": ["itemId", "fieldId", "revision"],
+                                        "type": "object"
+                                      },
+                                      "type": "array"
+                                    },
+                                    "fieldId": {
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                      "type": "string"
+                                    },
+                                    "source": {
+                                      "enum": ["computed"],
+                                      "type": "string"
+                                    },
+                                    "state": {
+                                      "enum": ["ok"],
+                                      "type": "string"
+                                    },
+                                    "traversedItemIds": {
+                                      "items": {
+                                        "type": "string"
+                                      },
+                                      "type": "array"
+                                    },
+                                    "values": {
+                                      "items": {},
+                                      "maxItems": 1,
+                                      "minItems": 1,
+                                      "type": "array"
+                                    }
+                                  },
+                                  "required": [
+                                    "fieldId",
+                                    "source",
+                                    "catalogueRevision",
+                                    "dependencies",
+                                    "traversedItemIds",
+                                    "state",
+                                    "values"
+                                  ],
+                                  "type": "object"
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "catalogueRevision": {
+                                      "exclusiveMinimum": true,
+                                      "maximum": 9007199254740991,
+                                      "minimum": 0,
+                                      "type": "integer"
+                                    },
+                                    "dependencies": {
+                                      "items": {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "fieldId": {
+                                            "format": "uuid",
+                                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                            "type": "string"
+                                          },
+                                          "itemId": {
+                                            "type": "string"
+                                          },
+                                          "revision": {
+                                            "maximum": 9007199254740991,
+                                            "minimum": -9007199254740991,
+                                            "type": "integer"
+                                          }
+                                        },
+                                        "required": ["itemId", "fieldId", "revision"],
+                                        "type": "object"
+                                      },
+                                      "type": "array"
+                                    },
+                                    "fieldId": {
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                      "type": "string"
+                                    },
+                                    "override": {
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "catalogueRevision": {
+                                          "exclusiveMinimum": true,
+                                          "maximum": 9007199254740991,
+                                          "minimum": 0,
+                                          "type": "integer"
+                                        }
+                                      },
+                                      "required": ["catalogueRevision"],
+                                      "type": "object"
+                                    },
+                                    "source": {
+                                      "enum": ["computed"],
+                                      "type": "string"
+                                    },
+                                    "state": {
+                                      "enum": ["overridden"],
+                                      "type": "string"
+                                    },
+                                    "traversedItemIds": {
+                                      "items": {
+                                        "type": "string"
+                                      },
+                                      "type": "array"
+                                    },
+                                    "values": {
+                                      "items": {},
+                                      "maxItems": 1,
+                                      "minItems": 1,
+                                      "type": "array"
+                                    }
+                                  },
+                                  "required": [
+                                    "fieldId",
+                                    "source",
+                                    "catalogueRevision",
+                                    "dependencies",
+                                    "traversedItemIds",
+                                    "state",
+                                    "values",
+                                    "override"
+                                  ],
+                                  "type": "object"
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "catalogueRevision": {
+                                      "exclusiveMinimum": true,
+                                      "maximum": 9007199254740991,
+                                      "minimum": 0,
+                                      "type": "integer"
+                                    },
+                                    "dependencies": {
+                                      "items": {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "fieldId": {
+                                            "format": "uuid",
+                                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                            "type": "string"
+                                          },
+                                          "itemId": {
+                                            "type": "string"
+                                          },
+                                          "revision": {
+                                            "maximum": 9007199254740991,
+                                            "minimum": -9007199254740991,
+                                            "type": "integer"
+                                          }
+                                        },
+                                        "required": ["itemId", "fieldId", "revision"],
+                                        "type": "object"
+                                      },
+                                      "type": "array"
+                                    },
+                                    "failedFieldId": {
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                      "type": "string"
+                                    },
+                                    "fieldId": {
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                      "type": "string"
+                                    },
+                                    "reason": {
+                                      "type": "string"
+                                    },
+                                    "source": {
+                                      "enum": ["computed"],
+                                      "type": "string"
+                                    },
+                                    "state": {
+                                      "enum": ["unavailable"],
+                                      "type": "string"
+                                    },
+                                    "traversedItemIds": {
+                                      "items": {
+                                        "type": "string"
+                                      },
+                                      "type": "array"
+                                    }
+                                  },
+                                  "required": [
+                                    "fieldId",
+                                    "source",
+                                    "catalogueRevision",
+                                    "dependencies",
+                                    "traversedItemIds",
+                                    "state",
+                                    "reason",
+                                    "failedFieldId"
+                                  ],
+                                  "type": "object"
+                                }
+                              ]
+                            },
+                            "type": "array"
+                          },
                           "createdAt": {
                             "type": "string"
                           },
@@ -9465,6 +9928,7 @@
                           "typeKey",
                           "legacyType",
                           "fieldValues",
+                          "computedValues",
                           "fields",
                           "note",
                           "code",
@@ -15046,6 +15510,237 @@
                             "nullable": true,
                             "type": "string"
                           },
+                          "computedValues": {
+                            "items": {
+                              "oneOf": [
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "catalogueRevision": {
+                                      "exclusiveMinimum": true,
+                                      "maximum": 9007199254740991,
+                                      "minimum": 0,
+                                      "type": "integer"
+                                    },
+                                    "dependencies": {
+                                      "items": {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "fieldId": {
+                                            "format": "uuid",
+                                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                            "type": "string"
+                                          },
+                                          "itemId": {
+                                            "type": "string"
+                                          },
+                                          "revision": {
+                                            "maximum": 9007199254740991,
+                                            "minimum": -9007199254740991,
+                                            "type": "integer"
+                                          }
+                                        },
+                                        "required": ["itemId", "fieldId", "revision"],
+                                        "type": "object"
+                                      },
+                                      "type": "array"
+                                    },
+                                    "fieldId": {
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                      "type": "string"
+                                    },
+                                    "source": {
+                                      "enum": ["computed"],
+                                      "type": "string"
+                                    },
+                                    "state": {
+                                      "enum": ["ok"],
+                                      "type": "string"
+                                    },
+                                    "traversedItemIds": {
+                                      "items": {
+                                        "type": "string"
+                                      },
+                                      "type": "array"
+                                    },
+                                    "values": {
+                                      "items": {},
+                                      "maxItems": 1,
+                                      "minItems": 1,
+                                      "type": "array"
+                                    }
+                                  },
+                                  "required": [
+                                    "fieldId",
+                                    "source",
+                                    "catalogueRevision",
+                                    "dependencies",
+                                    "traversedItemIds",
+                                    "state",
+                                    "values"
+                                  ],
+                                  "type": "object"
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "catalogueRevision": {
+                                      "exclusiveMinimum": true,
+                                      "maximum": 9007199254740991,
+                                      "minimum": 0,
+                                      "type": "integer"
+                                    },
+                                    "dependencies": {
+                                      "items": {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "fieldId": {
+                                            "format": "uuid",
+                                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                            "type": "string"
+                                          },
+                                          "itemId": {
+                                            "type": "string"
+                                          },
+                                          "revision": {
+                                            "maximum": 9007199254740991,
+                                            "minimum": -9007199254740991,
+                                            "type": "integer"
+                                          }
+                                        },
+                                        "required": ["itemId", "fieldId", "revision"],
+                                        "type": "object"
+                                      },
+                                      "type": "array"
+                                    },
+                                    "fieldId": {
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                      "type": "string"
+                                    },
+                                    "override": {
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "catalogueRevision": {
+                                          "exclusiveMinimum": true,
+                                          "maximum": 9007199254740991,
+                                          "minimum": 0,
+                                          "type": "integer"
+                                        }
+                                      },
+                                      "required": ["catalogueRevision"],
+                                      "type": "object"
+                                    },
+                                    "source": {
+                                      "enum": ["computed"],
+                                      "type": "string"
+                                    },
+                                    "state": {
+                                      "enum": ["overridden"],
+                                      "type": "string"
+                                    },
+                                    "traversedItemIds": {
+                                      "items": {
+                                        "type": "string"
+                                      },
+                                      "type": "array"
+                                    },
+                                    "values": {
+                                      "items": {},
+                                      "maxItems": 1,
+                                      "minItems": 1,
+                                      "type": "array"
+                                    }
+                                  },
+                                  "required": [
+                                    "fieldId",
+                                    "source",
+                                    "catalogueRevision",
+                                    "dependencies",
+                                    "traversedItemIds",
+                                    "state",
+                                    "values",
+                                    "override"
+                                  ],
+                                  "type": "object"
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "catalogueRevision": {
+                                      "exclusiveMinimum": true,
+                                      "maximum": 9007199254740991,
+                                      "minimum": 0,
+                                      "type": "integer"
+                                    },
+                                    "dependencies": {
+                                      "items": {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "fieldId": {
+                                            "format": "uuid",
+                                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                            "type": "string"
+                                          },
+                                          "itemId": {
+                                            "type": "string"
+                                          },
+                                          "revision": {
+                                            "maximum": 9007199254740991,
+                                            "minimum": -9007199254740991,
+                                            "type": "integer"
+                                          }
+                                        },
+                                        "required": ["itemId", "fieldId", "revision"],
+                                        "type": "object"
+                                      },
+                                      "type": "array"
+                                    },
+                                    "failedFieldId": {
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                      "type": "string"
+                                    },
+                                    "fieldId": {
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                      "type": "string"
+                                    },
+                                    "reason": {
+                                      "type": "string"
+                                    },
+                                    "source": {
+                                      "enum": ["computed"],
+                                      "type": "string"
+                                    },
+                                    "state": {
+                                      "enum": ["unavailable"],
+                                      "type": "string"
+                                    },
+                                    "traversedItemIds": {
+                                      "items": {
+                                        "type": "string"
+                                      },
+                                      "type": "array"
+                                    }
+                                  },
+                                  "required": [
+                                    "fieldId",
+                                    "source",
+                                    "catalogueRevision",
+                                    "dependencies",
+                                    "traversedItemIds",
+                                    "state",
+                                    "reason",
+                                    "failedFieldId"
+                                  ],
+                                  "type": "object"
+                                }
+                              ]
+                            },
+                            "type": "array"
+                          },
                           "createdAt": {
                             "type": "string"
                           },
@@ -15310,6 +16005,7 @@
                           "typeKey",
                           "legacyType",
                           "fieldValues",
+                          "computedValues",
                           "fields",
                           "note",
                           "code",
@@ -15693,6 +16389,237 @@
                           "nullable": true,
                           "type": "string"
                         },
+                        "computedValues": {
+                          "items": {
+                            "oneOf": [
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "catalogueRevision": {
+                                    "exclusiveMinimum": true,
+                                    "maximum": 9007199254740991,
+                                    "minimum": 0,
+                                    "type": "integer"
+                                  },
+                                  "dependencies": {
+                                    "items": {
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "fieldId": {
+                                          "format": "uuid",
+                                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                          "type": "string"
+                                        },
+                                        "itemId": {
+                                          "type": "string"
+                                        },
+                                        "revision": {
+                                          "maximum": 9007199254740991,
+                                          "minimum": -9007199254740991,
+                                          "type": "integer"
+                                        }
+                                      },
+                                      "required": ["itemId", "fieldId", "revision"],
+                                      "type": "object"
+                                    },
+                                    "type": "array"
+                                  },
+                                  "fieldId": {
+                                    "format": "uuid",
+                                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                    "type": "string"
+                                  },
+                                  "source": {
+                                    "enum": ["computed"],
+                                    "type": "string"
+                                  },
+                                  "state": {
+                                    "enum": ["ok"],
+                                    "type": "string"
+                                  },
+                                  "traversedItemIds": {
+                                    "items": {
+                                      "type": "string"
+                                    },
+                                    "type": "array"
+                                  },
+                                  "values": {
+                                    "items": {},
+                                    "maxItems": 1,
+                                    "minItems": 1,
+                                    "type": "array"
+                                  }
+                                },
+                                "required": [
+                                  "fieldId",
+                                  "source",
+                                  "catalogueRevision",
+                                  "dependencies",
+                                  "traversedItemIds",
+                                  "state",
+                                  "values"
+                                ],
+                                "type": "object"
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "catalogueRevision": {
+                                    "exclusiveMinimum": true,
+                                    "maximum": 9007199254740991,
+                                    "minimum": 0,
+                                    "type": "integer"
+                                  },
+                                  "dependencies": {
+                                    "items": {
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "fieldId": {
+                                          "format": "uuid",
+                                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                          "type": "string"
+                                        },
+                                        "itemId": {
+                                          "type": "string"
+                                        },
+                                        "revision": {
+                                          "maximum": 9007199254740991,
+                                          "minimum": -9007199254740991,
+                                          "type": "integer"
+                                        }
+                                      },
+                                      "required": ["itemId", "fieldId", "revision"],
+                                      "type": "object"
+                                    },
+                                    "type": "array"
+                                  },
+                                  "fieldId": {
+                                    "format": "uuid",
+                                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                    "type": "string"
+                                  },
+                                  "override": {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "catalogueRevision": {
+                                        "exclusiveMinimum": true,
+                                        "maximum": 9007199254740991,
+                                        "minimum": 0,
+                                        "type": "integer"
+                                      }
+                                    },
+                                    "required": ["catalogueRevision"],
+                                    "type": "object"
+                                  },
+                                  "source": {
+                                    "enum": ["computed"],
+                                    "type": "string"
+                                  },
+                                  "state": {
+                                    "enum": ["overridden"],
+                                    "type": "string"
+                                  },
+                                  "traversedItemIds": {
+                                    "items": {
+                                      "type": "string"
+                                    },
+                                    "type": "array"
+                                  },
+                                  "values": {
+                                    "items": {},
+                                    "maxItems": 1,
+                                    "minItems": 1,
+                                    "type": "array"
+                                  }
+                                },
+                                "required": [
+                                  "fieldId",
+                                  "source",
+                                  "catalogueRevision",
+                                  "dependencies",
+                                  "traversedItemIds",
+                                  "state",
+                                  "values",
+                                  "override"
+                                ],
+                                "type": "object"
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "catalogueRevision": {
+                                    "exclusiveMinimum": true,
+                                    "maximum": 9007199254740991,
+                                    "minimum": 0,
+                                    "type": "integer"
+                                  },
+                                  "dependencies": {
+                                    "items": {
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "fieldId": {
+                                          "format": "uuid",
+                                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                          "type": "string"
+                                        },
+                                        "itemId": {
+                                          "type": "string"
+                                        },
+                                        "revision": {
+                                          "maximum": 9007199254740991,
+                                          "minimum": -9007199254740991,
+                                          "type": "integer"
+                                        }
+                                      },
+                                      "required": ["itemId", "fieldId", "revision"],
+                                      "type": "object"
+                                    },
+                                    "type": "array"
+                                  },
+                                  "failedFieldId": {
+                                    "format": "uuid",
+                                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                    "type": "string"
+                                  },
+                                  "fieldId": {
+                                    "format": "uuid",
+                                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                    "type": "string"
+                                  },
+                                  "reason": {
+                                    "type": "string"
+                                  },
+                                  "source": {
+                                    "enum": ["computed"],
+                                    "type": "string"
+                                  },
+                                  "state": {
+                                    "enum": ["unavailable"],
+                                    "type": "string"
+                                  },
+                                  "traversedItemIds": {
+                                    "items": {
+                                      "type": "string"
+                                    },
+                                    "type": "array"
+                                  }
+                                },
+                                "required": [
+                                  "fieldId",
+                                  "source",
+                                  "catalogueRevision",
+                                  "dependencies",
+                                  "traversedItemIds",
+                                  "state",
+                                  "reason",
+                                  "failedFieldId"
+                                ],
+                                "type": "object"
+                              }
+                            ]
+                          },
+                          "type": "array"
+                        },
                         "createdAt": {
                           "type": "string"
                         },
@@ -15957,6 +16884,7 @@
                         "typeKey",
                         "legacyType",
                         "fieldValues",
+                        "computedValues",
                         "fields",
                         "note",
                         "code",

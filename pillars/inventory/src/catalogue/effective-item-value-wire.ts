@@ -12,6 +12,7 @@ export function computedWire(
         fieldId,
         state: 'unavailable',
         reason: value.reason,
+        failedFieldId: value.fieldId,
         traversedItemIds: value.traversedItemIds,
         provenance: value.provenance,
       };

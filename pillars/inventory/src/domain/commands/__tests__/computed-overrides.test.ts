@@ -3,6 +3,10 @@ import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 
 import {
+  publishComputedType,
+  type ComputedCatalogue,
+} from '../../../catalogue/__tests__/computed-catalogue-fixture.js';
+import {
   CatalogueApiError,
   createCatalogueDraft,
   patchCatalogueDraft,
@@ -19,96 +23,7 @@ import type { Harness } from './test-utils.js';
 
 const AUTHOR = { kind: 'web', id: 'owner', label: 'Owner' } as const;
 
-function publishComputedType(harness: Harness): {
-  readonly revision: number;
-  readonly typeId: string;
-  readonly inputFieldId: string;
-  readonly computedFieldId: string;
-  readonly lockedFieldId: string;
-} {
-  const created = createCatalogueDraft(harness.db, 1, AUTHOR);
-  const revision = created.revision.revision;
-  const target = (draft: { readonly revision: { readonly draftVersion: number } }) => ({
-    revision,
-    baseRevision: 1,
-    expectedDraftVersion: draft.revision.draftVersion,
-  });
-  const withType = patchCatalogueDraft(harness.db, target(created), [
-    { kind: 'put_type', key: 'computed_device', label: 'Computed device' },
-  ]);
-  const type = withType.draft.types.find((entry) => entry.key === 'computed_device');
-  if (type === undefined) throw new Error('computed type was not created');
-  const withInput = patchCatalogueDraft(harness.db, target(withType.draft), [
-    {
-      kind: 'put_field',
-      typeId: type.id,
-      key: 'input',
-      label: 'Input',
-      fieldKind: 'integer',
-      cardinality: 'one',
-      required: true,
-      storage: 'stored',
-    },
-  ]);
-  const input = withInput.draft.types
-    .find((entry) => entry.id === type.id)
-    ?.fields.find((entry) => entry.key === 'input');
-  if (input === undefined) throw new Error('input field was not created');
-  const expression = {
-    op: 'multiply',
-    left: { op: 'read', path: [], fieldId: input.id },
-    right: { op: 'literal', value: 2 },
-  } as const;
-  const withComputed = patchCatalogueDraft(harness.db, target(withInput.draft), [
-    {
-      kind: 'put_field',
-      typeId: type.id,
-      key: 'computed',
-      label: 'Computed',
-      fieldKind: 'integer',
-      cardinality: 'one',
-      required: true,
-      storage: 'computed',
-      expressionVersion: 1,
-      expression,
-      allowOverride: true,
-    },
-    {
-      kind: 'put_field',
-      typeId: type.id,
-      key: 'locked',
-      label: 'Locked',
-      fieldKind: 'integer',
-      cardinality: 'one',
-      required: false,
-      storage: 'computed',
-      expressionVersion: 1,
-      expression,
-      allowOverride: false,
-    },
-  ]);
-  const fields = withComputed.draft.types.find((entry) => entry.id === type.id)?.fields;
-  const computed = fields?.find((entry) => entry.key === 'computed');
-  const locked = fields?.find((entry) => entry.key === 'locked');
-  if (computed === undefined || locked === undefined) {
-    throw new Error('computed fields were not created');
-  }
-  publishCatalogueDraft(
-    harness.db,
-    revision,
-    { baseRevision: 1, expectedDraftVersion: withComputed.draft.revision.draftVersion, note: null },
-    AUTHOR
-  );
-  return {
-    revision,
-    typeId: type.id,
-    inputFieldId: input.id,
-    computedFieldId: computed.id,
-    lockedFieldId: locked.id,
-  };
-}
-
-function createItem(harness: Harness, catalogue: ReturnType<typeof publishComputedType>): string {
+function createItem(harness: Harness, catalogue: ComputedCatalogue): string {
   const itemId = randomUUID();
   const result = harness.run(
     mutation(
@@ -131,7 +46,7 @@ function createItem(harness: Harness, catalogue: ReturnType<typeof publishComput
 describe('computed field override commands', () => {
   it('refuses publication when the persisted draft expression is invalid', () => {
     const harness = openHarness();
-    const catalogue = publishComputedType(harness);
+    const catalogue = publishComputedType(harness.db);
     const draft = createCatalogueDraft(harness.db, catalogue.revision, AUTHOR);
     harness.raw
       .prepare(
@@ -178,7 +93,7 @@ describe('computed field override commands', () => {
 
   it('evaluates computed fields with dependency provenance from the read snapshot', () => {
     const harness = openHarness();
-    const catalogue = publishComputedType(harness);
+    const catalogue = publishComputedType(harness.db);
     const itemId = createItem(harness, catalogue);
     const published = loadPublishedCatalogue(harness.db, catalogue.revision);
     if (published === null) throw new Error('published catalogue disappeared');
@@ -233,7 +148,7 @@ describe('computed field override commands', () => {
 
   it('returns unavailable instead of inventing a value for a missing dependency', () => {
     const harness = openHarness();
-    const catalogue = publishComputedType(harness);
+    const catalogue = publishComputedType(harness.db);
     const itemId = createItem(harness, catalogue);
     harness.raw
       .prepare(`DELETE FROM item_field_values WHERE item_id = ? AND field_id = ?`)
@@ -249,6 +164,7 @@ describe('computed field override commands', () => {
       fieldId: catalogue.computedFieldId,
       state: 'unavailable',
       reason: 'missing_dependency',
+      failedFieldId: catalogue.inputFieldId,
       traversedItemIds: [itemId],
       provenance: {
         source: 'computed',
@@ -260,7 +176,7 @@ describe('computed field override commands', () => {
 
   it('sets and clears an override without persisting a computed fallback', () => {
     const harness = openHarness();
-    const catalogue = publishComputedType(harness);
+    const catalogue = publishComputedType(harness.db);
     const itemId = createItem(harness, catalogue);
 
     const set = harness.run(
@@ -321,7 +237,7 @@ describe('computed field override commands', () => {
 
   it('rejects forbidden, malformed and stale overrides atomically', () => {
     const harness = openHarness();
-    const catalogue = publishComputedType(harness);
+    const catalogue = publishComputedType(harness.db);
     const itemId = createItem(harness, catalogue);
 
     for (const [fieldId, values, catalogueRevision] of [
@@ -346,7 +262,7 @@ describe('computed field override commands', () => {
 
   it('rebases an override written against an older compatible revision', () => {
     const harness = openHarness();
-    const catalogue = publishComputedType(harness);
+    const catalogue = publishComputedType(harness.db);
     const itemId = createItem(harness, catalogue);
     const next = createCatalogueDraft(harness.db, catalogue.revision, AUTHOR);
     const patched = patchCatalogueDraft(
@@ -383,7 +299,7 @@ describe('computed field override commands', () => {
 
   it('asks for a catalogue refresh when the override names a revision this server lacks', () => {
     const harness = openHarness();
-    const catalogue = publishComputedType(harness);
+    const catalogue = publishComputedType(harness.db);
     const itemId = createItem(harness, catalogue);
 
     expect(

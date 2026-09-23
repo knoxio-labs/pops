@@ -21,7 +21,9 @@ import {
   readPreviousPlacement,
 } from '../../domain/commands/item-fields.js';
 import { jsonValueSchema } from '../../domain/commands/outcome.js';
+import { loadComputedValues } from './computed-wire.js';
 
+import type { SyncComputedValue } from '../../contract/rest-sync-computed-schemas.js';
 import type {
   SyncItemSchema,
   SyncItemFieldValueSchema,
@@ -46,6 +48,8 @@ export interface ItemExtras {
   readonly fields: ReadonlyMap<string, Protocol1Fields>;
   /** Canonical protocol-2 values grouped under their stable field IDs. */
   readonly fieldValues: ReadonlyMap<string, readonly ReadItemFieldValue[]>;
+  /** Effective computed-field values, evaluated against the active catalogue. */
+  readonly computedValues: ReadonlyMap<string, readonly SyncComputedValue[]>;
   /** Protocol-1 type key per item, loaded from the same published catalogue snapshot. */
   readonly typeKeys: ReadonlyMap<string, string | null>;
   /** Content-addressed photos per item, in position order. Legacy file-only photos are left out. */
@@ -70,7 +74,17 @@ export function loadItemExtras(db: CommandDb, ids: readonly string[]): ItemExtra
   const photos = new Map<string, SyncPhoto[]>();
   const documentTitles = new Map<string, string[]>();
   const linked = new Set<string>();
-  if (ids.length === 0) return { fields, fieldValues, typeKeys, photos, documentTitles, linked };
+  if (ids.length === 0) {
+    return {
+      fields,
+      fieldValues,
+      computedValues: new Map(),
+      typeKeys,
+      photos,
+      documentTitles,
+      linked,
+    };
+  }
 
   const itemTypes = db
     .select({ id: items.id, typeId: items.typeId })
@@ -106,7 +120,8 @@ export function loadItemExtras(db: CommandDb, ids: readonly string[]): ItemExtra
     linked.add(row.itemId);
     if (row.title !== null) append(documentTitles, row.itemId, row.title);
   }
-  return { fields, fieldValues, typeKeys, photos, documentTitles, linked };
+  const computedValues = loadComputedValues(db, ids, fieldValues);
+  return { fields, fieldValues, computedValues, typeKeys, photos, documentTitles, linked };
 }
 
 function protocol2FieldValues(extras: ItemExtras, itemId: string): SyncItemFieldValue[] {
@@ -172,6 +187,7 @@ export function toSyncItem(row: ItemRow, extras: ItemExtras, available: boolean)
     typeKey: extras.typeKeys.get(row.id) ?? null,
     legacyType: row.legacyType,
     fieldValues,
+    computedValues: [...(extras.computedValues.get(row.id) ?? [])],
     fields: fieldsBlobSchema.parse(extras.fields.get(row.id) ?? {}),
     note: row.note,
     code: row.code,

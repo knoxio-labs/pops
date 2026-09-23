@@ -14,6 +14,7 @@ import { z } from 'zod';
 import { mutationSchema } from '../domain/commands/envelope.js';
 import { conflictSourceSchema, outcomeWireSchema } from '../domain/commands/outcome.js';
 import { placementSchema, previousPlacementSchema } from '../domain/commands/placement-schema.js';
+import { SyncComputedValueSchema } from './rest-sync-computed-schemas.js';
 
 /**
  * Any JSON value. Unconstrained rather than a recursive JSON schema, because
@@ -75,6 +76,8 @@ export const SyncItemSchema = z.object({
   legacyType: z.string().nullable(),
   /** Canonical stable-ID values; `fields` remains the protocol-1 compatibility projection. */
   fieldValues: z.array(SyncItemFieldValueSchema),
+  /** Effective values of the type's computed fields; never part of the protocol-1 `fields`. */
+  computedValues: z.array(SyncComputedValueSchema),
   fields: z.record(z.string(), AnyJson),
   note: z.string().nullable(),
   code: z.string().nullable(),
