@@ -50,6 +50,7 @@ import {
 import {
   MobileClientTooOldErrorSchema,
   MobileInventoryCatalogueSchema,
+  MobileInventoryCatalogueRevisionDescriptorSchema,
   MobileInventoryChangesSchema,
   MobileInventoryItemHistorySchema,
   MobileInventorySnapshotSchema,
@@ -112,6 +113,19 @@ export const mobileInventoryContract = c.router({
       ...MOBILE_UPSTREAM_RESPONSES,
     },
     summary: 'The type catalogue: every type, field and unit the app needs to render an item',
+    metadata: requires('inventory.read'),
+  },
+  catalogueRevision: {
+    method: 'GET',
+    path: '/mobile/inventory/type-catalogue',
+    query: z.object({ revision: z.coerce.number().int().positive() }),
+    responses: {
+      200: MobileInventoryCatalogueRevisionDescriptorSchema,
+      ...MOBILE_REQUEST_RESPONSES,
+      ...MOBILE_PERIMETER_RESPONSES,
+      ...MOBILE_UPSTREAM_RESPONSES,
+    },
+    summary: 'One exact immutable catalogue revision required by protocol-2 item rows',
     metadata: requires('inventory.read'),
   },
   snapshot: {

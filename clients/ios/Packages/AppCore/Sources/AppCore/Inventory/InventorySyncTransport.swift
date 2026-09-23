@@ -181,6 +181,11 @@ public protocol InventorySyncTransport: Sendable {
     ///   `knownVersion`.
     func fetchCatalogue(knownVersion: String?) async throws -> InventoryCatalogue?
 
+    /// Reads the immutable protocol-2 catalogue revision an item page names.
+    /// Callers must obtain this before exposing or storing rows that reference
+    /// it, so an offline replica never presents values against another schema.
+    func fetchCatalogue(revision: Int) async throws -> InventoryCatalogueSnapshot
+
     func fetchSnapshot(cursor: String?, limit: Int) async throws -> InventorySnapshotPage
 
     /// - Throws: ``InventorySyncTransportError/resyncRequired`` when `since`

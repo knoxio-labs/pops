@@ -21,6 +21,11 @@
  */
 import { z } from 'zod';
 
+export {
+  MobileInventoryCatalogueRevisionDescriptorSchema,
+  type MobileInventoryCatalogueRevisionDescriptor,
+} from './mobile-inventory-protocol2-catalogue-schemas.js';
+
 const AnyJson = z.unknown();
 
 /** Where an item is: a location, inside a container item, or in hand. */
@@ -84,7 +89,7 @@ export const MobileInventoryItemSchema = z.object({
   /** Persisted type identity, independent from the display-oriented legacy key. */
   typeId: z.uuid().nullable(),
   /** Common source revision for the item values, or `null` for an empty/mixed set. */
-  catalogueRevision: z.number().int().positive().nullable(),
+  catalogueRevision: z.number().int().positive().nullable().default(null),
   typeKey: z.string().nullable(),
   /** The free-text type an item had before types existed; read-only, matched against a type's `legacyLabels`. */
   legacyType: z.string().nullable(),
@@ -198,6 +203,7 @@ export const MobileInventorySnapshotSchema = z.object({
   epoch: z.string(),
   highWaterSeq: z.number().int(),
   catalogueVersion: z.string(),
+  catalogueRevision: z.number().int().positive().nullable().default(null),
   total: z.number().int(),
   items: z.array(MobileInventoryItemSchema),
   locations: z.array(MobileInventoryLocationSchema),
@@ -215,6 +221,7 @@ export const MobileInventoryChangesSchema = z.object({
   nextSince: z.number().int(),
   hasMore: z.boolean(),
   catalogueVersion: z.string(),
+  catalogueRevision: z.number().int().positive().nullable().default(null),
 });
 
 export type MobileInventoryChanges = z.infer<typeof MobileInventoryChangesSchema>;

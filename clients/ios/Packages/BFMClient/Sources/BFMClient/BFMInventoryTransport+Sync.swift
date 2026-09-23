@@ -20,7 +20,7 @@ extension BFMInventoryTransport {
                 catalogueVersion: payload.catalogueVersion, total: payload.total,
                 items: try payload.items.map { try inventoryItem(from: $0, timeZone: timeZone()) },
                 locations: try payload.locations.map { try $0.inventoryLocation() },
-                nextCursor: payload.nextCursor
+                nextCursor: payload.nextCursor, catalogueRevision: payload.catalogueRevision
             )
         case .conflict:
             throw InventorySyncTransportError.resyncRequired
@@ -83,7 +83,8 @@ extension BFMInventoryTransport {
                 locations: try payload.locations.map { try $0.inventoryLocation() },
                 events: try payload.events.map(inventoryEvent(from:)),
                 nextSince: payload.nextSince, hasMore: payload.hasMore,
-                catalogueVersion: payload.catalogueVersion
+                catalogueVersion: payload.catalogueVersion,
+                catalogueRevision: payload.catalogueRevision
             )
         case .conflict:
             throw InventorySyncTransportError.resyncRequired

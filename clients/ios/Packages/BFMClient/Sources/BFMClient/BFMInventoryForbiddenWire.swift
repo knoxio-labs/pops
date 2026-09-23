@@ -13,6 +13,14 @@ extension Operations.MobileInventory_catalogue.Output.Forbidden.Body.JsonPayload
     }
 }
 
+extension Operations.MobileInventory_catalogueRevision.Output.Forbidden.Body.JsonPayload:
+    WireForbiddenBody
+{
+    internal var capabilityNotGranted: String? {
+        if case .case2(let denied) = self { denied.capability } else { nil }
+    }
+}
+
 extension Operations.MobileInventory_snapshot.Output.Forbidden.Body.JsonPayload: WireForbiddenBody {
     internal var capabilityNotGranted: String? {
         if case .case2(let denied) = self { denied.capability } else { nil }

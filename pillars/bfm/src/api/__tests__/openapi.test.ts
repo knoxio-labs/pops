@@ -149,6 +149,7 @@ describe('GET /openapi', () => {
       '/mobile/inventory/mutations',
       '/mobile/inventory/sync/changes',
       '/mobile/inventory/sync/snapshot',
+      '/mobile/inventory/type-catalogue',
       '/mobile/inventory/types',
       '/mobile/purchases',
       '/mobile/purchases/manual',

@@ -70,6 +70,40 @@ public struct BFMInventoryTransport: InventorySyncTransport {
         }
     }
 
+    public func fetchCatalogue(revision: Int) async throws -> InventoryCatalogueSnapshot {
+        let output: CatalogueRevision.Output
+        do {
+            output = try await client.generated.mobileInventory_catalogueRevision(
+                query: .init(revision: revision))
+        } catch let error as ClientError {
+            throw BFMRepositoryFailure.failure(error, operation: CatalogueRevision.id)
+        }
+        switch output {
+        case .ok(let ok):
+            return try protocol2Catalogue(from: ok.body.json)
+        case .badRequest:
+            throw BFMInventoryFailureMapping.repositoryError(
+                for: .badRequest, operation: CatalogueRevision.id)
+        case .unauthorized:
+            throw BFMInventoryFailureMapping.repositoryError(
+                for: .unauthorized, operation: CatalogueRevision.id)
+        case .forbidden(let forbidden):
+            throw Self.forbiddenFailure(try forbidden.body.json, operation: CatalogueRevision.id)
+        case .tooManyRequests:
+            throw BFMInventoryFailureMapping.repositoryError(
+                for: .rateLimited, operation: CatalogueRevision.id)
+        case .badGateway(let upstream):
+            throw BFMInventoryFailureMapping.repositoryError(
+                for: .upstream(code: try upstream.body.json.code.rawValue), operation: CatalogueRevision.id)
+        case .serviceUnavailable(let upstream):
+            throw BFMInventoryFailureMapping.repositoryError(
+                for: .upstream(code: try upstream.body.json.code.rawValue), operation: CatalogueRevision.id)
+        case .undocumented(let status, _):
+            throw BFMInventoryFailureMapping.repositoryError(
+                for: .undocumented(status), operation: CatalogueRevision.id)
+        }
+    }
+
     private static func catalogueType(
         from wire: Catalogue.Output.Ok.Body.JsonPayload.TypesPayloadPayload
     ) -> WireCatalogueType {
@@ -108,3 +142,4 @@ public struct BFMInventoryTransport: InventorySyncTransport {
 }
 
 private typealias Catalogue = Operations.MobileInventory_catalogue
+private typealias CatalogueRevision = Operations.MobileInventory_catalogueRevision

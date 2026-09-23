@@ -4659,6 +4659,7 @@ export interface operations {
         };
         content: {
           'application/json': {
+            catalogueRevision: number | null;
             catalogueVersion: string;
             epoch: string;
             events: {
@@ -5187,6 +5188,7 @@ export interface operations {
         };
         content: {
           'application/json': {
+            catalogueRevision: number | null;
             catalogueVersion: string;
             epoch: string;
             highWaterSeq: number;

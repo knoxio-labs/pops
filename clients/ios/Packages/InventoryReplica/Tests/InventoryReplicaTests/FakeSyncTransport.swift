@@ -22,6 +22,7 @@ internal final class FakeSyncTransport: InventorySyncTransport {
         var changes: ChangesHandler = { _, _ in throw RepositoryError.contractMismatch }
         var submit: SubmitHandler = { _ in throw RepositoryError.contractMismatch }
         var catalogue: InventoryCatalogue?
+        var protocol2Catalogue: InventoryCatalogueSnapshot?
         var upload: UploadHandler = { sha256, _, _ in
             InventoryMediaUploadResult(sha256: sha256, alreadyStored: false)
         }
@@ -33,6 +34,7 @@ internal final class FakeSyncTransport: InventorySyncTransport {
         var changesSince: [Int] = []
         var submitted: [InventoryOutboundMutation] = []
         var catalogueRequests: [String?] = []
+        var protocol2CatalogueRequests: [Int] = []
         var uploaded: [String] = []
         var fetched: [String] = []
     }
@@ -53,6 +55,16 @@ internal final class FakeSyncTransport: InventorySyncTransport {
     func fetchCatalogue(knownVersion: String?) async throws -> InventoryCatalogue? {
         recorded.withLock { $0.catalogueRequests.append(knownVersion) }
         return script.withLock { $0.catalogue }
+    }
+
+    func fetchCatalogue(revision: Int) async throws -> InventoryCatalogueSnapshot {
+        recorded.withLock { $0.protocol2CatalogueRequests.append(revision) }
+        return try script.withLock {
+            guard let catalogue = $0.protocol2Catalogue,
+                catalogue.revision.revision == revision
+            else { throw RepositoryError.contractMismatch }
+            return catalogue
+        }
     }
 
     func fetchSnapshot(cursor: String?, limit: Int) async throws -> InventorySnapshotPage {

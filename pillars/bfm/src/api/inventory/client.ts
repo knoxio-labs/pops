@@ -21,6 +21,7 @@ import {
 } from '../../contract/mobile-inventory-mutation-schemas.js';
 import {
   MobileInventoryCatalogueSchema,
+  MobileInventoryCatalogueRevisionDescriptorSchema,
   MobileInventoryChangesSchema,
   MobileInventoryItemHistorySchema,
   MobileInventorySnapshotSchema,
@@ -35,6 +36,7 @@ import type {
 } from '../../contract/mobile-inventory-mutation-schemas.js';
 import type {
   MobileInventoryCatalogue,
+  MobileInventoryCatalogueRevisionDescriptor,
   MobileInventoryChanges,
   MobileInventoryItemHistory,
   MobileInventorySnapshot,
@@ -54,6 +56,9 @@ export type InventorySyncRouter = {
   };
   types: {
     catalogue: (input: Record<string, never>) => Promise<unknown>;
+    read: {
+      catalogue: (input: { query: { revision: number } }) => Promise<unknown>;
+    };
   };
   codes: {
     suggest: (input: { name: string; typeKey?: string; stem?: string }) => Promise<unknown>;
@@ -99,6 +104,9 @@ export interface MobileInventoryClient {
   changes(request: ChangesRequest): Promise<GatewayOutcome<MobileInventoryChanges>>;
   itemHistory(request: ItemHistoryRequest): Promise<GatewayOutcome<MobileInventoryItemHistory>>;
   catalogue(): Promise<GatewayOutcome<MobileInventoryCatalogue>>;
+  catalogueRevision(
+    revision: number
+  ): Promise<GatewayOutcome<MobileInventoryCatalogueRevisionDescriptor>>;
   mutations(request: MutationsRequest): Promise<GatewayOutcome<MobileMutationsResponse>>;
   suggestCodes(request: SuggestCodesRequest): Promise<GatewayOutcome<MobileCodeSuggestResponse>>;
 }
@@ -169,6 +177,21 @@ async function callCatalogue(
   );
 }
 
+async function callCatalogueRevision(
+  gateway: PillarGateway,
+  revision: number
+): Promise<GatewayOutcome<MobileInventoryCatalogueRevisionDescriptor>> {
+  const outcome = await gateway.call<InventorySyncRouter, unknown>(INVENTORY_PILLAR_ID, (handle) =>
+    handle.types.read.catalogue({ query: { revision } })
+  );
+  return parseOrMismatch(
+    INVENTORY_PILLAR_ID,
+    outcome,
+    MobileInventoryCatalogueRevisionDescriptorSchema,
+    'types.read.catalogue'
+  );
+}
+
 async function callMutations(
   gateway: PillarGateway,
   request: MutationsRequest
@@ -211,6 +234,7 @@ export function createMobileInventoryClient(gateway: PillarGateway): MobileInven
     changes: (request) => callChanges(gateway, request),
     itemHistory: (request) => callItemHistory(gateway, request),
     catalogue: () => callCatalogue(gateway),
+    catalogueRevision: (revision) => callCatalogueRevision(gateway, revision),
     mutations: (request) => callMutations(gateway, request),
     suggestCodes: (request) => callSuggestCodes(gateway, request),
   };

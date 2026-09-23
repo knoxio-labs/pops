@@ -30,6 +30,18 @@ internal enum Protocol2CatalogueRows {
         for type in catalogue.types {
             try store(type, revision: revision.revision, in: db)
         }
+        try ReplicaSearchIndex.reindexAll(catalogue: searchableCatalogue(catalogue), in: db)
+    }
+
+    private static func searchableCatalogue(_ catalogue: InventoryCatalogueSnapshot) -> InventoryCatalogue {
+        InventoryCatalogue(
+            version: "protocol2-\(catalogue.revision.revision)", units: [],
+            types: catalogue.types.map {
+                InventoryType(
+                    key: $0.key, name: $0.label,
+                    capabilities: $0.capabilities.compactMap { $0 == "containment" ? .containment : nil },
+                    fields: [], legacyLabels: $0.legacyLabels)
+            })
     }
 
     static func read(revision: Int, in db: Database) throws -> InventoryCatalogueSnapshot? {

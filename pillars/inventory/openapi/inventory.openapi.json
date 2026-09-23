@@ -7658,6 +7658,13 @@
                 "schema": {
                   "additionalProperties": false,
                   "properties": {
+                    "catalogueRevision": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "nullable": true,
+                      "type": "integer"
+                    },
                     "catalogueVersion": {
                       "type": "string"
                     },
@@ -8285,7 +8292,8 @@
                     "events",
                     "nextSince",
                     "hasMore",
-                    "catalogueVersion"
+                    "catalogueVersion",
+                    "catalogueRevision"
                   ],
                   "type": "object"
                 }
@@ -9155,6 +9163,13 @@
                 "schema": {
                   "additionalProperties": false,
                   "properties": {
+                    "catalogueRevision": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "nullable": true,
+                      "type": "integer"
+                    },
                     "catalogueVersion": {
                       "type": "string"
                     },
@@ -9535,6 +9550,7 @@
                     "epoch",
                     "highWaterSeq",
                     "catalogueVersion",
+                    "catalogueRevision",
                     "total",
                     "items",
                     "locations",

@@ -69,6 +69,7 @@ const SnapshotResponse = z.object({
   epoch: z.string(),
   highWaterSeq: z.number().int(),
   catalogueVersion: z.string(),
+  catalogueRevision: z.number().int().positive().nullable(),
   total: z.number().int(),
   items: z.array(SyncItemSchema),
   locations: z.array(SyncLocationSchema),
@@ -83,6 +84,7 @@ const ChangesResponse = z.object({
   nextSince: z.number().int(),
   hasMore: z.boolean(),
   catalogueVersion: z.string(),
+  catalogueRevision: z.number().int().positive().nullable(),
 });
 
 const HistoryResponse = z.object({
