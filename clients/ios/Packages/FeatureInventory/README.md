@@ -45,6 +45,7 @@ Two things it reaches for belong to other screens, and it asks for them rather t
 `Search/`, `Browse/` and `InHand/` are the three ways to end up looking at one item outside its own page, each over one query built the same way the dashboard's is:
 
 - `InventorySearchViewModel` ranks the replica's own search in tiers — name prefix, name contains, then everything else, records before places — through `InventorySearchRanking.swift`, narrowed by the missing-type and include-inactive filters (`InventorySearchFilter.swift`) and remembering recent queries (`InventorySearchRecents.swift`) in `AppStorage`, not the replica.
+- `InventorySearchProvider` exposes that same ranking to universal search without adding a network dependency. It answers immediately and continues observing replica writes; an empty first-launch replica reports that Inventory is not on the phone until download completes.
 - `InventoryItemsBrowserViewModel` reads every non-container item in one query (`inventoryItems(includeInactive:)`), sectioned by initial when sorted by name and otherwise left in the replica's own order, with the same missing-type and include-inactive filters Search uses.
 - `InventoryInHandViewModel` reads the dashboard's own In-hand rows as a page of their own, with Put back and Put all back (`InHand/InventoryInHand.swift`): Put back does nothing for a row whose previous place was deleted, and Put all back only appears once there is more than one thing in hand.
 

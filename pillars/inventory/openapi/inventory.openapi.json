@@ -9734,6 +9734,12 @@
                           "required": ["actor", "at"],
                           "type": "object"
                         },
+                        "draftVersion": {
+                          "exclusiveMinimum": true,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
                         "minimumProtocol": {
                           "exclusiveMinimum": true,
                           "maximum": 9007199254740991,
@@ -9790,6 +9796,7 @@
                         "baseRevision",
                         "status",
                         "minimumProtocol",
+                        "draftVersion",
                         "created",
                         "published",
                         "abandoned"
@@ -10036,6 +10043,12 @@
                     "code": {
                       "type": "string"
                     },
+                    "currentDraftVersion": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
                     "issues": {
                       "items": {
                         "additionalProperties": false,
@@ -10081,6 +10094,12 @@
                   "properties": {
                     "code": {
                       "type": "string"
+                    },
+                    "currentDraftVersion": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "issues": {
                       "items": {
@@ -10256,6 +10275,12 @@
                     "code": {
                       "type": "string"
                     },
+                    "currentDraftVersion": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
                     "issues": {
                       "items": {
                         "additionalProperties": false,
@@ -10398,6 +10423,12 @@
                           "required": ["actor", "at"],
                           "type": "object"
                         },
+                        "draftVersion": {
+                          "exclusiveMinimum": true,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
                         "minimumProtocol": {
                           "exclusiveMinimum": true,
                           "maximum": 9007199254740991,
@@ -10454,6 +10485,7 @@
                         "baseRevision",
                         "status",
                         "minimumProtocol",
+                        "draftVersion",
                         "created",
                         "published",
                         "abandoned"
@@ -10697,6 +10729,12 @@
                     "code": {
                       "type": "string"
                     },
+                    "currentDraftVersion": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
                     "issues": {
                       "items": {
                         "additionalProperties": false,
@@ -10743,6 +10781,12 @@
                     "code": {
                       "type": "string"
                     },
+                    "currentDraftVersion": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
                     "issues": {
                       "items": {
                         "additionalProperties": false,
@@ -10788,6 +10832,12 @@
                   "properties": {
                     "code": {
                       "type": "string"
+                    },
+                    "currentDraftVersion": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "issues": {
                       "items": {
@@ -10911,6 +10961,12 @@
                           "required": ["actor", "at"],
                           "type": "object"
                         },
+                        "draftVersion": {
+                          "exclusiveMinimum": true,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
                         "minimumProtocol": {
                           "exclusiveMinimum": true,
                           "maximum": 9007199254740991,
@@ -10967,6 +11023,7 @@
                         "baseRevision",
                         "status",
                         "minimumProtocol",
+                        "draftVersion",
                         "created",
                         "published",
                         "abandoned"
@@ -11210,6 +11267,12 @@
                     "code": {
                       "type": "string"
                     },
+                    "currentDraftVersion": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
                     "issues": {
                       "items": {
                         "additionalProperties": false,
@@ -11255,6 +11318,12 @@
                   "properties": {
                     "code": {
                       "type": "string"
+                    },
+                    "currentDraftVersion": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "issues": {
                       "items": {
@@ -11321,6 +11390,12 @@
                 "additionalProperties": false,
                 "properties": {
                   "baseRevision": {
+                    "exclusiveMinimum": true,
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "expectedDraftVersion": {
                     "exclusiveMinimum": true,
                     "maximum": 9007199254740991,
                     "minimum": 0,
@@ -11597,7 +11672,7 @@
                     "type": "array"
                   }
                 },
-                "required": ["baseRevision", "operations"],
+                "required": ["baseRevision", "expectedDraftVersion", "operations"],
                 "type": "object"
               }
             }
@@ -11735,6 +11810,12 @@
                               "required": ["actor", "at"],
                               "type": "object"
                             },
+                            "draftVersion": {
+                              "exclusiveMinimum": true,
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
                             "minimumProtocol": {
                               "exclusiveMinimum": true,
                               "maximum": 9007199254740991,
@@ -11791,6 +11872,7 @@
                             "baseRevision",
                             "status",
                             "minimumProtocol",
+                            "draftVersion",
                             "created",
                             "published",
                             "abandoned"
@@ -12044,6 +12126,12 @@
                     "code": {
                       "type": "string"
                     },
+                    "currentDraftVersion": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
                     "issues": {
                       "items": {
                         "additionalProperties": false,
@@ -12161,6 +12249,12 @@
                     "code": {
                       "type": "string"
                     },
+                    "currentDraftVersion": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
                     "issues": {
                       "items": {
                         "additionalProperties": false,
@@ -12207,6 +12301,12 @@
                     "code": {
                       "type": "string"
                     },
+                    "currentDraftVersion": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
                     "issues": {
                       "items": {
                         "additionalProperties": false,
@@ -12252,6 +12352,12 @@
                   "properties": {
                     "code": {
                       "type": "string"
+                    },
+                    "currentDraftVersion": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "issues": {
                       "items": {
@@ -12393,9 +12499,15 @@
                     "maximum": 9007199254740991,
                     "minimum": 0,
                     "type": "integer"
+                  },
+                  "expectedDraftVersion": {
+                    "exclusiveMinimum": true,
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "type": "integer"
                   }
                 },
-                "required": ["baseRevision"],
+                "required": ["baseRevision", "expectedDraftVersion"],
                 "type": "object"
               }
             }
@@ -12478,6 +12590,12 @@
                           "required": ["actor", "at"],
                           "type": "object"
                         },
+                        "draftVersion": {
+                          "exclusiveMinimum": true,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
                         "minimumProtocol": {
                           "exclusiveMinimum": true,
                           "maximum": 9007199254740991,
@@ -12534,6 +12652,7 @@
                         "baseRevision",
                         "status",
                         "minimumProtocol",
+                        "draftVersion",
                         "created",
                         "published",
                         "abandoned"
@@ -12777,6 +12896,12 @@
                     "code": {
                       "type": "string"
                     },
+                    "currentDraftVersion": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
                     "issues": {
                       "items": {
                         "additionalProperties": false,
@@ -12823,6 +12948,12 @@
                     "code": {
                       "type": "string"
                     },
+                    "currentDraftVersion": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
                     "issues": {
                       "items": {
                         "additionalProperties": false,
@@ -12868,6 +12999,12 @@
                   "properties": {
                     "code": {
                       "type": "string"
+                    },
+                    "currentDraftVersion": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "issues": {
                       "items": {
@@ -12934,6 +13071,12 @@
                 "additionalProperties": false,
                 "properties": {
                   "baseRevision": {
+                    "exclusiveMinimum": true,
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "expectedDraftVersion": {
                     "exclusiveMinimum": true,
                     "maximum": 9007199254740991,
                     "minimum": 0,
@@ -13210,7 +13353,7 @@
                     "type": "array"
                   }
                 },
-                "required": ["baseRevision", "operations"],
+                "required": ["baseRevision", "expectedDraftVersion", "operations"],
                 "type": "object"
               }
             }
@@ -13304,6 +13447,12 @@
                   "properties": {
                     "code": {
                       "type": "string"
+                    },
+                    "currentDraftVersion": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "issues": {
                       "items": {
@@ -13422,6 +13571,12 @@
                     "code": {
                       "type": "string"
                     },
+                    "currentDraftVersion": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
                     "issues": {
                       "items": {
                         "additionalProperties": false,
@@ -13468,6 +13623,12 @@
                     "code": {
                       "type": "string"
                     },
+                    "currentDraftVersion": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
                     "issues": {
                       "items": {
                         "additionalProperties": false,
@@ -13513,6 +13674,12 @@
                   "properties": {
                     "code": {
                       "type": "string"
+                    },
+                    "currentDraftVersion": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "issues": {
                       "items": {
@@ -13650,6 +13817,12 @@
                 "additionalProperties": false,
                 "properties": {
                   "baseRevision": {
+                    "exclusiveMinimum": true,
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "expectedDraftVersion": {
                     "exclusiveMinimum": true,
                     "maximum": 9007199254740991,
                     "minimum": 0,
@@ -13867,7 +14040,7 @@
                     "type": "string"
                   }
                 },
-                "required": ["baseRevision"],
+                "required": ["baseRevision", "expectedDraftVersion"],
                 "type": "object"
               }
             }
@@ -13950,6 +14123,12 @@
                           "required": ["actor", "at"],
                           "type": "object"
                         },
+                        "draftVersion": {
+                          "exclusiveMinimum": true,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
                         "minimumProtocol": {
                           "exclusiveMinimum": true,
                           "maximum": 9007199254740991,
@@ -14006,6 +14185,7 @@
                         "baseRevision",
                         "status",
                         "minimumProtocol",
+                        "draftVersion",
                         "created",
                         "published",
                         "abandoned"
@@ -14249,6 +14429,12 @@
                     "code": {
                       "type": "string"
                     },
+                    "currentDraftVersion": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
                     "issues": {
                       "items": {
                         "additionalProperties": false,
@@ -14294,6 +14480,12 @@
                   "properties": {
                     "code": {
                       "type": "string"
+                    },
+                    "currentDraftVersion": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "issues": {
                       "items": {
@@ -14341,6 +14533,12 @@
                     "code": {
                       "type": "string"
                     },
+                    "currentDraftVersion": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
                     "issues": {
                       "items": {
                         "additionalProperties": false,
@@ -14386,6 +14584,12 @@
                   "properties": {
                     "code": {
                       "type": "string"
+                    },
+                    "currentDraftVersion": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     },
                     "issues": {
                       "items": {

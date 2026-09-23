@@ -36,6 +36,7 @@ export const catalogueRevisions = sqliteTable(
     abandonedActorId: text('abandoned_actor_id'),
     abandonedActorLabel: text('abandoned_actor_label'),
     abandonedAt: text('abandoned_at'),
+    draftVersion: integer('draft_version').notNull().default(1),
   },
   (table) => [
     foreignKey({ columns: [table.baseRevision], foreignColumns: [table.revision] }),
@@ -47,6 +48,7 @@ export const catalogueRevisions = sqliteTable(
       sql`${table.status} IN ('draft', 'published', 'abandoned')`
     ),
     check('ck_catalogue_revisions_minimum_protocol', sql`${table.minimumProtocol} >= 1`),
+    check('ck_catalogue_revisions_draft_version', sql`${table.draftVersion} >= 1`),
     check(
       'ck_catalogue_revisions_terminal_state',
       sql`(${table.status} = 'draft' AND ${table.publishedAt} IS NULL AND ${table.abandonedAt} IS NULL)

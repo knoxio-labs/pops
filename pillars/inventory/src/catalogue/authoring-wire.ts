@@ -36,6 +36,7 @@ interface RevisionRow {
   readonly abandonedActorId: string | null;
   readonly abandonedActorLabel: string | null;
   readonly abandonedAt: string | null;
+  readonly draftVersion: number;
 }
 
 function actor(kind: string | null, id: string | null, label: string | null): CatalogueActor {
@@ -62,6 +63,7 @@ function revisionWire(row: RevisionRow): CatalogueRevisionWire {
     baseRevision: row.baseRevision,
     status: row.status,
     minimumProtocol: row.minimumProtocol,
+    draftVersion: row.draftVersion,
     created: {
       actor: actor(row.createdActorKind, row.createdActorId, row.createdActorLabel),
       at: row.createdAt,

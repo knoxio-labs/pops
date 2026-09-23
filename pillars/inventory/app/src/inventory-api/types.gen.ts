@@ -3593,6 +3593,7 @@ export type TypesReadCatalogueErrors = {
    */
   401: {
     code?: string;
+    currentDraftVersion?: number;
     issues?: Array<{
       code: string;
       definitionId: string | null;
@@ -3607,6 +3608,7 @@ export type TypesReadCatalogueErrors = {
    */
   404: {
     code?: string;
+    currentDraftVersion?: number;
     issues?: Array<{
       code: string;
       definitionId: string | null;
@@ -3643,6 +3645,7 @@ export type TypesReadCatalogueResponses = {
         };
         at: string;
       };
+      draftVersion: number;
       minimumProtocol: number;
       published: {
         actor: {
@@ -3732,6 +3735,7 @@ export type TypesReadAuditErrors = {
    */
   401: {
     code?: string;
+    currentDraftVersion?: number;
     issues?: Array<{
       code: string;
       definitionId: string | null;
@@ -3793,6 +3797,7 @@ export type TypesManageCreateDraftErrors = {
    */
   400: {
     code?: string;
+    currentDraftVersion?: number;
     issues?: Array<{
       code: string;
       definitionId: string | null;
@@ -3807,6 +3812,7 @@ export type TypesManageCreateDraftErrors = {
    */
   401: {
     code?: string;
+    currentDraftVersion?: number;
     issues?: Array<{
       code: string;
       definitionId: string | null;
@@ -3821,6 +3827,7 @@ export type TypesManageCreateDraftErrors = {
    */
   409: {
     code?: string;
+    currentDraftVersion?: number;
     issues?: Array<{
       code: string;
       definitionId: string | null;
@@ -3858,6 +3865,7 @@ export type TypesManageCreateDraftResponses = {
         };
         at: string;
       };
+      draftVersion: number;
       minimumProtocol: number;
       published: {
         actor: {
@@ -3944,6 +3952,7 @@ export type TypesManageReadDraftErrors = {
    */
   401: {
     code?: string;
+    currentDraftVersion?: number;
     issues?: Array<{
       code: string;
       definitionId: string | null;
@@ -3958,6 +3967,7 @@ export type TypesManageReadDraftErrors = {
    */
   404: {
     code?: string;
+    currentDraftVersion?: number;
     issues?: Array<{
       code: string;
       definitionId: string | null;
@@ -3995,6 +4005,7 @@ export type TypesManageReadDraftResponses = {
         };
         at: string;
       };
+      draftVersion: number;
       minimumProtocol: number;
       published: {
         actor: {
@@ -4074,6 +4085,7 @@ export type TypesManagePatchDraftData = {
    */
   body?: {
     baseRevision: number;
+    expectedDraftVersion: number;
     operations: Array<
       | {
           archivedAt?: string | null;
@@ -4157,6 +4169,7 @@ export type TypesManagePatchDraftErrors = {
    */
   400: {
     code?: string;
+    currentDraftVersion?: number;
     issues?: Array<{
       code: string;
       definitionId: string | null;
@@ -4185,6 +4198,7 @@ export type TypesManagePatchDraftErrors = {
    */
   401: {
     code?: string;
+    currentDraftVersion?: number;
     issues?: Array<{
       code: string;
       definitionId: string | null;
@@ -4199,6 +4213,7 @@ export type TypesManagePatchDraftErrors = {
    */
   404: {
     code?: string;
+    currentDraftVersion?: number;
     issues?: Array<{
       code: string;
       definitionId: string | null;
@@ -4213,6 +4228,7 @@ export type TypesManagePatchDraftErrors = {
    */
   409: {
     code?: string;
+    currentDraftVersion?: number;
     issues?: Array<{
       code: string;
       definitionId: string | null;
@@ -4275,6 +4291,7 @@ export type TypesManagePatchDraftResponses = {
           };
           at: string;
         };
+        draftVersion: number;
         minimumProtocol: number;
         published: {
           actor: {
@@ -4355,6 +4372,7 @@ export type TypesManageAbandonDraftData = {
    */
   body?: {
     baseRevision: number;
+    expectedDraftVersion: number;
   };
   path: {
     revision: number;
@@ -4369,6 +4387,7 @@ export type TypesManageAbandonDraftErrors = {
    */
   401: {
     code?: string;
+    currentDraftVersion?: number;
     issues?: Array<{
       code: string;
       definitionId: string | null;
@@ -4383,6 +4402,7 @@ export type TypesManageAbandonDraftErrors = {
    */
   404: {
     code?: string;
+    currentDraftVersion?: number;
     issues?: Array<{
       code: string;
       definitionId: string | null;
@@ -4397,6 +4417,7 @@ export type TypesManageAbandonDraftErrors = {
    */
   409: {
     code?: string;
+    currentDraftVersion?: number;
     issues?: Array<{
       code: string;
       definitionId: string | null;
@@ -4434,6 +4455,7 @@ export type TypesManageAbandonDraftResponses = {
         };
         at: string;
       };
+      draftVersion: number;
       minimumProtocol: number;
       published: {
         actor: {
@@ -4513,6 +4535,7 @@ export type TypesManagePreviewDraftData = {
    */
   body?: {
     baseRevision: number;
+    expectedDraftVersion: number;
     operations: Array<
       | {
           archivedAt?: string | null;
@@ -4596,6 +4619,7 @@ export type TypesManagePreviewDraftErrors = {
    */
   400: {
     code?: string;
+    currentDraftVersion?: number;
     issues?: Array<{
       code: string;
       definitionId: string | null;
@@ -4624,6 +4648,7 @@ export type TypesManagePreviewDraftErrors = {
    */
   401: {
     code?: string;
+    currentDraftVersion?: number;
     issues?: Array<{
       code: string;
       definitionId: string | null;
@@ -4638,6 +4663,7 @@ export type TypesManagePreviewDraftErrors = {
    */
   404: {
     code?: string;
+    currentDraftVersion?: number;
     issues?: Array<{
       code: string;
       definitionId: string | null;
@@ -4652,6 +4678,7 @@ export type TypesManagePreviewDraftErrors = {
    */
   409: {
     code?: string;
+    currentDraftVersion?: number;
     issues?: Array<{
       code: string;
       definitionId: string | null;
@@ -4709,6 +4736,7 @@ export type TypesManagePublishDraftData = {
    */
   body?: {
     baseRevision: number;
+    expectedDraftVersion: number;
     migration?: {
       affectedFieldIds: Array<string>;
       affectedTypeIds: Array<string>;
@@ -4769,6 +4797,7 @@ export type TypesManagePublishDraftErrors = {
    */
   400: {
     code?: string;
+    currentDraftVersion?: number;
     issues?: Array<{
       code: string;
       definitionId: string | null;
@@ -4783,6 +4812,7 @@ export type TypesManagePublishDraftErrors = {
    */
   401: {
     code?: string;
+    currentDraftVersion?: number;
     issues?: Array<{
       code: string;
       definitionId: string | null;
@@ -4797,6 +4827,7 @@ export type TypesManagePublishDraftErrors = {
    */
   404: {
     code?: string;
+    currentDraftVersion?: number;
     issues?: Array<{
       code: string;
       definitionId: string | null;
@@ -4811,6 +4842,7 @@ export type TypesManagePublishDraftErrors = {
    */
   409: {
     code?: string;
+    currentDraftVersion?: number;
     issues?: Array<{
       code: string;
       definitionId: string | null;
@@ -4848,6 +4880,7 @@ export type TypesManagePublishDraftResponses = {
         };
         at: string;
       };
+      draftVersion: number;
       minimumProtocol: number;
       published: {
         actor: {

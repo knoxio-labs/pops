@@ -134,12 +134,14 @@ describe('inventory catalogue draft management', () => {
     await tool('inventory.catalogue.patchDraft').handler({
       revision: 5,
       baseRevision: 4,
+      expectedDraftVersion: 3,
       operations,
     });
 
     expect(types.manage.patchDraft).toHaveBeenCalledWith({
       revision: 5,
       baseRevision: 4,
+      expectedDraftVersion: 3,
       operations,
     });
   });
@@ -148,6 +150,7 @@ describe('inventory catalogue draft management', () => {
     const result = await tool('inventory.catalogue.patchDraft').handler({
       revision: 5,
       baseRevision: 4,
+      expectedDraftVersion: 3,
       operations: [],
     });
 
@@ -161,12 +164,14 @@ describe('inventory catalogue draft management', () => {
     await tool('inventory.catalogue.previewDraft').handler({
       revision: 5,
       baseRevision: 4,
+      expectedDraftVersion: 3,
       operations,
     });
 
     expect(types.manage.previewDraft).toHaveBeenCalledWith({
       revision: 5,
       baseRevision: 4,
+      expectedDraftVersion: 3,
       operations,
     });
     expect(types.manage.patchDraft).not.toHaveBeenCalled();
@@ -185,6 +190,7 @@ describe('inventory catalogue draft management', () => {
     await tool('inventory.catalogue.publishDraft').handler({
       revision: 5,
       baseRevision: 4,
+      expectedDraftVersion: 3,
       note: null,
       minimumProtocol: 2,
       migrationName: 'rename_voltage',
@@ -194,6 +200,7 @@ describe('inventory catalogue draft management', () => {
     expect(types.manage.publishDraft).toHaveBeenCalledWith({
       revision: 5,
       baseRevision: 4,
+      expectedDraftVersion: 3,
       note: null,
       minimumProtocol: 2,
       migrationName: 'rename_voltage',
@@ -205,6 +212,7 @@ describe('inventory catalogue draft management', () => {
     const result = await tool('inventory.catalogue.publishDraft').handler({
       revision: 5,
       baseRevision: 4,
+      expectedDraftVersion: 3,
       migration: 'rename_voltage',
     });
 
@@ -216,6 +224,7 @@ describe('inventory catalogue draft management', () => {
     const result = await tool('inventory.catalogue.publishDraft').handler({
       revision: 5,
       baseRevision: 4,
+      expectedDraftVersion: 3,
       minimumProtocol: 1.5,
     });
 
@@ -224,9 +233,17 @@ describe('inventory catalogue draft management', () => {
   });
 
   it('abandons a draft with its optimistic concurrency revision', async () => {
-    await tool('inventory.catalogue.abandonDraft').handler({ revision: 5, baseRevision: 4 });
+    await tool('inventory.catalogue.abandonDraft').handler({
+      revision: 5,
+      baseRevision: 4,
+      expectedDraftVersion: 3,
+    });
 
-    expect(types.manage.abandonDraft).toHaveBeenCalledWith({ revision: 5, baseRevision: 4 });
+    expect(types.manage.abandonDraft).toHaveBeenCalledWith({
+      revision: 5,
+      baseRevision: 4,
+      expectedDraftVersion: 3,
+    });
   });
 
   it('surfaces an authorization refusal as an MCP error', async () => {
@@ -239,6 +256,7 @@ describe('inventory catalogue draft management', () => {
     const result = await tool('inventory.catalogue.abandonDraft').handler({
       revision: 5,
       baseRevision: 4,
+      expectedDraftVersion: 3,
     });
 
     expect(result.isError).toBe(true);
@@ -246,5 +264,68 @@ describe('inventory catalogue draft management', () => {
       type: 'text',
       text: "Service account is not authorised for 'inventory.types.manage'",
     });
+  });
+
+  it.each([
+    ['inventory.catalogue.patchDraft', { operations: [{ kind: 'put_type', key: 'x' }] }],
+    ['inventory.catalogue.previewDraft', { operations: [{ kind: 'put_type', key: 'x' }] }],
+    ['inventory.catalogue.publishDraft', {}],
+    ['inventory.catalogue.abandonDraft', {}],
+  ])('%s requires an expected draft version before calling inventory', async (name, extra) => {
+    const schema = tool(name).inputSchema;
+    const result = await tool(name).handler({ revision: 5, baseRevision: 4, ...extra });
+
+    expect(schema.required).toContain('expectedDraftVersion');
+    expect(result.isError).toBe(true);
+    expect(result.content[0]).toMatchObject({
+      text: expect.stringContaining('expectedDraftVersion'),
+    });
+    expect(types.manage.patchDraft).not.toHaveBeenCalled();
+    expect(types.manage.previewDraft).not.toHaveBeenCalled();
+    expect(types.manage.publishDraft).not.toHaveBeenCalled();
+    expect(types.manage.abandonDraft).not.toHaveBeenCalled();
+  });
+
+  it('surfaces a stale draft version with the current version and how to recover', async () => {
+    types.manage.patchDraft.mockResolvedValueOnce({
+      kind: 'conflict',
+      pillar: 'inventory',
+      code: 'catalogue_draft_conflict',
+      message: 'Catalogue draft 5 is at version 4, not 3',
+      details: { currentDraftVersion: 4 },
+    });
+
+    const result = await tool('inventory.catalogue.patchDraft').handler({
+      revision: 5,
+      baseRevision: 4,
+      expectedDraftVersion: 3,
+      operations: [{ kind: 'put_type', key: 'tool', label: 'Tool' }],
+    });
+
+    expect(result.isError).toBe(true);
+    const [content] = result.content;
+    const text = content?.type === 'text' ? content.text : '';
+    expect(text).toContain('Catalogue draft 5 is at version 4, not 3');
+    expect(text).toContain('"currentDraftVersion":4');
+    expect(text).toContain('inventory.catalogue.readDraft');
+  });
+
+  it('does not attach draft recovery steps to an unrelated conflict', async () => {
+    types.manage.publishDraft.mockResolvedValueOnce({
+      kind: 'conflict',
+      pillar: 'inventory',
+      code: 'catalogue_migration_required',
+      message: 'Publication requires a named value migration',
+    });
+
+    const result = await tool('inventory.catalogue.publishDraft').handler({
+      revision: 5,
+      baseRevision: 4,
+      expectedDraftVersion: 3,
+    });
+
+    expect(result.isError).toBe(true);
+    const [content] = result.content;
+    expect(content?.type === 'text' ? content.text : '').not.toContain('readDraft');
   });
 });

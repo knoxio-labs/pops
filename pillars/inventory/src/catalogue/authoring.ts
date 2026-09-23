@@ -8,22 +8,20 @@ import {
   itemTypes,
 } from '../db/schema.js';
 import { applyDraftOperations } from './authoring-draft-operations.js';
-import {
-  currentPublished,
-  json,
-  requireCatalogue,
-  requireCurrentDraft,
-} from './authoring-shared.js';
+import { claimCurrentDraft } from './authoring-draft-version.js';
+import { currentPublished, json, requireCatalogue } from './authoring-shared.js';
 import { CatalogueApiError } from './authoring-types.js';
 import { toCatalogueDescriptor } from './authoring-wire.js';
 
 import type { CommandDb } from '../domain/commands/index.js';
+import type { DraftTarget } from './authoring-draft-operations.js';
 import type { CatalogueAuthor, CatalogueDescriptor, DraftOperation } from './authoring-types.js';
 import type { CatalogueCompatibilityResult } from './compatibility.js';
 
 export { readCatalogueAudit, toCatalogueDescriptor } from './authoring-wire.js';
 export { publishCatalogueDraft } from './authoring-publication.js';
 export { previewCatalogueDraft } from './authoring-draft-operations.js';
+export type { DraftTarget } from './authoring-draft-operations.js';
 export { CatalogueApiError } from './authoring-types.js';
 export type { CataloguePublicationInput } from './authoring-publication.js';
 export type {
@@ -132,28 +130,37 @@ export function createCatalogueDraft(
   });
 }
 
-/** Applies draft operations and returns the candidate compatibility proof. */
+/**
+ * Applies draft operations atomically and returns the candidate compatibility
+ * proof. The batch commits only when `target.expectedDraftVersion` is still the
+ * draft's version, and the returned draft carries the advanced version.
+ */
 export function patchCatalogueDraft(
   db: CommandDb,
-  revision: number,
-  baseRevision: number,
+  target: DraftTarget,
   operations: readonly DraftOperation[]
 ): {
   draft: CatalogueDescriptor;
   compatibility: CatalogueCompatibilityResult & { readonly affectedItems: number };
 } {
-  return db.transaction((tx) => applyDraftOperations(tx, revision, baseRevision, operations));
+  return db.transaction((tx) => applyDraftOperations(tx, target, operations));
 }
 
-/** Abandons a draft while retaining its immutable definition rows and audit. */
+/**
+ * Abandons a draft while retaining its immutable definition rows and audit,
+ * provided `target.expectedDraftVersion` is still the draft's version.
+ */
 export function abandonCatalogueDraft(
   db: CommandDb,
-  revision: number,
-  baseRevision: number,
+  target: DraftTarget,
   author: CatalogueAuthor
 ): CatalogueDescriptor {
+  const { revision, baseRevision, expectedDraftVersion } = target;
   return db.transaction((tx) => {
-    const draft = requireCurrentDraft(tx, revision, baseRevision);
+    const before = toCatalogueDescriptor(
+      tx,
+      claimCurrentDraft(tx, revision, baseRevision, expectedDraftVersion)
+    );
     const now = new Date().toISOString();
     tx.update(catalogueRevisions)
       .set({
@@ -173,7 +180,7 @@ export function abandonCatalogueDraft(
         actorKind: author.kind,
         actorId: author.id,
         actorLabel: author.label,
-        beforeJson: json(toCatalogueDescriptor(tx, draft)),
+        beforeJson: json(before),
         afterJson: json(toCatalogueDescriptor(tx, abandoned)),
         migrationName: null,
         affectedItems: 0,

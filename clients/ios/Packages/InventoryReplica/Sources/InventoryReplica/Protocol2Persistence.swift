@@ -7,21 +7,6 @@ private struct Protocol2FieldKinds {
     let storage: InventoryFieldStorage
 }
 
-private func searchableCatalogue(
-    _ catalogue: InventoryCatalogueSnapshot
-) -> InventoryCatalogue {
-    InventoryCatalogue(
-        version: "protocol2-\(catalogue.revision.revision)", units: [],
-        types: catalogue.types.map {
-            InventoryType(
-                key: $0.key, name: $0.label,
-                capabilities: $0.capabilities.compactMap {
-                    $0 == "containment" ? .containment : nil
-                },
-                fields: [], legacyLabels: $0.legacyLabels)
-        })
-}
-
 internal enum Protocol2CatalogueRows {
     static func store(_ catalogue: InventoryCatalogueSnapshot, in db: Database) throws {
         if let stored = try read(revision: catalogue.revision.revision, in: db) {
@@ -45,7 +30,6 @@ internal enum Protocol2CatalogueRows {
         for type in catalogue.types {
             try store(type, revision: revision.revision, in: db)
         }
-        try ReplicaSearchIndex.reindexAll(catalogue: searchableCatalogue(catalogue), in: db)
     }
 
     static func read(revision: Int, in db: Database) throws -> InventoryCatalogueSnapshot? {
@@ -229,6 +213,7 @@ extension InventoryReplica {
             var meta = try SyncMeta.read(db)
             meta.catalogueRevision = catalogue.revision.revision
             try meta.write(db)
+            try Protocol2SearchIndex.reindex(catalogue, in: db)
         }
     }
 
@@ -247,6 +232,7 @@ extension InventoryReplica {
         try write { db in
             try Protocol2CatalogueRows.store(catalogue, in: db)
             try ReplicaApply.snapshot(page, now: now(), in: db)
+            try Protocol2SearchIndex.reindex(catalogue, in: db)
         }
     }
 
@@ -260,6 +246,7 @@ extension InventoryReplica {
         try write { db in
             try Protocol2CatalogueRows.store(catalogue, in: db)
             try ReplicaApply.changes(page, now: now(), in: db)
+            try Protocol2SearchIndex.reindex(catalogue, in: db)
         }
     }
 }

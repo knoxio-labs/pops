@@ -1,3 +1,11 @@
+/** MCP schema for the draft version a catalogue draft call was prepared against. */
+export const expectedDraftVersionSchema = {
+  type: 'integer',
+  minimum: 1,
+  description:
+    'revision.draftVersion of the draft as last read (createDraft, readDraft or the previous patchDraft). A stale value is refused with catalogue_draft_conflict and changes nothing.',
+};
+
 type Parsed<T> = { readonly ok: true; readonly value: T } | { readonly ok: false; error: string };
 
 function isRecord(value: unknown): value is Record<string, unknown> {

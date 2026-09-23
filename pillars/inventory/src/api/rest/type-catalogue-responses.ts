@@ -19,6 +19,7 @@ type CatalogueFailure = {
   body: {
     message: string;
     code: string;
+    currentDraftVersion?: number;
     issues?: {
       definitionId: string | null;
       path: string;
@@ -51,6 +52,9 @@ function failure(error: CatalogueApiError): CatalogueFailure {
     body: {
       message: error.message,
       code: error.code,
+      ...(error.currentDraftVersion === undefined
+        ? {}
+        : { currentDraftVersion: error.currentDraftVersion }),
       ...(error.issues.length === 0 ? {} : { issues: [...error.issues] }),
       ...(error.preview === undefined
         ? {}

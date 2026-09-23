@@ -43,22 +43,6 @@ export function currentPublished(db: CommandDb): PersistedCatalogue {
   return catalogue;
 }
 
-export function requireCurrentDraft(
-  db: CommandDb,
-  revision: number,
-  baseRevision: number
-): PersistedCatalogue {
-  const draft = requireCatalogue(db, revision, ['draft']);
-  if (draft.revision.baseRevision !== baseRevision) {
-    throw new CatalogueApiError(409, 'catalogue_conflict', 'The draft base revision is stale');
-  }
-  const current = currentPublished(db);
-  if (current.revision.revision !== baseRevision) {
-    throw new CatalogueApiError(409, 'catalogue_conflict', 'The published catalogue has changed');
-  }
-  return draft;
-}
-
 export function json(value: unknown): string {
   return JSON.stringify(value);
 }

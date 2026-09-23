@@ -29,6 +29,7 @@ const CatalogueRevisionSchema = z.object({
   baseRevision: z.number().int().positive().nullable(),
   status: z.enum(['draft', 'published', 'abandoned']),
   minimumProtocol: z.number().int().positive(),
+  draftVersion: z.number().int().positive(),
   created: z.object({ actor: CatalogueActorSchema, at: z.string() }),
   published: z
     .object({
@@ -158,7 +159,15 @@ export const CatalogueDraftOperationSchema = z.discriminatedUnion('kind', [
   }),
 ]);
 
+/**
+ * The `revision.draftVersion` a mutating draft call was prepared against. The
+ * call commits only while it is still the draft's version; otherwise it answers
+ * `409 catalogue_draft_conflict` with `currentDraftVersion`.
+ */
+export const ExpectedDraftVersionSchema = z.number().int().positive();
+
 export const CatalogueErrorBodySchema = ErrorBodySchema.extend({
+  currentDraftVersion: z.number().int().positive().optional(),
   issues: z
     .array(
       z.object({
