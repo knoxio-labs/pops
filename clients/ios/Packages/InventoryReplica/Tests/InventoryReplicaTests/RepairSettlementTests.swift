@@ -6,13 +6,16 @@ import Testing
 /// POPS-4433: exercises settling a repair on a protocol-2-only replica end
 /// to end (`RepairSettlement.settleResolvedElsewhere` -> `isAlreadyOnServer`,
 /// then the feed's own `MutationLogReplay.rebase` reindex), asserting the
-/// item's type stays searchable throughout. `isAlreadyOnServer`'s own
-/// catalogue resolution (fixed alongside `ReplicaReader.inventoryCatalogue()`
-/// in this change, from `SyncMeta.storedCatalogue()` to
-/// `SyncMeta.searchCatalogue(in:)`) writes only inside a savepoint that is
-/// always rolled back, so this test cannot fail on that one line alone; it
-/// guards the settlement flow as a whole and against a future regression
-/// where that write stops being discarded.
+/// item's type stays searchable throughout.
+///
+/// `isAlreadyOnServer`'s dry run writes to the search index only inside a
+/// savepoint that always rolls back, so no catalogue it passes there can
+/// ever be observed: computing one (protocol-1 or protocol-2) only fed the
+/// discarded write. `RepairSettlement.isAlreadyOnServer` now passes `nil`
+/// instead of resolving a catalogue, removing the dead read rather than
+/// leaving an untestable "fix" in place. This test guards the settlement
+/// flow as a whole, including the real, non-discarded reindex that runs
+/// afterward via the feed's `MutationLogReplay.rebase`.
 @Suite("RepairSettlement: settling on a protocol-2-only replica")
 internal struct RepairSettlementTests {
     private static let typeId = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee"

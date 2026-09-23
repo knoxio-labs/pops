@@ -2,6 +2,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { InventoryApiError } from '../inventory-api-helpers';
+
 import type { ReactNode } from 'react';
 
 import type { CatalogueCompatibility, CatalogueDescriptor } from './types';
@@ -187,5 +189,60 @@ describe('useCatalogueEditor readiness', () => {
     });
 
     expect(result.current.readiness).toEqual({ status: 'not_previewed' });
+  });
+
+  it('clears a stale save error on reload and permits a valid retry', async () => {
+    api.readDraft.mockResolvedValue({ data: draft(4), error: undefined });
+    api.patchDraft.mockRejectedValueOnce(
+      new InventoryApiError('This draft changed elsewhere', 409, 'catalogue_draft_stale', [])
+    );
+    const { result } = setup();
+    await waitFor(() => expect(result.current.catalogue).toBeDefined());
+
+    await act(async () => {
+      await expect(
+        result.current.patchDraft.mutateAsync([{ kind: 'put_type', id: TYPE_ID, label: 'Renamed' }])
+      ).rejects.toThrow();
+    });
+    expect(result.current.error).toBeInstanceOf(InventoryApiError);
+
+    api.readDraft.mockResolvedValue({ data: draft(5), error: undefined });
+    await act(async () => {
+      await result.current.reload();
+    });
+
+    expect(result.current.error).toBeUndefined();
+
+    api.patchDraft.mockResolvedValue({
+      data: { compatibility: compatible, draft: draft(6) },
+      error: undefined,
+    });
+    await act(async () => {
+      await result.current.patchDraft.mutateAsync([
+        { kind: 'put_type', id: TYPE_ID, label: 'Renamed again' },
+      ]);
+    });
+
+    expect(result.current.error).toBeUndefined();
+    expect(result.current.readiness.status).toBe('ready');
+  });
+
+  it('never grants ready from a preview attempt that failed', async () => {
+    api.readDraft.mockResolvedValue({ data: draft(4), error: undefined });
+    api.previewDraft.mockRejectedValue(
+      new InventoryApiError('Preview unavailable', 503, 'unavailable', [])
+    );
+    const { result } = setup();
+    await waitFor(() => expect(result.current.catalogue).toBeDefined());
+
+    act(() => {
+      result.current.previewOperation({ kind: 'put_type', id: TYPE_ID, label: 'Unsaved edit' });
+    });
+
+    await waitFor(() => expect(api.previewDraft).toHaveBeenCalled());
+    await waitFor(() => expect(result.current.error).toBeInstanceOf(InventoryApiError));
+
+    expect(result.current.readiness).toEqual({ status: 'not_previewed' });
+    expect(api.patchDraft).not.toHaveBeenCalled();
   });
 });

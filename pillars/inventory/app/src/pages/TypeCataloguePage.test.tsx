@@ -547,4 +547,106 @@ describe('TypeCataloguePage', () => {
     expect(await screen.findByText('inventory API returned no data')).toBeInTheDocument();
     expect(screen.getByDisplayValue('Retry me')).toBeInTheDocument();
   });
+
+  it('surfaces structured validation issues and preserves the unsaved edit', async () => {
+    api.readDraft.mockResolvedValue({ data: draft(), error: undefined });
+    api.patchDraft.mockRejectedValue(
+      new InventoryApiError('Catalogue validation failed', 400, 'catalogue_invalid', [
+        {
+          code: 'fixed_unit_required',
+          definitionId: FIELD_ID,
+          message: 'Fixed unit is required',
+          path: 'fixedUnit',
+        },
+      ])
+    );
+    renderPage();
+
+    await screen.findByDisplayValue('Electronics');
+    fireEvent.change(screen.getByLabelText('Type label'), {
+      target: { value: 'Invalid edit kept' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save type' }));
+
+    expect(await screen.findByText('Catalogue validation failed')).toBeInTheDocument();
+    expect(screen.getByText('Fixed unit is required')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Invalid edit kept')).toBeInTheDocument();
+    expect(toasts.success).not.toHaveBeenCalled();
+  });
+
+  it('refuses to publish a draft the preview marks forbidden', async () => {
+    api.readDraft.mockResolvedValue({ data: draft(), error: undefined });
+    api.patchDraft.mockResolvedValue({
+      data: {
+        compatibility: {
+          affectedIds: [FIELD_ID],
+          affectedItems: 3,
+          changes: [
+            { classification: 'forbidden', code: 'field_kind_changed', definitionId: FIELD_ID },
+          ],
+          classification: 'forbidden',
+        },
+        draft: draft(published.types, 2),
+      },
+      error: undefined,
+    });
+    renderPage();
+
+    await screen.findByDisplayValue('Electronics');
+    fireEvent.change(screen.getByLabelText('Type label'), {
+      target: { value: 'Destructive edit' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save type' }));
+
+    await waitFor(() => expect(api.patchDraft).toHaveBeenCalled());
+    expect((await screen.findAllByText('Forbidden')).length).toBeGreaterThan(0);
+    expect(screen.getByRole('button', { name: 'Review and publish' })).toBeDisabled();
+    expect(
+      screen.getByText(
+        /cannot publish without replacing the incompatible definition or supplying the explicit named migration/u
+      )
+    ).toBeInTheDocument();
+  });
+
+  it('edits an existing field end to end', async () => {
+    api.readDraft.mockResolvedValue({ data: draft(), error: undefined });
+    api.patchDraft.mockResolvedValue({
+      data: {
+        compatibility: compatibleResult,
+        draft: draft([
+          {
+            ...published.types[0]!,
+            fields: [{ ...published.types[0]!.fields[0]!, label: 'Manufacturer name' }],
+          },
+        ]),
+      },
+      error: undefined,
+    });
+    renderPage();
+
+    await screen.findAllByText('Electronics');
+    fireEvent.click(screen.getByRole('button', { name: 'Continue to fields' }));
+    fireEvent.click(await screen.findByText('Manufacturer'));
+    fireEvent.change(screen.getByLabelText('Field label'), {
+      target: { value: 'Manufacturer name' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save field' }));
+
+    await waitFor(() =>
+      expect(api.patchDraft).toHaveBeenCalledWith(
+        expect.objectContaining({
+          body: expect.objectContaining({
+            operations: [
+              expect.objectContaining({
+                kind: 'put_field',
+                id: FIELD_ID,
+                label: 'Manufacturer name',
+              }),
+            ],
+          }),
+        })
+      )
+    );
+    expect((await screen.findAllByText('Manufacturer name')).length).toBeGreaterThan(0);
+  });
 });

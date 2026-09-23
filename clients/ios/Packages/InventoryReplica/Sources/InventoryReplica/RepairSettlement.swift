@@ -192,9 +192,12 @@ internal enum RepairSettlement {
     private static func isAlreadyOnServer(_ entry: LogEntry, in db: Database) throws -> Bool {
         guard case .command = entry.command else { return false }
         var unchanged = false
-        let catalogue = try SyncMeta.read(db).searchCatalogue(in: db)
+        // This savepoint always rolls back, so the reindex `resetView` performs as part of
+        // materializing the view row never reaches disk: there is nothing for a catalogue to
+        // improve here, and reading one just to discard it invites the protocol-1-only bug this
+        // call site once had (POPS-4433).
         try db.inSavepoint {
-            try MutationLogReplay.resetView(entry.entity, catalogue: catalogue, in: db)
+            try MutationLogReplay.resetView(entry.entity, catalogue: nil, in: db)
             do {
                 let application = try LocalReducer.apply(
                     entry.command, primary: entry.entity,
