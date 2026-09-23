@@ -12,6 +12,7 @@ type CatalogueShape = {
       audit: (input: { before?: number; limit?: number }) => unknown;
     };
     manage: {
+      readDraft: () => unknown;
       createDraft: (input: { baseRevision: number }) => unknown;
       patchDraft: (input: {
         revision: number;
