@@ -168,6 +168,68 @@ internal struct PurchaseStagingModelTests {
         #expect(model.everyPage.map(\.id) == ["a", "b"])
     }
 
+    @Test("a supported file resolves into staging and clears its pending tile")
+    func supportedFile() async {
+        let model = PurchaseStagingModel()
+        let data = Data("Coffee 4.50".utf8)
+
+        await model.addFromFileURLs([
+            (URL(fileURLWithPath: "/picked/receipt.txt"), data)
+        ])
+
+        #expect(model.pending.isEmpty)
+        #expect(model.loose.count == 1)
+        #expect(model.loose[0].label == "receipt.txt")
+        #expect(model.loose[0].part == ReceiptPart(mediaType: .plainText, data: data))
+    }
+
+    @Test("an unsupported file remains failed without changing staging")
+    func unsupportedFile() async {
+        let model = PurchaseStagingModel()
+
+        await model.addFromFileURLs([
+            (URL(fileURLWithPath: "/picked/receipt.docx"), Data([1, 2, 3]))
+        ])
+
+        #expect(model.isEmpty)
+        #expect(model.pending.count == 1)
+        #expect(model.pending[0].label == "receipt.docx")
+        #expect(model.pending[0].phase == .failed(reason: .unsupportedType))
+    }
+
+    @Test("removing a pending item leaves its siblings")
+    func removePending() {
+        let model = PurchaseStagingModel(
+            receipts: [],
+            pending: [
+                PendingStagedItem(id: "first", label: "first", phase: .loading),
+                PendingStagedItem(
+                    id: "second", label: "second", phase: .failed(reason: .unreadable)),
+            ])
+
+        model.removePending("first")
+
+        #expect(model.pending.map(\.id) == ["second"])
+    }
+
+    @Test("Read waits for staged content and loading conversions")
+    func canRead() {
+        let empty = PurchaseStagingModel()
+        let loading = PurchaseStagingModel(
+            receipts: [receipt("ready", ["page"])],
+            pending: [PendingStagedItem(id: "loading", label: "loading", phase: .loading)])
+        let failed = PurchaseStagingModel(
+            receipts: [receipt("ready", ["page"])],
+            pending: [
+                PendingStagedItem(
+                    id: "failed", label: "failed", phase: .failed(reason: .unreadable))
+            ])
+
+        #expect(!empty.canRead)
+        #expect(!loading.canRead)
+        #expect(failed.canRead)
+    }
+
     private func model(_ receipts: [StagedReceipt]) -> PurchaseStagingModel {
         PurchaseStagingModel(receipts: receipts)
     }

@@ -84,6 +84,7 @@ internal struct PurchaseStagingGrid: View {
             Text(ReceiptCaptureCopy.message(for: problem))
         }
         .popsMotion(value: model.receipts)
+        .popsMotion(value: model.pending)
         .popsMotion(value: targeted)
         .tint(.popsPurchases)
         .accessibilityIdentifier(PurchaseStagingAccessibility.root)
@@ -92,7 +93,7 @@ internal struct PurchaseStagingGrid: View {
     private var readButton: some View {
         Button("Read", action: onRead)
             .popsProminentGlassButton()
-            .disabled(model.isEmpty)
+            .disabled(!model.canRead)
             .accessibilityIdentifier(PurchaseStagingAccessibility.read)
     }
 
@@ -137,6 +138,12 @@ extension PurchaseStagingGrid {
             ForEach(model.loose) { page in
                 tile(page, width: tileWidth, caption: page.label)
                     .transition(.scale(scale: 0.9).combined(with: .opacity))
+            }
+            ForEach(model.pending) { item in
+                StagedPendingTile(item: item, width: tileWidth) {
+                    model.removePending(item.id)
+                }
+                .transition(.scale(scale: 0.9).combined(with: .opacity))
             }
         }
         .frame(maxWidth: .infinity, minHeight: looseMinimumHeight, alignment: .topLeading)
