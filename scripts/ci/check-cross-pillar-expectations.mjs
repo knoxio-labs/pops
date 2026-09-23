@@ -499,6 +499,17 @@ export const EXPECTATIONS = [
   {
     consumer: 'bfm',
     producer: 'inventory',
+    operationId: 'types.read.catalogue',
+    path: '/type-catalogue',
+    method: 'get',
+    // The exact immutable revision is the consistency boundary for applying
+    // protocol-2 item pages on the phone.
+    query: ['revision'],
+    usedBy: 'pillars/bfm/src/api/inventory/client.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'inventory',
     operationId: 'sync.snapshot',
     path: '/sync/snapshot',
     method: 'get',
