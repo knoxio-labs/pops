@@ -50,9 +50,15 @@ function formatRateLimited(
   failure: Extract<CallResult<unknown>, { kind: 'rate-limited' }>
 ): string {
   if (failure.retryAfterSeconds === undefined) {
-    return `Pillar '${failure.pillar}' is rate-limiting this request. Try again shortly.`;
+    return appendProducerDiagnostics(
+      `Pillar '${failure.pillar}' is rate-limiting this request. Try again shortly.`,
+      failure
+    );
   }
-  return `Pillar '${failure.pillar}' is rate-limiting this request. Try again in ${String(failure.retryAfterSeconds)}s.`;
+  return appendProducerDiagnostics(
+    `Pillar '${failure.pillar}' is rate-limiting this request. Try again in ${String(failure.retryAfterSeconds)}s.`,
+    failure
+  );
 }
 
 /** The failure kinds that only ever need the message-or-fallback treatment. */
@@ -62,7 +68,20 @@ function formatSimpleFailure(
     { kind: 'not-found' | 'conflict' | 'bad-request' | 'unauthorized' | 'refused' }
   >
 ): string {
-  return failure.message ?? `Pillar '${failure.pillar}' ${MESSAGE_FALLBACK[failure.kind]}.`;
+  const message =
+    failure.message ?? `Pillar '${failure.pillar}' ${MESSAGE_FALLBACK[failure.kind]}.`;
+  return appendProducerDiagnostics(message, failure);
+}
+
+function appendProducerDiagnostics(
+  message: string,
+  failure: { code?: string; details?: Record<string, unknown> }
+): string {
+  if (!failure.code && !failure.details) return message;
+  return `${message}\n${JSON.stringify({
+    ...(failure.code ? { code: failure.code } : {}),
+    ...failure.details,
+  })}`;
 }
 
 export function reqStr(args: Record<string, unknown>, key: string): string | null {

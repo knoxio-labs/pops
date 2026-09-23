@@ -37,6 +37,57 @@ describe('inventory catalogue reads', () => {
 });
 
 describe('inventory catalogue draft management', () => {
+  it('advertises the complete discriminated operation and migration schemas', () => {
+    expect(tool('inventory.catalogue.patchDraft').inputSchema).toMatchObject({
+      properties: {
+        revision: { type: 'integer', minimum: 1 },
+        operations: {
+          items: {
+            oneOf: [
+              { properties: { kind: { const: 'put_type' } }, required: ['kind'] },
+              {
+                properties: { kind: { const: 'put_field' }, typeId: { format: 'uuid' } },
+                required: ['kind', 'typeId'],
+              },
+              {
+                properties: { kind: { const: 'put_enum_option' }, fieldId: { format: 'uuid' } },
+                required: ['kind', 'fieldId'],
+              },
+              {
+                properties: {
+                  kind: { enum: ['archive_type', 'archive_field', 'archive_enum_option'] },
+                },
+              },
+              {
+                properties: { kind: { const: 'reorder' } },
+                required: ['kind', 'definition', 'ids'],
+              },
+            ],
+          },
+        },
+      },
+    });
+    expect(tool('inventory.catalogue.publishDraft').inputSchema).toMatchObject({
+      properties: {
+        minimumProtocol: { type: 'integer', minimum: 1 },
+        migration: {
+          properties: {
+            steps: {
+              items: {
+                oneOf: expect.arrayContaining([
+                  expect.objectContaining({
+                    properties: expect.objectContaining({ kind: { const: 'convert_decimal' } }),
+                    required: ['kind', 'fromFieldId', 'toFieldId', 'factor'],
+                  }),
+                ]),
+              },
+            },
+          },
+        },
+      },
+    });
+  });
+
   it('reads the current draft for recovery without inventing a revision', async () => {
     const result = await tool('inventory.catalogue.readDraft').handler({});
 
@@ -138,6 +189,17 @@ describe('inventory catalogue draft management', () => {
       revision: 5,
       baseRevision: 4,
       migration: 'rename_voltage',
+    });
+
+    expect(result.isError).toBe(true);
+    expect(types.manage.publishDraft).not.toHaveBeenCalled();
+  });
+
+  it('rejects a fractional minimum protocol before calling inventory', async () => {
+    const result = await tool('inventory.catalogue.publishDraft').handler({
+      revision: 5,
+      baseRevision: 4,
+      minimumProtocol: 1.5,
     });
 
     expect(result.isError).toBe(true);

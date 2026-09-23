@@ -49,15 +49,21 @@ export type CallSuccess<T> = { kind: 'ok'; value: T };
  * `Retry-After` when the producer sent one) rather than a caller's guess.
  */
 /**
- * The producer's own error code, from its `{ message, code? }` envelope
+ * The producer's own error code and structured diagnostics from its error envelope
  * (see `rest-call.ts`'s `mapHttpFailure`). Optional: a producer's envelope
- * may carry no `code`, or none at all when the body was not JSON.
+ * may carry neither, or no usable envelope at all when the body was not JSON.
  *
  * Lets a consumer tell two failures of the same `kind` apart by a stable
  * machine token instead of parsing the producer's human-readable `message`
  * — e.g. bfm's `PATCH /mobile/purchases/:id` needs to distinguish a stale
  * save from a locked field, both of which arrive as `kind: 'conflict'`.
  */
+type ProducerFailureDetails = {
+  message?: string;
+  code?: string;
+  details?: Record<string, unknown>;
+};
+
 export type CallFailure =
   | { kind: 'unavailable'; pillar: string }
   | { kind: 'degraded'; pillar: string; reason: 'reconciling' }
@@ -68,18 +74,16 @@ export type CallFailure =
       actual?: string;
       message?: string;
     }
-  | { kind: 'not-found'; pillar: string; message?: string; code?: string }
-  | { kind: 'conflict'; pillar: string; message?: string; code?: string }
-  | { kind: 'bad-request'; pillar: string; message?: string; code?: string }
-  | { kind: 'unauthorized'; pillar: string; message?: string; code?: string }
-  | { kind: 'refused'; pillar: string; status: number; message?: string; code?: string }
-  | {
+  | ({ kind: 'not-found'; pillar: string } & ProducerFailureDetails)
+  | ({ kind: 'conflict'; pillar: string } & ProducerFailureDetails)
+  | ({ kind: 'bad-request'; pillar: string } & ProducerFailureDetails)
+  | ({ kind: 'unauthorized'; pillar: string } & ProducerFailureDetails)
+  | ({ kind: 'refused'; pillar: string; status: number } & ProducerFailureDetails)
+  | ({
       kind: 'rate-limited';
       pillar: string;
       retryAfterSeconds?: number;
-      message?: string;
-      code?: string;
-    };
+    } & ProducerFailureDetails);
 
 export type CallResult<T> = CallSuccess<T> | CallFailure;
 
