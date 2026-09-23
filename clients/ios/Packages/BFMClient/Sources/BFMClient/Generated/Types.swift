@@ -22131,6 +22131,8 @@ internal enum Operations {
                         internal typealias LocationsPayload = [Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.LocationsPayloadPayload]
                         /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/locations`.
                         internal var locations: Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.LocationsPayload
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/minimumProtocol`.
+                        internal var minimumProtocol: Swift.Int
                         /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/nextSince`.
                         internal var nextSince: Swift.Int
                         /// Creates a new `JsonPayload`.
@@ -22143,6 +22145,7 @@ internal enum Operations {
                         ///   - hasMore:
                         ///   - items:
                         ///   - locations:
+                        ///   - minimumProtocol:
                         ///   - nextSince:
                         internal init(
                             catalogueRevision: Swift.Int? = nil,
@@ -22152,6 +22155,7 @@ internal enum Operations {
                             hasMore: Swift.Bool,
                             items: Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayload,
                             locations: Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.LocationsPayload,
+                            minimumProtocol: Swift.Int,
                             nextSince: Swift.Int
                         ) {
                             self.catalogueRevision = catalogueRevision
@@ -22161,6 +22165,7 @@ internal enum Operations {
                             self.hasMore = hasMore
                             self.items = items
                             self.locations = locations
+                            self.minimumProtocol = minimumProtocol
                             self.nextSince = nextSince
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -22171,6 +22176,7 @@ internal enum Operations {
                             case hasMore
                             case items
                             case locations
+                            case minimumProtocol
                             case nextSince
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
@@ -22203,6 +22209,10 @@ internal enum Operations {
                                 Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.LocationsPayload.self,
                                 forKey: .locations
                             )
+                            self.minimumProtocol = try container.decode(
+                                Swift.Int.self,
+                                forKey: .minimumProtocol
+                            )
                             self.nextSince = try container.decode(
                                 Swift.Int.self,
                                 forKey: .nextSince
@@ -22215,6 +22225,7 @@ internal enum Operations {
                                 "hasMore",
                                 "items",
                                 "locations",
+                                "minimumProtocol",
                                 "nextSince"
                             ])
                         }
@@ -24781,6 +24792,8 @@ internal enum Operations {
                         internal typealias LocationsPayload = [Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.LocationsPayloadPayload]
                         /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/locations`.
                         internal var locations: Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.LocationsPayload
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/minimumProtocol`.
+                        internal var minimumProtocol: Swift.Int
                         /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/nextCursor`.
                         internal var nextCursor: Swift.String?
                         /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/total`.
@@ -24794,6 +24807,7 @@ internal enum Operations {
                         ///   - highWaterSeq:
                         ///   - items:
                         ///   - locations:
+                        ///   - minimumProtocol:
                         ///   - nextCursor:
                         ///   - total:
                         internal init(
@@ -24803,6 +24817,7 @@ internal enum Operations {
                             highWaterSeq: Swift.Int,
                             items: Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayload,
                             locations: Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.LocationsPayload,
+                            minimumProtocol: Swift.Int,
                             nextCursor: Swift.String? = nil,
                             total: Swift.Int
                         ) {
@@ -24812,6 +24827,7 @@ internal enum Operations {
                             self.highWaterSeq = highWaterSeq
                             self.items = items
                             self.locations = locations
+                            self.minimumProtocol = minimumProtocol
                             self.nextCursor = nextCursor
                             self.total = total
                         }
@@ -24822,6 +24838,7 @@ internal enum Operations {
                             case highWaterSeq
                             case items
                             case locations
+                            case minimumProtocol
                             case nextCursor
                             case total
                         }
@@ -24851,6 +24868,10 @@ internal enum Operations {
                                 Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.LocationsPayload.self,
                                 forKey: .locations
                             )
+                            self.minimumProtocol = try container.decode(
+                                Swift.Int.self,
+                                forKey: .minimumProtocol
+                            )
                             self.nextCursor = try container.decodeIfPresent(
                                 Swift.String.self,
                                 forKey: .nextCursor
@@ -24866,6 +24887,7 @@ internal enum Operations {
                                 "highWaterSeq",
                                 "items",
                                 "locations",
+                                "minimumProtocol",
                                 "nextCursor",
                                 "total"
                             ])

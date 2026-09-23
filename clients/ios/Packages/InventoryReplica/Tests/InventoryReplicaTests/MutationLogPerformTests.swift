@@ -118,4 +118,37 @@ internal struct MutationLogPerformTests {
         }
         #expect(try replica.read(.item(id: "lamp"))?.quantity.count == 2)
     }
+
+    /// LocalReducer resolves its own reindexing catalogue at init from
+    /// SyncMeta.searchCatalogue(in:), the same call MutationLogReplay.rebase
+    /// makes; a regression back to storedCatalogue() (protocol 1, never
+    /// written for a protocol-2 replica) would wipe this item's type-label
+    /// search text here without touching the feed-rebase path at all.
+    @Test("a local command keeps the item's type-label search text under a protocol-2 catalogue")
+    func performKeepsProtocol2TypeLabel() throws {
+        let typeId = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee"
+        let replica = try InventoryReplica()
+        let catalogue = InventoryCatalogueSnapshot(
+            revision: InventoryCatalogueRevision(revision: 1, minimumProtocol: 2),
+            types: [
+                InventoryCatalogueType(id: typeId, key: "widget", label: "Widget", sortOrder: 0)
+            ]
+        )
+        let item = InventoryItem(
+            id: "thing-1", revision: 1, seq: 1, name: "Distinct Item", typeId: typeId,
+            typeKey: "widget", placement: .hand, createdAt: Fixture.created,
+            updatedAt: Fixture.created)
+        let page = InventorySnapshotPage(
+            epoch: Fixture.epoch, highWaterSeq: 10, catalogueVersion: "catalogue-1", total: 1,
+            items: [item], locations: [Fixture.location("hall")], nextCursor: nil,
+            catalogueRevision: 1)
+        try replica.apply(page, catalogue: catalogue)
+        #expect(try replica.ids(.search("Widget")) == ["thing-1"])
+
+        _ = try replica.perform(
+            .moveItem(id: "thing-1", to: .location("hall"), verb: .move), mutationId: "m1",
+            clientTime: Self.time)
+
+        #expect(try replica.ids(.search("Widget")) == ["thing-1"])
+    }
 }

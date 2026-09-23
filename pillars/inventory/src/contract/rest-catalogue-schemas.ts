@@ -107,6 +107,13 @@ export const CatalogueItemValidationResultSchema = z.object({
   fieldValues: z.array(CatalogueItemFieldValueSchema),
 });
 
+/** Persistent rollout state shared by catalogue publication and sync admission. */
+export const ProtocolRolloutStateSchema = z.object({
+  minimumProtocol: z.number().int().positive(),
+  supportedProtocol: z.number().int().positive(),
+  catalogueMinimumProtocol: z.number().int().positive(),
+});
+
 const CatalogueCompatibilityChangeSchema = z.object({
   classification: z.enum(['compatible', 'protocol_gated', 'migration_required', 'forbidden']),
   definitionId: z.string(),

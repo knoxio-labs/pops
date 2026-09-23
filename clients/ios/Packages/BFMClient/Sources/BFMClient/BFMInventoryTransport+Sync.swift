@@ -17,6 +17,7 @@ extension BFMInventoryTransport {
             let payload = try ok.body.json
             return InventorySnapshotPage(
                 epoch: payload.epoch, highWaterSeq: payload.highWaterSeq,
+                minimumProtocol: payload.minimumProtocol,
                 catalogueVersion: payload.catalogueVersion, total: payload.total,
                 items: try payload.items.map { try inventoryItem(from: $0, timeZone: timeZone()) },
                 locations: try payload.locations.map { try $0.inventoryLocation() },
@@ -79,6 +80,7 @@ extension BFMInventoryTransport {
             let payload = try ok.body.json
             return InventoryChangesPage(
                 epoch: payload.epoch,
+                minimumProtocol: payload.minimumProtocol,
                 items: try payload.items.map { try inventoryItem(from: $0, timeZone: timeZone()) },
                 locations: try payload.locations.map { try $0.inventoryLocation() },
                 events: try payload.events.map(inventoryEvent(from:)),

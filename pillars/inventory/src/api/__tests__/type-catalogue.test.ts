@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -364,6 +365,131 @@ describe('type catalogue owner API', () => {
         ],
       })
     );
+  });
+
+  it('activates a supported protocol before publishing its catalogue vocabulary', async () => {
+    const api = apiFor('web');
+    const current = await api.get('/type-catalogue');
+    const baseRevision = current.body.revision.revision as number;
+    const typeId = current.body.types[0].id as string;
+    const initialRollout = await api.get('/type-catalogue/protocol-rollout');
+    const draft = await api.post('/type-catalogue/drafts').send({ baseRevision });
+    const draftRevision = draft.body.revision.revision as number;
+
+    expect(initialRollout.body).toEqual({
+      minimumProtocol: 1,
+      supportedProtocol: 2,
+      catalogueMinimumProtocol: 1,
+    });
+
+    const premature = await api.post(`/type-catalogue/drafts/${draftRevision}/publish`).send({
+      baseRevision,
+      minimumProtocol: 2,
+      note: 'Protocol 2 vocabulary',
+      expectedDraftVersion: draft.body.revision.draftVersion,
+    });
+    const draftAfterRefusal = await api.get('/type-catalogue/drafts/current');
+
+    expect(premature.status).toBe(409);
+    expect(premature.body).toMatchObject({
+      code: 'protocol_rollout_required',
+      message: expect.stringContaining('Activate inventory protocol 2'),
+    });
+    expect(draftAfterRefusal.body.revision.minimumProtocol).toBe(1);
+
+    const unsupported = await api.post('/type-catalogue/protocol-rollout').send({
+      expectedMinimumProtocol: 1,
+      minimumProtocol: 3,
+    });
+    expect(unsupported.status).toBe(400);
+    expect(unsupported.body.code).toBe('protocol_not_supported');
+
+    const activated = await api.post('/type-catalogue/protocol-rollout').send({
+      expectedMinimumProtocol: 1,
+      minimumProtocol: 2,
+    });
+    expect(activated.body).toMatchObject({ minimumProtocol: 2, catalogueMinimumProtocol: 1 });
+
+    const staleActivation = await api.post('/type-catalogue/protocol-rollout').send({
+      expectedMinimumProtocol: 1,
+      minimumProtocol: 2,
+    });
+    const downgrade = await api.post('/type-catalogue/protocol-rollout').send({
+      expectedMinimumProtocol: 2,
+      minimumProtocol: 1,
+    });
+    expect(staleActivation.status).toBe(409);
+    expect(staleActivation.body.code).toBe('protocol_rollout_conflict');
+    expect(downgrade.status).toBe(409);
+    expect(downgrade.body.code).toBe('protocol_minimum_downgrade');
+
+    inventoryDb.raw.close();
+    inventoryDb = openInventoryDb(join(tmpDir, 'inventory.db'));
+    const restarted = apiFor('web');
+    const persistedRollout = await restarted.get('/type-catalogue/protocol-rollout');
+    expect(persistedRollout.body.minimumProtocol).toBe(2);
+
+    const protocol1 = await restarted.get('/types').set({ 'Pops-Inventory-Protocol': '1' });
+    const protocol2 = await restarted.get('/types').set({ 'Pops-Inventory-Protocol': '2' });
+    expect(protocol1.status).toBe(426);
+    expect(protocol1.body.code).toBe('client_too_old');
+    expect(protocol2.status).toBe(200);
+
+    const published = await restarted.post(`/type-catalogue/drafts/${draftRevision}/publish`).send({
+      baseRevision,
+      minimumProtocol: 2,
+      note: 'Protocol 2 vocabulary',
+      expectedDraftVersion: draft.body.revision.draftVersion,
+    });
+    expect(published.status).toBe(200);
+
+    const snapshot = await restarted.get('/sync/snapshot').set({ 'Pops-Inventory-Protocol': '2' });
+    expect(snapshot.body.minimumProtocol).toBe(2);
+
+    const mutationId = randomUUID();
+    const entityId = randomUUID();
+    const write = await restarted
+      .post('/sync/mutations')
+      .set({ 'Pops-Inventory-Protocol': '2' })
+      .send({
+        mutations: [
+          {
+            mutationId,
+            op: 'item.create',
+            entityId,
+            baseRevision: null,
+            catalogueRevision: draftRevision,
+            dependsOn: [],
+            clientTime: '2026-09-23T00:00:00.000Z',
+            args: {
+              item: {
+                name: 'Protocol 2 item',
+                typeId,
+                values: [],
+                placement: { kind: 'hand' },
+              },
+            },
+          },
+        ],
+      });
+    expect(write.status, JSON.stringify(write.body)).toBe(200);
+    expect(write.body.outcomes).toEqual([
+      expect.objectContaining({ mutationId, status: 'applied' }),
+    ]);
+
+    const changes = await restarted
+      .get('/sync/changes')
+      .set({ 'Pops-Inventory-Protocol': '2' })
+      .query({ since: 0, epoch: snapshot.body.epoch });
+    expect(changes.status).toBe(200);
+    expect(changes.body.minimumProtocol).toBe(2);
+
+    const finalRollout = await restarted.get('/type-catalogue/protocol-rollout');
+    expect(finalRollout.body).toEqual({
+      minimumProtocol: 2,
+      supportedProtocol: 2,
+      catalogueMinimumProtocol: 2,
+    });
   });
 
   it('reports when there is no draft to resume', async () => {

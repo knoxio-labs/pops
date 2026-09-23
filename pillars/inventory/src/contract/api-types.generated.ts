@@ -954,6 +954,24 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/type-catalogue/protocol-rollout': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Read the persistent protocol minimum governing catalogue publication and sync */
+    get: operations['types.manage.readProtocolRollout'];
+    put?: never;
+    /** Atomically raise the inventory sync protocol minimum before catalogue publication */
+    post: operations['types.manage.activateProtocolRollout'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/types': {
     parameters: {
       query?: never;
@@ -4928,6 +4946,7 @@ export interface operations {
               seq: number;
               sortOrder: number;
             }[];
+            minimumProtocol: number;
             nextSince: number;
           };
         };
@@ -5432,6 +5451,7 @@ export interface operations {
               seq: number;
               sortOrder: number;
             }[];
+            minimumProtocol: number;
             nextCursor: string | null;
             total: number;
           };
@@ -7206,6 +7226,142 @@ export interface operations {
       };
       /** @description 401 */
       401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            currentDraftVersion?: number;
+            issues?: {
+              code: string;
+              definitionId: string | null;
+              message: string;
+              path: string;
+            }[];
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'types.manage.readProtocolRollout': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            catalogueMinimumProtocol: number;
+            minimumProtocol: number;
+            supportedProtocol: number;
+          };
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            currentDraftVersion?: number;
+            issues?: {
+              code: string;
+              definitionId: string | null;
+              message: string;
+              path: string;
+            }[];
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'types.manage.activateProtocolRollout': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          expectedMinimumProtocol: number;
+          minimumProtocol: number;
+        };
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            catalogueMinimumProtocol: number;
+            minimumProtocol: number;
+            supportedProtocol: number;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            currentDraftVersion?: number;
+            issues?: {
+              code: string;
+              definitionId: string | null;
+              message: string;
+              path: string;
+            }[];
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            currentDraftVersion?: number;
+            issues?: {
+              code: string;
+              definitionId: string | null;
+              message: string;
+              path: string;
+            }[];
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
         headers: {
           [name: string]: unknown;
         };

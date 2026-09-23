@@ -1,6 +1,7 @@
 import { eq, max } from 'drizzle-orm';
 
-import { events, syncMeta, type SyncMetaKey } from '../../db/index.js';
+import { events, syncMeta } from '../../db/index.js';
+import { readMinimumProtocol } from '../../protocol/rollout.js';
 
 import type { CommandDb } from '../../domain/commands/index.js';
 
@@ -12,26 +13,18 @@ export interface SyncState {
   readonly maxSeq: number;
 }
 
-function requireMeta(db: CommandDb, key: SyncMetaKey): string {
-  const row = db.select().from(syncMeta).where(eq(syncMeta.key, key)).get();
-  if (!row) throw new Error(`sync_meta has no ${key}; migration 0012 seeds it`);
-  return row.value;
-}
-
 /** Read {@link SyncState}. A missing epoch is a broken database and throws. */
 export function readSyncState(db: CommandDb): SyncState {
   const latest = db
     .select({ seq: max(events.seq) })
     .from(events)
     .get();
-  return { epoch: requireMeta(db, 'epoch'), maxSeq: latest?.seq ?? 0 };
+  const epoch = db.select().from(syncMeta).where(eq(syncMeta.key, 'epoch')).get();
+  if (epoch === undefined) throw new Error('sync_meta has no epoch; migration 0012 seeds it');
+  return { epoch: epoch.value, maxSeq: latest?.seq ?? 0 };
 }
 
 /** The lowest `Pops-Inventory-Protocol` this server serves. */
 export function readMinProtocol(db: CommandDb): number {
-  const minProtocol = Number.parseInt(requireMeta(db, 'min_protocol'), 10);
-  if (!Number.isSafeInteger(minProtocol) || minProtocol < 1) {
-    throw new Error('sync_meta.min_protocol is not a positive integer');
-  }
-  return minProtocol;
+  return readMinimumProtocol(db);
 }

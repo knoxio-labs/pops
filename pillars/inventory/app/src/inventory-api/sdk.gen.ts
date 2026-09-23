@@ -180,6 +180,9 @@ import type {
   TypesManageAbandonDraftData,
   TypesManageAbandonDraftErrors,
   TypesManageAbandonDraftResponses,
+  TypesManageActivateProtocolRolloutData,
+  TypesManageActivateProtocolRolloutErrors,
+  TypesManageActivateProtocolRolloutResponses,
   TypesManageCreateDraftData,
   TypesManageCreateDraftErrors,
   TypesManageCreateDraftResponses,
@@ -195,6 +198,9 @@ import type {
   TypesManageReadDraftData,
   TypesManageReadDraftErrors,
   TypesManageReadDraftResponses,
+  TypesManageReadProtocolRolloutData,
+  TypesManageReadProtocolRolloutErrors,
+  TypesManageReadProtocolRolloutResponses,
   TypesReadAuditData,
   TypesReadAuditErrors,
   TypesReadAuditResponses,
@@ -1191,6 +1197,45 @@ export const typesReadValidateItem = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     url: '/type-catalogue/items/validate',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
+
+/**
+ * Read the persistent protocol minimum governing catalogue publication and sync
+ */
+export const typesManageReadProtocolRollout = <ThrowOnError extends boolean = false>(
+  options?: Options<TypesManageReadProtocolRolloutData, ThrowOnError>
+): RequestResult<
+  TypesManageReadProtocolRolloutResponses,
+  TypesManageReadProtocolRolloutErrors,
+  ThrowOnError
+> =>
+  (options?.client ?? client).get<
+    TypesManageReadProtocolRolloutResponses,
+    TypesManageReadProtocolRolloutErrors,
+    ThrowOnError
+  >({ url: '/type-catalogue/protocol-rollout', ...options });
+
+/**
+ * Atomically raise the inventory sync protocol minimum before catalogue publication
+ */
+export const typesManageActivateProtocolRollout = <ThrowOnError extends boolean = false>(
+  options?: Options<TypesManageActivateProtocolRolloutData, ThrowOnError>
+): RequestResult<
+  TypesManageActivateProtocolRolloutResponses,
+  TypesManageActivateProtocolRolloutErrors,
+  ThrowOnError
+> =>
+  (options?.client ?? client).post<
+    TypesManageActivateProtocolRolloutResponses,
+    TypesManageActivateProtocolRolloutErrors,
+    ThrowOnError
+  >({
+    url: '/type-catalogue/protocol-rollout',
     ...options,
     headers: {
       'Content-Type': 'application/json',

@@ -16,6 +16,7 @@ import {
 import { loadCatalogue } from '../../catalogue/index.js';
 import { readInventoryPrincipal } from '../middleware/identity.js';
 import { compatibilityBody, runCatalogue } from './type-catalogue-responses.js';
+import { makeProtocolRolloutHandlers } from './type-catalogue-rollout-handlers.js';
 import { validateCatalogueItemPayload } from './type-catalogue-validation.js';
 
 import type { ServerInferRequest } from '@ts-rest/core';
@@ -100,6 +101,9 @@ function makeTypeCatalogueReadHandlers(db: CommandDb) {
 
 function makeTypeCatalogueManageHandlers(db: CommandDb) {
   return {
+    ...makeProtocolRolloutHandlers(db, (response) => {
+      requireAuthor(response, 'manage');
+    }),
     readDraft: ({ res }: TypesRequest['manage']['readDraft'] & { res: Response }) =>
       runCatalogue(() => {
         requireAuthor(res, 'manage');
