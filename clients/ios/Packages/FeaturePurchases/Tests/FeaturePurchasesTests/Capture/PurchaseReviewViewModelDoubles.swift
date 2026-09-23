@@ -83,3 +83,46 @@ internal actor ReviewWriteRepository: ReceiptCaptureRepository {
         return try results[call - 1].get()
     }
 }
+
+extension PurchaseReviewViewModelTests {
+    func makeModel(
+        _ entries: [ReviewEntry],
+        repository: ReviewWriteRepository,
+        keys: KeySequence = KeySequence()
+    ) -> PurchaseReviewViewModel {
+        PurchaseReviewViewModel(
+            entries: entries, repository: repository, makeIdempotencyKey: keys.next)
+    }
+
+    func entry(
+        id: String,
+        origin: ReviewOrigin = .read,
+        flagged: Bool = false,
+        saveable: Bool = true
+    ) -> ReviewEntry {
+        let reading = ReceiptDraftReading(
+            receiptUris: ["pops://purchases/receipt/\(id)"],
+            reconciled: !flagged,
+            failures: flagged ? [.fake()] : [],
+            extracted: .fake(),
+            capture: nil,
+            matchedMerchantEntityID: "merchant-1")
+        var draft = ReceiptDraftPresentation().draft(
+            extracted: reading.extracted,
+            failures: reading.failures,
+            matchedMerchantID: reading.matchedMerchantEntityID)
+        if !saveable { draft.total.value = "" }
+        return ReviewEntry(
+            id: id,
+            draft: draft,
+            origin: origin,
+            reading: origin == .read ? reading : nil,
+            status: flagged
+                ? ReceiptDraftView.Status(
+                    tone: .warning,
+                    heading: PurchaseReviewCopy.needsReviewHeading,
+                    message: PurchaseReviewCopy.needsReviewMessage)
+                : nil,
+            parts: [.fake()])
+    }
+}
