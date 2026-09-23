@@ -34863,6 +34863,8 @@ internal enum Operations {
                                 internal var quantity: Swift.Int
                                 /// - Remark: Generated from `#/paths/mobile/purchases/search/GET/responses/200/content/json/HitsPayload/case2/status`.
                                 internal var status: Swift.String
+                                /// - Remark: Generated from `#/paths/mobile/purchases/search/GET/responses/200/content/json/HitsPayload/case2/totalCents`.
+                                internal var totalCents: Swift.Int
                                 /// Creates a new `Case2Payload`.
                                 ///
                                 /// - Parameters:
@@ -34878,6 +34880,7 @@ internal enum Operations {
                                 ///   - purchaseId:
                                 ///   - quantity:
                                 ///   - status:
+                                ///   - totalCents:
                                 internal init(
                                     currency: Swift.String,
                                     id: Swift.String,
@@ -34890,7 +34893,8 @@ internal enum Operations {
                                     orderedOn: Swift.String,
                                     purchaseId: Swift.String,
                                     quantity: Swift.Int,
-                                    status: Swift.String
+                                    status: Swift.String,
+                                    totalCents: Swift.Int
                                 ) {
                                     self.currency = currency
                                     self.id = id
@@ -34904,6 +34908,7 @@ internal enum Operations {
                                     self.purchaseId = purchaseId
                                     self.quantity = quantity
                                     self.status = status
+                                    self.totalCents = totalCents
                                 }
                                 internal enum CodingKeys: String, CodingKey {
                                     case currency
@@ -34918,6 +34923,7 @@ internal enum Operations {
                                     case purchaseId
                                     case quantity
                                     case status
+                                    case totalCents
                                 }
                                 internal init(from decoder: any Swift.Decoder) throws {
                                     let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -34969,6 +34975,10 @@ internal enum Operations {
                                         Swift.String.self,
                                         forKey: .status
                                     )
+                                    self.totalCents = try container.decode(
+                                        Swift.Int.self,
+                                        forKey: .totalCents
+                                    )
                                     try decoder.ensureNoAdditionalProperties(knownKeys: [
                                         "currency",
                                         "id",
@@ -34981,7 +34991,8 @@ internal enum Operations {
                                         "orderedOn",
                                         "purchaseId",
                                         "quantity",
-                                        "status"
+                                        "status",
+                                        "totalCents"
                                     ])
                                 }
                             }

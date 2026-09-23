@@ -138,6 +138,8 @@ describe('the line-item adapter', () => {
     // Without this the hit is unreachable: the pillar's only item route is
     // scoped under its order.
     expect(itemHit?.data['purchaseId']).toBe(id);
+    expect(itemHit?.data['totalCents']).toBe(5678);
+    expect(itemHit?.data['totalCents']).not.toBe(itemHit?.data['lineTotalCents']);
   });
 
   it('finds a line by sku when the name does not match', () => {

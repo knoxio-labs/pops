@@ -37,6 +37,7 @@ It also holds a service-account credential and one way to spend it — see
 | `GET /mobile/finance/transactions`     | One cursor-paginated page of list rows — see [The mobile shape](#the-mobile-shape).          |
 | `GET /mobile/finance/transactions/:id` | The fuller record behind one row, for the detail screen.                                     |
 | `GET /mobile/purchases`                | One cursor-paginated page of purchase list rows — see [The mobile shape](#the-mobile-shape). |
+| `GET /mobile/purchases/search`         | Purchase and line matches, including the owning order context for each line.                 |
 | `GET /mobile/purchases/:id`            | One order with its lines and Inventory-link flags, for the detail screen.                    |
 | `POST /mobile/purchases/receipts`      | Hands a captured receipt to `purchases` — see [The mobile write](#the-mobile-write).         |
 | `/mobile/*`                            | Everything the phone calls, gated by `requireDevice` and then `requireCapability`.           |
@@ -344,6 +345,11 @@ purchase document URIs in the order purchases returns them, or an empty array
 when there are none. The detail's `receiptUri` remains the first entry, or
 `null`, for installed clients that still decode the single-receipt field.
 Detail renderers use `receiptUris`; list rows retain their single thumbnail URI.
+
+**A line search hit carries two totals.** `lineTotalCents` is the matched
+line's amount; `totalCents` is the owning order's total. BFM projects both
+from the purchases result because the phone opens the line in its order
+context, and substituting the line amount would make that context false.
 
 **The date is a day, not an instant.** `orderedOn` is `YYYY-MM-DD`, derived by
 bfm from the offset the order's own `orderedAt` carries. That is deliberate and

@@ -3709,6 +3709,7 @@ export type MobilePurchasesSearchPurchasesResponses = {
           purchaseId: string;
           quantity: number;
           status: string;
+          totalCents: number;
         }
     >;
   };
