@@ -113,7 +113,9 @@ internal final class InventoryItemFormModel {
 
     /// Whether Cancel has something to lose and so asks first.
     internal var hasStagedWork: Bool {
-        mode == .create ? draft.hasStagedWork : !commands.isEmpty
+        mode == .create
+            ? draft.hasStagedWork || protocol2Draft?.hasStagedWork == true
+            : !commands.isEmpty
     }
 
     /// "No type yet" is offered to a new item and to one stored untyped;
@@ -253,7 +255,11 @@ extension InventoryItemFormModel {
         switch request {
         case .create:
             draft.placementName = context.placementName
-            if let catalogue = context.protocol2Catalogue, let type = catalogue.types.first {
+            if let catalogue = context.protocol2Catalogue {
+                guard let type = catalogue.types.first(where: { $0.archivedAt == nil }) else {
+                    phase = .unavailable
+                    return
+                }
                 protocol2Draft = .init(
                     type: type, catalogueRevision: catalogue.revision.revision)
             }

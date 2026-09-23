@@ -83,6 +83,77 @@ internal struct InventoryProtocol2ItemFormTests {
         #expect(item.typeKey == "cable")
     }
 
+    @Test("create starts from the first active type and never writes an archived type")
+    func createSkipsArchivedType() async {
+        let archived = InventoryCatalogueType(
+            id: "archived", key: "archived", label: "Archived", sortOrder: 0,
+            archivedAt: "2026-09-01")
+        let active = Self.type(field: Self.field())
+        let store = RecordingFormStore(
+            FormFixtureSource(
+                protocol2Catalogue: InventoryCatalogueSnapshot(
+                    revision: InventoryCatalogueRevision(revision: 3, minimumProtocol: 2),
+                    types: [archived, active])))
+        let form = InventoryItemFormModel(
+            request: .create(placement: nil), store: store, suggester: .unbound)
+        let loading = await form.startAndAwaitReady()
+        defer { loading.cancel() }
+
+        #expect(form.protocol2Draft?.typeId == active.id)
+        form.selectProtocol2Type(archived.id)
+        #expect(form.protocol2Draft?.typeId == active.id)
+    }
+
+    @Test("create is unavailable when the catalogue has no active type")
+    func createWithNoActiveType() async {
+        let archived = InventoryCatalogueType(
+            id: "archived", key: "archived", label: "Archived", sortOrder: 0,
+            archivedAt: "2026-09-01")
+        let store = RecordingFormStore(
+            FormFixtureSource(
+                protocol2Catalogue: InventoryCatalogueSnapshot(
+                    revision: InventoryCatalogueRevision(revision: 3, minimumProtocol: 2),
+                    types: [archived])))
+        let form = InventoryItemFormModel(
+            request: .create(placement: nil), store: store, suggester: .unbound)
+        let loading = await form.startAndAwaitReady()
+        defer { loading.cancel() }
+
+        #expect(form.phase == .unavailable)
+        form.draft.name = "Cable"
+        #expect(await form.submit() == false)
+        #expect(store.performed.isEmpty)
+    }
+
+    @Test("generic field and type edits make a create draft worth preserving")
+    func protocol2WorkParticipatesInDiscardProtection() async throws {
+        let field = Self.field()
+        let first = Self.type(field: field)
+        let second = InventoryCatalogueType(
+            id: "second", key: "second", label: "Second", sortOrder: 1)
+        let store = RecordingFormStore(
+            FormFixtureSource(
+                protocol2Catalogue: InventoryCatalogueSnapshot(
+                    revision: InventoryCatalogueRevision(revision: 3, minimumProtocol: 2),
+                    types: [first, second])))
+        let form = InventoryItemFormModel(
+            request: .create(placement: nil), store: store, suggester: .unbound)
+        let loading = await form.startAndAwaitReady()
+        defer { loading.cancel() }
+
+        #expect(!form.hasStagedWork)
+        let entry = try #require(form.protocol2Draft?.draftEntries(for: field).first)
+        form.protocol2Draft?.setText("USB-C", entryId: entry.id, for: field)
+        #expect(form.hasStagedWork)
+
+        let fresh = InventoryItemFormModel(
+            request: .create(placement: nil), store: store, suggester: .unbound)
+        let freshLoading = await fresh.startAndAwaitReady()
+        defer { freshLoading.cancel() }
+        fresh.selectProtocol2Type(second.id)
+        #expect(fresh.hasStagedWork)
+    }
+
     private static func type(field: InventoryCatalogueField) -> InventoryCatalogueType {
         InventoryCatalogueType(
             id: "type-id", key: "cable", label: "Cable", sortOrder: 0, fields: [field])

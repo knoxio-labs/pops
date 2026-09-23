@@ -9,6 +9,7 @@ internal struct InventoryProtocol2Draft: Hashable, Sendable {
     internal var entries: [String: [InventoryProtocol2DraftEntry]]
     internal var computed: [String: InventoryFieldValueState]
     internal var touched: Set<String>
+    internal var typeSelectionChanged = false
 
     internal init(
         type: InventoryCatalogueType, catalogueRevision: Int, item: InventoryItem? = nil
@@ -41,6 +42,10 @@ internal struct InventoryProtocol2Draft: Hashable, Sendable {
                 entry.source == .stored ? nil : (entry.fieldId, entry.state)
             })
         touched = []
+    }
+
+    internal var hasStagedWork: Bool {
+        typeSelectionChanged || !touched.isEmpty
     }
 
     internal func values(for field: InventoryCatalogueField) -> [InventoryPrimitiveValue] {
