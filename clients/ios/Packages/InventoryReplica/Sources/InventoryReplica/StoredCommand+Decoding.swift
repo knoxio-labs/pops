@@ -64,6 +64,10 @@ extension StoredCommand {
         case .reorderPhotos(let id, let sha256s): .reorderPhotos(itemId: id, sha256s: sha256s)
         case .restoreDeletedItem(let id): .restoreDeletedItem(id: id)
         case .deleteItem(let id): .deleteItem(id: id)
+        case .setComputedOverride(let id, let fieldId, let value):
+            .setComputedOverride(id: id, fieldId: fieldId, value: value)
+        case .clearComputedOverride(let id, let fieldId):
+            .clearComputedOverride(id: id, fieldId: fieldId)
         default: nil
         }
     }

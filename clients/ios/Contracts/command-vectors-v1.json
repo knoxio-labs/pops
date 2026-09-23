@@ -621,6 +621,85 @@
       }
     },
     {
+      "name": "item.setOverride",
+      "op": "item.setOverride",
+      "seedLocations": [],
+      "seedItems": [
+        {
+          "id": "20000000-0000-4000-8000-000000000002",
+          "name": "Lamp",
+          "placement": {
+            "kind": "hand"
+          },
+          "typeKey": "bulb"
+        }
+      ],
+      "mutation": {
+        "mutationId": "30000000-0000-4000-8000-000000000015",
+        "op": "item.setOverride",
+        "entityId": "20000000-0000-4000-8000-000000000002",
+        "baseRevision": 1,
+        "catalogueRevision": 2,
+        "dependsOn": [],
+        "args": {
+          "fieldId": "40000000-0000-4000-8000-000000000001",
+          "values": [false]
+        },
+        "clientTime": "2026-09-19T00:00:00.000Z"
+      },
+      "actor": {
+        "kind": "device",
+        "id": "device-fixture",
+        "label": "Fixture"
+      },
+      "outcome": {
+        "mutationId": "30000000-0000-4000-8000-000000000015",
+        "status": "applied",
+        "revision": 2,
+        "seq": 1,
+        "converged": false
+      }
+    },
+    {
+      "name": "item.clearOverride",
+      "op": "item.clearOverride",
+      "seedLocations": [],
+      "seedItems": [
+        {
+          "id": "20000000-0000-4000-8000-000000000002",
+          "name": "Lamp",
+          "placement": {
+            "kind": "hand"
+          },
+          "typeKey": "bulb"
+        }
+      ],
+      "mutation": {
+        "mutationId": "30000000-0000-4000-8000-000000000016",
+        "op": "item.clearOverride",
+        "entityId": "20000000-0000-4000-8000-000000000002",
+        "baseRevision": 2,
+        "catalogueRevision": 2,
+        "dependsOn": [],
+        "args": {
+          "fieldId": "40000000-0000-4000-8000-000000000001"
+        },
+        "clientTime": "2026-09-19T00:00:00.000Z"
+      },
+      "actor": {
+        "kind": "device",
+        "id": "device-fixture",
+        "label": "Fixture"
+      },
+      "outcome": {
+        "mutationId": "30000000-0000-4000-8000-000000000016",
+        "status": "applied",
+        "revision": 3,
+        "seq": 2,
+        "converged": false
+      }
+    },
+    {
       "name": "location.create-under-parent",
       "op": "location.create",
       "seedLocations": [

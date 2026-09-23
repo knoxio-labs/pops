@@ -222,6 +222,8 @@ public final class InMemoryInventoryStore: InventoryStore, @unchecked Sendable {
         case .setItemAccess, .setItemFull, .setItemLifecycle, .setItemQuantity, .splitItem,
             .attachPhoto, .removePhoto, .reorderPhotos, .restoreDeletedItem, .deleteItem:
             try applyItemGroupB(command, mutationId: mutationId, into: &state)
+        case .setComputedOverride, .clearComputedOverride:
+            try applyOverrideCommand(command, mutationId: mutationId, into: &state)
         case .createLocation, .renameLocation, .moveLocation, .deleteLocation:
             try applyLocationCommand(command, mutationId: mutationId, into: &state)
         case .revertEvent:

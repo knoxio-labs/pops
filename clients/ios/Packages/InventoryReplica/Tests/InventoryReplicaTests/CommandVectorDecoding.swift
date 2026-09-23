@@ -25,6 +25,27 @@ internal enum CommandVectorDecoding {
                 ])
         ])
 
+    static let computedFieldId = "40000000-0000-4000-8000-000000000001"
+
+    /// The revision-2 catalogue `command-vector-fixture.ts` publishes for the
+    /// override vectors: `bulb` gains one overridable computed boolean.
+    static let computedCatalogue = InventoryCatalogueSnapshot(
+        revision: InventoryCatalogueRevision(revision: 2, baseRevision: 1, minimumProtocol: 2),
+        types: [
+            InventoryCatalogueType(
+                id: "59538480-6e82-5ccc-b7be-f1cfd15b9af6", key: "bulb", label: "Light bulb",
+                sortOrder: 0,
+                fields: [
+                    InventoryCatalogueField(
+                        id: computedFieldId, typeId: "59538480-6e82-5ccc-b7be-f1cfd15b9af6",
+                        key: "Computed vector", label: "Computed vector", sortOrder: 6,
+                        kind: .boolean, cardinality: .one, required: false, storage: .computed,
+                        expressionVersion: 1,
+                        expression: .object(["op": .string("literal"), "value": .boolean(true)]),
+                        allowOverride: true)
+                ])
+        ])
+
     static func date(_ text: String) throws -> Date {
         let parser = ISO8601DateFormatter()
         parser.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
@@ -163,7 +184,24 @@ internal enum CommandVectorDecoding {
             return .reorderPhotos(itemId: id, sha256s: try hashes.map { try require($0.string) })
         case "item.restoreDeleted": return .restoreDeletedItem(id: id)
         case "item.delete": return .deleteItem(id: id)
+        case "item.setOverride":
+            guard case .array(let values)? = args["values"], values.count == 1,
+                let only = values.first
+            else { throw Malformed(description: "override values") }
+            return .setComputedOverride(
+                id: id, fieldId: try require(args["fieldId"]?.string), value: try primitive(only))
+        case "item.clearOverride":
+            return .clearComputedOverride(id: id, fieldId: try require(args["fieldId"]?.string))
         default: return nil
+        }
+    }
+
+    /// The scalar protocol-2 values the override vectors carry.
+    private static func primitive(_ json: JSONValue) throws -> InventoryPrimitiveValue {
+        switch json {
+        case .bool(let flag): return .boolean(flag)
+        case .string(let text): return .string(text)
+        default: throw Malformed(description: "override value \(json)")
         }
     }
 

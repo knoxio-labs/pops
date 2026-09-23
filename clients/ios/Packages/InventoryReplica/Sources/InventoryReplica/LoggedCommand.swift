@@ -54,6 +54,8 @@ internal enum StoredCommand: Codable, Equatable {
     case reorderPhotos(itemId: String, sha256s: [String])
     case restoreDeletedItem(id: String)
     case deleteItem(id: String)
+    case setComputedOverride(id: String, fieldId: String, value: InventoryPrimitiveValue)
+    case clearComputedOverride(id: String, fieldId: String)
     case createLocation(id: String, name: String, parentId: String?, sortOrder: Int)
     case renameLocation(id: String, name: String)
     case moveLocation(id: String, parentId: String?)

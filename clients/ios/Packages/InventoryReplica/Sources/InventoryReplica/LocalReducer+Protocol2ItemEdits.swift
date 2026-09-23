@@ -118,7 +118,7 @@ extension LocalReducer {
         }
     }
 
-    private func primitiveKind(
+    func primitiveKind(
         of value: InventoryPrimitiveValue, matches field: InventoryPrimitiveKind
     ) -> Bool {
         switch value {

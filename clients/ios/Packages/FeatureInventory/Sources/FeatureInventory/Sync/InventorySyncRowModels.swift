@@ -108,6 +108,8 @@ extension InventorySyncPage {
         case .moveLocation: "Move"
         case .deleteLocation: "Delete"
         case .revertEvent: "Undo"
+        case .setComputedOverride: "Override value"
+        case .clearComputedOverride: "Clear override"
         default: itemCommandTitle(for: command)
         }
     }
@@ -140,7 +142,8 @@ extension InventorySyncPage {
         case .deleteItem: "Delete"
         case .createItem, .createProtocol2Item, .editItem, .editProtocol2Item, .changeItemType,
             .changeProtocol2ItemType, .setItemCode, .moveItem, .setItemAccess, .setItemFull,
-            .createLocation, .renameLocation, .moveLocation, .deleteLocation, .revertEvent:
+            .createLocation, .renameLocation, .moveLocation, .deleteLocation, .revertEvent,
+            .setComputedOverride, .clearComputedOverride:
             // Unreachable: `title(for:)` and `itemCommandTitle(for:)` handle
             // every one of these before falling through to this function.
             ""

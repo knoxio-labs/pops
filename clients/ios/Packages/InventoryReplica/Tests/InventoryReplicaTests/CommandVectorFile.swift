@@ -84,6 +84,7 @@ internal struct CommandVectorFile: Decodable {
         let op: String
         let entityId: String
         let baseRevision: Int?
+        let catalogueRevision: Int?
         let dependsOn: [String]
         let args: JSONValue
         let clientTime: String

@@ -55,6 +55,8 @@ internal enum BFMInventoryCommandEncoding {
         case .reorderPhotos: "item.reorderPhotos"
         case .restoreDeletedItem: "item.restoreDeleted"
         case .deleteItem: "item.delete"
+        case .setComputedOverride: "item.setOverride"
+        case .clearComputedOverride: "item.clearOverride"
         default: nil
         }
     }
@@ -108,6 +110,9 @@ internal enum BFMInventoryCommandEncoding {
         case .removePhoto(_, let sha256): ["sha256": sha256]
         case .reorderPhotos(_, let sha256s): ["sha256s": sha256s]
         case .restoreDeletedItem, .deleteItem: [:]
+        case .setComputedOverride(_, let fieldId, let value):
+            try ["fieldId": fieldId, "values": [protocol2Value(value)]]
+        case .clearComputedOverride(_, let fieldId): ["fieldId": fieldId]
         default: nil
         }
     }
