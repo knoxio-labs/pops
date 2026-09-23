@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { CatalogueActorSchema } from './rest-catalogue-audit-schema.js';
+import { ExpressionV1Schema } from './rest-catalogue-expression-schema.js';
 import { ErrorBodySchema } from './rest-schemas.js';
 
 const AnyJson = z.unknown();
@@ -58,7 +59,7 @@ const CatalogueDefinitionFieldSchema = z.object({
   referenceKinds: z.array(z.enum(['item', 'location'])),
   referenceTypeIds: z.array(z.uuid()),
   expressionVersion: z.number().int().positive().nullable(),
-  expression: z.unknown().nullable(),
+  expression: ExpressionV1Schema.nullable(),
   allowOverride: z.boolean(),
   presentation: z.record(z.string(), z.unknown()),
   archivedAt: z.string().nullable(),
@@ -152,7 +153,7 @@ export const CataloguePutFieldSchema = z.object({
     .optional(),
   referenceTypeIds: z.array(z.uuid()).max(100).optional(),
   expressionVersion: z.number().int().positive().nullable().optional(),
-  expression: z.unknown().nullable().optional(),
+  expression: ExpressionV1Schema.nullable().optional(),
   allowOverride: z.boolean().optional(),
   presentation: z.record(z.string(), z.unknown()).optional(),
   archivedAt: z.string().nullable().optional(),

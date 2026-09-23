@@ -1,6 +1,159 @@
 {
   "components": {
     "schemas": {
+      "ExpressionV1": {
+        "anyOf": [
+          {
+            "additionalProperties": false,
+            "properties": {
+              "op": {
+                "enum": ["literal"],
+                "type": "string"
+              },
+              "value": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "additionalProperties": false,
+                    "properties": {
+                      "optionId": {
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                        "type": "string"
+                      }
+                    },
+                    "required": ["optionId"],
+                    "type": "object"
+                  },
+                  {
+                    "additionalProperties": false,
+                    "properties": {
+                      "amount": {
+                        "type": "string"
+                      },
+                      "unit": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["amount", "unit"],
+                    "type": "object"
+                  },
+                  {
+                    "additionalProperties": false,
+                    "properties": {
+                      "targetId": {
+                        "type": "string"
+                      },
+                      "targetKind": {
+                        "enum": ["item", "location"],
+                        "type": "string"
+                      }
+                    },
+                    "required": ["targetKind", "targetId"],
+                    "type": "object"
+                  }
+                ]
+              }
+            },
+            "required": ["op", "value"],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "fieldId": {
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                "type": "string"
+              },
+              "op": {
+                "enum": ["read"],
+                "type": "string"
+              },
+              "path": {
+                "items": {
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                  "type": "string"
+                },
+                "maxItems": 2,
+                "type": "array"
+              }
+            },
+            "required": ["op", "path", "fieldId"],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "op": {
+                "enum": ["negate", "not"],
+                "type": "string"
+              },
+              "value": {
+                "$ref": "#/components/schemas/ExpressionV1"
+              }
+            },
+            "required": ["op", "value"],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "left": {
+                "$ref": "#/components/schemas/ExpressionV1"
+              },
+              "op": {
+                "enum": [
+                  "add",
+                  "subtract",
+                  "multiply",
+                  "divide",
+                  "concat",
+                  "equal",
+                  "less_than",
+                  "and",
+                  "or"
+                ],
+                "type": "string"
+              },
+              "right": {
+                "$ref": "#/components/schemas/ExpressionV1"
+              }
+            },
+            "required": ["op", "left", "right"],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "condition": {
+                "$ref": "#/components/schemas/ExpressionV1"
+              },
+              "elseBranch": {
+                "$ref": "#/components/schemas/ExpressionV1"
+              },
+              "op": {
+                "enum": ["if"],
+                "type": "string"
+              },
+              "thenBranch": {
+                "$ref": "#/components/schemas/ExpressionV1"
+              }
+            },
+            "required": ["op", "condition", "thenBranch", "elseBranch"],
+            "type": "object"
+          }
+        ]
+      },
       "LocationTreeNode": {
         "additionalProperties": false,
         "properties": {
@@ -10331,6 +10484,11 @@
                                   "type": "array"
                                 },
                                 "expression": {
+                                  "allOf": [
+                                    {
+                                      "$ref": "#/components/schemas/ExpressionV1"
+                                    }
+                                  ],
                                   "nullable": true
                                 },
                                 "expressionVersion": {
@@ -11020,6 +11178,11 @@
                                   "type": "array"
                                 },
                                 "expression": {
+                                  "allOf": [
+                                    {
+                                      "$ref": "#/components/schemas/ExpressionV1"
+                                    }
+                                  ],
                                   "nullable": true
                                 },
                                 "expressionVersion": {
@@ -11558,6 +11721,11 @@
                                   "type": "array"
                                 },
                                 "expression": {
+                                  "allOf": [
+                                    {
+                                      "$ref": "#/components/schemas/ExpressionV1"
+                                    }
+                                  ],
                                   "nullable": true
                                 },
                                 "expressionVersion": {
@@ -11945,6 +12113,11 @@
                               "type": "string"
                             },
                             "expression": {
+                              "allOf": [
+                                {
+                                  "$ref": "#/components/schemas/ExpressionV1"
+                                }
+                              ],
                               "nullable": true
                             },
                             "expressionVersion": {
@@ -12413,6 +12586,11 @@
                                       "type": "array"
                                     },
                                     "expression": {
+                                      "allOf": [
+                                        {
+                                          "$ref": "#/components/schemas/ExpressionV1"
+                                        }
+                                      ],
                                       "nullable": true
                                     },
                                     "expressionVersion": {
@@ -13187,6 +13365,11 @@
                                   "type": "array"
                                 },
                                 "expression": {
+                                  "allOf": [
+                                    {
+                                      "$ref": "#/components/schemas/ExpressionV1"
+                                    }
+                                  ],
                                   "nullable": true
                                 },
                                 "expressionVersion": {
@@ -13626,6 +13809,11 @@
                               "type": "string"
                             },
                             "expression": {
+                              "allOf": [
+                                {
+                                  "$ref": "#/components/schemas/ExpressionV1"
+                                }
+                              ],
                               "nullable": true
                             },
                             "expressionVersion": {
@@ -14720,6 +14908,11 @@
                                   "type": "array"
                                 },
                                 "expression": {
+                                  "allOf": [
+                                    {
+                                      "$ref": "#/components/schemas/ExpressionV1"
+                                    }
+                                  ],
                                   "nullable": true
                                 },
                                 "expressionVersion": {

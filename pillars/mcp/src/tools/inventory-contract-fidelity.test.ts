@@ -23,7 +23,6 @@ import { validationFieldValueSchema } from './inventory-item-input.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const INVENTORY_OPENAPI_PATH = join(here, '../../../inventory/openapi/inventory.openapi.json');
-const EXPRESSION_PARSER_PATH = join(here, '../../../inventory/src/catalogue/expression-parser.ts');
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -68,28 +67,33 @@ function discriminants(schema: unknown): readonly string[] {
   });
 }
 
-/**
- * Extracts the string literals of a `const NAME = new Set([...])` (or plain
- * array) declaration from producer source text. The expression grammar has
- * no zod/OpenAPI projection to diff against (`expression` is `z.unknown()`
- * in the REST contract; see `expression-parser.ts` for why), and MCP cannot
- * import `@pops/inventory` at runtime (this file's header), so this reads
- * the producer's own op-set source directly rather than duplicating it as an
- * unchecked literal.
- */
-function readOpSet(source: string, constName: string): readonly string[] {
-  const match = new RegExp(`const ${constName} = new Set\\(\\[([\\s\\S]*?)\\]\\)`).exec(source);
-  const body = match?.[1];
-  if (body === undefined) throw new Error(`could not find ${constName} in expression-parser.ts`);
-  const entries = [...body.matchAll(/'([^']+)'/g)]
-    .map((entry) => entry[1])
-    .filter((entry): entry is string => entry !== undefined);
-  if (entries.length === 0) throw new Error(`${constName} parsed to no entries`);
-  return entries;
+/** Resolves a `{ $ref: '#/components/schemas/Name' }` against the OpenAPI document root. */
+function resolveRef(spec: unknown, schema: unknown): unknown {
+  const ref = property(schema, '$ref');
+  if (typeof ref !== 'string') return schema;
+  if (!ref.startsWith('#/')) throw new Error(`unsupported $ref: ${ref}`);
+  return ref
+    .slice(2)
+    .split('/')
+    .reduce<unknown>((node, segment) => property(node, segment), spec);
+}
+
+/** The producer's published `ExpressionV1` schema, following `allOf`/`$ref` wrapping to the real node. */
+function expressionSchema(spec: unknown): Record<string, unknown> {
+  const patchSchema = requestSchema(spec, '/type-catalogue/drafts/{revision}', 'patch');
+  const operations = property(property(property(patchSchema, 'properties'), 'operations'), 'items');
+  const putField = array(property(operations, 'oneOf'), 'operation oneOf').find((variant) =>
+    discriminants({ oneOf: [variant] }).includes('put_field')
+  );
+  if (putField === undefined) throw new Error('put_field operation is missing');
+  const wrapped = property(property(putField, 'properties'), 'expression');
+  const wrappedAllOf = array(property(wrapped, 'allOf'), 'expression allOf');
+  const first = wrappedAllOf[0];
+  if (first === undefined) throw new Error('expression allOf is empty');
+  return object(resolveRef(spec, first), 'ExpressionV1');
 }
 
 const spec: unknown = JSON.parse(readFileSync(INVENTORY_OPENAPI_PATH, 'utf8'));
-const expressionParserSource = readFileSync(EXPRESSION_PARSER_PATH, 'utf8');
 
 describe('inventory MCP schema fidelity', () => {
   it('matches every producer catalogue operation discriminant and primitive kind', () => {
@@ -147,52 +151,45 @@ describe('inventory MCP schema fidelity', () => {
   });
 
   it('matches the producer expression grammar op sets and reference-hop bound', () => {
-    const producerUnary = readOpSet(expressionParserSource, 'UNARY_OPS');
-    const producerBinary = readOpSet(expressionParserSource, 'BINARY_OPS');
-    expect([...EXPRESSION_UNARY_OPS].toSorted()).toEqual(producerUnary.toSorted());
-    expect([...EXPRESSION_BINARY_OPS].toSorted()).toEqual(producerBinary.toSorted());
+    const producerVariants = array(property(expressionSchema(spec), 'anyOf'), 'ExpressionV1 anyOf');
 
-    const maxHopsMatch = /const MAX_REFERENCE_HOPS = (\d+)/.exec(expressionParserSource);
-    if (maxHopsMatch === null) throw new Error('could not find MAX_REFERENCE_HOPS');
-    const producerMaxHops = Number(maxHopsMatch[1]);
-
-    function opConstIs(variant: unknown, value: string): boolean {
-      return property(property(variant, 'properties'), 'op') === undefined
-        ? false
-        : property(property(property(variant, 'properties'), 'op'), 'const') === value;
+    function opValues(variant: unknown): readonly string[] | undefined {
+      const opSchema = property(property(variant, 'properties'), 'op');
+      const enumValues = property(opSchema, 'enum');
+      if (Array.isArray(enumValues)) return strings(enumValues, 'op enum');
+      const constant = property(opSchema, 'const');
+      return typeof constant === 'string' ? [constant] : undefined;
     }
 
-    const expressionDef = expressionSchemaDefs.expressionV1;
-    const readVariant = expressionDef.oneOf.find((variant) => opConstIs(variant, 'read'));
-    if (readVariant === undefined) throw new Error('read expression variant is missing');
-    expect(property(property(readVariant, 'properties'), 'path')).toMatchObject({
-      maxItems: producerMaxHops,
-    });
-
-    const unaryVariant = expressionDef.oneOf.find((variant) => {
-      const op = property(property(variant, 'properties'), 'op');
-      const enumValues = property(op, 'enum');
-      return Array.isArray(enumValues) && enumValues.includes('negate');
-    });
-    const binaryVariant = expressionDef.oneOf.find((variant) => {
-      const op = property(property(variant, 'properties'), 'op');
-      const enumValues = property(op, 'enum');
-      return Array.isArray(enumValues) && enumValues.includes('add');
-    });
-    if (unaryVariant === undefined || binaryVariant === undefined) {
-      throw new Error('unary or binary expression variant is missing');
+    function findByOp(variants: readonly unknown[], op: string): unknown {
+      const found = variants.find((variant) => opValues(variant)?.includes(op));
+      if (found === undefined) throw new Error(`no expression variant accepts op '${op}'`);
+      return found;
     }
-    expect(
-      strings(
-        property(property(property(unaryVariant, 'properties'), 'op'), 'enum'),
-        'unary op enum'
-      ).toSorted()
-    ).toEqual(producerUnary.toSorted());
-    expect(
-      strings(
-        property(property(property(binaryVariant, 'properties'), 'op'), 'enum'),
-        'binary op enum'
-      ).toSorted()
-    ).toEqual(producerBinary.toSorted());
+
+    const producerUnaryOps = opValues(findByOp(producerVariants, 'negate'));
+    const producerBinaryOps = opValues(findByOp(producerVariants, 'add'));
+    if (producerUnaryOps === undefined || producerBinaryOps === undefined) {
+      throw new Error('producer op enum missing on a matched variant');
+    }
+    const producerReadPath = property(
+      property(findByOp(producerVariants, 'read'), 'properties'),
+      'path'
+    );
+
+    expect([...EXPRESSION_UNARY_OPS].toSorted()).toEqual(producerUnaryOps.toSorted());
+    expect([...EXPRESSION_BINARY_OPS].toSorted()).toEqual(producerBinaryOps.toSorted());
+
+    const mcpVariants = expressionSchemaDefs.expressionV1.oneOf;
+    const mcpUnaryOps = opValues(findByOp(mcpVariants, 'negate'));
+    const mcpBinaryOps = opValues(findByOp(mcpVariants, 'add'));
+    if (mcpUnaryOps === undefined || mcpBinaryOps === undefined) {
+      throw new Error('MCP op enum missing on a matched variant');
+    }
+    const mcpReadPath = property(property(findByOp(mcpVariants, 'read'), 'properties'), 'path');
+
+    expect(mcpUnaryOps.toSorted()).toEqual(producerUnaryOps.toSorted());
+    expect(mcpBinaryOps.toSorted()).toEqual(producerBinaryOps.toSorted());
+    expect(mcpReadPath).toMatchObject({ maxItems: property(producerReadPath, 'maxItems') });
   });
 });
