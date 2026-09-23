@@ -89,11 +89,13 @@ internal struct PurchaseStagingModelTests {
         #expect(model.refusal == nil)
     }
 
-    @Test("a partially prepared scan is refused without changing staging")
-    func unpreparedScan() {
+    @Test(
+        "a scan whose prepared parts do not match its page count is refused without changing staging",
+        arguments: [2, 4])
+    func unpreparedScan(partCount: Int) {
         let model = model([receipt("existing", ["a"])])
 
-        model.addScanned([part(1), part(2)], pageCount: 3)
+        model.addScanned((1...partCount).map(part), pageCount: 3)
 
         #expect(model.refusal == .unpreparedPages)
         #expect(model.everyPage.map(\.id) == ["a"])

@@ -53,7 +53,7 @@ public final class PurchaseStagingModel {
             refusal = .noPages
             return
         }
-        guard parts.count >= pageCount else {
+        guard parts.count == pageCount else {
             refusal = .unpreparedPages
             return
         }
