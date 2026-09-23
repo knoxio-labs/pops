@@ -21,11 +21,17 @@ export const EXPRESSION_BINARY_OPS = [
 
 const primitiveWireValue = {
   description:
-    'A stored primitive value: string, number, boolean, {optionId} for an enum, ' +
-    '{amount, unit} for a fixed-unit measurement, or {targetKind, targetId} for a reference.',
+    'A stored primitive value: string, safe integer, boolean, {optionId} for an enum, ' +
+    '{amount, unit} for a fixed-unit measurement, or {targetKind, targetId} for a reference. ' +
+    'A decimal literal (e.g. 2.5) is not a number here — encode it as a string, same as any ' +
+    'other stored decimal amount.',
   oneOf: [
     { type: 'string' },
-    { type: 'number' },
+    {
+      type: 'integer',
+      minimum: Number.MIN_SAFE_INTEGER,
+      maximum: Number.MAX_SAFE_INTEGER,
+    },
     { type: 'boolean' },
     {
       type: 'object',

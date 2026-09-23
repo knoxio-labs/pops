@@ -50,4 +50,12 @@ describe('ExpressionV1Schema', () => {
     expect(ExpressionV1Schema.parse(wire)).toEqual(wire);
     expect(parseExpression(1, wire)).toMatchObject({ op: 'add' });
   });
+
+  it('rejects a decimal literal, matching the parser own safe-integer-only rule', () => {
+    const wire = { op: 'literal', value: 2.5 };
+    expect(ExpressionV1Schema.safeParse(wire).success).toBe(false);
+    expect(() => parseExpression(1, wire)).toThrowError(
+      expect.objectContaining({ code: 'expression_node_invalid' })
+    );
+  });
 });

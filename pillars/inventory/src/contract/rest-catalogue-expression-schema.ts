@@ -37,7 +37,10 @@ export const ELSE_KEY = 'else' as const;
 
 const PrimitiveWireValueSchema = z.union([
   z.string(),
-  z.number(),
+  // Matches expression-parser.ts's primitive(): typeof value === 'number' &&
+  // Number.isSafeInteger(value) — a decimal literal like 2.5 must be typed
+  // as a string wire value, same as any other stored decimal amount.
+  z.number().safe(),
   z.boolean(),
   z.object({ optionId: z.uuid() }).strict(),
   z.object({ amount: z.string(), unit: z.string() }).strict(),
