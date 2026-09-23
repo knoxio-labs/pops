@@ -6,7 +6,7 @@ internal enum Protocol2SearchIndex {
         try ReplicaSearchIndex.reindexAll(catalogue: searchableCatalogue(catalogue), in: db)
     }
 
-    private static func searchableCatalogue(_ catalogue: InventoryCatalogueSnapshot)
+    static func searchableCatalogue(_ catalogue: InventoryCatalogueSnapshot)
         -> InventoryCatalogue
     {
         InventoryCatalogue(

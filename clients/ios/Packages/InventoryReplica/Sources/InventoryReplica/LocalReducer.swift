@@ -77,7 +77,7 @@ internal final class LocalReducer {
         self.db = db
         self.now = storedDate(now)
         primaryEntity = primary
-        catalogue = try SyncMeta.read(db).storedCatalogue()
+        catalogue = try SyncMeta.read(db).searchCatalogue(in: db)
     }
 
     /// Applies `command` to the optimistic layer inside the caller's
