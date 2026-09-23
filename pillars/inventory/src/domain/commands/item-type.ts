@@ -8,11 +8,14 @@ import { items } from '../../db/index.js';
 import {
   activeFieldValueSchema,
   activeReplacementChanges,
-  assertActiveFieldValues,
   currentAuthoritativeFieldValues,
-  requireActiveType,
   storedFieldValues,
 } from './active-catalogue-values.js';
+import {
+  assertCommandFieldValues,
+  resolveCommandCatalogue,
+  resolveCommandType,
+} from './command-catalogue.js';
 import { requireItem, type CommandDb, type FieldValues } from './entities.js';
 import { CommandRejected } from './errors.js';
 import { itemFieldsBlobSchema } from './item-fields.js';
@@ -84,9 +87,10 @@ function resolveActiveTypeChange(
   if (args.typeId === undefined || args.values === undefined) {
     throw new CommandRejected('invalid', 'stable typeId and values are required');
   }
-  const type = requireActiveType(db, revision, args.typeId);
+  const resolution = resolveCommandCatalogue(db, revision);
+  const type = resolveCommandType(resolution, args.typeId).active;
   const values = storedFieldValues(args.values);
-  assertActiveFieldValues(db, type, values, itemId);
+  assertCommandFieldValues(db, resolution, { typeId: type.id, values, existingItemId: itemId });
   return {
     type,
     fields: {

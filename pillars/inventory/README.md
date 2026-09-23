@@ -106,8 +106,16 @@ exact catalogue revision: kind, cardinality, required fields, storage authority,
 archived selections and live reference constraints are one atomic check.
 Generic item mutations carry the active `catalogueRevision`, address types and
 fields by stable ID, and persist through the same validated replacement path as
-the catalogue value API. A stale revision is rejected as `catalogue_changed`;
-it never falls back to the revision-1 projection. Mutations that omit
+the catalogue value API. An offline mutation may carry an older published
+revision: the server first validates it against that authored snapshot, then
+rebases it only when the complete authored-to-active compatibility diff is
+compatible and the same stable IDs and values validate against the active
+snapshot. Renames therefore replay without rewriting the payload, while an
+archived/replaced definition returns `catalogue_repair_required` and a
+protocol-gated or migration-required publication returns
+`catalogue_update_required`. Successful rebases persist the active revision;
+rejections and applications remain idempotent. A stable-ID mutation never
+falls back to the revision-1 projection. Mutations that omit
 `catalogueRevision` retain the named `typeKey`/`fields` protocol-1 contract for
 the built-in types during rollout.
 Archived enum selections and stale references remain readable when unchanged;
@@ -255,10 +263,10 @@ the gate above derives three grants: `inventory.sync` (`GET /sync/snapshot`,
 - Protocol and catalogue revision are independent. Catalogue, snapshot, feed and
   mutation shapes carry `catalogueRevision`; a phone downloads an immutable
   revision before applying rows that name it, and an offline mutation pins the
-  revision used to validate it. Generic stable-ID commands currently require
-  that revision to be the active publication and reject stale input with
-  `catalogue_changed`; compatibility proofs can widen that gate without ever
-  silently reinterpreting a write against another snapshot.
+  revision used to author it. Generic stable-ID commands validate the payload
+  against that exact published snapshot and the active snapshot. Only a fully
+  compatible diff rebases; schema/protocol changes require refreshed
+  definitions, and values invalidated by archival/replacement require repair.
 - Protocol 2 item rows carry the persisted `typeId` and canonical
   stable-field-ID `fieldValues` (each with its source and catalogue revision).
   The existing `typeKey` and `fields` projection remains alongside them for

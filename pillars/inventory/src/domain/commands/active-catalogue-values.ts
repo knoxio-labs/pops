@@ -6,12 +6,10 @@ import {
   loadPublishedCatalogue,
   readItemFieldValues,
   replaceValidatedItemFieldValues,
-  validateItemFieldValuesForType,
   ValueValidationError,
 } from '../../catalogue/index.js';
 import { CommandRejected } from './errors.js';
 
-import type { PersistedCatalogue, PersistedItemType } from '../../catalogue/index.js';
 import type { ItemFieldValueInput } from '../../catalogue/item-values.js';
 import type { CommandDb, FieldValues } from './entities.js';
 import type { JsonValue } from './outcome.js';
@@ -45,47 +43,9 @@ function rejectValue(error: unknown): never {
   throw error;
 }
 
-/** Loads the current published catalogue and rejects stale stable-ID mutations. */
-export function requireActiveCatalogue(db: CommandDb, revision: number): PersistedCatalogue {
-  const catalogue = loadPublishedCatalogue(db);
-  if (!catalogue) throw new CommandRejected('type_unknown', 'no published catalogue exists');
-  if (catalogue.revision.revision !== revision) {
-    throw new CommandRejected(
-      'catalogue_changed',
-      `catalogue revision ${revision} is not active; current revision is ${catalogue.revision.revision}`
-    );
-  }
-  return catalogue;
-}
-
-/** Resolves an assignable type by stable ID from the active published revision. */
-export function requireActiveType(
-  db: CommandDb,
-  revision: number,
-  typeId: string
-): PersistedItemType {
-  const type = requireActiveCatalogue(db, revision).types.find((entry) => entry.id === typeId);
-  if (!type) throw new CommandRejected('type_unknown', `unknown type ${typeId}`);
-  return type;
-}
-
 /** Converts client stored values into the authoritative validation shape. */
 export function storedFieldValues(values: readonly ActiveFieldValue[]): ItemFieldValueInput[] {
   return values.map((entry) => ({ ...entry, source: 'stored' }));
-}
-
-/** Validates a complete authoritative value set and maps failures to command outcomes. */
-export function assertActiveFieldValues(
-  db: CommandDb,
-  type: PersistedItemType,
-  values: readonly ItemFieldValueInput[],
-  existingItemId?: string
-): void {
-  try {
-    validateItemFieldValuesForType(db, type, values, existingItemId);
-  } catch (error) {
-    rejectValue(error);
-  }
 }
 
 function writableValue(value: JsonValue): JsonValue {
