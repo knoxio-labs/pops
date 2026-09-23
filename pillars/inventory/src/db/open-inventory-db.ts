@@ -15,6 +15,7 @@ import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 
 import { withPreMigrationBackup } from '@pops/pillar-sdk/db';
 
+import { ensureComputedDependencyIndex } from '../catalogue/computed-dependency-index.js';
 import { rebuildSearchIndexFromItems } from './backfill-search-index.js';
 import { registerPersistedItemTypesMigrationFunctions } from './migrations/persisted-item-types-bootstrap.js';
 
@@ -82,6 +83,10 @@ function searchIndexIncomplete(raw: Database.Database): boolean {
  *     because `0015_items_fts_trigram` just recreated it empty, or because
  *     an earlier boot committed that migration and was killed before
  *     finishing the rebuild (POPS-4158; see {@link searchIndexIncomplete}).
+ *   - The computed reverse-dependency index is rebuilt when it was never
+ *     built (migration `0019_item_computed_dependencies` creates it empty) or
+ *     was built for another catalogue revision; see
+ *     `ensureComputedDependencyIndex`.
  *
  * If the migration apply throws (corrupt DB, malformed migration,
  * missing folder), the raw handle is closed before the error is
@@ -109,6 +114,7 @@ export function openInventoryDb(path: string): OpenedInventoryDb {
       () => migrate(db, { migrationsFolder: migrations })
     );
     if (searchIndexIncomplete(raw)) rebuildSearchIndexFromItems(db);
+    ensureComputedDependencyIndex(db);
   } catch (err) {
     raw.close();
     throw err;
