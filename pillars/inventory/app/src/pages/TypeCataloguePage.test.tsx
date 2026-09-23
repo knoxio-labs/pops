@@ -12,6 +12,7 @@ const api = vi.hoisted(() => ({
   abandonDraft: vi.fn(),
   createDraft: vi.fn(),
   patchDraft: vi.fn(),
+  previewDraft: vi.fn(),
   publishDraft: vi.fn(),
   readAudit: vi.fn(),
   readCatalogue: vi.fn(),
@@ -19,14 +20,17 @@ const api = vi.hoisted(() => ({
 }));
 const toasts = vi.hoisted(() => ({ error: vi.fn(), success: vi.fn() }));
 
-vi.mock('../inventory-api/index.js', () => ({
-  typesManageAbandonDraft: (...args: unknown[]) => api.abandonDraft(...args),
-  typesManageCreateDraft: (...args: unknown[]) => api.createDraft(...args),
-  typesManagePatchDraft: (...args: unknown[]) => api.patchDraft(...args),
-  typesManagePublishDraft: (...args: unknown[]) => api.publishDraft(...args),
-  typesManageReadDraft: (...args: unknown[]) => api.readDraft(...args),
-  typesReadAudit: (...args: unknown[]) => api.readAudit(...args),
-  typesReadCatalogue: (...args: unknown[]) => api.readCatalogue(...args),
+vi.mock('../catalogue-editor/catalogue-api', () => ({
+  catalogueApi: {
+    abandonDraft: (...args: unknown[]) => api.abandonDraft(...args),
+    createDraft: (...args: unknown[]) => api.createDraft(...args),
+    patchDraft: (...args: unknown[]) => api.patchDraft(...args),
+    previewDraft: (...args: unknown[]) => api.previewDraft(...args),
+    publishDraft: (...args: unknown[]) => api.publishDraft(...args),
+    readAudit: (...args: unknown[]) => api.readAudit(...args),
+    readCatalogue: (...args: unknown[]) => api.readCatalogue(...args),
+    readDraft: (...args: unknown[]) => api.readDraft(...args),
+  },
 }));
 
 vi.mock('sonner', () => ({ toast: toasts }));
@@ -127,6 +131,17 @@ beforeEach(() => {
     response: new Response(null, { status: 404 }),
   });
   api.createDraft.mockResolvedValue({ data: draft(), error: undefined });
+  api.previewDraft.mockResolvedValue({
+    data: {
+      compatibility: {
+        affectedIds: [],
+        affectedItems: 0,
+        changes: [],
+        classification: 'compatible',
+      },
+    },
+    error: undefined,
+  });
   api.readAudit.mockResolvedValue({ data: { events: [], nextBefore: null }, error: undefined });
 });
 
@@ -196,6 +211,33 @@ describe('TypeCataloguePage', () => {
     expect(api.createDraft).not.toHaveBeenCalled();
   });
 
+  it('previews an existing draft edit without patching it', async () => {
+    api.readDraft.mockResolvedValue({ data: draft(), error: undefined });
+    renderPage();
+
+    await screen.findByDisplayValue('Electronics');
+    fireEvent.change(screen.getByLabelText('Type label'), {
+      target: { value: 'Previewed electronics' },
+    });
+
+    await waitFor(() =>
+      expect(api.previewDraft).toHaveBeenCalledWith({
+        path: { revision: 2 },
+        body: {
+          baseRevision: 1,
+          operations: [
+            expect.objectContaining({
+              id: TYPE_ID,
+              kind: 'put_type',
+              label: 'Previewed electronics',
+            }),
+          ],
+        },
+      })
+    );
+    expect(api.patchDraft).not.toHaveBeenCalled();
+  });
+
   it('does not report a failed edit as saved', async () => {
     api.createDraft.mockRejectedValue(new InventoryApiError('write failed', 400));
     renderPage();
@@ -210,5 +252,56 @@ describe('TypeCataloguePage', () => {
     expect(api.patchDraft).not.toHaveBeenCalled();
     expect(toasts.success).not.toHaveBeenCalled();
     expect(await screen.findByText('write failed')).toBeInTheDocument();
+  });
+
+  it('reloads a stale draft into the open form without replaying the rejected edit', async () => {
+    const recovered = draft([
+      { ...published.types[0]!, label: 'Electronics recovered elsewhere', revision: 2 },
+    ]);
+    api.readDraft
+      .mockResolvedValueOnce({ data: draft(), error: undefined })
+      .mockResolvedValueOnce({ data: recovered, error: undefined });
+    api.patchDraft.mockRejectedValue(
+      new InventoryApiError('Draft revision is stale', 409, 'catalogue_conflict')
+    );
+    renderPage();
+
+    await screen.findByDisplayValue('Electronics');
+    fireEvent.change(screen.getByLabelText('Type label'), {
+      target: { value: 'Rejected local edit' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save type' }));
+    expect(await screen.findByText('This draft changed elsewhere')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reload' }));
+
+    expect(await screen.findByDisplayValue('Electronics recovered elsewhere')).toBeInTheDocument();
+    expect(screen.queryByText('This draft changed elsewhere')).not.toBeInTheDocument();
+    expect(api.patchDraft).toHaveBeenCalledTimes(1);
+    expect(toasts.success).not.toHaveBeenCalled();
+  });
+
+  it('keeps a failed stale-draft reload recoverable through the page retry', async () => {
+    const recovered = draft([
+      { ...published.types[0]!, label: 'Recovered after retry', revision: 2 },
+    ]);
+    api.readDraft
+      .mockResolvedValueOnce({ data: draft(), error: undefined })
+      .mockRejectedValueOnce(new InventoryApiError('Draft reload failed', 503))
+      .mockResolvedValueOnce({ data: recovered, error: undefined });
+    api.patchDraft.mockRejectedValue(
+      new InventoryApiError('Draft revision is stale', 409, 'catalogue_conflict')
+    );
+    renderPage();
+
+    await screen.findByDisplayValue('Electronics');
+    fireEvent.click(screen.getByRole('button', { name: 'Save type' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Reload' }));
+
+    expect(await screen.findByText('Failed to load the type catalogue.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+
+    expect(await screen.findByDisplayValue('Recovered after retry')).toBeInTheDocument();
+    expect(api.patchDraft).toHaveBeenCalledTimes(1);
   });
 });

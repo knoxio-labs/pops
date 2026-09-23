@@ -155,9 +155,15 @@ creates the single draft on the first write, resumes it after reload through
 stale-base, compatibility, archive, abandonment, audit, and publication
 states. Each successful draft patch includes the producer-counted live items
 affected by its changed definitions, so the publication review does not
-reimplement catalogue validation in the browser. Published field identity and shape stay locked; incompatible changes
-must be expressed as a replacement and an explicit named migration rather
-than edited in place.
+reimplement catalogue validation in the browser. Existing drafts also preview
+pending form edits through the non-mutating preview endpoint after a short
+debounce; sequenced responses prevent older diagnostics from replacing newer
+ones, and the editor never patches a draft merely to preview it. A stale-draft reload clears
+the rejected mutation, refetches both published and draft snapshots, and
+rebuilds the open form from the persisted draft without replaying the rejected
+operation. Published field identity and shape stay locked; incompatible
+changes must be expressed as a replacement and an explicit named migration
+rather than edited in place.
 
 ## Registration
 
