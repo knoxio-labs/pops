@@ -91,6 +91,8 @@ Purchase detail reads and updates retain the server's optional edit record and o
 
 The same repository maps `GET /mobile/purchases/summary` into `PurchasesMonthSummary`. Currency groups remain separate, an absent previous month remains `nil`, and merchant leaders keep only the aggregate facts supplied by the route: optional name, currency, net spend, and order count.
 
+Search maps `PurchaseSearchStatus` onto the route's settlement vocabulary and omits `status` for `.any`. The wire names a merchant only by entity name, so a hit's merchant is `.printed` or `.unattributed`. A line hit's `tagMatch` is set only when `matchField` is `tag`.
+
 Purchase detail reads preserve the contract's complete ordered `receiptUris` list; the deprecated single `receiptUri` is retained only inside the nested list-compatible `Purchase`. Receipt and thumbnail envelopes are decoded from base64 into `ReceiptImage`, with the server's media type unchanged. Missing details or receipt bytes return `nil`, as does a receipt whose media type the thumbnail route cannot render; malformed bytes and other contract failures still throw.
 
 ### Receipt capture
