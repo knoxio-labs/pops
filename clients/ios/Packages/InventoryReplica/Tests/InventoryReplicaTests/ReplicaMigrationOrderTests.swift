@@ -4,7 +4,7 @@ import Testing
 @testable import InventoryReplica
 
 @Suite("Replica migration order")
-struct ReplicaMigrationOrderTests {
+internal struct ReplicaMigrationOrderTests {
     @Test("a fresh replica applies the local computed values before the catalogue update hold")
     func freshReplicaAppliesBoth() throws {
         let queue = try DatabaseQueue()
@@ -14,9 +14,10 @@ struct ReplicaMigrationOrderTests {
 
         try queue.read { db in
             let applied = try migrator.appliedMigrations(db)
-            #expect(Array(applied.suffix(3)) == [
+            let expected = [
                 "v8_computed_values", "v9_local_computed_values", "v10_catalogue_update_hold",
-            ])
+            ]
+            #expect(Array(applied.suffix(3)) == expected)
             #expect(try db.tableExists(ComputedValueRows.localTableName))
             #expect(try Self.mutationLogColumns(db).contains("awaiting_catalogue_after"))
         }
