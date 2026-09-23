@@ -5,6 +5,8 @@ import AppCore
 /// code assist's offline state), and, when editing, the item as it stands.
 internal struct InventoryItemFormContext: Equatable, Sendable {
     internal let catalogue: InventoryCatalogue
+    /// The immutable stable-ID catalogue that matches protocol-2 item values.
+    internal let protocol2Catalogue: InventoryCatalogueSnapshot?
     internal let isOffline: Bool
     /// The item being edited; nil for a create, and for an edit whose item
     /// has gone.
@@ -36,7 +38,8 @@ internal struct InventoryItemFormContext: Equatable, Sendable {
                 isOffline = false
             }
             return InventoryItemFormContext(
-                catalogue: source.inventoryCatalogue(), isOffline: isOffline, item: item,
+                catalogue: source.inventoryCatalogue(),
+                protocol2Catalogue: source.inventoryProtocol2Catalogue(), isOffline: isOffline, item: item,
                 placementName: placement.flatMap { name(of: $0, in: source) },
                 photoUploads: source.inventoryPhotoUploads())
         }

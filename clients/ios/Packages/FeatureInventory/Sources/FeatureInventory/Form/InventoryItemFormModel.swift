@@ -43,6 +43,8 @@ internal final class InventoryItemFormModel {
     internal private(set) var phase: Phase = .loading
     internal var draft: InventoryItemDraft
     internal private(set) var catalogue = InventoryCatalogue(version: "", units: [], types: [])
+    /// The active immutable catalogue used by the protocol-2 field editor.
+    internal private(set) var protocol2Catalogue: InventoryCatalogueSnapshot?
     internal private(set) var isOffline = false
     /// False until the final action is pressed once: a form that reddens a
     /// field before anybody has typed opens accusing.
@@ -214,6 +216,7 @@ internal final class InventoryItemFormModel {
 
     private func apply(_ context: InventoryItemFormContext) {
         catalogue = context.catalogue
+        protocol2Catalogue = context.protocol2Catalogue
         original = context.item
         photoUploads = context.photoUploads
         followStoreUploads()
