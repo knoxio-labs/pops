@@ -1,5 +1,4 @@
 import DesignSystem
-import FeaturePurchases
 import SwiftUI
 
 /// One staged page in the grid: the picture, what it is called, and every
@@ -9,22 +8,37 @@ import SwiftUI
 /// gestures meet — a tap that opens it, a drag that lifts it, and a drop that
 /// makes it the other half of a receipt — and a grid that also held the
 /// rearrangement and the layout was over the length a reader can hold.
-internal struct StagedPageTile: View {
-    internal let page: StagedPage
-    internal let width: CGFloat
-    /// The file's name under the picture, or nil inside a receipt's
-    /// platter, where the order of the pages is what tells them apart.
-    internal let caption: String?
-    internal let isTarget: Bool
-    internal let onTap: () -> Void
-    internal let drop: PageDropDelegate
+public struct StagedPageTile: View {
+    private let page: StagedPage
+    private let width: CGFloat
+    private let caption: String?
+    private let isTarget: Bool
+    private let onTap: () -> Void
+    private let drop: PageDropDelegate
 
     private let ratio: CGFloat = PopsSize.pageHeight / PopsSize.pageWidth
     /// The target settles *into* the well rather than swelling out of it.
     private let targetScale: CGFloat = 0.88
     private let liftScale: CGFloat = 1.08
 
-    internal var body: some View {
+    /// Creates a staged page tile with its tap and drop interactions.
+    public init(
+        page: StagedPage,
+        width: CGFloat,
+        caption: String?,
+        isTarget: Bool,
+        onTap: @escaping () -> Void,
+        drop: PageDropDelegate
+    ) {
+        self.page = page
+        self.width = width
+        self.caption = caption
+        self.isTarget = isTarget
+        self.onTap = onTap
+        self.drop = drop
+    }
+
+    public var body: some View {
         VStack(spacing: PopsSpacing.xs) {
             picture
             if let caption {
@@ -50,7 +64,7 @@ internal struct StagedPageTile: View {
             .frame(width: width, height: width * ratio)
             .scaleEffect(isTarget ? targetScale : 1)
             .background { StagedDropWell(active: isTarget) }
-            .inventoryMotion(value: isTarget)
+            .popsMotion(value: isTarget)
     }
 
     /// What rides under the finger. Opaque, because the system composites a
@@ -69,10 +83,15 @@ internal struct StagedPageTile: View {
 ///
 /// A ring reads as a selection. A well reads as somewhere the item is about to
 /// go into, which is what is about to happen.
-internal struct StagedDropWell: View {
-    internal let active: Bool
+public struct StagedDropWell: View {
+    private let active: Bool
 
-    internal var body: some View {
+    /// Creates a drop well that highlights when a dragged page targets it.
+    public init(active: Bool) {
+        self.active = active
+    }
+
+    public var body: some View {
         RoundedRectangle(cornerRadius: PopsRadius.card)
             .fill(Color.popsPurchases.opacity(active ? 0.3 : 0))
             .padding(-PopsSpacing.sm)
