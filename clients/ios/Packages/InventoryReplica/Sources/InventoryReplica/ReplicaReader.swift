@@ -97,7 +97,7 @@ internal final class ReplicaReader: InventoryQuerySource {
 
     func inventoryCatalogue() -> InventoryCatalogue {
         attempt(InventoryReplica.emptyCatalogue) {
-            try SyncMeta.read($0).storedCatalogue() ?? InventoryReplica.emptyCatalogue
+            try SyncMeta.read($0).searchCatalogue(in: $0) ?? InventoryReplica.emptyCatalogue
         }
     }
 
