@@ -8,13 +8,19 @@
  * five-runner macOS pool. TestFlight therefore reads the merge-group run's
  * verdict instead of chaining off a push run.
  *
+ * When the merge queue is off (POPS-4439) no commit has a merge-group run, so
+ * a commit without one falls back to the `pull_request` verdict on the head of
+ * the PR it landed from. That lane is narrower — no analyzer, no UI flow — but
+ * it is exactly what gated the merge, and without the fallback TestFlight
+ * shipped nothing at all.
+ *
  * A push can carry several commits (the queue merges a batch in one push),
  * and which of their merge groups selected the iOS lane depends on each
  * group's diff. So every pushed commit is looked at, newest first, and the
- * first one whose merge-group `quality` job actually ran is decisive: shipped
- * if it passed, nothing shipped if it did not. A commit whose lane was scoped
- * out (`skipped`) or that has no merge-group run at all (a direct push) says
- * nothing about iOS and is passed over.
+ * first one whose `quality` job actually ran is decisive: shipped if it
+ * passed, nothing shipped if it did not. A commit whose lane was scoped out
+ * (`skipped`) or that has neither a merge-group run nor a PR run (a direct
+ * push) says nothing about iOS and is passed over.
  *
  * Tier A: no third-party imports, runs straight after checkout.
  *
@@ -37,8 +43,8 @@ export const QUALITY_WORKFLOW_NAME = 'iOS Quality';
  * Picks the commit to ship from pushed commits and their merge-group verdicts.
  *
  * @param {readonly string[]} commitsNewestFirst every commit of the push, newest first
- * @param {ReadonlyMap<string, string>} verdicts sha → the merge-group `quality`
- *   job's conclusion (`success`, `failure`, `skipped`, …), `absent` when there
+ * @param {ReadonlyMap<string, string>} verdicts sha → the `quality` job's
+ *   conclusion from `verdictFor` (`success`, `failure`, `skipped`, …), `absent` when there
  *   is no such run or job, `pending` when the run has not completed
  * @returns {string | null} the sha to ship, or null to ship nothing
  */
@@ -54,19 +60,37 @@ export function pickShipSha(commitsNewestFirst, verdicts) {
 /**
  * @typedef {{ id: number, name: string, run_number: number, run_attempt: number, status: string }} WorkflowRun
  * @typedef {{ name: string, conclusion: string | null }} Job
+ * @typedef {{ merge_commit_sha: string | null, merged_at: string | null, head: { sha: string } }} PullRequest
  * @typedef {{ workflow_runs?: WorkflowRun[], jobs?: Job[] }} ApiPage
+ * @typedef {{ repo: string, request: (path: string) => Promise<ApiPage>, requestPulls: (path: string) => Promise<PullRequest[]> }} Api
  */
 
 /**
- * Reads the merge-group `quality` job's verdict for one commit from the API.
+ * Reads the `quality` job's verdict for one landed commit from the API: the
+ * merge-group run's when there is one, otherwise the `pull_request` run's on
+ * the head of the merged PR whose merge commit it is.
  *
  * @param {string} sha
- * @param {{ repo: string, request: (path: string) => Promise<ApiPage> }} api
+ * @param {Api} api
  * @returns {Promise<string>}
  */
-export async function verdictFor(sha, { repo, request }) {
+export async function verdictFor(sha, api) {
+  const mergeGroup = await laneVerdict(sha, 'merge_group', api);
+  if (mergeGroup !== 'absent') return mergeGroup;
+  const pulls = await api.requestPulls(`/repos/${api.repo}/commits/${sha}/pulls`);
+  const landed = pulls.find((pull) => pull.merged_at !== null && pull.merge_commit_sha === sha);
+  return landed ? laneVerdict(landed.head.sha, 'pull_request', api) : 'absent';
+}
+
+/**
+ * @param {string} sha
+ * @param {'merge_group' | 'pull_request'} event
+ * @param {Api} api
+ * @returns {Promise<string>}
+ */
+async function laneVerdict(sha, event, { repo, request }) {
   const { workflow_runs: runs = [] } = await request(
-    `/repos/${repo}/actions/runs?head_sha=${sha}&event=merge_group&per_page=100`
+    `/repos/${repo}/actions/runs?head_sha=${sha}&event=${event}&per_page=100`
   );
   const latest = runs
     .filter((run) => run.name === QUALITY_WORKFLOW_NAME)
@@ -90,8 +114,8 @@ async function main() {
   const commitsNewestFirst = (event.commits ?? []).map((commit) => commit.id).toReversed();
   if (commitsNewestFirst.length === 0 && event.after) commitsNewestFirst.push(event.after);
 
-  /** @param {string} path @returns {Promise<ApiPage>} */
-  const request = async (path) => {
+  /** @param {string} path */
+  const get = async (path) => {
     const response = await fetch(`https://api.github.com${path}`, {
       headers: {
         Accept: 'application/vnd.github+json',
@@ -102,12 +126,14 @@ async function main() {
     if (!response.ok) throw new Error(`GET ${path} → ${response.status}`);
     return response.json();
   };
+  /** @type {Api} */
+  const api = { repo: GITHUB_REPOSITORY, request: get, requestPulls: get };
 
   const verdicts = new Map();
   for (const sha of commitsNewestFirst) {
-    const verdict = await verdictFor(sha, { repo: GITHUB_REPOSITORY, request });
+    const verdict = await verdictFor(sha, api);
     verdicts.set(sha, verdict);
-    console.log(`${sha}: merge-group ${QUALITY_JOB_NAME} → ${verdict}`);
+    console.log(`${sha}: ${QUALITY_JOB_NAME} → ${verdict}`);
     if (verdict !== 'absent' && verdict !== 'skipped') break;
   }
 

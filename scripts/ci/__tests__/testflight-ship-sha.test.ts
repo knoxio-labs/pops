@@ -69,8 +69,13 @@ describe('verdictFor', () => {
 
   type Run = ReturnType<typeof run>;
   type Job = { name: string; conclusion: string | null };
+  type Pull = { merge_commit_sha: string | null; merged_at: string | null; head: { sha: string } };
 
-  function api(runs: Run[], jobsByRun: Record<number, Job[]>) {
+  function api(
+    runs: Run[],
+    jobsByRun: Record<number, Job[]>,
+    { pulls = [], prRuns = [] }: { pulls?: Pull[]; prRuns?: Run[] } = {}
+  ) {
     const paths: string[] = [];
     return {
       paths,
@@ -78,12 +83,23 @@ describe('verdictFor', () => {
       request: (path: string) => {
         paths.push(path);
         const jobs = /\/runs\/(\d+)\/jobs/u.exec(path);
-        return Promise.resolve(
-          jobs ? { jobs: jobsByRun[Number(jobs[1])] ?? [] } : { workflow_runs: runs }
-        );
+        if (jobs) return Promise.resolve({ jobs: jobsByRun[Number(jobs[1])] ?? [] });
+        return Promise.resolve({
+          workflow_runs: path.includes('event=pull_request') ? prRuns : runs,
+        });
+      },
+      requestPulls: (path: string) => {
+        paths.push(path);
+        return Promise.resolve(pulls);
       },
     };
   }
+
+  const merged = (mergeSha: string, headSha: string): Pull => ({
+    merge_commit_sha: mergeSha,
+    merged_at: '2026-09-23T09:06:48Z',
+    head: { sha: headSha },
+  });
 
   it('asks only for merge-group runs of that commit', async () => {
     const a = api([], {});
@@ -111,6 +127,67 @@ describe('verdictFor', () => {
 
   it('reports a run still in flight as pending', async () => {
     expect(await verdictFor('abc', api([run(1, 1, 1, 'in_progress')], {}))).toBe('pending');
+  });
+
+  it('takes the merge-group verdict without asking about the PR', async () => {
+    const a = api(
+      [run(1, 1, 1)],
+      { 1: [{ name: QUALITY_JOB_NAME, conclusion: 'failure' }] },
+      {
+        pulls: [merged('abc', 'head')],
+      }
+    );
+    expect(await verdictFor('abc', a)).toBe('failure');
+    expect(a.paths.some((path) => path.includes('/pulls'))).toBe(false);
+  });
+
+  it('falls back to the pull_request run on the head of the PR the commit landed from', async () => {
+    const a = api(
+      [],
+      { 7: [{ name: QUALITY_JOB_NAME, conclusion: 'success' }] },
+      {
+        pulls: [merged('abc', 'head')],
+        prRuns: [run(7, 3, 1)],
+      }
+    );
+    expect(await verdictFor('abc', a)).toBe('success');
+    expect(a.paths).toContain('/repos/o/r/commits/abc/pulls');
+    expect(a.paths).toContain(
+      '/repos/o/r/actions/runs?head_sha=head&event=pull_request&per_page=100'
+    );
+  });
+
+  it('carries a failed PR lane through the fallback', async () => {
+    const a = api(
+      [],
+      { 7: [{ name: QUALITY_JOB_NAME, conclusion: 'failure' }] },
+      {
+        pulls: [merged('abc', 'head')],
+        prRuns: [run(7, 3, 1)],
+      }
+    );
+    expect(await verdictFor('abc', a)).toBe('failure');
+  });
+
+  it.each([
+    ['no PR at all', []],
+    ['a PR that merged as another commit', [merged('other', 'head')]],
+    ['a PR that never merged', [{ ...merged('abc', 'head'), merged_at: null }]],
+  ] as const)('reports absent for %s', async (_label, pulls) => {
+    const a = api(
+      [],
+      { 7: [{ name: QUALITY_JOB_NAME, conclusion: 'success' }] },
+      {
+        pulls: [...pulls],
+        prRuns: [run(7, 3, 1)],
+      }
+    );
+    expect(await verdictFor('abc', a)).toBe('absent');
+  });
+
+  it('reports absent when the merged PR never ran the iOS lane', async () => {
+    const a = api([], {}, { pulls: [merged('abc', 'head')] });
+    expect(await verdictFor('abc', a)).toBe('absent');
   });
 
   it('reports a scoped-out lane as skipped', async () => {
