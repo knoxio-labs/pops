@@ -1,6 +1,7 @@
 import { catalogueClient } from './inventory-catalogue-client.js';
 import {
   optionalObject,
+  optionalPositiveInteger,
   requiredObjectArray,
   requiredPositiveInteger,
 } from './inventory-catalogue-input.js';
@@ -9,7 +10,7 @@ import {
   catalogueMigrationSchema,
   catalogueOperationSchema,
 } from './inventory-catalogue-schema.js';
-import { mapCallResult, nullStr, optNum, optStr, toolError } from './utils.js';
+import { mapCallResult, nullStr, optStr, toolError } from './utils.js';
 
 import type { ToolDef } from './tool-def.js';
 
@@ -25,7 +26,9 @@ const catalogueCreateDraft: ToolDef = {
   description: 'Create the one editable catalogue draft from the current published revision.',
   inputSchema: {
     type: 'object',
-    properties: { baseRevision: { type: 'number', description: 'Current published revision' } },
+    properties: {
+      baseRevision: { type: 'integer', minimum: 1, description: 'Current published revision' },
+    },
     required: ['baseRevision'],
   },
   handler: async (args) => {
@@ -44,8 +47,12 @@ const cataloguePatchDraft: ToolDef = {
   inputSchema: {
     type: 'object',
     properties: {
-      revision: { type: 'number', description: 'Draft revision' },
-      baseRevision: { type: 'number', description: 'Published revision the draft is based on' },
+      revision: { type: 'integer', minimum: 1, description: 'Draft revision' },
+      baseRevision: {
+        type: 'integer',
+        minimum: 1,
+        description: 'Published revision the draft is based on',
+      },
       operations: {
         type: 'array',
         items: catalogueOperationSchema,
@@ -79,10 +86,18 @@ const cataloguePublishDraft: ToolDef = {
   inputSchema: {
     type: 'object',
     properties: {
-      revision: { type: 'number', description: 'Draft revision' },
-      baseRevision: { type: 'number', description: 'Published revision the draft is based on' },
+      revision: { type: 'integer', minimum: 1, description: 'Draft revision' },
+      baseRevision: {
+        type: 'integer',
+        minimum: 1,
+        description: 'Published revision the draft is based on',
+      },
       note: { type: ['string', 'null'], description: 'Publication note' },
-      minimumProtocol: { type: 'number', description: 'Minimum client protocol for this revision' },
+      minimumProtocol: {
+        type: 'integer',
+        minimum: 1,
+        description: 'Minimum client protocol for this revision',
+      },
       migrationName: { type: 'string', description: 'Registered server migration name' },
       migration: catalogueMigrationSchema,
     },
@@ -96,14 +111,15 @@ const cataloguePublishDraft: ToolDef = {
     const migration = optionalObject(args, 'migration');
     if (!migration.ok) return toolError(migration.error);
     const note = nullStr(args, 'note');
-    const minimumProtocol = optNum(args, 'minimumProtocol');
+    const minimumProtocol = optionalPositiveInteger(args, 'minimumProtocol');
+    if (!minimumProtocol.ok) return toolError(minimumProtocol.error);
     const migrationName = optStr(args, 'migrationName');
     return mapCallResult(
       await catalogueClient().manage.publishDraft({
         revision: revision.value,
         baseRevision: baseRevision.value,
         ...(note !== undefined ? { note } : {}),
-        ...(minimumProtocol !== undefined ? { minimumProtocol } : {}),
+        ...(minimumProtocol.value !== undefined ? { minimumProtocol: minimumProtocol.value } : {}),
         ...(migrationName !== undefined ? { migrationName } : {}),
         ...(migration.value !== undefined ? { migration: migration.value } : {}),
       })
@@ -117,8 +133,12 @@ const catalogueAbandonDraft: ToolDef = {
   inputSchema: {
     type: 'object',
     properties: {
-      revision: { type: 'number', description: 'Draft revision' },
-      baseRevision: { type: 'number', description: 'Published revision the draft is based on' },
+      revision: { type: 'integer', minimum: 1, description: 'Draft revision' },
+      baseRevision: {
+        type: 'integer',
+        minimum: 1,
+        description: 'Published revision the draft is based on',
+      },
     },
     required: ['revision', 'baseRevision'],
   },

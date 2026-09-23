@@ -13,6 +13,7 @@ import {
   optStr,
   reqStr,
   toolError,
+  mapCallResult,
 } from './utils.js';
 
 describe('ok / toolError', () => {
@@ -23,6 +24,31 @@ describe('ok / toolError', () => {
   it('toolError sets isError and surfaces the message', () => {
     expect(toolError('boom')).toEqual({
       content: [{ type: 'text', text: 'boom' }],
+      isError: true,
+    });
+  });
+});
+
+describe('mapCallResult', () => {
+  it('surfaces stable codes and structured diagnostics for self-correction', () => {
+    const result = mapCallResult({
+      kind: 'bad-request',
+      pillar: 'inventory',
+      message: 'catalogue validation failed',
+      code: 'catalogue_validation',
+      details: {
+        issues: [{ path: 'types.0.fields.1', message: 'Field key is duplicated' }],
+        affectedItems: 7,
+      },
+    });
+
+    expect(result).toEqual({
+      content: [
+        {
+          type: 'text',
+          text: 'catalogue validation failed\n{"code":"catalogue_validation","issues":[{"path":"types.0.fields.1","message":"Field key is duplicated"}],"affectedItems":7}',
+        },
+      ],
       isError: true,
     });
   });

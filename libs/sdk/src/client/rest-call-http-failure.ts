@@ -53,16 +53,17 @@ export function mapHttpFailure(
 ): CallFailure {
   const message = extractErrorMessage(body);
   const code = extractErrorCode(body);
+  const details = extractErrorDetails(body);
   switch (status) {
     case 400:
-      return withDetails({ kind: 'bad-request', pillar: pillarId }, message, code);
+      return withDetails({ kind: 'bad-request', pillar: pillarId }, message, code, details);
     case 401:
     case 403:
-      return withDetails({ kind: 'unauthorized', pillar: pillarId }, message, code);
+      return withDetails({ kind: 'unauthorized', pillar: pillarId }, message, code, details);
     case 404:
-      return withDetails({ kind: 'not-found', pillar: pillarId }, message, code);
+      return withDetails({ kind: 'not-found', pillar: pillarId }, message, code, details);
     case 409:
-      return withDetails({ kind: 'conflict', pillar: pillarId }, message, code);
+      return withDetails({ kind: 'conflict', pillar: pillarId }, message, code, details);
     case 408:
     case 425:
       // 408 Request Timeout (RFC 9110 §15.5.9): "the client MAY repeat the
@@ -83,7 +84,8 @@ export function mapHttpFailure(
           retryAfterSeconds: parseRetryAfterSeconds(headers),
         },
         message,
-        code
+        code,
+        details
       );
     default:
       // A status this function does not otherwise recognise. The two families
@@ -100,7 +102,7 @@ export function mapHttpFailure(
       // handling still can.
       return status >= 500
         ? { kind: 'unavailable', pillar: pillarId }
-        : withDetails({ kind: 'refused', pillar: pillarId, status }, message, code);
+        : withDetails({ kind: 'refused', pillar: pillarId, status }, message, code, details);
   }
 }
 
@@ -109,16 +111,18 @@ type FailureWithDetails = Extract<
   { kind: 'not-found' | 'conflict' | 'bad-request' | 'unauthorized' | 'refused' | 'rate-limited' }
 >;
 
-/** Attach the producer's `message` and `code`, when either was sent. */
+/** Attach the producer's message, code, and remaining structured diagnostics when sent. */
 function withDetails<T extends FailureWithDetails>(
   failure: T,
   message: string | undefined,
-  code: string | undefined
+  code: string | undefined,
+  details: Record<string, unknown> | undefined
 ): T {
   return {
     ...failure,
     ...(message ? { message } : {}),
     ...(code ? { code } : {}),
+    ...(details ? { details } : {}),
   };
 }
 
@@ -133,4 +137,10 @@ function extractErrorCode(body: unknown): string | undefined {
   if (typeof body !== 'object' || body === null || Array.isArray(body)) return undefined;
   const code = (body as Record<string, unknown>)['code'];
   return typeof code === 'string' ? code : undefined;
+}
+
+function extractErrorDetails(body: unknown): Record<string, unknown> | undefined {
+  if (typeof body !== 'object' || body === null || Array.isArray(body)) return undefined;
+  const entries = Object.entries(body).filter(([key]) => key !== 'message' && key !== 'code');
+  return entries.length > 0 ? Object.fromEntries(entries) : undefined;
 }
