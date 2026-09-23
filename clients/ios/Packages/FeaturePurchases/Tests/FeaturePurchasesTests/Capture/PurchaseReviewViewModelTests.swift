@@ -142,8 +142,7 @@ internal struct PurchaseReviewViewModelTests {
         let first = Task { await model.save() }
         await repository.waitForCallCount(1)
         model.discard("one")
-        let second = Task { await model.save() }
-        await Task.yield()
+        await Task { await model.save() }.value
 
         #expect(await repository.routes.count == 1)
         #expect(model.remaining.map(\.id) == ["one", "two"])
@@ -151,7 +150,6 @@ internal struct PurchaseReviewViewModelTests {
 
         await repository.release()
         await first.value
-        await second.value
 
         #expect(await repository.routes == [.draft, .draft])
         #expect(model.savedPurchaseIDs == ["one", "two"])
