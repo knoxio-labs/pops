@@ -66,6 +66,61 @@ public struct InventoryNewItem: Hashable, Sendable {
     }
 }
 
+/// A stored protocol-2 field value addressed by its immutable catalogue field ID.
+public struct InventoryProtocol2FieldValue: Codable, Hashable, Sendable {
+    public let fieldId: String
+    public let values: [InventoryPrimitiveValue]
+
+    public init(fieldId: String, values: [InventoryPrimitiveValue]) {
+        self.fieldId = fieldId
+        self.values = values
+    }
+}
+
+/// A protocol-2 patch to a stable field ID. A `nil` value list clears the
+/// field; a non-empty list replaces all of its values.
+public struct InventoryProtocol2FieldPatch: Codable, Hashable, Sendable {
+    public let fieldId: String
+    public let values: [InventoryPrimitiveValue]?
+
+    public init(fieldId: String, values: [InventoryPrimitiveValue]?) {
+        self.fieldId = fieldId
+        self.values = values
+    }
+}
+
+/// What a new protocol-2 item needs. `catalogueRevision`, `typeId`, and every
+/// field ID name immutable catalogue records, so queued writes remain bound to
+/// exactly the schema the editor rendered.
+public struct InventoryNewProtocol2Item: Hashable, Sendable {
+    public let id: String
+    public let name: String
+    public let catalogueRevision: Int
+    public let typeId: String
+    public let values: [InventoryProtocol2FieldValue]
+    public let note: String?
+    public let externalIds: [InventoryExternalIdentifier]
+    public let quantity: Int
+    public let placement: InventoryPlacement
+
+    public init(
+        id: String, name: String, catalogueRevision: Int, typeId: String,
+        values: [InventoryProtocol2FieldValue] = [], note: String? = nil,
+        externalIds: [InventoryExternalIdentifier] = [], quantity: Int = 1,
+        placement: InventoryPlacement
+    ) {
+        self.id = id
+        self.name = name
+        self.catalogueRevision = catalogueRevision
+        self.typeId = typeId
+        self.values = values
+        self.note = note
+        self.externalIds = externalIds
+        self.quantity = quantity
+        self.placement = placement
+    }
+}
+
 /// What a newly created location needs. `id` is client-minted, the same as
 /// `InventoryNewItem.id`.
 public struct InventoryNewLocation: Hashable, Sendable {
@@ -88,6 +143,7 @@ public struct InventoryNewLocation: Hashable, Sendable {
 /// only what a person decided.
 public enum InventoryCommand: Hashable, Sendable {
     case createItem(InventoryNewItem)
+    case createProtocol2Item(InventoryNewProtocol2Item)
     /// `fields` patches by key: a key mapped to a value sets it, a key mapped
     /// to `nil` clears it, and an absent key is untouched. `externalIds`
     /// replaces the whole list when present and leaves it alone when `nil`,
@@ -97,6 +153,11 @@ public enum InventoryCommand: Hashable, Sendable {
         fields: [String: InventoryFieldValue?], externalIds: [InventoryExternalIdentifier]? = nil)
     case changeItemType(
         id: InventoryItem.ID, typeKey: String, fields: [String: InventoryFieldValue])
+    case editProtocol2Item(
+        id: InventoryItem.ID, catalogueRevision: Int, values: [InventoryProtocol2FieldPatch])
+    case changeProtocol2ItemType(
+        id: InventoryItem.ID, catalogueRevision: Int, typeId: String,
+        values: [InventoryProtocol2FieldValue])
     case setItemCode(id: InventoryItem.ID, code: String?)
     case moveItem(id: InventoryItem.ID, to: InventoryPlacement, verb: InventoryMoveVerb)
     case setItemAccess(id: InventoryItem.ID, access: InventoryAccess)
@@ -127,8 +188,11 @@ public enum InventoryCommand: Hashable, Sendable {
     public var entityId: String {
         switch self {
         case .createItem(let item): item.id
+        case .createProtocol2Item(let item): item.id
         case .editItem(let id, _, _, _, _): id
         case .changeItemType(let id, _, _): id
+        case .editProtocol2Item(let id, _, _): id
+        case .changeProtocol2ItemType(let id, _, _, _): id
         case .setItemCode(let id, _): id
         case .moveItem(let id, _, _): id
         case .setItemAccess(let id, _): id
@@ -155,6 +219,17 @@ public enum InventoryCommand: Hashable, Sendable {
         case .createLocation, .renameLocation, .moveLocation, .deleteLocation: .location
         case .revertEvent(_, let entityKind, _): entityKind
         default: .item
+        }
+    }
+
+    /// The immutable protocol-2 catalogue revision this command must be
+    /// validated against. Protocol-1 commands have no catalogue revision.
+    public var protocol2CatalogueRevision: Int? {
+        switch self {
+        case .createProtocol2Item(let item): item.catalogueRevision
+        case .editProtocol2Item(_, let revision, _): revision
+        case .changeProtocol2ItemType(_, let revision, _, _): revision
+        default: nil
         }
     }
 }

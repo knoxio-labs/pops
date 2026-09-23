@@ -92,6 +92,55 @@ internal struct InventoryCommandEncodingTests {
         #expect(String(describing: wire).contains("DCD777"))
     }
 
+    @Test("protocol-2 writes encode stable IDs and canonical dynamic values")
+    func protocol2Values() throws {
+        let decimal = try InventoryDecimal("12.50")
+        let envelope = try BFMInventoryCommandEncoding.envelope(
+            for: .createProtocol2Item(
+                .init(
+                    id: "item-9", name: "Drill", catalogueRevision: 7, typeId: "type-7",
+                    values: [
+                        .init(fieldId: "field-decimal", values: [.decimal(decimal)]),
+                        .init(
+                            fieldId: "field-reference",
+                            values: [
+                                .reference(
+                                    .init(targetKind: .item, targetId: "target-1", targetState: .deleted))
+                            ])
+                    ], placement: .hand)))
+
+        #expect(envelope.op == "item.create")
+        let item = try #require(envelope.args["item"] as? [String: (any Sendable)?])
+        #expect(item["typeId"] as? String == "type-7")
+        let values = try #require(item["values"] as? [(any Sendable)?])
+        let decimalValue = try #require(values[0] as? [String: (any Sendable)?])
+        #expect(decimalValue["fieldId"] as? String == "field-decimal")
+        #expect((decimalValue["values"] as? [(any Sendable)?])?.first as? String == "12.50")
+        let referenceValue = try #require(values[1] as? [String: (any Sendable)?])
+        let referenceValues = try #require(referenceValue["values"] as? [(any Sendable)?])
+        let reference = try #require(referenceValues.first as? [String: String])
+        #expect(reference["targetKind"] == "item")
+        #expect(reference["targetId"] == "target-1")
+    }
+
+    @Test("protocol-2 patches distinguish clearing a field from replacing it")
+    func protocol2Patch() throws {
+        let envelope = try BFMInventoryCommandEncoding.envelope(
+            for: .editProtocol2Item(
+                id: "item-9", catalogueRevision: 7,
+                values: [
+                    .init(fieldId: "field-clear", values: nil),
+                    .init(fieldId: "field-flag", values: [.boolean(true)]),
+                ]))
+
+        let values = try #require(envelope.args["values"] as? [(any Sendable)?])
+        let clear = try #require(values[0] as? [String: (any Sendable)?])
+        #expect(clear.keys.contains("values"))
+        #expect((clear["values"] ?? "not present") == nil)
+        let flag = try #require(values[1] as? [String: (any Sendable)?])
+        #expect((flag["values"] as? [(any Sendable)?])?.first as? Bool == true)
+    }
+
     @Test("setLifecycle carries the discard reason's wire spelling")
     func setLifecycle() throws {
         let envelope = try BFMInventoryCommandEncoding.envelope(

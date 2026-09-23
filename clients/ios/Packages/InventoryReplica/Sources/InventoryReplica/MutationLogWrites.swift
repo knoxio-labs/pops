@@ -37,7 +37,7 @@ internal enum MutationLogWrites {
             dependsOn: try dependencies(
                 of: application.touched.union(application.references), in: db),
             baseRevision: sendsBase ? application.baseRevision : nil,
-            catalogueRevision: try SyncMeta.read(db).catalogueRevision ?? 1, state: .queued,
+            catalogueRevision: try catalogueRevision(for: command, in: db), state: .queued,
             outcome: nil, settlesAtSeq: nil, touched: application.touched,
             change: application.change, attempts: 0, createdAt: storedDate(time),
             lastAttemptAt: nil)
@@ -171,5 +171,17 @@ internal enum MutationLogWrites {
             }
         }
         return latest.sorted()
+    }
+
+    private static func catalogueRevision(for command: LoggedCommand, in db: Database) throws -> Int {
+        guard case .command(let inventoryCommand) = command,
+            let revision = inventoryCommand.protocol2CatalogueRevision
+        else { return try SyncMeta.read(db).catalogueRevision ?? 1 }
+        guard try SyncMeta.read(db).catalogueRevision == revision else {
+            throw InventoryCommandError.rejected(
+                reason: .invalid,
+                message: "catalogue revision \(revision) is not active in this replica")
+        }
+        return revision
     }
 }

@@ -72,8 +72,11 @@ internal struct WorkingItem: WorkingRow {
     var id: String
     var revision: Int
     var seq: Int
+    var catalogueRevision: Int?
     var name: String
+    var typeId: String?
     var typeKey: String?
+    var fieldValues: [InventoryItemFieldEntry]
     /// Read-only: no command sets it, so it is not a tracked field. Optional
     /// in the stored JSON too, which a log entry written before the column
     /// existed simply lacks.
@@ -97,7 +100,9 @@ internal struct WorkingItem: WorkingRow {
     var deletedAt: Double?
 
     static let tracked: [TrackedField<Self>] = [
-        .on("name", \.name), .on("typeKey", \.typeKey), .on("fields", \.fields),
+        .on("name", \.name), .on("catalogueRevision", \.catalogueRevision),
+        .on("typeId", \.typeId), .on("typeKey", \.typeKey), .on("fieldValues", \.fieldValues),
+        .on("fields", \.fields),
         .on("note", \.note), .on("code", \.code), .on("externalIds", \.externalIds),
         .on("quantity", \.quantity), .on("lifecycle", \.lifecycle),
         .on("placement", \.placement), .on("previousPlacement", \.previousPlacement),
@@ -121,8 +126,9 @@ internal struct WorkingItem: WorkingRow {
 extension WorkingItem {
     init(_ item: InventoryItem) {
         self.init(
-            id: item.id, revision: item.revision, seq: item.seq, name: item.name,
-            typeKey: item.typeKey, legacyType: item.legacyType,
+            id: item.id, revision: item.revision, seq: item.seq,
+            catalogueRevision: item.catalogueRevision, name: item.name, typeId: item.typeId,
+            typeKey: item.typeKey, fieldValues: item.fieldValues, legacyType: item.legacyType,
             fields: item.fields.mapValues(StoredFieldValue.init),
             note: item.note, code: item.code,
             externalIds: item.externalIds.map {
@@ -144,7 +150,8 @@ extension WorkingItem {
 
     var item: InventoryItem {
         InventoryItem(
-            id: id, revision: revision, seq: seq, name: name, typeKey: typeKey,
+            id: id, revision: revision, seq: seq, catalogueRevision: catalogueRevision,
+            name: name, typeId: typeId, typeKey: typeKey, fieldValues: fieldValues,
             legacyType: legacyType, fields: fields.mapValues(\.domainValue), note: note, code: code,
             externalIds: externalIds.map {
                 InventoryExternalIdentifier(kind: $0.kind, value: $0.value)

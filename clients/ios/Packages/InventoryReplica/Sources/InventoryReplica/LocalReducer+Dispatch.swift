@@ -20,8 +20,8 @@ extension LocalReducer {
     /// are judged by the op itself, and the command vectors send them none.
     static func sendsBaseRevision(_ command: InventoryCommand) -> Bool {
         switch command {
-        case .createItem, .createLocation, .restoreDeletedItem, .revertEvent, .attachPhoto,
-            .removePhoto, .reorderPhotos:
+        case .createItem, .createProtocol2Item, .createLocation, .restoreDeletedItem,
+            .revertEvent, .attachPhoto, .removePhoto, .reorderPhotos:
             false
         default:
             true
@@ -31,11 +31,17 @@ extension LocalReducer {
     private func runItemWrite(_ command: InventoryCommand) throws -> Written? {
         switch command {
         case .createItem(let new): try createItem(new)
+        case .createProtocol2Item(let new): try createProtocol2Item(new)
         case .editItem(let id, let name, let note, let fields, let externalIds):
             try editItem(
                 id: id, name: name, note: note, fields: fields, externalIds: externalIds)
+        case .editProtocol2Item(let id, let revision, let values):
+            try editProtocol2Item(id: id, catalogueRevision: revision, values: values)
         case .changeItemType(let id, let typeKey, let fields):
             try changeItemType(id: id, typeKey: typeKey, fields: fields)
+        case .changeProtocol2ItemType(let id, let revision, let typeId, let values):
+            try changeProtocol2ItemType(
+                id: id, catalogueRevision: revision, typeId: typeId, values: values)
         case .setItemCode(let id, let code): try setItemCode(id: id, code: code)
         case .moveItem(let id, let to, let verb): try moveItem(id: id, to: to, verb: verb)
         case .setItemAccess(let id, let access): try setItemAccess(id: id, access: access)

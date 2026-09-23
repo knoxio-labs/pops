@@ -21,6 +21,14 @@ extension StoredCommand {
                     id: id, name: name, typeKey: typeKey, fields: fields.mapValues(\.domainValue),
                     note: note, externalIds: externalIds.map(\.domainValue), quantity: quantity,
                     placement: to.domainValue))
+        case .createProtocol2Item(
+            let id, let name, let catalogueRevision, let typeId, let values, let note,
+            let externalIds, let quantity, let placement):
+            .createProtocol2Item(
+                .init(
+                    id: id, name: name, catalogueRevision: catalogueRevision, typeId: typeId,
+                    values: values, note: note, externalIds: externalIds.map(\.domainValue),
+                    quantity: quantity, placement: placement.domainValue))
         case .editItem(let id, let name, let note, let fields, let externalIds):
             .editItem(
                 id: id, name: name, note: note.domainValue,
@@ -28,6 +36,11 @@ extension StoredCommand {
                 externalIds: externalIds?.map(\.domainValue))
         case .changeItemType(let id, let typeKey, let fields):
             .changeItemType(id: id, typeKey: typeKey, fields: fields.mapValues(\.domainValue))
+        case .editProtocol2Item(let id, let catalogueRevision, let values):
+            .editProtocol2Item(id: id, catalogueRevision: catalogueRevision, values: values)
+        case .changeProtocol2ItemType(let id, let catalogueRevision, let typeId, let values):
+            .changeProtocol2ItemType(
+                id: id, catalogueRevision: catalogueRevision, typeId: typeId, values: values)
         case .setItemCode(let id, let code): .setItemCode(id: id, code: code)
         case .setItemAccess(let id, let access):
             .setItemAccess(id: id, access: InventoryAccess(wire: access))

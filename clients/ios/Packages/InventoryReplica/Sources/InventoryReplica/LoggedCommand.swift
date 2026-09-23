@@ -29,10 +29,18 @@ internal enum StoredCommand: Codable, Equatable {
         id: String, name: String, typeKey: String?, fields: [String: StoredFieldValue],
         note: String?, externalIds: [StoredExternalIdentifier], quantity: Int,
         placement: StoredPlacement)
+    case createProtocol2Item(
+        id: String, name: String, catalogueRevision: Int, typeId: String,
+        values: [InventoryProtocol2FieldValue], note: String?,
+        externalIds: [StoredExternalIdentifier], quantity: Int, placement: StoredPlacement)
     case editItem(
         id: String, name: String?, note: StoredNoteUpdate, fields: [String: StoredFieldPatch],
         externalIds: [StoredExternalIdentifier]?)
     case changeItemType(id: String, typeKey: String, fields: [String: StoredFieldValue])
+    case editProtocol2Item(id: String, catalogueRevision: Int, values: [InventoryProtocol2FieldPatch])
+    case changeProtocol2ItemType(
+        id: String, catalogueRevision: Int, typeId: String,
+        values: [InventoryProtocol2FieldValue])
     case setItemCode(id: String, code: String?)
     case moveItem(id: String, to: StoredPlacement, verb: String)
     case setItemAccess(id: String, access: String)
