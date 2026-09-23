@@ -3053,6 +3053,7 @@ export type SyncChangesResponses = {
    * 200
    */
   200: {
+    catalogueRevision: number | null;
     catalogueVersion: string;
     epoch: string;
     events: Array<{
@@ -3485,6 +3486,7 @@ export type SyncSnapshotResponses = {
    * 200
    */
   200: {
+    catalogueRevision: number | null;
     catalogueVersion: string;
     epoch: string;
     highWaterSeq: number;

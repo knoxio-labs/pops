@@ -2189,6 +2189,7 @@ export type MobileInventoryChangesResponses = {
    * 200
    */
   200: {
+    catalogueRevision: number | null;
     catalogueVersion: string;
     epoch: string;
     events: Array<{
@@ -2451,6 +2452,7 @@ export type MobileInventorySnapshotResponses = {
    * 200
    */
   200: {
+    catalogueRevision: number | null;
     catalogueVersion: string;
     epoch: string;
     highWaterSeq: number;
@@ -2539,6 +2541,190 @@ export type MobileInventorySnapshotResponses = {
 
 export type MobileInventorySnapshotResponse =
   MobileInventorySnapshotResponses[keyof MobileInventorySnapshotResponses];
+
+export type MobileInventoryCatalogueRevisionData = {
+  body?: never;
+  path?: never;
+  query: {
+    revision: number;
+  };
+  url: '/mobile/inventory/type-catalogue';
+};
+
+export type MobileInventoryCatalogueRevisionErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code: 'invalid_cursor' | 'invalid_request';
+    message: string;
+  };
+  /**
+   * 401
+   */
+  401: {
+    code: 'invalid_token';
+    message: string;
+  };
+  /**
+   * 403
+   */
+  403:
+    | {
+        code: 'device_revoked';
+        message: string;
+      }
+    | {
+        capability: string;
+        code: 'capability_not_granted';
+        message: string;
+      };
+  /**
+   * 429
+   */
+  429: {
+    code: 'rate_limited';
+    message: string;
+    retryAfterSeconds: number;
+  };
+  /**
+   * 502
+   */
+  502: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'purchase_locked'
+      | 'purchase_stale'
+      | 'upstream_unsupported_media'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code:
+      | 'upstream_unavailable'
+      | 'upstream_degraded'
+      | 'upstream_contract_mismatch'
+      | 'upstream_misconfigured'
+      | 'upstream_invalid_request'
+      | 'upstream_conflict'
+      | 'purchase_locked'
+      | 'purchase_stale'
+      | 'upstream_unsupported_media'
+      | 'not_found';
+    message: string;
+    pillar: string;
+    retryable: boolean;
+  };
+};
+
+export type MobileInventoryCatalogueRevisionError =
+  MobileInventoryCatalogueRevisionErrors[keyof MobileInventoryCatalogueRevisionErrors];
+
+export type MobileInventoryCatalogueRevisionResponses = {
+  /**
+   * 200
+   */
+  200: {
+    revision: {
+      abandoned: {
+        actor: {
+          id: string | null;
+          kind: string;
+          label: string;
+        };
+        at: string;
+      } | null;
+      baseRevision: number | null;
+      created: {
+        actor: {
+          id: string | null;
+          kind: string;
+          label: string;
+        };
+        at: string;
+      };
+      minimumProtocol: number;
+      published: {
+        actor: {
+          id: string | null;
+          kind: string;
+          label: string;
+        };
+        at: string;
+        note: string | null;
+      } | null;
+      revision: number;
+      status: 'draft' | 'published' | 'abandoned';
+    };
+    types: Array<{
+      archivedAt: string | null;
+      capabilities: Array<string>;
+      description: string | null;
+      fields: Array<{
+        allowOverride: boolean;
+        archivedAt: string | null;
+        cardinality: 'one' | 'many';
+        enumOptions: Array<{
+          archivedAt: string | null;
+          id: string;
+          key: string;
+          label: string;
+          sortOrder: number;
+        }>;
+        expression: unknown;
+        expressionVersion: number | null;
+        fixedUnit: string | null;
+        help: string | null;
+        id: string;
+        key: string;
+        kind:
+          | 'short_text'
+          | 'long_text'
+          | 'integer'
+          | 'decimal'
+          | 'boolean'
+          | 'enum'
+          | 'measurement'
+          | 'date'
+          | 'date_time'
+          | 'url'
+          | 'reference';
+        label: string;
+        presentation: {
+          [key: string]: unknown;
+        };
+        referenceKinds: Array<'item' | 'location'>;
+        referenceTypeIds: Array<string>;
+        required: boolean;
+        sortOrder: number;
+        storage: 'stored' | 'computed';
+        typeId: string;
+      }>;
+      id: string;
+      key: string;
+      label: string;
+      legacyLabels: Array<string>;
+      presentation: {
+        [key: string]: unknown;
+      };
+      revision: number;
+      sortOrder: number;
+    }>;
+  };
+};
+
+export type MobileInventoryCatalogueRevisionResponse =
+  MobileInventoryCatalogueRevisionResponses[keyof MobileInventoryCatalogueRevisionResponses];
 
 export type MobileInventoryCatalogueData = {
   body?: never;

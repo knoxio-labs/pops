@@ -48,6 +48,9 @@ import type {
   MobileInventoryCatalogueData,
   MobileInventoryCatalogueErrors,
   MobileInventoryCatalogueResponses,
+  MobileInventoryCatalogueRevisionData,
+  MobileInventoryCatalogueRevisionErrors,
+  MobileInventoryCatalogueRevisionResponses,
   MobileInventoryChangesData,
   MobileInventoryChangesErrors,
   MobileInventoryChangesResponses,
@@ -464,6 +467,22 @@ export const mobileInventorySnapshot = <ThrowOnError extends boolean = false>(
     MobileInventorySnapshotErrors,
     ThrowOnError
   >({ url: '/mobile/inventory/sync/snapshot', ...options });
+
+/**
+ * One exact immutable catalogue revision required by protocol-2 item rows
+ */
+export const mobileInventoryCatalogueRevision = <ThrowOnError extends boolean = false>(
+  options: Options<MobileInventoryCatalogueRevisionData, ThrowOnError>
+): RequestResult<
+  MobileInventoryCatalogueRevisionResponses,
+  MobileInventoryCatalogueRevisionErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    MobileInventoryCatalogueRevisionResponses,
+    MobileInventoryCatalogueRevisionErrors,
+    ThrowOnError
+  >({ url: '/mobile/inventory/type-catalogue', ...options });
 
 /**
  * The type catalogue: every type, field and unit the app needs to render an item
