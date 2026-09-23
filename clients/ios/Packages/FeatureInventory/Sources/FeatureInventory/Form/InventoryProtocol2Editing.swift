@@ -15,6 +15,39 @@ internal struct InventoryProtocol2DraftEntry: Identifiable, Hashable, Sendable {
             referenceKind = reference.targetKind
         }
     }
+
+    /// Parses typed text into this entry's value, the way every text-backed
+    /// editor does it, whether the entry belongs to a staged draft or to a
+    /// computed field's override being composed.
+    internal mutating func setText(_ input: String, for field: InventoryCatalogueField) {
+        self.input = input
+        switch InventoryProtocol2ValueText.parse(input, for: field) {
+        case .value(let value):
+            self.value = value
+            issue = nil
+        case .issue(let issue):
+            value = nil
+            self.issue = issue
+        }
+    }
+
+    internal mutating func setValue(_ value: InventoryPrimitiveValue?) {
+        self.value = value
+        input = value.map(InventoryProtocol2ValueText.input) ?? ""
+        if case .reference(let reference)? = value {
+            referenceKind = reference.targetKind
+        }
+        issue = nil
+    }
+
+    internal mutating func setReferenceKind(_ kind: InventoryReferenceTargetKind) {
+        referenceKind = kind
+        if case .reference(let reference)? = value, reference.targetKind != kind {
+            value = nil
+            input = ""
+        }
+        issue = nil
+    }
 }
 
 internal struct InventoryProtocol2DraftIssue: Equatable, Sendable {
@@ -179,6 +212,21 @@ internal enum InventoryProtocol2Display {
         case .referenceDeleted: "Unavailable because the referenced record was deleted"
         case .evaluationError: "Unavailable because the calculation failed"
         }
+    }
+
+    /// A computed field's unavailable reason, naming the missing dependency
+    /// by label when the reason identifies one. Shared by Item detail and the
+    /// item form, the two places a computed value's unavailability is shown.
+    internal static func unavailable(
+        reason: String, failedFieldId: String, dependencyLabel: (String) -> String?
+    ) -> String {
+        guard let known = InventoryValueUnavailableReason(rawValue: reason) else {
+            return "Unavailable"
+        }
+        if known == .missingDependency, let missing = dependencyLabel(failedFieldId) {
+            return "Unavailable until \(missing) is set"
+        }
+        return unavailable(known)
     }
 
     private static func valueText(

@@ -7,7 +7,6 @@ internal struct InventoryProtocol2Draft: Hashable, Sendable {
     internal var typeId: String
     internal let catalogueRevision: Int
     internal var entries: [String: [InventoryProtocol2DraftEntry]]
-    internal var computed: [String: InventoryFieldValueState]
     internal var touched: Set<String>
     internal var typeSelectionChanged = false
 
@@ -37,10 +36,6 @@ internal struct InventoryProtocol2Draft: Hashable, Sendable {
                 }
                 return values.isEmpty ? nil : (field.id, values)
             })
-        computed = Dictionary(
-            uniqueKeysWithValues: (item?.fieldValues ?? []).compactMap { entry in
-                entry.source == .stored ? nil : (entry.fieldId, entry.state)
-            })
         touched = []
     }
 
@@ -49,21 +44,13 @@ internal struct InventoryProtocol2Draft: Hashable, Sendable {
     }
 
     internal func values(for field: InventoryCatalogueField) -> [InventoryPrimitiveValue] {
-        if case .value(let values)? = computed[field.id] { return values }
-        return entries[field.id, default: []].compactMap(\.value)
+        entries[field.id, default: []].compactMap(\.value)
     }
 
     internal func draftEntries(
         for field: InventoryCatalogueField
     ) -> [InventoryProtocol2DraftEntry] {
         entries[field.id] ?? []
-    }
-
-    internal func unavailableReason(
-        for field: InventoryCatalogueField
-    ) -> InventoryValueUnavailableReason? {
-        guard case .unavailable(let reason)? = computed[field.id] else { return nil }
-        return reason
     }
 
     internal mutating func addEntry(id: String, for field: InventoryCatalogueField) {
@@ -90,46 +77,20 @@ internal struct InventoryProtocol2Draft: Hashable, Sendable {
     internal mutating func setText(
         _ input: String, entryId: String, for field: InventoryCatalogueField
     ) {
-        update(entryId, for: field) { entry in
-            entry.input = input
-            switch InventoryProtocol2ValueText.parse(input, for: field) {
-            case .value(let value):
-                entry.value = value
-                entry.issue = nil
-            case .issue(let issue):
-                entry.value = nil
-                entry.issue = issue
-            }
-        }
+        update(entryId, for: field) { entry in entry.setText(input, for: field) }
     }
 
     internal mutating func setValue(
         _ value: InventoryPrimitiveValue?, entryId: String, for field: InventoryCatalogueField
     ) {
-        update(entryId, for: field) { entry in
-            entry.value = value
-            entry.input = value.map(InventoryProtocol2ValueText.input) ?? ""
-            if case .reference(let reference)? = value {
-                entry.referenceKind = reference.targetKind
-            }
-            entry.issue = nil
-        }
+        update(entryId, for: field) { entry in entry.setValue(value) }
     }
 
     internal mutating func setReferenceKind(
         _ kind: InventoryReferenceTargetKind, entryId: String,
         for field: InventoryCatalogueField
     ) {
-        update(entryId, for: field) { entry in
-            entry.referenceKind = kind
-            if case .reference(let reference)? = entry.value,
-                reference.targetKind != kind
-            {
-                entry.value = nil
-                entry.input = ""
-            }
-            entry.issue = nil
-        }
+        update(entryId, for: field) { entry in entry.setReferenceKind(kind) }
     }
 
     internal func issues(for type: InventoryCatalogueType) -> [InventoryProtocol2DraftIssue] {
