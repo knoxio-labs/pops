@@ -425,7 +425,7 @@ export const CEREBRUM_ALLOWLIST = [];
 export const BFM_OPENAPI_REL_PATH = 'pillars/bfm/openapi/bfm.openapi.json';
 
 /**
- * Only 6 routes carry query fields today — below every other pillar's floor,
+ * Ten routes carry query fields today — below every other pillar's floor,
  * but bfm's mobile surface is deliberately thin (POPS-1369): a device-gated
  * passthrough onto finance/purchases/inventory, not a domain of its own. The
  * floor still catches a collapse to 0.
@@ -463,6 +463,12 @@ export const BFM_ROUTES = [
     path: '/mobile/purchases/search',
     handlerFile: 'pillars/bfm/src/api/rest/mobile-purchases-search-handlers.ts',
     handlerKey: 'searchPurchases',
+  },
+  {
+    method: 'get',
+    path: '/mobile/inventory/type-catalogue',
+    handlerFile: 'pillars/bfm/src/api/rest/mobile-inventory-handlers.ts',
+    handlerKey: 'catalogueRevision',
   },
   {
     method: 'get',

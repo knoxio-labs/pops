@@ -149,7 +149,7 @@ export function validateMigrationHeader(
       400,
       'migration_coverage_mismatch',
       'Migration coverage must exactly match the catalogue diff',
-      issues
+      { issues }
     );
   }
   return coverage;
