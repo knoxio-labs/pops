@@ -50,7 +50,7 @@ function publishRevisionTwo(harness: ReturnType<typeof openHarness>): void {
     [FIELD_IDS.integer, 'integer', 'integer', 'one', null, '[]', '[]', null],
     [FIELD_IDS.decimal, 'decimal', 'decimal', 'one', null, '[]', '[]', null],
     [FIELD_IDS.boolean, 'boolean', 'boolean', 'one', null, '[]', '[]', null],
-    [FIELD_IDS.enum, 'enum', 'enum', 'one', null, '[]', '[]', null],
+    [FIELD_IDS.enum, 'enum', 'enum', 'many', null, '[]', '[]', null],
     [FIELD_IDS.measurement, 'measurement', 'measurement', 'one', 'kg', '[]', '[]', null],
     [FIELD_IDS.date, 'date', 'date', 'one', null, '[]', '[]', null],
     [FIELD_IDS.dateTime, 'date-time', 'date_time', 'one', null, '[]', '[]', null],
@@ -223,6 +223,62 @@ describe('validateItemFieldValues', () => {
         catalogueRevision: 2,
         existingItemId: newId,
         fields: [entry],
+      })
+    ).toThrow(/archived/u);
+  });
+
+  it('cannot multiply an existing retired enum occurrence in a many-valued field', () => {
+    const harness = openHarness();
+    const existingId = '40000000-0000-4000-8000-000000000012';
+    seedItem(harness, { id: existingId });
+    publishRevisionTwo(harness);
+    harness.db
+      .insert(itemFieldValues)
+      .values([
+        {
+          itemId: existingId,
+          fieldId: FIELD_IDS.enum,
+          source: 'stored',
+          ordinal: 0,
+          valueJson: JSON.stringify({ optionId: OPTION_ID }),
+          catalogueRevision: 2,
+          createdAt: 'now',
+          updatedAt: 'now',
+        },
+        {
+          itemId: existingId,
+          fieldId: FIELD_IDS.enum,
+          source: 'stored',
+          ordinal: 1,
+          valueJson: JSON.stringify({ optionId: OPTION_ID }),
+          catalogueRevision: 2,
+          createdAt: 'now',
+          updatedAt: 'now',
+        },
+      ])
+      .run();
+    const retained = { optionId: OPTION_ID };
+
+    expect(
+      validateItemFieldValues(harness.db, {
+        typeId: TYPE_ID,
+        catalogueRevision: 2,
+        existingItemId: existingId,
+        fields: [{ fieldId: FIELD_IDS.enum, source: 'stored', values: [retained, retained] }],
+      })
+    ).toHaveLength(1);
+    expect(() =>
+      validateItemFieldValues(harness.db, {
+        typeId: TYPE_ID,
+        catalogueRevision: 2,
+        existingItemId: existingId,
+        fields: [
+          {
+            fieldId: FIELD_IDS.enum,
+            source: 'stored',
+            values: [retained, retained, retained],
+          },
+        ],
       })
     ).toThrow(/archived/u);
   });
