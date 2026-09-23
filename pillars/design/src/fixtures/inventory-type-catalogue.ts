@@ -11,29 +11,6 @@ export interface CatalogueTypeSummary {
   capabilities: readonly string[];
 }
 
-export type CatalogueFieldKind =
-  | 'text'
-  | 'integer'
-  | 'decimal'
-  | 'boolean'
-  | 'date'
-  | 'enum'
-  | 'measurement'
-  | 'reference';
-
-export interface CatalogueFieldSummary {
-  id: string;
-  key: string;
-  label: string;
-  helpText: string;
-  kind: CatalogueFieldKind;
-  cardinality: 'one' | 'many';
-  required: boolean;
-  highlighted: boolean;
-  storage: 'stored' | 'computed';
-  archived?: boolean;
-}
-
 export interface CatalogueEnumOption {
   id: string;
   key: string;
@@ -50,7 +27,7 @@ export const catalogueTypes: readonly CatalogueTypeSummary[] = [
     description: 'Powered devices, accessories and components.',
     status: 'draft',
     itemCount: 184,
-    fieldCount: 8,
+    fieldCount: 13,
     capabilities: [],
   },
   {
@@ -85,97 +62,8 @@ export const catalogueTypes: readonly CatalogueTypeSummary[] = [
   },
 ];
 
-export const electronicsFields: readonly CatalogueFieldSummary[] = [
-  {
-    id: 'field-manufacturer',
-    key: 'manufacturer',
-    label: 'Manufacturer',
-    helpText: 'The company shown on the product or packaging.',
-    kind: 'text',
-    cardinality: 'one',
-    required: true,
-    highlighted: true,
-    storage: 'stored',
-  },
-  {
-    id: 'field-model',
-    key: 'model',
-    label: 'Model',
-    helpText: 'The manufacturer model name or number.',
-    kind: 'text',
-    cardinality: 'one',
-    required: false,
-    highlighted: true,
-    storage: 'stored',
-  },
-  {
-    id: 'field-connectors',
-    key: 'connectors',
-    label: 'Connectors',
-    helpText: 'Physical data and power connectors available on this item.',
-    kind: 'enum',
-    cardinality: 'many',
-    required: false,
-    highlighted: false,
-    storage: 'stored',
-  },
-  {
-    id: 'field-stored-with',
-    key: 'stored_with',
-    label: 'Stored with',
-    helpText: 'Another item that should stay with this one.',
-    kind: 'reference',
-    cardinality: 'one',
-    required: false,
-    highlighted: false,
-    storage: 'stored',
-  },
-  {
-    id: 'field-unit-price',
-    key: 'unit_price',
-    label: 'Unit price',
-    helpText: 'Replacement price for one unit.',
-    kind: 'decimal',
-    cardinality: 'one',
-    required: false,
-    highlighted: false,
-    storage: 'stored',
-  },
-  {
-    id: 'field-package-count',
-    key: 'package_count',
-    label: 'Package count',
-    helpText: 'Number of units in the package.',
-    kind: 'integer',
-    cardinality: 'one',
-    required: false,
-    highlighted: false,
-    storage: 'stored',
-  },
-  {
-    id: 'field-replacement-value',
-    key: 'replacement_value',
-    label: 'Replacement value',
-    helpText: 'Calculated from unit price and package count.',
-    kind: 'decimal',
-    cardinality: 'one',
-    required: false,
-    highlighted: true,
-    storage: 'computed',
-  },
-  {
-    id: 'field-voltage',
-    key: 'voltage',
-    label: 'Voltage',
-    helpText: 'Nominal input voltage.',
-    kind: 'measurement',
-    cardinality: 'one',
-    required: false,
-    highlighted: false,
-    storage: 'stored',
-    archived: true,
-  },
-];
+export { electronicsFields } from './inventory-type-fields';
+export type { CatalogueFieldKind, CatalogueFieldSummary } from './inventory-type-fields';
 
 export const connectorOptions: readonly CatalogueEnumOption[] = [
   { id: 'option-usb-c', key: 'usb_c', label: 'USB-C', itemCount: 93 },

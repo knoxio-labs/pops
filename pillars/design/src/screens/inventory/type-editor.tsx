@@ -1,4 +1,5 @@
 import { catalogueRevision } from '@/fixtures/inventory-type-catalogue';
+import { PrimitiveFieldState } from '@/fixtures/inventory-type-editor-field-states';
 import { CatalogueList } from '@/kit/inventory/type-editor/catalogue-navigation';
 import { FocusedEditor, WorkspaceEditor } from '@/kit/inventory/type-editor/layouts';
 import { Database, Plus } from 'lucide-react';
@@ -6,6 +7,7 @@ import { Database, Plus } from 'lucide-react';
 import { Button, ButtonPrimitive, PageHeader } from '@pops/ui';
 
 import type { ScreenMeta, ScreenStates } from '@/contract';
+import type { CatalogueFieldKind } from '@/fixtures/inventory-type-catalogue';
 import type { TypeEditorLayout, TypeEditorMode } from '@/kit/inventory/type-editor/types';
 
 export const meta: ScreenMeta = { title: 'Type editor', order: 9, frame: 'web' };
@@ -13,6 +15,7 @@ export const meta: ScreenMeta = { title: 'Type editor', order: 9, frame: 'web' }
 interface TypeEditorProps {
   mode?: TypeEditorMode;
   layout?: TypeEditorLayout;
+  fieldKind?: CatalogueFieldKind;
 }
 
 function TypeList() {
@@ -37,11 +40,16 @@ function TypeList() {
   );
 }
 
+function EditorLayout({ mode, layout }: { mode: TypeEditorMode; layout: TypeEditorLayout }) {
+  if (layout === 'workspace') return <WorkspaceEditor mode={mode} />;
+  return <FocusedEditor mode={mode} />;
+}
+
 /**
  * Owner-facing catalogue editor design covering the complete type, field,
  * compatibility and publication workflow from Inventory ADR-002 D5.
  */
-export function TypeEditor({ mode = 'edit', layout = 'focused' }: TypeEditorProps) {
+export function TypeEditor({ mode = 'edit', layout = 'focused', fieldKind }: TypeEditorProps) {
   if (mode === 'list') return <TypeList />;
 
   return (
@@ -56,7 +64,11 @@ export function TypeEditor({ mode = 'edit', layout = 'focused' }: TypeEditorProp
           </ButtonPrimitive>
         }
       />
-      {layout === 'workspace' ? <WorkspaceEditor mode={mode} /> : <FocusedEditor mode={mode} />}
+      {fieldKind === undefined ? (
+        <EditorLayout mode={mode} layout={layout} />
+      ) : (
+        <PrimitiveFieldState kind={fieldKind} layout={layout} />
+      )}
     </div>
   );
 }
@@ -70,7 +82,19 @@ export function createTypeEditorStates(layout: TypeEditorLayout): ScreenStates {
     edit: () => <TypeEditor mode="edit" layout={layout} />,
     archive: () => <TypeEditor mode="archive" layout={layout} />,
     'enum-options': () => <TypeEditor mode="enum" layout={layout} />,
-    'reference-targets': () => <TypeEditor mode="reference" layout={layout} />,
+    'reference-targets': () => <TypeEditor fieldKind="reference" layout={layout} />,
+    'reference-items-and-locations': () => <TypeEditor fieldKind="reference" layout={layout} />,
+    'primitive-short-text': () => <TypeEditor fieldKind="short_text" layout={layout} />,
+    'primitive-long-text': () => <TypeEditor fieldKind="long_text" layout={layout} />,
+    'primitive-integer': () => <TypeEditor fieldKind="integer" layout={layout} />,
+    'primitive-decimal': () => <TypeEditor fieldKind="decimal" layout={layout} />,
+    'primitive-boolean': () => <TypeEditor fieldKind="boolean" layout={layout} />,
+    'primitive-enum': () => <TypeEditor fieldKind="enum" layout={layout} />,
+    'primitive-measurement': () => <TypeEditor fieldKind="measurement" layout={layout} />,
+    'primitive-date': () => <TypeEditor fieldKind="date" layout={layout} />,
+    'primitive-date-time': () => <TypeEditor fieldKind="date_time" layout={layout} />,
+    'primitive-url': () => <TypeEditor fieldKind="url" layout={layout} />,
+    'primitive-reference': () => <TypeEditor fieldKind="reference" layout={layout} />,
     'validation-preview': () => <TypeEditor mode="preview" layout={layout} />,
     'stale-revision': () => <TypeEditor mode="stale" layout={layout} />,
     'destructive-refusal': () => <TypeEditor mode="destructive" layout={layout} />,
