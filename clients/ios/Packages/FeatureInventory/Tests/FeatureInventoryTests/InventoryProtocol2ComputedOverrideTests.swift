@@ -84,8 +84,8 @@ internal struct InventoryProtocol2ComputedOverrideTests {
         defer { opened.loading.cancel() }
 
         await opened.form.setComputedOverride(.string("9 l"), for: Self.volume)
-        let performed = opened.store.performed
-        guard case .setComputedOverride(let id, let fieldId, let value)? = performed.first else {
+        let afterSet = opened.store.performed
+        guard case .setComputedOverride(let id, let fieldId, let value)? = afterSet.first else {
             Issue.record("expected item.setOverride")
             return
         }
@@ -94,13 +94,14 @@ internal struct InventoryProtocol2ComputedOverrideTests {
         #expect(value == .string("9 l"))
 
         await opened.form.clearComputedOverride(for: Self.volume)
-        guard case .clearComputedOverride(let id, let fieldId)? = opened.store.performed.last
+        let afterClear = opened.store.performed
+        guard case .clearComputedOverride(let clearedId, let clearedField)? = afterClear.last
         else {
             Issue.record("expected item.clearOverride")
             return
         }
-        #expect(id == "box")
-        #expect(fieldId == Self.volume.id)
+        #expect(clearedId == "box")
+        #expect(clearedField == Self.volume.id)
     }
 
     @Test("an override value composes and clears the same way a stored entry does")
