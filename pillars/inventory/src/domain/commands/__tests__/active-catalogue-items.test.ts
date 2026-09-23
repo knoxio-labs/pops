@@ -20,6 +20,9 @@ function publishCustomType(harness: Harness): {
   readonly fieldId: string;
   readonly notesFieldId: string;
   readonly referenceFieldId: string;
+  readonly enumFieldId: string;
+  readonly activeOptionId: string;
+  readonly retiredOptionId: string;
   readonly cableTypeId: string;
 } {
   const created = createCatalogueDraft(harness.db, 1, AUTHOR);
@@ -76,19 +79,46 @@ function publishCustomType(harness: Harness): {
         referenceKinds: ['item'],
         referenceTypeIds: [cable.id],
       },
+      {
+        kind: 'put_field',
+        typeId: type.id,
+        key: 'tags',
+        label: 'Tags',
+        fieldKind: 'enum',
+        cardinality: 'many',
+        required: false,
+        storage: 'stored',
+      },
     ]
   );
   const fields = withField.draft.types.find((entry) => entry.id === type.id)?.fields;
   const field = fields?.find((entry) => entry.key === 'serial');
   const notesField = fields?.find((entry) => entry.key === 'notes');
   const referenceField = fields?.find((entry) => entry.key === 'connected_to');
+  const enumField = fields?.find((entry) => entry.key === 'tags');
   if (!field) throw new Error('custom field was not created');
   if (!notesField) throw new Error('custom notes field was not created');
   if (!referenceField) throw new Error('custom reference field was not created');
+  if (!enumField) throw new Error('custom enum field was not created');
+  const withOptions = patchCatalogueDraft(
+    harness.db,
+    { revision, baseRevision: 1, expectedDraftVersion: withField.draft.revision.draftVersion },
+    [
+      { kind: 'put_enum_option', fieldId: enumField.id, key: 'active', label: 'Active' },
+      { kind: 'put_enum_option', fieldId: enumField.id, key: 'retired', label: 'Retired' },
+    ]
+  );
+  const options = withOptions.draft.types
+    .find((entry) => entry.id === type.id)
+    ?.fields.find((entry) => entry.id === enumField.id)?.enumOptions;
+  const activeOption = options?.find((entry) => entry.key === 'active');
+  const retiredOption = options?.find((entry) => entry.key === 'retired');
+  if (!activeOption) throw new Error('active enum option was not created');
+  if (!retiredOption) throw new Error('retired enum option was not created');
   publishCatalogueDraft(
     harness.db,
     revision,
-    { baseRevision: 1, expectedDraftVersion: withField.draft.revision.draftVersion, note: null },
+    { baseRevision: 1, expectedDraftVersion: withOptions.draft.revision.draftVersion, note: null },
     AUTHOR
   );
   return {
@@ -97,8 +127,50 @@ function publishCustomType(harness: Harness): {
     fieldId: field.id,
     notesFieldId: notesField.id,
     referenceFieldId: referenceField.id,
+    enumFieldId: enumField.id,
+    activeOptionId: activeOption.id,
+    retiredOptionId: retiredOption.id,
     cableTypeId: cable.id,
   };
+}
+
+function archiveEnumOption(harness: Harness, optionId: string, baseRevision: number): number {
+  const created = createCatalogueDraft(harness.db, baseRevision, AUTHOR);
+  const revision = created.revision.revision;
+  const patched = patchCatalogueDraft(
+    harness.db,
+    { revision, baseRevision, expectedDraftVersion: created.revision.draftVersion },
+    [{ kind: 'archive_enum_option', id: optionId }]
+  );
+  publishCatalogueDraft(
+    harness.db,
+    revision,
+    { baseRevision, expectedDraftVersion: patched.draft.revision.draftVersion, note: null },
+    AUTHOR
+  );
+  return revision;
+}
+
+function restoreEnumOption(
+  harness: Harness,
+  optionId: string,
+  fieldId: string,
+  baseRevision: number
+): number {
+  const created = createCatalogueDraft(harness.db, baseRevision, AUTHOR);
+  const revision = created.revision.revision;
+  const patched = patchCatalogueDraft(
+    harness.db,
+    { revision, baseRevision, expectedDraftVersion: created.revision.draftVersion },
+    [{ kind: 'put_enum_option', id: optionId, fieldId, archivedAt: null }]
+  );
+  publishCatalogueDraft(
+    harness.db,
+    revision,
+    { baseRevision, expectedDraftVersion: patched.draft.revision.draftVersion, note: null },
+    AUTHOR
+  );
+  return revision;
 }
 
 function archiveType(harness: Harness, typeId: string, baseRevision: number): number {
@@ -626,5 +698,259 @@ describe('active catalogue item commands', () => {
     expect(
       harness.raw.prepare(`SELECT count(*) AS count FROM items WHERE id = ?`).get(itemId)
     ).toEqual({ count: 0 });
+  });
+
+  describe('retired enum options in a many-valued field', () => {
+    it('lets an edit reorder or partially remove a retained retired occurrence', () => {
+      const harness = openHarness();
+      const catalogue = publishCustomType(harness);
+      const itemId = randomUUID();
+      harness.run(
+        mutation(
+          'item.create',
+          itemId,
+          {
+            item: {
+              name: 'Tagged sensor',
+              typeId: catalogue.typeId,
+              values: [
+                { fieldId: catalogue.fieldId, values: ['SN-1'] },
+                {
+                  fieldId: catalogue.enumFieldId,
+                  values: [
+                    { optionId: catalogue.retiredOptionId },
+                    { optionId: catalogue.retiredOptionId },
+                    { optionId: catalogue.activeOptionId },
+                  ],
+                },
+              ],
+            },
+          },
+          { baseRevision: null, catalogueRevision: catalogue.revision }
+        )
+      );
+      const activeRevision = archiveEnumOption(
+        harness,
+        catalogue.retiredOptionId,
+        catalogue.revision
+      );
+
+      const reordered = harness.run(
+        mutation(
+          'item.edit',
+          itemId,
+          {
+            values: [
+              {
+                fieldId: catalogue.enumFieldId,
+                values: [
+                  { optionId: catalogue.activeOptionId },
+                  { optionId: catalogue.retiredOptionId },
+                  { optionId: catalogue.retiredOptionId },
+                ],
+              },
+            ],
+          },
+          { baseRevision: 1, catalogueRevision: activeRevision }
+        )
+      );
+      expect(reordered).toMatchObject({ status: 'applied', revision: 2 });
+      expect(readItemFieldValues(harness.db, itemId)).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            fieldId: catalogue.enumFieldId,
+            values: [
+              { optionId: catalogue.activeOptionId },
+              { optionId: catalogue.retiredOptionId },
+              { optionId: catalogue.retiredOptionId },
+            ],
+          }),
+        ])
+      );
+
+      const partiallyRemoved = harness.run(
+        mutation(
+          'item.edit',
+          itemId,
+          {
+            values: [
+              {
+                fieldId: catalogue.enumFieldId,
+                values: [
+                  { optionId: catalogue.retiredOptionId },
+                  { optionId: catalogue.activeOptionId },
+                ],
+              },
+            ],
+          },
+          { baseRevision: 2, catalogueRevision: activeRevision }
+        )
+      );
+      expect(partiallyRemoved).toMatchObject({ status: 'applied', revision: 3 });
+      expect(readItemFieldValues(harness.db, itemId)).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            fieldId: catalogue.enumFieldId,
+            values: [
+              { optionId: catalogue.retiredOptionId },
+              { optionId: catalogue.activeOptionId },
+            ],
+          }),
+        ])
+      );
+    });
+
+    it('rejects an edit that adds a brand new occurrence of a retired option', () => {
+      const harness = openHarness();
+      const catalogue = publishCustomType(harness);
+      const itemId = randomUUID();
+      harness.run(
+        mutation(
+          'item.create',
+          itemId,
+          {
+            item: {
+              name: 'Tagged sensor',
+              typeId: catalogue.typeId,
+              values: [
+                { fieldId: catalogue.fieldId, values: ['SN-1'] },
+                {
+                  fieldId: catalogue.enumFieldId,
+                  values: [{ optionId: catalogue.retiredOptionId }],
+                },
+              ],
+            },
+          },
+          { baseRevision: null, catalogueRevision: catalogue.revision }
+        )
+      );
+      const activeRevision = archiveEnumOption(
+        harness,
+        catalogue.retiredOptionId,
+        catalogue.revision
+      );
+
+      const outcome = harness.run(
+        mutation(
+          'item.edit',
+          itemId,
+          {
+            values: [
+              {
+                fieldId: catalogue.enumFieldId,
+                values: [
+                  { optionId: catalogue.retiredOptionId },
+                  { optionId: catalogue.retiredOptionId },
+                ],
+              },
+            ],
+          },
+          { baseRevision: 1, catalogueRevision: activeRevision }
+        )
+      );
+      expect(outcome).toMatchObject({ status: 'rejected', reason: 'invalid' });
+      expect(harness.item(itemId).revision).toBe(1);
+      expect(readItemFieldValues(harness.db, itemId)).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            fieldId: catalogue.enumFieldId,
+            values: [{ optionId: catalogue.retiredOptionId }],
+          }),
+        ])
+      );
+
+      const otherItemId = randomUUID();
+      const freshSelection = harness.run(
+        mutation(
+          'item.create',
+          otherItemId,
+          {
+            item: {
+              name: 'Other sensor',
+              typeId: catalogue.typeId,
+              values: [
+                { fieldId: catalogue.fieldId, values: ['SN-2'] },
+                {
+                  fieldId: catalogue.enumFieldId,
+                  values: [{ optionId: catalogue.retiredOptionId }],
+                },
+              ],
+            },
+          },
+          { baseRevision: null, catalogueRevision: activeRevision }
+        )
+      );
+      expect(freshSelection).toMatchObject({ status: 'rejected', reason: 'invalid' });
+    });
+
+    it('allows unrestricted selection once a later revision restores the option', () => {
+      const harness = openHarness();
+      const catalogue = publishCustomType(harness);
+      const itemId = randomUUID();
+      harness.run(
+        mutation(
+          'item.create',
+          itemId,
+          {
+            item: {
+              name: 'Tagged sensor',
+              typeId: catalogue.typeId,
+              values: [
+                { fieldId: catalogue.fieldId, values: ['SN-1'] },
+                {
+                  fieldId: catalogue.enumFieldId,
+                  values: [{ optionId: catalogue.retiredOptionId }],
+                },
+              ],
+            },
+          },
+          { baseRevision: null, catalogueRevision: catalogue.revision }
+        )
+      );
+      const archivedRevision = archiveEnumOption(
+        harness,
+        catalogue.retiredOptionId,
+        catalogue.revision
+      );
+      const restoredRevision = restoreEnumOption(
+        harness,
+        catalogue.retiredOptionId,
+        catalogue.enumFieldId,
+        archivedRevision
+      );
+
+      const outcome = harness.run(
+        mutation(
+          'item.edit',
+          itemId,
+          {
+            values: [
+              {
+                fieldId: catalogue.enumFieldId,
+                values: [
+                  { optionId: catalogue.retiredOptionId },
+                  { optionId: catalogue.retiredOptionId },
+                  { optionId: catalogue.activeOptionId },
+                ],
+              },
+            ],
+          },
+          { baseRevision: 1, catalogueRevision: restoredRevision }
+        )
+      );
+      expect(outcome).toMatchObject({ status: 'applied', revision: 2 });
+      expect(readItemFieldValues(harness.db, itemId)).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            fieldId: catalogue.enumFieldId,
+            values: [
+              { optionId: catalogue.retiredOptionId },
+              { optionId: catalogue.retiredOptionId },
+              { optionId: catalogue.activeOptionId },
+            ],
+          }),
+        ])
+      );
+    });
   });
 });
