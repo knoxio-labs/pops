@@ -96,6 +96,10 @@ function snapshot(items: readonly VectorItem[]): ExpressionSnapshot {
 function ops(node: ExpressionV1, found: Set<ExpressionV1['op']>): Set<ExpressionV1['op']> {
   found.add(node.op);
   if (node.op === 'literal' || node.op === 'read') return found;
+  if (node.op === 'coalesce') {
+    for (const value of node.values) ops(value, found);
+    return found;
+  }
   if ('value' in node) return ops(node.value, found);
   if (node.op === 'if') {
     ops(node.condition, found);

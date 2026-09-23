@@ -5271,6 +5271,668 @@
       }
     },
     {
+      "name": "coalesce skips a missing input to the first available one",
+      "expressionVersion": 1,
+      "expression": {
+        "op": "coalesce",
+        "values": [
+          {
+            "op": "read",
+            "path": [],
+            "fieldId": "00000000-0000-4000-8000-00000000020c"
+          },
+          {
+            "op": "read",
+            "path": [],
+            "fieldId": "00000000-0000-4000-8000-000000000202"
+          }
+        ]
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "decimal",
+        "fixedUnit": null,
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000202",
+              "state": "value",
+              "value": "2.50",
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000208",
+              "state": "value",
+              "value": {
+                "targetKind": "item",
+                "targetId": "00000000-0000-4000-8000-000000000104"
+              },
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["coalesce", "read"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": ["2.50"],
+          "dependencies": [
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-000000000202",
+              "revision": 3
+            },
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020c",
+              "revision": 3
+            }
+          ],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "coalesce stops at its first value without reading the rest",
+      "expressionVersion": 1,
+      "expression": {
+        "op": "coalesce",
+        "values": [
+          {
+            "op": "read",
+            "path": [],
+            "fieldId": "00000000-0000-4000-8000-000000000202"
+          },
+          {
+            "op": "read",
+            "path": [],
+            "fieldId": "00000000-0000-4000-8000-00000000020c"
+          },
+          {
+            "op": "read",
+            "path": ["00000000-0000-4000-8000-000000000208"],
+            "fieldId": "00000000-0000-4000-8000-000000000202"
+          }
+        ]
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "decimal",
+        "fixedUnit": null,
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000202",
+              "state": "value",
+              "value": "2.50",
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000208",
+              "state": "value",
+              "value": {
+                "targetKind": "item",
+                "targetId": "00000000-0000-4000-8000-000000000104"
+              },
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["coalesce", "read"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": ["2.50"],
+          "dependencies": [
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-000000000202",
+              "revision": 3
+            }
+          ],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "coalesce falls back to a literal default",
+      "expressionVersion": 1,
+      "expression": {
+        "op": "coalesce",
+        "values": [
+          {
+            "op": "read",
+            "path": ["00000000-0000-4000-8000-000000000208"],
+            "fieldId": "00000000-0000-4000-8000-000000000202"
+          },
+          {
+            "op": "literal",
+            "value": "0"
+          }
+        ]
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "decimal",
+        "fixedUnit": null,
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000202",
+              "state": "value",
+              "value": "2.50",
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000208",
+              "state": "value",
+              "value": {
+                "targetKind": "item",
+                "targetId": "00000000-0000-4000-8000-000000000104"
+              },
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["coalesce", "literal", "read"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": ["0"],
+          "dependencies": [
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-000000000208",
+              "revision": 3
+            },
+            {
+              "itemId": "00000000-0000-4000-8000-000000000104",
+              "fieldId": "00000000-0000-4000-8000-000000000202",
+              "revision": 0
+            }
+          ],
+          "traversedItemIds": [
+            "00000000-0000-4000-8000-000000000101",
+            "00000000-0000-4000-8000-000000000104"
+          ]
+        }
+      }
+    },
+    {
+      "name": "coalesce of only unavailable inputs reports the last reason and every traversal",
+      "expressionVersion": 1,
+      "expression": {
+        "op": "coalesce",
+        "values": [
+          {
+            "op": "read",
+            "path": ["00000000-0000-4000-8000-000000000208"],
+            "fieldId": "00000000-0000-4000-8000-000000000202"
+          },
+          {
+            "op": "read",
+            "path": [],
+            "fieldId": "00000000-0000-4000-8000-00000000020c"
+          }
+        ]
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "decimal",
+        "fixedUnit": null,
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000202",
+              "state": "value",
+              "value": "2.50",
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000208",
+              "state": "value",
+              "value": {
+                "targetKind": "item",
+                "targetId": "00000000-0000-4000-8000-000000000104"
+              },
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["coalesce", "read"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "unavailable",
+          "reason": "missing_dependency",
+          "failedFieldId": "00000000-0000-4000-8000-00000000020c",
+          "dependencies": [
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-000000000208",
+              "revision": 3
+            },
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020c",
+              "revision": 3
+            },
+            {
+              "itemId": "00000000-0000-4000-8000-000000000104",
+              "fieldId": "00000000-0000-4000-8000-000000000202",
+              "revision": 0
+            }
+          ],
+          "traversedItemIds": [
+            "00000000-0000-4000-8000-000000000101",
+            "00000000-0000-4000-8000-000000000104"
+          ]
+        }
+      }
+    },
+    {
+      "name": "coalesce does not skip an evaluation error",
+      "expressionVersion": 1,
+      "expression": {
+        "op": "coalesce",
+        "values": [
+          {
+            "op": "divide",
+            "left": {
+              "op": "read",
+              "path": [],
+              "fieldId": "00000000-0000-4000-8000-000000000202"
+            },
+            "right": {
+              "op": "literal",
+              "value": "0"
+            }
+          },
+          {
+            "op": "literal",
+            "value": "1"
+          }
+        ]
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "decimal",
+        "fixedUnit": null,
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000202",
+              "state": "value",
+              "value": "2.50",
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000208",
+              "state": "value",
+              "value": {
+                "targetKind": "item",
+                "targetId": "00000000-0000-4000-8000-000000000104"
+              },
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["coalesce", "divide", "literal", "read"],
+        "evaluationErrorCode": "division_by_zero",
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "unavailable",
+          "reason": "evaluation_error",
+          "failedFieldId": "00000000-0000-4000-8000-000000000201",
+          "dependencies": [
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-000000000202",
+              "revision": 3
+            }
+          ],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "coalesce reaches an error after skipping an unavailable input",
+      "expressionVersion": 1,
+      "expression": {
+        "op": "coalesce",
+        "values": [
+          {
+            "op": "read",
+            "path": [],
+            "fieldId": "00000000-0000-4000-8000-00000000020c"
+          },
+          {
+            "op": "divide",
+            "left": {
+              "op": "literal",
+              "value": "1"
+            },
+            "right": {
+              "op": "literal",
+              "value": "3"
+            }
+          }
+        ]
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "decimal",
+        "fixedUnit": null,
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000202",
+              "state": "value",
+              "value": "2.50",
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000208",
+              "state": "value",
+              "value": {
+                "targetKind": "item",
+                "targetId": "00000000-0000-4000-8000-000000000104"
+              },
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["coalesce", "divide", "literal", "read"],
+        "evaluationErrorCode": "precision_overflow",
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "unavailable",
+          "reason": "evaluation_error",
+          "failedFieldId": "00000000-0000-4000-8000-000000000201",
+          "dependencies": [
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020c",
+              "revision": 3
+            }
+          ],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "coalesce inside arithmetic",
+      "expressionVersion": 1,
+      "expression": {
+        "op": "add",
+        "left": {
+          "op": "coalesce",
+          "values": [
+            {
+              "op": "read",
+              "path": [],
+              "fieldId": "00000000-0000-4000-8000-00000000020c"
+            },
+            {
+              "op": "literal",
+              "value": "1.5"
+            }
+          ]
+        },
+        "right": {
+          "op": "read",
+          "path": [],
+          "fieldId": "00000000-0000-4000-8000-000000000202"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "decimal",
+        "fixedUnit": null,
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000202",
+              "state": "value",
+              "value": "2.50",
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000208",
+              "state": "value",
+              "value": {
+                "targetKind": "item",
+                "targetId": "00000000-0000-4000-8000-000000000104"
+              },
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["add", "coalesce", "literal", "read"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": ["4.00"],
+          "dependencies": [
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-000000000202",
+              "revision": 3
+            },
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020c",
+              "revision": 3
+            }
+          ],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "coalesce with one value is rejected",
+      "expressionVersion": 1,
+      "expression": {
+        "op": "coalesce",
+        "values": [
+          {
+            "op": "literal",
+            "value": "1"
+          }
+        ]
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "decimal",
+        "fixedUnit": null,
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": []
+        }
+      ],
+      "expected": {
+        "outcome": "rejected",
+        "code": "expression_arity_invalid",
+        "path": "expression.values"
+      }
+    },
+    {
+      "name": "coalesce without a values array is rejected",
+      "expressionVersion": 1,
+      "expression": {
+        "op": "coalesce",
+        "values": {
+          "op": "literal",
+          "value": "1"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "decimal",
+        "fixedUnit": null,
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": []
+        }
+      ],
+      "expected": {
+        "outcome": "rejected",
+        "code": "expression_arity_invalid",
+        "path": "expression.values"
+      }
+    },
+    {
+      "name": "coalesce with an extra key is rejected",
+      "expressionVersion": 1,
+      "expression": {
+        "op": "coalesce",
+        "values": [
+          {
+            "op": "literal",
+            "value": "1"
+          },
+          {
+            "op": "literal",
+            "value": "2"
+          }
+        ],
+        "left": {
+          "op": "literal",
+          "value": "3"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "decimal",
+        "fixedUnit": null,
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": []
+        }
+      ],
+      "expected": {
+        "outcome": "rejected",
+        "code": "expression_node_invalid",
+        "path": "expression"
+      }
+    },
+    {
       "name": "exactly 128 nodes evaluate",
       "expressionVersion": 1,
       "expression": {

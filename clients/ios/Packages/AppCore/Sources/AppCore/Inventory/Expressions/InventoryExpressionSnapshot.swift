@@ -63,7 +63,10 @@ public enum InventoryExpressionEvaluation<Value: Hashable & Sendable>: Hashable,
     }
 
     func merging(_ earlier: [InventoryValueDependency]) -> Self {
-        let merged = InventoryValueDependency.unique(earlier + dependencies)
+        replacingDependencies(InventoryValueDependency.unique(earlier + dependencies))
+    }
+
+    func replacingDependencies(_ merged: [InventoryValueDependency]) -> Self {
         switch self {
         case .value(let value, _): return .value(value, dependencies: merged)
         case .unavailable(let unavailable, _):

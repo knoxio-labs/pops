@@ -154,7 +154,11 @@ type/field dependencies, resolves reference reads across every permitted target
 type, and rejects direct, transitive and reference-mediated cycles. Evaluation is
 synchronous against one supplied item snapshot, uses exact integer, decimal and
 fixed-unit measurement arithmetic, and short-circuits boolean and conditional
-branches before attempting their reads. Its disposable LRU cache has no clock:
+branches before attempting their reads. `coalesce` alone skips an unavailable
+argument, and records the input it lacked as a dependency (revision 0 when the
+item is absent) so the fallback goes stale when that input appears. It needs no
+protocol rollout: phones carry expressions as opaque JSON and keep the server's
+value for syntax they cannot parse. Its disposable LRU cache has no clock:
 entries match exact item, catalogue and dependency revisions, with direct
 dependency, item and catalogue invalidation primitives for command and feed paths.
 Draft validation and publication run that expression validator before any snapshot

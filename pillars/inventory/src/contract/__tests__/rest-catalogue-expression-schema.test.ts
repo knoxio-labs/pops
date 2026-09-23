@@ -51,6 +51,26 @@ describe('ExpressionV1Schema', () => {
     expect(parseExpression(1, wire)).toMatchObject({ op: 'add' });
   });
 
+  it('accepts a coalesce of two or more expressions, matching parseExpression', () => {
+    const wire = {
+      op: 'coalesce',
+      values: [
+        { op: 'read', path: [], fieldId: randomUUID() },
+        { op: 'literal', value: '0' },
+      ],
+    };
+    expect(ExpressionV1Schema.parse(wire)).toEqual(wire);
+    expect(parseExpression(1, wire)).toMatchObject({ op: 'coalesce' });
+  });
+
+  it('rejects a coalesce of fewer than two expressions, as the parser does', () => {
+    const wire = { op: 'coalesce', values: [{ op: 'literal', value: '0' }] };
+    expect(ExpressionV1Schema.safeParse(wire).success).toBe(false);
+    expect(() => parseExpression(1, wire)).toThrowError(
+      expect.objectContaining({ code: 'expression_arity_invalid' })
+    );
+  });
+
   it('rejects a decimal literal, matching the parser own safe-integer-only rule', () => {
     const wire = { op: 'literal', value: 2.5 };
     expect(ExpressionV1Schema.safeParse(wire).success).toBe(false);

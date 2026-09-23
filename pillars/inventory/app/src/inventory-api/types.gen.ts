@@ -51,6 +51,10 @@ export type ExpressionV1 =
       else: ExpressionV1;
       op: 'if';
       then: ExpressionV1;
+    }
+  | {
+      op: 'coalesce';
+      values: Array<ExpressionV1>;
     };
 
 export type LocationTreeNode = {

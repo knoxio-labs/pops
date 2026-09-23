@@ -10,7 +10,7 @@ internal struct LocalComputedValueTests {
 
     /// A box 2.0 wide and 3 deep on a rack 40 deep, with the server's own
     /// evaluations of both computed fields.
-    private static func replica(
+    static func replica(
         complete: Bool = true, catalogue: InventoryCatalogueSnapshot = Setup.catalogue
     )
         throws -> InventoryReplica
@@ -29,7 +29,7 @@ internal struct LocalComputedValueTests {
         return replica
     }
 
-    private static func edit(
+    static func edit(
         _ replica: InventoryReplica, _ itemId: String, _ fieldId: String,
         _ values: [InventoryPrimitiveValue]?, mutationId: String
     ) throws {
@@ -186,21 +186,11 @@ internal struct LocalComputedValueTests {
     @Test("an expression this build cannot parse leaves the value Out of date")
     func unknownSyntaxStaysOutOfDate() throws {
         let future = InventoryJSON.object([
-            "op": .string("coalesce"),
-            "args": .array([Setup.read(Setup.width), Setup.read(Setup.depth)]),
+            "op": .string("modulo"), "left": Setup.read(Setup.width),
+            "right": Setup.read(Setup.depth),
         ])
-        let types = Setup.catalogue.types.map { type in
-            InventoryCatalogueType(
-                id: type.id, key: type.key, label: type.label, sortOrder: type.sortOrder,
-                fields: type.fields.map { field in
-                    field.id == Setup.volume
-                        ? Setup.field(
-                            Setup.volume, key: "volume", kind: .decimal, expression: future)
-                        : field
-                })
-        }
         let replica = try Self.replica(
-            catalogue: InventoryCatalogueSnapshot(revision: Setup.catalogue.revision, types: types))
+            catalogue: Setup.catalogue(replacing: Setup.volume, with: future))
 
         try Self.edit(replica, Setup.box, Setup.width, [try Setup.decimal("4.0")], mutationId: "m1")
 

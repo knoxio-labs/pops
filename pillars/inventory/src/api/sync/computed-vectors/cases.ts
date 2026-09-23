@@ -1,4 +1,5 @@
 import { ARITHMETIC_CASES } from './cases-arithmetic.js';
+import { COALESCE_CASES } from './cases-coalesce.js';
 import { LITERAL_CASES } from './cases-literals.js';
 import { LOGIC_CASES } from './cases-logic.js';
 import { READ_CASES } from './cases-reads.js';
@@ -12,6 +13,7 @@ export const EXPRESSION_VECTOR_CASES: readonly ExpressionVectorCase[] = [
   ...READ_CASES,
   ...ARITHMETIC_CASES,
   ...LOGIC_CASES,
+  ...COALESCE_CASES,
   ...STRUCTURE_CASES,
   ...OVERRIDE_CASES,
 ];

@@ -24,7 +24,8 @@ export type ExpressionV1 =
       readonly condition: ExpressionV1;
       readonly thenBranch: ExpressionV1;
       readonly elseBranch: ExpressionV1;
-    };
+    }
+  | { readonly op: 'coalesce'; readonly values: readonly ExpressionV1[] };
 
 /** A primitive type inferred for a validated expression node. */
 export interface ExpressionValueType {

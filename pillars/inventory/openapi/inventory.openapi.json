@@ -153,6 +153,24 @@
             },
             "required": ["op", "condition", "then", "else"],
             "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "op": {
+                "enum": ["coalesce"],
+                "type": "string"
+              },
+              "values": {
+                "items": {
+                  "$ref": "#/components/schemas/ExpressionV1"
+                },
+                "minItems": 2,
+                "type": "array"
+              }
+            },
+            "required": ["op", "values"],
+            "type": "object"
           }
         ]
       },

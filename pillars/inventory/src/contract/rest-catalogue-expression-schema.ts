@@ -66,7 +66,8 @@ export type ExpressionV1Shape =
        * ['condition', 'else', 'op', 'then'], path)`. */
       readonly then: ExpressionV1Shape;
       readonly else: ExpressionV1Shape;
-    };
+    }
+  | { readonly op: 'coalesce'; readonly values: readonly ExpressionV1Shape[] };
 
 /**
  * The v1 computed-field expression grammar (Inventory ADR-002 D-computed),
@@ -76,7 +77,8 @@ export type ExpressionV1Shape =
  * `expression-parser.ts`'s private `UNARY_OPS`/`BINARY_OPS`/
  * `MAX_REFERENCE_HOPS`. Mirrors `expression-types.ts`'s `ExpressionV1` union:
  * a literal, a same-item or bounded reference read, a unary op, a binary op,
- * or an `if`. No other syntax — no arbitrary JS/SQL.
+ * an `if`, or a `coalesce` of two or more expressions. No other syntax — no
+ * arbitrary JS/SQL.
  *
  * Recursive, so it follows `LocationTreeNodeSchema`'s `z.lazy` +
  * `.meta({ id })` pattern (`rest-locations.ts`) — the pillar's existing
@@ -110,6 +112,7 @@ export const ExpressionV1Schema: z.ZodType<ExpressionV1Shape> = z
           [ELSE_KEY]: ExpressionV1Schema,
         })
         .strict(),
+      z.object({ op: z.literal('coalesce'), values: z.array(ExpressionV1Schema).min(2) }).strict(),
     ])
   )
   .meta({ id: 'ExpressionV1' });
