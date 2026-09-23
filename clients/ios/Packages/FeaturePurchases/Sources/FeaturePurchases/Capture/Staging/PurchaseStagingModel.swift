@@ -4,6 +4,7 @@ import Observation
 
 #if canImport(PhotosUI) && canImport(UIKit)
     import PhotosUI
+    import SwiftUI
     import UIKit
 #endif
 

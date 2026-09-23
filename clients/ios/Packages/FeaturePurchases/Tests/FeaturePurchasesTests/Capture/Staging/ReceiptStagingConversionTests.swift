@@ -46,4 +46,20 @@ internal struct ReceiptStagingConversionTests {
         #expect(page.bytes == nil)
         #expect(page.part.data == data)
     }
+
+    @Test("the Files picker offers HEIC and HEIF, the iPhone's default photo formats")
+    func pickerOffersHEIC() {
+        #expect(ReceiptStagingConversion.fileContentTypes.contains(.heic))
+        #expect(ReceiptStagingConversion.fileContentTypes.contains(.heif))
+    }
+
+    @Test("every type the Files picker offers converts to a receipt media type")
+    func everyOfferedTypeConverts() {
+        for type in ReceiptStagingConversion.fileContentTypes {
+            let pathExtension = type.preferredFilenameExtension ?? ""
+            #expect(
+                ReceiptStagingConversion.mediaType(forPathExtension: pathExtension) != nil,
+                "\(type.identifier) has no receipt media type")
+        }
+    }
 }

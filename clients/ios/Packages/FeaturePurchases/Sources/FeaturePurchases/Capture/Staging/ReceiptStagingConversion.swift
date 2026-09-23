@@ -1,5 +1,6 @@
 import AppCore
 import Foundation
+import UniformTypeIdentifiers
 
 #if canImport(UIKit)
     import UIKit
@@ -10,6 +11,11 @@ internal enum ReceiptStagingConversion {
         case unreadable
         case unsupportedType
     }
+
+    /// The file types the Files picker offers: exactly those `mediaType(forPathExtension:)` accepts.
+    internal static let fileContentTypes: [UTType] = [
+        .jpeg, .png, .webP, .gif, .heic, .heif, .pdf, .plainText,
+    ]
 
     internal static func mediaType(forPathExtension pathExtension: String) -> ReceiptMediaType? {
         let normalized =

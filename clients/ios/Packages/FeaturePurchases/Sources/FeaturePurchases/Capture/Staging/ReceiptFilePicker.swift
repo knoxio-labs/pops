@@ -21,7 +21,7 @@
 
         internal func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
             let picker = UIDocumentPickerViewController(
-                forOpeningContentTypes: [.jpeg, .png, .webP, .gif, .pdf, .plainText],
+                forOpeningContentTypes: ReceiptStagingConversion.fileContentTypes,
                 asCopy: true)
             picker.allowsMultipleSelection = true
             picker.delegate = context.coordinator
