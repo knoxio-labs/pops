@@ -19,6 +19,7 @@ internal protocol WireInventoryItem {
     var typeId: String? { get }
     var catalogueRevision: Int? { get }
     var protocol2FieldValues: [WireProtocol2FieldValue] { get }
+    func computedValueRows() throws -> [WireComputedValue]
     var typeKey: String? { get }
     var legacyType: String? { get }
     var fieldsAdditionalProperties: [String: OpenAPIValueContainer] { get }
@@ -89,6 +90,9 @@ internal func inventoryItem<Item: WireInventoryItem>(
         typeId: wire.typeId,
         typeKey: wire.typeKey,
         fieldValues: try protocol2FieldValues(from: wire.protocol2FieldValues),
+        computedValues: try wire.computedValueRows().map {
+            try $0.domainValue(evaluatedItemRevision: wire.revision)
+        },
         legacyType: wire.legacyType,
         fields: customFields(from: wire.fieldsAdditionalProperties),
         note: wire.note,

@@ -20,6 +20,10 @@ extension Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPa
         }
     }
 
+    internal func computedValueRows() throws -> [WireComputedValue] {
+        try WireComputedValue.rows(computedValues)
+    }
+
     internal var fieldsAdditionalProperties: [String: OpenAPIRuntime.OpenAPIValueContainer] {
         fields.additionalProperties
     }
@@ -71,6 +75,10 @@ extension Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPay
                 values: $0.values
             )
         }
+    }
+
+    internal func computedValueRows() throws -> [WireComputedValue] {
+        try WireComputedValue.rows(computedValues)
     }
 
     internal var fieldsAdditionalProperties: [String: OpenAPIRuntime.OpenAPIValueContainer] {
