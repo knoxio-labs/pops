@@ -281,10 +281,11 @@ describe('the purchases stub', () => {
   });
 
   it.each([
-    ['/purchases?limit=0', 'INVALID_QUERY'],
-    ['/purchases?limit=501', 'INVALID_QUERY'],
-    ['/purchases?limit=1.5', 'INVALID_QUERY'],
-    ['/purchases?statuses=probably_fine', 'INVALID_QUERY'],
+    ['/purchases?limit=0', 'VALIDATION_ERROR'],
+    ['/purchases?limit=501', 'VALIDATION_ERROR'],
+    ['/purchases?limit=1.5', 'VALIDATION_ERROR'],
+    ['/purchases?statuses=probably_fine', 'VALIDATION_ERROR'],
+    ['/purchases?beforeOrderedAt=2026-09-01T00%3A00%3A00.000Z&beforeId=', 'VALIDATION_ERROR'],
     ['/purchases?beforeId=some-id', 'KEYSET_ANCHOR_INCOMPLETE'],
     ['/purchases?beforeOrderedAt=2026-09-01T00%3A00%3A00.000Z', 'KEYSET_ANCHOR_INCOMPLETE'],
     [

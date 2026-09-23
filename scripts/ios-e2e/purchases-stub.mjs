@@ -366,6 +366,13 @@ function purchaseId(detail) {
   return typeof id === 'string' ? id : undefined;
 }
 
+/** What ts-rest answers when a query fails the pillar's contract schema, before any handler runs. */
+const SCHEMA_REJECTION = Object.freeze({
+  ok: false,
+  code: 'VALIDATION_ERROR',
+  message: 'Request does not match the contract schema',
+});
+
 /**
  * @param {URLSearchParams} search
  * @returns {{ ok: true, limit: number, statuses: string[] | null, anchor: null | { orderedAt: string, id: string } } | { ok: false, code: string, message: string }}
@@ -374,12 +381,12 @@ function readListQuery(search) {
   const rawLimit = search.get('limit');
   const limit = rawLimit === null ? 50 : Number(rawLimit);
   if (!Number.isInteger(limit) || limit < 1 || limit > 500) {
-    return { ok: false, code: 'INVALID_QUERY', message: 'limit must be an integer from 1 to 500' };
+    return SCHEMA_REJECTION;
   }
 
   const statuses = search.getAll('statuses');
   if (statuses.some((status) => !PURCHASE_STATUSES.has(status))) {
-    return { ok: false, code: 'INVALID_QUERY', message: 'statuses contains an unknown value' };
+    return SCHEMA_REJECTION;
   }
 
   const beforeOrderedAt = search.get('beforeOrderedAt');
@@ -399,7 +406,7 @@ function readListQuery(search) {
     };
   }
   if (beforeId !== null && beforeId.length === 0) {
-    return { ok: false, code: 'INVALID_QUERY', message: 'beforeId must not be empty' };
+    return SCHEMA_REJECTION;
   }
 
   return {
