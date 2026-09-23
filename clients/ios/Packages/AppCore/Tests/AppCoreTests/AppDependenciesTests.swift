@@ -47,6 +47,13 @@ internal struct AppDependenciesTests {
         }
     }
 
+    @Test("an unbound merchant directory fails rather than returning an empty catalogue")
+    func unboundMerchantDirectoryFails() async {
+        await #expect(throws: RepositoryError.dependencyNotBound) {
+            try await AppDependencies.unbound.merchants.search("shop")
+        }
+    }
+
     @Test("an unbound purchases update fails rather than pretending the purchase is missing")
     func unboundPurchaseUpdateFails() async {
         await #expect(throws: RepositoryError.dependencyNotBound) {

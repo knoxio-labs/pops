@@ -58,6 +58,7 @@ extension AccountsSurfaces {
                 reachability: AppDependencies.unbound.reachability,
                 receiptCapture: AppDependencies.unbound.receiptCapture,
                 purchases: AppDependencies.unbound.purchases,
+                merchants: AppDependencies.unbound.merchants,
                 accounts: PlaygroundAccountsRepository(outcome: outcome)
             ),
             router: Router()

@@ -46,6 +46,7 @@
                 reachability: AppDependencies.unbound.reachability,
                 receiptCapture: AppDependencies.unbound.receiptCapture,
                 purchases: AppDependencies.unbound.purchases,
+                merchants: AppDependencies.unbound.merchants,
                 accounts: AppDependencies.unbound.accounts
             ),
             camera: PreviewCamera(access: camera),

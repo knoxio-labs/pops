@@ -153,6 +153,7 @@ internal final class AppComposition {
             reachability: AppDependencies.unbound.reachability,
             receiptCapture: AppDependencies.unbound.receiptCapture,
             purchases: AppDependencies.unbound.purchases,
+            merchants: AppDependencies.unbound.merchants,
             accounts: AppDependencies.unbound.accounts
         )
         shell = AppShellModel(
@@ -186,6 +187,7 @@ internal final class AppComposition {
             reachability: shell,
             receiptCapture: BFMReceiptCaptureRepository(client: authenticated(device)),
             purchases: BFMPurchasesRepository(client: authenticated(device)),
+            merchants: BFMMerchantDirectoryRepository(client: authenticated(device)),
             accounts: BFMAccountsRepository(client: authenticated(device)),
             inventory: inventoryStore(for: device, storageFull: &storageFull)
         )
