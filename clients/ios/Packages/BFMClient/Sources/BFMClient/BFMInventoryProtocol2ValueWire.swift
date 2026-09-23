@@ -15,8 +15,9 @@ internal func protocol2FieldValues(
     }
 }
 
-internal func protocol2Value(from container: OpenAPIValueContainer) throws -> InventoryPrimitiveValue
-{
+internal func protocol2Value(
+    from container: OpenAPIValueContainer
+) throws -> InventoryPrimitiveValue {
     switch container.value {
     case let value as String:
         return .string(value)
