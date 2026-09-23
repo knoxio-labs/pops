@@ -28,11 +28,11 @@ export const INVENTORY_PROTOCOL_HEADER = 'pops-inventory-protocol';
 
 /**
  * The sync wire shape this build of bfm understands. Raised only when
- * `client.ts`'s mapping changes to depend on a newer shape than `1` — see
- * `pillars/inventory/migrations/0012_items_single_identity.sql`, which seeds
- * the producer's own minimum at the same value.
+ * `client.ts`'s mapping changes to depend on a newer shape than `2`: protocol
+ * 2 carries persisted type IDs, exact catalogue revisions and canonical
+ * stable-ID values alongside the protocol-1 compatibility projection.
  */
-export const INVENTORY_SYNC_PROTOCOL_VERSION = 1;
+export const INVENTORY_SYNC_PROTOCOL_VERSION = 2;
 
 /**
  * The acting-device header inventory's `POST /sync/mutations` honours

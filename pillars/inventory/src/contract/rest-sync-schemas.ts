@@ -46,6 +46,14 @@ export const SyncProvenanceSchema = z.object({
   transactionUri: z.string().nullable(),
 });
 
+/** One canonical, stable-ID field-value group returned by protocol 2. */
+export const SyncItemFieldValueSchema = z.object({
+  fieldId: z.uuid(),
+  source: z.enum(['stored', 'override']),
+  catalogueRevision: z.number().int().positive(),
+  values: z.array(AnyJson),
+});
+
 /**
  * Whether an item has Paperless documents: `linked`, `none`, or `unavailable`
  * when it has links but Paperless could not be reached while the page was
@@ -59,8 +67,14 @@ export const SyncItemSchema = z.object({
   revision: z.number().int(),
   seq: z.number().int(),
   name: z.string(),
+  /** Stable persisted type identity. Present alongside `typeKey` for protocol-1 readers. */
+  typeId: z.uuid().nullable(),
+  /** The catalogue revision shared by every current value, when one exists. */
+  catalogueRevision: z.number().int().positive().nullable(),
   typeKey: z.string().nullable(),
   legacyType: z.string().nullable(),
+  /** Canonical stable-ID values; `fields` remains the protocol-1 compatibility projection. */
+  fieldValues: z.array(SyncItemFieldValueSchema),
   fields: z.record(z.string(), AnyJson),
   note: z.string().nullable(),
   code: z.string().nullable(),

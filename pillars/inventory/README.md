@@ -220,6 +220,10 @@ the gate above derives three grants: `inventory.sync` (`GET /sync/snapshot`,
   revision before applying rows that name it, and an offline mutation pins the
   revision used to validate it. The server accepts that mutation only when its
   compatibility record proves the referenced definitions unchanged.
+- Protocol 2 item rows carry the persisted `typeId` and canonical
+  stable-field-ID `fieldValues` (each with its source and catalogue revision).
+  The existing `typeKey` and `fields` projection remains alongside them for
+  protocol-1 readers during the transition.
 - The snapshot serves live items and locations in pages whose opaque cursor
   pins the high-water `seq` of the first page; the change feed then serves
   every row (tombstones included) and every event after a `seq`. A cursor or

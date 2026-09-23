@@ -1,8 +1,25 @@
+import AppCore
 import OpenAPIRuntime
 
 extension Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload:
     WireInventoryItem
 {
+    internal var protocol2FieldValues: [WireProtocol2FieldValue] {
+        return fieldValues.map {
+            let source: InventoryValueSource
+            switch $0.source {
+            case .stored: source = .stored
+            case .override: source = .override
+            }
+            return WireProtocol2FieldValue(
+                fieldId: $0.fieldId,
+                source: source,
+                catalogueRevision: $0.catalogueRevision,
+                values: $0.values
+            )
+        }
+    }
+
     internal var fieldsAdditionalProperties: [String: OpenAPIRuntime.OpenAPIValueContainer] {
         fields.additionalProperties
     }
@@ -40,6 +57,22 @@ extension Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPa
 extension Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload:
     WireInventoryItem
 {
+    internal var protocol2FieldValues: [WireProtocol2FieldValue] {
+        return fieldValues.map {
+            let source: InventoryValueSource
+            switch $0.source {
+            case .stored: source = .stored
+            case .override: source = .override
+            }
+            return WireProtocol2FieldValue(
+                fieldId: $0.fieldId,
+                source: source,
+                catalogueRevision: $0.catalogueRevision,
+                values: $0.values
+            )
+        }
+    }
+
     internal var fieldsAdditionalProperties: [String: OpenAPIRuntime.OpenAPIValueContainer] {
         fields.additionalProperties
     }

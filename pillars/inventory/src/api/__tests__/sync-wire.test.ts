@@ -9,7 +9,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { SyncEventSchema, SyncItemSchema } from '../../contract/rest-sync-schemas.js';
-import { itemDocuments, items } from '../../db/index.js';
+import { itemDocuments, itemFieldValues, items } from '../../db/index.js';
 import {
   createItem,
   createLocation,
@@ -135,6 +135,47 @@ describe('move events on the wire', () => {
 });
 
 describe('item rows on the wire', () => {
+  it('carries protocol-2 stable identities and canonical persisted values beside the compatibility projection', async () => {
+    const target = harness();
+    const lamp = randomUUID();
+    const typeId = '59538480-6e82-5ccc-b7be-f1cfd15b9af6';
+    const fieldId = '147a262c-bb7c-51bf-b617-16d354228d91';
+    await apply(target, createItem(lamp, 'Lamp'));
+    target.db.db.update(items).set({ typeId }).where(eq(items.id, lamp)).run();
+    target.db.db
+      .insert(itemFieldValues)
+      .values({
+        itemId: lamp,
+        fieldId,
+        source: 'stored',
+        ordinal: 0,
+        valueJson: '{"amount":"800","unit":"lm"}',
+        catalogueRevision: 1,
+        createdAt: '2026-09-19T00:00:00.000Z',
+        updatedAt: '2026-09-19T00:00:00.000Z',
+      })
+      .run();
+
+    const { items: rows } = await feed(target);
+
+    expect(rows).toContainEqual(
+      expect.objectContaining({
+        id: lamp,
+        typeId,
+        catalogueRevision: 1,
+        typeKey: 'bulb',
+        fieldValues: [
+          {
+            fieldId,
+            source: 'stored',
+            catalogueRevision: 1,
+            values: [{ amount: '800', unit: 'lm' }],
+          },
+        ],
+      })
+    );
+  });
+
   it('carry content-addressed photos in order and leave legacy file-only photos out', async () => {
     const target = harness();
     const lamp = randomUUID();

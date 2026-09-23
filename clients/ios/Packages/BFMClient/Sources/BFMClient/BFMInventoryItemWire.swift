@@ -16,6 +16,9 @@ internal protocol WireInventoryItem {
     var revision: Int { get }
     var seq: Int { get }
     var name: String { get }
+    var typeId: String? { get }
+    var catalogueRevision: Int? { get }
+    var protocol2FieldValues: [WireProtocol2FieldValue] { get }
     var typeKey: String? { get }
     var legacyType: String? { get }
     var fieldsAdditionalProperties: [String: OpenAPIValueContainer] { get }
@@ -81,8 +84,11 @@ internal func inventoryItem<Item: WireInventoryItem>(
         id: wire.id,
         revision: wire.revision,
         seq: wire.seq,
+        catalogueRevision: wire.catalogueRevision,
         name: wire.name,
+        typeId: wire.typeId,
         typeKey: wire.typeKey,
+        fieldValues: try protocol2FieldValues(from: wire.protocol2FieldValues),
         legacyType: wire.legacyType,
         fields: customFields(from: wire.fieldsAdditionalProperties),
         note: wire.note,
@@ -107,6 +113,15 @@ internal func inventoryItem<Item: WireInventoryItem>(
         updatedAt: updatedAt,
         deletedAt: wire.deletedAt.flatMap(ISO8601Instant.parse)
     )
+}
+
+/// One generated protocol-2 field row, reduced to the stable wire facts the
+/// hand-written transport owns across snapshot and change response types.
+internal struct WireProtocol2FieldValue {
+    internal let fieldId: String
+    internal let source: InventoryValueSource
+    internal let catalogueRevision: Int
+    internal let values: [OpenAPIValueContainer]
 }
 
 private func customFields(

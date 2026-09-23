@@ -20610,6 +20610,8 @@ internal enum Operations {
                             }
                             /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/access`.
                             internal var access: Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.AccessPayload?
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/catalogueRevision`.
+                            internal var catalogueRevision: Swift.Int?
                             /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/code`.
                             internal var code: Swift.String?
                             /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/createdAt`.
@@ -20668,6 +20670,75 @@ internal enum Operations {
                             internal typealias ExternalIdsPayload = [Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ExternalIdsPayloadPayload]
                             /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/externalIds`.
                             internal var externalIds: Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ExternalIdsPayload
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/FieldValuesPayload`.
+                            internal struct FieldValuesPayloadPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/FieldValuesPayload/catalogueRevision`.
+                                internal var catalogueRevision: Swift.Int
+                                /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/FieldValuesPayload/fieldId`.
+                                internal var fieldId: Swift.String
+                                /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/FieldValuesPayload/source`.
+                                internal enum SourcePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case stored = "stored"
+                                    case override = "override"
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/FieldValuesPayload/source`.
+                                internal var source: Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.FieldValuesPayloadPayload.SourcePayload
+                                /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/FieldValuesPayload/values`.
+                                internal var values: [OpenAPIRuntime.OpenAPIValueContainer]
+                                /// Creates a new `FieldValuesPayloadPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - catalogueRevision:
+                                ///   - fieldId:
+                                ///   - source:
+                                ///   - values:
+                                internal init(
+                                    catalogueRevision: Swift.Int,
+                                    fieldId: Swift.String,
+                                    source: Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.FieldValuesPayloadPayload.SourcePayload,
+                                    values: [OpenAPIRuntime.OpenAPIValueContainer]
+                                ) {
+                                    self.catalogueRevision = catalogueRevision
+                                    self.fieldId = fieldId
+                                    self.source = source
+                                    self.values = values
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case catalogueRevision
+                                    case fieldId
+                                    case source
+                                    case values
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.catalogueRevision = try container.decode(
+                                        Swift.Int.self,
+                                        forKey: .catalogueRevision
+                                    )
+                                    self.fieldId = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .fieldId
+                                    )
+                                    self.source = try container.decode(
+                                        Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.FieldValuesPayloadPayload.SourcePayload.self,
+                                        forKey: .source
+                                    )
+                                    self.values = try container.decode(
+                                        [OpenAPIRuntime.OpenAPIValueContainer].self,
+                                        forKey: .values
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "catalogueRevision",
+                                        "fieldId",
+                                        "source",
+                                        "values"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/fieldValues`.
+                            internal typealias FieldValuesPayload = [Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.FieldValuesPayloadPayload]
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/fieldValues`.
+                            internal var fieldValues: Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.FieldValuesPayload
                             /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/fields`.
                             internal struct FieldsPayload: Codable, Hashable, Sendable {
                                 /// A container of undocumented properties.
@@ -21106,6 +21177,8 @@ internal enum Operations {
                             internal var revision: Swift.Int
                             /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/seq`.
                             internal var seq: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/typeId`.
+                            internal var typeId: Swift.String?
                             /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/typeKey`.
                             internal var typeKey: Swift.String?
                             /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/updatedAt`.
@@ -21114,12 +21187,14 @@ internal enum Operations {
                             ///
                             /// - Parameters:
                             ///   - access:
+                            ///   - catalogueRevision:
                             ///   - code:
                             ///   - createdAt:
                             ///   - deletedAt:
                             ///   - documentTitles:
                             ///   - documentsStatus:
                             ///   - externalIds:
+                            ///   - fieldValues:
                             ///   - fields:
                             ///   - id:
                             ///   - isContainer:
@@ -21136,16 +21211,19 @@ internal enum Operations {
                             ///   - quantity:
                             ///   - revision:
                             ///   - seq:
+                            ///   - typeId:
                             ///   - typeKey:
                             ///   - updatedAt:
                             internal init(
                                 access: Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.AccessPayload? = nil,
+                                catalogueRevision: Swift.Int? = nil,
                                 code: Swift.String? = nil,
                                 createdAt: Swift.String,
                                 deletedAt: Swift.String? = nil,
                                 documentTitles: [Swift.String],
                                 documentsStatus: Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.DocumentsStatusPayload,
                                 externalIds: Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ExternalIdsPayload,
+                                fieldValues: Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.FieldValuesPayload,
                                 fields: Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.FieldsPayload,
                                 id: Swift.String,
                                 isContainer: Swift.Bool,
@@ -21162,16 +21240,19 @@ internal enum Operations {
                                 quantity: Swift.Int,
                                 revision: Swift.Int,
                                 seq: Swift.Int,
+                                typeId: Swift.String? = nil,
                                 typeKey: Swift.String? = nil,
                                 updatedAt: Swift.String
                             ) {
                                 self.access = access
+                                self.catalogueRevision = catalogueRevision
                                 self.code = code
                                 self.createdAt = createdAt
                                 self.deletedAt = deletedAt
                                 self.documentTitles = documentTitles
                                 self.documentsStatus = documentsStatus
                                 self.externalIds = externalIds
+                                self.fieldValues = fieldValues
                                 self.fields = fields
                                 self.id = id
                                 self.isContainer = isContainer
@@ -21188,17 +21269,20 @@ internal enum Operations {
                                 self.quantity = quantity
                                 self.revision = revision
                                 self.seq = seq
+                                self.typeId = typeId
                                 self.typeKey = typeKey
                                 self.updatedAt = updatedAt
                             }
                             internal enum CodingKeys: String, CodingKey {
                                 case access
+                                case catalogueRevision
                                 case code
                                 case createdAt
                                 case deletedAt
                                 case documentTitles
                                 case documentsStatus
                                 case externalIds
+                                case fieldValues
                                 case fields
                                 case id
                                 case isContainer
@@ -21215,6 +21299,7 @@ internal enum Operations {
                                 case quantity
                                 case revision
                                 case seq
+                                case typeId
                                 case typeKey
                                 case updatedAt
                             }
@@ -21223,6 +21308,10 @@ internal enum Operations {
                                 self.access = try container.decodeIfPresent(
                                     Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.AccessPayload.self,
                                     forKey: .access
+                                )
+                                self.catalogueRevision = try container.decodeIfPresent(
+                                    Swift.Int.self,
+                                    forKey: .catalogueRevision
                                 )
                                 self.code = try container.decodeIfPresent(
                                     Swift.String.self,
@@ -21247,6 +21336,10 @@ internal enum Operations {
                                 self.externalIds = try container.decode(
                                     Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ExternalIdsPayload.self,
                                     forKey: .externalIds
+                                )
+                                self.fieldValues = try container.decode(
+                                    Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.FieldValuesPayload.self,
+                                    forKey: .fieldValues
                                 )
                                 self.fields = try container.decode(
                                     Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.FieldsPayload.self,
@@ -21312,6 +21405,10 @@ internal enum Operations {
                                     Swift.Int.self,
                                     forKey: .seq
                                 )
+                                self.typeId = try container.decodeIfPresent(
+                                    Swift.String.self,
+                                    forKey: .typeId
+                                )
                                 self.typeKey = try container.decodeIfPresent(
                                     Swift.String.self,
                                     forKey: .typeKey
@@ -21322,12 +21419,14 @@ internal enum Operations {
                                 )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
                                     "access",
+                                    "catalogueRevision",
                                     "code",
                                     "createdAt",
                                     "deletedAt",
                                     "documentTitles",
                                     "documentsStatus",
                                     "externalIds",
+                                    "fieldValues",
                                     "fields",
                                     "id",
                                     "isContainer",
@@ -21344,6 +21443,7 @@ internal enum Operations {
                                     "quantity",
                                     "revision",
                                     "seq",
+                                    "typeId",
                                     "typeKey",
                                     "updatedAt"
                                 ])
@@ -22588,6 +22688,8 @@ internal enum Operations {
                             }
                             /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/access`.
                             internal var access: Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.AccessPayload?
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/catalogueRevision`.
+                            internal var catalogueRevision: Swift.Int?
                             /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/code`.
                             internal var code: Swift.String?
                             /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/createdAt`.
@@ -22646,6 +22748,75 @@ internal enum Operations {
                             internal typealias ExternalIdsPayload = [Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ExternalIdsPayloadPayload]
                             /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/externalIds`.
                             internal var externalIds: Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ExternalIdsPayload
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/FieldValuesPayload`.
+                            internal struct FieldValuesPayloadPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/FieldValuesPayload/catalogueRevision`.
+                                internal var catalogueRevision: Swift.Int
+                                /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/FieldValuesPayload/fieldId`.
+                                internal var fieldId: Swift.String
+                                /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/FieldValuesPayload/source`.
+                                internal enum SourcePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case stored = "stored"
+                                    case override = "override"
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/FieldValuesPayload/source`.
+                                internal var source: Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.FieldValuesPayloadPayload.SourcePayload
+                                /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/FieldValuesPayload/values`.
+                                internal var values: [OpenAPIRuntime.OpenAPIValueContainer]
+                                /// Creates a new `FieldValuesPayloadPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - catalogueRevision:
+                                ///   - fieldId:
+                                ///   - source:
+                                ///   - values:
+                                internal init(
+                                    catalogueRevision: Swift.Int,
+                                    fieldId: Swift.String,
+                                    source: Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.FieldValuesPayloadPayload.SourcePayload,
+                                    values: [OpenAPIRuntime.OpenAPIValueContainer]
+                                ) {
+                                    self.catalogueRevision = catalogueRevision
+                                    self.fieldId = fieldId
+                                    self.source = source
+                                    self.values = values
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case catalogueRevision
+                                    case fieldId
+                                    case source
+                                    case values
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.catalogueRevision = try container.decode(
+                                        Swift.Int.self,
+                                        forKey: .catalogueRevision
+                                    )
+                                    self.fieldId = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .fieldId
+                                    )
+                                    self.source = try container.decode(
+                                        Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.FieldValuesPayloadPayload.SourcePayload.self,
+                                        forKey: .source
+                                    )
+                                    self.values = try container.decode(
+                                        [OpenAPIRuntime.OpenAPIValueContainer].self,
+                                        forKey: .values
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "catalogueRevision",
+                                        "fieldId",
+                                        "source",
+                                        "values"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/fieldValues`.
+                            internal typealias FieldValuesPayload = [Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.FieldValuesPayloadPayload]
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/fieldValues`.
+                            internal var fieldValues: Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.FieldValuesPayload
                             /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/fields`.
                             internal struct FieldsPayload: Codable, Hashable, Sendable {
                                 /// A container of undocumented properties.
@@ -23084,6 +23255,8 @@ internal enum Operations {
                             internal var revision: Swift.Int
                             /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/seq`.
                             internal var seq: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/typeId`.
+                            internal var typeId: Swift.String?
                             /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/typeKey`.
                             internal var typeKey: Swift.String?
                             /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/updatedAt`.
@@ -23092,12 +23265,14 @@ internal enum Operations {
                             ///
                             /// - Parameters:
                             ///   - access:
+                            ///   - catalogueRevision:
                             ///   - code:
                             ///   - createdAt:
                             ///   - deletedAt:
                             ///   - documentTitles:
                             ///   - documentsStatus:
                             ///   - externalIds:
+                            ///   - fieldValues:
                             ///   - fields:
                             ///   - id:
                             ///   - isContainer:
@@ -23114,16 +23289,19 @@ internal enum Operations {
                             ///   - quantity:
                             ///   - revision:
                             ///   - seq:
+                            ///   - typeId:
                             ///   - typeKey:
                             ///   - updatedAt:
                             internal init(
                                 access: Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.AccessPayload? = nil,
+                                catalogueRevision: Swift.Int? = nil,
                                 code: Swift.String? = nil,
                                 createdAt: Swift.String,
                                 deletedAt: Swift.String? = nil,
                                 documentTitles: [Swift.String],
                                 documentsStatus: Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.DocumentsStatusPayload,
                                 externalIds: Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ExternalIdsPayload,
+                                fieldValues: Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.FieldValuesPayload,
                                 fields: Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.FieldsPayload,
                                 id: Swift.String,
                                 isContainer: Swift.Bool,
@@ -23140,16 +23318,19 @@ internal enum Operations {
                                 quantity: Swift.Int,
                                 revision: Swift.Int,
                                 seq: Swift.Int,
+                                typeId: Swift.String? = nil,
                                 typeKey: Swift.String? = nil,
                                 updatedAt: Swift.String
                             ) {
                                 self.access = access
+                                self.catalogueRevision = catalogueRevision
                                 self.code = code
                                 self.createdAt = createdAt
                                 self.deletedAt = deletedAt
                                 self.documentTitles = documentTitles
                                 self.documentsStatus = documentsStatus
                                 self.externalIds = externalIds
+                                self.fieldValues = fieldValues
                                 self.fields = fields
                                 self.id = id
                                 self.isContainer = isContainer
@@ -23166,17 +23347,20 @@ internal enum Operations {
                                 self.quantity = quantity
                                 self.revision = revision
                                 self.seq = seq
+                                self.typeId = typeId
                                 self.typeKey = typeKey
                                 self.updatedAt = updatedAt
                             }
                             internal enum CodingKeys: String, CodingKey {
                                 case access
+                                case catalogueRevision
                                 case code
                                 case createdAt
                                 case deletedAt
                                 case documentTitles
                                 case documentsStatus
                                 case externalIds
+                                case fieldValues
                                 case fields
                                 case id
                                 case isContainer
@@ -23193,6 +23377,7 @@ internal enum Operations {
                                 case quantity
                                 case revision
                                 case seq
+                                case typeId
                                 case typeKey
                                 case updatedAt
                             }
@@ -23201,6 +23386,10 @@ internal enum Operations {
                                 self.access = try container.decodeIfPresent(
                                     Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.AccessPayload.self,
                                     forKey: .access
+                                )
+                                self.catalogueRevision = try container.decodeIfPresent(
+                                    Swift.Int.self,
+                                    forKey: .catalogueRevision
                                 )
                                 self.code = try container.decodeIfPresent(
                                     Swift.String.self,
@@ -23225,6 +23414,10 @@ internal enum Operations {
                                 self.externalIds = try container.decode(
                                     Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ExternalIdsPayload.self,
                                     forKey: .externalIds
+                                )
+                                self.fieldValues = try container.decode(
+                                    Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.FieldValuesPayload.self,
+                                    forKey: .fieldValues
                                 )
                                 self.fields = try container.decode(
                                     Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.FieldsPayload.self,
@@ -23290,6 +23483,10 @@ internal enum Operations {
                                     Swift.Int.self,
                                     forKey: .seq
                                 )
+                                self.typeId = try container.decodeIfPresent(
+                                    Swift.String.self,
+                                    forKey: .typeId
+                                )
                                 self.typeKey = try container.decodeIfPresent(
                                     Swift.String.self,
                                     forKey: .typeKey
@@ -23300,12 +23497,14 @@ internal enum Operations {
                                 )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
                                     "access",
+                                    "catalogueRevision",
                                     "code",
                                     "createdAt",
                                     "deletedAt",
                                     "documentTitles",
                                     "documentsStatus",
                                     "externalIds",
+                                    "fieldValues",
                                     "fields",
                                     "id",
                                     "isContainer",
@@ -23322,6 +23521,7 @@ internal enum Operations {
                                     "quantity",
                                     "revision",
                                     "seq",
+                                    "typeId",
                                     "typeKey",
                                     "updatedAt"
                                 ])
