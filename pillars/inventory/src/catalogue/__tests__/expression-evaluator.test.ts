@@ -119,6 +119,153 @@ describe('evaluateExpression', () => {
     });
   });
 
+  it('compares ordered values with less_than and structural values with equal', () => {
+    const lessThan = validatedExpression(
+      { op: 'less_than', left: { op: 'literal', value: 3 }, right: { op: 'literal', value: 5 } },
+      { kind: 'boolean', fixedUnit: null }
+    );
+    expect(evaluateExpression(lessThan, emptySnapshot)).toMatchObject({
+      state: 'value',
+      value: true,
+    });
+
+    const notLessThan = validatedExpression(
+      { op: 'less_than', left: { op: 'literal', value: 5 }, right: { op: 'literal', value: 5 } },
+      { kind: 'boolean', fixedUnit: null }
+    );
+    expect(evaluateExpression(notLessThan, emptySnapshot)).toMatchObject({
+      state: 'value',
+      value: false,
+    });
+
+    const equalNumbers = validatedExpression(
+      { op: 'equal', left: { op: 'literal', value: 4 }, right: { op: 'literal', value: 4 } },
+      { kind: 'boolean', fixedUnit: null }
+    );
+    expect(evaluateExpression(equalNumbers, emptySnapshot)).toMatchObject({
+      state: 'value',
+      value: true,
+    });
+
+    const equalEnums = validatedExpression(
+      {
+        op: 'equal',
+        left: { op: 'literal', value: { optionId: 'a' } },
+        right: { op: 'literal', value: { optionId: 'a' } },
+      },
+      { kind: 'boolean', fixedUnit: null }
+    );
+    expect(evaluateExpression(equalEnums, emptySnapshot)).toMatchObject({
+      state: 'value',
+      value: true,
+    });
+
+    const equalDifferentEnums = validatedExpression(
+      {
+        op: 'equal',
+        left: { op: 'literal', value: { optionId: 'a' } },
+        right: { op: 'literal', value: { optionId: 'b' } },
+      },
+      { kind: 'boolean', fixedUnit: null }
+    );
+    expect(evaluateExpression(equalDifferentEnums, emptySnapshot)).toMatchObject({
+      state: 'value',
+      value: false,
+    });
+
+    const equalDifferentReferences = validatedExpression(
+      {
+        op: 'equal',
+        left: { op: 'literal', value: { targetKind: 'item', targetId: 'a' } },
+        right: { op: 'literal', value: { targetKind: 'item', targetId: 'b' } },
+      },
+      { kind: 'boolean', fixedUnit: null }
+    );
+    expect(evaluateExpression(equalDifferentReferences, emptySnapshot)).toMatchObject({
+      state: 'value',
+      value: false,
+    });
+
+    const equalMismatchedShapes = validatedExpression(
+      {
+        op: 'equal',
+        left: { op: 'literal', value: { amount: '1.0', unit: 'kg' } },
+        right: { op: 'literal', value: { optionId: 'a' } },
+      },
+      { kind: 'boolean', fixedUnit: null }
+    );
+    expect(evaluateExpression(equalMismatchedShapes, emptySnapshot)).toMatchObject({
+      state: 'value',
+      value: false,
+    });
+  });
+
+  it('evaluates or, not and negate, and the valid path of concat', () => {
+    const or = validatedExpression(
+      {
+        op: 'or',
+        left: { op: 'literal', value: false },
+        right: { op: 'literal', value: true },
+      },
+      { kind: 'boolean', fixedUnit: null }
+    );
+    expect(evaluateExpression(or, emptySnapshot)).toEqual({
+      state: 'value',
+      value: true,
+      dependencies: [],
+    });
+
+    const orShortCircuit = validatedExpression(
+      {
+        op: 'or',
+        left: { op: 'literal', value: true },
+        right: { op: 'read', path: [], fieldId: 'missing' },
+      },
+      { kind: 'boolean', fixedUnit: null }
+    );
+    expect(evaluateExpression(orShortCircuit, emptySnapshot)).toEqual({
+      state: 'value',
+      value: true,
+      dependencies: [],
+    });
+
+    const not = validatedExpression(
+      { op: 'not', value: { op: 'literal', value: false } },
+      { kind: 'boolean', fixedUnit: null }
+    );
+    expect(evaluateExpression(not, emptySnapshot)).toMatchObject({
+      state: 'value',
+      value: true,
+    });
+
+    const notNonBoolean = validatedExpression(
+      { op: 'not', value: { op: 'literal', value: '1.000' } },
+      { kind: 'boolean', fixedUnit: null }
+    );
+    expect(evaluateExpression(notNonBoolean, emptySnapshot)).toMatchObject({
+      state: 'error',
+      code: 'invalid_value',
+    });
+
+    const negate = validatedExpression(
+      { op: 'negate', value: { op: 'literal', value: '3.500' } },
+      { kind: 'decimal', fixedUnit: null }
+    );
+    expect(evaluateExpression(negate, emptySnapshot)).toMatchObject({
+      state: 'value',
+      value: '-3.500',
+    });
+
+    const concat = validatedExpression(
+      { op: 'concat', left: { op: 'literal', value: 'a' }, right: { op: 'literal', value: 'b' } },
+      { kind: 'short_text', fixedUnit: null }
+    );
+    expect(evaluateExpression(concat, emptySnapshot)).toMatchObject({
+      state: 'value',
+      value: 'ab',
+    });
+  });
+
   it('retains dependencies evaluated before a selected branch becomes unavailable', () => {
     const root = item('root', new Map([['condition', value(true, 4)]]));
     const snapshot = expressionSnapshot(new Map([['root', { state: 'resolved', item: root }]]));

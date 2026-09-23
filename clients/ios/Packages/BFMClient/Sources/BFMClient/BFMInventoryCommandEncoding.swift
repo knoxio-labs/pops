@@ -28,7 +28,8 @@ internal enum BFMInventoryCommandEncoding {
     /// `switch`; a `switch` reads plainer for a one-line-per-case mapping,
     /// so this keeps that shape split three ways instead.
     private static func op(for command: InventoryCommand) -> String {
-        itemWriteOp(for: command) ?? itemAuxOp(for: command) ?? locationOrEventOp(for: command)
+        protocol2ItemWriteOp(for: command) ?? itemWriteOp(for: command)
+            ?? itemAuxOp(for: command) ?? locationOrEventOp(for: command)
     }
 
     private static func itemWriteOp(for command: InventoryCommand) -> String? {
@@ -71,6 +72,7 @@ internal enum BFMInventoryCommandEncoding {
     }
 
     private static func args(for command: InventoryCommand) throws -> [String: (any Sendable)?] {
+        if let args = try protocol2ItemWriteArgs(for: command) { return args }
         if let args = try itemWriteArgs(for: command) { return args }
         if let args = try itemAuxArgs(for: command) { return args }
         return try locationOrEventArgs(for: command)
@@ -159,11 +161,11 @@ internal enum BFMInventoryCommandEncoding {
         return args
     }
 
-    private static func externalIdArgs(_ ids: [InventoryExternalIdentifier]) -> [(any Sendable)?] {
+    internal static func externalIdArgs(_ ids: [InventoryExternalIdentifier]) -> [(any Sendable)?] {
         ids.map { ["kind": $0.kind, "value": $0.value] }
     }
 
-    private static func placementArgs(_ placement: InventoryPlacement) -> [String: (any Sendable)?]
+    internal static func placementArgs(_ placement: InventoryPlacement) -> [String: (any Sendable)?]
     {
         switch placement {
         case .location(let id): ["kind": "location", "locationId": id]

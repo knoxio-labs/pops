@@ -18,11 +18,18 @@ extension InventoryItemDetail {
         guard let item = source.inventoryItem(id: id), !item.isDeleted else { return nil }
         let status = source.inventoryReplicaStatus()
         let ledger = source.inventorySyncLedger()
+        let protocol2Type = item.typeId.flatMap { typeId in
+            source.inventoryProtocol2Catalogue()?.types.first { $0.id == typeId }
+        }
         let type = item.typeKey.flatMap { source.inventoryCatalogue().type(forKey: $0) }
         let events = source.inventoryItemHistory(itemId: id)
-        let fields = InventoryDetailFields(values: item.fields, type: type)
+        let fields =
+            protocol2Type.map {
+                InventoryDetailFields(entries: item.fieldValues, type: $0, source: source)
+            } ?? InventoryDetailFields(values: item.fields, type: type)
         record = InventoryDetailRecord(
-            id: item.id, name: item.name, typeName: type?.name, code: item.code,
+            id: item.id, name: item.name, typeName: protocol2Type?.label ?? type?.name,
+            code: item.code,
             quantity: item.quantity,
             trail: InventoryDetailTrails(source: source).trail(of: item.placement),
             access: item.containment?.access, lifecycle: item.lifecycle,

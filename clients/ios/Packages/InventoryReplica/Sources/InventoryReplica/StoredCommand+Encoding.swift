@@ -11,7 +11,25 @@ extension StoredCommand {
             self = .undo(of: target)
         case .command(let command):
             self =
-                Self.itemWrite(command) ?? Self.itemAux(command) ?? Self.locationOrEvent(command)
+                Self.protocol2ItemWrite(command) ?? Self.itemWrite(command)
+                ?? Self.itemAux(command) ?? Self.locationOrEvent(command)
+        }
+    }
+
+    private static func protocol2ItemWrite(_ command: InventoryCommand) -> StoredCommand? {
+        switch command {
+        case .createProtocol2Item(let new):
+            .createProtocol2Item(
+                id: new.id, name: new.name, catalogueRevision: new.catalogueRevision,
+                typeId: new.typeId, values: new.values, note: new.note,
+                externalIds: new.externalIds.map(StoredExternalIdentifier.init),
+                quantity: new.quantity, placement: StoredPlacement(new.placement))
+        case .editProtocol2Item(let id, let catalogueRevision, let values):
+            .editProtocol2Item(id: id, catalogueRevision: catalogueRevision, values: values)
+        case .changeProtocol2ItemType(let id, let catalogueRevision, let typeId, let values):
+            .changeProtocol2ItemType(
+                id: id, catalogueRevision: catalogueRevision, typeId: typeId, values: values)
+        default: nil
         }
     }
 

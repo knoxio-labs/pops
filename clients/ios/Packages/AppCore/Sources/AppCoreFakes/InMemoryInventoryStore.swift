@@ -216,7 +216,8 @@ public final class InMemoryInventoryStore: InventoryStore, @unchecked Sendable {
         _ command: InventoryCommand, mutationId: String, into state: inout State
     ) throws {
         switch command {
-        case .createItem, .editItem, .changeItemType, .setItemCode, .moveItem:
+        case .createItem, .createProtocol2Item, .editItem, .editProtocol2Item, .changeItemType,
+            .changeProtocol2ItemType, .setItemCode, .moveItem:
             try applyItemGroupA(command, mutationId: mutationId, into: &state)
         case .setItemAccess, .setItemFull, .setItemLifecycle, .setItemQuantity, .splitItem,
             .attachPhoto, .removePhoto, .reorderPhotos, .restoreDeletedItem, .deleteItem:

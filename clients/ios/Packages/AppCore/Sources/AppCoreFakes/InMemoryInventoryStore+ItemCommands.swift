@@ -13,14 +13,26 @@ extension InMemoryInventoryStore {
         switch command {
         case .createItem(let new):
             try applyCreateItem(new, mutationId: mutationId, into: &state)
+        case .createProtocol2Item(let new):
+            try applyCreateProtocol2Item(new, mutationId: mutationId, into: &state)
         case .editItem(let id, let name, let note, let fields, let externalIds):
             try applyEditItem(
                 id: id,
                 edit: ItemEdit(name: name, note: note, fields: fields, externalIds: externalIds),
                 mutationId: mutationId, into: &state)
+        case .editProtocol2Item(let id, let catalogueRevision, let values):
+            try applyEditProtocol2Item(
+                id: id, catalogueRevision: catalogueRevision, values: values,
+                mutationId: mutationId, into: &state)
         case .changeItemType(let id, let typeKey, let fields):
             try applyChangeItemType(
                 id: id, typeKey: typeKey, fields: fields, mutationId: mutationId, into: &state)
+        case .changeProtocol2ItemType(let id, let catalogueRevision, let typeId, let values):
+            try applyChangeProtocol2ItemType(
+                id: id,
+                change: Protocol2TypeChange(
+                    catalogueRevision: catalogueRevision, typeId: typeId, values: values),
+                mutationId: mutationId, into: &state)
         case .setItemCode(let id, let code):
             try applySetItemCode(id: id, code: code, mutationId: mutationId, into: &state)
         case .moveItem(let id, let to, let verb):
@@ -83,15 +95,6 @@ extension InMemoryInventoryStore {
         state.nextSeq += 1
         state.items[new.id] = item
         state.undoLog[mutationId] = .item(nil)
-    }
-
-    /// The payload of `item.edit`, grouped into one value so applying it
-    /// stays within this file's parameter-count budget.
-    private struct ItemEdit {
-        let name: String?
-        let note: InventoryFieldUpdate<String>
-        let fields: [String: InventoryFieldValue?]
-        let externalIds: [InventoryExternalIdentifier]?
     }
 
     private static func applyEditItem(

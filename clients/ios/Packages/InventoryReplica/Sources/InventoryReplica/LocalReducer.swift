@@ -104,7 +104,7 @@ internal final class LocalReducer {
 
     func item(_ id: String) throws -> WorkingItem? {
         try Row.fetchOne(db, sql: "SELECT * FROM item WHERE id = ?", arguments: [id])
-            .map { WorkingItem(try ItemRow.decode($0, in: nil)) }
+            .map { WorkingItem(try ItemRow.decode($0, in: db)) }
     }
 
     func liveItem(_ id: String) throws -> WorkingItem {
@@ -189,6 +189,8 @@ internal final class LocalReducer {
             try db.execute(
                 sql: ReplicaApply.upsertSQL(ItemRow.columns, into: "item"),
                 arguments: StatementArguments(try ItemRow.values(of: item.item)))
+            try Protocol2FieldValueRows.replace(
+                itemId: item.id, entries: item.fieldValues, in: "item_field_value", db)
             try ReplicaSearchIndex.index(SearchDocument(item.item), catalogue: catalogue, in: db)
         case .location(let location):
             try db.execute(

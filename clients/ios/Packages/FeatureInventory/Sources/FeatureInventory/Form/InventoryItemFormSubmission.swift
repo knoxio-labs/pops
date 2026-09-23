@@ -8,6 +8,59 @@ import AppCore
 /// command after the create rather than inside it, so a code
 /// the server refuses leaves the item created.
 internal enum InventoryItemFormSubmission {
+    internal static func protocol2Create(
+        _ draft: InventoryItemDraft, protocol2: InventoryProtocol2Draft,
+        type: InventoryCatalogueType
+    ) -> [InventoryCommand] {
+        let note = draft.note.trimmingCharacters(in: .whitespacesAndNewlines)
+        var commands: [InventoryCommand] = [
+            .createProtocol2Item(
+                .init(
+                    id: draft.id, name: draft.trimmedName,
+                    catalogueRevision: protocol2.catalogueRevision, typeId: protocol2.typeId,
+                    values: protocol2.completeValues(for: type), note: note.isEmpty ? nil : note,
+                    externalIds: draft.externalIds, quantity: draft.quantity,
+                    placement: draft.placement))
+        ]
+        if let code = draft.code.normalized {
+            commands.append(.setItemCode(id: draft.id, code: code))
+        }
+        return commands + photoAttachCommands(for: draft.id, in: draft)
+    }
+
+    internal static func protocol2Edit(
+        _ draft: InventoryItemDraft, protocol2: InventoryProtocol2Draft,
+        type: InventoryCatalogueType, original: InventoryItem
+    ) -> [InventoryCommand] {
+        var commands: [InventoryCommand] = []
+        if protocol2.typeId != original.typeId {
+            commands.append(
+                .changeProtocol2ItemType(
+                    id: original.id, catalogueRevision: protocol2.catalogueRevision,
+                    typeId: protocol2.typeId, values: protocol2.completeValues(for: type)))
+        } else if !protocol2.patches(for: type).isEmpty {
+            commands.append(
+                .editProtocol2Item(
+                    id: original.id, catalogueRevision: protocol2.catalogueRevision,
+                    values: protocol2.patches(for: type)))
+        }
+        if let edit = editCommand(
+            draft, original: original, catalogue: .init(version: "", units: [], types: []),
+            retyped: false)
+        {
+            commands.append(edit)
+        }
+        if draft.code.normalized != original.code {
+            commands.append(.setItemCode(id: original.id, code: draft.code.normalized))
+        }
+        if draft.quantity != original.quantity.count {
+            commands.append(.setItemQuantity(id: original.id, quantity: draft.quantity))
+        }
+        if draft.placement != original.placement {
+            commands.append(.moveItem(id: original.id, to: draft.placement, verb: .move))
+        }
+        return commands + photoAttachCommands(for: original.id, in: draft)
+    }
     /// Everything that blocks the final action, in the order the form lists
     /// them.
     internal static func issues(

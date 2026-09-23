@@ -32,6 +32,31 @@ internal struct InventoryDetailFields: Equatable {
             + undeclared.compactMap { line($0, $0) }
     }
 
+    internal init(
+        entries: [InventoryItemFieldEntry], type: InventoryCatalogueType,
+        source: any InventoryQuerySource
+    ) {
+        let definitions = Dictionary(uniqueKeysWithValues: type.fields.map { ($0.id, $0) })
+        let values = Dictionary(uniqueKeysWithValues: entries.map { ($0.fieldId, $0) })
+        let line = { (field: InventoryCatalogueField) -> InventoryDetailField? in
+            values[field.id].map {
+                InventoryDetailField(
+                    key: field.id, label: field.label,
+                    value: Self.protocol2Display($0, field: field, source: source))
+            }
+        }
+        let declared = type.fields.compactMap(line)
+        let highlightedIds = Set(type.fields.filter(Self.isHighlighted).map(\.id))
+        highlighted = declared.filter { highlightedIds.contains($0.id) }
+        other =
+            declared.filter { !highlightedIds.contains($0.id) }
+            + entries.filter { definitions[$0.fieldId] == nil }.map {
+                InventoryDetailField(
+                    key: $0.fieldId, label: $0.fieldId,
+                    value: Self.undeclaredProtocol2Display($0))
+            }
+    }
+
     /// One value as a line reads it. A measurement keeps the unit it was
     /// recorded in (POPS-4015); nothing here converts. Nil for a placement,
     /// which only an event's before and after carry: the page's placement line
@@ -55,5 +80,48 @@ internal struct InventoryDetailFields: Equatable {
 
     private static func number(_ value: Double, locale: Locale) -> String {
         value.formatted(.number.grouping(.never).locale(locale))
+    }
+
+    private static func protocol2Display(
+        _ entry: InventoryItemFieldEntry, field: InventoryCatalogueField,
+        source: any InventoryQuerySource
+    ) -> String {
+        switch entry.state {
+        case .unavailable(let reason):
+            return InventoryProtocol2Display.unavailable(reason)
+        case .value(let values):
+            return InventoryProtocol2Display.text(
+                for: values, field: field,
+                referenceLabel: { reference in
+                    guard reference.targetState != .deleted, reference.targetState != .missing
+                    else { return nil }
+                    switch reference.targetKind {
+                    case .item:
+                        return source.inventoryItem(id: reference.targetId).flatMap {
+                            $0.isDeleted ? nil : $0.name
+                        }
+                    case .location:
+                        return source.inventoryLocation(id: reference.targetId).flatMap {
+                            $0.isDeleted ? nil : $0.name
+                        }
+                    }
+                })
+        }
+    }
+
+    private static func undeclaredProtocol2Display(_ entry: InventoryItemFieldEntry) -> String {
+        switch entry.state {
+        case .unavailable(let reason):
+            return InventoryProtocol2Display.unavailable(reason)
+        case .value(let values):
+            return values.map(InventoryProtocol2ValueText.input).joined(separator: " · ")
+        }
+    }
+
+    private static func isHighlighted(_ field: InventoryCatalogueField) -> Bool {
+        guard case .object(let presentation) = field.presentation,
+            case .boolean(true)? = presentation["highlighted"]
+        else { return false }
+        return true
     }
 }

@@ -5,7 +5,9 @@ import OpenAPIRuntime
 internal func protocol2Catalogue(
     from payload: Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload
 ) throws -> InventoryCatalogueSnapshot {
-    guard let status = InventoryCatalogueRevisionStatus(rawValue: payload.revision.status.rawValue)
+    guard
+        let status = InventoryCatalogueRevisionStatus(
+            rawValue: payload.revision.status.rawValue)
     else {
         throw RepositoryError.contractMismatch
     }
@@ -28,10 +30,11 @@ internal func protocol2Catalogue(
     return InventoryCatalogueSnapshot(revision: revision, types: types)
 }
 
-private func protocol2Field(
-    from wire: Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload
-        .TypesPayloadPayload.FieldsPayloadPayload
-) throws -> InventoryCatalogueField {
+private typealias Protocol2FieldPayload =
+    Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.TypesPayloadPayload
+    .FieldsPayloadPayload
+
+private func protocol2Field(from wire: Protocol2FieldPayload) throws -> InventoryCatalogueField {
     guard let kind = InventoryPrimitiveKind(rawValue: wire.kind.rawValue),
         let cardinality = InventoryFieldCardinality(rawValue: wire.cardinality.rawValue),
         let storage = InventoryFieldStorage(rawValue: wire.storage.rawValue)
@@ -42,7 +45,8 @@ private func protocol2Field(
                 throw RepositoryError.contractMismatch
             }
             return kind
-        })
+        }
+    )
     return InventoryCatalogueField(
         id: wire.id, typeId: wire.typeId, key: wire.key, label: wire.label, help: wire.help,
         sortOrder: wire.sortOrder, kind: kind, cardinality: cardinality, required: wire.required,

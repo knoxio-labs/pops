@@ -103,7 +103,7 @@ extension InventorySyncPage {
     /// the thing, so this only needs to say what is about to happen to it.
     private static func title(for command: InventoryCommand) -> String {
         switch command {
-        case .createItem, .createLocation: "Create"
+        case .createItem, .createProtocol2Item, .createLocation: "Create"
         case .renameLocation: "Rename"
         case .moveLocation: "Move"
         case .deleteLocation: "Delete"
@@ -117,8 +117,8 @@ extension InventorySyncPage {
     /// climbs past the shared complexity budget on its own.
     private static func itemCommandTitle(for command: InventoryCommand) -> String {
         switch command {
-        case .editItem: "Edit"
-        case .changeItemType: "Change type"
+        case .editItem, .editProtocol2Item: "Edit"
+        case .changeItemType, .changeProtocol2ItemType: "Change type"
         case .setItemCode: "Set code"
         case .moveItem(_, _, let verb): title(for: verb)
         case .setItemAccess(_, let access): access == .open ? "Open" : "Close"
@@ -138,9 +138,9 @@ extension InventorySyncPage {
         case .reorderPhotos: "Reorder photos"
         case .restoreDeletedItem: "Restore"
         case .deleteItem: "Delete"
-        case .createItem, .editItem, .changeItemType, .setItemCode, .moveItem, .setItemAccess,
-            .setItemFull, .createLocation, .renameLocation, .moveLocation, .deleteLocation,
-            .revertEvent:
+        case .createItem, .createProtocol2Item, .editItem, .editProtocol2Item, .changeItemType,
+            .changeProtocol2ItemType, .setItemCode, .moveItem, .setItemAccess, .setItemFull,
+            .createLocation, .renameLocation, .moveLocation, .deleteLocation, .revertEvent:
             // Unreachable: `title(for:)` and `itemCommandTitle(for:)` handle
             // every one of these before falling through to this function.
             ""
@@ -170,8 +170,12 @@ extension InventorySyncPage {
             return "This was deleted on another device."
         case .photoFailed:
             return "This photo could not be uploaded."
-        case .unrecognised:
-            return "This change needs a person to look at it."
+        case .unrecognised(let reason):
+            if reason == "invalid" || reason == "type_unknown" {
+                return "This change no longer matches the catalogue. "
+                    + "Edit the item, then let this change go."
+            }
+            return "The server rejected this change. Review the item, then let this change go."
         }
     }
 }

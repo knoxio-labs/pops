@@ -101,6 +101,13 @@ internal final class ReplicaReader: InventoryQuerySource {
         }
     }
 
+    func inventoryProtocol2Catalogue() -> InventoryCatalogueSnapshot? {
+        attempt(nil) { db in
+            guard let revision = try SyncMeta.read(db).catalogueRevision else { return nil }
+            return try Protocol2CatalogueRows.read(revision: revision, in: db)
+        }
+    }
+
     /// What waits for the server, in log order; the open repairs, oldest
     /// first; and what was resolved, newest first.
     func inventorySyncLedger() -> InventoryReplicaSyncLedger {

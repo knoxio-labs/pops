@@ -175,7 +175,8 @@ internal struct OnlineStoreDownloadTests {
     }
 
     @Test(
-        "a protocol-2 page is invisible until its exact catalogue arrives, then retry commits both")
+        "a protocol-2 page is invisible until its exact catalogue arrives, then retry commits both"
+    )
     func protocol2CatalogueFailureRetriesAtomically() async throws {
         let item = InventoryItem(
             id: "typed", revision: 1, seq: 1, catalogueRevision: 2, name: "Typed",

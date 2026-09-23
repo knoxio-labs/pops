@@ -26,9 +26,12 @@ internal enum InventoryDetailConflicts {
             return InventoryDetailConflict(
                 repairId: repair.id, problem: "A photo did not upload", resolution: "Retry",
                 choice: .keepMine())
-        case .unrecognised:
+        case .unrecognised(let reason):
             return InventoryDetailConflict(
-                repairId: repair.id, problem: InventorySync.needsAttention.label,
+                repairId: repair.id,
+                problem: reason == "invalid" || reason == "type_unknown"
+                    ? "A queued value no longer matches the catalogue"
+                    : "The server rejected a queued change",
                 resolution: nil, choice: .keepMine())
         }
     }

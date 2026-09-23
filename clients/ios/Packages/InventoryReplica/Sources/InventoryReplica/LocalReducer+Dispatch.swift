@@ -9,9 +9,22 @@ extension LocalReducer {
         case .undo(let target):
             return try undo(of: target)
         case .command(let command):
+            if let written = try runProtocol2ItemWrite(command) { return written }
             if let written = try runItemWrite(command) { return written }
             if let written = try runItemAux(command) { return written }
             return try runLocationOrEvent(command)
+        }
+    }
+
+    private func runProtocol2ItemWrite(_ command: InventoryCommand) throws -> Written? {
+        switch command {
+        case .createProtocol2Item(let new): try createProtocol2Item(new)
+        case .editProtocol2Item(let id, let revision, let values):
+            try editProtocol2Item(id: id, catalogueRevision: revision, values: values)
+        case .changeProtocol2ItemType(let id, let revision, let typeId, let values):
+            try changeProtocol2ItemType(
+                id: id, catalogueRevision: revision, typeId: typeId, values: values)
+        default: nil
         }
     }
 
@@ -20,8 +33,8 @@ extension LocalReducer {
     /// are judged by the op itself, and the command vectors send them none.
     static func sendsBaseRevision(_ command: InventoryCommand) -> Bool {
         switch command {
-        case .createItem, .createLocation, .restoreDeletedItem, .revertEvent, .attachPhoto,
-            .removePhoto, .reorderPhotos:
+        case .createItem, .createProtocol2Item, .createLocation, .restoreDeletedItem,
+            .revertEvent, .attachPhoto, .removePhoto, .reorderPhotos:
             false
         default:
             true

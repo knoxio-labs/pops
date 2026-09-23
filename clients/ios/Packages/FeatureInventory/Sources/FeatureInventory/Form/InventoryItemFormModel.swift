@@ -43,6 +43,10 @@ internal final class InventoryItemFormModel {
     internal private(set) var phase: Phase = .loading
     internal var draft: InventoryItemDraft
     internal private(set) var catalogue = InventoryCatalogue(version: "", units: [], types: [])
+    /// The active immutable catalogue used by the protocol-2 field editor.
+    internal private(set) var protocol2Catalogue: InventoryCatalogueSnapshot?
+    internal var protocol2Draft: InventoryProtocol2Draft?
+    internal private(set) var protocol2ReferenceTargets: [InventoryProtocol2ReferenceTarget] = []
     internal private(set) var isOffline = false
     /// False until the final action is pressed once: a form that reddens a
     /// field before anybody has typed opens accusing.
@@ -57,6 +61,7 @@ internal final class InventoryItemFormModel {
 
     internal let store: any InventoryStore
     private let suggester: InventoryCodeSuggester
+    internal let mintProtocol2ValueId: () -> String
     private var original: InventoryItem?
     private var created = false
     /// What an offer over `photoRunner` reverses: the photo it removed, and
@@ -73,11 +78,14 @@ internal final class InventoryItemFormModel {
 
     internal init(
         request: InventoryItemFormRequest, store: any InventoryStore,
-        suggester: InventoryCodeSuggester, mintId: () -> String = { UUID().uuidString.lowercased() }
+        suggester: InventoryCodeSuggester,
+        mintId: () -> String = { UUID().uuidString.lowercased() },
+        mintProtocol2ValueId: @escaping () -> String = { UUID().uuidString.lowercased() }
     ) {
         self.request = request
         self.store = store
         self.suggester = suggester
+        self.mintProtocol2ValueId = mintProtocol2ValueId
         photoRunner = InventoryCommandRunner(store: store)
         switch request {
         case .create(let placement):
@@ -105,7 +113,9 @@ internal final class InventoryItemFormModel {
 
     /// Whether Cancel has something to lose and so asks first.
     internal var hasStagedWork: Bool {
-        mode == .create ? draft.hasStagedWork : !commands.isEmpty
+        mode == .create
+            ? draft.hasStagedWork || protocol2Draft?.hasStagedWork == true
+            : !commands.isEmpty
     }
 
     /// "No type yet" is offered to a new item and to one stored untyped;
@@ -126,7 +136,9 @@ internal final class InventoryItemFormModel {
         }
         if phase == .loading && !Task.isCancelled { phase = .unavailable }
     }
+}
 
+extension InventoryItemFormModel {
     internal func codeChanged(to value: String) {
         let previous = draft.code.value
         draft.code.assist = draft.code.assist.typed(value, previous: previous)
@@ -186,7 +198,9 @@ internal final class InventoryItemFormModel {
             if case .codeTaken = $0 { return false }
             return true
         }
-        guard blocking.isEmpty, phase == .ready, !isSubmitting else { return false }
+        guard blocking.isEmpty, protocol2Issues.isEmpty, phase == .ready, !isSubmitting else {
+            return false
+        }
         isSubmitting = true
         defer { isSubmitting = false }
         for command in commands {
@@ -202,6 +216,18 @@ internal final class InventoryItemFormModel {
     }
 
     private var commands: [InventoryCommand] {
+        if let protocol2 = protocol2Draft, let type = protocol2Type {
+            switch mode {
+            case .create:
+                let all = InventoryItemFormSubmission.protocol2Create(
+                    draft, protocol2: protocol2, type: type)
+                return created ? Array(all.dropFirst()) : all
+            case .edit:
+                guard let original else { return [] }
+                return InventoryItemFormSubmission.protocol2Edit(
+                    draft, protocol2: protocol2, type: type, original: original)
+            }
+        }
         switch mode {
         case .create:
             let all = InventoryItemFormSubmission.create(draft, catalogue: catalogue)
@@ -214,6 +240,8 @@ internal final class InventoryItemFormModel {
 
     private func apply(_ context: InventoryItemFormContext) {
         catalogue = context.catalogue
+        protocol2Catalogue = context.protocol2Catalogue
+        protocol2ReferenceTargets = context.protocol2ReferenceTargets
         original = context.item
         photoUploads = context.photoUploads
         followStoreUploads()
@@ -227,6 +255,14 @@ internal final class InventoryItemFormModel {
         switch request {
         case .create:
             draft.placementName = context.placementName
+            if let catalogue = context.protocol2Catalogue {
+                guard let type = catalogue.types.first(where: { $0.archivedAt == nil }) else {
+                    phase = .unavailable
+                    return
+                }
+                protocol2Draft = .init(
+                    type: type, catalogueRevision: catalogue.revision.revision)
+            }
             phase = .ready
         case .edit:
             guard let item = context.item else {
@@ -234,6 +270,14 @@ internal final class InventoryItemFormModel {
                 return
             }
             draft = InventoryItemDraft(editing: item, placementName: context.placementName)
+            if let catalogue = context.protocol2Catalogue, let typeId = item.typeId {
+                guard let type = catalogue.types.first(where: { $0.id == typeId }) else {
+                    phase = .unavailable
+                    return
+                }
+                protocol2Draft = .init(
+                    type: type, catalogueRevision: catalogue.revision.revision, item: item)
+            }
             phase = .ready
         }
     }

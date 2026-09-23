@@ -40,6 +40,9 @@ public protocol InventoryQuerySource: Sendable {
     func inventoryItemHistory(itemId: String) -> [InventoryEvent]
     func inventoryLocationHistory(locationId: String) -> [InventoryEvent]
     func inventoryCatalogue() -> InventoryCatalogue
+    /// The immutable protocol-2 catalogue that matches the replica's active
+    /// stable-ID item values, when the replica has downloaded one.
+    func inventoryProtocol2Catalogue() -> InventoryCatalogueSnapshot?
     func inventorySyncLedger() -> InventoryReplicaSyncLedger
     func inventoryReplicaStatus() -> InventoryReplicaStatus
     /// The photos this phone staged for upload, by hash, and how far each
@@ -50,6 +53,11 @@ public protocol InventoryQuerySource: Sendable {
     /// `InventoryStore.settleTypeArrival(typeKey:)` records the ask, and
     /// never comes back once it has.
     func inventoryAwaitingTypeArrivals() -> [String]
+}
+
+extension InventoryQuerySource {
+    /// Protocol-1 sources have no immutable stable-ID catalogue to expose.
+    public func inventoryProtocol2Catalogue() -> InventoryCatalogueSnapshot? { nil }
 }
 
 /// A read `InventoryStore.observe(_:)` can serve, typed by the value it
@@ -136,6 +144,11 @@ public struct InventoryQuery<Value: Sendable>: Sendable {
 
     public static var catalogue: InventoryQuery<InventoryCatalogue> {
         .init { $0.inventoryCatalogue() }
+    }
+
+    /// The active immutable catalogue for protocol-2 field rendering.
+    public static var protocol2Catalogue: InventoryQuery<InventoryCatalogueSnapshot?> {
+        .init { $0.inventoryProtocol2Catalogue() }
     }
 
     public static var syncLedger: InventoryQuery<InventoryReplicaSyncLedger> {

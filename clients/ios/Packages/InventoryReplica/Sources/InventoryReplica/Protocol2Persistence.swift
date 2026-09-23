@@ -1,13 +1,13 @@
 import AppCore
 import GRDB
 
-internal enum Protocol2CatalogueRows {
-    private struct FieldKinds {
-        let primitive: InventoryPrimitiveKind
-        let cardinality: InventoryFieldCardinality
-        let storage: InventoryFieldStorage
-    }
+private struct Protocol2FieldKinds {
+    let primitive: InventoryPrimitiveKind
+    let cardinality: InventoryFieldCardinality
+    let storage: InventoryFieldStorage
+}
 
+internal enum Protocol2CatalogueRows {
     static func store(_ catalogue: InventoryCatalogueSnapshot, in db: Database) throws {
         if let stored = try read(revision: catalogue.revision.revision, in: db) {
             guard stored == catalogue else {
@@ -178,7 +178,9 @@ internal enum Protocol2CatalogueRows {
             })
     }
 
-    private static func fieldKinds(from row: Row, fieldId: String) throws -> FieldKinds {
+    private static func fieldKinds(
+        from row: Row, fieldId: String
+    ) throws -> Protocol2FieldKinds {
         let primitive: String = try row.decode(forColumn: "kind")
         let cardinality: String = try row.decode(forColumn: "cardinality")
         let storage: String = try row.decode(forColumn: "storage")
@@ -186,7 +188,8 @@ internal enum Protocol2CatalogueRows {
             let cardinality = InventoryFieldCardinality(rawValue: cardinality),
             let storage = InventoryFieldStorage(rawValue: storage)
         else { throw InventoryReplicaError.corruptValue("catalogue field \(fieldId)") }
-        return FieldKinds(primitive: primitive, cardinality: cardinality, storage: storage)
+        return Protocol2FieldKinds(
+            primitive: primitive, cardinality: cardinality, storage: storage)
     }
 
     private static func referenceKinds(from row: Row) throws -> Set<InventoryReferenceTargetKind> {
