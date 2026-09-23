@@ -85,12 +85,6 @@ export const TypeCatalogueDescriptorSchema = z.object({
   types: z.array(CatalogueDefinitionTypeSchema),
 });
 
-/** One type definition as one immutable published catalogue revision defined it. */
-export const TypeCatalogueTypeDescriptorSchema = z.object({
-  revision: CatalogueRevisionSchema,
-  type: CatalogueDefinitionTypeSchema,
-});
-
 /** One complete stable-ID value group accepted by catalogue-aware item validation. */
 export const CatalogueItemFieldValueSchema = z.object({
   fieldId: z.uuid(),

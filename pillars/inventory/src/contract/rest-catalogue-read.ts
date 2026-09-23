@@ -8,10 +8,16 @@ import {
   CatalogueItemValidationResultSchema,
   CatalogueReadHeaders,
   TypeCatalogueDescriptorSchema,
-  TypeCatalogueTypeDescriptorSchema,
 } from './rest-catalogue-schemas.js';
 
 const c = initContract();
+
+/** One type definition as one immutable published catalogue revision defined it. */
+export const TypeCatalogueTypeDescriptorSchema = z.object({
+  revision: TypeCatalogueDescriptorSchema.shape.revision,
+  type: TypeCatalogueDescriptorSchema.shape.types.element,
+});
+
 const PageLimit = z.coerce.number().int().min(1).max(500).default(250);
 
 /** Immutable catalogue reads and non-mutating item validation, under `inventory.types.read`. */
