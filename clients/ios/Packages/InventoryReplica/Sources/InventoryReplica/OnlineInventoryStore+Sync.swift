@@ -63,7 +63,7 @@ extension OnlineInventoryStore {
         repeat {
             let page = try await transport.fetchSnapshot(cursor: cursor, limit: pageSize)
             if let next = page.nextCursor, next == cursor { throw RepositoryError.contractMismatch }
-            try replica.apply(page)
+            try await apply(page)
             cursor = page.nextCursor
         } while cursor != nil
         try await refreshCatalogueIfAnnounced()
@@ -76,7 +76,7 @@ extension OnlineInventoryStore {
                 throw InventoryReplicaError.notDownloaded
             }
             let page = try await transport.fetchChanges(since: since, epoch: epoch, limit: pageSize)
-            try replica.apply(page)
+            try await apply(page)
             guard page.hasMore else { break }
             guard page.nextSince > since else { throw RepositoryError.contractMismatch }
         }
@@ -85,11 +85,26 @@ extension OnlineInventoryStore {
 
     private func refreshCatalogueIfAnnounced() async throws {
         let position = try replica.syncPosition()
+        if position.announcedCatalogueRevision != nil { return }
         guard position.needsCatalogue else { return }
         let known = position.storedCatalogueVersion
         if let catalogue = try await transport.fetchCatalogue(knownVersion: known) {
             try replica.store(catalogue)
         }
+    }
+
+    private func apply(_ page: InventorySnapshotPage) async throws {
+        guard let revision = page.catalogueRevision else { return try replica.apply(page) }
+        let catalogue = try await transport.fetchCatalogue(revision: revision)
+        guard catalogue.revision.revision == revision else { throw RepositoryError.contractMismatch }
+        try replica.apply(page, catalogue: catalogue)
+    }
+
+    private func apply(_ page: InventoryChangesPage) async throws {
+        guard let revision = page.catalogueRevision else { return try replica.apply(page) }
+        let catalogue = try await transport.fetchCatalogue(revision: revision)
+        guard catalogue.revision.revision == revision else { throw RepositoryError.contractMismatch }
+        try replica.apply(page, catalogue: catalogue)
     }
 
     func noteReached() {

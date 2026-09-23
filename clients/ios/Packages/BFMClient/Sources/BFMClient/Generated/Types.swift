@@ -116,6 +116,11 @@ internal protocol APIProtocol: Sendable {
     /// - Remark: HTTP `GET /mobile/inventory/sync/snapshot`.
     /// - Remark: Generated from `#/paths//mobile/inventory/sync/snapshot/get(mobileInventory.snapshot)`.
     func mobileInventory_snapshot(_ input: Operations.MobileInventory_snapshot.Input) async throws -> Operations.MobileInventory_snapshot.Output
+    /// One exact immutable catalogue revision required by protocol-2 item rows
+    ///
+    /// - Remark: HTTP `GET /mobile/inventory/type-catalogue`.
+    /// - Remark: Generated from `#/paths//mobile/inventory/type-catalogue/get(mobileInventory.catalogueRevision)`.
+    func mobileInventory_catalogueRevision(_ input: Operations.MobileInventory_catalogueRevision.Input) async throws -> Operations.MobileInventory_catalogueRevision.Output
     /// The type catalogue: every type, field and unit the app needs to render an item
     ///
     /// - Remark: HTTP `GET /mobile/inventory/types`.
@@ -454,6 +459,19 @@ extension APIProtocol {
         headers: Operations.MobileInventory_snapshot.Input.Headers = .init()
     ) async throws -> Operations.MobileInventory_snapshot.Output {
         try await mobileInventory_snapshot(Operations.MobileInventory_snapshot.Input(
+            query: query,
+            headers: headers
+        ))
+    }
+    /// One exact immutable catalogue revision required by protocol-2 item rows
+    ///
+    /// - Remark: HTTP `GET /mobile/inventory/type-catalogue`.
+    /// - Remark: Generated from `#/paths//mobile/inventory/type-catalogue/get(mobileInventory.catalogueRevision)`.
+    internal func mobileInventory_catalogueRevision(
+        query: Operations.MobileInventory_catalogueRevision.Input.Query,
+        headers: Operations.MobileInventory_catalogueRevision.Input.Headers = .init()
+    ) async throws -> Operations.MobileInventory_catalogueRevision.Output {
+        try await mobileInventory_catalogueRevision(Operations.MobileInventory_catalogueRevision.Input(
             query: query,
             headers: headers
         ))
@@ -19724,6 +19742,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/catalogueRevision`.
+                        internal var catalogueRevision: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/catalogueVersion`.
                         internal var catalogueVersion: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/epoch`.
@@ -21555,6 +21575,7 @@ internal enum Operations {
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
+                        ///   - catalogueRevision:
                         ///   - catalogueVersion:
                         ///   - epoch:
                         ///   - events:
@@ -21563,6 +21584,7 @@ internal enum Operations {
                         ///   - locations:
                         ///   - nextSince:
                         internal init(
+                            catalogueRevision: Swift.Int? = nil,
                             catalogueVersion: Swift.String,
                             epoch: Swift.String,
                             events: Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.EventsPayload,
@@ -21571,6 +21593,7 @@ internal enum Operations {
                             locations: Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.LocationsPayload,
                             nextSince: Swift.Int
                         ) {
+                            self.catalogueRevision = catalogueRevision
                             self.catalogueVersion = catalogueVersion
                             self.epoch = epoch
                             self.events = events
@@ -21580,6 +21603,7 @@ internal enum Operations {
                             self.nextSince = nextSince
                         }
                         internal enum CodingKeys: String, CodingKey {
+                            case catalogueRevision
                             case catalogueVersion
                             case epoch
                             case events
@@ -21590,6 +21614,10 @@ internal enum Operations {
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
                             let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.catalogueRevision = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .catalogueRevision
+                            )
                             self.catalogueVersion = try container.decode(
                                 Swift.String.self,
                                 forKey: .catalogueVersion
@@ -21619,6 +21647,7 @@ internal enum Operations {
                                 forKey: .nextSince
                             )
                             try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "catalogueRevision",
                                 "catalogueVersion",
                                 "epoch",
                                 "events",
@@ -22672,6 +22701,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/catalogueRevision`.
+                        internal var catalogueRevision: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/catalogueVersion`.
                         internal var catalogueVersion: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/epoch`.
@@ -23635,6 +23666,7 @@ internal enum Operations {
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
+                        ///   - catalogueRevision:
                         ///   - catalogueVersion:
                         ///   - epoch:
                         ///   - highWaterSeq:
@@ -23643,6 +23675,7 @@ internal enum Operations {
                         ///   - nextCursor:
                         ///   - total:
                         internal init(
+                            catalogueRevision: Swift.Int? = nil,
                             catalogueVersion: Swift.String,
                             epoch: Swift.String,
                             highWaterSeq: Swift.Int,
@@ -23651,6 +23684,7 @@ internal enum Operations {
                             nextCursor: Swift.String? = nil,
                             total: Swift.Int
                         ) {
+                            self.catalogueRevision = catalogueRevision
                             self.catalogueVersion = catalogueVersion
                             self.epoch = epoch
                             self.highWaterSeq = highWaterSeq
@@ -23660,6 +23694,7 @@ internal enum Operations {
                             self.total = total
                         }
                         internal enum CodingKeys: String, CodingKey {
+                            case catalogueRevision
                             case catalogueVersion
                             case epoch
                             case highWaterSeq
@@ -23670,6 +23705,10 @@ internal enum Operations {
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
                             let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.catalogueRevision = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .catalogueRevision
+                            )
                             self.catalogueVersion = try container.decode(
                                 Swift.String.self,
                                 forKey: .catalogueVersion
@@ -23699,6 +23738,7 @@ internal enum Operations {
                                 forKey: .total
                             )
                             try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "catalogueRevision",
                                 "catalogueVersion",
                                 "epoch",
                                 "highWaterSeq",
@@ -24651,6 +24691,1769 @@ internal enum Operations {
             /// - Throws: An error if `self` is not `.serviceUnavailable`.
             /// - SeeAlso: `.serviceUnavailable`.
             internal var serviceUnavailable: Operations.MobileInventory_snapshot.Output.ServiceUnavailable {
+                get throws {
+                    switch self {
+                    case let .serviceUnavailable(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "serviceUnavailable",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        internal enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            internal init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            internal var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            internal static var allCases: [Self] {
+                [
+                    .json
+                ]
+            }
+        }
+    }
+    /// One exact immutable catalogue revision required by protocol-2 item rows
+    ///
+    /// - Remark: HTTP `GET /mobile/inventory/type-catalogue`.
+    /// - Remark: Generated from `#/paths//mobile/inventory/type-catalogue/get(mobileInventory.catalogueRevision)`.
+    internal enum MobileInventory_catalogueRevision {
+        internal static let id: Swift.String = "mobileInventory.catalogueRevision"
+        internal struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/query`.
+            internal struct Query: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/query/revision`.
+                internal var revision: Swift.Int
+                /// Creates a new `Query`.
+                ///
+                /// - Parameters:
+                ///   - revision:
+                internal init(revision: Swift.Int) {
+                    self.revision = revision
+                }
+            }
+            internal var query: Operations.MobileInventory_catalogueRevision.Input.Query
+            /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/header`.
+            internal struct Headers: Sendable, Hashable {
+                internal var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.MobileInventory_catalogueRevision.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - accept:
+                internal init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.MobileInventory_catalogueRevision.AcceptableContentType>] = .defaultValues()) {
+                    self.accept = accept
+                }
+            }
+            internal var headers: Operations.MobileInventory_catalogueRevision.Input.Headers
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - query:
+            ///   - headers:
+            internal init(
+                query: Operations.MobileInventory_catalogueRevision.Input.Query,
+                headers: Operations.MobileInventory_catalogueRevision.Input.Headers = .init()
+            ) {
+                self.query = query
+                self.headers = headers
+            }
+        }
+        internal enum Output: Sendable, Hashable {
+            internal struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/revision`.
+                        internal struct RevisionPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/revision/abandoned`.
+                            internal struct AbandonedPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/revision/abandoned/actor`.
+                                internal struct ActorPayload: Codable, Hashable, Sendable {
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/revision/abandoned/actor/id`.
+                                    internal var id: Swift.String?
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/revision/abandoned/actor/kind`.
+                                    internal var kind: Swift.String
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/revision/abandoned/actor/label`.
+                                    internal var label: Swift.String
+                                    /// Creates a new `ActorPayload`.
+                                    ///
+                                    /// - Parameters:
+                                    ///   - id:
+                                    ///   - kind:
+                                    ///   - label:
+                                    internal init(
+                                        id: Swift.String? = nil,
+                                        kind: Swift.String,
+                                        label: Swift.String
+                                    ) {
+                                        self.id = id
+                                        self.kind = kind
+                                        self.label = label
+                                    }
+                                    internal enum CodingKeys: String, CodingKey {
+                                        case id
+                                        case kind
+                                        case label
+                                    }
+                                    internal init(from decoder: any Swift.Decoder) throws {
+                                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                                        self.id = try container.decodeIfPresent(
+                                            Swift.String.self,
+                                            forKey: .id
+                                        )
+                                        self.kind = try container.decode(
+                                            Swift.String.self,
+                                            forKey: .kind
+                                        )
+                                        self.label = try container.decode(
+                                            Swift.String.self,
+                                            forKey: .label
+                                        )
+                                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                            "id",
+                                            "kind",
+                                            "label"
+                                        ])
+                                    }
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/revision/abandoned/actor`.
+                                internal var actor: Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.RevisionPayload.AbandonedPayload.ActorPayload
+                                /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/revision/abandoned/at`.
+                                internal var at: Swift.String
+                                /// Creates a new `AbandonedPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - actor:
+                                ///   - at:
+                                internal init(
+                                    actor: Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.RevisionPayload.AbandonedPayload.ActorPayload,
+                                    at: Swift.String
+                                ) {
+                                    self.actor = actor
+                                    self.at = at
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case actor
+                                    case at
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.actor = try container.decode(
+                                        Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.RevisionPayload.AbandonedPayload.ActorPayload.self,
+                                        forKey: .actor
+                                    )
+                                    self.at = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .at
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "actor",
+                                        "at"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/revision/abandoned`.
+                            internal var abandoned: Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.RevisionPayload.AbandonedPayload?
+                            /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/revision/baseRevision`.
+                            internal var baseRevision: Swift.Int?
+                            /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/revision/created`.
+                            internal struct CreatedPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/revision/created/actor`.
+                                internal struct ActorPayload: Codable, Hashable, Sendable {
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/revision/created/actor/id`.
+                                    internal var id: Swift.String?
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/revision/created/actor/kind`.
+                                    internal var kind: Swift.String
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/revision/created/actor/label`.
+                                    internal var label: Swift.String
+                                    /// Creates a new `ActorPayload`.
+                                    ///
+                                    /// - Parameters:
+                                    ///   - id:
+                                    ///   - kind:
+                                    ///   - label:
+                                    internal init(
+                                        id: Swift.String? = nil,
+                                        kind: Swift.String,
+                                        label: Swift.String
+                                    ) {
+                                        self.id = id
+                                        self.kind = kind
+                                        self.label = label
+                                    }
+                                    internal enum CodingKeys: String, CodingKey {
+                                        case id
+                                        case kind
+                                        case label
+                                    }
+                                    internal init(from decoder: any Swift.Decoder) throws {
+                                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                                        self.id = try container.decodeIfPresent(
+                                            Swift.String.self,
+                                            forKey: .id
+                                        )
+                                        self.kind = try container.decode(
+                                            Swift.String.self,
+                                            forKey: .kind
+                                        )
+                                        self.label = try container.decode(
+                                            Swift.String.self,
+                                            forKey: .label
+                                        )
+                                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                            "id",
+                                            "kind",
+                                            "label"
+                                        ])
+                                    }
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/revision/created/actor`.
+                                internal var actor: Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.RevisionPayload.CreatedPayload.ActorPayload
+                                /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/revision/created/at`.
+                                internal var at: Swift.String
+                                /// Creates a new `CreatedPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - actor:
+                                ///   - at:
+                                internal init(
+                                    actor: Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.RevisionPayload.CreatedPayload.ActorPayload,
+                                    at: Swift.String
+                                ) {
+                                    self.actor = actor
+                                    self.at = at
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case actor
+                                    case at
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.actor = try container.decode(
+                                        Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.RevisionPayload.CreatedPayload.ActorPayload.self,
+                                        forKey: .actor
+                                    )
+                                    self.at = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .at
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "actor",
+                                        "at"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/revision/created`.
+                            internal var created: Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.RevisionPayload.CreatedPayload
+                            /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/revision/minimumProtocol`.
+                            internal var minimumProtocol: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/revision/published`.
+                            internal struct PublishedPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/revision/published/actor`.
+                                internal struct ActorPayload: Codable, Hashable, Sendable {
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/revision/published/actor/id`.
+                                    internal var id: Swift.String?
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/revision/published/actor/kind`.
+                                    internal var kind: Swift.String
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/revision/published/actor/label`.
+                                    internal var label: Swift.String
+                                    /// Creates a new `ActorPayload`.
+                                    ///
+                                    /// - Parameters:
+                                    ///   - id:
+                                    ///   - kind:
+                                    ///   - label:
+                                    internal init(
+                                        id: Swift.String? = nil,
+                                        kind: Swift.String,
+                                        label: Swift.String
+                                    ) {
+                                        self.id = id
+                                        self.kind = kind
+                                        self.label = label
+                                    }
+                                    internal enum CodingKeys: String, CodingKey {
+                                        case id
+                                        case kind
+                                        case label
+                                    }
+                                    internal init(from decoder: any Swift.Decoder) throws {
+                                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                                        self.id = try container.decodeIfPresent(
+                                            Swift.String.self,
+                                            forKey: .id
+                                        )
+                                        self.kind = try container.decode(
+                                            Swift.String.self,
+                                            forKey: .kind
+                                        )
+                                        self.label = try container.decode(
+                                            Swift.String.self,
+                                            forKey: .label
+                                        )
+                                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                            "id",
+                                            "kind",
+                                            "label"
+                                        ])
+                                    }
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/revision/published/actor`.
+                                internal var actor: Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.RevisionPayload.PublishedPayload.ActorPayload
+                                /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/revision/published/at`.
+                                internal var at: Swift.String
+                                /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/revision/published/note`.
+                                internal var note: Swift.String?
+                                /// Creates a new `PublishedPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - actor:
+                                ///   - at:
+                                ///   - note:
+                                internal init(
+                                    actor: Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.RevisionPayload.PublishedPayload.ActorPayload,
+                                    at: Swift.String,
+                                    note: Swift.String? = nil
+                                ) {
+                                    self.actor = actor
+                                    self.at = at
+                                    self.note = note
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case actor
+                                    case at
+                                    case note
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.actor = try container.decode(
+                                        Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.RevisionPayload.PublishedPayload.ActorPayload.self,
+                                        forKey: .actor
+                                    )
+                                    self.at = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .at
+                                    )
+                                    self.note = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .note
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "actor",
+                                        "at",
+                                        "note"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/revision/published`.
+                            internal var published: Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.RevisionPayload.PublishedPayload?
+                            /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/revision/revision`.
+                            internal var revision: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/revision/status`.
+                            internal enum StatusPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case draft = "draft"
+                                case published = "published"
+                                case abandoned = "abandoned"
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/revision/status`.
+                            internal var status: Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.RevisionPayload.StatusPayload
+                            /// Creates a new `RevisionPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - abandoned:
+                            ///   - baseRevision:
+                            ///   - created:
+                            ///   - minimumProtocol:
+                            ///   - published:
+                            ///   - revision:
+                            ///   - status:
+                            internal init(
+                                abandoned: Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.RevisionPayload.AbandonedPayload? = nil,
+                                baseRevision: Swift.Int? = nil,
+                                created: Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.RevisionPayload.CreatedPayload,
+                                minimumProtocol: Swift.Int,
+                                published: Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.RevisionPayload.PublishedPayload? = nil,
+                                revision: Swift.Int,
+                                status: Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.RevisionPayload.StatusPayload
+                            ) {
+                                self.abandoned = abandoned
+                                self.baseRevision = baseRevision
+                                self.created = created
+                                self.minimumProtocol = minimumProtocol
+                                self.published = published
+                                self.revision = revision
+                                self.status = status
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case abandoned
+                                case baseRevision
+                                case created
+                                case minimumProtocol
+                                case published
+                                case revision
+                                case status
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.abandoned = try container.decodeIfPresent(
+                                    Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.RevisionPayload.AbandonedPayload.self,
+                                    forKey: .abandoned
+                                )
+                                self.baseRevision = try container.decodeIfPresent(
+                                    Swift.Int.self,
+                                    forKey: .baseRevision
+                                )
+                                self.created = try container.decode(
+                                    Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.RevisionPayload.CreatedPayload.self,
+                                    forKey: .created
+                                )
+                                self.minimumProtocol = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .minimumProtocol
+                                )
+                                self.published = try container.decodeIfPresent(
+                                    Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.RevisionPayload.PublishedPayload.self,
+                                    forKey: .published
+                                )
+                                self.revision = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .revision
+                                )
+                                self.status = try container.decode(
+                                    Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.RevisionPayload.StatusPayload.self,
+                                    forKey: .status
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "abandoned",
+                                    "baseRevision",
+                                    "created",
+                                    "minimumProtocol",
+                                    "published",
+                                    "revision",
+                                    "status"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/revision`.
+                        internal var revision: Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.RevisionPayload
+                        /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload`.
+                        internal struct TypesPayloadPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/archivedAt`.
+                            internal var archivedAt: Swift.String?
+                            /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/capabilities`.
+                            internal var capabilities: [Swift.String]
+                            /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/description`.
+                            internal var description: Swift.String?
+                            /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/FieldsPayload`.
+                            internal struct FieldsPayloadPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/FieldsPayload/allowOverride`.
+                                internal var allowOverride: Swift.Bool
+                                /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/FieldsPayload/archivedAt`.
+                                internal var archivedAt: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/FieldsPayload/cardinality`.
+                                internal enum CardinalityPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case one = "one"
+                                    case many = "many"
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/FieldsPayload/cardinality`.
+                                internal var cardinality: Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.TypesPayloadPayload.FieldsPayloadPayload.CardinalityPayload
+                                /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/FieldsPayload/EnumOptionsPayload`.
+                                internal struct EnumOptionsPayloadPayload: Codable, Hashable, Sendable {
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/FieldsPayload/EnumOptionsPayload/archivedAt`.
+                                    internal var archivedAt: Swift.String?
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/FieldsPayload/EnumOptionsPayload/id`.
+                                    internal var id: Swift.String
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/FieldsPayload/EnumOptionsPayload/key`.
+                                    internal var key: Swift.String
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/FieldsPayload/EnumOptionsPayload/label`.
+                                    internal var label: Swift.String
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/FieldsPayload/EnumOptionsPayload/sortOrder`.
+                                    internal var sortOrder: Swift.Int
+                                    /// Creates a new `EnumOptionsPayloadPayload`.
+                                    ///
+                                    /// - Parameters:
+                                    ///   - archivedAt:
+                                    ///   - id:
+                                    ///   - key:
+                                    ///   - label:
+                                    ///   - sortOrder:
+                                    internal init(
+                                        archivedAt: Swift.String? = nil,
+                                        id: Swift.String,
+                                        key: Swift.String,
+                                        label: Swift.String,
+                                        sortOrder: Swift.Int
+                                    ) {
+                                        self.archivedAt = archivedAt
+                                        self.id = id
+                                        self.key = key
+                                        self.label = label
+                                        self.sortOrder = sortOrder
+                                    }
+                                    internal enum CodingKeys: String, CodingKey {
+                                        case archivedAt
+                                        case id
+                                        case key
+                                        case label
+                                        case sortOrder
+                                    }
+                                    internal init(from decoder: any Swift.Decoder) throws {
+                                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                                        self.archivedAt = try container.decodeIfPresent(
+                                            Swift.String.self,
+                                            forKey: .archivedAt
+                                        )
+                                        self.id = try container.decode(
+                                            Swift.String.self,
+                                            forKey: .id
+                                        )
+                                        self.key = try container.decode(
+                                            Swift.String.self,
+                                            forKey: .key
+                                        )
+                                        self.label = try container.decode(
+                                            Swift.String.self,
+                                            forKey: .label
+                                        )
+                                        self.sortOrder = try container.decode(
+                                            Swift.Int.self,
+                                            forKey: .sortOrder
+                                        )
+                                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                            "archivedAt",
+                                            "id",
+                                            "key",
+                                            "label",
+                                            "sortOrder"
+                                        ])
+                                    }
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/FieldsPayload/enumOptions`.
+                                internal typealias EnumOptionsPayload = [Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.TypesPayloadPayload.FieldsPayloadPayload.EnumOptionsPayloadPayload]
+                                /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/FieldsPayload/enumOptions`.
+                                internal var enumOptions: Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.TypesPayloadPayload.FieldsPayloadPayload.EnumOptionsPayload
+                                /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/FieldsPayload/expression`.
+                                internal var expression: OpenAPIRuntime.OpenAPIValueContainer?
+                                /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/FieldsPayload/expressionVersion`.
+                                internal var expressionVersion: Swift.Int?
+                                /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/FieldsPayload/fixedUnit`.
+                                internal var fixedUnit: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/FieldsPayload/help`.
+                                internal var help: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/FieldsPayload/id`.
+                                internal var id: Swift.String
+                                /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/FieldsPayload/key`.
+                                internal var key: Swift.String
+                                /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/FieldsPayload/kind`.
+                                internal enum KindPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case shortText = "short_text"
+                                    case longText = "long_text"
+                                    case integer = "integer"
+                                    case decimal = "decimal"
+                                    case boolean = "boolean"
+                                    case _enum = "enum"
+                                    case measurement = "measurement"
+                                    case date = "date"
+                                    case dateTime = "date_time"
+                                    case url = "url"
+                                    case reference = "reference"
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/FieldsPayload/kind`.
+                                internal var kind: Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.TypesPayloadPayload.FieldsPayloadPayload.KindPayload
+                                /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/FieldsPayload/label`.
+                                internal var label: Swift.String
+                                /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/FieldsPayload/presentation`.
+                                internal struct PresentationPayload: Codable, Hashable, Sendable {
+                                    /// A container of undocumented properties.
+                                    internal var additionalProperties: [String: OpenAPIRuntime.OpenAPIValueContainer]
+                                    /// Creates a new `PresentationPayload`.
+                                    ///
+                                    /// - Parameters:
+                                    ///   - additionalProperties: A container of undocumented properties.
+                                    internal init(additionalProperties: [String: OpenAPIRuntime.OpenAPIValueContainer] = .init()) {
+                                        self.additionalProperties = additionalProperties
+                                    }
+                                    internal init(from decoder: any Swift.Decoder) throws {
+                                        additionalProperties = try decoder.decodeAdditionalProperties(knownKeys: [])
+                                    }
+                                    internal func encode(to encoder: any Swift.Encoder) throws {
+                                        try encoder.encodeAdditionalProperties(additionalProperties)
+                                    }
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/FieldsPayload/presentation`.
+                                internal var presentation: Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.TypesPayloadPayload.FieldsPayloadPayload.PresentationPayload
+                                /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/FieldsPayload/ReferenceKindsPayload`.
+                                internal enum ReferenceKindsPayloadPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case item = "item"
+                                    case location = "location"
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/FieldsPayload/referenceKinds`.
+                                internal typealias ReferenceKindsPayload = [Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.TypesPayloadPayload.FieldsPayloadPayload.ReferenceKindsPayloadPayload]
+                                /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/FieldsPayload/referenceKinds`.
+                                internal var referenceKinds: Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.TypesPayloadPayload.FieldsPayloadPayload.ReferenceKindsPayload
+                                /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/FieldsPayload/referenceTypeIds`.
+                                internal var referenceTypeIds: [Swift.String]
+                                /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/FieldsPayload/required`.
+                                internal var required: Swift.Bool
+                                /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/FieldsPayload/sortOrder`.
+                                internal var sortOrder: Swift.Int
+                                /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/FieldsPayload/storage`.
+                                internal enum StoragePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case stored = "stored"
+                                    case computed = "computed"
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/FieldsPayload/storage`.
+                                internal var storage: Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.TypesPayloadPayload.FieldsPayloadPayload.StoragePayload
+                                /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/FieldsPayload/typeId`.
+                                internal var typeId: Swift.String
+                                /// Creates a new `FieldsPayloadPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - allowOverride:
+                                ///   - archivedAt:
+                                ///   - cardinality:
+                                ///   - enumOptions:
+                                ///   - expression:
+                                ///   - expressionVersion:
+                                ///   - fixedUnit:
+                                ///   - help:
+                                ///   - id:
+                                ///   - key:
+                                ///   - kind:
+                                ///   - label:
+                                ///   - presentation:
+                                ///   - referenceKinds:
+                                ///   - referenceTypeIds:
+                                ///   - required:
+                                ///   - sortOrder:
+                                ///   - storage:
+                                ///   - typeId:
+                                internal init(
+                                    allowOverride: Swift.Bool,
+                                    archivedAt: Swift.String? = nil,
+                                    cardinality: Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.TypesPayloadPayload.FieldsPayloadPayload.CardinalityPayload,
+                                    enumOptions: Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.TypesPayloadPayload.FieldsPayloadPayload.EnumOptionsPayload,
+                                    expression: OpenAPIRuntime.OpenAPIValueContainer? = nil,
+                                    expressionVersion: Swift.Int? = nil,
+                                    fixedUnit: Swift.String? = nil,
+                                    help: Swift.String? = nil,
+                                    id: Swift.String,
+                                    key: Swift.String,
+                                    kind: Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.TypesPayloadPayload.FieldsPayloadPayload.KindPayload,
+                                    label: Swift.String,
+                                    presentation: Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.TypesPayloadPayload.FieldsPayloadPayload.PresentationPayload,
+                                    referenceKinds: Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.TypesPayloadPayload.FieldsPayloadPayload.ReferenceKindsPayload,
+                                    referenceTypeIds: [Swift.String],
+                                    required: Swift.Bool,
+                                    sortOrder: Swift.Int,
+                                    storage: Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.TypesPayloadPayload.FieldsPayloadPayload.StoragePayload,
+                                    typeId: Swift.String
+                                ) {
+                                    self.allowOverride = allowOverride
+                                    self.archivedAt = archivedAt
+                                    self.cardinality = cardinality
+                                    self.enumOptions = enumOptions
+                                    self.expression = expression
+                                    self.expressionVersion = expressionVersion
+                                    self.fixedUnit = fixedUnit
+                                    self.help = help
+                                    self.id = id
+                                    self.key = key
+                                    self.kind = kind
+                                    self.label = label
+                                    self.presentation = presentation
+                                    self.referenceKinds = referenceKinds
+                                    self.referenceTypeIds = referenceTypeIds
+                                    self.required = required
+                                    self.sortOrder = sortOrder
+                                    self.storage = storage
+                                    self.typeId = typeId
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case allowOverride
+                                    case archivedAt
+                                    case cardinality
+                                    case enumOptions
+                                    case expression
+                                    case expressionVersion
+                                    case fixedUnit
+                                    case help
+                                    case id
+                                    case key
+                                    case kind
+                                    case label
+                                    case presentation
+                                    case referenceKinds
+                                    case referenceTypeIds
+                                    case required
+                                    case sortOrder
+                                    case storage
+                                    case typeId
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.allowOverride = try container.decode(
+                                        Swift.Bool.self,
+                                        forKey: .allowOverride
+                                    )
+                                    self.archivedAt = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .archivedAt
+                                    )
+                                    self.cardinality = try container.decode(
+                                        Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.TypesPayloadPayload.FieldsPayloadPayload.CardinalityPayload.self,
+                                        forKey: .cardinality
+                                    )
+                                    self.enumOptions = try container.decode(
+                                        Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.TypesPayloadPayload.FieldsPayloadPayload.EnumOptionsPayload.self,
+                                        forKey: .enumOptions
+                                    )
+                                    self.expression = try container.decodeIfPresent(
+                                        OpenAPIRuntime.OpenAPIValueContainer.self,
+                                        forKey: .expression
+                                    )
+                                    self.expressionVersion = try container.decodeIfPresent(
+                                        Swift.Int.self,
+                                        forKey: .expressionVersion
+                                    )
+                                    self.fixedUnit = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .fixedUnit
+                                    )
+                                    self.help = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .help
+                                    )
+                                    self.id = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .id
+                                    )
+                                    self.key = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .key
+                                    )
+                                    self.kind = try container.decode(
+                                        Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.TypesPayloadPayload.FieldsPayloadPayload.KindPayload.self,
+                                        forKey: .kind
+                                    )
+                                    self.label = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .label
+                                    )
+                                    self.presentation = try container.decode(
+                                        Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.TypesPayloadPayload.FieldsPayloadPayload.PresentationPayload.self,
+                                        forKey: .presentation
+                                    )
+                                    self.referenceKinds = try container.decode(
+                                        Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.TypesPayloadPayload.FieldsPayloadPayload.ReferenceKindsPayload.self,
+                                        forKey: .referenceKinds
+                                    )
+                                    self.referenceTypeIds = try container.decode(
+                                        [Swift.String].self,
+                                        forKey: .referenceTypeIds
+                                    )
+                                    self.required = try container.decode(
+                                        Swift.Bool.self,
+                                        forKey: .required
+                                    )
+                                    self.sortOrder = try container.decode(
+                                        Swift.Int.self,
+                                        forKey: .sortOrder
+                                    )
+                                    self.storage = try container.decode(
+                                        Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.TypesPayloadPayload.FieldsPayloadPayload.StoragePayload.self,
+                                        forKey: .storage
+                                    )
+                                    self.typeId = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .typeId
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "allowOverride",
+                                        "archivedAt",
+                                        "cardinality",
+                                        "enumOptions",
+                                        "expression",
+                                        "expressionVersion",
+                                        "fixedUnit",
+                                        "help",
+                                        "id",
+                                        "key",
+                                        "kind",
+                                        "label",
+                                        "presentation",
+                                        "referenceKinds",
+                                        "referenceTypeIds",
+                                        "required",
+                                        "sortOrder",
+                                        "storage",
+                                        "typeId"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/fields`.
+                            internal typealias FieldsPayload = [Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.TypesPayloadPayload.FieldsPayloadPayload]
+                            /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/fields`.
+                            internal var fields: Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.TypesPayloadPayload.FieldsPayload
+                            /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/id`.
+                            internal var id: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/key`.
+                            internal var key: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/label`.
+                            internal var label: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/legacyLabels`.
+                            internal var legacyLabels: [Swift.String]
+                            /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/presentation`.
+                            internal struct PresentationPayload: Codable, Hashable, Sendable {
+                                /// A container of undocumented properties.
+                                internal var additionalProperties: [String: OpenAPIRuntime.OpenAPIValueContainer]
+                                /// Creates a new `PresentationPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - additionalProperties: A container of undocumented properties.
+                                internal init(additionalProperties: [String: OpenAPIRuntime.OpenAPIValueContainer] = .init()) {
+                                    self.additionalProperties = additionalProperties
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    additionalProperties = try decoder.decodeAdditionalProperties(knownKeys: [])
+                                }
+                                internal func encode(to encoder: any Swift.Encoder) throws {
+                                    try encoder.encodeAdditionalProperties(additionalProperties)
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/presentation`.
+                            internal var presentation: Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.TypesPayloadPayload.PresentationPayload
+                            /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/revision`.
+                            internal var revision: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/sortOrder`.
+                            internal var sortOrder: Swift.Int
+                            /// Creates a new `TypesPayloadPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - archivedAt:
+                            ///   - capabilities:
+                            ///   - description:
+                            ///   - fields:
+                            ///   - id:
+                            ///   - key:
+                            ///   - label:
+                            ///   - legacyLabels:
+                            ///   - presentation:
+                            ///   - revision:
+                            ///   - sortOrder:
+                            internal init(
+                                archivedAt: Swift.String? = nil,
+                                capabilities: [Swift.String],
+                                description: Swift.String? = nil,
+                                fields: Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.TypesPayloadPayload.FieldsPayload,
+                                id: Swift.String,
+                                key: Swift.String,
+                                label: Swift.String,
+                                legacyLabels: [Swift.String],
+                                presentation: Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.TypesPayloadPayload.PresentationPayload,
+                                revision: Swift.Int,
+                                sortOrder: Swift.Int
+                            ) {
+                                self.archivedAt = archivedAt
+                                self.capabilities = capabilities
+                                self.description = description
+                                self.fields = fields
+                                self.id = id
+                                self.key = key
+                                self.label = label
+                                self.legacyLabels = legacyLabels
+                                self.presentation = presentation
+                                self.revision = revision
+                                self.sortOrder = sortOrder
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case archivedAt
+                                case capabilities
+                                case description
+                                case fields
+                                case id
+                                case key
+                                case label
+                                case legacyLabels
+                                case presentation
+                                case revision
+                                case sortOrder
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.archivedAt = try container.decodeIfPresent(
+                                    Swift.String.self,
+                                    forKey: .archivedAt
+                                )
+                                self.capabilities = try container.decode(
+                                    [Swift.String].self,
+                                    forKey: .capabilities
+                                )
+                                self.description = try container.decodeIfPresent(
+                                    Swift.String.self,
+                                    forKey: .description
+                                )
+                                self.fields = try container.decode(
+                                    Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.TypesPayloadPayload.FieldsPayload.self,
+                                    forKey: .fields
+                                )
+                                self.id = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .id
+                                )
+                                self.key = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .key
+                                )
+                                self.label = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .label
+                                )
+                                self.legacyLabels = try container.decode(
+                                    [Swift.String].self,
+                                    forKey: .legacyLabels
+                                )
+                                self.presentation = try container.decode(
+                                    Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.TypesPayloadPayload.PresentationPayload.self,
+                                    forKey: .presentation
+                                )
+                                self.revision = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .revision
+                                )
+                                self.sortOrder = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .sortOrder
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "archivedAt",
+                                    "capabilities",
+                                    "description",
+                                    "fields",
+                                    "id",
+                                    "key",
+                                    "label",
+                                    "legacyLabels",
+                                    "presentation",
+                                    "revision",
+                                    "sortOrder"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/types`.
+                        internal typealias TypesPayload = [Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.TypesPayloadPayload]
+                        /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/types`.
+                        internal var types: Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.TypesPayload
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - revision:
+                        ///   - types:
+                        internal init(
+                            revision: Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.RevisionPayload,
+                            types: Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.TypesPayload
+                        ) {
+                            self.revision = revision
+                            self.types = types
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case revision
+                            case types
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.revision = try container.decode(
+                                Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.RevisionPayload.self,
+                                forKey: .revision
+                            )
+                            self.types = try container.decode(
+                                Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.TypesPayload.self,
+                                forKey: .types
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "revision",
+                                "types"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/application\/json`.
+                    case json(Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileInventory_catalogueRevision.Output.Ok.Body
+                /// Creates a new `Ok`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileInventory_catalogueRevision.Output.Ok.Body) {
+                    self.body = body
+                }
+            }
+            /// 200
+            ///
+            /// - Remark: Generated from `#/paths//mobile/inventory/type-catalogue/get(mobileInventory.catalogueRevision)/responses/200`.
+            ///
+            /// HTTP response code: `200 ok`.
+            case ok(Operations.MobileInventory_catalogueRevision.Output.Ok)
+            /// The associated value of the enum case if `self` is `.ok`.
+            ///
+            /// - Throws: An error if `self` is not `.ok`.
+            /// - SeeAlso: `.ok`.
+            internal var ok: Operations.MobileInventory_catalogueRevision.Output.Ok {
+                get throws {
+                    switch self {
+                    case let .ok(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/400/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/400/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/400/content/json/code`.
+                        internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case invalidCursor = "invalid_cursor"
+                            case invalidRequest = "invalid_request"
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/400/content/json/code`.
+                        internal var code: Operations.MobileInventory_catalogueRevision.Output.BadRequest.Body.JsonPayload.CodePayload
+                        /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/400/content/json/message`.
+                        internal var message: Swift.String
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - message:
+                        internal init(
+                            code: Operations.MobileInventory_catalogueRevision.Output.BadRequest.Body.JsonPayload.CodePayload,
+                            message: Swift.String
+                        ) {
+                            self.code = code
+                            self.message = message
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case message
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Operations.MobileInventory_catalogueRevision.Output.BadRequest.Body.JsonPayload.CodePayload.self,
+                                forKey: .code
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "message"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/400/content/application\/json`.
+                    case json(Operations.MobileInventory_catalogueRevision.Output.BadRequest.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileInventory_catalogueRevision.Output.BadRequest.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileInventory_catalogueRevision.Output.BadRequest.Body
+                /// Creates a new `BadRequest`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileInventory_catalogueRevision.Output.BadRequest.Body) {
+                    self.body = body
+                }
+            }
+            /// 400
+            ///
+            /// - Remark: Generated from `#/paths//mobile/inventory/type-catalogue/get(mobileInventory.catalogueRevision)/responses/400`.
+            ///
+            /// HTTP response code: `400 badRequest`.
+            case badRequest(Operations.MobileInventory_catalogueRevision.Output.BadRequest)
+            /// The associated value of the enum case if `self` is `.badRequest`.
+            ///
+            /// - Throws: An error if `self` is not `.badRequest`.
+            /// - SeeAlso: `.badRequest`.
+            internal var badRequest: Operations.MobileInventory_catalogueRevision.Output.BadRequest {
+                get throws {
+                    switch self {
+                    case let .badRequest(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "badRequest",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct Unauthorized: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/401/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/401/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/401/content/json/code`.
+                        internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case invalidToken = "invalid_token"
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/401/content/json/code`.
+                        internal var code: Operations.MobileInventory_catalogueRevision.Output.Unauthorized.Body.JsonPayload.CodePayload
+                        /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/401/content/json/message`.
+                        internal var message: Swift.String
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - message:
+                        internal init(
+                            code: Operations.MobileInventory_catalogueRevision.Output.Unauthorized.Body.JsonPayload.CodePayload,
+                            message: Swift.String
+                        ) {
+                            self.code = code
+                            self.message = message
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case message
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Operations.MobileInventory_catalogueRevision.Output.Unauthorized.Body.JsonPayload.CodePayload.self,
+                                forKey: .code
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "message"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/401/content/application\/json`.
+                    case json(Operations.MobileInventory_catalogueRevision.Output.Unauthorized.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileInventory_catalogueRevision.Output.Unauthorized.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileInventory_catalogueRevision.Output.Unauthorized.Body
+                /// Creates a new `Unauthorized`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileInventory_catalogueRevision.Output.Unauthorized.Body) {
+                    self.body = body
+                }
+            }
+            /// 401
+            ///
+            /// - Remark: Generated from `#/paths//mobile/inventory/type-catalogue/get(mobileInventory.catalogueRevision)/responses/401`.
+            ///
+            /// HTTP response code: `401 unauthorized`.
+            case unauthorized(Operations.MobileInventory_catalogueRevision.Output.Unauthorized)
+            /// The associated value of the enum case if `self` is `.unauthorized`.
+            ///
+            /// - Throws: An error if `self` is not `.unauthorized`.
+            /// - SeeAlso: `.unauthorized`.
+            internal var unauthorized: Operations.MobileInventory_catalogueRevision.Output.Unauthorized {
+                get throws {
+                    switch self {
+                    case let .unauthorized(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "unauthorized",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct Forbidden: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/403/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/403/content/json`.
+                    internal enum JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/403/content/json/case1`.
+                        internal struct Case1Payload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/403/content/json/case1/code`.
+                            internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case deviceRevoked = "device_revoked"
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/403/content/json/case1/code`.
+                            internal var code: Operations.MobileInventory_catalogueRevision.Output.Forbidden.Body.JsonPayload.Case1Payload.CodePayload
+                            /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/403/content/json/case1/message`.
+                            internal var message: Swift.String
+                            /// Creates a new `Case1Payload`.
+                            ///
+                            /// - Parameters:
+                            ///   - code:
+                            ///   - message:
+                            internal init(
+                                code: Operations.MobileInventory_catalogueRevision.Output.Forbidden.Body.JsonPayload.Case1Payload.CodePayload,
+                                message: Swift.String
+                            ) {
+                                self.code = code
+                                self.message = message
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case code
+                                case message
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.code = try container.decode(
+                                    Operations.MobileInventory_catalogueRevision.Output.Forbidden.Body.JsonPayload.Case1Payload.CodePayload.self,
+                                    forKey: .code
+                                )
+                                self.message = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .message
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "code",
+                                    "message"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/403/content/json/case1`.
+                        case case1(Operations.MobileInventory_catalogueRevision.Output.Forbidden.Body.JsonPayload.Case1Payload)
+                        /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/403/content/json/case2`.
+                        internal struct Case2Payload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/403/content/json/case2/capability`.
+                            internal var capability: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/403/content/json/case2/code`.
+                            internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case capabilityNotGranted = "capability_not_granted"
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/403/content/json/case2/code`.
+                            internal var code: Operations.MobileInventory_catalogueRevision.Output.Forbidden.Body.JsonPayload.Case2Payload.CodePayload
+                            /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/403/content/json/case2/message`.
+                            internal var message: Swift.String
+                            /// Creates a new `Case2Payload`.
+                            ///
+                            /// - Parameters:
+                            ///   - capability:
+                            ///   - code:
+                            ///   - message:
+                            internal init(
+                                capability: Swift.String,
+                                code: Operations.MobileInventory_catalogueRevision.Output.Forbidden.Body.JsonPayload.Case2Payload.CodePayload,
+                                message: Swift.String
+                            ) {
+                                self.capability = capability
+                                self.code = code
+                                self.message = message
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case capability
+                                case code
+                                case message
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.capability = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .capability
+                                )
+                                self.code = try container.decode(
+                                    Operations.MobileInventory_catalogueRevision.Output.Forbidden.Body.JsonPayload.Case2Payload.CodePayload.self,
+                                    forKey: .code
+                                )
+                                self.message = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .message
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "capability",
+                                    "code",
+                                    "message"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/403/content/json/case2`.
+                        case case2(Operations.MobileInventory_catalogueRevision.Output.Forbidden.Body.JsonPayload.Case2Payload)
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            var errors: [any Swift.Error] = []
+                            do {
+                                self = .case1(try .init(from: decoder))
+                                return
+                            } catch {
+                                errors.append(error)
+                            }
+                            do {
+                                self = .case2(try .init(from: decoder))
+                                return
+                            } catch {
+                                errors.append(error)
+                            }
+                            throw Swift.DecodingError.failedToDecodeOneOfSchema(
+                                type: Self.self,
+                                codingPath: decoder.codingPath,
+                                errors: errors
+                            )
+                        }
+                        internal func encode(to encoder: any Swift.Encoder) throws {
+                            switch self {
+                            case let .case1(value):
+                                try value.encode(to: encoder)
+                            case let .case2(value):
+                                try value.encode(to: encoder)
+                            }
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/403/content/application\/json`.
+                    case json(Operations.MobileInventory_catalogueRevision.Output.Forbidden.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileInventory_catalogueRevision.Output.Forbidden.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileInventory_catalogueRevision.Output.Forbidden.Body
+                /// Creates a new `Forbidden`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileInventory_catalogueRevision.Output.Forbidden.Body) {
+                    self.body = body
+                }
+            }
+            /// 403
+            ///
+            /// - Remark: Generated from `#/paths//mobile/inventory/type-catalogue/get(mobileInventory.catalogueRevision)/responses/403`.
+            ///
+            /// HTTP response code: `403 forbidden`.
+            case forbidden(Operations.MobileInventory_catalogueRevision.Output.Forbidden)
+            /// The associated value of the enum case if `self` is `.forbidden`.
+            ///
+            /// - Throws: An error if `self` is not `.forbidden`.
+            /// - SeeAlso: `.forbidden`.
+            internal var forbidden: Operations.MobileInventory_catalogueRevision.Output.Forbidden {
+                get throws {
+                    switch self {
+                    case let .forbidden(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "forbidden",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct TooManyRequests: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/429/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/429/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/429/content/json/code`.
+                        internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case rateLimited = "rate_limited"
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/429/content/json/code`.
+                        internal var code: Operations.MobileInventory_catalogueRevision.Output.TooManyRequests.Body.JsonPayload.CodePayload
+                        /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/429/content/json/message`.
+                        internal var message: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/429/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - message:
+                        ///   - retryAfterSeconds:
+                        internal init(
+                            code: Operations.MobileInventory_catalogueRevision.Output.TooManyRequests.Body.JsonPayload.CodePayload,
+                            message: Swift.String,
+                            retryAfterSeconds: Swift.Int
+                        ) {
+                            self.code = code
+                            self.message = message
+                            self.retryAfterSeconds = retryAfterSeconds
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case message
+                            case retryAfterSeconds
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Operations.MobileInventory_catalogueRevision.Output.TooManyRequests.Body.JsonPayload.CodePayload.self,
+                                forKey: .code
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            self.retryAfterSeconds = try container.decode(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "message",
+                                "retryAfterSeconds"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/429/content/application\/json`.
+                    case json(Operations.MobileInventory_catalogueRevision.Output.TooManyRequests.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileInventory_catalogueRevision.Output.TooManyRequests.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileInventory_catalogueRevision.Output.TooManyRequests.Body
+                /// Creates a new `TooManyRequests`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileInventory_catalogueRevision.Output.TooManyRequests.Body) {
+                    self.body = body
+                }
+            }
+            /// 429
+            ///
+            /// - Remark: Generated from `#/paths//mobile/inventory/type-catalogue/get(mobileInventory.catalogueRevision)/responses/429`.
+            ///
+            /// HTTP response code: `429 tooManyRequests`.
+            case tooManyRequests(Operations.MobileInventory_catalogueRevision.Output.TooManyRequests)
+            /// The associated value of the enum case if `self` is `.tooManyRequests`.
+            ///
+            /// - Throws: An error if `self` is not `.tooManyRequests`.
+            /// - SeeAlso: `.tooManyRequests`.
+            internal var tooManyRequests: Operations.MobileInventory_catalogueRevision.Output.TooManyRequests {
+                get throws {
+                    switch self {
+                    case let .tooManyRequests(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "tooManyRequests",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct BadGateway: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/502/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/502/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/502/content/json/code`.
+                        internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case upstreamUnavailable = "upstream_unavailable"
+                            case upstreamDegraded = "upstream_degraded"
+                            case upstreamContractMismatch = "upstream_contract_mismatch"
+                            case upstreamMisconfigured = "upstream_misconfigured"
+                            case upstreamInvalidRequest = "upstream_invalid_request"
+                            case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
+                            case upstreamUnsupportedMedia = "upstream_unsupported_media"
+                            case notFound = "not_found"
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/502/content/json/code`.
+                        internal var code: Operations.MobileInventory_catalogueRevision.Output.BadGateway.Body.JsonPayload.CodePayload
+                        /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/502/content/json/message`.
+                        internal var message: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/502/content/json/pillar`.
+                        internal var pillar: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/502/content/json/retryable`.
+                        internal var retryable: Swift.Bool
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - message:
+                        ///   - pillar:
+                        ///   - retryable:
+                        internal init(
+                            code: Operations.MobileInventory_catalogueRevision.Output.BadGateway.Body.JsonPayload.CodePayload,
+                            message: Swift.String,
+                            pillar: Swift.String,
+                            retryable: Swift.Bool
+                        ) {
+                            self.code = code
+                            self.message = message
+                            self.pillar = pillar
+                            self.retryable = retryable
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case message
+                            case pillar
+                            case retryable
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Operations.MobileInventory_catalogueRevision.Output.BadGateway.Body.JsonPayload.CodePayload.self,
+                                forKey: .code
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            self.pillar = try container.decode(
+                                Swift.String.self,
+                                forKey: .pillar
+                            )
+                            self.retryable = try container.decode(
+                                Swift.Bool.self,
+                                forKey: .retryable
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "message",
+                                "pillar",
+                                "retryable"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/502/content/application\/json`.
+                    case json(Operations.MobileInventory_catalogueRevision.Output.BadGateway.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileInventory_catalogueRevision.Output.BadGateway.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileInventory_catalogueRevision.Output.BadGateway.Body
+                /// Creates a new `BadGateway`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileInventory_catalogueRevision.Output.BadGateway.Body) {
+                    self.body = body
+                }
+            }
+            /// 502
+            ///
+            /// - Remark: Generated from `#/paths//mobile/inventory/type-catalogue/get(mobileInventory.catalogueRevision)/responses/502`.
+            ///
+            /// HTTP response code: `502 badGateway`.
+            case badGateway(Operations.MobileInventory_catalogueRevision.Output.BadGateway)
+            /// The associated value of the enum case if `self` is `.badGateway`.
+            ///
+            /// - Throws: An error if `self` is not `.badGateway`.
+            /// - SeeAlso: `.badGateway`.
+            internal var badGateway: Operations.MobileInventory_catalogueRevision.Output.BadGateway {
+                get throws {
+                    switch self {
+                    case let .badGateway(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "badGateway",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct ServiceUnavailable: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/503/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/503/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/503/content/json/code`.
+                        internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case upstreamUnavailable = "upstream_unavailable"
+                            case upstreamDegraded = "upstream_degraded"
+                            case upstreamContractMismatch = "upstream_contract_mismatch"
+                            case upstreamMisconfigured = "upstream_misconfigured"
+                            case upstreamInvalidRequest = "upstream_invalid_request"
+                            case upstreamConflict = "upstream_conflict"
+                            case purchaseLocked = "purchase_locked"
+                            case purchaseStale = "purchase_stale"
+                            case upstreamUnsupportedMedia = "upstream_unsupported_media"
+                            case notFound = "not_found"
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/503/content/json/code`.
+                        internal var code: Operations.MobileInventory_catalogueRevision.Output.ServiceUnavailable.Body.JsonPayload.CodePayload
+                        /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/503/content/json/message`.
+                        internal var message: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/503/content/json/pillar`.
+                        internal var pillar: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/503/content/json/retryable`.
+                        internal var retryable: Swift.Bool
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - message:
+                        ///   - pillar:
+                        ///   - retryable:
+                        internal init(
+                            code: Operations.MobileInventory_catalogueRevision.Output.ServiceUnavailable.Body.JsonPayload.CodePayload,
+                            message: Swift.String,
+                            pillar: Swift.String,
+                            retryable: Swift.Bool
+                        ) {
+                            self.code = code
+                            self.message = message
+                            self.pillar = pillar
+                            self.retryable = retryable
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case message
+                            case pillar
+                            case retryable
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Operations.MobileInventory_catalogueRevision.Output.ServiceUnavailable.Body.JsonPayload.CodePayload.self,
+                                forKey: .code
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            self.pillar = try container.decode(
+                                Swift.String.self,
+                                forKey: .pillar
+                            )
+                            self.retryable = try container.decode(
+                                Swift.Bool.self,
+                                forKey: .retryable
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "message",
+                                "pillar",
+                                "retryable"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/503/content/application\/json`.
+                    case json(Operations.MobileInventory_catalogueRevision.Output.ServiceUnavailable.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileInventory_catalogueRevision.Output.ServiceUnavailable.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileInventory_catalogueRevision.Output.ServiceUnavailable.Body
+                /// Creates a new `ServiceUnavailable`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileInventory_catalogueRevision.Output.ServiceUnavailable.Body) {
+                    self.body = body
+                }
+            }
+            /// 503
+            ///
+            /// - Remark: Generated from `#/paths//mobile/inventory/type-catalogue/get(mobileInventory.catalogueRevision)/responses/503`.
+            ///
+            /// HTTP response code: `503 serviceUnavailable`.
+            case serviceUnavailable(Operations.MobileInventory_catalogueRevision.Output.ServiceUnavailable)
+            /// The associated value of the enum case if `self` is `.serviceUnavailable`.
+            ///
+            /// - Throws: An error if `self` is not `.serviceUnavailable`.
+            /// - SeeAlso: `.serviceUnavailable`.
+            internal var serviceUnavailable: Operations.MobileInventory_catalogueRevision.Output.ServiceUnavailable {
                 get throws {
                     switch self {
                     case let .serviceUnavailable(response):

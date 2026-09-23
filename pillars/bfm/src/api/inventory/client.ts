@@ -20,12 +20,12 @@ import {
   MobileMutationsResponseSchema,
 } from '../../contract/mobile-inventory-mutation-schemas.js';
 import {
-  MobileInventoryCatalogueSchema,
   MobileInventoryChangesSchema,
   MobileInventoryItemHistorySchema,
   MobileInventorySnapshotSchema,
 } from '../../contract/mobile-inventory-schemas.js';
 import { parseOrMismatch } from '../pillars/parse-response.js';
+import { createMobileInventoryCatalogueClient } from './catalogue-client.js';
 import { withInventoryActor } from './handle-factory.js';
 
 import type {
@@ -34,26 +34,26 @@ import type {
   MobileMutationsResponse,
 } from '../../contract/mobile-inventory-mutation-schemas.js';
 import type {
-  MobileInventoryCatalogue,
   MobileInventoryChanges,
   MobileInventoryItemHistory,
   MobileInventorySnapshot,
 } from '../../contract/mobile-inventory-schemas.js';
 import type { GatewayOutcome, PillarGateway } from '../pillars/gateway.js';
+import type {
+  InventoryCatalogueRouter,
+  MobileInventoryCatalogueClient,
+} from './catalogue-client.js';
 
 /** The inventory pillar id — matches its registered manifest name. */
 export const INVENTORY_PILLAR_ID = 'inventory';
 
 /** The subset of inventory's router bfm calls. See `client.ts` header. */
-export type InventorySyncRouter = {
+export type InventorySyncRouter = InventoryCatalogueRouter & {
   sync: {
     snapshot: (input: { cursor?: string; limit?: number }) => Promise<unknown>;
     changes: (input: { since: number; epoch: string; limit?: number }) => Promise<unknown>;
     itemEvents: (input: { id: string; cursor?: string; limit?: number }) => Promise<unknown>;
     mutations: (input: { mutations: readonly MobileMutation[] }) => Promise<unknown>;
-  };
-  types: {
-    catalogue: (input: Record<string, never>) => Promise<unknown>;
   };
   codes: {
     suggest: (input: { name: string; typeKey?: string; stem?: string }) => Promise<unknown>;
@@ -94,11 +94,10 @@ export interface SuggestCodesRequest {
   readonly stem: string | null;
 }
 
-export interface MobileInventoryClient {
+export interface MobileInventoryClient extends MobileInventoryCatalogueClient {
   snapshot(request: SnapshotRequest): Promise<GatewayOutcome<MobileInventorySnapshot>>;
   changes(request: ChangesRequest): Promise<GatewayOutcome<MobileInventoryChanges>>;
   itemHistory(request: ItemHistoryRequest): Promise<GatewayOutcome<MobileInventoryItemHistory>>;
-  catalogue(): Promise<GatewayOutcome<MobileInventoryCatalogue>>;
   mutations(request: MutationsRequest): Promise<GatewayOutcome<MobileMutationsResponse>>;
   suggestCodes(request: SuggestCodesRequest): Promise<GatewayOutcome<MobileCodeSuggestResponse>>;
 }
@@ -155,20 +154,6 @@ async function callItemHistory(
   );
 }
 
-async function callCatalogue(
-  gateway: PillarGateway
-): Promise<GatewayOutcome<MobileInventoryCatalogue>> {
-  const outcome = await gateway.call<InventorySyncRouter, unknown>(INVENTORY_PILLAR_ID, (handle) =>
-    handle.types.catalogue({})
-  );
-  return parseOrMismatch(
-    INVENTORY_PILLAR_ID,
-    outcome,
-    MobileInventoryCatalogueSchema,
-    'types.catalogue'
-  );
-}
-
 async function callMutations(
   gateway: PillarGateway,
   request: MutationsRequest
@@ -207,10 +192,10 @@ async function callSuggestCodes(
 
 export function createMobileInventoryClient(gateway: PillarGateway): MobileInventoryClient {
   return {
+    ...createMobileInventoryCatalogueClient(gateway),
     snapshot: (request) => callSnapshot(gateway, request),
     changes: (request) => callChanges(gateway, request),
     itemHistory: (request) => callItemHistory(gateway, request),
-    catalogue: () => callCatalogue(gateway),
     mutations: (request) => callMutations(gateway, request),
     suggestCodes: (request) => callSuggestCodes(gateway, request),
   };

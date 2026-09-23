@@ -82,6 +82,13 @@ export function makeMobileInventoryHandlers(deps: MobileInventoryHandlerDeps) {
       return { status: 200 as const, body: outcome.value };
     },
 
+    catalogueRevision: async ({ query }: Req['catalogueRevision']) => {
+      const outcome = orThrowIfTooOld(await deps.inventory.catalogueRevision(query.revision));
+      if (!isGatewayOk(outcome)) return toCollectionUpstreamErrorResponse(outcome);
+
+      return { status: 200 as const, body: outcome.value };
+    },
+
     snapshot: async ({ query }: Req['snapshot']) => {
       const outcome = orThrowIfTooOld(
         await deps.inventory.snapshot({

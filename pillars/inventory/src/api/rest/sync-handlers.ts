@@ -7,6 +7,7 @@
  */
 import { SERVICE_ACCOUNT_HEADER, type ServiceAccountVerifier } from '@pops/pillar-sdk/server';
 
+import { loadPublishedCatalogue } from '../../catalogue/index.js';
 import { runMutations } from '../../domain/commands/index.js';
 import { createAiClient, isPermutation, type AiClient } from '../ai/client.js';
 import { resolveActor } from '../sync/actor.js';
@@ -69,9 +70,10 @@ export function makeSyncHandlers({ db, documents, verify }: SyncHandlerDeps) {
   return {
     snapshot: ({ query }: SyncReq['snapshot']) =>
       runSync(async () => {
-        const { page, catalogue } = db.transaction((tx) => ({
+        const { page, catalogue, catalogueRevision } = db.transaction((tx) => ({
           page: readSnapshotPage(tx, readSyncState(tx), query),
           catalogue: readProtocol1Catalogue(tx),
+          catalogueRevision: loadPublishedCatalogue(tx)?.revision.revision ?? null,
         }));
         return {
           status: 200 as const,
@@ -79,6 +81,7 @@ export function makeSyncHandlers({ db, documents, verify }: SyncHandlerDeps) {
             epoch: page.epoch,
             highWaterSeq: page.highWaterSeq,
             catalogueVersion: catalogue.version,
+            catalogueRevision,
             total: page.total,
             items: await projectItems(page, documents),
             locations: page.locations.map(toSyncLocation),
@@ -89,11 +92,12 @@ export function makeSyncHandlers({ db, documents, verify }: SyncHandlerDeps) {
 
     changes: ({ query }: SyncReq['changes']) =>
       runSync(async () => {
-        const { page, catalogue } = db.transaction((tx) => {
+        const { page, catalogue, catalogueRevision } = db.transaction((tx) => {
           const rows = readChanges(tx, readSyncState(tx), query);
           return {
             page: { ...rows, syncEvents: toSyncEvents(tx, rows.events) },
             catalogue: readProtocol1Catalogue(tx),
+            catalogueRevision: loadPublishedCatalogue(tx)?.revision.revision ?? null,
           };
         });
         return {
@@ -106,6 +110,7 @@ export function makeSyncHandlers({ db, documents, verify }: SyncHandlerDeps) {
             nextSince: page.nextSince,
             hasMore: page.hasMore,
             catalogueVersion: catalogue.version,
+            catalogueRevision,
           },
         };
       }),

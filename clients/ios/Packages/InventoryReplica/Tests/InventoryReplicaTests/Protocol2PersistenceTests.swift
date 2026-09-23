@@ -89,6 +89,19 @@ internal struct Protocol2PersistenceTests {
         #expect(stored.fieldValues == values)
     }
 
+    @Test("an arriving protocol-2 catalogue reindexes its type labels")
+    func catalogueArrivalReindexesSearch() throws {
+        let replica = try InventoryReplica()
+        try replica.apply(
+            Self.snapshot(items: [Self.item("cable", revision: 1)], revision: 1),
+            catalogue: Self.catalogue(revision: 1, label: "Cable"))
+        #expect(try replica.ids(.search("Cable")) == ["cable"])
+
+        try replica.store(Self.catalogue(revision: 2, label: "Lead"))
+        #expect(try replica.ids(.search("Cable")).isEmpty)
+        #expect(try replica.ids(.search("Lead")) == ["cable"])
+    }
+
     @Test("ordered values retain scale and duplicate ordinals")
     func orderedValues() throws {
         let replica = try InventoryReplica()
