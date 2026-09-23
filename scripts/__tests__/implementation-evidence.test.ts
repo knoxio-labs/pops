@@ -205,6 +205,17 @@ describe('implementation evidence', () => {
     expect(assessment).toMatchObject({ status: 'blocked', canAutomate: false });
   });
 
+  it('blocks a criterion no pull request ever gave evidence for', () => {
+    const input = packet();
+    input.criteria.push({ id: 'undocumented', description: 'a criterion nobody evidenced' });
+    const assessment = assessImplementationEvidence(readEvidencePacket(input));
+    expect(assessment).toMatchObject({ status: 'blocked', canAutomate: false });
+    expect(assessment.blockers).toContainEqual({
+      criterion: 'undocumented',
+      reason: 'no evidence record',
+    });
+  });
+
   it('blocks ambiguous duplicate evidence rather than choosing a PR', () => {
     const input = packet();
     input.pullRequests[1]!.evidence[0]!.criterion = 'association';
