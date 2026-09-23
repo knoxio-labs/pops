@@ -1,12 +1,16 @@
 import { and, eq, isNull } from 'drizzle-orm';
 
 import { items } from '../db/schema.js';
+import { CatalogueApiError } from './authoring-types.js';
 import { validateItemFieldValuesForType } from './item-values.js';
+import { validateMigrationHeader } from './migration-coverage.js';
 import { applyMigrationStep, loadMigrationItemValues } from './migration-steps.js';
+import { migrationStepTargetFieldId, validateMigrationSteps } from './migration-validation.js';
 import { writeMigratedItem } from './migration-write.js';
 
 import type { CommandDb } from '../domain/commands/entities.js';
 import type { PersistedCatalogue } from './catalogue-types.js';
+import type { RequiredMigrationCoverage } from './migration-coverage.js';
 import type { CatalogueMigration, CatalogueMigrationResult } from './migration-types.js';
 import type { DryRunItem } from './migration-write.js';
 
@@ -15,28 +19,6 @@ export type {
   CatalogueMigrationResult,
   CatalogueMigrationStep,
 } from './migration-types.js';
-
-function validateMigrationHeader(
-  migration: CatalogueMigration,
-  candidate: PersistedCatalogue
-): void {
-  if (
-    candidate.revision.revision !== migration.toRevision ||
-    candidate.revision.baseRevision !== migration.fromRevision
-  ) {
-    throw new Error(`migration ${migration.name} does not match the candidate revision`);
-  }
-  const affectedFields = new Set(migration.affectedFieldIds);
-  for (const step of migration.steps) {
-    const named =
-      step.kind === 'copy' || step.kind === 'convert_decimal'
-        ? [step.fromFieldId, step.toFieldId]
-        : [step.fieldId];
-    if (named.some((fieldId) => !affectedFields.has(fieldId))) {
-      throw new Error(`migration ${migration.name} uses an undeclared affected field`);
-    }
-  }
-}
 
 function assertContainmentCanChange(
   db: CommandDb,
@@ -56,21 +38,29 @@ function assertContainmentCanChange(
     )
     .limit(1)
     .get();
-  if (content) throw new Error(`migration cannot remove containment from non-empty item ${row.id}`);
+  if (content) {
+    throw new CatalogueApiError(
+      409,
+      'migration_containment_in_use',
+      `Migration cannot remove containment from non-empty item ${row.id}`
+    );
+  }
 }
 
 function dryRunMigration(
   db: CommandDb,
   migration: CatalogueMigration,
-  candidate: PersistedCatalogue
+  candidate: PersistedCatalogue,
+  coverage: RequiredMigrationCoverage
 ): readonly DryRunItem[] {
-  const typeIds = new Set(migration.affectedTypeIds);
+  const typeIds = new Set(coverage.affectedTypeIds);
   const rows = db
     .select()
     .from(items)
     .where(isNull(items.deletedAt))
     .all()
     .filter((row) => row.typeId !== null && typeIds.has(row.typeId));
+  validateMigrationSteps(migration, coverage, rows);
   return rows.map((row) => {
     const type = candidate.types.find((entry) => entry.id === row.typeId);
     if (!type) throw new Error(`migration ${migration.name} has no candidate type ${row.typeId}`);
@@ -78,7 +68,11 @@ function dryRunMigration(
     assertContainmentCanChange(db, row, supportsContainment);
     const before = loadMigrationItemValues(db, row.id);
     const after = before.map((entry) => ({ ...entry, values: [...entry.values] }));
-    for (const step of migration.steps) applyMigrationStep(after, step, candidate);
+    for (const step of migration.steps) {
+      if (coverage.fieldTypeIds.get(migrationStepTargetFieldId(step)) === row.typeId) {
+        applyMigrationStep(after, step, candidate);
+      }
+    }
     const validated = validateItemFieldValuesForType(db, type, after, row.id);
     return { row, type, before, after, validated, supportsContainment };
   });
@@ -106,8 +100,8 @@ export function executeCatalogueMigrationInTransaction(
   candidate: PersistedCatalogue,
   now: string
 ): CatalogueMigrationResult {
-  validateMigrationHeader(migration, candidate);
-  const dryRun = dryRunMigration(db, migration, candidate);
+  const coverage = validateMigrationHeader(db, migration, candidate);
+  const dryRun = dryRunMigration(db, migration, candidate, coverage);
   return {
     name: migration.name,
     affectedItems: dryRun.filter((item) => writeMigratedItem(db, migration, item, now)).length,

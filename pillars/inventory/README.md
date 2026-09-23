@@ -109,9 +109,12 @@ reference reads add `resolved`, `deleted` or `missing` without discarding the
 target ID. Publication compatibility distinguishes additive, protocol-gated,
 migration-required and forbidden changes. Required rewrites use only the named
 `copy`, `set_default`, `map_enum`, `convert_decimal`, `replace_reference` and
-`drop_value` operations, dry-run every affected row, and append a `migrated`
-item event only after the complete candidate validates. Search rebuilds use the
-candidate catalogue during that same transition.
+`drop_value` operations. The server derives the exact affected type and field
+sets from the base-to-draft compatibility diff; a submitted migration cannot
+narrow or widen that set, and every changed field on a live affected type needs
+a migration step. Publication dry-runs every derived affected row and appends a
+`migrated` item event only after the complete candidate validates. Search
+rebuilds use the candidate catalogue during that same transition.
 
 Computed fields use the bounded, versioned expression AST from D5: no SQL,
 JavaScript, clocks or network access; at most two reference hops; publication
