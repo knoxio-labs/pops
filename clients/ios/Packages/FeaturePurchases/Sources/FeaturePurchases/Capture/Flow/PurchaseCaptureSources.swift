@@ -3,6 +3,7 @@ import Foundation
 
 #if canImport(PhotosUI) && canImport(UIKit)
     import PhotosUI
+    import SwiftUI
 #endif
 
 internal enum PurchaseCapturePicker: String, Identifiable {
