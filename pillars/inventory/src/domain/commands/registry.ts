@@ -3,6 +3,7 @@ import { itemSetCode } from './item-code.js';
 import { itemCreate } from './item-create.js';
 import { itemDelete } from './item-delete.js';
 import { itemEdit } from './item-edit.js';
+import { itemClearOverride, itemSetOverride } from './item-override.js';
 import { itemAttachPhoto, itemRemovePhoto, itemReorderPhotos } from './item-photos.js';
 import { itemSetQuantity } from './item-quantity.js';
 import { itemSplit } from './item-split.js';
@@ -45,6 +46,8 @@ export const COMMAND_REGISTRY: OpRegistry = buildRegistry([
   itemAttachPhoto,
   itemRemovePhoto,
   itemReorderPhotos,
+  itemSetOverride,
+  itemClearOverride,
   locationCreate,
   locationRename,
   locationMove,

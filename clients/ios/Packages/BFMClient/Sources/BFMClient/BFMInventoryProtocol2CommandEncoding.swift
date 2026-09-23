@@ -64,7 +64,7 @@ extension BFMInventoryCommandEncoding {
         }
     }
 
-    private static func protocol2Value(_ value: InventoryPrimitiveValue) throws -> any Sendable {
+    internal static func protocol2Value(_ value: InventoryPrimitiveValue) throws -> any Sendable {
         switch value {
         case .string(let text): text
         case .integer(let integer): Int(integer.value)

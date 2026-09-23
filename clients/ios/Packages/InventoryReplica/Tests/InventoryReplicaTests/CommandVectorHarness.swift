@@ -39,6 +39,12 @@ internal struct CommandVectorHarness {
                 sha256: String(repeating: "a", count: 64),
                 position: 0)
         ),
+        "item.clearOverride": (
+            "30000000-0000-4000-8000-0000000000fc",
+            .setComputedOverride(
+                id: "20000000-0000-4000-8000-000000000002",
+                fieldId: CommandVectorDecoding.computedFieldId, value: .boolean(false))
+        ),
     ]
 
     static func run(_ vector: CommandVectorFile.Vector) throws -> Result {
@@ -51,6 +57,9 @@ internal struct CommandVectorHarness {
                 items: try vector.seedItems.map(CommandVectorDecoding.item),
                 locations: vector.seedLocations.map(CommandVectorDecoding.location),
                 nextCursor: nil))
+        if vector.mutation.catalogueRevision != nil {
+            try replica.store(CommandVectorDecoding.computedCatalogue)
+        }
         let clientTime = try CommandVectorDecoding.date(vector.mutation.clientTime)
         var events = 0
         if let earlier = earlierMutations[vector.name] {

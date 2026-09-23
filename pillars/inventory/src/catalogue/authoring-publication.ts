@@ -9,6 +9,7 @@ import { CatalogueApiError } from './authoring-types.js';
 import { validateCatalogue } from './authoring-validation.js';
 import { toCatalogueDescriptor } from './authoring-wire.js';
 import { classifyCatalogueCompatibility } from './compatibility.js';
+import { clearComputedValueCache } from './computed-value-runtime-cache.js';
 
 import type { CommandDb } from '../domain/commands/index.js';
 import type {
@@ -81,7 +82,7 @@ export function publishCatalogueDraft(
   input: CataloguePublicationInput,
   author: CatalogueAuthor
 ): CatalogueDescriptor {
-  return db.transaction((tx) => {
+  const descriptor = db.transaction((tx) => {
     claimCurrentDraft(tx, revision, input.baseRevision, input.expectedDraftVersion);
     if (input.minimumProtocol !== undefined) {
       tx.update(catalogueRevisions)
@@ -103,6 +104,8 @@ export function publishCatalogueDraft(
       migration,
     });
   });
+  clearComputedValueCache(db);
+  return descriptor;
 }
 
 export type {

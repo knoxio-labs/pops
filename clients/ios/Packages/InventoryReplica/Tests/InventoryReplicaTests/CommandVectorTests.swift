@@ -19,7 +19,7 @@ internal struct CommandVectorTests {
     func everyVectorIsCovered() throws {
         let file = try CommandVectorFile.load()
         #expect(file.version == 1)
-        #expect(file.vectors.count == 21)
+        #expect(file.vectors.count == 23)
         let names = Set(file.vectors.map(\.name))
         #expect(names == Set(CommandVectorStates.checks.keys))
     }
@@ -48,6 +48,9 @@ internal struct CommandVectorTests {
         #expect(sent.command == command)
         #expect(sent.command.entityId == vector.mutation.entityId)
         #expect(sent.baseRevision == vector.mutation.baseRevision)
+        if let catalogueRevision = vector.mutation.catalogueRevision {
+            #expect(sent.catalogueRevision == catalogueRevision)
+        }
         #expect(sent.dependsOn == vector.mutation.dependsOn)
         #expect(sent.clientTime == (try CommandVectorDecoding.date(vector.mutation.clientTime)))
     }

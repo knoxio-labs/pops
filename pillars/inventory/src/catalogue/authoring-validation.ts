@@ -1,4 +1,6 @@
 import { failIssues, issue } from './authoring-shared.js';
+import { ExpressionValidationError } from './expression-types.js';
+import { validateCatalogueExpressions } from './expression-validator.js';
 
 import type { CatalogueIssue } from './authoring-types.js';
 import type {
@@ -165,6 +167,14 @@ export function validateCatalogue(catalogue: PersistedCatalogue): void {
   for (const type of catalogue.types) {
     duplicateKey(typeKeys, { id: type.id, key: type.key, path: 'key', label: 'Type key' }, issues);
     validateType(type, typeIds, issues);
+  }
+  if (issues.length === 0) {
+    try {
+      validateCatalogueExpressions(catalogue);
+    } catch (error) {
+      if (!(error instanceof ExpressionValidationError)) throw error;
+      issues.push(issue(error.definitionId, error.path, error.code, error.message));
+    }
   }
   if (issues.length > 0) failIssues(issues);
 }

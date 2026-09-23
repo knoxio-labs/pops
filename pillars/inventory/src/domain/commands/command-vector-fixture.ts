@@ -6,8 +6,9 @@
  */
 import { sql } from 'drizzle-orm';
 
+import { createCatalogueDraft, publishCatalogueDraft } from '../../catalogue/authoring.js';
 import { replaceItemFieldValues, resolveProtocol1Type } from '../../catalogue/index.js';
-import { items, locations, type InventoryDb } from '../../db/index.js';
+import { itemTypeFields, items, locations, type InventoryDb } from '../../db/index.js';
 
 import type { Mutation } from './envelope.js';
 
@@ -45,9 +46,57 @@ export interface CommandVectorCase {
   readonly seedLocations?: readonly SeedLocation[];
   readonly seedItems?: readonly SeedItem[];
   readonly seedMedia?: readonly string[];
+  readonly seedComputedOverrides?: true;
   /** Run before the recorded mutation, to leave real events behind (e.g. an event for `event.revert` to undo). Their outcomes are not recorded. */
   readonly pre?: readonly Omit<Mutation, 'clientTime'>[];
   readonly mutation: Omit<Mutation, 'clientTime'>;
+}
+
+const VECTOR_AUTHOR = { kind: 'web', id: 'vector-fixture', label: 'Fixture' } as const;
+
+function seedComputedOverrides(db: InventoryDb): void {
+  const draft = createCatalogueDraft(db, 1, VECTOR_AUTHOR);
+  db.insert(itemTypeFields)
+    .values({
+      revision: draft.revision.revision,
+      id: '40000000-0000-4000-8000-000000000001',
+      typeId: '59538480-6e82-5ccc-b7be-f1cfd15b9af6',
+      key: 'Computed vector',
+      label: 'Computed vector',
+      help: null,
+      sortOrder: 6,
+      kind: 'boolean',
+      cardinality: 'one',
+      required: 0,
+      storage: 'computed',
+      fixedUnit: null,
+      referenceKindsJson: '[]',
+      referenceTypeIdsJson: '[]',
+      expressionVersion: 1,
+      expressionJson: JSON.stringify({ op: 'literal', value: true }),
+      allowOverride: 1,
+      presentationJson: '{}',
+      archivedAt: null,
+    })
+    .run();
+  publishCatalogueDraft(
+    db,
+    draft.revision.revision,
+    {
+      baseRevision: 1,
+      expectedDraftVersion: draft.revision.draftVersion,
+      note: null,
+      migration: {
+        name: 'add-computed-vector',
+        fromRevision: 1,
+        toRevision: draft.revision.revision,
+        affectedTypeIds: ['59538480-6e82-5ccc-b7be-f1cfd15b9af6'],
+        affectedFieldIds: ['40000000-0000-4000-8000-000000000001'],
+        steps: [],
+      },
+    },
+    VECTOR_AUTHOR
+  );
 }
 
 function seedLocations(db: InventoryDb, seeds: readonly SeedLocation[]): void {
@@ -119,6 +168,7 @@ function seedMedia(db: InventoryDb, hashes: readonly string[]): void {
 
 /** Bring `db` to the state `vectorCase` starts from: its locations, items and media rows. */
 export function seedFixture(db: InventoryDb, vectorCase: CommandVectorCase): void {
+  if (vectorCase.seedComputedOverrides) seedComputedOverrides(db);
   seedLocations(db, vectorCase.seedLocations ?? []);
   seedItems(db, vectorCase.seedItems ?? []);
   seedMedia(db, vectorCase.seedMedia ?? []);

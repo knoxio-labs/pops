@@ -15,6 +15,7 @@ export function evaluateComputedValue({
   expression,
   fieldId,
   override,
+  onEvaluationError,
   snapshot,
 }: {
   readonly allowOverride: boolean;
@@ -24,6 +25,9 @@ export function evaluateComputedValue({
   readonly override:
     | { readonly state: 'absent' }
     | { readonly state: 'value'; readonly value: PrimitiveWireValue };
+  readonly onEvaluationError?: (
+    code: Extract<ReturnType<typeof evaluateExpression>, { readonly state: 'error' }>['code']
+  ) => void;
   readonly snapshot: ExpressionSnapshot;
 }): EffectiveComputedValue {
   if (override.state === 'value') {
@@ -52,6 +56,7 @@ export function evaluateComputedValue({
     };
   }
   const failed = evaluated.state === 'error';
+  if (failed) onEvaluationError?.(evaluated.code);
   return {
     state: 'unavailable',
     reason: failed ? 'evaluation_error' : evaluated.reason,

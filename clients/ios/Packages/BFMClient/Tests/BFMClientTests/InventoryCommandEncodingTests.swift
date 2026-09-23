@@ -173,4 +173,49 @@ internal struct InventoryCommandEncodingTests {
         #expect(envelope.entityId == "item-1")
         #expect(envelope.args.isEmpty)
     }
+
+    @Test("item.setOverride sends the field id and exactly one wire value")
+    func setOverride() throws {
+        let envelope = try BFMInventoryCommandEncoding.envelope(
+            for: .setComputedOverride(id: "item-1", fieldId: "field-1", value: .boolean(false)))
+
+        #expect(envelope.op == "item.setOverride")
+        #expect(envelope.entityId == "item-1")
+        #expect(envelope.args["fieldId"] as? String == "field-1")
+        let values = try #require(envelope.args["values"] as? [any Sendable])
+        #expect(values.count == 1)
+        #expect(values.first as? Bool == false)
+    }
+
+    @Test("an override on an enum or measurement field sends the server's object spelling")
+    func setOverrideObjectValues() throws {
+        let option = try BFMInventoryCommandEncoding.envelope(
+            for: .setComputedOverride(
+                id: "item-1", fieldId: "field-1", value: .enumeration(optionId: "opt-1")))
+        let optionValue = try #require((option.args["values"] as? [any Sendable])?.first)
+        let optionObject = try #require(optionValue as? [String: String])
+        #expect(optionObject["optionId"] == "opt-1")
+
+        let volume = try BFMInventoryCommandEncoding.envelope(
+            for: .setComputedOverride(
+                id: "item-1", fieldId: "field-2",
+                value: .measurement(amount: try InventoryDecimal("1.500"), unit: "l")))
+        let volumeValue = try #require((volume.args["values"] as? [any Sendable])?.first)
+        let volumeObject = try #require(volumeValue as? [String: String])
+        #expect(volumeObject["amount"] == "1.500")
+        #expect(volumeObject["unit"] == "l")
+        let wire = try OpenAPIValueContainer(unvalidatedValue: volume.args)
+        #expect(String(describing: wire).contains("1.500"))
+    }
+
+    @Test("item.clearOverride sends only the field id")
+    func clearOverride() throws {
+        let envelope = try BFMInventoryCommandEncoding.envelope(
+            for: .clearComputedOverride(id: "item-1", fieldId: "field-1"))
+
+        #expect(envelope.op == "item.clearOverride")
+        #expect(envelope.entityId == "item-1")
+        #expect(envelope.args.count == 1)
+        #expect(envelope.args["fieldId"] as? String == "field-1")
+    }
 }

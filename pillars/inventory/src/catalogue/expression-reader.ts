@@ -1,4 +1,8 @@
-import { errorEvaluation, unavailableEvaluation } from './expression-evaluation-shared.js';
+import {
+  errorEvaluation,
+  unavailableEvaluation,
+  uniqueEvaluatedDependencies,
+} from './expression-evaluation-shared.js';
 
 import type {
   EvaluatedDependency,
@@ -38,7 +42,7 @@ export function evaluateRead(
     const itemResult = snapshot.readItem(itemId);
     if (itemResult.state !== 'resolved')
       return missingItem(itemResult.state, referenceFieldId, traversedItemIds, dependencies);
-    const field = itemResult.item.fields.get(referenceFieldId);
+    const field = snapshot.readField(itemId, referenceFieldId);
     if (field === undefined)
       return unavailableEvaluation(
         'missing_dependency',
@@ -46,7 +50,10 @@ export function evaluateRead(
         traversedItemIds,
         dependencies
       );
-    dependencies.push({ itemId, fieldId: referenceFieldId, revision: field.revision });
+    dependencies.push(
+      { itemId, fieldId: referenceFieldId, revision: field.revision },
+      ...(field.dependencies ?? [])
+    );
     if (field.state === 'unavailable')
       return unavailableEvaluation(
         field.reason,
@@ -62,7 +69,7 @@ export function evaluateRead(
   const itemResult = snapshot.readItem(itemId);
   if (itemResult.state !== 'resolved')
     return missingItem(itemResult.state, expression.fieldId, traversedItemIds, dependencies);
-  const field = itemResult.item.fields.get(expression.fieldId);
+  const field = snapshot.readField(itemId, expression.fieldId);
   if (field === undefined)
     return unavailableEvaluation(
       'missing_dependency',
@@ -70,8 +77,15 @@ export function evaluateRead(
       traversedItemIds,
       dependencies
     );
-  dependencies.push({ itemId, fieldId: expression.fieldId, revision: field.revision });
+  dependencies.push(
+    { itemId, fieldId: expression.fieldId, revision: field.revision },
+    ...(field.dependencies ?? [])
+  );
   if (field.state === 'unavailable')
     return unavailableEvaluation(field.reason, field.fieldId, field.traversedItemIds, dependencies);
-  return { state: 'value', value: field.value, dependencies };
+  return {
+    state: 'value',
+    value: field.value,
+    dependencies: uniqueEvaluatedDependencies(dependencies),
+  };
 }

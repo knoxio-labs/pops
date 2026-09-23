@@ -48,6 +48,12 @@ export {
   validateItemFieldValues,
   validateItemFieldValuesForType,
 } from './item-values.js';
+export {
+  readEffectiveItemFieldValues,
+  readEffectiveItemFieldValuesForItems,
+} from './effective-item-values.js';
+export { clearComputedValueCache, invalidateComputedItem } from './computed-value-runtime-cache.js';
+export type { EffectiveItemFieldValue } from './item-value-types.js';
 export type {
   CanonicalItemFieldValueInput,
   ItemFieldValueInput,

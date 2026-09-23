@@ -99,6 +99,22 @@ internal enum CommandVectorStates {
             #expect(lampItem.previousPlacement == .tombstoned)
             #expect(lampItem.revision == 2)
         },
+        "item.setOverride": { replica throws in
+            let item = try #require(try replica.read(.item(id: lamp)))
+            #expect(item.revision == 2)
+            #expect(
+                item.fieldValues == [
+                    InventoryItemFieldEntry(
+                        fieldId: CommandVectorDecoding.computedFieldId,
+                        state: .value([.boolean(false)]), source: .override,
+                        catalogueRevision: 2)
+                ])
+        },
+        "item.clearOverride": { replica throws in
+            let item = try #require(try replica.read(.item(id: lamp)))
+            #expect(item.revision == 3)
+            #expect(item.fieldValues.isEmpty)
+        },
     ]
 
     private static let locationChecks: [String: Check] = [

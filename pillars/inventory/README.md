@@ -157,6 +157,15 @@ fixed-unit measurement arithmetic, and short-circuits boolean and conditional
 branches before attempting their reads. Its disposable LRU cache has no clock:
 entries match exact item, catalogue and dependency revisions, with direct
 dependency, item and catalogue invalidation primitives for command and feed paths.
+Draft validation and publication run that expression validator before any snapshot
+can become active. Item reads evaluate the active snapshot without persisting a
+derived value, degrade missing inputs and arithmetic failures to explicit
+unavailable results, and log internal evaluation failures with item, field and
+catalogue identities. `item.setOverride` and `item.clearOverride` are ordinary
+revision-checked, event-logged commands; only a computed field with
+`allowOverride` accepts them. Every applied item command invalidates both the
+item's cached subjects and reverse dependencies, while publication clears the
+process-local cache.
 
 Migration `0012_items_single_identity` built this from `home_inventory` and
 `containers` and dropped both. It aborts, writing nothing, when an id or a

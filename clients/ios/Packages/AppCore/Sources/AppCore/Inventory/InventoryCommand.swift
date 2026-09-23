@@ -165,6 +165,14 @@ public enum InventoryCommand: Hashable, Sendable {
     case setItemLifecycle(
         id: InventoryItem.ID, lifecycle: InventoryLifecycle, reason: InventoryDiscardReason?)
     case setItemQuantity(id: InventoryItem.ID, quantity: Int)
+    /// Supersedes an overridable computed field with one explicit value
+    /// (`item.setOverride`). The value stays authoritative until cleared,
+    /// whatever later happens to the fields the expression reads.
+    case setComputedOverride(
+        id: InventoryItem.ID, fieldId: String, value: InventoryPrimitiveValue)
+    /// Removes a computed field's override (`item.clearOverride`), so the
+    /// server resumes evaluating the expression.
+    case clearComputedOverride(id: InventoryItem.ID, fieldId: String)
     case splitItem(id: InventoryItem.ID, newItemId: InventoryItem.ID, quantity: Int)
     case attachPhoto(itemId: InventoryItem.ID, sha256: String, position: Int)
     case removePhoto(itemId: InventoryItem.ID, sha256: String)
@@ -199,6 +207,8 @@ public enum InventoryCommand: Hashable, Sendable {
         case .setItemFull(let id, _): id
         case .setItemLifecycle(let id, _, _): id
         case .setItemQuantity(let id, _): id
+        case .setComputedOverride(let id, _, _): id
+        case .clearComputedOverride(let id, _): id
         case .splitItem(let id, _, _): id
         case .attachPhoto(let id, _, _): id
         case .removePhoto(let id, _): id

@@ -70,6 +70,10 @@ extension LocalReducer {
         case .reorderPhotos(let id, let sha256s): try reorderPhotos(itemId: id, sha256s: sha256s)
         case .restoreDeletedItem(let id): try restoreDeletedItem(id: id)
         case .deleteItem(let id): try deleteItem(id: id)
+        case .setComputedOverride(let id, let fieldId, let value):
+            try setComputedOverride(id: id, fieldId: fieldId, value: value)
+        case .clearComputedOverride(let id, let fieldId):
+            try clearComputedOverride(id: id, fieldId: fieldId)
         default: nil
         }
     }

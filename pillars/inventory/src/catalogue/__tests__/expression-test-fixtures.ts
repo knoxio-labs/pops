@@ -94,5 +94,9 @@ export function expressionSnapshot(
   return {
     rootItemId,
     readItem: (itemId) => items.get(itemId) ?? { state: 'missing' },
+    readField: (itemId, fieldId) => {
+      const item = items.get(itemId);
+      return item?.state === 'resolved' ? item.item.fields.get(fieldId) : undefined;
+    },
   };
 }
