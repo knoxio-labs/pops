@@ -136,6 +136,7 @@ export type {
   DocumentsUnlinkErrors,
   DocumentsUnlinkResponse,
   DocumentsUnlinkResponses,
+  ExpressionV1,
   FixturesConnectData,
   FixturesConnectError,
   FixturesConnectErrors,

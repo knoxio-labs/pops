@@ -13,7 +13,12 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
-import { catalogueOperationSchema } from './inventory-catalogue-schema.js';
+import {
+  catalogueOperationSchema,
+  EXPRESSION_BINARY_OPS,
+  EXPRESSION_UNARY_OPS,
+  expressionSchemaDefs,
+} from './inventory-catalogue-schema.js';
 import { validationFieldValueSchema } from './inventory-item-input.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -60,6 +65,32 @@ function discriminants(schema: unknown): readonly string[] {
     if (typeof constant === 'string') return [constant];
     return strings(property(kind, 'enum'), 'kind enum');
   });
+}
+
+/** Resolves a `{ $ref: '#/components/schemas/Name' }` against the OpenAPI document root. */
+function resolveRef(spec: unknown, schema: unknown): unknown {
+  const ref = property(schema, '$ref');
+  if (typeof ref !== 'string') return schema;
+  if (!ref.startsWith('#/')) throw new Error(`unsupported $ref: ${ref}`);
+  return ref
+    .slice(2)
+    .split('/')
+    .reduce<unknown>((node, segment) => property(node, segment), spec);
+}
+
+/** The producer's published `ExpressionV1` schema, following `allOf`/`$ref` wrapping to the real node. */
+function expressionSchema(spec: unknown): Record<string, unknown> {
+  const patchSchema = requestSchema(spec, '/type-catalogue/drafts/{revision}', 'patch');
+  const operations = property(property(property(patchSchema, 'properties'), 'operations'), 'items');
+  const putField = array(property(operations, 'oneOf'), 'operation oneOf').find((variant) =>
+    discriminants({ oneOf: [variant] }).includes('put_field')
+  );
+  if (putField === undefined) throw new Error('put_field operation is missing');
+  const wrapped = property(property(putField, 'properties'), 'expression');
+  const wrappedAllOf = array(property(wrapped, 'allOf'), 'expression allOf');
+  const first = wrappedAllOf[0];
+  if (first === undefined) throw new Error('expression allOf is empty');
+  return object(resolveRef(spec, first), 'ExpressionV1');
 }
 
 const spec: unknown = JSON.parse(readFileSync(INVENTORY_OPENAPI_PATH, 'utf8'));
@@ -117,5 +148,48 @@ describe('inventory MCP schema fidelity', () => {
       type: validationFieldValueSchema.properties.values.type,
       minItems: validationFieldValueSchema.properties.values.minItems,
     });
+  });
+
+  it('matches the producer expression grammar op sets and reference-hop bound', () => {
+    const producerVariants = array(property(expressionSchema(spec), 'anyOf'), 'ExpressionV1 anyOf');
+
+    function opValues(variant: unknown): readonly string[] | undefined {
+      const opSchema = property(property(variant, 'properties'), 'op');
+      const enumValues = property(opSchema, 'enum');
+      if (Array.isArray(enumValues)) return strings(enumValues, 'op enum');
+      const constant = property(opSchema, 'const');
+      return typeof constant === 'string' ? [constant] : undefined;
+    }
+
+    function findByOp(variants: readonly unknown[], op: string): unknown {
+      const found = variants.find((variant) => opValues(variant)?.includes(op));
+      if (found === undefined) throw new Error(`no expression variant accepts op '${op}'`);
+      return found;
+    }
+
+    const producerUnaryOps = opValues(findByOp(producerVariants, 'negate'));
+    const producerBinaryOps = opValues(findByOp(producerVariants, 'add'));
+    if (producerUnaryOps === undefined || producerBinaryOps === undefined) {
+      throw new Error('producer op enum missing on a matched variant');
+    }
+    const producerReadPath = property(
+      property(findByOp(producerVariants, 'read'), 'properties'),
+      'path'
+    );
+
+    expect([...EXPRESSION_UNARY_OPS].toSorted()).toEqual(producerUnaryOps.toSorted());
+    expect([...EXPRESSION_BINARY_OPS].toSorted()).toEqual(producerBinaryOps.toSorted());
+
+    const mcpVariants = expressionSchemaDefs.expressionV1.oneOf;
+    const mcpUnaryOps = opValues(findByOp(mcpVariants, 'negate'));
+    const mcpBinaryOps = opValues(findByOp(mcpVariants, 'add'));
+    if (mcpUnaryOps === undefined || mcpBinaryOps === undefined) {
+      throw new Error('MCP op enum missing on a matched variant');
+    }
+    const mcpReadPath = property(property(findByOp(mcpVariants, 'read'), 'properties'), 'path');
+
+    expect(mcpUnaryOps.toSorted()).toEqual(producerUnaryOps.toSorted());
+    expect(mcpBinaryOps.toSorted()).toEqual(producerBinaryOps.toSorted());
+    expect(mcpReadPath).toMatchObject({ maxItems: property(producerReadPath, 'maxItems') });
   });
 });

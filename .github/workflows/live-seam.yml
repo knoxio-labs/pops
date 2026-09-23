@@ -20,10 +20,17 @@ name: Live Seam
 #   - pillars/bfm/src/api/inventory/__tests__/offline-replay.live-seam.test.ts
 #     boots registry + inventory + bfm and replays revision-pinned mutations
 #     through the phone route after compatible and incompatible publications.
+#   - pillars/mcp/src/tools/__tests__/inventory-catalogue.live-seam.test.ts and
+#     inventory-items.live-seam.test.ts boot registry + inventory and drive the
+#     inventory MCP tools' own `pillar-client.ts` / registry-discovery path —
+#     readDraft/patch/preview/publish, a stale-revision conflict and recovery,
+#     structured migration_required/forbidden/401/unavailable failures, and the
+#     protocol-2 item + computed-override lifecycle — over real HTTP instead of
+#     `vi.mock('../pillar-client.js')`.
 # Each is normally run by hand via that pillar's `pnpm test:live-seam`.
 #
 # ADVISORY, NOT REQUIRED — deliberately, for a bake-in period. None of the
-# three jobs below is in ci-gate.yml's `gated` array, and none of their names
+# four jobs below is in ci-gate.yml's `gated` array, and none of their names
 # is in the branch ruleset, so a failure here reports on the PR (and blocks
 # nothing) — the only way to make a job genuinely advisory, since a job
 # inside a GATED workflow can't opt out with `continue-on-error`
@@ -152,6 +159,9 @@ on:
       - "pillars/bfm/vitest.live-seam.config.ts"
       - "pillars/purchases/**"
       - "pillars/inventory/**"
+      - "pillars/mcp/src/tools/**"
+      - "pillars/mcp/src/pillar-client.ts"
+      - "pillars/mcp/vitest.live-seam.config.ts"
       - "!pillars/purchases/app/**"
       - "!pillars/purchases/extension/**"
       - "!pillars/purchases/README.md"
@@ -175,6 +185,9 @@ on:
       - "pillars/bfm/vitest.live-seam.config.ts"
       - "pillars/purchases/**"
       - "pillars/inventory/**"
+      - "pillars/mcp/src/tools/**"
+      - "pillars/mcp/src/pillar-client.ts"
+      - "pillars/mcp/vitest.live-seam.config.ts"
       - "!pillars/purchases/app/**"
       - "!pillars/purchases/extension/**"
       - "!pillars/purchases/README.md"
@@ -190,6 +203,7 @@ jobs:
       food: ${{ steps.filter.outputs.food }}
       cerebrum: ${{ steps.filter.outputs.cerebrum }}
       bfm: ${{ steps.filter.outputs.bfm }}
+      mcp: ${{ steps.filter.outputs.mcp }}
     steps:
       - uses: actions/checkout@v7
       - uses: dorny/paths-filter@v4
@@ -224,6 +238,14 @@ jobs:
               - "!pillars/purchases/README.md"
               - "!pillars/purchases/Dockerfile"
               - "!pillars/purchases/mise.toml"
+              - ".github/workflows/live-seam.yml"
+            mcp:
+              - "libs/sdk/**"
+              - "pillars/registry/**"
+              - "pillars/inventory/**"
+              - "pillars/mcp/src/tools/**"
+              - "pillars/mcp/src/pillar-client.ts"
+              - "pillars/mcp/vitest.live-seam.config.ts"
               - ".github/workflows/live-seam.yml"
 
   food-lists:
@@ -287,3 +309,21 @@ jobs:
         run: pnpm --filter "@pops/registry..." --filter "@pops/purchases..." --filter "@pops/bfm..." build
       - name: Run bfm's live-seam suite
         run: pnpm --filter @pops/bfm test:live-seam
+
+  mcp-inventory:
+    name: mcp -> inventory live seam
+    needs: [changes]
+    if: needs.changes.outputs.mcp == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build the pillars this suite spawns (registry, inventory, mcp)
+        run: pnpm --filter "@pops/registry..." --filter "@pops/inventory..." --filter "@pops/mcp..." build
+      - name: Run mcp's live-seam suite
+        run: pnpm --filter @pops/mcp test:live-seam

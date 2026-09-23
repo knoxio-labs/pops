@@ -1044,6 +1044,62 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
+    ExpressionV1:
+      | {
+          /** @enum {string} */
+          op: 'literal';
+          value:
+            | string
+            | number
+            | boolean
+            | {
+                /** Format: uuid */
+                optionId: string;
+              }
+            | {
+                amount: string;
+                unit: string;
+              }
+            | {
+                targetId: string;
+                /** @enum {string} */
+                targetKind: 'item' | 'location';
+              };
+        }
+      | {
+          /** Format: uuid */
+          fieldId: string;
+          /** @enum {string} */
+          op: 'read';
+          path: string[];
+        }
+      | {
+          /** @enum {string} */
+          op: 'negate' | 'not';
+          value: components['schemas']['ExpressionV1'];
+        }
+      | {
+          left: components['schemas']['ExpressionV1'];
+          /** @enum {string} */
+          op:
+            | 'add'
+            | 'subtract'
+            | 'multiply'
+            | 'divide'
+            | 'concat'
+            | 'equal'
+            | 'less_than'
+            | 'and'
+            | 'or';
+          right: components['schemas']['ExpressionV1'];
+        }
+      | {
+          condition: components['schemas']['ExpressionV1'];
+          else: components['schemas']['ExpressionV1'];
+          /** @enum {string} */
+          op: 'if';
+          then: components['schemas']['ExpressionV1'];
+        };
     LocationTreeNode: {
       children: components['schemas']['LocationTreeNode'][];
       id: string;
@@ -5571,7 +5627,7 @@ export interface operations {
                   label: string;
                   sortOrder: number;
                 }[];
-                expression: unknown;
+                expression: components['schemas']['ExpressionV1'] | null;
                 expressionVersion: number | null;
                 fixedUnit: string | null;
                 help: string | null;
@@ -5809,7 +5865,7 @@ export interface operations {
                   label: string;
                   sortOrder: number;
                 }[];
-                expression: unknown;
+                expression: components['schemas']['ExpressionV1'] | null;
                 expressionVersion: number | null;
                 fixedUnit: string | null;
                 help: string | null;
@@ -5987,7 +6043,7 @@ export interface operations {
                   label: string;
                   sortOrder: number;
                 }[];
-                expression: unknown;
+                expression: components['schemas']['ExpressionV1'] | null;
                 expressionVersion: number | null;
                 fixedUnit: string | null;
                 help: string | null;
@@ -6113,7 +6169,7 @@ export interface operations {
                 archivedAt?: string | null;
                 /** @enum {string} */
                 cardinality?: 'one' | 'many';
-                expression?: unknown;
+                expression?: components['schemas']['ExpressionV1'] | null;
                 expressionVersion?: number | null;
                 /** @enum {string} */
                 fieldKind?:
@@ -6257,7 +6313,7 @@ export interface operations {
                     label: string;
                     sortOrder: number;
                   }[];
-                  expression: unknown;
+                  expression: components['schemas']['ExpressionV1'] | null;
                   expressionVersion: number | null;
                   fixedUnit: string | null;
                   help: string | null;
@@ -6514,7 +6570,7 @@ export interface operations {
                   label: string;
                   sortOrder: number;
                 }[];
-                expression: unknown;
+                expression: components['schemas']['ExpressionV1'] | null;
                 expressionVersion: number | null;
                 fixedUnit: string | null;
                 help: string | null;
@@ -6660,7 +6716,7 @@ export interface operations {
                 archivedAt?: string | null;
                 /** @enum {string} */
                 cardinality?: 'one' | 'many';
-                expression?: unknown;
+                expression?: components['schemas']['ExpressionV1'] | null;
                 expressionVersion?: number | null;
                 /** @enum {string} */
                 fieldKind?:
@@ -7027,7 +7083,7 @@ export interface operations {
                   label: string;
                   sortOrder: number;
                 }[];
-                expression: unknown;
+                expression: components['schemas']['ExpressionV1'] | null;
                 expressionVersion: number | null;
                 fixedUnit: string | null;
                 help: string | null;
