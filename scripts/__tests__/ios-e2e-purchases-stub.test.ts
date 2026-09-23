@@ -1,12 +1,17 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  DETAIL_OPERATION_ID,
+  LIST_OPERATION_ID,
   MANUAL_OPERATION_ID,
   PURCHASES_PILLAR_ID,
   UPLOAD_OPERATION_ID,
+  detailRoute,
+  listRoute,
   manualRoute,
   purchasesRegistryEntry,
   readPurchasesContract,
+  seededPurchases,
   startPurchasesStub,
   uploadRoute,
 } from '../ios-e2e/purchases-stub.mjs';
@@ -45,6 +50,12 @@ describe('the purchases contract this stub serves', () => {
       manualRoute({ paths: { '/purchases/manual': { post: { operationId: 'other' } } } })
     ).toThrow(new RegExp(`declares no ${MANUAL_OPERATION_ID}`, 'u'));
   });
+
+  it('declares the list and detail operations the bfm reads through', () => {
+    const contract = readPurchasesContract();
+    expect(listRoute(contract)).toEqual({ method: 'GET', path: '/purchases' });
+    expect(detailRoute(contract)).toEqual({ method: 'GET', path: '/purchases/{id}' });
+  });
 });
 
 describe('the purchases registry entry', () => {
@@ -77,6 +88,13 @@ describe('the purchases registry entry', () => {
     expect(entry.manifest.routes.mutations).toEqual([
       `purchases.${UPLOAD_OPERATION_ID}`,
       `purchases.${MANUAL_OPERATION_ID}`,
+    ]);
+  });
+
+  it('names the list and detail queries it now answers', () => {
+    expect(entry.manifest.routes.queries).toEqual([
+      `purchases.${LIST_OPERATION_ID}`,
+      `purchases.${DETAIL_OPERATION_ID}`,
     ]);
   });
 });
@@ -181,6 +199,146 @@ describe('the purchases stub', () => {
         body: JSON.stringify({ items: [] }),
       });
       expect(answered.status).toBe(200);
+    } finally {
+      await stub.close();
+    }
+  });
+
+  it('pages newest first without repeating an anchor and ends with an empty page', async () => {
+    const stub = await startPurchasesStub();
+    try {
+      const first = await fetch(`${stub.url}/purchases?limit=2`);
+      expect(first.status).toBe(200);
+      const firstBody = await first.json();
+      expect(firstBody.items.map((row: { id: string }) => row.id)).toEqual([
+        'purchase-september-unsettled',
+        'purchase-august-linked',
+      ]);
+      expect(firstBody.total).toBe(3);
+
+      const anchor = firstBody.items[1];
+      const second = await fetch(
+        `${stub.url}/purchases?limit=2&beforeOrderedAt=${encodeURIComponent(String(anchor.orderedAt))}&beforeId=${String(anchor.id)}`
+      );
+      const secondBody = await second.json();
+      expect(secondBody.items.map((row: { id: string }) => row.id)).toEqual([
+        'purchase-july-partial',
+      ]);
+      expect(secondBody).not.toHaveProperty('total');
+
+      const end = secondBody.items[0];
+      const final = await fetch(
+        `${stub.url}/purchases?beforeOrderedAt=${encodeURIComponent(String(end.orderedAt))}&beforeId=${String(end.id)}`
+      );
+      expect(await final.json()).toEqual({ items: [] });
+    } finally {
+      await stub.close();
+    }
+  });
+
+  it('filters repeated unsettled statuses and counts the whole filtered scope', async () => {
+    const stub = await startPurchasesStub();
+    try {
+      const answered = await fetch(
+        `${stub.url}/purchases?statuses=awaiting_settlement&statuses=partial&limit=1`
+      );
+      const body = await answered.json();
+
+      expect(answered.status).toBe(200);
+      expect(body.items.map((row: { id: string }) => row.id)).toEqual([
+        'purchase-september-unsettled',
+      ]);
+      expect(body.total).toBe(2);
+    } finally {
+      await stub.close();
+    }
+  });
+
+  it("answers an omitted limit with the pillar's default page of 100", async () => {
+    const stub = await startPurchasesStub();
+    try {
+      const extra = 101 - seededPurchases().length;
+      for (let index = 0; index < extra; index += 1) {
+        await fetch(`${stub.url}/purchases/manual`, {
+          method: 'POST',
+          body: JSON.stringify({
+            merchantEntityName: `Shop ${String(index)}`,
+            totalCents: 100,
+            items: [{ name: 'Item', quantity: 1, lineTotalCents: 100 }],
+          }),
+        });
+      }
+
+      const body = await (await fetch(`${stub.url}/purchases`)).json();
+      expect(body.total).toBe(101);
+      expect(body.items).toHaveLength(100);
+    } finally {
+      await stub.close();
+    }
+  });
+
+  it('adds a manual purchase to list and detail reads, newest first', async () => {
+    const stub = await startPurchasesStub();
+    try {
+      const createdResponse = await fetch(`${stub.url}/purchases/manual`, {
+        method: 'POST',
+        body: JSON.stringify({
+          merchantEntityName: 'New Shop',
+          totalCents: 300,
+          items: [{ name: 'New item', quantity: 1, lineTotalCents: 300 }],
+        }),
+      });
+      const created = await createdResponse.json();
+
+      const listResponse = await fetch(`${stub.url}/purchases?limit=1`);
+      const listBody = await listResponse.json();
+      expect(listBody.items[0].id).toBe(created.purchase.id);
+      expect(listBody.total).toBe(seededPurchases().length + 1);
+
+      const detailResponse = await fetch(`${stub.url}/purchases/${String(created.purchase.id)}`);
+      expect(detailResponse.status).toBe(200);
+      expect(await detailResponse.json()).toEqual(created);
+    } finally {
+      await stub.close();
+    }
+  });
+
+  it.each([
+    ['/purchases?limit=0', 'VALIDATION_ERROR'],
+    ['/purchases?limit=501', 'VALIDATION_ERROR'],
+    ['/purchases?limit=1.5', 'VALIDATION_ERROR'],
+    ['/purchases?statuses=probably_fine', 'VALIDATION_ERROR'],
+    ['/purchases?beforeOrderedAt=2026-09-01T00%3A00%3A00.000Z&beforeId=', 'VALIDATION_ERROR'],
+    ['/purchases?beforeId=some-id', 'KEYSET_ANCHOR_INCOMPLETE'],
+    ['/purchases?beforeOrderedAt=2026-09-01T00%3A00%3A00.000Z', 'KEYSET_ANCHOR_INCOMPLETE'],
+    [
+      '/purchases?beforeOrderedAt=2026-02-30T00%3A00%3A00.000Z&beforeId=some-id',
+      'UNREADABLE_TIMESTAMP',
+    ],
+  ])('rejects malformed list boundary %s', async (path, code) => {
+    const stub = await startPurchasesStub();
+    try {
+      const answered = await fetch(`${stub.url}${path}`);
+      expect(answered.status).toBe(400);
+      expect(await answered.json()).toMatchObject({ code });
+    } finally {
+      await stub.close();
+    }
+  });
+
+  it('serves seeded details and 404s an unknown purchase id', async () => {
+    const stub = await startPurchasesStub();
+    try {
+      const known = await fetch(`${stub.url}/purchases/purchase-august-linked`);
+      expect(known.status).toBe(200);
+      expect((await known.json()).purchase.id).toBe('purchase-august-linked');
+
+      const unknown = await fetch(`${stub.url}/purchases/not-here`);
+      expect(unknown.status).toBe(404);
+      expect(await unknown.json()).toEqual({
+        code: 'NOT_FOUND',
+        message: 'Purchase not-here not found',
+      });
     } finally {
       await stub.close();
     }

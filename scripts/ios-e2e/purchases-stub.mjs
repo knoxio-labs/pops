@@ -1,6 +1,6 @@
 /**
  * The second pillar this harness puts on the registry, and the only reason it
- * exists: `receipt-capture`.
+ * exists: Purchases.
  *
  * The bfm declares two mobile features — `transactions` behind `finance`, and
  * `receipt-capture` behind `purchases` (`pillars/bfm/src/api/mobile/features.ts`).
@@ -17,15 +17,17 @@
  * the SDK resolves an operation's path against the base URL, and a prefix in
  * the base URL is not carried onto it. One pillar, one origin, one port.
  *
- * ## Why it serves a contract, `POST /purchases/manual`, and nothing else
+ * ## What it serves
  *
- * `/openapi` is the whole of what reachability is decided from. Beyond that,
- * the Simulator has no camera, so no flow can produce a receipt to upload
+ * `/openapi` is the whole of what reachability is decided from. The stub also
+ * keeps a small purchase history for the mobile home, archive and detail
+ * routes, and accepts manual purchases into that same history. The Simulator
+ * has no camera, so no flow can produce a receipt to upload
  * (`VNDocumentCameraViewController` cannot be driven there at all — the
  * capture spike ran it and the Simulator's AVFoundation backend refuses to
  * configure an input). `POST /purchases/manual` needs none of that: manual
- * entry (POPS-2454) is the one write this Simulator can drive end to end, so
- * it is the one this stub answers. `POST /receipts*` stays unserved for the
+ * entry (POPS-2454) is the one write this Simulator can drive end to end.
+ * `POST /receipts*` stays unserved for the
  * same reason it always was — a fixture nobody's flow can exercise is a
  * fixture nobody notices going wrong.
  *
@@ -85,6 +87,10 @@ export const UPLOAD_OPERATION_ID = 'receipt.upload';
  * calls it by this name.
  */
 export const MANUAL_OPERATION_ID = 'purchase.createManual';
+
+/** The operations used by the mobile purchase history and detail routes. */
+export const LIST_OPERATION_ID = 'purchase.list';
+export const DETAIL_OPERATION_ID = 'purchase.get';
 
 /**
  * purchases' committed OpenAPI snapshot.
@@ -146,6 +152,22 @@ export function manualRoute(document) {
 }
 
 /**
+ * @param {Record<string, unknown>} document purchases' OpenAPI snapshot
+ * @returns {{ method: string, path: string }}
+ */
+export function listRoute(document) {
+  return routeFor(document, LIST_OPERATION_ID);
+}
+
+/**
+ * @param {Record<string, unknown>} document purchases' OpenAPI snapshot
+ * @returns {{ method: string, path: string }}
+ */
+export function detailRoute(document) {
+  return routeFor(document, DETAIL_OPERATION_ID);
+}
+
+/**
  * The shape both snapshot readers accept for one pillar on the registry —
  * shared with `upstream-stub.mjs`'s finance entry so the two can sit in the
  * same `pillars` array.
@@ -191,7 +213,7 @@ export function purchasesRegistryEntry({ baseUrl, now }) {
         tag: 'contract-purchases@v1.0.0',
       },
       routes: {
-        queries: [],
+        queries: [`purchases.${LIST_OPERATION_ID}`, `purchases.${DETAIL_OPERATION_ID}`],
         mutations: [`purchases.${UPLOAD_OPERATION_ID}`, `purchases.${MANUAL_OPERATION_ID}`],
         subscriptions: [],
       },
@@ -217,12 +239,267 @@ function readJsonBody(request) {
     request.on('data', (chunk) => chunks.push(chunk));
     request.on('end', () => {
       try {
-        resolve(JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}'));
+        const body = Buffer.concat(chunks).toString('utf8');
+        resolve(JSON.parse(body.length === 0 ? '{}' : body));
       } catch (error) {
         reject(error);
       }
     });
     request.on('error', reject);
+  });
+}
+
+const PURCHASE_STATUSES = new Set([
+  'awaiting_settlement',
+  'linked',
+  'partial',
+  'settled_cash',
+  'ignored',
+]);
+
+/**
+ * The deterministic purchase history each stub starts with.
+ *
+ * @returns {Array<Record<string, unknown>>}
+ */
+export function seededPurchases() {
+  return [
+    seededPurchase({
+      id: 'purchase-september-unsettled',
+      merchant: 'Corner Store',
+      orderedAt: '2026-09-18T08:30:00.000Z',
+      status: 'awaiting_settlement',
+      totalCents: 1_250,
+      item: 'Breakfast',
+    }),
+    seededPurchase({
+      id: 'purchase-august-linked',
+      merchant: 'Hardware Shop',
+      orderedAt: '2026-08-14T02:15:00.000Z',
+      status: 'linked',
+      totalCents: 4_599,
+      item: 'Fasteners',
+    }),
+    seededPurchase({
+      id: 'purchase-july-partial',
+      merchant: 'Market',
+      orderedAt: '2026-07-03T23:10:00.000Z',
+      status: 'partial',
+      totalCents: 875,
+      item: 'Groceries',
+    }),
+  ];
+}
+
+/**
+ * @param {{
+ *   id: string,
+ *   merchant: string,
+ *   orderedAt: string,
+ *   status: string,
+ *   totalCents: number,
+ *   item: string,
+ * }} fixture
+ * @returns {Record<string, unknown>}
+ */
+function seededPurchase(fixture) {
+  return {
+    edit: null,
+    purchase: {
+      id: fixture.id,
+      source: 'ios-e2e',
+      merchantEntityId: null,
+      merchantEntityName: fixture.merchant,
+      totalCents: fixture.totalCents,
+      subtotalCents: fixture.totalCents,
+      taxCents: 0,
+      shippingCents: 0,
+      discountCents: 0,
+      surchargeCents: 0,
+      currency: 'AUD',
+      orderedAt: fixture.orderedAt,
+      orderedAtOffsetMinutes: 600,
+      status: fixture.status,
+      updatedAt: fixture.orderedAt,
+    },
+    items: [
+      {
+        item: {
+          id: `${fixture.id}-item`,
+          name: fixture.item,
+          quantity: 1,
+          lineTotalCents: fixture.totalCents,
+        },
+        units: [],
+      },
+    ],
+    documents: [],
+  };
+}
+
+/**
+ * @param {Record<string, unknown>} detail
+ * @returns {Record<string, unknown>}
+ */
+function listRow(detail) {
+  const purchase = detail['purchase'];
+  const items = detail['items'];
+  const documents = detail['documents'];
+  const receipt = Array.isArray(documents)
+    ? documents.find((document) => document?.kind === 'receipt')
+    : undefined;
+  return {
+    ...(purchase !== null && typeof purchase === 'object' ? purchase : {}),
+    itemCount: Array.isArray(items) ? items.length : 0,
+    receiptUri: receipt?.documentUri ?? null,
+  };
+}
+
+/**
+ * @param {Record<string, unknown>} detail
+ * @returns {string | undefined}
+ */
+function purchaseId(detail) {
+  const purchase = detail['purchase'];
+  if (purchase === null || typeof purchase !== 'object') return undefined;
+  const id = /** @type {Record<string, unknown>} */ (purchase)['id'];
+  return typeof id === 'string' ? id : undefined;
+}
+
+/** `purchase-reads.ts`' `listPurchases` page size when a caller omits `limit`. */
+const PILLAR_DEFAULT_LIMIT = 100;
+
+/** What ts-rest answers when a query fails the pillar's contract schema, before any handler runs. */
+const SCHEMA_REJECTION = Object.freeze({
+  ok: false,
+  code: 'VALIDATION_ERROR',
+  message: 'Request does not match the contract schema',
+});
+
+/**
+ * @param {URLSearchParams} search
+ * @returns {{ ok: true, limit: number, statuses: string[] | null, anchor: null | { orderedAt: string, id: string } } | { ok: false, code: string, message: string }}
+ */
+function readListQuery(search) {
+  const rawLimit = search.get('limit');
+  const limit = rawLimit === null ? PILLAR_DEFAULT_LIMIT : Number(rawLimit);
+  if (!Number.isInteger(limit) || limit < 1 || limit > 500) {
+    return SCHEMA_REJECTION;
+  }
+
+  const statuses = search.getAll('statuses');
+  if (statuses.some((status) => !PURCHASE_STATUSES.has(status))) {
+    return SCHEMA_REJECTION;
+  }
+
+  const beforeOrderedAt = search.get('beforeOrderedAt');
+  const beforeId = search.get('beforeId');
+  if ((beforeOrderedAt === null) !== (beforeId === null)) {
+    return {
+      ok: false,
+      code: 'KEYSET_ANCHOR_INCOMPLETE',
+      message: 'beforeOrderedAt and beforeId must be supplied together',
+    };
+  }
+  if (beforeOrderedAt !== null && !isCanonicalInstant(beforeOrderedAt)) {
+    return {
+      ok: false,
+      code: 'UNREADABLE_TIMESTAMP',
+      message: `Keyset anchor 'beforeOrderedAt' value '${beforeOrderedAt}' names no instant`,
+    };
+  }
+  if (beforeId !== null && beforeId.length === 0) {
+    return SCHEMA_REJECTION;
+  }
+
+  return {
+    ok: true,
+    limit,
+    statuses: statuses.length === 0 ? null : statuses,
+    anchor:
+      beforeOrderedAt === null || beforeId === null
+        ? null
+        : { orderedAt: new Date(beforeOrderedAt).toISOString(), id: beforeId },
+  };
+}
+
+/**
+ * @param {string} value
+ * @returns {boolean}
+ */
+function isCanonicalInstant(value) {
+  const match =
+    /^(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})T(?<hour>\d{2}):(?<minute>\d{2}):(?<second>\d{2})(?:\.\d{1,9})?(?<zone>Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)$/u.exec(
+      value
+    );
+  if (match?.groups === undefined) return false;
+  const timestamp = Date.parse(value);
+  if (!Number.isFinite(timestamp)) return false;
+  const zone = match.groups['zone'];
+  if (zone === undefined) return false;
+  const offsetMinutes =
+    zone === 'Z'
+      ? 0
+      : (zone.startsWith('-') ? -1 : 1) *
+        (Number(zone.slice(1, 3)) * 60 + Number(zone.slice(4, 6)));
+  const local = new Date(timestamp + offsetMinutes * 60_000);
+  return (
+    local.getUTCFullYear() === Number(match.groups['year']) &&
+    local.getUTCMonth() + 1 === Number(match.groups['month']) &&
+    local.getUTCDate() === Number(match.groups['day']) &&
+    local.getUTCHours() === Number(match.groups['hour']) &&
+    local.getUTCMinutes() === Number(match.groups['minute']) &&
+    local.getUTCSeconds() === Number(match.groups['second'])
+  );
+}
+
+/**
+ * @param {import('node:http').ServerResponse} response
+ * @param {number} status
+ * @param {unknown} body
+ */
+function json(response, status, body) {
+  const bytes = Buffer.from(JSON.stringify(body));
+  response.writeHead(status, {
+    'content-type': 'application/json',
+    'content-length': String(bytes.byteLength),
+  });
+  response.end(bytes);
+}
+
+/**
+ * @param {URL} url
+ * @param {import('node:http').ServerResponse} response
+ * @param {Array<Record<string, unknown>>} store
+ */
+function handleListPurchases(url, response, store) {
+  const query = readListQuery(url.searchParams);
+  if (!query.ok) {
+    json(response, 400, { code: query.code, message: query.message });
+    return;
+  }
+
+  const rows = store
+    .map(listRow)
+    .filter((row) => query.statuses === null || query.statuses.includes(String(row['status'])))
+    .toSorted((left, right) => {
+      const byDate = String(right['orderedAt']).localeCompare(String(left['orderedAt']));
+      return byDate === 0 ? String(left['id']).localeCompare(String(right['id'])) : byDate;
+    });
+  const anchor = query.anchor;
+  const scoped =
+    anchor === null
+      ? rows
+      : rows.filter((row) => {
+          const orderedAt = String(row['orderedAt']);
+          return (
+            orderedAt < anchor.orderedAt ||
+            (orderedAt === anchor.orderedAt && String(row['id']) > anchor.id)
+          );
+        });
+  json(response, 200, {
+    items: scoped.slice(0, query.limit),
+    ...(anchor === null ? { total: rows.length } : {}),
   });
 }
 
@@ -239,9 +516,10 @@ function readJsonBody(request) {
  *
  * @param {import('node:http').IncomingMessage} request
  * @param {import('node:http').ServerResponse} response
+ * @param {Array<Record<string, unknown>>} store
  * @returns {Promise<void>}
  */
-async function handleCreateManualPurchase(request, response) {
+async function handleCreateManualPurchase(request, response, store) {
   const body = await readJsonBody(request);
   const items = Array.isArray(body['items']) ? body['items'] : [];
   const now = new Date().toISOString();
@@ -253,6 +531,7 @@ async function handleCreateManualPurchase(request, response) {
     purchase: {
       id: randomUUID(),
       source: 'manual',
+      merchantEntityId: null,
       merchantEntityName: body['merchantEntityName'] ?? null,
       totalCents: body['totalCents'] ?? 0,
       subtotalCents: body['subtotalCents'] ?? sumLineTotals(items),
@@ -273,16 +552,13 @@ async function handleCreateManualPurchase(request, response) {
         quantity: item?.quantity ?? 1,
         lineTotalCents: item?.lineTotalCents ?? 0,
       },
+      units: [],
     })),
     documents: [],
   };
 
-  const responseBody = Buffer.from(JSON.stringify(detail));
-  response.writeHead(200, {
-    'content-type': 'application/json',
-    'content-length': String(responseBody.byteLength),
-  });
-  response.end(responseBody);
+  store.unshift(detail);
+  json(response, 200, detail);
 }
 
 /**
@@ -291,6 +567,29 @@ async function handleCreateManualPurchase(request, response) {
  */
 function sumLineTotals(items) {
   return items.reduce((total, item) => total + (item?.lineTotalCents ?? 0), 0);
+}
+
+/**
+ * Reads one path parameter from an OpenAPI template containing `{id}`.
+ *
+ * @param {string} template
+ * @param {string} pathname
+ * @returns {string | null}
+ */
+function pathParameter(template, pathname) {
+  const marker = '{id}';
+  const markerIndex = template.indexOf(marker);
+  if (markerIndex === -1) return null;
+  const prefix = template.slice(0, markerIndex);
+  const suffix = template.slice(markerIndex + marker.length);
+  if (!pathname.startsWith(prefix) || !pathname.endsWith(suffix)) return null;
+  const encoded = pathname.slice(prefix.length, pathname.length - suffix.length);
+  if (encoded.length === 0 || encoded.includes('/')) return null;
+  try {
+    return decodeURIComponent(encoded);
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -313,6 +612,9 @@ export async function startPurchasesStub({
   // declares the operation, and this is the moment to find that out.
   uploadRoute(contract);
   const manual = manualRoute(contract);
+  const list = listRoute(contract);
+  const detail = detailRoute(contract);
+  const store = seededPurchases();
 
   let reachable = false;
 
@@ -343,19 +645,36 @@ export async function startPurchasesStub({
     }
 
     if (request.method === manual.method && url.pathname === manual.path) {
-      void handleCreateManualPurchase(request, response);
+      void handleCreateManualPurchase(request, response, store);
       return;
     }
 
-    response.writeHead(404, { 'content-type': 'application/json' });
-    response.end(
-      JSON.stringify({
-        message:
-          `ios-e2e purchases stub serves nothing at ${request.method} ${url.pathname}. ` +
-          'It answers `/openapi`, `POST /purchases/manual`, and nothing else, on purpose — ' +
-          "see this file's header.",
-      })
-    );
+    if (request.method === list.method && url.pathname === list.path) {
+      handleListPurchases(url, response, store);
+      return;
+    }
+
+    const detailId =
+      request.method === detail.method ? pathParameter(detail.path, url.pathname) : null;
+    if (detailId !== null) {
+      const found = store.find((entry) => purchaseId(entry) === detailId);
+      if (found === undefined) {
+        json(response, 404, {
+          code: 'NOT_FOUND',
+          message: `Purchase ${detailId} not found`,
+        });
+      } else {
+        json(response, 200, found);
+      }
+      return;
+    }
+
+    json(response, 404, {
+      message:
+        `ios-e2e purchases stub serves nothing at ${request.method} ${url.pathname}. ` +
+        'It answers the purchase list, detail and manual-create routes; receipt upload remains ' +
+        "unserved on purpose — see this file's header.",
+    });
   });
 
   /** @type {Promise<void>} */
