@@ -1,5 +1,6 @@
 import AppCore
 import AppCoreFakes
+import Foundation
 import Testing
 
 @testable import FeatureInventory
@@ -14,10 +15,12 @@ internal struct InventoryScanViewModelTests {
         items: [InventoryItem] = [],
         camera: StubCameraAuthorization = StubCameraAuthorization(
             standing: .authorized),
-        router: EntityRouterRegistry = EntityRouterRegistry()
+        router: EntityRouterRegistry = EntityRouterRegistry(),
+        recents: UserDefaults? = nil
     ) -> InventoryScanViewModel {
         InventoryScanViewModel(
-            store: InMemoryInventoryStore(items: items), router: router, camera: camera)
+            store: InMemoryInventoryStore(items: items), router: router, camera: camera,
+            recents: recents ?? freshDefaults())
     }
 
     @Test("starting with camera access opens the scanner")
@@ -110,9 +113,11 @@ internal struct InventoryScanViewModelTests {
 
     @Test("a plain code that matches an item is found")
     func plainCodeFound() async {
-        let model = model(items: [
-            InventoryFixture.item("item-1", "Drill", at: .hand, code: "ABC-123")
-        ])
+        let recents = freshDefaults()
+        let model = model(
+            items: [
+                InventoryFixture.item("item-1", "Drill", at: .hand, code: "ABC-123")
+            ], recents: recents)
         await model.start()
 
         model.didScan("ABC-123")
@@ -123,6 +128,7 @@ internal struct InventoryScanViewModelTests {
             return
         }
         #expect(record.id == "item-1")
+        #expect(scanned(in: recents) == ["item-1"])
     }
 
     @Test("the code lookup is case-insensitive, as the pillar's own index is")
@@ -142,15 +148,18 @@ internal struct InventoryScanViewModelTests {
 
     @Test("a code nothing carries is target missing")
     func unknownCodeIsTargetMissing() async {
-        let model = model(items: [
-            InventoryFixture.item("item-1", "Drill", at: .hand, code: "ABC-123")
-        ])
+        let recents = freshDefaults()
+        let model = model(
+            items: [
+                InventoryFixture.item("item-1", "Drill", at: .hand, code: "ABC-123")
+            ], recents: recents)
         await model.start()
 
         model.didScan("ZZZ-999")
         await awaitObservedCondition { model.phase != .loading }
 
         #expect(model.phase == .targetMissing)
+        #expect(scanned(in: recents).isEmpty)
     }
 
     /// POPS-4108's deleted-item rule: the code stays reserved, but scanning it
@@ -185,6 +194,18 @@ internal struct InventoryScanViewModelTests {
         #expect(!consumed)
         #expect(invocationCount == 0)
         #expect(model.phase == .unsupported(pillar: "finance"))
+    }
+
+    private func freshDefaults() -> UserDefaults {
+        guard let defaults = UserDefaults(suiteName: "InventoryScanViewModelTests.\(UUID())") else {
+            preconditionFailure("Unable to create isolated defaults")
+        }
+        return defaults
+    }
+
+    private func scanned(in defaults: UserDefaults) -> [String] {
+        InventorySearchRecents.decode(
+            defaults.string(forKey: InventorySearchRecents.scannedKey) ?? "")
     }
 }
 

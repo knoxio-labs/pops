@@ -29,15 +29,18 @@ internal final class InventoryScanViewModel {
     private let store: any InventoryStore
     private let router: any EntityRouter
     private let camera: any CameraAuthorizing
+    private let recents: UserDefaults
 
     internal init(
         store: any InventoryStore,
         router: any EntityRouter,
-        camera: any CameraAuthorizing = SystemCameraAuthorization()
+        camera: any CameraAuthorizing = SystemCameraAuthorization(),
+        recents: UserDefaults = .standard
     ) {
         self.store = store
         self.router = router
         self.camera = camera
+        self.recents = recents
     }
 
     /// Prompts if nobody has been asked, and opens the camera only if the
@@ -85,6 +88,9 @@ internal final class InventoryScanViewModel {
     private func route(_ uri: PopsURI) {
         switch router.route(uri) {
         case .handled:
+            if uri.pillar == InventoryEntity.pillar, uri.type == "item" {
+                InventorySearchRecents.recordingScan(uri.id, in: recents)
+            }
             didRouteElsewhere = true
         case .unsupported(let pillar):
             phase = .unsupported(pillar: pillar)
@@ -93,8 +99,11 @@ internal final class InventoryScanViewModel {
 
     private func lookUp(code: String) {
         phase = .loading
-        pendingLookup = Task { [weak self, store] in
+        pendingLookup = Task { [weak self, store, recents] in
             for await record in store.observe(Self.query(code: code)) {
+                if let record {
+                    InventorySearchRecents.recordingScan(record.id, in: recents)
+                }
                 self?.phase = record.map(InventoryScanPhase.found) ?? .targetMissing
                 return
             }

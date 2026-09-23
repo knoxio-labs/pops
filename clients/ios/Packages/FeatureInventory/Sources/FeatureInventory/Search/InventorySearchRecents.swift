@@ -1,3 +1,4 @@
+import AppCore
 import Foundation
 
 /// The empty search's two memories, kept on this phone only: what was
@@ -28,5 +29,10 @@ internal enum InventorySearchRecents {
         guard !trimmed.isEmpty else { return entries }
         let others = entries.filter { $0.caseInsensitiveCompare(trimmed) != .orderedSame }
         return Array(([trimmed] + others).prefix(limit))
+    }
+
+    internal static func recordingScan(_ id: InventoryItem.ID, in defaults: UserDefaults) {
+        let current = decode(defaults.string(forKey: scannedKey) ?? "")
+        defaults.set(encode(adding(id, to: current)), forKey: scannedKey)
     }
 }
