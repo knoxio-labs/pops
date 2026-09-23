@@ -7,7 +7,13 @@ import {
   resolveProtocol1TypeById,
 } from '../../catalogue/index.js';
 import { itemPhotos, items, type ItemRow } from '../../db/index.js';
-import { loadEntity, requireItem, type CommandDb } from './entities.js';
+import {
+  activeStoredChanges,
+  currentAuthoritativeFieldValues,
+  requireActiveCatalogue,
+  requireActiveType,
+} from './active-catalogue-values.js';
+import { loadEntity, requireItem, type CommandDb, type FieldValues } from './entities.js';
 import { CommandRejected } from './errors.js';
 import { readPlacement } from './item-fields.js';
 import { defineOp } from './op.js';
@@ -74,6 +80,30 @@ function insertSplitInto({ db, row, newItemId, quantity, stamp }: InsertSplitInt
     .run();
 }
 
+function legacySplitFields(db: CommandDb, row: ItemRow): FieldValues {
+  const fields = protocol1FieldsAsJson(loadProtocol1Fields(db, row.id));
+  if (row.typeId === null) return { typeKey: null, fields };
+  const type = resolveProtocol1TypeById(db, row.typeId);
+  if (!type) throw new CommandRejected('type_unknown', `unknown type ${row.typeId}`);
+  return { typeKey: type.key, fields };
+}
+
+function activeSplitFields(db: CommandDb, row: ItemRow, revision: number): FieldValues {
+  requireActiveCatalogue(db, revision);
+  const fieldValues = activeStoredChanges(currentAuthoritativeFieldValues(db, row.id));
+  if (row.typeId === null) return { typeId: null, ...fieldValues };
+  const type = requireActiveType(db, revision, row.typeId);
+  return { typeId: type.id, ...fieldValues };
+}
+
+function splitCatalogueFields(
+  db: CommandDb,
+  row: ItemRow,
+  revision: number | undefined
+): FieldValues {
+  return revision === undefined ? legacySplitFields(db, row) : activeSplitFields(db, row, revision);
+}
+
 /**
  * `item.split { newItemId, quantity }`: split `quantity` of `entityId`'s
  * count off into a new item at `newItemId`, minted by the client. The new
@@ -97,11 +127,7 @@ export const itemSplit = defineOp({
     if (remaining < 1) {
       throw new CommandRejected('invalid', 'a split must leave at least one item behind');
     }
-    const fields = protocol1FieldsAsJson(loadProtocol1Fields(ctx.db, row.id));
-    const type = row.typeId === null ? null : resolveProtocol1TypeById(ctx.db, row.typeId);
-    if (row.typeId !== null && type === null) {
-      throw new CommandRejected('type_unknown', `unknown type ${row.typeId}`);
-    }
+    const catalogueFields = splitCatalogueFields(ctx.db, row, ctx.mutation.catalogueRevision);
 
     return {
       eventKind: 'split_from',
@@ -111,8 +137,7 @@ export const itemSplit = defineOp({
           eventKind: 'split_into',
           changes: {
             name: row.name,
-            typeKey: type?.key ?? null,
-            fields,
+            ...catalogueFields,
             note: row.note,
             externalIds: JSON.parse(row.externalIds) as JsonValue,
             quantity: args.quantity,

@@ -7,8 +7,10 @@ import type { ConflictBody } from './outcome.js';
 export const REJECTION_REASONS = [
   'invalid',
   'type_unknown',
+  'catalogue_changed',
   'cycle',
   'target_missing',
+  'reference_type_mismatch',
   'not_container',
   'has_contents',
   'illegal_transition',

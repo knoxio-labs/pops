@@ -1,11 +1,16 @@
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 
-import { resolveProtocol1Type, resolveProtocol1TypeById } from '../../catalogue/catalogue.js';
+import {
+  resolveProtocol1Type,
+  resolveProtocol1TypeById,
+  resolvePublishedType,
+} from '../../catalogue/catalogue.js';
 import { clearItemFieldValues } from '../../catalogue/protocol-1-copy.js';
 import { loadProtocol1Fields } from '../../catalogue/protocol-1-read.js';
 import { replaceItemFieldValues } from '../../catalogue/protocol-1-values.js';
-import { items, locations } from '../../db/schema.js';
+import { itemFieldValues, items, locations } from '../../db/schema.js';
+import { isActiveFieldName } from './active-field-key.js';
 import { CommandRejected } from './errors.js';
 import { itemFieldsBlobSchema, ITEM_FIELD_CODECS, parseFieldValue } from './item-fields.js';
 import { LEGACY_ITEM_FIELD_CODECS } from './legacy-item-fields.js';
@@ -62,7 +67,12 @@ const ALL_ITEM_FIELD_CODECS = { ...ITEM_FIELD_CODECS, ...LEGACY_ITEM_FIELD_CODEC
 
 /** Whether `field` is a wire field the command layer can write on `kind`. */
 export function isWritableField(kind: EntityKind, field: string): boolean {
-  if (kind === 'item' && (field === 'fields' || field === 'typeKey')) return true;
+  if (
+    kind === 'item' &&
+    (field === 'fields' || field === 'typeKey' || field === 'typeId' || isActiveFieldName(field))
+  ) {
+    return true;
+  }
   const codecs = kind === 'item' ? ALL_ITEM_FIELD_CODECS : LOCATION_FIELD_CODECS;
   return Object.hasOwn(codecs, field);
 }
@@ -71,6 +81,8 @@ export function isWritableField(kind: EntityKind, field: string): boolean {
 export function currentValue(db: CommandDb, entity: LoadedEntity, field: string): JsonValue {
   if (entity.kind === 'item') {
     if (field === 'fields') return protocol1FieldsAsJson(loadProtocol1Fields(db, entity.row.id));
+    if (isActiveFieldName(field)) return currentDynamicValue(db, entity.row.id, field);
+    if (field === 'typeId') return entity.row.typeId;
     if (field === 'typeKey') {
       if (entity.row.typeId === null) return null;
       const type = resolveProtocol1TypeById(db, entity.row.typeId);
@@ -86,6 +98,20 @@ export function currentValue(db: CommandDb, entity: LoadedEntity, field: string)
   return codec.read(entity.row);
 }
 
+function currentDynamicValue(db: CommandDb, itemId: string, fieldId: string): JsonValue {
+  const rows = db
+    .select({ source: itemFieldValues.source, valueJson: itemFieldValues.valueJson })
+    .from(itemFieldValues)
+    .where(and(eq(itemFieldValues.itemId, itemId), eq(itemFieldValues.fieldId, fieldId)))
+    .orderBy(itemFieldValues.source, itemFieldValues.ordinal)
+    .all();
+  const stored = rows.filter((row) => row.source === 'stored');
+  const selected = stored.length > 0 ? stored : rows;
+  return selected.length === 0
+    ? null
+    : z.array(z.json()).parse(selected.map((row) => JSON.parse(row.valueJson)));
+}
+
 /** What a write stamps on the row besides the changed fields. */
 export interface WriteStamp {
   readonly revision: number;
@@ -93,17 +119,31 @@ export interface WriteStamp {
   readonly now: string;
 }
 
+function resolvedTypeId(
+  db: CommandDb,
+  field: 'typeId' | 'typeKey',
+  value: JsonValue
+): string | null {
+  const identifier = parseFieldValue(z.string().min(1).nullable(), field, value);
+  if (identifier === null) return null;
+  const type =
+    field === 'typeId'
+      ? resolvePublishedType(db, { id: identifier })
+      : resolveProtocol1Type(db, identifier);
+  if (!type) throw new CommandRejected('type_unknown', `unknown type ${identifier}`);
+  return type.id;
+}
+
 function itemColumns(db: CommandDb, changes: FieldValues, now: string): Partial<ItemInsert> {
   const columns: Partial<ItemInsert> = {};
   for (const [field, value] of Object.entries(changes)) {
-    if (field === 'fields') continue;
+    if (field === 'fields' || isActiveFieldName(field)) continue;
+    if (field === 'typeId') {
+      columns.typeId = resolvedTypeId(db, field, value);
+      continue;
+    }
     if (field === 'typeKey') {
-      const typeKey = parseFieldValue(z.string().min(1).nullable(), field, value);
-      const type = typeKey === null ? null : resolveProtocol1Type(db, typeKey);
-      if (typeKey !== null && type === null) {
-        throw new CommandRejected('type_unknown', `unknown type ${typeKey}`);
-      }
-      columns.typeId = type?.id ?? null;
+      columns.typeId = resolvedTypeId(db, field, value);
       continue;
     }
     const codec = ALL_ITEM_FIELD_CODECS[field];
