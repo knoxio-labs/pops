@@ -155,6 +155,23 @@ describe('inventory catalogue draft management', () => {
     expect(types.manage.patchDraft).not.toHaveBeenCalled();
   });
 
+  it('previews operations without patching the draft', async () => {
+    const operations = [{ kind: 'put_type', key: 'tool', label: 'Tool' }];
+
+    await tool('inventory.catalogue.previewDraft').handler({
+      revision: 5,
+      baseRevision: 4,
+      operations,
+    });
+
+    expect(types.manage.previewDraft).toHaveBeenCalledWith({
+      revision: 5,
+      baseRevision: 4,
+      operations,
+    });
+    expect(types.manage.patchDraft).not.toHaveBeenCalled();
+  });
+
   it('publishes with nullable notes, protocol gates, and a migration intact', async () => {
     const migration = {
       name: 'rename_voltage',

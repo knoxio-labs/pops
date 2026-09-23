@@ -2,14 +2,15 @@ import { catalogueClient } from './inventory-catalogue-client.js';
 import {
   optionalObject,
   optionalPositiveInteger,
-  requiredObjectArray,
   requiredPositiveInteger,
 } from './inventory-catalogue-input.js';
-import { catalogueReadTools } from './inventory-catalogue-read.js';
 import {
-  catalogueMigrationSchema,
-  catalogueOperationSchema,
-} from './inventory-catalogue-schema.js';
+  catalogueDraftOperationInput,
+  catalogueDraftOperationInputSchema,
+  cataloguePreviewDraft,
+} from './inventory-catalogue-preview.js';
+import { catalogueReadTools } from './inventory-catalogue-read.js';
+import { catalogueMigrationSchema } from './inventory-catalogue-schema.js';
 import { mapCallResult, nullStr, optStr, toolError } from './utils.js';
 
 import type { ToolDef } from './tool-def.js';
@@ -44,38 +45,11 @@ const cataloguePatchDraft: ToolDef = {
   name: 'inventory.catalogue.patchDraft',
   description:
     'Apply validated operations to a catalogue draft and preview publication compatibility.',
-  inputSchema: {
-    type: 'object',
-    properties: {
-      revision: { type: 'integer', minimum: 1, description: 'Draft revision' },
-      baseRevision: {
-        type: 'integer',
-        minimum: 1,
-        description: 'Published revision the draft is based on',
-      },
-      operations: {
-        type: 'array',
-        items: catalogueOperationSchema,
-        minItems: 1,
-        maxItems: 100,
-      },
-    },
-    required: ['revision', 'baseRevision', 'operations'],
-  },
+  inputSchema: catalogueDraftOperationInputSchema,
   handler: async (args) => {
-    const revision = requiredPositiveInteger(args, 'revision');
-    if (!revision.ok) return toolError(revision.error);
-    const baseRevision = requiredPositiveInteger(args, 'baseRevision');
-    if (!baseRevision.ok) return toolError(baseRevision.error);
-    const operations = requiredObjectArray(args, 'operations');
-    if (!operations.ok) return toolError(operations.error);
-    return mapCallResult(
-      await catalogueClient().manage.patchDraft({
-        revision: revision.value,
-        baseRevision: baseRevision.value,
-        operations: operations.value,
-      })
-    );
+    const input = catalogueDraftOperationInput(args);
+    if (!input.ok) return toolError(input.error);
+    return mapCallResult(await catalogueClient().manage.patchDraft(input.value));
   },
 };
 
@@ -161,6 +135,7 @@ export const catalogueTools: readonly ToolDef[] = [
   catalogueReadDraft,
   catalogueCreateDraft,
   cataloguePatchDraft,
+  cataloguePreviewDraft,
   cataloguePublishDraft,
   catalogueAbandonDraft,
 ];

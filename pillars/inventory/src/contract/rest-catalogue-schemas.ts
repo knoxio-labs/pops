@@ -171,4 +171,14 @@ export const CatalogueErrorBodySchema = ErrorBodySchema.extend({
     .optional(),
 });
 
+export const CataloguePreviewErrorBodySchema = CatalogueErrorBodySchema.extend({
+  preview: z
+    .object({
+      baseRevision: z.number().int().positive(),
+      draftRevision: z.number().int().positive(),
+      compatibility: CatalogueCompatibilitySchema,
+    })
+    .optional(),
+});
+
 export const CatalogueReadHeaders = z.object({ 'if-none-match': z.string().optional() });
