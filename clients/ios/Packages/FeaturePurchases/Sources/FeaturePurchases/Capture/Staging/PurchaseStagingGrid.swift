@@ -27,11 +27,7 @@ internal struct PurchaseStagingGrid: View {
         self.onReplace = onReplace
     }
 
-    private enum DropTarget: Hashable {
-        case page(String)
-        case receipt(String)
-        case loose
-    }
+    private typealias DropTarget = PurchaseStagingGridLogic.DropTarget
 
     private let columns = [
         GridItem(.flexible(), spacing: PopsSpacing.md, alignment: .top),
@@ -102,10 +98,9 @@ internal struct PurchaseStagingGrid: View {
 
     private var cancelButton: some View {
         Button("Cancel") {
-            if model.isEmpty {
-                onCancel()
-            } else {
-                discarding = true
+            switch PurchaseStagingGridLogic.cancel(isEmpty: model.isEmpty) {
+            case .leave: onCancel()
+            case .confirmDiscard: discarding = true
             }
         }
         .accessibilityIdentifier(PurchaseStagingAccessibility.cancel)
@@ -216,11 +211,7 @@ extension PurchaseStagingGrid {
     }
 
     private func note(_ over: Bool, as target: DropTarget) {
-        if over {
-            targeted = target
-        } else if targeted == target {
-            targeted = nil
-        }
+        targeted = PurchaseStagingGridLogic.highlight(after: over, on: target, current: targeted)
     }
 
     private var refusalPresented: Binding<Bool> {
