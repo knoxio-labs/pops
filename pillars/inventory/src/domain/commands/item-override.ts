@@ -1,9 +1,7 @@
 import { z } from 'zod';
 
-import {
-  currentAuthoritativeFieldValues,
-  requireActiveCatalogue,
-} from './active-catalogue-values.js';
+import { currentAuthoritativeFieldValues } from './active-catalogue-values.js';
+import { resolveCommandCatalogue, resolveCommandType } from './command-catalogue.js';
 import { requireItem } from './entities.js';
 import { CommandRejected } from './errors.js';
 import { defineOp } from './op.js';
@@ -26,11 +24,17 @@ function requireOverrideField(
     throw new CommandRejected('invalid', 'override mutations require catalogueRevision');
   }
   if (typeId === null) throw new CommandRejected('type_unknown', 'an untyped item has no fields');
-  const catalogue = requireActiveCatalogue(db, catalogueRevision);
-  const type = catalogue.types.find((candidate) => candidate.id === typeId);
-  if (type === undefined) throw new CommandRejected('type_unknown', `unknown type ${typeId}`);
-  const field = type.fields.find((candidate) => candidate.id === fieldId);
-  if (field === undefined) throw new CommandRejected('invalid', `field ${fieldId} is not declared`);
+  const type = resolveCommandType(resolveCommandCatalogue(db, catalogueRevision), typeId);
+  if (!type.authored.fields.some((candidate) => candidate.id === fieldId)) {
+    throw new CommandRejected('invalid', `field ${fieldId} is not declared`);
+  }
+  const field = type.active.fields.find((candidate) => candidate.id === fieldId);
+  if (field === undefined) {
+    throw new CommandRejected(
+      'catalogue_repair_required',
+      `field ${fieldId} is unavailable in the active catalogue; refresh and repair the mutation`
+    );
+  }
   if (field.storage !== 'computed' || !field.allowOverride) {
     throw new CommandRejected('invalid', `field ${fieldId} does not permit an override`);
   }

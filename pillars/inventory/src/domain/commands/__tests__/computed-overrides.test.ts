@@ -343,4 +343,59 @@ describe('computed field override commands', () => {
     expect(harness.item(itemId).revision).toBe(1);
     expect(readItemFieldValues(harness.db, itemId)).toHaveLength(1);
   });
+
+  it('rebases an override written against an older compatible revision', () => {
+    const harness = openHarness();
+    const catalogue = publishComputedType(harness);
+    const itemId = createItem(harness, catalogue);
+    const next = createCatalogueDraft(harness.db, catalogue.revision, AUTHOR);
+    const patched = patchCatalogueDraft(
+      harness.db,
+      {
+        revision: next.revision.revision,
+        baseRevision: catalogue.revision,
+        expectedDraftVersion: next.revision.draftVersion,
+      },
+      [{ kind: 'put_type', key: 'unrelated', label: 'Unrelated' }]
+    );
+    publishCatalogueDraft(
+      harness.db,
+      next.revision.revision,
+      {
+        baseRevision: catalogue.revision,
+        expectedDraftVersion: patched.draft.revision.draftVersion,
+        note: null,
+      },
+      AUTHOR
+    );
+
+    expect(
+      harness.run(
+        mutation(
+          'item.setOverride',
+          itemId,
+          { fieldId: catalogue.computedFieldId, values: [9] },
+          { baseRevision: 1, catalogueRevision: catalogue.revision }
+        )
+      )
+    ).toMatchObject({ status: 'applied', revision: 2 });
+  });
+
+  it('asks for a catalogue refresh when the override names a revision this server lacks', () => {
+    const harness = openHarness();
+    const catalogue = publishComputedType(harness);
+    const itemId = createItem(harness, catalogue);
+
+    expect(
+      harness.run(
+        mutation(
+          'item.setOverride',
+          itemId,
+          { fieldId: catalogue.computedFieldId, values: [9] },
+          { baseRevision: 1, catalogueRevision: catalogue.revision + 5 }
+        )
+      )
+    ).toMatchObject({ status: 'rejected', reason: 'catalogue_update_required' });
+    expect(harness.item(itemId).revision).toBe(1);
+  });
 });
