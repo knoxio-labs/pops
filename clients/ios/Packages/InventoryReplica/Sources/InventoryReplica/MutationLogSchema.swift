@@ -54,7 +54,7 @@ extension ReplicaSchema {
     /// moved past (``LogEntry/awaitingCatalogueAfter``). Null for every
     /// change that is not waiting on a catalogue.
     static func registerCatalogueUpdateHold(in migrator: inout DatabaseMigrator) {
-        migrator.registerMigration("v9_catalogue_update_hold") { db in
+        migrator.registerMigration("v10_catalogue_update_hold") { db in
             try db.execute(
                 sql:
                     "ALTER TABLE \(mutationLogTableName) ADD COLUMN awaiting_catalogue_after INTEGER"
