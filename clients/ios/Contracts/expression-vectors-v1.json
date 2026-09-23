@@ -3758,6 +3758,58 @@
       }
     },
     {
+      "name": "measurement units match by code unit, not canonical equivalence",
+      "expressionVersion": 1,
+      "expression": {
+        "op": "add",
+        "left": {
+          "op": "literal",
+          "value": {
+            "amount": "1",
+            "unit": "é"
+          }
+        },
+        "right": {
+          "op": "literal",
+          "value": {
+            "amount": "1",
+            "unit": "é"
+          }
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "measurement",
+        "fixedUnit": "é",
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": []
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["add", "literal"],
+        "evaluationErrorCode": "invalid_value",
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "unavailable",
+          "reason": "evaluation_error",
+          "failedFieldId": "00000000-0000-4000-8000-000000000201",
+          "dependencies": [],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
       "name": "equal integers",
       "expressionVersion": 1,
       "expression": {
@@ -3981,6 +4033,51 @@
           "catalogueRevision": 12,
           "state": "ok",
           "values": [true],
+          "dependencies": [],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "equal text compares code units, not canonical equivalence",
+      "expressionVersion": 1,
+      "expression": {
+        "op": "equal",
+        "left": {
+          "op": "literal",
+          "value": "é"
+        },
+        "right": {
+          "op": "literal",
+          "value": "é"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "boolean",
+        "fixedUnit": null,
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": []
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["equal", "literal"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": [false],
           "dependencies": [],
           "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
         }

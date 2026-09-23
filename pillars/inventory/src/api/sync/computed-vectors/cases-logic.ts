@@ -6,6 +6,10 @@ function compared(name: string, op: string, left: unknown, right: unknown): Expr
   return { name, expression: bin(op, lit(left), lit(right)), kind: 'boolean' };
 }
 
+/** "e" with an acute accent as one code point, and as "e" plus a combining accent. */
+const PRECOMPOSED = String.fromCodePoint(0xe9);
+const DECOMPOSED = `e${String.fromCodePoint(0x301)}`;
+
 const flagged = [root(field(FIELD.flag, true), field(FIELD.price, '2.50'))];
 
 /** Text, comparison, boolean and conditional nodes, including their short-circuits. */
@@ -21,11 +25,27 @@ export const LOGIC_CASES: readonly ExpressionVectorCase[] = [
     expression: bin('concat', lit('\u{1F4E6}'.repeat(100)), lit('\u{1F4E6}'.repeat(100))),
     kind: 'short_text',
   },
+  {
+    name: 'measurement units match by code unit, not canonical equivalence',
+    expression: bin(
+      'add',
+      lit({ amount: '1', unit: PRECOMPOSED }),
+      lit({ amount: '1', unit: DECOMPOSED })
+    ),
+    kind: 'measurement',
+    fixedUnit: PRECOMPOSED,
+  },
   compared('equal integers', 'equal', 3, 3),
   compared('equal decimals compare spelling, not magnitude', 'equal', '1.0', '1.00'),
   compared('equal booleans', 'equal', false, false),
   compared('equal enums', 'equal', { optionId: OPTION.red }, { optionId: OPTION.blue }),
   compared('equal text', 'equal', 'a', 'a'),
+  compared(
+    'equal text compares code units, not canonical equivalence',
+    'equal',
+    PRECOMPOSED,
+    DECOMPOSED
+  ),
   compared('equal measurements', 'equal', { amount: '2', unit: 'mm' }, { amount: '2', unit: 'mm' }),
   compared('equal references', 'equal', refTo(ITEM.a), refTo(ITEM.a)),
   compared('equal across kinds is false', 'equal', refTo(ITEM.a), { optionId: OPTION.red }),
