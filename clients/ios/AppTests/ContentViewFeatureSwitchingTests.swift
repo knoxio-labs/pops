@@ -22,6 +22,7 @@ internal enum ContentViewFixture {
     internal static func view(
         available: [MobileFeature],
         bootstrap: BootstrapPhase = .answered(.fresh),
+        captureAvailable: Bool = false,
         purchasesCaptureObserver: (@MainActor (Bool) -> Void)? = nil
     ) -> ContentView {
         let bound = AppComposition(
@@ -33,7 +34,8 @@ internal enum ContentViewFixture {
         )
         return ContentView(
             surface: FeatureSurface(
-                available: available, unavailable: [], bootstrap: bootstrap),
+                available: available, unavailable: [], bootstrap: bootstrap,
+                captureAvailable: captureAvailable),
             shell: bound.shell,
             composition: bound,
             purchasesCaptureObserver: purchasesCaptureObserver
@@ -102,6 +104,22 @@ internal struct ContentViewFeatureSwitchingTests {
     func zeroFeaturesRendersRealContent() throws {
         let light = try #require(Self.render(contentView(available: []), in: .light))
         let dark = try #require(Self.render(contentView(available: []), in: .dark))
+
+        #expect(light != dark, "the explanation renders identically in both colour schemes")
+    }
+
+    /// `.receiptCapture` is not in `RootFeature.renderable` — POPS-4294
+    /// retired its tab — so a `FeatureSurface` naming it alone (as one would
+    /// arrive if something upstream still put it in `available`) reaches
+    /// `screen(for:)`'s `default:` case exactly like any feature id this
+    /// build has no screen for. Named alone, that is the same
+    /// "nothing this build can show" state as an empty `available`, not a
+    /// lone screen of its own.
+    @Test("receipt-capture alone renders the nothing-available explanation, not a screen")
+    func receiptCaptureAloneRendersNothingAvailable() throws {
+        let light = try #require(
+            Self.render(contentView(available: [.receiptCapture]), in: .light))
+        let dark = try #require(Self.render(contentView(available: [.receiptCapture]), in: .dark))
 
         #expect(light != dark, "the explanation renders identically in both colour schemes")
     }

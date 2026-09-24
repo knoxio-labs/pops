@@ -7,7 +7,7 @@ import Testing
 /// absent from every fixture's `renderable` list below, the same way it is
 /// absent from `RootFeature.renderable`. What these prove is that the BFM's
 /// answer about it still reaches `FeatureSurface.captureAvailable` even
-/// though it never reaches `available` or gets a tab.
+/// though it never reaches `available` and so never earns a tab.
 @Suite("App shell capture availability")
 @MainActor
 internal struct AppShellCaptureAvailabilityTests {
@@ -72,7 +72,7 @@ internal struct AppShellCaptureAvailabilityTests {
     /// way it is absent from `RootFeature.renderable`, so it never becomes
     /// `available` and never earns a screen — Purchases' own tab is what
     /// would offer it, and Purchases is not among the features named here.
-    @Test("receipt-capture named alone leaves nothing available")
+    @Test("receipt-capture named alone leaves nothing available, though capture itself reads true")
     func receiptCaptureAloneIsNothingAvailable() async {
         let fixture = AppShellFixture(
             restored: .paired(device),

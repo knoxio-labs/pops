@@ -214,9 +214,9 @@ extension AppShellModel {
     /// of its own — POPS-4294 removed its tab, but the answer still needs to
     /// reach Purchases, which reads it to decide whether to offer capture at
     /// all. Read straight from the snapshot rather than through `named`
-    /// above: `named` is filtered to `renderableFeatures`, which is
-    /// deliberately every feature this build gives its own tab, and
-    /// `.receiptCapture` is not one of them.
+    /// above: `named` is filtered to `renderableFeatures`, and
+    /// `.receiptCapture` is deliberately not one of them — see
+    /// `RootFeature.renderable`'s own doc comment.
     private func captureAvailable(in snapshot: BootstrapSnapshot) -> Bool {
         snapshot.features.first { $0.id == .receiptCapture }?.reachability.isUsable ?? false
     }

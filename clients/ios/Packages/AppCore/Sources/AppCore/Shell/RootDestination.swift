@@ -38,9 +38,10 @@ public struct FeatureSurface: Hashable, Sendable {
     /// Whether the BFM says Purchases' own capture entry point is usable.
     ///
     /// `.receiptCapture` names a capability Purchases reads, not a screen —
-    /// it never appears in ``available`` or ``unavailable``, which are both
-    /// scoped to features this build gives their own tab. See
-    /// `AppShellModel.captureAvailable(in:)` for how this is derived.
+    /// deliberately absent from `RootFeature.renderable`, so it never reaches
+    /// ``available`` or ``unavailable``, both scoped to features this build
+    /// gives their own tab. See `AppShellModel.captureAvailable(in:)` for how
+    /// this is derived instead.
     public let captureAvailable: Bool
 
     public init(
