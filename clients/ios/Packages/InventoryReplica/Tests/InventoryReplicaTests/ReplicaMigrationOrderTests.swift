@@ -6,7 +6,7 @@ import Testing
 @Suite("Replica migration order")
 internal struct ReplicaMigrationOrderTests {
     @Test(
-        "a fresh replica applies the computed values, the update hold, the nullable revision, then the hold reason"
+        "a fresh replica applies the computed values, the update hold, the revision, the hold reason, then lineage"
     )
     func freshReplicaAppliesBoth() throws {
         let queue = try DatabaseQueue()
@@ -19,8 +19,9 @@ internal struct ReplicaMigrationOrderTests {
             let expected = [
                 "v8_computed_values", "v9_local_computed_values", "v10_catalogue_update_hold",
                 "v11_nullable_catalogue_revision", "v12_catalogue_hold_reason",
+                "v13_catalogue_lineage",
             ]
-            #expect(Array(applied.suffix(5)) == expected)
+            #expect(Array(applied.suffix(6)) == expected)
             #expect(try db.tableExists(ComputedValueRows.localTableName))
             #expect(try Self.mutationLogColumns(db).contains("awaiting_catalogue_after"))
         }

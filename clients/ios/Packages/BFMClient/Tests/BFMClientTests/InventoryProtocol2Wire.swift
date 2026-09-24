@@ -17,14 +17,15 @@ internal enum Protocol2Wire {
     internal static func field(
         id: String, key: String, label: String, kind: String = "measurement",
         storage: String = "stored", required: Bool = false, archivedAt: String? = nil,
-        sortOrder: Int = 0
+        replacedBy: String? = nil, sortOrder: Int = 0
     ) -> String {
         """
         {"id":"\(id)","typeId":"\(bulbType)","key":"\(key)","label":"\(label)","help":null,\
         "sortOrder":\(sortOrder),"kind":"\(kind)","cardinality":"one","required":\(required),\
         "storage":"\(storage)","fixedUnit":null,"referenceKinds":[],"referenceTypeIds":[],\
         "expressionVersion":null,"expression":null,"allowOverride":false,"presentation":{},\
-        "archivedAt":\(archivedAt.map { "\"\($0)\"" } ?? "null"),"enumOptions":[]}
+        "archivedAt":\(archivedAt.map { "\"\($0)\"" } ?? "null"),\
+        "replacedBy":\(replacedBy.map { "\"\($0)\"" } ?? "null"),"enumOptions":[]}
         """
     }
 
@@ -47,6 +48,16 @@ internal enum Protocol2Wire {
     /// `Lumens` archived and replaced by a new `Brightness` field.
     internal static let replacedFields = [
         field(id: lumens, key: "lumens", label: "Lumens", archivedAt: "2026-09-02T00:00:00.000Z"),
+        field(id: brightness, key: "brightness", label: "Brightness", sortOrder: 2),
+        efficacyField,
+    ]
+
+    /// `Lumens` archived with the catalogue recording the new `Brightness`
+    /// field, of the same kind, as its replacement.
+    internal static let lineageFields = [
+        field(
+            id: lumens, key: "lumens", label: "Lumens", archivedAt: "2026-09-02T00:00:00.000Z",
+            replacedBy: brightness),
         field(id: brightness, key: "brightness", label: "Brightness", sortOrder: 2),
         efficacyField,
     ]

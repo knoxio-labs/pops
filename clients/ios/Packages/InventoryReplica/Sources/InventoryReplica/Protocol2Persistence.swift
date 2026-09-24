@@ -10,10 +10,13 @@ private struct Protocol2FieldKinds {
 internal enum Protocol2CatalogueRows {
     static func store(_ catalogue: InventoryCatalogueSnapshot, in db: Database) throws {
         if let stored = try read(revision: catalogue.revision.revision, in: db) {
-            guard stored == catalogue.inStoredOrder else {
+            let incoming = catalogue.inStoredOrder
+            if stored == incoming { return }
+            guard stored.withLineage(from: incoming) == incoming else {
                 throw InventoryReplicaError.corruptValue(
                     "catalogue revision \(catalogue.revision.revision) changed")
             }
+            try CatalogueLineageRows.fill(stored, from: incoming, in: db)
             return
         }
         let revision = catalogue.revision
@@ -65,13 +68,13 @@ internal enum Protocol2CatalogueRows {
             sql: """
                 INSERT INTO catalogue_type
                     (revision, id, key, label, description, sort_order, capabilities,
-                     legacy_labels, presentation, archived_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     legacy_labels, presentation, archived_at, replaced_by)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
             arguments: [
                 revision, type.id, type.key, type.label, type.description, type.sortOrder,
                 try StoredJSON.encode(type.capabilities), try StoredJSON.encode(type.legacyLabels),
-                try StoredJSON.encode(type.presentation), type.archivedAt,
+                try StoredJSON.encode(type.presentation), type.archivedAt, type.replacedBy,
             ])
         for field in type.fields {
             try store(field, revision: revision, in: db)
@@ -86,8 +89,9 @@ internal enum Protocol2CatalogueRows {
                 INSERT INTO catalogue_field
                     (revision, id, type_id, key, label, help, sort_order, kind, cardinality,
                      required, storage, fixed_unit, reference_kinds, reference_type_ids,
-                     expression_version, expression, allow_override, presentation, archived_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     expression_version, expression, allow_override, presentation, archived_at,
+                     replaced_by)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
             arguments: [
                 revision, field.id, field.typeId, field.key, field.label, field.help,
@@ -97,6 +101,7 @@ internal enum Protocol2CatalogueRows {
                 try StoredJSON.encode(field.references.targetTypeIds.sorted()),
                 field.expressionVersion, try field.expression.map(StoredJSON.encode),
                 field.allowOverride, try StoredJSON.encode(field.presentation), field.archivedAt,
+                field.replacedBy,
             ])
         for option in field.enumOptions {
             try db.execute(
@@ -134,7 +139,8 @@ internal enum Protocol2CatalogueRows {
                 [String].self, from: try row.decode(forColumn: "legacy_labels")),
             presentation: try StoredJSON.decode(
                 InventoryJSON.self, from: try row.decode(forColumn: "presentation")),
-            archivedAt: try row.decode(forColumn: "archived_at"))
+            archivedAt: try row.decode(forColumn: "archived_at"),
+            replacedBy: try row.decode(forColumn: "replaced_by"))
     }
 
     private static func field(
@@ -169,6 +175,7 @@ internal enum Protocol2CatalogueRows {
             presentation: try StoredJSON.decode(
                 InventoryJSON.self, from: try row.decode(forColumn: "presentation")),
             archivedAt: try row.decode(forColumn: "archived_at"),
+            replacedBy: try row.decode(forColumn: "replaced_by"),
             enumOptions: try optionRows.map {
                 InventoryCatalogueOption(
                     id: try $0.decode(forColumn: "id"), key: try $0.decode(forColumn: "key"),

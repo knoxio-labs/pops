@@ -150,6 +150,31 @@ internal struct CatalogueRevisionReplayTests {
     }
 
     @Test(
+        "update required and N+1 records a replacement for the field: the change moves onto it and is sent"
+    )
+    func updateRequiredMovesOntoRecordedReplacement() async throws {
+        let harness = try LocalFirstHarness()
+        try await harness.downloadLamp()
+        await harness.publish(revision: 3, fields: Protocol2Wire.lineageFields)
+        await harness.server.onMutations { sent in
+            sent.allSatisfy { $0.catalogueRevision == 3 }
+                ? applied(sent) : rejected(sent, reason: "catalogue_update_required")
+        }
+
+        _ = try await harness.store.perform(try LocalFirstHarness.editLumens())
+        await harness.store.synchronize()
+
+        let sent = await harness.server.mutations
+        #expect(sent.map(\.mutationId) == ["m1", "m2"])
+        #expect(sent.map(\.catalogueRevision) == [2, 3])
+        #expect(sent.first?.args.contains(Protocol2Wire.lumens) == true)
+        #expect(sent.last?.args.contains(Protocol2Wire.brightness) == true)
+        #expect(sent.last?.args.contains(Protocol2Wire.lumens) == false)
+        #expect(try harness.ledger.waiting.isEmpty)
+        #expect(try harness.ledger.repairs.isEmpty)
+    }
+
+    @Test(
         "repair required from the server opens the catalogue repair, which retries once the field is back"
     )
     func repairRequiredThenRetry() async throws {

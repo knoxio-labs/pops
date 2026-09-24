@@ -4,8 +4,8 @@ import AppCore
 /// replaced and onto their replacements, when the replacement accepts them.
 ///
 /// "Accepts" is the rule the server's own compatibility check applies to a
-/// field that keeps its identity across revisions (`immutableShapeChanged`
-/// in the inventory pillar's `catalogue/compatibility-fields.ts`): the same
+/// field that keeps its identity across revisions (`sameFieldShape` in the
+/// inventory pillar's `catalogue/compatibility-fields.ts`): the same
 /// kind, cardinality, storage, fixed unit and reference constraint. A value
 /// is never converted: a replacement in another unit, or of another kind,
 /// refuses, and the change goes to repair with the value struck through.
@@ -51,6 +51,35 @@ internal struct CatalogueReplacement {
             }
         }
         return Moved(command: command, refused: refused)
+    }
+
+    /// The replacements `target` records for the type and fields `command`
+    /// writes, where the authored revision still had them live: the lineage
+    /// a move tries when the server named none, as when it could not judge
+    /// the change's revision at all. A cleared field is never replaced.
+    func recorded(for command: InventoryCommand) -> [InventoryCatalogueChange] {
+        let revision = target.revision.revision
+        var changes: [InventoryCatalogueChange] = []
+        if let typeId = command.protocol2TypeId,
+            authored?.types.first(where: { $0.id == typeId })?.archivedAt == nil,
+            let replacement = target.replacingType(typeId)
+        {
+            changes.append(
+                InventoryCatalogueChange(
+                    definition: .type, id: typeId, typeId: typeId, change: .replaced,
+                    replacementId: replacement.id, revision: revision))
+        }
+        for fieldId in command.protocol2WrittenFieldIds
+        where field(fieldId, in: authored)?.archivedAt == nil {
+            guard let replaced = field(fieldId, in: target),
+                let replacement = target.replacingField(fieldId)
+            else { continue }
+            changes.append(
+                InventoryCatalogueChange(
+                    definition: .field, id: fieldId, typeId: replaced.typeId, fieldId: fieldId,
+                    change: .replaced, replacementId: replacement.id, revision: revision))
+        }
+        return changes
     }
 
     private func movedField(
@@ -100,7 +129,7 @@ internal struct CatalogueReplacement {
         snapshot?.types.lazy.flatMap(\.fields).first { $0.id == id }
     }
 
-    /// The server's `immutableShapeChanged`, negated.
+    /// The server's `sameFieldShape`.
     static func sameShape(_ lhs: InventoryCatalogueField, _ rhs: InventoryCatalogueField) -> Bool {
         lhs.kind == rhs.kind && lhs.cardinality == rhs.cardinality && lhs.storage == rhs.storage
             && lhs.fixedUnit == rhs.fixedUnit && lhs.references == rhs.references
@@ -115,6 +144,16 @@ extension InventoryCommand {
         case .createProtocol2Item(let item): item.typeId
         case .changeProtocol2ItemType(_, _, let typeId, _): typeId
         default: nil
+        }
+    }
+
+    /// Every field a protocol-2 command writes a value to, leaving out the
+    /// fields an edit clears.
+    var protocol2WrittenFieldIds: [String] {
+        switch self {
+        case .editProtocol2Item(_, _, let patches):
+            patches.filter { $0.values != nil }.map(\.fieldId)
+        default: protocol2FieldIds
         }
     }
 
