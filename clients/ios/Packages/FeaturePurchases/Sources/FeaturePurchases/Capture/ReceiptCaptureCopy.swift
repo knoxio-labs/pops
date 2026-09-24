@@ -5,34 +5,7 @@ import Foundation
 /// and `FeaturePairing`: the app has no localisation layer, and copy
 /// scattered through a view makes adding one a hunt.
 internal enum ReceiptCaptureCopy {
-    /// The tab's own name rather than a description of the button under it.
-    /// A screen titled after its one control tells a reader what will happen
-    /// when they press it and nothing about where they are.
-    internal static let title = "Receipts"
-    internal static let instruction =
-        "Photograph a receipt and it's read into a purchase — merchant, items and total."
-    internal static let captureButton = "Photograph a receipt"
     internal static let captureAnother = "Photograph another receipt"
-    /// The manual-entry action (POPS-2454) — a purchase with no receipt to
-    /// photograph. Offered beside the camera button rather than behind it:
-    /// it needs no camera and is not a fallback for one being unavailable.
-    internal static let addPurchase = "Add a purchase"
-    internal static let doneAddingPurchase = "Done"
-
-    // MARK: getting a readable photograph
-
-    /// What actually decides whether the reading comes back usable, said
-    /// before the photograph rather than after it fails.
-    ///
-    /// Three, and no more: this is the screen's second-most-important content
-    /// and a list long enough to scroll is one nobody reads. Each is paired
-    /// with a glyph in ``ReceiptCapturePrompt`` — the symbol names live there
-    /// because they are pictures rather than words.
-    internal static let guidanceTitle = "For a clean read"
-    internal static let guidanceFlat = "Lay it flat and fill the frame."
-    internal static let guidanceLight = "Even light, no shadow across the print."
-    internal static let guidanceLongReceipt =
-        "A long receipt is several photos, top to bottom — they're read as one."
 
     // MARK: camera refusals
 
@@ -125,9 +98,6 @@ internal enum ReceiptFailureCategory: Hashable {
 /// screens: this one is read from a ``ReceiptOutcome`` the server produced,
 /// the other from what the camera and the person in front of it did.
 internal enum ReceiptResultCopy {
-    internal static let submitting = "Reading your receipt…"
-    internal static let retry = "Retry"
-
     /// The heading over the photographs themselves. They sit above every
     /// outcome, because the paper is the thing all three are about and only
     /// the commentary underneath changes.
@@ -179,14 +149,6 @@ internal enum ReceiptResultCopy {
         }
     }
 
-    /// The label beside the figure on the confirmation card. Named rather
-    /// than reusing ``FieldLabel/total``: that set describes a *reading* the
-    /// gate refused, and this one describes a purchase that was written.
-    internal static let createdTotalLabel = "Total"
-    internal static func purchasedOn(_ formattedDate: String) -> String {
-        "Dated \(formattedDate)"
-    }
-
     // MARK: needs review
 
     internal static let needsReviewHeading = "Needs a closer look"
@@ -212,24 +174,7 @@ internal enum ReceiptResultCopy {
             "This receipt has more than one problem, so nothing was recorded. "
             + "Check the details below, then enter it manually or retake the photo."
     }
-    internal static let needsReviewWhatWeRead = "What was read"
-    internal static let needsReviewWhatFailed = "Why it needs review"
-
-    /// How a line item's quantity and unit note are folded into one aside
-    /// beside the amount, so the description column stays a column.
-    internal static func lineNote(quantity: Int?, unitNote: String?) -> String? {
-        let parts =
-            [
-                quantity.map { "×\($0)" },
-                unitNote?.trimmingCharacters(in: .whitespacesAndNewlines),
-            ]
-            .compactMap { $0 }
-            .filter { !$0.isEmpty }
-        return parts.isEmpty ? nil : parts.joined(separator: " ")
-    }
-
-    /// The labels on the table under ``needsReviewWhatWeRead``. Nested rather
-    /// than prefixed so the set reads as one table, matching
+    /// The labels on the table under the reading, matching
     /// `TransactionsCopy.FieldLabel`.
     internal enum FieldLabel {
         internal static let merchant = "Merchant"
@@ -240,7 +185,6 @@ internal enum ReceiptResultCopy {
         internal static let discounts = "Discounts"
         internal static let surcharges = "Surcharges"
         internal static let shipping = "Shipping"
-        internal static let unreadableNotes = "Could not be read"
     }
 
     // MARK: unreadable
@@ -248,9 +192,6 @@ internal enum ReceiptResultCopy {
     internal static let unreadableHeading = "Couldn't read this receipt"
     internal static let unreadableMessage =
         "Retake the photo — a flatter angle or better light usually fixes this."
-    internal static func unreadableReason(_ reason: String) -> String {
-        "Details: \(reason)"
-    }
 
     // MARK: photo count
 
@@ -320,11 +261,4 @@ internal enum ReceiptResultCopy {
             return "Pops is not set up correctly on this device."
         }
     }
-
-    // MARK: save
-
-    /// The alert title for a `saveDraft` or `createManualPurchase` failure —
-    /// shared by the gateway-failure banner and the field-validation one, so
-    /// the two read as the same kind of interruption to the same form.
-    internal static let saveFailedTitle = "Couldn't save"
 }

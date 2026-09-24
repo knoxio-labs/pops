@@ -11,7 +11,7 @@
     /// something a host-toolchain test could pass against. Every *decision* this
     /// feature makes about pages — how many are too many, what a page that
     /// could not be prepared means — lives outside this file, in
-    /// ``ReceiptCaptureViewModel`` and ``ReceiptPageBudget``.
+    /// ``ReceiptStagingConversion`` and ``ReceiptPageBudget``.
     internal enum ReceiptPageEncoder {
         /// Every page that could be prepared, in the order given.
         ///

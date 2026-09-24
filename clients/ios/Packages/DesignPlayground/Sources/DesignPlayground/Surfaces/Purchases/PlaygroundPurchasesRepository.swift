@@ -26,8 +26,8 @@ internal struct PlaygroundPurchasesRepository: PurchasesRepository {
             // Never answers, so the stage holds on the loading state. A
             // `Task.sleep` rather than a continuation nobody resumes, because
             // leaving the state cancels the task and the model treats that as
-            // the non-event it is — the same shape `ReceiptCapturePreviews`
-            // uses for the same reason.
+            // the non-event it is — the same shape this package's other
+            // playground repositories use for the same reason.
             try await Task.sleep(for: .seconds(3_600))
         }
         if let failure {

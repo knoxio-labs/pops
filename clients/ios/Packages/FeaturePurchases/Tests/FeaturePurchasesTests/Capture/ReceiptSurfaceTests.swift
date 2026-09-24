@@ -6,56 +6,10 @@ import Testing
 
 @testable import FeaturePurchases
 
-/// What the design pass added, asserted as values rather than as pixels.
-///
-/// Every claim here is one a render comparison could only make where the
-/// colour catalogue compiled, and several are ones it could not make at all —
-/// two screens that differ by a glyph and a colour rasterise identically on a
-/// lane where no token resolves, which is exactly how "the three outcomes look
-/// different" can be green while all three are the same grey card.
-@Suite("Receipt surface")
-internal struct ReceiptSurfaceTests {
-    private static let presentation = ReceiptResultPresentation()
-
-    private static func content(_ outcome: ReceiptOutcome) -> ReceiptResultContent {
-        presentation.content(outcome)
-    }
-
-    /// The distinction the tri-state rests on, carried by something other
-    /// than prose. A reader who has just pressed a button is scanning.
-    @Test("the three outcomes open in three different tones")
-    func outcomesCarryDistinctTones() {
-        let tones = [
-            Self.content(.created(purchase: .fake(), alreadyStored: false)).tone,
-            Self.content(.needsReview(receiptCount: 1, failures: [.fake()], extracted: .fake()))
-                .tone,
-            Self.content(.unreadable(receiptCount: 1, reason: "blank")).tone,
-        ]
-
-        #expect(Set(tones).count == tones.count)
-    }
-
-    /// `needsReview` is a purchase waiting for a person, not a failure.
-    /// Drawing it in the same tone as `unreadable` would tell a reader their
-    /// money is gone when it is sitting there needing a decision.
-    @Test("needs-review is not toned as a failure")
-    func needsReviewIsNotAFailure() {
-        let needsReview = Self.content(
-            .needsReview(receiptCount: 1, failures: [.fake()], extracted: .fake())
-        ).tone
-        let unreadable = Self.content(.unreadable(receiptCount: 1, reason: "blank")).tone
-
-        #expect(needsReview == .warning)
-        #expect(unreadable == .danger)
-    }
-
-    @Test("a written purchase is toned as one")
-    func createdIsToneSuccess() {
-        #expect(Self.content(.created(purchase: .fake(), alreadyStored: false)).tone == .success)
-    }
-}
-
-/// The refusals, as the redesigned screen draws them.
+/// Presentation odds and ends that outlived the single-receipt capture and
+/// result screens (POPS-4295): the refusals a camera can report, which media
+/// types draw as a photograph, the capture screen's problem copy, and the one
+/// layout rule a line item and a receipt line share.
 ///
 /// `CameraRefusalTests` next door holds the rule about which of them earns a
 /// trip to Settings. This holds what the design pass added: each refusal now
@@ -152,21 +106,6 @@ internal struct ReceiptPagesTests {
                 != ReceiptPageMedia.placeholderSymbol(for: photo))
     }
 
-    /// The pages the result screen draws are the ones that were submitted —
-    /// the model keeps them after the call, which is the whole reason the
-    /// photograph can sit above the reading.
-    @MainActor
-    @Test("the result screen's model keeps the pages it sent")
-    func theModelKeepsItsPages() {
-        let parts = [
-            ReceiptPart(mediaType: .jpeg, data: Data("one".utf8)),
-            ReceiptPart(mediaType: .jpeg, data: Data("two".utf8)),
-        ]
-        let model = ReceiptResultViewModel(parts: parts, dependencies: .unbound)
-
-        #expect(model.parts == parts)
-    }
-
     /// One page or five, the pages read as pages rather than as "photo 1 of
     /// 1", which is a count nobody needs.
     @Test("a single page is not announced as one of one")
@@ -178,10 +117,6 @@ internal struct ReceiptPagesTests {
 }
 
 /// The words the capture screen shows when a scan produced no receipt.
-///
-/// `ReceiptCaptureRenderingTests.problemsAreDistinct` makes the same claim by
-/// rasterising, and disables itself where the colour catalogue did not
-/// compile. Four sentences are four sentences on every lane.
 @Suite("Capture problem copy")
 internal struct ReceiptCaptureProblemCopyTests {
     private static let everyProblem: [ReceiptCaptureProblem] = [

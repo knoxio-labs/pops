@@ -4,7 +4,7 @@ import DesignSystem
 /// Why the camera cannot be opened, how to say so, and whether Settings can
 /// undo it.
 ///
-/// One value rather than three branches inside ``ReceiptCapturePrompt``. Which
+/// One value rather than branches inside whichever view presents it. Which
 /// refusals are worth sending somebody to Settings for is a fact about the
 /// camera states, not about the layout, and holding it here is what lets it be
 /// asserted without rasterising a screen — the render comparisons cannot see
