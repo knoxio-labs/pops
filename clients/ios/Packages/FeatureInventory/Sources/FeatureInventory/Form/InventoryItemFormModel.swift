@@ -103,7 +103,7 @@ internal final class InventoryItemFormModel {
         switch request {
         case .create(let placement):
             draft = InventoryItemDraft(id: mintId(), placement: placement ?? .hand)
-        case .edit(let id):
+        case .edit(let id), .labelling(let id):
             draft = InventoryItemDraft(id: id)
         case .repair:
             draft = InventoryItemDraft(id: "")
@@ -279,7 +279,7 @@ extension InventoryItemFormModel {
                     type: type, catalogueRevision: catalogue.revision.revision)
             }
             phase = .ready
-        case .edit:
+        case .edit, .labelling:
             guard let item = context.item else {
                 phase = .unavailable
                 return
