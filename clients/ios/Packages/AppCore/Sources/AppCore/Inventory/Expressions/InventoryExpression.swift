@@ -65,8 +65,8 @@ public indirect enum InventoryExpression: Hashable, Sendable {
     }
 
     /// The expression versions this build evaluates: the server's
-    /// `EXPRESSION_VERSIONS`. Version 2 shares version 1's grammar and derives
-    /// and converts measurement units (ADR-002 D5).
+    /// `EXPRESSION_VERSIONS`. Version 2 shares version 1's grammar, derives
+    /// and converts measurement units, and compares decimals by value (ADR-002 D5).
     public static let supportedVersions: Set<Int> = [1, 2]
 
     /// Parses stored expression JSON exactly as the server's `parseExpression`
