@@ -36,7 +36,7 @@ public final class PurchaseStagingModel {
     internal var receipts: [StagedReceipt] { staged.receipts }
     internal var everyPage: [StagedPage] { staged.everyPage }
     internal var count: Int { staged.count }
-    internal var isEmpty: Bool { staged.isEmpty }
+    internal var isEmpty: Bool { staged.isEmpty && pending.isEmpty }
     internal var canRead: Bool {
         !staged.isEmpty
             && pending.allSatisfy {
@@ -168,7 +168,7 @@ public final class PurchaseStagingModel {
         switch result {
         case .success(let page):
             pending.remove(at: index)
-            staged.add([page])
+            if !replaceIfPending(with: page) { staged.add([page]) }
         case .failure(let reason):
             pending[index].phase = .failed(reason: reason)
         }

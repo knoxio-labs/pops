@@ -191,7 +191,8 @@ internal struct PurchaseStagingModelTests {
             (URL(fileURLWithPath: "/picked/receipt.docx"), Data([1, 2, 3]))
         ])
 
-        #expect(model.isEmpty)
+        #expect(!model.isEmpty)
+        #expect(model.everyPage.isEmpty)
         #expect(model.pending.count == 1)
         #expect(model.pending[0].label == "receipt.docx")
         #expect(model.pending[0].phase == .failed(reason: .unsupportedType))
