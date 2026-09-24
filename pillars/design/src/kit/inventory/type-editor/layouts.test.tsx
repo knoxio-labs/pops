@@ -12,6 +12,21 @@ describe('FocusedEditor publish state', () => {
     expect(screen.getByText('Cardinality cannot change in place')).toBeInTheDocument();
     expect(screen.queryByText(/no migration required/u)).toBeNull();
     expect(screen.queryByText('Review migration')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Create replacement field' })).toBeNull();
+  });
+
+  it('names the MCP replacement route instead of leaving a dead end', () => {
+    render(<FocusedEditor mode="replacement" />);
+
+    expect(screen.getByText('Create a replacement, then migrate through MCP')).toBeInTheDocument();
+    expect(screen.getByText('inventory.catalogue.patchDraft')).toBeInTheDocument();
+    expect(screen.getByText('archive_field')).toBeInTheDocument();
+    expect(screen.getByText('replacedBy')).toBeInTheDocument();
+    expect(screen.getByText('inventory.catalogue.publishDraft')).toBeInTheDocument();
+    expect(screen.getByText(/\+ Field/u)).toBeInTheDocument();
+    expect(screen.getByText(/held for repair/u)).toBeInTheDocument();
+    expect(screen.queryByText(/no migration required/u)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Create replacement field' })).toBeNull();
   });
 
   it('offers direct publishing for a compatible edit', () => {
