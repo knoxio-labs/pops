@@ -88,6 +88,7 @@ export function useCatalogueEditor() {
     isPending,
     patchDraft,
     previewOperation: cataloguePreview.preview,
+    recheckCompatibility: cataloguePreview.recheck,
     published: publishedQuery.data,
     publishDraft,
     reload: async () => {

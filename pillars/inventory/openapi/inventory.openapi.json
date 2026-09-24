@@ -15168,7 +15168,6 @@
                       ]
                     },
                     "maxItems": 100,
-                    "minItems": 1,
                     "type": "array"
                   }
                 },
@@ -15690,7 +15689,7 @@
             "description": "409"
           }
         },
-        "summary": "Validate draft operations and preview compatibility without mutating the draft",
+        "summary": "Validate draft operations and preview compatibility without mutating the draft; an empty operations array re-checks the current draft as it stands",
         "tags": ["types", "manage"]
       }
     },

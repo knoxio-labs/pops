@@ -49,6 +49,7 @@ function renderPanel(
 ) {
   const onPublish = vi.fn();
   const onReload = vi.fn();
+  const onRecheck = vi.fn();
   render(
     <PublishPanel
       catalogue={catalogue}
@@ -58,9 +59,10 @@ function renderPanel(
       onAbandon={vi.fn()}
       onPublish={onPublish}
       onReload={onReload}
+      onRecheck={onRecheck}
     />
   );
-  return { onPublish, onReload };
+  return { onPublish, onReload, onRecheck };
 }
 
 describe('PublishPanel', () => {
@@ -104,6 +106,15 @@ describe('PublishPanel', () => {
     expect(screen.getByRole('button', { name: 'Review and publish' })).toBeDisabled();
     expect(screen.getByText('Not yet previewed')).toBeInTheDocument();
     expect(screen.queryByText('Passed')).not.toBeInTheDocument();
+  });
+
+  it('lets a stale preview re-check the persisted draft without repeating the edit', () => {
+    const { onRecheck } = renderPanel({ readiness: { status: 'stale' } });
+
+    expect(screen.getByText(/Recheck or repeat the edit/u)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Recheck' }));
+
+    expect(onRecheck).toHaveBeenCalledTimes(1);
   });
 
   it('blocks publication when the last preview no longer matches the current draft', () => {
