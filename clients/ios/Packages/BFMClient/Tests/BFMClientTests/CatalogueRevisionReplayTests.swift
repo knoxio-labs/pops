@@ -224,4 +224,45 @@ internal struct CatalogueRevisionReplayTests {
         #expect(try harness.ledger.waiting.map(\.receipt.mutationId) == ["m2"])
         #expect(try harness.ledger.repairs.isEmpty)
     }
+
+    /// POPS-4405 remaining gap: a queued edit that names a reference target
+    /// gone stale by the time it replays (the target was deleted, or its
+    /// type no longer satisfies the field, after the catalogue itself moved
+    /// on). The server has no schema-level repair to offer for this, so it
+    /// refuses outright rather than folding it into `catalogue_repair_required`;
+    /// the phone opens the generic repair, which only lets the change go
+    /// (ADR-002 open question 1) and never applies the stale value.
+    @Test(
+        "a queued edit whose reference target was deleted opens a repair that only lets it go, across a catalogue change",
+        arguments: ["target_missing", "reference_type_mismatch"]
+    )
+    func staleReferenceTargetOpensLetGoOnlyRepair(reason: String) async throws {
+        let harness = try LocalFirstHarness()
+        try await harness.downloadLamp()
+        await harness.publish(revision: 3, fields: Protocol2Wire.renamedFields)
+        await harness.server.onMutations { rejected($0, reason: reason) }
+
+        _ = try await harness.store.perform(try LocalFirstHarness.editLumens())
+        await harness.store.synchronize()
+
+        let repair = try #require(try harness.ledger.repairs.first)
+        #expect(repair.kind == .unrecognised(reason))
+        #expect(try harness.ledger.waiting.isEmpty)
+
+        let beforeLetGo = try harness.replica.read(.item(id: Protocol2Wire.lampId))
+        let lumensBefore = beforeLetGo?.fieldValues.first {
+            $0.fieldId == Protocol2Wire.lumens && $0.source == .stored
+        }
+        #expect(lumensBefore?.state == .value([.measurement(amount: try InventoryDecimal("800"), unit: "lm")]))
+
+        try await harness.store.resolve(repair.id, with: .discardMine)
+
+        #expect(try harness.ledger.repairs.isEmpty)
+        #expect(try harness.ledger.resolved.first?.outcome == "Let go")
+        let afterLetGo = try harness.replica.read(.item(id: Protocol2Wire.lampId))
+        let lumensAfter = afterLetGo?.fieldValues.first {
+            $0.fieldId == Protocol2Wire.lumens && $0.source == .stored
+        }
+        #expect(lumensAfter?.state == .value([.measurement(amount: try InventoryDecimal("800"), unit: "lm")]))
+    }
 }
