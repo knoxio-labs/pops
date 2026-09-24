@@ -222,6 +222,31 @@ describe('inventory catalogue draft management', () => {
     expect(types.manage.patchDraft).not.toHaveBeenCalled();
   });
 
+  it('re-checks the current draft with an empty operations array, unlike patchDraft', async () => {
+    const preview = await tool('inventory.catalogue.previewDraft').handler({
+      revision: 5,
+      baseRevision: 4,
+      expectedDraftVersion: 3,
+      operations: [],
+    });
+    const patch = await tool('inventory.catalogue.patchDraft').handler({
+      revision: 5,
+      baseRevision: 4,
+      expectedDraftVersion: 3,
+      operations: [],
+    });
+
+    expect(preview.isError).toBeFalsy();
+    expect(types.manage.previewDraft).toHaveBeenCalledWith({
+      revision: 5,
+      baseRevision: 4,
+      expectedDraftVersion: 3,
+      operations: [],
+    });
+    expect(patch.isError).toBe(true);
+    expect(types.manage.patchDraft).not.toHaveBeenCalled();
+  });
+
   it('publishes with nullable notes, protocol gates, and a migration intact', async () => {
     const migration = {
       name: 'rename_voltage',

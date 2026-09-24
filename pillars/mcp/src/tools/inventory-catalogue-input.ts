@@ -43,16 +43,25 @@ export function optionalPositiveInteger(
   return { ok: true, value };
 }
 
+/** Parses an array whose members are JSON-style objects, at least `minLength` long. */
+export function objectArray(
+  args: Record<string, unknown>,
+  key: string,
+  minLength: number
+): Parsed<Record<string, unknown>[]> {
+  const value = args[key];
+  if (!Array.isArray(value) || value.length < minLength || !value.every(isRecord)) {
+    return { ok: false, error: `Missing or invalid required field: ${key}` };
+  }
+  return { ok: true, value };
+}
+
 /** Parses a non-empty array whose members are JSON-style objects. */
 export function requiredObjectArray(
   args: Record<string, unknown>,
   key: string
 ): Parsed<Record<string, unknown>[]> {
-  const value = args[key];
-  if (!Array.isArray(value) || value.length === 0 || !value.every(isRecord)) {
-    return { ok: false, error: `Missing or invalid required field: ${key}` };
-  }
-  return { ok: true, value };
+  return objectArray(args, key, 1);
 }
 
 /** Parses an optional JSON-style object from an MCP argument bag. */

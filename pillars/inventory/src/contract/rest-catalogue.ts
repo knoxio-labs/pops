@@ -93,7 +93,7 @@ export const inventoryCatalogueContract = c.router({
       body: z.object({
         baseRevision: z.number().int().positive(),
         expectedDraftVersion: ExpectedDraftVersionSchema,
-        operations: z.array(CatalogueDraftOperationSchema).min(1).max(100),
+        operations: z.array(CatalogueDraftOperationSchema).max(100),
       }),
       responses: {
         200: z.object({
@@ -106,7 +106,8 @@ export const inventoryCatalogueContract = c.router({
         404: CatalogueErrorBodySchema,
         409: CataloguePreviewErrorBodySchema,
       },
-      summary: 'Validate draft operations and preview compatibility without mutating the draft',
+      summary:
+        'Validate draft operations and preview compatibility without mutating the draft; an empty operations array re-checks the current draft as it stands',
     },
     publishDraft: {
       method: 'POST',

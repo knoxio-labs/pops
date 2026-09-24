@@ -1151,7 +1151,7 @@ export const typesManageAbandonDraft = <ThrowOnError extends boolean = false>(
   });
 
 /**
- * Validate draft operations and preview compatibility without mutating the draft
+ * Validate draft operations and preview compatibility without mutating the draft; an empty operations array re-checks the current draft as it stands
  */
 export const typesManagePreviewDraft = <ThrowOnError extends boolean = false>(
   options: Options<TypesManagePreviewDraftData, ThrowOnError>

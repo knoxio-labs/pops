@@ -912,7 +912,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Validate draft operations and preview compatibility without mutating the draft */
+    /** Validate draft operations and preview compatibility without mutating the draft; an empty operations array re-checks the current draft as it stands */
     post: operations['types.manage.previewDraft'];
     delete?: never;
     options?: never;
