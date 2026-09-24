@@ -53,6 +53,10 @@
       "types": "./dist/testing/index.d.ts",
       "default": "./dist/testing/index.js"
     },
+    "./testing/api-mock": {
+      "types": "./dist/testing/api-mock/index.d.ts",
+      "default": "./dist/testing/api-mock/index.js"
+    },
     "./capabilities": {
       "types": "./dist/capabilities/index.d.ts",
       "default": "./dist/capabilities/index.js"

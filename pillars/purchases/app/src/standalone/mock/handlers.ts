@@ -5,8 +5,7 @@ import { PRODUCT_DICTIONARY } from '../fixtures/product-dictionary';
 import { RECEIPT_DRAFT } from '../fixtures/receipt-draft';
 import { RECONCILE_QUEUE } from '../fixtures/reconcile-queue';
 
-import type { MockHandler } from './install';
-import type { OperationKey } from './router';
+import type { MockHandler, MockHandlers } from '@pops/pillar-sdk/testing/api-mock';
 
 /**
  * One handler per operation the purchases OpenAPI document declares.
@@ -34,7 +33,7 @@ const ok =
 /** `{ ok: true }`, the contract's answer for a write with nothing to report. */
 const acknowledged: MockHandler = () => ({ body: { ok: true } });
 
-export const handlers: Readonly<Record<OperationKey, MockHandler>> = {
+export const handlers: MockHandlers = {
   // ── Reconcile ────────────────────────────────────────────────────────────
   'GET /reconcile/queue': ok(RECONCILE_QUEUE),
   'GET /reconcile/links': ok({ purchases: [] }),

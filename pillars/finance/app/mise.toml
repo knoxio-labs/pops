@@ -11,6 +11,10 @@ run = "oxlint src && oxfmt --check ."
 [tasks.build]
 run = "pnpm run build:remote"
 
+[tasks."dev:standalone"]
+description = "Run the finance app on its own, with mock data"
+run = "pnpm run dev:standalone"
+
 [env]
 # mise's `_.path` interpolates `config_root` per config FILE, so the root
 # mise.toml only ever contributes the workspace-hoisted bin dir — this unit's

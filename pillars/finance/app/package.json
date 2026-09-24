@@ -10,6 +10,8 @@
   "scripts": {
     "build": "pnpm run build:remote",
     "build:remote": "tsx scripts/build-remote.ts",
+    "dev:standalone": "vite --config vite.standalone.config.ts",
+    "build:standalone": "vite build --config vite.standalone.config.ts",
     "typecheck": "node ../../../scripts/require-built-graph.mjs && tsc --noEmit",
     "test": "node ../../../scripts/require-built-graph.mjs && vitest run",
     "test:coverage": "node ../../../scripts/require-built-graph.mjs && vitest run --coverage",
@@ -51,6 +53,7 @@
   "devDependencies": {
     "@hey-api/openapi-ts": "^0.99.0",
     "@storybook/react-vite": "^10.6.0",
+    "@tailwindcss/vite": "4.3.3",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.7",

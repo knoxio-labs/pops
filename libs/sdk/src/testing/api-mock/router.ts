@@ -1,30 +1,29 @@
 /**
- * Matching a request onto one of the pillar's contract operations.
+ * Matching a request onto one of a pillar's contract operations.
  *
  * The mock layer is keyed by the operations the OpenAPI document declares —
  * `'GET /purchases/{id}'` — rather than by whatever the app happens to call,
- * so the coverage test can compare the two sets and a new endpoint cannot ship
- * without a fixture. That means the request path has to be matched back onto a
- * template, which is this module.
+ * so the coverage check can compare the two sets and a new endpoint cannot
+ * ship without a fixture. That means the request path has to be matched back
+ * onto a template, which is this module.
  */
 
 /** `'<METHOD> <path template>'`, exactly as the OpenAPI document spells it. */
 export type OperationKey = string;
 
+/** The operation a request resolved to, with the path parameters it bound. */
 export interface MatchedOperation {
   readonly key: OperationKey;
   /** Path parameters, by the name the template gives them. */
   readonly params: Readonly<Record<string, string>>;
 }
 
-/** `'GET /purchases/{id}'` → `{ method: 'GET', segments: [...] }`. */
 function parseKey(key: OperationKey): { method: string; segments: string[] } | undefined {
   const [method, path] = key.split(' ');
   if (method === undefined || path === undefined || !path.startsWith('/')) return undefined;
   return { method: method.toUpperCase(), segments: path.split('/').slice(1) };
 }
 
-/** The parameter name a template segment declares, or `undefined` if literal. */
 function parameterName(segment: string): string | undefined {
   return segment.startsWith('{') && segment.endsWith('}') ? segment.slice(1, -1) : undefined;
 }
@@ -66,8 +65,8 @@ function matchTemplate(
 }
 
 /**
- * The operation a method and path resolve to, or `undefined` when the contract
- * declares none — which the caller reports rather than guessing at.
+ * The operation a method and path resolve to, or `undefined` when none of
+ * `keys` accepts them — which the caller reports rather than guessing at.
  *
  * @param method HTTP method, any case.
  * @param path Request path with the API base prefix already removed.

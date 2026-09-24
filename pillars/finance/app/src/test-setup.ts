@@ -1,9 +1,6 @@
 import '@testing-library/jest-dom/vitest';
 
-import { createInstance } from 'i18next';
-import { initReactI18next } from 'react-i18next';
-
-import enAUFinance from './locales/en-AU.json';
+import { createFinanceI18n } from './app-i18n';
 
 // jsdom ships neither ResizeObserver nor Element.scrollIntoView; cmdk and the
 // Radix popover/select primitives use both on mount.
@@ -14,17 +11,4 @@ globalThis.ResizeObserver ??= class ResizeObserver {
 };
 Element.prototype.scrollIntoView ??= function scrollIntoView() {};
 
-const i18n = createInstance();
-
-void i18n.use(initReactI18next).init({
-  lng: 'en-AU',
-  fallbackLng: 'en-AU',
-  ns: ['finance'],
-  defaultNS: 'finance',
-  interpolation: { escapeValue: false },
-  resources: {
-    'en-AU': {
-      finance: enAUFinance,
-    },
-  },
-});
+createFinanceI18n();

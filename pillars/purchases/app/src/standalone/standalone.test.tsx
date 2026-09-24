@@ -4,13 +4,13 @@ import { Suspense } from 'react';
 import { createMemoryRouter, Outlet, RouterProvider } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { installApiMock, type MockHandler } from '@pops/pillar-sdk/testing/api-mock';
 import { TooltipProvider } from '@pops/ui';
 
 import { client as purchasesApiClient } from '../purchases-api/client.gen';
 import { routes } from '../routes';
 import { ORDER_ID } from './fixtures/order';
 import { handlers } from './mock/handlers';
-import { installPurchasesApiMock } from './mock/install';
 
 /**
  * The standalone harness, booted the way `main.tsx` boots it.
@@ -79,7 +79,7 @@ describe('purchases standalone, on mocks alone', () => {
   });
 
   function withMocks(): void {
-    uninstall = installPurchasesApiMock({ handlers });
+    uninstall = installApiMock({ handlers, baseUrl: '/purchases-api' });
   }
 
   it('renders the reconcile queue from fixture charges', async () => {
@@ -158,9 +158,13 @@ describe('purchases standalone, on mocks alone', () => {
   it('renders the page error path when an operation has no mock', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const unhandled = vi.fn();
-    const withoutQueue: Record<string, (typeof handlers)[string]> = { ...handlers };
+    const withoutQueue: Record<string, MockHandler> = { ...handlers };
     delete withoutQueue['GET /reconcile/queue'];
-    uninstall = installPurchasesApiMock({ handlers: withoutQueue, onUnhandled: unhandled });
+    uninstall = installApiMock({
+      handlers: withoutQueue,
+      baseUrl: '/purchases-api',
+      onUnhandled: unhandled,
+    });
 
     renderStandaloneAt('/purchases');
 
