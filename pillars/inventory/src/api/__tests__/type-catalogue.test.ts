@@ -91,6 +91,49 @@ describe('type catalogue owner API', () => {
     expect(cached.status).toBe(304);
   });
 
+  it('moves the ETag once a draft publishes, and keeps the old one stale', async () => {
+    const api = apiFor('web');
+    const before = await api.get('/type-catalogue');
+    const oldEtag = before.headers.etag;
+    if (oldEtag === undefined) throw new Error('catalogue response did not include an ETag');
+
+    const created = await api
+      .post('/type-catalogue/drafts')
+      .send({ baseRevision: before.body.revision.revision });
+    expect(created.status, JSON.stringify(created.body)).toBe(201);
+    const patched = await api
+      .patch(`/type-catalogue/drafts/${created.body.revision.revision}`)
+      .send({
+        baseRevision: before.body.revision.revision,
+        expectedDraftVersion: created.body.revision.draftVersion,
+        operations: [{ kind: 'put_type', key: 'etag-probe', label: 'ETag probe' }],
+      });
+    expect(patched.status, JSON.stringify(patched.body)).toBe(200);
+    const published = await api
+      .post(`/type-catalogue/drafts/${created.body.revision.revision}/publish`)
+      .send({
+        baseRevision: before.body.revision.revision,
+        expectedDraftVersion: patched.body.draft.revision.draftVersion,
+      });
+    expect(published.status, JSON.stringify(published.body)).toBe(200);
+
+    const after = await api.get('/type-catalogue');
+    const newEtag = after.headers.etag;
+    if (newEtag === undefined) throw new Error('catalogue response did not include an ETag');
+
+    expect(newEtag).not.toBe(oldEtag);
+    expect(newEtag).toBe(`"catalogue-${after.body.revision.revision}"`);
+    expect(after.body.revision.revision).toBeGreaterThan(before.body.revision.revision);
+
+    const cachedOnNew = await api.get('/type-catalogue').set('If-None-Match', newEtag);
+    expect(cachedOnNew.status).toBe(304);
+
+    const cachedOnOld = await api.get('/type-catalogue').set('If-None-Match', oldEtag);
+    expect(cachedOnOld.status).toBe(200);
+    expect(cachedOnOld.body.revision.revision).toBe(after.body.revision.revision);
+    expect(cachedOnOld.headers.etag).toBe(newEtag);
+  });
+
   it('requires an owner identity for catalogue reads and authoring', async () => {
     const api = apiFor('none');
 
