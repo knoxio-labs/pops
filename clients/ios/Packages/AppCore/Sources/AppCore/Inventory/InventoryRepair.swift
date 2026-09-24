@@ -27,8 +27,13 @@ public enum InventorySyncSource: Hashable, Sendable {
 /// A change the server refused outright (a `rejected` outcome) has no
 /// approved repair of its own, so it is `unrecognised` too, carrying the
 /// rejection's reason, and offers only Let go. The exceptions are
-/// `media_missing` on a photo attach, which is `photoFailed`, and
-/// `catalogue_repair_required`, which is `catalogueChanged`.
+/// `media_missing` on a photo attach, which is `photoFailed`;
+/// `catalogue_repair_required`, which is `catalogueChanged`; and
+/// `target_missing` or `reference_type_mismatch` on a protocol-2 new item,
+/// edit or type change that carries a reference value, which is
+/// `catalogueChanged` too, so Edit item can point the reference elsewhere
+/// (``InventoryCatalogueRepair/staleReference``). Any other `target_missing`,
+/// such as a move to a place that no longer exists, stays `unrecognised`.
 public enum InventoryRepairKind: Hashable, Sendable {
     /// The same field was changed here and elsewhere.
     case conflict
@@ -38,9 +43,13 @@ public enum InventoryRepairKind: Hashable, Sendable {
     case deletedElsewhere
     /// A photo taken here could not be uploaded.
     case photoFailed
-    /// A field or type the change used was archived or replaced after it was
-    /// made. Keeping this phone's side sends it again against the current
-    /// definitions, which the replica checks first; letting go drops it.
+    /// A queued item change no longer fits what it was written against: a
+    /// field or type it used was archived or replaced after it was made, or
+    /// a record one of its reference values names is gone or no longer of a
+    /// type the field allows. Keeping this phone's side sends it again
+    /// against the current definitions, which the replica checks first;
+    /// replacing it sends the change as Edit item reworked it; letting go
+    /// drops it.
     case catalogueChanged
     case unrecognised(String)
 
@@ -116,6 +125,26 @@ public struct InventoryRepair: Identifiable, Hashable, Sendable {
     }
 }
 
+/// Why the server refused a reference value a queued change carried. The
+/// refusal does not say which value, so the phone judges each one against
+/// the records it holds.
+public enum InventoryStaleReference: Hashable, Sendable {
+    /// `target_missing`: the record is deleted, or the server never had it.
+    case targetMissing
+    /// `reference_type_mismatch`: the record's type is not one the field
+    /// allows.
+    case typeNotAllowed
+
+    /// The stale reference `reason` names, or nil for any other refusal.
+    public init?(_ reason: InventoryRejectedReason) {
+        switch reason {
+        case .targetMissing: self = .targetMissing
+        case .referenceTypeMismatch: self = .typeNotAllowed
+        default: return nil
+        }
+    }
+}
+
 /// A `catalogueChanged` repair's change, what stands in its way, and
 /// whether this phone's fields have moved since it opened.
 public struct InventoryCatalogueRepair: Hashable, Sendable {
@@ -123,21 +152,26 @@ public struct InventoryCatalogueRepair: Hashable, Sendable {
     public let queued: InventoryCommand?
     /// What the server (or the replica moving the change itself) named as
     /// standing in its way, first cause first. Empty from a server that
-    /// predates naming them.
+    /// predates naming them, and for a stale reference.
     public let changes: [InventoryCatalogueChange]
     /// The catalogue revision this phone held when the repair opened.
     public let openedAtRevision: Int?
     /// The catalogue revision this phone holds now.
     public let currentRevision: Int?
+    /// Set when the server refused one of the change's reference values
+    /// rather than a definition it used; nil otherwise.
+    public let staleReference: InventoryStaleReference?
 
     public init(
         queued: InventoryCommand?, changes: [InventoryCatalogueChange],
-        openedAtRevision: Int?, currentRevision: Int?
+        openedAtRevision: Int?, currentRevision: Int?,
+        staleReference: InventoryStaleReference? = nil
     ) {
         self.queued = queued
         self.changes = changes
         self.openedAtRevision = openedAtRevision
         self.currentRevision = currentRevision
+        self.staleReference = staleReference
     }
 
     /// Whether the fields changed since the repair opened, which is the only
@@ -159,7 +193,8 @@ public enum InventoryRepairChoice: Hashable, Sendable {
     /// `catalogueChanged`.
     case keepMine(code: String? = nil)
     /// Send `command` in place of this phone's change, in its place in the
-    /// queue: a `catalogueChanged` change edited against the current fields.
+    /// queue: a `catalogueChanged` change edited against the current fields
+    /// and records (Edit item).
     case replaceMine(InventoryCommand)
     /// Discard this phone's value: rebases on the server's value
     /// (`conflict`), drops the code (`codeCollision`), lets the deletion

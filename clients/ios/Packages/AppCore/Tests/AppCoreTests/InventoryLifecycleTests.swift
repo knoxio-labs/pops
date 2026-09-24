@@ -118,4 +118,14 @@ internal struct InventoryWireDecodingTests {
     func unknownRejectedReasonIsKept() {
         #expect(InventoryRejectedReason(wire: "quota_exceeded") == .unrecognised("quota_exceeded"))
     }
+
+    @Test("only a refused reference value names a stale reference")
+    func staleReferenceReasons() {
+        #expect(InventoryRejectedReason(wire: "reference_type_mismatch") == .referenceTypeMismatch)
+        #expect(InventoryStaleReference(.targetMissing) == .targetMissing)
+        #expect(InventoryStaleReference(.referenceTypeMismatch) == .typeNotAllowed)
+        #expect(InventoryStaleReference(.catalogueRepairRequired) == nil)
+        #expect(InventoryStaleReference(.invalid) == nil)
+        #expect(InventoryStaleReference(.unrecognised("reference_missing")) == nil)
+    }
 }

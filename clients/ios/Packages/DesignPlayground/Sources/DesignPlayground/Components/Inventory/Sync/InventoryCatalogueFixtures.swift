@@ -93,10 +93,36 @@ internal enum InventoryCatalogueFixtures {
             ],
             retry: .sends, definitionsChanged: true))
 
+    /// An edit whose reference names a record deleted before it was sent.
+    internal static let recordGone = InventoryRepair(
+        id: "extension-lead-plugged", recordID: "extension-lead", kind: .catalogueChanged,
+        problem: "Powers links to a record no longer in Inventory",
+        catalogue: InventoryCatalogueChange(
+            title: "Queued edit",
+            values: [
+                InventoryQueuedValue(field: "Powers", value: "Desk lamp", fit: .recordGone),
+                InventoryQueuedValue(field: "Length", value: "5 m"),
+            ],
+            retry: .refused(
+                "Powers still links to a record no longer in Inventory, so nothing was sent.")))
+
+    /// An edit whose reference names a record the field no longer takes.
+    internal static let recordNotAllowed = InventoryRepair(
+        id: "hdmi-connected", recordID: "hdmi", kind: .catalogueChanged,
+        problem: "Connected to no longer allows Router",
+        catalogue: InventoryCatalogueChange(
+            title: "Queued edit",
+            values: [
+                InventoryQueuedValue(
+                    field: "Connected to", value: "Router", fit: .recordNotAllowed),
+                InventoryQueuedValue(field: "Length", value: "2 m"),
+            ],
+            retry: .refused("Connected to still does not allow Router, so nothing was sent.")))
+
     /// Every catalogue repair the surface stages.
     internal static let everyRepair: [InventoryRepair] = [
         shieldingArchived, shieldingAfterChange, screenReplaced, typeReplaced, optionRetired,
-        nowRequired, fieldsNotHere, fieldsArrived,
+        nowRequired, fieldsNotHere, fieldsArrived, recordGone, recordNotAllowed,
     ]
 
     /// Several changes the same catalogue publish left behind at once.

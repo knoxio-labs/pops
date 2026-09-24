@@ -12,6 +12,10 @@ internal enum InventoryFieldFit: Hashable, Sendable {
     case nowRequired
     /// Named by a newer catalogue that has not reached this phone.
     case notOnPhone
+    /// A reference to a record that is no longer in Inventory.
+    case recordGone
+    /// A reference to a record whose type the field no longer allows.
+    case recordNotAllowed
 
     internal var symbol: InventorySymbol {
         switch self {
@@ -20,6 +24,8 @@ internal enum InventoryFieldFit: Hashable, Sendable {
         case .replaced, .changedKind: .replaced
         case .nowRequired: .required
         case .notOnPhone: .newerFields
+        case .recordGone: .lost
+        case .recordNotAllowed: .unavailable
         }
     }
 
@@ -34,10 +40,15 @@ internal enum InventoryFieldFit: Hashable, Sendable {
         case .changedKind(let kind): "Now \(kind)"
         case .nowRequired: "Required"
         case .notOnPhone: "Not here yet"
+        case .recordGone: "Gone"
+        case .recordNotAllowed: "Not allowed"
         }
     }
 
     internal var blocks: Bool { self != .fits }
+
+    /// Whether the value names a record the field can no longer take.
+    internal var isStaleReference: Bool { self == .recordGone || self == .recordNotAllowed }
 }
 
 /// One field of a queued change and the value it carried.

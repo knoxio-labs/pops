@@ -123,6 +123,7 @@ extension InventoryRejectedReason {
         case .typeUnknown: "type_unknown"
         case .cycle: "cycle"
         case .targetMissing: "target_missing"
+        case .referenceTypeMismatch: "reference_type_mismatch"
         case .notContainer: "not_container"
         case .hasContents: "has_contents"
         case .illegalTransition: "illegal_transition"

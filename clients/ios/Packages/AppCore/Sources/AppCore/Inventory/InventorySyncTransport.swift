@@ -39,6 +39,9 @@ public enum InventoryRejectedReason: Hashable, Sendable {
     case typeUnknown
     case cycle
     case targetMissing
+    /// A reference value names a live record whose type the field does not
+    /// allow.
+    case referenceTypeMismatch
     case notContainer
     case hasContents
     case illegalTransition
@@ -59,6 +62,7 @@ public enum InventoryRejectedReason: Hashable, Sendable {
         case "type_unknown": self = .typeUnknown
         case "cycle": self = .cycle
         case "target_missing": self = .targetMissing
+        case "reference_type_mismatch": self = .referenceTypeMismatch
         case "not_container": self = .notContainer
         case "has_contents": self = .hasContents
         case "illegal_transition": self = .illegalTransition

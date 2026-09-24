@@ -57,6 +57,9 @@ internal enum InventoryCatalogueRepairSurface {
             repairState("now-required", "Field now required", Fixtures.nowRequired),
             repairState("fields-not-here", "Fields not on this phone", Fixtures.fieldsNotHere),
             repairState("fields-arrived", "Fields arrived", Fixtures.fieldsArrived),
+            repairState("record-gone", "Linked record gone", Fixtures.recordGone),
+            repairState(
+                "record-not-allowed", "Linked record not allowed", Fixtures.recordNotAllowed),
             repairState(
                 "blocked-after-change", "Fields changed, still archived",
                 Fixtures.shieldingAfterChange),

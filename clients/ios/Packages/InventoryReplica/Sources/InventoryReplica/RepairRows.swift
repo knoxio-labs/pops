@@ -30,7 +30,9 @@ internal enum StoredRepairKind: String {
     /// photo, which Retry and Remove settle. A change that no longer fits
     /// the active catalogue (`catalogue_repair_required`) is
     /// `catalogueChanged`, which can be sent again against the current
-    /// definitions. Every other refusal is let go.
+    /// definitions or edited. So is an item change whose reference value the
+    /// server refused (`target_missing`, `reference_type_mismatch`), which
+    /// Edit item can point elsewhere. Every other refusal is let go.
     init?(_ outcome: StoredOutcome, command: LoggedCommand) {
         switch outcome {
         case .conflictField: self = .field
@@ -41,13 +43,22 @@ internal enum StoredRepairKind: String {
                 StagedUploadFailure.photoRejectionReasons.contains(reason)
             {
                 self = .photoFailed
-            } else if reason == InventoryRejectedReason.catalogueRepairRequired.storageValue {
+            } else if reason == InventoryRejectedReason.catalogueRepairRequired.storageValue
+                || Self.refusesReference(reason, of: command)
+            {
                 self = .catalogueChanged
             } else {
                 self = .rejected
             }
         case .applied, .deferred: return nil
         }
+    }
+
+    private static func refusesReference(_ reason: String, of command: LoggedCommand) -> Bool {
+        guard InventoryStaleReference(InventoryRejectedReason(wire: reason)) != nil,
+            case .command(let command) = command
+        else { return false }
+        return command.carriesReferenceValue
     }
 }
 
@@ -116,9 +127,14 @@ extension StoredRepair {
         guard kind == .catalogueChanged else { return nil }
         var queued: InventoryCommand?
         if case .command(let command)? = command { queued = command }
+        var staleReference: InventoryStaleReference?
+        if case .rejected(let reason, _, _) = payload.outcome {
+            staleReference = InventoryStaleReference(InventoryRejectedReason(wire: reason))
+        }
         return InventoryCatalogueRepair(
             queued: queued, changes: payload.outcome.catalogueChanges,
-            openedAtRevision: payload.openedAtRevision, currentRevision: currentRevision)
+            openedAtRevision: payload.openedAtRevision, currentRevision: currentRevision,
+            staleReference: staleReference)
     }
 
     fileprivate static func rejectedKind(_ kind: StoredRepairKind, reason: String)

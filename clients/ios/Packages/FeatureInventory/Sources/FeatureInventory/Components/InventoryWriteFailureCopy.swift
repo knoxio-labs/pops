@@ -47,7 +47,8 @@ extension InventoryCopy {
             "The item's fields changed since this was opened. Sync, then try again."
         case .catalogueRepairRequired:
             "A field this change used was archived or replaced, so nothing changed."
-        case .invalid, .unrecognised: "The server would not take that change. Nothing changed."
+        case .invalid, .referenceTypeMismatch, .unrecognised:
+            "The server would not take that change. Nothing changed."
         }
     }
 
