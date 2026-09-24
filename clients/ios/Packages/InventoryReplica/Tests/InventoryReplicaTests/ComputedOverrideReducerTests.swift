@@ -6,11 +6,11 @@ import Testing
 
 @Suite("Local reducer: computed-field overrides")
 internal struct ComputedOverrideReducerTests {
-    private static let lamp = "20000000-0000-4000-8000-000000000002"
-    private static let fieldId = CommandVectorDecoding.computedFieldId
-    private static let time = CommandVectorDecoding.clock
+    static let lamp = "20000000-0000-4000-8000-000000000002"
+    static let fieldId = CommandVectorDecoding.computedFieldId
+    static let time = CommandVectorDecoding.clock
 
-    private static func replica(allowOverride: Bool = true) throws -> InventoryReplica {
+    static func replica(allowOverride: Bool = true) throws -> InventoryReplica {
         let replica = try InventoryReplica(now: { time })
         try replica.store(CommandVectorDecoding.catalogue)
         try replica.apply(
@@ -45,7 +45,7 @@ internal struct ComputedOverrideReducerTests {
             ])
     }
 
-    private static func rejection(_ body: () throws -> Void) -> InventoryRejectedReason? {
+    static func rejection(_ body: () throws -> Void) -> InventoryRejectedReason? {
         do {
             try body()
             return nil

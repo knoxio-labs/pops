@@ -26,8 +26,7 @@ function previewBody(preview: ComputedFieldPreview): PreviewBody {
       result: {
         ...evaluated,
         state: result.state,
-        reason: result.reason,
-        missing: result.missing.map((entry) => ({ ...entry })),
+        missingInputs: result.missingInputs.map((entry) => ({ ...entry })),
       },
     };
   if (result.state === 'value')

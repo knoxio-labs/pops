@@ -24,18 +24,23 @@ internal struct InventoryItemFormView: View {
     /// Whether the discard confirmation is already up, so the moment can be
     /// looked at rather than performed.
     internal let cancelling: Bool
+    /// Edit item on a catalogue repair: the queued values the current fields
+    /// no longer take, listed struck through under the form.
+    internal let notCarried: [InventoryQueuedValue]
     @State private var typeName: String
 
     internal init(
         draft: InventoryDraft,
         mode: InventoryItemFormMode = .create,
         showsValidation: Bool = false,
-        cancelling: Bool = false
+        cancelling: Bool = false,
+        notCarried: [InventoryQueuedValue] = []
     ) {
         self.draft = draft
         self.mode = mode
         self.showsValidation = showsValidation
         self.cancelling = cancelling
+        self.notCarried = notCarried
         _typeName = State(initialValue: draft.typeName ?? InventoryFormType.none)
     }
 
@@ -48,6 +53,7 @@ internal struct InventoryItemFormView: View {
             }
             identity
             labelling
+            InventoryFormNotCarriedSection(values: notCarried)
         }
         .inventoryMotion(value: typeName)
         .playgroundInsetGroupedList()

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { currentAuthoritativeFieldValues } from './active-catalogue-values.js';
+import { catalogueChange } from './catalogue-change-reasons.js';
 import { resolveCommandCatalogue, resolveCommandType } from './command-catalogue.js';
 import { requireItem } from './entities.js';
 import { CommandRejected } from './errors.js';
@@ -15,17 +16,31 @@ const fieldIdSchema = z.string().uuid();
 const setOverrideArgs = z.object({ fieldId: fieldIdSchema, values: z.array(z.json()).length(1) });
 const clearOverrideArgs = z.object({ fieldId: fieldIdSchema });
 
-function requireOverrideField(
-  db: CommandDb,
-  catalogueRevision: number | undefined,
-  typeId: string | null,
-  fieldId: string
-): PersistedItemTypeField {
+type OverrideOperation = 'set' | 'clear';
+
+interface OverrideFieldRequest {
+  readonly db: CommandDb;
+  readonly catalogueRevision: number | undefined;
+  readonly typeId: string | null;
+  readonly fieldId: string;
+  readonly operation: OverrideOperation;
+}
+
+/**
+ * Resolves the field an override mutation targets. Clearing an override only
+ * ever moves an item toward its computed value, so it stays permitted even
+ * once a later catalogue revision turns `allowOverride` off for a field some
+ * item still holds an override for; setting a new override still requires
+ * `allowOverride`.
+ */
+function requireOverrideField(request: OverrideFieldRequest): PersistedItemTypeField {
+  const { db, catalogueRevision, typeId, fieldId, operation } = request;
   if (catalogueRevision === undefined) {
     throw new CommandRejected('invalid', 'override mutations require catalogueRevision');
   }
   if (typeId === null) throw new CommandRejected('type_unknown', 'an untyped item has no fields');
-  const type = resolveCommandType(resolveCommandCatalogue(db, catalogueRevision), typeId);
+  const resolution = resolveCommandCatalogue(db, catalogueRevision);
+  const type = resolveCommandType(resolution, typeId);
   if (!type.authored.fields.some((candidate) => candidate.id === fieldId)) {
     throw new CommandRejected('invalid', `field ${fieldId} is not declared`);
   }
@@ -33,10 +48,18 @@ function requireOverrideField(
   if (field === undefined) {
     throw new CommandRejected(
       'catalogue_repair_required',
-      `field ${fieldId} is unavailable in the active catalogue; refresh and repair the mutation`
+      `field ${fieldId} is unavailable in the active catalogue; refresh and repair the mutation`,
+      [
+        catalogueChange(
+          [resolution.active, resolution.authored],
+          fieldId,
+          'not_in_revision',
+          resolution.active.revision.revision
+        ),
+      ]
     );
   }
-  if (field.storage !== 'computed' || !field.allowOverride) {
+  if (field.storage !== 'computed' || (operation === 'set' && !field.allowOverride)) {
     throw new CommandRejected('invalid', `field ${fieldId} does not permit an override`);
   }
   return field;
@@ -65,12 +88,13 @@ export const itemSetOverride = defineOp({
   args: setOverrideArgs,
   plan(ctx, target, args) {
     const row = requireItem(target);
-    const field = requireOverrideField(
-      ctx.db,
-      ctx.mutation.catalogueRevision,
-      row.typeId,
-      args.fieldId
-    );
+    const field = requireOverrideField({
+      db: ctx.db,
+      catalogueRevision: ctx.mutation.catalogueRevision,
+      typeId: row.typeId,
+      fieldId: args.fieldId,
+      operation: 'set',
+    });
     return {
       eventKind: 'override_set',
       changes: overrideChanges(ctx.db, row.id, field, args.values),
@@ -90,12 +114,13 @@ export const itemClearOverride = defineOp({
   args: clearOverrideArgs,
   plan(ctx, target, args) {
     const row = requireItem(target);
-    const field = requireOverrideField(
-      ctx.db,
-      ctx.mutation.catalogueRevision,
-      row.typeId,
-      args.fieldId
-    );
+    const field = requireOverrideField({
+      db: ctx.db,
+      catalogueRevision: ctx.mutation.catalogueRevision,
+      typeId: row.typeId,
+      fieldId: args.fieldId,
+      operation: 'clear',
+    });
     return {
       eventKind: 'override_cleared',
       changes: overrideChanges(ctx.db, row.id, field, null),

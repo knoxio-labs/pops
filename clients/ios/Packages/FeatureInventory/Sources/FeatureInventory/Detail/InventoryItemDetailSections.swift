@@ -68,11 +68,17 @@ internal struct InventoryItemDetailFieldsSection: View {
     @ViewBuilder internal var body: some View {
         if !fields.isEmpty {
             InventoryItemDetailGroup("Details") {
-                ForEach(fields) {
+                ForEach(fields) { field in
                     InventoryPropertyLine(
-                        key: $0.label, value: $0.value,
-                        tone: $0.source.isMuted ? .popsMutedForeground : .popsForeground,
-                        caption: $0.source.caption)
+                        key: field.label, value: field.value,
+                        tone: field.source.isMuted ? .popsMutedForeground : .popsForeground,
+                        caption: field.source.caption)
+                    if !field.missingInputs.isEmpty {
+                        InventoryMissingInputsList(
+                            inputs: field.missingInputs, alignment: .trailing
+                        )
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                    }
                 }
             }
         }
@@ -94,7 +100,12 @@ internal struct InventoryItemDetailSyncBanner: View {
                     PopsNotice(
                         symbol: InventorySymbol.attention.system, tint: .popsDestructive,
                         text: conflict.problem)
-                    if let resolution = conflict.resolution {
+                    if let resolution = conflict.resolution, conflict.opensRepair {
+                        NavigationLink(resolution, value: InventoryRoute.repair(conflict.repairId))
+                            .font(.popsSubheadline.weight(.semibold))
+                            .inventoryGlassButton()
+                            .tint(.popsInventory)
+                    } else if let resolution = conflict.resolution {
                         Button(resolution, action: resolve)
                             .font(.popsSubheadline.weight(.semibold))
                             .inventoryGlassButton()

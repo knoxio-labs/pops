@@ -43,7 +43,7 @@ export function applyDraftOperations(
   const base = requireCatalogue(db, baseRevision, ['published']);
   const previewCompatibility = assessCatalogueCompatibility(db, base, draft);
   try {
-    validateCatalogue(draft);
+    validateCatalogue(draft, base);
   } catch (error) {
     if (error instanceof CatalogueApiError) {
       throw new CatalogueApiError(error.status, error.code, error.message, {

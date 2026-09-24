@@ -55,6 +55,40 @@ caller, so driven on its own it would fail on the ones nobody passed it.
 secondary-feature route through More consistent across healthy and error-state
 flows that need the Transactions screen.
 
+## The acceptance flow, kept out of the glob
+
+`acceptance/inventory-user-defined-type.yaml` is scenario S8 of the
+inventory-types acceptance suite (POPS-4354): an owner publishes a
+user-defined type with a stored `Price` and a computed `Doubled price`
+(`scripts/ios-e2e/inventory-user-type.mjs`, reached through the control
+plane's `POST /__e2e/inventory/user-defined-type`), then the flow syncs it,
+creates an item of it through the form's generic fields, waits for the
+computed value, edits it with every relayed sync request failing, and waits
+for the edit to replay.
+
+It sits one directory down so the lane's glob never drives it. Run it with
+the rest of the suite, which records it as evidence:
+
+```bash
+mise run inventory:acceptance -- --ios
+```
+
+or on its own through the lane, which runs exactly the flows it is given:
+
+```bash
+POPS_E2E_FLOWS=.maestro/acceptance/inventory-user-defined-type.yaml mise run e2e:ios
+```
+
+It has been driven on a simulator and passed (POPS-4508). It stays out of
+the lane's glob on purpose, not only until a run passed: it boots the real
+inventory pillar on top of everything `mise run e2e:ios` already starts, and
+runs a couple of minutes longer than any flow in the glob, for a scenario
+`inventory-smoke.yaml` already covers the happy path of. Folding it in would
+add that cost to every one of the ten flows above, on every change, whether
+or not it touches inventory types. It belongs to POPS-4354's acceptance
+suite, not the general UI smoke lane, which is exactly what
+`mise run inventory:acceptance -- --ios` already treats it as.
+
 ## Why Maestro and not XCUITest
 
 Decided 2026-08-10. Recorded here so it is not reopened every time someone

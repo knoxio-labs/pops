@@ -43,13 +43,14 @@ export function optionalPositiveInteger(
   return { ok: true, value };
 }
 
-/** Parses a non-empty array whose members are JSON-style objects. */
-export function requiredObjectArray(
+/** Parses an array whose members are JSON-style objects, at least `minLength` long. */
+export function objectArray(
   args: Record<string, unknown>,
-  key: string
+  key: string,
+  minLength: number
 ): Parsed<Record<string, unknown>[]> {
   const value = args[key];
-  if (!Array.isArray(value) || value.length === 0 || !value.every(isRecord)) {
+  if (!Array.isArray(value) || value.length < minLength || !value.every(isRecord)) {
     return { ok: false, error: `Missing or invalid required field: ${key}` };
   }
   return { ok: true, value };

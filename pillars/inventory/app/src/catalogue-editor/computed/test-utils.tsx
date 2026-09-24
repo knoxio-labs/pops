@@ -73,6 +73,7 @@ function field(typeId: string, shape: FieldShape, sortOrder: number): CatalogueF
     presentation: {},
     referenceKinds: [],
     referenceTypeIds: [],
+    replacedBy: null,
     required: false,
     sortOrder,
     storage: 'stored',
@@ -92,6 +93,7 @@ function type(id: string, label: string, fields: readonly FieldShape[]): Catalog
     label,
     legacyLabels: [],
     presentation: {},
+    replacedBy: null,
     revision: 3,
     sortOrder: 0,
   };
@@ -119,6 +121,7 @@ export function catalogueTypes(volume: Partial<CatalogueField> = {}): CatalogueT
     type('box', 'Storage box', [
       { id: 'width', label: 'Width', kind: 'measurement', fixedUnit: 'cm' },
       { id: 'height', label: 'Height', kind: 'measurement', fixedUnit: 'cm' },
+      { id: 'depth', label: 'Depth', kind: 'measurement', fixedUnit: 'cm' },
       { id: 'label', label: 'Label', kind: 'short_text' },
       { id: 'count', label: 'Count', kind: 'integer' },
       { id: 'fragile', label: 'Fragile', kind: 'boolean' },

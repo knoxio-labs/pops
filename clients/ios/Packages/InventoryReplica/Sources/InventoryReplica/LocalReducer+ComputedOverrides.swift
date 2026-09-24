@@ -9,7 +9,7 @@ extension LocalReducer {
         throws -> Written
     {
         let before = try liveItem(id)
-        let (field, revision) = try overridableField(of: before, fieldId: fieldId)
+        let (field, revision) = try overridableField(of: before, fieldId: fieldId, operation: .set)
         guard primitiveKind(of: value, matches: field.kind) else {
             throw refusal(.invalid, "field \(fieldId) does not hold a \(field.kind.rawValue)")
         }
@@ -25,7 +25,7 @@ extension LocalReducer {
 
     func clearComputedOverride(id: String, fieldId: String) throws -> Written {
         let before = try liveItem(id)
-        _ = try overridableField(of: before, fieldId: fieldId)
+        _ = try overridableField(of: before, fieldId: fieldId, operation: .clearing)
         var after = before
         after.fieldValues = withoutOverride(before.fieldValues, fieldId: fieldId)
         return try update(before, to: after, kind: "override_cleared") ?? unchanged(before)
@@ -37,12 +37,23 @@ extension LocalReducer {
         entries.filter { !($0.fieldId == fieldId && $0.source == .override) }
     }
 
+    private enum OverrideOperation {
+        case set
+        case clearing
+    }
+
     /// `requireOverrideField`: the field must be declared on the item's type
-    /// in the catalogue revision this phone writes against, computed, and
-    /// open to overrides. An item migrated from protocol 1 names its type by
-    /// key only, as the server's own seed rows do.
-    private func overridableField(of item: WorkingItem, fieldId: String) throws
-        -> (InventoryCatalogueField, Int)
+    /// in the catalogue revision this phone writes against, and computed.
+    /// Setting a new override also requires the field to still be open to
+    /// overrides; clearing one only moves the item toward its computed value,
+    /// so it stays permitted even once a later catalogue revision turns
+    /// `allowOverride` off for a field some item still holds an override for.
+    /// An item migrated from protocol 1 names its type by key only, as the
+    /// server's own seed rows do.
+    private func overridableField(
+        of item: WorkingItem, fieldId: String, operation: OverrideOperation
+    )
+        throws -> (InventoryCatalogueField, Int)
     {
         guard let revision = try SyncMeta.read(db).catalogueRevision,
             let catalogue = try Protocol2CatalogueRows.read(revision: revision, in: db)
@@ -62,7 +73,7 @@ extension LocalReducer {
         guard let field = type.fields.first(where: { $0.id == fieldId }) else {
             throw refusal(.invalid, "field \(fieldId) is not declared")
         }
-        guard field.storage == .computed, field.allowOverride else {
+        guard field.storage == .computed, operation == .clearing || field.allowOverride else {
             throw refusal(.invalid, "field \(fieldId) does not permit an override")
         }
         return (field, revision)

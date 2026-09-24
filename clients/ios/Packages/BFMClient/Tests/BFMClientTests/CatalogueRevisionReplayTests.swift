@@ -8,7 +8,7 @@ import Testing
 
 /// A drain whose backoff never elapses on its own, so only the store's own
 /// requests start a pass.
-private struct ParkedDrainClock: InventoryDrainClock {
+internal struct ParkedDrainClock: InventoryDrainClock {
     func sleep(for duration: Duration) async throws {
         try await Task.sleep(for: .seconds(86_400))
     }
@@ -16,7 +16,7 @@ private struct ParkedDrainClock: InventoryDrainClock {
 
 /// The local-first store over a scripted BFM: changes are logged on the
 /// phone and replayed by the drain through the real transport.
-private struct LocalFirstHarness {
+internal struct LocalFirstHarness {
     let server = ScriptedInventoryServer()
     let replica: InventoryReplica
     let reachability: ScriptedNetworkReachability
@@ -147,6 +147,31 @@ internal struct CatalogueRevisionReplayTests {
         #expect(repair.kind == .catalogueChanged)
         #expect(repair.entityId == Protocol2Wire.lampId)
         #expect(try harness.ledger.waiting.isEmpty)
+    }
+
+    @Test(
+        "update required and N+1 records a replacement for the field: the change moves onto it and is sent"
+    )
+    func updateRequiredMovesOntoRecordedReplacement() async throws {
+        let harness = try LocalFirstHarness()
+        try await harness.downloadLamp()
+        await harness.publish(revision: 3, fields: Protocol2Wire.lineageFields)
+        await harness.server.onMutations { sent in
+            sent.allSatisfy { $0.catalogueRevision == 3 }
+                ? applied(sent) : rejected(sent, reason: "catalogue_update_required")
+        }
+
+        _ = try await harness.store.perform(try LocalFirstHarness.editLumens())
+        await harness.store.synchronize()
+
+        let sent = await harness.server.mutations
+        #expect(sent.map(\.mutationId) == ["m1", "m2"])
+        #expect(sent.map(\.catalogueRevision) == [2, 3])
+        #expect(sent.first?.args.contains(Protocol2Wire.lumens) == true)
+        #expect(sent.last?.args.contains(Protocol2Wire.brightness) == true)
+        #expect(sent.last?.args.contains(Protocol2Wire.lumens) == false)
+        #expect(try harness.ledger.waiting.isEmpty)
+        #expect(try harness.ledger.repairs.isEmpty)
     }
 
     @Test(

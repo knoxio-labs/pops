@@ -97,7 +97,9 @@ export default defineConfig({
       use: {
         ...devices['Desktop Chrome'],
       },
-      testIgnore: ['**/pops-apps-finance-only-*.spec.ts'],
+      // `*.acceptance.spec.ts` boots a real backend and runs only under
+      // `playwright.acceptance.config.ts`.
+      testIgnore: ['**/pops-apps-finance-only-*.spec.ts', '**/*.acceptance.spec.ts'],
     },
     {
       // Restricted install set — only the specs that assert the

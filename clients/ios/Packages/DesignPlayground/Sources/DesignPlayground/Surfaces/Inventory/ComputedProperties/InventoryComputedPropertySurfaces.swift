@@ -38,8 +38,20 @@ internal enum InventoryComputedPropertySurfaces {
             DesignState("missing-input", "Missing input") {
                 InventoryComputedPropertyItemForm(openingState: .unavailable)
             },
-        ]
+        ] + missingInputsStates
     )
+
+    /// One state per condition `InventoryMissingInputsList` draws once a
+    /// value is unavailable, staged the same way "missing-input" above is:
+    /// the same form, only the property's summary and the rows under it
+    /// change.
+    private static let missingInputsStates: [DesignState] =
+        InventoryMissingInputsScenario.allCases.map { scenario in
+            DesignState("missing-inputs-\(scenario.rawValue)", scenario.title) {
+                InventoryComputedPropertyItemForm(
+                    openingState: .unavailable, missingInputs: scenario)
+            }
+        }
 
     internal static let itemDetail = DesignSurface(
         id: detailID,

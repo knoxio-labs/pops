@@ -1,6 +1,6 @@
 import { validationItems } from '@/fixtures/inventory-type-catalogue';
 
-import { cn } from '@pops/ui';
+import { Badge, cn } from '@pops/ui';
 
 function Metric({ label, value, tone }: { label: string; value: string; tone?: 'destructive' }) {
   return (
@@ -15,10 +15,27 @@ function Metric({ label, value, tone }: { label: string; value: string; tone?: '
   );
 }
 
-/** Full-catalogue draft validation summary with affected-item counts and samples. */
-export function ValidationPreview() {
+function Placeholder() {
   return (
-    <section className="space-y-4">
+    <section aria-label="Dry-run validation" className="space-y-2 rounded-lg border p-4">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="font-medium">Dry-run validation</h3>
+        <Badge variant="outline">Not yet previewed</Badge>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Edit a type or field to run a dry-run preview before publishing.
+      </p>
+    </section>
+  );
+}
+
+function Results() {
+  return (
+    <section aria-label="Dry-run validation" className="space-y-4 rounded-lg border p-4">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="font-medium">Dry-run validation</h3>
+        <Badge variant="outline">Compatible</Badge>
+      </div>
       <div className="grid gap-3 sm:grid-cols-3">
         <Metric label="Affected items" value="184" />
         <Metric label="Valid" value="183" />
@@ -48,4 +65,12 @@ export function ValidationPreview() {
       </p>
     </section>
   );
+}
+
+/**
+ * Dry-run validation summary shown in the publish panel, matching where the
+ * web editor surfaces compatibility: never as a separate tab.
+ */
+export function DryRunValidation({ ready }: { ready: boolean }) {
+  return ready ? <Results /> : <Placeholder />;
 }

@@ -29,6 +29,7 @@ const field: CatalogueField = {
   presentation: {},
   referenceKinds: [],
   referenceTypeIds: [],
+  replacedBy: null,
   required: false,
   sortOrder: 0,
   storage: 'stored',
@@ -87,5 +88,58 @@ describe('EnumOptions', () => {
     render(<EnumOptions field={field} onOperation={vi.fn()} />);
 
     expect(screen.getByRole('button', { name: 'Add' })).toBeDisabled();
+  });
+
+  it('moves an active option down, submitting a reorder scoped to the field', () => {
+    const first = { ...field.enumOptions[0]!, archivedAt: null, id: 'opt-a', label: 'A' };
+    const second = { ...field.enumOptions[0]!, archivedAt: null, id: 'opt-b', label: 'B' };
+    const withOptions = { ...field, enumOptions: [first, second] };
+    const onOperation = vi.fn();
+    render(<EnumOptions field={withOptions} onOperation={onOperation} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Move A down' }));
+
+    expect(onOperation).toHaveBeenCalledWith({
+      kind: 'reorder',
+      definition: 'enum_option',
+      parentId: field.id,
+      ids: ['opt-b', 'opt-a'],
+    });
+  });
+
+  it('moves an active option up, submitting a reorder scoped to the field', () => {
+    const first = { ...field.enumOptions[0]!, archivedAt: null, id: 'opt-a', label: 'A' };
+    const second = { ...field.enumOptions[0]!, archivedAt: null, id: 'opt-b', label: 'B' };
+    const withOptions = { ...field, enumOptions: [first, second] };
+    const onOperation = vi.fn();
+    render(<EnumOptions field={withOptions} onOperation={onOperation} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Move B up' }));
+
+    expect(onOperation).toHaveBeenCalledWith({
+      kind: 'reorder',
+      definition: 'enum_option',
+      parentId: field.id,
+      ids: ['opt-b', 'opt-a'],
+    });
+  });
+
+  it('disables moving the first active option up and the last active option down', () => {
+    const first = { ...field.enumOptions[0]!, archivedAt: null, id: 'opt-a', label: 'A' };
+    const second = { ...field.enumOptions[0]!, archivedAt: null, id: 'opt-b', label: 'B' };
+    const withOptions = { ...field, enumOptions: [first, second] };
+    render(<EnumOptions field={withOptions} onOperation={vi.fn()} />);
+
+    expect(screen.getByRole('button', { name: 'Move A up' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Move B down' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Move A down' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Move B up' })).toBeEnabled();
+  });
+
+  it('disables both move buttons for an archived option', () => {
+    render(<EnumOptions field={field} onOperation={vi.fn()} />);
+
+    expect(screen.getByRole('button', { name: 'Move Archived option up' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Move Archived option down' })).toBeDisabled();
   });
 });

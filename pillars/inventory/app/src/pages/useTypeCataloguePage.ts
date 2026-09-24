@@ -56,6 +56,7 @@ export function useTypeCataloguePage() {
     published: model.published,
     previewOperation: model.previewOperation,
     readiness: model.readiness,
+    recheckCompatibility: model.recheckCompatibility,
     reload: model.reload,
     setArchiveTarget,
     setAuditOpen,

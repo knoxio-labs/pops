@@ -25,18 +25,38 @@ internal struct ComputedValuePersistenceTests {
             placement: plain.placement, createdAt: plain.createdAt, updatedAt: plain.updatedAt)
     }
 
+    /// A replica holding the revision the evaluations name, which declares
+    /// `volume` as computed short text.
+    private static func replica() throws -> InventoryReplica {
+        let replica = try InventoryReplica()
+        try replica.store(
+            InventoryCatalogueSnapshot(
+                revision: InventoryCatalogueRevision(revision: 2, minimumProtocol: 2),
+                types: [
+                    InventoryCatalogueType(
+                        id: LocalComputedFixture.typeId, key: "box", label: "Box", sortOrder: 0,
+                        fields: [
+                            LocalComputedFixture.field(
+                                fieldId, key: "volume", kind: .shortText,
+                                expression: LocalComputedFixture.read("width"))
+                        ])
+                ]))
+        return replica
+    }
+
     private static func display(_ replica: InventoryReplica, _ id: String) throws
         -> InventoryComputedDisplay?
     {
         let item = try #require(try replica.read(.item(id: id)))
-        return item.computedValues.first?.display(in: item) { other in
-            (try? replica.read(.item(id: other)))??.revision
-        }
+        let active = try replica.read(.protocol2Catalogue)?.revision.revision
+        let revisionOf = { (other: String) in (try? replica.read(.item(id: other)))??.revision }
+        return item.computedValues.first?.display(
+            in: item, activeCatalogueRevision: active, revisionOf: revisionOf)
     }
 
     @Test("a snapshot's evaluations are kept with the revision they were made for")
     func snapshotKeepsEvaluations() throws {
-        let replica = try InventoryReplica()
+        let replica = try Self.replica()
 
         try replica.apply(
             Fixture.snapshot(items: [Self.item("box", revision: 3, evaluation: .ok(.string("6 l")))]
@@ -49,7 +69,7 @@ internal struct ComputedValuePersistenceTests {
 
     @Test("a newer row replaces its evaluations; an older one leaves them")
     func newerRowReplaces() throws {
-        let replica = try InventoryReplica()
+        let replica = try Self.replica()
         try replica.apply(
             Fixture.snapshot(items: [Self.item("box", revision: 3, evaluation: .ok(.string("6 l")))]
             ))
@@ -74,7 +94,7 @@ internal struct ComputedValuePersistenceTests {
 
     @Test("a local edit shows the evaluation as out of date until the server re-evaluates")
     func localEditInvalidates() throws {
-        let replica = try InventoryReplica()
+        let replica = try Self.replica()
         try replica.apply(
             Fixture.snapshot(items: [Self.item("box", revision: 3, evaluation: .ok(.string("6 l")))]
             ))
@@ -95,7 +115,7 @@ internal struct ComputedValuePersistenceTests {
 
     @Test("a newer revision of an item it depends on shows the evaluation as out of date")
     func dependencyChangeInvalidates() throws {
-        let replica = try InventoryReplica()
+        let replica = try Self.replica()
         let dependency = InventoryValueDependency(itemId: "shelf", fieldId: "depth", revision: 1)
         try replica.apply(
             Fixture.snapshot(items: [
@@ -112,7 +132,7 @@ internal struct ComputedValuePersistenceTests {
 
     @Test("a dependent re-sent at its revision with a newer seq replaces the stale evaluation")
     func resentDependentReplaces() throws {
-        let replica = try InventoryReplica()
+        let replica = try Self.replica()
         let before = InventoryValueDependency(itemId: "shelf", fieldId: "depth", revision: 1)
         let after = InventoryValueDependency(itemId: "shelf", fieldId: "depth", revision: 2)
         try replica.apply(
@@ -144,7 +164,7 @@ internal struct ComputedValuePersistenceTests {
 
     @Test("a new epoch discards evaluations with the rest of the server's state")
     func epochResetDiscards() throws {
-        let replica = try InventoryReplica()
+        let replica = try Self.replica()
         try replica.apply(
             Fixture.snapshot(items: [Self.item("box", revision: 3, evaluation: .ok(.string("6 l")))]
             ))

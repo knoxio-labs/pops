@@ -7,6 +7,7 @@ import {
   currentAuthoritativeFieldValues,
   mergeActiveFieldPatches,
 } from './active-catalogue-values.js';
+import { moveOntoReplacements } from './catalogue-replacement-move.js';
 import {
   assertCommandFieldValues,
   resolveCommandCatalogue,
@@ -21,6 +22,8 @@ import { assertProtocol1Fields, protocol1FieldsAsJson } from './protocol-1-field
 import { upsertSearchIndex } from './search-index.js';
 
 import type { ItemFieldValueInput } from '../../catalogue/index.js';
+import type { ActiveFieldPatch } from './active-catalogue-values.js';
+import type { CommandCatalogueResolution } from './command-catalogue.js';
 import type { CommandDb } from './entities.js';
 import type { JsonValue } from './outcome.js';
 
@@ -97,25 +100,31 @@ function resolveNextFields(
 function resolveNextActiveValues(
   db: CommandDb,
   row: { readonly id: string; readonly typeId: string | null },
-  catalogueRevision: number,
-  patches: z.infer<typeof activeFieldPatchSchema>[] | undefined
+  resolution: CommandCatalogueResolution,
+  patches:
+    | {
+        readonly authored: readonly ActiveFieldPatch[];
+        readonly moved: readonly ActiveFieldPatch[];
+      }
+    | undefined
 ): ItemFieldValueInput[] {
-  const resolution = resolveCommandCatalogue(db, catalogueRevision);
   const type = row.typeId === null ? null : resolveCommandType(resolution, row.typeId).active;
   const current = currentAuthoritativeFieldValues(db, row.id);
   if (patches === undefined) return current;
   if (type === null) {
-    if (patches.some((patch) => patch.values !== null)) {
+    if (patches.authored.some((patch) => patch.values !== null)) {
       throw new CommandRejected('invalid', 'an untyped item cannot carry values');
     }
     return [];
   }
-  const values = mergeActiveFieldPatches(current, patches);
-  assertCommandFieldValues(db, resolution, {
-    typeId: type.id,
-    values,
-    existingItemId: row.id,
-  });
+  const authored = mergeActiveFieldPatches(current, patches.authored);
+  const values = mergeActiveFieldPatches(current, patches.moved);
+  assertCommandFieldValues(
+    db,
+    resolution,
+    { typeId: type.id, values: authored, existingItemId: row.id },
+    { typeId: type.id, values, existingItemId: row.id }
+  );
   return values;
 }
 
@@ -135,8 +144,20 @@ function catalogueEditChanges(
   if (args.fields !== undefined) {
     throw new CommandRejected('invalid', 'named fields are only supported by protocol 1');
   }
-  resolveNextActiveValues(db, row, catalogueRevision, args.values);
-  return args.values === undefined ? {} : activePatchChanges(args.values);
+  const resolution = resolveCommandCatalogue(db, catalogueRevision);
+  const patches =
+    args.values === undefined
+      ? undefined
+      : {
+          authored: args.values,
+          moved: moveOntoReplacements(resolution, {
+            typeId: null,
+            itemTypeId: row.typeId,
+            values: args.values,
+          }).values,
+        };
+  resolveNextActiveValues(db, row, resolution, patches);
+  return patches === undefined ? {} : activePatchChanges(patches.moved);
 }
 
 /**

@@ -19,6 +19,7 @@ internal enum ReplicaApply {
     static func snapshot(_ page: InventorySnapshotPage, now: Date, in db: Database) throws {
         try requireCatalogue(page.catalogueRevision, in: db)
         var meta = try SyncMeta.read(db)
+        let catalogueMoved = meta.catalogueRevision != page.catalogueRevision
         if let epoch = meta.epoch, epoch != page.epoch {
             try discardServerState(db)
             meta = meta.startingOver()
@@ -38,6 +39,7 @@ internal enum ReplicaApply {
         }
         try meta.write(db)
         try MutationLogReplay.rebase(resetting: changed, in: db)
+        if catalogueMoved { try LocalComputedValues.refreshForCatalogueChange(in: db) }
         try RepairSettlement.settleResolvedElsewhere(at: now, in: db)
     }
 
@@ -50,6 +52,7 @@ internal enum ReplicaApply {
         guard epoch == page.epoch else {
             throw InventoryReplicaError.epochMismatch(stored: epoch, received: page.epoch)
         }
+        let catalogueMoved = meta.catalogueRevision != page.catalogueRevision
         let changed = try upsert(items: page.items, locations: page.locations, in: db)
         for event in page.events {
             try db.execute(
@@ -62,6 +65,7 @@ internal enum ReplicaApply {
         if !page.hasMore { meta.lastRefreshAt = now }
         try meta.write(db)
         try MutationLogReplay.rebase(resetting: changed, in: db)
+        if catalogueMoved { try LocalComputedValues.refreshForCatalogueChange(in: db) }
         try RepairSettlement.settleResolvedElsewhere(at: now, in: db)
     }
 
@@ -97,12 +101,14 @@ internal enum ReplicaApply {
         var changed: Set<EntityRef> = []
         for item in items {
             guard try isNewer(item, in: db) else { continue }
+            let fieldValues = try ReplicaValueKinds.conformed(item.fieldValues, in: db)
+            let computedValues = try ReplicaValueKinds.conformed(item.computedValues, in: db)
             try db.execute(
                 sql: upsertSQL(ItemRow.columns, into: "item_base"),
                 arguments: StatementArguments(try ItemRow.values(of: item)))
             try Protocol2FieldValueRows.replace(
-                itemId: item.id, entries: item.fieldValues, in: "item_field_value_base", db)
-            try ComputedValueRows.replace(itemId: item.id, values: item.computedValues, in: db)
+                itemId: item.id, entries: fieldValues, in: "item_field_value_base", db)
+            try ComputedValueRows.replace(itemId: item.id, values: computedValues, in: db)
             changed.insert(.item(item.id))
         }
         for location in locations {

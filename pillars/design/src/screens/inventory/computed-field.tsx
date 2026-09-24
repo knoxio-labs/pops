@@ -11,7 +11,9 @@ export const meta: ScreenMeta = { title: 'Computed field', order: 10, frame: 'we
 /**
  * The web catalogue editor's computed-field authoring screen: expression
  * builder, override policy, single-item preview and every refusal, for
- * expression v1 plus `coalesce`.
+ * expression v1 plus `coalesce`, and expression v2's dimensional measurement
+ * units (Inventory ADR-002 D5): derived products and quotients, dimension
+ * conversion, and an unavailable preview naming every missing input.
  */
 export function ComputedField({ state = 'loaded' }: { state?: ComputedScenarioName }) {
   return (

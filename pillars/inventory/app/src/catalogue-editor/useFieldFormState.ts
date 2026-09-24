@@ -136,6 +136,7 @@ function isValid(value: FieldFormContextValue): boolean {
     value.label.trim() !== '' &&
     (value.field !== undefined || value.keyValue !== '') &&
     (value.kind !== 'measurement' || value.fixedUnit.trim() !== '') &&
+    (value.kind !== 'reference' || value.referenceKinds.length > 0) &&
     (value.storage === 'stored' || toWire(value.expression) !== null)
   );
 }

@@ -1,5 +1,6 @@
 import { ARITHMETIC_CASES } from './cases-arithmetic.js';
 import { COALESCE_CASES } from './cases-coalesce.js';
+import { DECIMAL_EQUALITY_CASES } from './cases-decimal-equality.js';
 import { DIMENSIONAL_BOUND_CASES } from './cases-dimensional-bounds.js';
 import { DIMENSIONAL_CASES } from './cases-dimensional.js';
 import { LITERAL_CASES } from './cases-literals.js';
@@ -18,6 +19,7 @@ export const EXPRESSION_VECTOR_CASES: readonly ExpressionVectorCase[] = [
   ...COALESCE_CASES,
   ...DIMENSIONAL_CASES,
   ...DIMENSIONAL_BOUND_CASES,
+  ...DECIMAL_EQUALITY_CASES,
   ...STRUCTURE_CASES,
   ...OVERRIDE_CASES,
 ];

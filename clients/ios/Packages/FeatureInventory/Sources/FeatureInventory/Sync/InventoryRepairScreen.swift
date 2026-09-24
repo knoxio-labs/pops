@@ -10,6 +10,7 @@ internal struct InventoryRepairScreen: View {
     @State internal var model: InventoryRepairViewModel
     @State private var chosen: InventoryRepairOption.ID?
     @State private var code: String = ""
+    @Environment(\.inventoryItemForm) private var itemForm
 
     internal init(repairId: InventoryRepair.ID, store: any InventoryStore) {
         _model = State(wrappedValue: InventoryRepairViewModel(repairId: repairId, store: store))
@@ -41,6 +42,16 @@ internal struct InventoryRepairScreen: View {
         .popsTitleDisplay(large: false)
         .tint(.popsInventory)
         .inventoryWriteFailureAlerts($model.failure)
+        .alert(
+            "That change did not save",
+            isPresented: Binding(
+                get: { model.refusal != nil }, set: { if !$0 { model.refusal = nil } }),
+            presenting: model.refusal
+        ) { _ in
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text($0)
+        }
     }
 
     private func content(_ row: InventorySyncRepairRow) -> some View {
@@ -92,28 +103,51 @@ internal struct InventoryRepairScreen: View {
                 }
             }
         case .codeCollision:
-            InventoryGroundedListPanel {
-                HStack(spacing: PopsSpacing.sm) {
-                    TextField("Code", text: $code)
-                        .font(.popsMonospaced)
-                        .inventoryCodeCapitalization()
-                    Button {
-                        code = row.repair.suggestedCode ?? code
-                    } label: {
-                        InventorySymbol.suggest.image
-                    }
-                    .buttonStyle(.borderless)
-                    .accessibilityLabel("Suggest a code")
-                }
-                .frame(minHeight: PopsSize.touchTarget)
-                .disabled(model.outcome != nil)
+            codeEntry(row)
+        case .catalogueChanged:
+            if let detail = row.catalogue {
+                InventoryCatalogueRepairDetails(title: detail.title, values: detail.values)
             }
-        case .photoFailed, .deletedElsewhere, .catalogueChanged, .unrecognised:
+        case .photoFailed, .deletedElsewhere, .unrecognised:
             EmptyView()
         }
     }
 
+    private func codeEntry(_ row: InventorySyncRepairRow) -> some View {
+        InventoryGroundedListPanel {
+            HStack(spacing: PopsSpacing.sm) {
+                TextField("Code", text: $code)
+                    .font(.popsMonospaced)
+                    .inventoryCodeCapitalization()
+                Button {
+                    code = row.repair.suggestedCode ?? code
+                } label: {
+                    InventorySymbol.suggest.image
+                }
+                .buttonStyle(.borderless)
+                .accessibilityLabel("Suggest a code")
+            }
+            .frame(minHeight: PopsSize.touchTarget)
+            .disabled(model.outcome != nil)
+        }
+    }
+
     @ViewBuilder private func commits(_ row: InventorySyncRepairRow) -> some View {
+        if let detail = row.catalogue {
+            InventoryCatalogueRepairCommits(
+                detail: detail,
+                letGo: { Task { await model.commit(keepingMine: false, code: nil) } },
+                retry: { Task { await model.commit(keepingMine: true, code: nil) } },
+                editItem: {
+                    model.beginEditing()
+                    itemForm?(.repair(row.repair.id))
+                })
+        } else {
+            standardCommits(row)
+        }
+    }
+
+    private func standardCommits(_ row: InventorySyncRepairRow) -> some View {
         HStack(spacing: PopsSpacing.md) {
             Button {
                 Task { await model.commit(keepingMine: false, code: nil) }
@@ -143,66 +177,6 @@ internal struct InventoryRepairScreen: View {
         .padding(.bottom, PopsSpacing.sm)
         .tint(.popsInventory)
         .background(.bar)
-    }
-}
-
-/// One side of a conflict as a row to pick: its value over where it came
-/// from and when, with the selection mark trailing.
-internal struct InventoryConflictChoiceRow: View {
-    internal let option: InventoryRepairOption
-    internal let isChosen: Bool
-    internal let isLocked: Bool
-    internal let onChoose: () -> Void
-
-    internal var body: some View {
-        Button(action: onChoose) {
-            HStack(spacing: PopsSpacing.md) {
-                Image(systemName: sourceSymbol)
-                    .font(.popsHeadline)
-                    .foregroundStyle(Color.popsMutedForeground)
-                    .frame(width: PopsSize.touchTarget, height: PopsSize.touchTarget)
-                VStack(alignment: .leading, spacing: PopsSpacing.xs) {
-                    Text(option.value)
-                        .font(.popsHeadline)
-                        .foregroundStyle(Color.popsForeground)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Text("\(sourceTitle) · \(InventoryRelativeTime.text(option.at))")
-                        .font(.popsCaption)
-                        .foregroundStyle(Color.popsMutedForeground)
-                }
-                Spacer(minLength: PopsSpacing.sm)
-                Image(systemName: isChosen ? "checkmark.circle.fill" : "circle")
-                    .font(.popsTitle)
-                    .foregroundStyle(isChosen ? Color.popsInventory : Color.popsMutedForeground)
-                    .contentTransition(.symbolEffect(.replace))
-                    .opacity(isLocked && !isChosen ? 0 : 1)
-            }
-            .padding(.vertical, PopsSpacing.xs)
-            .contentShape(.rect)
-        }
-        .buttonStyle(.plain)
-        .disabled(isLocked)
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(isChosen ? .isSelected : [])
-    }
-
-    private var sourceTitle: String {
-        switch option.source {
-        case .thisDevice: "This phone"
-        case .otherDevice(let label): label
-        case .web: "Web"
-        case .service(let account): account
-        case .unrecognised(_, let label): label
-        }
-    }
-
-    private var sourceSymbol: String {
-        switch option.source {
-        case .thisDevice: "iphone"
-        case .otherDevice: "ipad"
-        case .web, .service: "server.rack"
-        case .unrecognised: "questionmark.circle"
-        }
     }
 }
 

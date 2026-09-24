@@ -73,11 +73,31 @@ const mobileConflictHeaderSchema = z.object({
   status: z.literal('conflict'),
 });
 
+/**
+ * Which catalogue definition a `catalogue_update_required` or
+ * `catalogue_repair_required` refusal is about, mirroring inventory's
+ * `catalogueChangeWireSchema`: `definition` (type, field, option, revision)
+ * and `change` (archived, replaced, retired, now_required, not_in_revision,
+ * redefined, needs_newer_app) stay open strings, as `reason` does.
+ */
+export const MobileCatalogueChangeSchema = z.object({
+  definition: z.string(),
+  id: z.string(),
+  typeId: z.string().nullable(),
+  fieldId: z.string().nullable(),
+  change: z.string(),
+  replacementId: z.string().nullable(),
+  revision: z.number().int(),
+});
+
+export type MobileCatalogueChange = z.infer<typeof MobileCatalogueChangeSchema>;
+
 const mobileRejectedOutcomeSchema = z.object({
   mutationId: z.string(),
   status: z.literal('rejected'),
   reason: z.string(),
   message: z.string(),
+  catalogueChanges: z.array(MobileCatalogueChangeSchema).optional(),
 });
 
 const mobileDeferredOutcomeSchema = z.object({

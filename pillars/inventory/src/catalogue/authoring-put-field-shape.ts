@@ -125,6 +125,28 @@ function assertStorageShape(context: StorageShapeContext): void {
   }
 }
 
+/**
+ * Rejects a reference field with no target kind at the moment it is
+ * authored, before it is ever persisted — the earliest point a `put_field`
+ * for this shape can be refused, matching {@link assertStorageShape}'s
+ * pattern for computed/stored fields. `validateCatalogue`'s whole-catalogue
+ * sweep still re-checks this on every later patch/publish as defense in
+ * depth, but with this in place no `put_field` can create the shape it
+ * checks for in the first place.
+ */
+function assertReferenceShape(id: string, values: FieldValues): void {
+  if (values.kind === 'reference' && values.referenceKinds.length === 0) {
+    failIssues([
+      issue(
+        id,
+        'referenceKinds',
+        'reference_kinds_required',
+        'Reference fields must allow at least one target kind (item or location)'
+      ),
+    ]);
+  }
+}
+
 export function fieldValues(
   id: string,
   current: typeof itemTypeFields.$inferSelect | undefined,
@@ -166,5 +188,6 @@ export function fieldValues(
     archivedAt: choose(operation.archivedAt, defaults.archivedAt),
   };
   assertStorageShape({ id, storage: values.storage, expressionVersion, expression, allowOverride });
+  assertReferenceShape(id, values);
   return values;
 }

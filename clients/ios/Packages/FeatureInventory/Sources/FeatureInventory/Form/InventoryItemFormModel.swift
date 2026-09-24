@@ -50,6 +50,9 @@ internal final class InventoryItemFormModel {
     /// Each computed field's current display state, by field ID. See
     /// ``InventoryItemFormContext/computedDisplays``.
     internal private(set) var protocol2ComputedDisplays: [String: InventoryComputedDisplay] = [:]
+    /// See ``InventoryItemFormContext/computedMissingInputs``.
+    internal private(set) var protocol2ComputedMissingInputs: [String: [InventoryMissingInput]] =
+        [:]
     internal private(set) var isOffline = false
     /// False until the final action is pressed once: a form that reddens a
     /// field before anybody has typed opens accusing.
@@ -65,7 +68,14 @@ internal final class InventoryItemFormModel {
     internal let store: any InventoryStore
     private let suggester: InventoryCodeSuggester
     internal let mintProtocol2ValueId: () -> String
-    private var original: InventoryItem?
+    /// The item as the store has it; nil for a create.
+    internal var original: InventoryItem?
+    /// For a `.repair` request: whether the held change was a new item or a
+    /// change to one, which decides what saving sends.
+    internal var repairMode: InventoryItemFormMode = .edit
+    /// For a `.repair` request: the held change's values that no longer fit
+    /// the current fields, shown struck through with why.
+    internal var notCarried: [InventoryQueuedValue] = []
     private var created = false
     /// What an offer over `photoRunner` reverses: the photo it removed, and
     /// where it stood, so Undo can put it back in place.
@@ -95,12 +105,9 @@ internal final class InventoryItemFormModel {
             draft = InventoryItemDraft(id: mintId(), placement: placement ?? .hand)
         case .edit(let id):
             draft = InventoryItemDraft(id: id)
+        case .repair:
+            draft = InventoryItemDraft(id: "")
         }
-    }
-
-    internal var mode: InventoryItemFormMode {
-        if case .edit = request { return .edit }
-        return .create
     }
 
     internal var issues: [InventoryDraftIssue] {
@@ -206,6 +213,9 @@ extension InventoryItemFormModel {
         }
         isSubmitting = true
         defer { isSubmitting = false }
+        if case .repair(let repairId) = request {
+            return await submitRepair(repairId, commands: commands)
+        }
         for command in commands {
             do {
                 _ = try await store.perform(command)
@@ -218,7 +228,7 @@ extension InventoryItemFormModel {
         return true
     }
 
-    private var commands: [InventoryCommand] {
+    internal var commands: [InventoryCommand] {
         if let protocol2 = protocol2Draft, let type = protocol2Type {
             switch mode {
             case .create:
@@ -246,6 +256,7 @@ extension InventoryItemFormModel {
         protocol2Catalogue = context.protocol2Catalogue
         protocol2ReferenceTargets = context.protocol2ReferenceTargets
         protocol2ComputedDisplays = context.computedDisplays
+        protocol2ComputedMissingInputs = context.computedMissingInputs
         original = context.item
         photoUploads = context.photoUploads
         followStoreUploads()
@@ -283,6 +294,8 @@ extension InventoryItemFormModel {
                     type: type, catalogueRevision: catalogue.revision.revision, item: item)
             }
             phase = .ready
+        case .repair:
+            phase = seedRepair(context)
         }
     }
 

@@ -51,14 +51,7 @@ extension InventoryExpressionArithmetic {
         guard let converted = amount(rhs, from: other, in: unit) else {
             return .success(.boolean(false))
         }
-        return converted.flatMap { text in
-            let below = lessThan(.text(lhs), .text(text))
-            let above = lessThan(.text(text), .text(lhs))
-            guard case .success(.boolean(let isBelow)) = below,
-                case .success(.boolean(let isAbove)) = above
-            else { return .failure(.invalidValue) }
-            return .success(.boolean(!isBelow && !isAbove))
-        }
+        return converted.flatMap { text in decimalEqual(lhs, text) }
     }
 
     static func dimensionalMultiply(

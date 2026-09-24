@@ -60,9 +60,21 @@ export {
 } from './catalogue-editor/expression/operations';
 export type { OperationGroup, OperationInfo } from './catalogue-editor/expression/operations';
 export {
+  combineUnits,
+  describeDimension,
+  formatUnitTerm,
+  parseUnitTerm,
+  sameDimension,
+  termDimension,
+  unitConversionShift,
+  unitDimension,
+} from '@pops/inventory';
+export type { CombinedUnit, UnitDimension, UnitFactor, UnitTerm } from '@pops/inventory';
+export {
   evaluationErrorSentence,
   unavailableSentence,
 } from './catalogue-editor/expression/preview-copy';
+export type { PreviewMissingInput } from './catalogue-editor/expression/preview-copy';
 export { fieldFitsSlot, slotTypes } from './catalogue-editor/expression/slot-types';
 export {
   ROOT_PATH,

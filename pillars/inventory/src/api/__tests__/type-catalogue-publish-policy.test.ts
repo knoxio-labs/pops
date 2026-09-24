@@ -469,5 +469,48 @@ describe('computed-field publication policy over REST', () => {
         affectedItems: 2,
       });
     });
+
+    it('does not migrate a soft-deleted item holding an override, but drops it on restore', async () => {
+      const { gadget, draft, operation, overridden } = await prepare();
+      const deletedItemId = overridden[0];
+      if (deletedItemId === undefined) throw new Error('prepare() did not seed an overridden item');
+
+      await send(
+        api,
+        [wireMutation('item.delete', deletedItemId, {}, { baseRevision: 2 })],
+        PROTOCOL_2
+      );
+      const patched = await patch(draft, [operation]);
+      const published = await publish(patched.draft, {
+        migration: {
+          name: 'discard-ready-overrides',
+          fromRevision: draft.baseRevision,
+          toRevision: draft.revision,
+          affectedTypeIds: [gadget.typeId],
+          affectedFieldIds: [gadget.readyFieldId],
+          steps: [{ kind: 'drop_value', fieldId: gadget.readyFieldId }],
+        },
+      });
+      expect(published.status, JSON.stringify(published.body)).toBe(200);
+
+      // The soft-deleted item is invisible to the migration, so its override survives publication.
+      expect(overrideRows(gadget.readyFieldId)).toEqual({ count: 1 });
+
+      const restore = await send(
+        api,
+        [wireMutation('item.restoreDeleted', deletedItemId, {}, { baseRevision: null })],
+        PROTOCOL_2
+      );
+      expect(restore.body.outcomes[0], JSON.stringify(restore.body)).toMatchObject({
+        status: 'applied',
+      });
+
+      // Restoring the item cannot resurrect an override the active catalogue no longer allows.
+      expect(overrideRows(gadget.readyFieldId)).toEqual({ count: 0 });
+      const restored = inventoryDb.raw
+        .prepare(`SELECT deleted_at AS deletedAt FROM items WHERE id = ?`)
+        .get(deletedItemId);
+      expect(restored).toMatchObject({ deletedAt: null });
+    });
   });
 });

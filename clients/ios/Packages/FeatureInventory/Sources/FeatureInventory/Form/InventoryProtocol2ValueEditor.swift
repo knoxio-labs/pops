@@ -42,7 +42,8 @@ internal struct InventoryProtocol2ValueEditor: View {
             measurementEditor
         default:
             InventoryFormTextRow(
-                label, placeholder: field.help ?? "Not recorded", text: textBinding)
+                label, placeholder: field.help ?? "Not recorded", text: textBinding,
+                identifier: InventoryAccessibility.protocol2Field(id: field.id))
         }
         if let issue = entry.issue {
             Text(issue)

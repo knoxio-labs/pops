@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm';
 
 import { catalogueRevisions } from '../db/schema.js';
+import { DEFAULT_COMPUTED_DEPENDENT_LIMIT } from '../domain/commands/computed-dependents.js';
 import { PERSISTED_CATALOGUE_PROTOCOL, readMinimumProtocol } from '../protocol/rollout.js';
 import { claimCurrentDraft } from './authoring-draft-version.js';
 import { migrationInput } from './authoring-migration.js';
@@ -135,21 +136,31 @@ function requireMigration(
   return migration;
 }
 
+/** One publication, as {@link publishCatalogueDraftWith} takes it. */
+export interface CataloguePublicationRequest {
+  readonly revision: number;
+  readonly input: CataloguePublicationInput;
+  readonly author: CatalogueAuthor;
+  /** Cap on the reverse-index dependents one publication re-sends; defaults to the command path's. */
+  readonly computedDependentLimit?: number;
+}
+
 /**
  * Publishes a draft atomically, including dry-run migration and search rebuild.
  * Vocabulary the base never used raises the catalogue minimum protocol, and
- * publication waits until the persisted rollout minimum reaches it.
+ * publication waits until the persisted rollout minimum reaches it. Items
+ * whose computed values the publication changed are re-sent through the
+ * change feed in the same transaction (Inventory ADR-002 D5).
  */
-export function publishCatalogueDraft(
+export function publishCatalogueDraftWith(
   db: CommandDb,
-  revision: number,
-  input: CataloguePublicationInput,
-  author: CatalogueAuthor
+  request: CataloguePublicationRequest
 ): CatalogueDescriptor {
+  const { revision, input, author } = request;
   const descriptor = db.transaction((tx) => {
     claimCurrentDraft(tx, revision, input.baseRevision, input.expectedDraftVersion);
     const { base, candidate, compatibility } = applyProtocolGate(tx, revision, input);
-    validateCatalogue(candidate);
+    validateCatalogue(candidate, base);
     const migration = requireMigration(compatibility, input, input.baseRevision, revision);
     return writePublication({
       db: tx,
@@ -160,10 +171,21 @@ export function publishCatalogueDraft(
       candidate,
       compatibility,
       migration,
+      computedDependentLimit: request.computedDependentLimit ?? DEFAULT_COMPUTED_DEPENDENT_LIMIT,
     });
   });
   clearComputedValueCache(db);
   return descriptor;
+}
+
+/** {@link publishCatalogueDraftWith} with the default re-send cap. */
+export function publishCatalogueDraft(
+  db: CommandDb,
+  revision: number,
+  input: CataloguePublicationInput,
+  author: CatalogueAuthor
+): CatalogueDescriptor {
+  return publishCatalogueDraftWith(db, { revision, input, author });
 }
 
 export type {

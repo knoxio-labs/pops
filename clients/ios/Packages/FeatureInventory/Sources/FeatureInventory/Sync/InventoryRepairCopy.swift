@@ -15,10 +15,17 @@ extension InventoryRepairKind {
         case .conflict: ("Keep mine", InventorySymbol.device)
         case .codeCollision: ("New code", .suggest)
         case .deletedElsewhere: ("Restore", .restore)
-        case .photoFailed, .catalogueChanged: ("Retry", .retry)
+        case .photoFailed: ("Retry", .retry)
+        case .catalogueChanged: ("Review", .edit)
         case .unrecognised: ("Let go", .attention)
         }
     }
+
+    /// Whether the one-tap entry points (the Sync row's icon, the item's
+    /// notice) open the repair screen rather than committing its fix: a
+    /// catalogue repair's right move depends on what is still in the way,
+    /// which only the screen shows (POPS-4494).
+    internal var opensRepair: Bool { self == .catalogueChanged }
 
     /// The repair screen's keep-mine commit, or nil when there is none
     /// (`unrecognised` offers only Let go).

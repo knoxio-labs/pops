@@ -4,7 +4,8 @@ import {
   EMPTY_COMPUTED_ENVIRONMENT,
   ComputedSectionProvider,
 } from './computed/computed-environment';
-import { toWire } from './expression/wire';
+import { savedExpressionVersion } from './expression/expression-version';
+import { expressionContext, fieldValueType, toWire } from './expression/wire';
 import { FieldFormActions } from './FieldFormActions';
 import { FieldFormBehaviour } from './FieldFormBehaviour';
 import { FieldFormConstraints } from './FieldFormConstraints';
@@ -74,8 +75,22 @@ export function FieldForm(props: FieldFormProps) {
   );
 }
 
+function computedPart(value: FieldFormContextValue, typeId: string) {
+  if (value.storage !== 'computed')
+    return { expressionVersion: null, expression: null, allowOverride: false };
+  return {
+    expressionVersion: savedExpressionVersion(
+      value.field?.expressionVersion,
+      expressionContext(value.types, typeId, value.field?.id),
+      value.expression,
+      fieldValueType(value.kind, value.fixedUnit)
+    ),
+    expression: toWire(value.expression),
+    allowOverride: value.allowOverride,
+  };
+}
+
 function createOperation(value: FieldFormContextValue, typeId: string): CatalogueOperation {
-  const expression = value.storage === 'computed' ? toWire(value.expression) : null;
   return {
     kind: 'put_field',
     typeId,
@@ -95,8 +110,6 @@ function createOperation(value: FieldFormContextValue, typeId: string): Catalogu
           referenceKinds: value.kind === 'reference' ? [...value.referenceKinds] : [],
           referenceTypeIds: value.kind === 'reference' ? [...value.referenceTypeIds] : [],
         }),
-    ...(value.storage === 'computed'
-      ? { expressionVersion: 2, expression, allowOverride: value.allowOverride }
-      : { expressionVersion: null, expression: null, allowOverride: false }),
+    ...computedPart(value, typeId),
   };
 }

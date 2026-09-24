@@ -21,7 +21,7 @@ internal struct InventoryItemFormView: View {
     internal var body: some View {
         NavigationStack {
             content
-                .navigationTitle(model.mode.title)
+                .navigationTitle(model.title)
                 .popsTitleDisplay(large: false)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
@@ -30,7 +30,7 @@ internal struct InventoryItemFormView: View {
                         ) { dismiss() }
                     }
                     ToolbarItem(placement: .confirmationAction) {
-                        Button(model.mode.actionTitle) {
+                        Button(model.actionTitle) {
                             Task { if await model.submit() { dismiss() } }
                         }
                         .popsProminentGlassButton()
@@ -98,9 +98,17 @@ internal struct InventoryItemFormView: View {
             }
             identity
             labelling
+            InventoryFormNotCarriedSection(values: model.notCarried)
         }
         .popsMotion(value: model.draft.typeKey)
         .inventoryInsetGroupedList()
+        // Without this, a tap that moves on from a just-typed field (Name to
+        // Type, Name to a protocol-2 field) can land while the keyboard is
+        // still dismissing and miss its target row entirely — the keyboard
+        // stays focused on the field just typed into, and whatever the next
+        // tap was meant to change gets typed there instead. `ReceiptDraftView`
+        // carries the same modifier for the same class of tap.
+        .scrollDismissesKeyboard(.interactively)
         .task(id: model.draft.code.value) { await model.checkCode() }
     }
 
@@ -199,7 +207,7 @@ extension InventoryItemFormView {
                 computedDisplay: model.protocol2ComputedDisplays[field.id],
                 overridesEnabled: model.mode == .edit,
                 referenceTargets: model.protocol2ReferenceTargets,
-                dependencyLabel: { id in type.fields.first { $0.id == id }?.label },
+                missingInputs: model.protocol2ComputedMissingInputs[field.id] ?? [],
                 setText: { value, id in
                     model.protocol2Draft?.setText(value, entryId: id, for: field)
                 },

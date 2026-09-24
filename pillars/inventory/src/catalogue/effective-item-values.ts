@@ -56,7 +56,7 @@ export class EffectiveValueReader {
       .filter((entry) => entry.source === 'stored')
       .map(storedWire);
     for (const field of type.fields) {
-      if (field.storage !== 'computed') continue;
+      if (field.storage !== 'computed' || field.archivedAt !== null) continue;
       effective.push(computedWire(field.id, this.computed(itemId, record, field, persisted)));
     }
     return effective.toSorted((left, right) => left.fieldId.localeCompare(right.fieldId));

@@ -50,9 +50,13 @@ internal struct InventorySyncWaitingRowView: View {
     internal let loadPhoto: @MainActor (String) async -> Data?
 
     internal var body: some View {
-        InventorySyncRowLabel(display: row.display, caption: row.detail, loadPhoto: loadPhoto) {
+        InventorySyncRowLabel(display: row.display, caption: row.caption, loadPhoto: loadPhoto) {
             VStack(alignment: .trailing, spacing: PopsSpacing.xs) {
-                InventorySyncMarker(sync: row.progress == nil ? .queued : .synchronizing)
+                if let hold = row.hold {
+                    InventoryQueueHoldMark(hold: hold)
+                } else {
+                    InventorySyncMarker(sync: row.progress == nil ? .queued : .synchronizing)
+                }
                 if let progress = row.progress {
                     ProgressView(value: progress)
                         .tint(Color.popsInventory)
@@ -66,6 +70,8 @@ internal struct InventorySyncWaitingRowView: View {
 }
 
 /// One repair: what happened in one line, and its one fix as an amber icon.
+/// A repair whose fix is its own screen (`opensRepair`) draws the icon
+/// without a button of its own, so a tap anywhere on the row opens it.
 internal struct InventorySyncRepairRowView: View {
     internal let row: InventorySyncRepairRow
     internal let loadPhoto: @MainActor (String) async -> Data?
@@ -73,15 +79,45 @@ internal struct InventorySyncRepairRowView: View {
 
     internal var body: some View {
         InventorySyncRowLabel(display: row.display, caption: row.problem, loadPhoto: loadPhoto) {
-            Button(action: onFix) {
-                row.repair.kind.fix.symbol.image
-                    .font(.popsHeadline)
-                    .foregroundStyle(Color.popsWarning)
-                    .frame(width: PopsSize.touchTarget, height: PopsSize.touchTarget)
-                    .contentShape(.rect)
+            if row.repair.kind.opensRepair {
+                icon.accessibilityHidden(true)
+            } else {
+                Button(action: onFix) { icon }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(row.repair.kind.fix.title)
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel(row.repair.kind.fix.title)
+        }
+        .accessibilityHint(row.repair.kind.opensRepair ? row.repair.kind.fix.title : "")
+    }
+
+    private var icon: some View {
+        row.repair.kind.fix.symbol.image
+            .font(.popsHeadline)
+            .foregroundStyle(Color.popsWarning)
+            .frame(width: PopsSize.touchTarget, height: PopsSize.touchTarget)
+            .contentShape(.rect)
+    }
+}
+
+/// Why a waiting change is not being sent: turning while the phone fetches
+/// newer fields, amber when only an app update moves it, red when nothing
+/// will.
+private struct InventoryQueueHoldMark: View {
+    let hold: InventoryQueueHold
+
+    var body: some View {
+        hold.symbol.image
+            .font(.popsCaption.weight(.semibold))
+            .foregroundStyle(tint)
+            .symbolEffect(.rotate, isActive: hold == .waitingForFields)
+            .accessibilityLabel(hold.caption)
+    }
+
+    private var tint: Color {
+        switch hold {
+        case .needsAppUpdate: .popsWarning
+        case .stalled: .popsDestructive
+        case .waitingForFields, .behindRepair: .popsMutedForeground
         }
     }
 }

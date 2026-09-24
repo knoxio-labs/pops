@@ -18469,6 +18469,103 @@ internal enum Operations {
                             internal var value2: Operations.MobileInventory_mutations.Output.Ok.Body.JsonPayload.OutcomesPayloadPayload.Value2Payload?
                             /// - Remark: Generated from `#/paths/mobile/inventory/mutations/POST/responses/200/content/json/OutcomesPayload/value3`.
                             internal struct Value3Payload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/inventory/mutations/POST/responses/200/content/json/OutcomesPayload/value3/CatalogueChangesPayload`.
+                                internal struct CatalogueChangesPayloadPayload: Codable, Hashable, Sendable {
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/mutations/POST/responses/200/content/json/OutcomesPayload/value3/CatalogueChangesPayload/change`.
+                                    internal var change: Swift.String
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/mutations/POST/responses/200/content/json/OutcomesPayload/value3/CatalogueChangesPayload/definition`.
+                                    internal var definition: Swift.String
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/mutations/POST/responses/200/content/json/OutcomesPayload/value3/CatalogueChangesPayload/fieldId`.
+                                    internal var fieldId: Swift.String?
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/mutations/POST/responses/200/content/json/OutcomesPayload/value3/CatalogueChangesPayload/id`.
+                                    internal var id: Swift.String
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/mutations/POST/responses/200/content/json/OutcomesPayload/value3/CatalogueChangesPayload/replacementId`.
+                                    internal var replacementId: Swift.String?
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/mutations/POST/responses/200/content/json/OutcomesPayload/value3/CatalogueChangesPayload/revision`.
+                                    internal var revision: Swift.Int
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/mutations/POST/responses/200/content/json/OutcomesPayload/value3/CatalogueChangesPayload/typeId`.
+                                    internal var typeId: Swift.String?
+                                    /// Creates a new `CatalogueChangesPayloadPayload`.
+                                    ///
+                                    /// - Parameters:
+                                    ///   - change:
+                                    ///   - definition:
+                                    ///   - fieldId:
+                                    ///   - id:
+                                    ///   - replacementId:
+                                    ///   - revision:
+                                    ///   - typeId:
+                                    internal init(
+                                        change: Swift.String,
+                                        definition: Swift.String,
+                                        fieldId: Swift.String? = nil,
+                                        id: Swift.String,
+                                        replacementId: Swift.String? = nil,
+                                        revision: Swift.Int,
+                                        typeId: Swift.String? = nil
+                                    ) {
+                                        self.change = change
+                                        self.definition = definition
+                                        self.fieldId = fieldId
+                                        self.id = id
+                                        self.replacementId = replacementId
+                                        self.revision = revision
+                                        self.typeId = typeId
+                                    }
+                                    internal enum CodingKeys: String, CodingKey {
+                                        case change
+                                        case definition
+                                        case fieldId
+                                        case id
+                                        case replacementId
+                                        case revision
+                                        case typeId
+                                    }
+                                    internal init(from decoder: any Swift.Decoder) throws {
+                                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                                        self.change = try container.decode(
+                                            Swift.String.self,
+                                            forKey: .change
+                                        )
+                                        self.definition = try container.decode(
+                                            Swift.String.self,
+                                            forKey: .definition
+                                        )
+                                        self.fieldId = try container.decodeIfPresent(
+                                            Swift.String.self,
+                                            forKey: .fieldId
+                                        )
+                                        self.id = try container.decode(
+                                            Swift.String.self,
+                                            forKey: .id
+                                        )
+                                        self.replacementId = try container.decodeIfPresent(
+                                            Swift.String.self,
+                                            forKey: .replacementId
+                                        )
+                                        self.revision = try container.decode(
+                                            Swift.Int.self,
+                                            forKey: .revision
+                                        )
+                                        self.typeId = try container.decodeIfPresent(
+                                            Swift.String.self,
+                                            forKey: .typeId
+                                        )
+                                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                            "change",
+                                            "definition",
+                                            "fieldId",
+                                            "id",
+                                            "replacementId",
+                                            "revision",
+                                            "typeId"
+                                        ])
+                                    }
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/inventory/mutations/POST/responses/200/content/json/OutcomesPayload/value3/catalogueChanges`.
+                                internal typealias CatalogueChangesPayload = [Operations.MobileInventory_mutations.Output.Ok.Body.JsonPayload.OutcomesPayloadPayload.Value3Payload.CatalogueChangesPayloadPayload]
+                                /// - Remark: Generated from `#/paths/mobile/inventory/mutations/POST/responses/200/content/json/OutcomesPayload/value3/catalogueChanges`.
+                                internal var catalogueChanges: Operations.MobileInventory_mutations.Output.Ok.Body.JsonPayload.OutcomesPayloadPayload.Value3Payload.CatalogueChangesPayload?
                                 /// - Remark: Generated from `#/paths/mobile/inventory/mutations/POST/responses/200/content/json/OutcomesPayload/value3/message`.
                                 internal var message: Swift.String
                                 /// - Remark: Generated from `#/paths/mobile/inventory/mutations/POST/responses/200/content/json/OutcomesPayload/value3/mutationId`.
@@ -18484,22 +18581,26 @@ internal enum Operations {
                                 /// Creates a new `Value3Payload`.
                                 ///
                                 /// - Parameters:
+                                ///   - catalogueChanges:
                                 ///   - message:
                                 ///   - mutationId:
                                 ///   - reason:
                                 ///   - status:
                                 internal init(
+                                    catalogueChanges: Operations.MobileInventory_mutations.Output.Ok.Body.JsonPayload.OutcomesPayloadPayload.Value3Payload.CatalogueChangesPayload? = nil,
                                     message: Swift.String,
                                     mutationId: Swift.String,
                                     reason: Swift.String,
                                     status: Operations.MobileInventory_mutations.Output.Ok.Body.JsonPayload.OutcomesPayloadPayload.Value3Payload.StatusPayload
                                 ) {
+                                    self.catalogueChanges = catalogueChanges
                                     self.message = message
                                     self.mutationId = mutationId
                                     self.reason = reason
                                     self.status = status
                                 }
                                 internal enum CodingKeys: String, CodingKey {
+                                    case catalogueChanges
                                     case message
                                     case mutationId
                                     case reason
@@ -18507,6 +18608,10 @@ internal enum Operations {
                                 }
                                 internal init(from decoder: any Swift.Decoder) throws {
                                     let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.catalogueChanges = try container.decodeIfPresent(
+                                        Operations.MobileInventory_mutations.Output.Ok.Body.JsonPayload.OutcomesPayloadPayload.Value3Payload.CatalogueChangesPayload.self,
+                                        forKey: .catalogueChanges
+                                    )
                                     self.message = try container.decode(
                                         Swift.String.self,
                                         forKey: .message
@@ -18524,6 +18629,7 @@ internal enum Operations {
                                         forKey: .status
                                     )
                                     try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "catalogueChanges",
                                         "message",
                                         "mutationId",
                                         "reason",
@@ -26583,6 +26689,8 @@ internal enum Operations {
                                 internal var referenceKinds: Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.TypesPayloadPayload.FieldsPayloadPayload.ReferenceKindsPayload
                                 /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/FieldsPayload/referenceTypeIds`.
                                 internal var referenceTypeIds: [Swift.String]
+                                /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/FieldsPayload/replacedBy`.
+                                internal var replacedBy: Swift.String?
                                 /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/FieldsPayload/required`.
                                 internal var required: Swift.Bool
                                 /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/FieldsPayload/sortOrder`.
@@ -26614,6 +26722,7 @@ internal enum Operations {
                                 ///   - presentation:
                                 ///   - referenceKinds:
                                 ///   - referenceTypeIds:
+                                ///   - replacedBy:
                                 ///   - required:
                                 ///   - sortOrder:
                                 ///   - storage:
@@ -26634,6 +26743,7 @@ internal enum Operations {
                                     presentation: Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.TypesPayloadPayload.FieldsPayloadPayload.PresentationPayload,
                                     referenceKinds: Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.TypesPayloadPayload.FieldsPayloadPayload.ReferenceKindsPayload,
                                     referenceTypeIds: [Swift.String],
+                                    replacedBy: Swift.String? = nil,
                                     required: Swift.Bool,
                                     sortOrder: Swift.Int,
                                     storage: Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.TypesPayloadPayload.FieldsPayloadPayload.StoragePayload,
@@ -26654,6 +26764,7 @@ internal enum Operations {
                                     self.presentation = presentation
                                     self.referenceKinds = referenceKinds
                                     self.referenceTypeIds = referenceTypeIds
+                                    self.replacedBy = replacedBy
                                     self.required = required
                                     self.sortOrder = sortOrder
                                     self.storage = storage
@@ -26675,6 +26786,7 @@ internal enum Operations {
                                     case presentation
                                     case referenceKinds
                                     case referenceTypeIds
+                                    case replacedBy
                                     case required
                                     case sortOrder
                                     case storage
@@ -26742,6 +26854,10 @@ internal enum Operations {
                                         [Swift.String].self,
                                         forKey: .referenceTypeIds
                                     )
+                                    self.replacedBy = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .replacedBy
+                                    )
                                     self.required = try container.decode(
                                         Swift.Bool.self,
                                         forKey: .required
@@ -26774,6 +26890,7 @@ internal enum Operations {
                                         "presentation",
                                         "referenceKinds",
                                         "referenceTypeIds",
+                                        "replacedBy",
                                         "required",
                                         "sortOrder",
                                         "storage",
@@ -26813,6 +26930,8 @@ internal enum Operations {
                             }
                             /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/presentation`.
                             internal var presentation: Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.TypesPayloadPayload.PresentationPayload
+                            /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/replacedBy`.
+                            internal var replacedBy: Swift.String?
                             /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/revision`.
                             internal var revision: Swift.Int
                             /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/sortOrder`.
@@ -26829,6 +26948,7 @@ internal enum Operations {
                             ///   - label:
                             ///   - legacyLabels:
                             ///   - presentation:
+                            ///   - replacedBy:
                             ///   - revision:
                             ///   - sortOrder:
                             internal init(
@@ -26841,6 +26961,7 @@ internal enum Operations {
                                 label: Swift.String,
                                 legacyLabels: [Swift.String],
                                 presentation: Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.TypesPayloadPayload.PresentationPayload,
+                                replacedBy: Swift.String? = nil,
                                 revision: Swift.Int,
                                 sortOrder: Swift.Int
                             ) {
@@ -26853,6 +26974,7 @@ internal enum Operations {
                                 self.label = label
                                 self.legacyLabels = legacyLabels
                                 self.presentation = presentation
+                                self.replacedBy = replacedBy
                                 self.revision = revision
                                 self.sortOrder = sortOrder
                             }
@@ -26866,6 +26988,7 @@ internal enum Operations {
                                 case label
                                 case legacyLabels
                                 case presentation
+                                case replacedBy
                                 case revision
                                 case sortOrder
                             }
@@ -26907,6 +27030,10 @@ internal enum Operations {
                                     Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.TypesPayloadPayload.PresentationPayload.self,
                                     forKey: .presentation
                                 )
+                                self.replacedBy = try container.decodeIfPresent(
+                                    Swift.String.self,
+                                    forKey: .replacedBy
+                                )
                                 self.revision = try container.decode(
                                     Swift.Int.self,
                                     forKey: .revision
@@ -26925,6 +27052,7 @@ internal enum Operations {
                                     "label",
                                     "legacyLabels",
                                     "presentation",
+                                    "replacedBy",
                                     "revision",
                                     "sortOrder"
                                 ])

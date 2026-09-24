@@ -35,6 +35,8 @@ export interface PersistedItemTypeField extends ValueFieldDefinition {
   readonly allowOverride: boolean;
   readonly presentation: Record<string, unknown>;
   readonly archivedAt: string | null;
+  /** The field that took over this archived field's values, when authoring named one. */
+  readonly replacedBy: string | null;
   readonly enumOptions: readonly PersistedEnumOption[];
 }
 
@@ -50,6 +52,8 @@ export interface PersistedItemType {
   readonly legacyLabels: readonly string[];
   readonly presentation: Record<string, unknown>;
   readonly archivedAt: string | null;
+  /** The type that took over this archived type's items, when authoring named one. */
+  readonly replacedBy: string | null;
   readonly fields: readonly PersistedItemTypeField[];
 }
 

@@ -987,7 +987,14 @@ fi
 xcrun simctl bootstatus "$udid" -b > /dev/null
 xcrun simctl install "$udid" "$app"
 
-flows=$(find .maestro -maxdepth 1 -name '*.yaml' | sort)
+# POPS_E2E_FLOWS names flows explicitly, for the ones kept out of the glob on
+# purpose: `.maestro/acceptance/` is driven only by `mise run
+# inventory:acceptance -- --ios` (`.maestro/README.md`).
+if [ -n "${POPS_E2E_FLOWS:-}" ]; then
+  flows="$POPS_E2E_FLOWS"
+else
+  flows=$(find .maestro -maxdepth 1 -name '*.yaml' | sort)
+fi
 if [ -z "$flows" ]; then
   echo "e2e: no flows under .maestro. A lane that drives nothing and reports success is" >&2
   echo "     worse than one that fails, so this is a failure." >&2

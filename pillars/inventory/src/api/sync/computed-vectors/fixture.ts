@@ -45,6 +45,27 @@ export const FIELD = {
   speed: uuid(0x212),
 } as const;
 
+/**
+ * The declared kind of each shared field, which a version-2 `equal` on a read
+ * is typed by. A case may override it with its own `fieldKinds`.
+ */
+export const FIELD_KINDS: Readonly<Record<string, PrimitiveKind>> = {
+  [FIELD.price]: 'decimal',
+  [FIELD.count]: 'decimal',
+  [FIELD.name]: 'short_text',
+  [FIELD.flag]: 'boolean',
+  [FIELD.length]: 'measurement',
+  [FIELD.ref]: 'reference',
+  [FIELD.upstream]: 'decimal',
+  [FIELD.absent]: 'decimal',
+  [FIELD.width]: 'measurement',
+  [FIELD.height]: 'measurement',
+  [FIELD.depth]: 'measurement',
+  [FIELD.mass]: 'measurement',
+  [FIELD.capacity]: 'measurement',
+  [FIELD.speed]: 'measurement',
+};
+
 /** Enum option identities. */
 export const OPTION = { red: uuid(0x301), blue: uuid(0x302) } as const;
 
@@ -94,6 +115,8 @@ export interface ExpressionVectorCase {
   readonly allowOverride?: boolean;
   readonly override?: PrimitiveWireValue;
   readonly items?: readonly VectorItem[];
+  /** Replaces {@link FIELD_KINDS} for the fields this case reads. */
+  readonly fieldKinds?: Readonly<Record<string, PrimitiveKind>>;
 }
 
 /** A resolved item holding `fields`. */

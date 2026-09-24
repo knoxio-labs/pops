@@ -35,6 +35,7 @@ export function materializeType(
     legacyLabels: parseStringArray(typeRow.legacyLabelsJson, `type ${typeRow.id} legacy labels`),
     presentation: parseObject(typeRow.presentationJson, `type ${typeRow.id} presentation`),
     archivedAt: typeRow.archivedAt,
+    replacedBy: typeRow.replacedBy,
     fields,
   };
 }
@@ -80,6 +81,7 @@ function materializeField(
     allowOverride: field.allowOverride === 1,
     presentation: parseObject(field.presentationJson, `field ${field.id} presentation`),
     archivedAt: field.archivedAt,
+    replacedBy: field.replacedBy,
     enumOptionIds,
     archivedEnumOptionIds,
     enumOptions,

@@ -6,12 +6,18 @@ internal enum InventorySyncConnection: Equatable {
     case online(lastSynced: String)
     case offline(lastSynced: String)
     case syncing
+    /// Fetching the catalogue's newer fields before a held change can move.
+    case updatingFields
+    /// Sending is stuck on a change the phone cannot read back.
+    case stuck
 
     fileprivate var symbol: InventorySymbol {
         switch self {
         case .online: .synced
         case .offline: .offline
         case .syncing: .queued
+        case .updatingFields: .refreshFields
+        case .stuck: .attention
         }
     }
 }
@@ -96,7 +102,10 @@ internal struct InventorySyncView: View {
                 .contentTransition(.numericText())
         } icon: {
             connection.symbol.image
-                .foregroundStyle(Color.popsMutedForeground)
+                .foregroundStyle(
+                    connection == .stuck ? Color.popsDestructive : Color.popsMutedForeground
+                )
+                .symbolEffect(.rotate, isActive: connection == .updatingFields)
         }
         .font(.popsSubheadline)
         .accessibilityElement(children: .combine)
@@ -107,6 +116,8 @@ internal struct InventorySyncView: View {
         case .online(let lastSynced): "Synced \(lastSynced)"
         case .offline(let lastSynced): "Offline · synced \(lastSynced)"
         case .syncing: "Syncing \(ledger.waiting.count) changes"
+        case .updatingFields: "Updating fields"
+        case .stuck: "Can't send \(ledger.waiting.count) changes"
         }
     }
 

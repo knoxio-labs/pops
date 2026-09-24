@@ -4,99 +4,133 @@ import Testing
 
 @testable import FeatureInventory
 
-/// The `catalogueChanged` repair (POPS-4405) on the Sync page, the repair
-/// screen and the item it is about: a change a newer catalogue no longer
-/// fits can be sent again against the current fields, or let go.
+/// The `catalogueChanged` repair (POPS-4405, POPS-4494) on the Sync page, the
+/// repair screen, the item it is about and the form Edit item opens, as the
+/// owner approved it: one-tap entry points open the repair, Edit item leads
+/// while something is in the way, and Retry shows only once the fields moved.
 @MainActor
 @Suite("Inventory catalogue repair")
 internal struct InventoryCatalogueRepairTests {
-    private typealias Fixture = InventoryFixture
+    private typealias Fixture = CatalogueRepairFixture
 
-    @Test("the Sync page lists it with its own problem line and Retry as the inline fix")
-    func rowOnTheSyncPage() async throws {
-        let inner = InMemoryInventoryStore(
-            items: [Fixture.item("lamp", "Desk lamp", at: .location("kitchen"))],
-            locations: [Fixture.location("kitchen", "Kitchen")])
-        let repair = Fixture.repair("m1", on: "lamp", kind: .catalogueChanged)
-        inner.addRepair(repair)
-        let store = RecordingInventoryStore(inner)
+    @Test("the Sync row names what happened and its icon opens the repair, never retrying")
+    func syncRowOpensTheRepair() async throws {
+        let store = Fixture.store()
         let model = InventorySyncViewModel(store: store)
         let (task, _) = await model.startAndAwaitFirstAnswer()
         defer { task.cancel() }
 
         let page = await model.awaitPage { !$0.repairRows.isEmpty }
         let row = try #require(page?.repairRows.first)
-        #expect(row.display.name == "Desk lamp")
-        #expect(row.problem == "A field this change used was archived or replaced.")
-        #expect(row.repair.kind.fix.title == "Retry")
 
-        await model.resolveInline(repair)
-
-        #expect(store.resolutions == [.keepMine()])
-        #expect(model.undoOffer?.message == "Sent with current fields")
+        #expect(row.problem == "Shielding was archived")
+        #expect(row.repair.kind.fix.title == "Review")
+        #expect(row.repair.kind.opensRepair)
+        #expect(InventoryRepairKind.photoFailed.opensRepair == false)
+        #expect(store.resolutions.isEmpty)
     }
 
-    @Test("the repair screen offers Retry and Let go, and says what each did")
-    func repairScreenCommits() async throws {
-        let store = InMemoryInventoryStore()
-        store.addRepair(Fixture.repair("m1", on: "lamp", kind: .catalogueChanged))
-        let keeping = InventoryRepairViewModel(repairId: "m1", store: store)
-        let task = await keeping.startAndAwaitFirstAnswer()
+    @Test("a held change says why on its row, and the header says Updating fields")
+    func heldRowsAndHeader() async throws {
+        let waiting = [
+            Self.waiting("m2", hold: .waitingForFields),
+            Self.waiting("m3", hold: .needsAppUpdate),
+            Self.waiting("m4", hold: .behindRepair),
+        ]
+        let model = InventorySyncViewModel(store: Fixture.store(repairs: [], waiting: waiting))
+        let (task, _) = await model.startAndAwaitFirstAnswer()
         defer { task.cancel() }
 
-        let row = try #require(keeping.row)
-        #expect(row.repair.kind.keepTitle == "Retry")
-        #expect(row.repair.kind.letGoTitle == "Let go")
-        await keeping.commit(keepingMine: true, code: nil)
-        #expect(keeping.outcome == "Sent with current fields")
+        let page = try #require(await model.awaitPage { $0.waitingRows.count == 3 })
 
-        store.addRepair(Fixture.repair("m2", on: "lamp", kind: .catalogueChanged))
-        let lettingGo = InventoryRepairViewModel(repairId: "m2", store: store)
-        let second = await lettingGo.startAndAwaitFirstAnswer()
-        defer { second.cancel() }
-        await lettingGo.commit(keepingMine: false, code: nil)
-        #expect(lettingGo.outcome == "Let go")
+        #expect(
+            page.waitingRows.map(\.caption) == [
+                "Edit · Waiting for new fields", "Edit · Needs an app update",
+                "Edit · Waits on a repair",
+            ])
+        #expect(InventorySyncHeaderStatus.derive(page: page) == .updatingFields)
+        #expect(InventorySyncView.statusLine(.updatingFields) == "Updating fields")
     }
 
-    @Test("a retry the catalogue still refuses is reported in words, and the repair stays open")
-    func refusedRetryIsReported() async throws {
-        let repair = Fixture.repair("m1", on: "lamp", kind: .catalogueChanged)
-        let store = RefusingResolveStore(
-            InMemoryInventoryStore(repairs: [repair]),
-            error: InventoryCommandError.rejected(
-                reason: .catalogueRepairRequired, message: "field lumens was archived"))
+    @Test("an unreadable change shows as stuck, and so does the header")
+    func stalledRow() async throws {
+        let stuck = InventoryQueuedMutation(
+            receipt: InventoryReceipt(mutationId: "m9", entityKind: .item, entityId: "cable"),
+            command: nil, enqueuedAt: InventoryFixture.epoch, hold: .stalled)
+        let model = InventorySyncViewModel(
+            store: Fixture.store(repairs: [], waiting: [stuck, Self.waiting("m2", hold: nil)]))
+        let (task, _) = await model.startAndAwaitFirstAnswer()
+        defer { task.cancel() }
+
+        let page = try #require(await model.awaitPage { $0.waitingRows.count == 2 })
+
+        #expect(page.waitingRows.first?.caption == "Can't be read · Can't be sent")
+        #expect(InventorySyncHeaderStatus.derive(page: page) == .stuck(waiting: 2))
+    }
+
+    @Test("Retry the catalogue still refuses says what is in the way; the repair stays open")
+    func refusedRetry() async throws {
+        let store = Fixture.store(
+            repairs: [
+                Fixture.repair(
+                    queued: Fixture.shieldingArchived.catalogue?.queued,
+                    changes: Fixture.shieldingArchived.catalogue?.changes ?? [], current: 3)
+            ],
+            catalogue: Fixture.catalogue(revision: 3))
+        store.failResolves(
+            with: InventoryCommandError.rejected(reason: .catalogueRepairRequired, message: "x"))
+        let model = InventoryRepairViewModel(repairId: "m1", store: store)
+        let task = await model.startAndAwaitFirstAnswer()
+        defer { task.cancel() }
+        #expect(model.row?.catalogue?.offersRetry == true)
+
+        await model.commit(keepingMine: true, code: nil)
+
+        #expect(store.resolutions == [.keepMine()])
+        #expect(model.refusal == "Shielding is still archived, so nothing was sent.")
+        #expect(model.failure == nil)
+        #expect(model.outcome == nil)
+        #expect(model.row?.repair.id == "m1")
+    }
+
+    @Test("Let go settles it")
+    func letGo() async throws {
+        let store = Fixture.store()
         let model = InventoryRepairViewModel(repairId: "m1", store: store)
         let task = await model.startAndAwaitFirstAnswer()
         defer { task.cancel() }
 
-        await model.commit(keepingMine: true, code: nil)
+        await model.commit(keepingMine: false, code: nil)
 
-        let failure = try #require(model.failure)
-        #expect(model.outcome == nil)
-        #expect(model.row?.repair.id == "m1")
-        #expect(
-            InventoryCopy.message(for: failure)
-                == "A field this change used was archived or replaced, so nothing changed.")
+        #expect(store.resolutions == [.discardMine])
+        #expect(model.outcome == "Let go")
     }
 
-    @Test("the item's own notice names the replaced field and offers Retry")
-    func itemNotice() {
-        let repair = Fixture.repair("m1", on: "lamp", kind: .catalogueChanged)
+    @Test("the item's notice names the queued change and opens the repair instead of retrying")
+    func itemNotice() async throws {
+        let detail = Fixture.reading().detail(Fixture.shieldingArchived)
 
-        let conflict = InventoryDetailConflicts.conflict(repair)
+        let conflict = InventoryDetailConflicts.conflict(
+            Fixture.shieldingArchived, catalogue: detail)
 
-        #expect(conflict.problem == "A field in a queued change was replaced")
-        #expect(conflict.resolution == "Retry")
-        #expect(conflict.choice == .keepMine())
+        #expect(conflict.problem == "Queued edit: Shielding was archived")
+        #expect(conflict.resolution == "Review")
+        #expect(conflict.opensRepair)
+
+        let store = Fixture.store()
+        let model = InventoryItemDetailViewModel(itemId: Fixture.cableId, store: store)
+        let (task, loaded) = await model.startAndAwaitDetail()
+        defer { task.cancel() }
+        #expect(loaded?.conflict?.opensRepair == true)
+        await model.resolveConflict()
+        #expect(store.resolutions.isEmpty)
     }
 
-    @Test("an update-required refusal asks for a sync rather than blaming the server")
-    func updateRequiredCopy() {
-        let failure = InventoryWriteFailure.command(
-            .rejected(reason: .catalogueUpdateRequired, message: "revision 2 is unavailable"))
-
-        #expect(
-            InventoryCopy.message(for: failure)
-                == "The item's fields changed since this was opened. Sync, then try again.")
+    private static func waiting(_ id: String, hold: InventoryQueueHold?) -> InventoryQueuedMutation
+    {
+        InventoryQueuedMutation(
+            receipt: InventoryReceipt(mutationId: id, entityKind: .item, entityId: "cable"),
+            command: Fixture.edit([(Fixture.length, .string("3 m"))]),
+            enqueuedAt: InventoryFixture.epoch, hold: hold)
     }
 }

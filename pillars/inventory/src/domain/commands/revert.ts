@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { RECOMPUTED_EVENT_KIND } from '../../catalogue/publication-resend.js';
 import { isActiveFieldName } from './active-field-key.js';
 import { conflictSinceSeq } from './conflicts.js';
 import { isWritableField, loadEntity, type CommandDb, type FieldValues } from './entities.js';
@@ -10,6 +11,8 @@ import { upsertSearchIndex } from './search-index.js';
 
 /** Event kinds that bring an entity into being; undoing one is a deletion, not a revert. */
 const IRREVERSIBLE_KINDS: ReadonlySet<string> = new Set(['created', 'split_from', 'split_into']);
+/** Event kinds that record a derived re-evaluation and change nothing a revert could restore. */
+const DERIVED_KINDS: ReadonlySet<string> = new Set([RECOMPUTED_EVENT_KIND]);
 const INDEXED_ITEM_FIELDS: ReadonlySet<string> = new Set([
   'name',
   'code',
@@ -32,7 +35,7 @@ function requireEvent(db: CommandDb, seq: number): DomainEvent {
 }
 
 function assertRevertible(event: DomainEvent): void {
-  if (IRREVERSIBLE_KINDS.has(event.kind)) {
+  if (IRREVERSIBLE_KINDS.has(event.kind) || DERIVED_KINDS.has(event.kind)) {
     throw new CommandRejected('illegal_transition', `a ${event.kind} event cannot be reverted`);
   }
   if (event.after.lifecycle === 'destroyed') {

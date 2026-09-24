@@ -11,6 +11,7 @@ import {
   Textarea,
 } from '@pops/ui';
 
+import { fieldKindHint } from './field-kind-hints';
 import { useFieldFormContext } from './FieldFormContext';
 
 import type { FieldKind } from './FieldFormContext';
@@ -89,6 +90,7 @@ function FieldShape() {
   const { cardinality, kind, setCardinality, setKind, shapeLocked, storage } =
     useFieldFormContext();
   const locked = storage === 'computed' || kind === 'boolean';
+  const hint = fieldKindHint(kind);
   return (
     <>
       <div className="space-y-2">
@@ -112,6 +114,7 @@ function FieldShape() {
             ))}
           </SelectContent>
         </SelectPrimitive>
+        {hint !== null && <p className="text-xs text-muted-foreground">{hint}</p>}
       </div>
       <div className="space-y-2">
         <Label>Cardinality</Label>

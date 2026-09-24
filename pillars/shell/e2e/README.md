@@ -18,6 +18,13 @@ that way. Contract fidelity is the pillar's own tests' job, and the generated
 clients are regenerated from each pillar's OpenAPI projection, so a shape that
 drifts fails there first.
 
+The one exception is `*.acceptance.spec.ts`: the inventory-types acceptance
+spec boots a real registry and inventory itself
+(`helpers/inventory-acceptance-stack.ts`) and forwards `/inventory-api/*` to
+them. The default config ignores it; it runs only through
+`playwright.acceptance.config.ts` under `INVENTORY_ACCEPTANCE=1`, which
+`mise run inventory:acceptance -- --web` sets.
+
 ## What every spec has to stub
 
 `helpers/pillar-rest.ts` covers the surfaces that are hit on _every_ page load,

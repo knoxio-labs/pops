@@ -85,3 +85,50 @@ describe('the phone catalogue descriptor', () => {
     ).toBe(true);
   });
 });
+
+describe('replacement lineage on the phone catalogue', () => {
+  function replaced(typeReplacedBy: unknown, fieldReplacedBy: unknown) {
+    const body = descriptor(null);
+    const [type] = body.types;
+    const [field] = type?.fields ?? [];
+    if (type === undefined || field === undefined) throw new Error('fixture has no field');
+    return {
+      ...body,
+      types: [
+        {
+          ...type,
+          archivedAt: '2026-09-24T00:00:00.000Z',
+          replacedBy: typeReplacedBy,
+          fields: [
+            { ...field, storage: 'stored', expressionVersion: null, replacedBy: fieldReplacedBy },
+          ],
+        },
+      ],
+    };
+  }
+
+  it('relays the type and field that replaced archived ones', () => {
+    const typeReplacement = randomUUID();
+    const fieldReplacement = randomUUID();
+
+    const parsed = MobileInventoryCatalogueRevisionDescriptorSchema.parse(
+      replaced(typeReplacement, fieldReplacement)
+    );
+
+    expect(parsed.types[0]?.replacedBy).toBe(typeReplacement);
+    expect(parsed.types[0]?.fields[0]?.replacedBy).toBe(fieldReplacement);
+  });
+
+  it('parses a catalogue from an Inventory that records no lineage', () => {
+    const parsed = MobileInventoryCatalogueRevisionDescriptorSchema.parse(descriptor(null));
+
+    expect(parsed.types[0]?.replacedBy).toBeUndefined();
+  });
+
+  it('refuses lineage that does not name a definition', () => {
+    expect(
+      MobileInventoryCatalogueRevisionDescriptorSchema.safeParse(replaced('not-an-id', null))
+        .success
+    ).toBe(false);
+  });
+});

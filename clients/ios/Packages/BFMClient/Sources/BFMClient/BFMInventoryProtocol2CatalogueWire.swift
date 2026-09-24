@@ -24,7 +24,7 @@ internal func protocol2Catalogue(
             sortOrder: type.sortOrder, fields: try type.fields.map(protocol2Field(from:)),
             capabilities: type.capabilities, legacyLabels: type.legacyLabels,
             presentation: try protocol2JSON(object: type.presentation.additionalProperties),
-            archivedAt: type.archivedAt
+            archivedAt: type.archivedAt, replacedBy: type.replacedBy
         )
     }
     return InventoryCatalogueSnapshot(revision: revision, types: types)
@@ -57,7 +57,7 @@ private func protocol2Field(from wire: Protocol2FieldPayload) throws -> Inventor
         expression: try wire.expression.map(protocol2JSON(from:)),
         allowOverride: wire.allowOverride,
         presentation: try protocol2JSON(object: wire.presentation.additionalProperties),
-        archivedAt: wire.archivedAt,
+        archivedAt: wire.archivedAt, replacedBy: wire.replacedBy,
         enumOptions: wire.enumOptions.map {
             InventoryCatalogueOption(
                 id: $0.id, key: $0.key, label: $0.label, sortOrder: $0.sortOrder,

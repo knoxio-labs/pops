@@ -110,10 +110,17 @@ the catalogue value API. An offline mutation may carry an older published
 revision: the server first validates it against that authored snapshot, then
 rebases it only when the complete authored-to-active compatibility diff is
 compatible and the same stable IDs and values validate against the active
-snapshot. Renames therefore replay without rewriting the payload, while an
-archived/replaced definition returns `catalogue_repair_required` and a
+snapshot. Renames therefore replay without rewriting the payload; a value on
+a definition archived since moves onto its recorded replacement when that has
+the same shape (ADR-002, Archive and compatibility rules), while an
+archived/replaced definition in the way returns `catalogue_repair_required` and a
 protocol-gated or migration-required publication returns
-`catalogue_update_required`. Successful rebases persist the active revision;
+`catalogue_update_required`. Both carry `catalogueChanges`: for each
+definition in the way, which one (`type`, `field`, `option`, or a `revision`
+the server cannot judge by), what happened (`archived`, `replaced`, `retired`,
+`now_required`, `not_in_revision`, `redefined`, `needs_newer_app`), and the
+first published revision that did it. A `replaced` change names the live end of
+the definition's recorded lineage in `replacementId`. Successful rebases persist the active revision;
 rejections and applications remain idempotent. A stable-ID mutation never
 falls back to the revision-1 projection. Mutations that omit
 `catalogueRevision` retain the named `typeKey`/`fields` protocol-1 contract for
@@ -131,13 +138,6 @@ narrow or widen that set, and every changed field on a live affected type needs
 a migration step. Publication dry-runs every derived affected row and appends a
 `migrated` item event only after the complete candidate validates. Search
 rebuilds use the candidate catalogue during that same transition.
-
-`POST /type-catalogue/drafts/:revision/preview` applies the proposed operation
-batch inside a rolled-back transaction. It returns fresh compatibility and
-affected-item diagnostics bound to the exact base and draft revisions without
-changing the persisted draft. Blocked validation responses retain every
-definition-level issue and the same revision-bound compatibility and affected
-item evidence in the standard error envelope.
 
 `POST /type-catalogue/drafts/:revision/preview` applies the proposed operation
 batch inside a rolled-back transaction. It returns fresh compatibility and

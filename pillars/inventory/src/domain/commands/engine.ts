@@ -118,6 +118,9 @@ function decide(d: Dispatch, registry: OpRegistry): StoredOutcome {
         status: 'rejected',
         reason: error.reason,
         message: error.message,
+        ...(error.catalogueChanges.length > 0
+          ? { catalogueChanges: [...error.catalogueChanges] }
+          : {}),
       };
     }
     if (error instanceof CommandConflict) return conflicted(d.mutation, error.conflict);

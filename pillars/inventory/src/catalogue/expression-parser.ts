@@ -208,8 +208,9 @@ function parseNode(value: unknown, path: string, state: ParseState): ExpressionV
 
 /**
  * The expression versions this server stores. Both share one grammar;
- * version 2 derives and converts measurement units (ADR-002 D5), so a client
- * that only evaluates version 1 keeps the server's value for it.
+ * version 2 derives and converts measurement units and compares decimals by
+ * value (ADR-002 D5), so a client that only evaluates version 1 keeps the
+ * server's value for it.
  */
 export const EXPRESSION_VERSIONS: readonly number[] = [1, 2];
 

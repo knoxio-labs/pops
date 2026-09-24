@@ -214,21 +214,6 @@ internal enum InventoryProtocol2Display {
         }
     }
 
-    /// A computed field's unavailable reason, naming the missing dependency
-    /// by label when the reason identifies one. Shared by Item detail and the
-    /// item form, the two places a computed value's unavailability is shown.
-    internal static func unavailable(
-        reason: String, failedFieldId: String, dependencyLabel: (String) -> String?
-    ) -> String {
-        guard let known = InventoryValueUnavailableReason(rawValue: reason) else {
-            return "Unavailable"
-        }
-        if known == .missingDependency, let missing = dependencyLabel(failedFieldId) {
-            return "Unavailable until \(missing) is set"
-        }
-        return unavailable(known)
-    }
-
     private static func valueText(
         _ primitive: InventoryPrimitiveValue, field: InventoryCatalogueField,
         referenceLabel: (InventoryReferenceValue) -> String?

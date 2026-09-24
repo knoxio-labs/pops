@@ -2063,6 +2063,15 @@ export type MobileInventoryMutationsResponses = {
           status: 'conflict';
         }
       | {
+          catalogueChanges?: Array<{
+            change: string;
+            definition: string;
+            fieldId: string | null;
+            id: string;
+            replacementId: string | null;
+            revision: number;
+            typeId: string | null;
+          }>;
           message: string;
           mutationId: string;
           reason: string;
@@ -2807,6 +2816,7 @@ export type MobileInventoryCatalogueRevisionResponses = {
         };
         referenceKinds: Array<'item' | 'location'>;
         referenceTypeIds: Array<string>;
+        replacedBy?: string | null;
         required: boolean;
         sortOrder: number;
         storage: 'stored' | 'computed';
@@ -2819,6 +2829,7 @@ export type MobileInventoryCatalogueRevisionResponses = {
       presentation: {
         [key: string]: unknown;
       };
+      replacedBy?: string | null;
       revision: number;
       sortOrder: number;
     }>;

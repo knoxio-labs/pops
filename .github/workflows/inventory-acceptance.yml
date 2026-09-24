@@ -1,0 +1,187 @@
+name: Inventory Acceptance
+
+# Runs the inventory-types acceptance suite (POPS-4354) — `mise run
+# inventory:acceptance`, `scripts/inventory-acceptance/run.mjs` — against
+# real registry/inventory/bfm/mcp processes and, optionally, a real browser
+# or iOS simulator, and uploads the evidence records/packets it writes under
+# `tmp/inventory-acceptance/` as workflow artifacts.
+#
+# OPT-IN VERIFICATION, NOT A GUARD (ADR-045, 2026-09-24 amendment;
+# POPS-4514). The only trigger is `workflow_dispatch` — no `pull_request`,
+# `push`, or `merge_group` — so this can never gate a PR or the merge queue,
+# is not in `ci-gate.yml`'s `gated` array, and is not a required context in
+# the branch ruleset. `scripts/ci/__tests__/guard-job-tiers.test.ts` derives
+# that classification from these exact trigger keys, not from this comment,
+# so it fails the moment a PR/push/merge-group trigger is added here without
+# also being added to that test's expectations.
+#
+# TWO JOBS, COST BOUNDED BY DEFAULT. `run_web` defaults to true and adds the
+# Playwright (S7) layer on the same `ubuntu-latest` runner that already runs
+# the vitest layer (S1-S6) — cheap, so it is on by default. `run_ios`
+# defaults to FALSE: it drives a real iOS simulator through Maestro
+# (`clients/ios/.maestro/acceptance/`), which needs `macos-latest`, an Xcode
+# compile, and a simulator boot — the same shape `ios-quality.yml`'s merge-
+# group lane pays, on the order of tens of minutes. It only runs when a
+# dispatch explicitly asks for it. The macOS job re-runs the vitest layer
+# too: `scripts/inventory-acceptance/run.mjs` has no flag to run only the iOS
+# scenario, and splitting it one would be scope beyond what this workflow
+# adds — the vitest layer is the cheap part of either job.
+#
+# EVIDENCE PACKETS are optional: `pull_request`/`pr_issue` are blank by
+# default, which runs the suite and writes `*.records.json` with no
+# `*.packet.json` (`run.mjs`'s own behaviour when neither flag is passed).
+# Fill both to get a packet `scripts/implementation-evidence.mjs` can
+# validate for that PR/ticket.
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_web:
+        description: "Also run the Playwright (S7) layer"
+        type: boolean
+        default: true
+      run_ios:
+        description: "Also run the Maestro iOS layer (macos-latest, tens of minutes)"
+        type: boolean
+        default: false
+      pull_request:
+        description: "PR number to write an evidence packet for (leave blank for records only)"
+        type: string
+        default: ""
+      pr_issue:
+        description: "Huly ticket the evidence packet is for (required together with pull_request)"
+        type: string
+        default: ""
+
+jobs:
+  acceptance:
+    name: Acceptance suite (vitest${{ inputs.run_web && ' + Playwright' || '' }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Cache Playwright browsers
+        if: inputs.run_web
+        id: playwright-cache
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+
+      - name: Install Playwright Chromium
+        if: inputs.run_web && steps.playwright-cache.outputs.cache-hit != 'true'
+        timeout-minutes: 10
+        run: |
+          cd pillars/shell
+          node ../../scripts/ci/playwright-install-retry.mjs \
+            --label "playwright install chromium" \
+            -- npx playwright install --with-deps chromium
+
+      - name: Install Playwright system dependencies
+        # The cache above only holds the downloaded browser binary, never the
+        # OS-level packages `--with-deps` installs (libnss3, libgbm1, …), and
+        # a fresh `ubuntu-latest` VM remembers neither. Same split as
+        # fe-test-e2e.yml, for the same reason: without this, a cache hit on
+        # the second (and every later) run_web dispatch skips the step above
+        # entirely and Chromium fails to launch.
+        if: inputs.run_web && steps.playwright-cache.outputs.cache-hit == 'true'
+        timeout-minutes: 10
+        run: |
+          cd pillars/shell
+          node ../../scripts/ci/playwright-install-retry.mjs \
+            --label "playwright install-deps" \
+            -- npx playwright install-deps
+
+      - name: Run the acceptance suite
+        run: |
+          set -euo pipefail
+          args=()
+          if [ "${{ inputs.run_web }}" = "true" ]; then
+            args+=(--web)
+          fi
+          if [ -n "${{ inputs.pull_request }}" ]; then
+            args+=(--pull-request "${{ inputs.pull_request }}" --pr-issue "${{ inputs.pr_issue }}")
+          fi
+          node scripts/inventory-acceptance/run.mjs "${args[@]}"
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: inventory-acceptance-evidence
+          path: tmp/inventory-acceptance/
+          if-no-files-found: error
+          retention-days: 30
+
+  acceptance-ios:
+    name: Acceptance suite (+ Maestro iOS)
+    if: inputs.run_ios
+    runs-on: macos-latest
+    # A wedged simulator hangs rather than failing — see ios-quality.yml's
+    # identical ceiling and its own comment for why 100 minutes.
+    timeout-minutes: 100
+    env:
+      MISE_DISABLE_TOOLS: rust
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/select-xcode
+
+      - uses: ./.github/actions/setup-mise
+        with:
+          working_directory: clients/ios
+
+      - name: Expose bundled node-gyp on PATH
+        # mise-installed node bundles node-gyp under npm but does not put it
+        # on PATH, so better-sqlite3 (bfm/inventory's DB driver) fails its
+        # pnpm lifecycle build with `node-gyp: not found`. Same fix as
+        # ios-quality.yml and unit-quality.yml.
+        run: |
+          set -euo pipefail
+          gyp_bin="$(dirname "$(mise which node)")/../lib/node_modules/npm/bin/node-gyp-bin"
+          [ -x "$gyp_bin/node-gyp" ] || { echo "::error::bundled node-gyp not found at $gyp_bin"; exit 1; }
+          echo "$gyp_bin" >> "$GITHUB_PATH"
+
+      - name: Install the acceptance suite's subgraph
+        working-directory: .
+        run: pnpm install --frozen-lockfile --filter "@pops/registry..." --filter "@pops/inventory..." --filter "@pops/bfm..." --filter "@pops/mcp..."
+
+      - name: Run the acceptance suite with the iOS layer
+        working-directory: .
+        run: |
+          set -euo pipefail
+          args=(--ios --out tmp/inventory-acceptance-ios)
+          if [ -n "${{ inputs.pull_request }}" ]; then
+            args+=(--pull-request "${{ inputs.pull_request }}" --pr-issue "${{ inputs.pr_issue }}")
+          fi
+          node scripts/inventory-acceptance/run.mjs "${args[@]}"
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: inventory-acceptance-evidence-ios
+          path: tmp/inventory-acceptance-ios/
+          if-no-files-found: error
+          retention-days: 30
+
+      # Maestro's own screenshots/view hierarchies, same path and the same
+      # `if: failure()` as ios-quality.yml (a green run's are 30MB nobody
+      # opens) — the only way to tell a real regression from a tap the
+      # simulator swallowed.
+      - name: Maestro's screenshots and view hierarchies
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: inventory-acceptance-maestro
+          path: ~/.maestro/tests
+          retention-days: 7
+          if-no-files-found: warn

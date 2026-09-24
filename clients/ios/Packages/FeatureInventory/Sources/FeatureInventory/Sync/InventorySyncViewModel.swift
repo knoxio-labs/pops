@@ -113,6 +113,8 @@ internal final class InventorySyncViewModel {
         switch choice {
         case .keepMine(let code):
             return code.map { "Relabelled \($0)" } ?? repair.kind.keepOutcome
+        case .replaceMine:
+            return repair.kind.keepOutcome
         case .discardMine:
             return repair.kind.letGoOutcome
         }

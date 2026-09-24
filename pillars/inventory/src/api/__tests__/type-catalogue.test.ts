@@ -635,6 +635,75 @@ describe('type catalogue owner API', () => {
     ).toBe(false);
   });
 
+  it('rejects a reference field declared with no target kind, on both draft patch and preview', async () => {
+    const api = apiFor('web');
+    const current = await api.get('/type-catalogue');
+    const baseRevision = current.body.revision.revision;
+    const type = current.body.types[0];
+    const created = await api.post('/type-catalogue/drafts').send({ baseRevision });
+    const revision = created.body.revision.revision;
+    const operations = [
+      {
+        kind: 'put_field',
+        typeId: type.id,
+        key: 'ownerless_reference',
+        label: 'Ownerless reference',
+        fieldKind: 'reference',
+        cardinality: 'one',
+        storage: 'stored',
+        referenceKinds: [],
+      },
+    ];
+
+    const preview = await api
+      .post(`/type-catalogue/drafts/${revision}/preview`)
+      .send({ baseRevision, expectedDraftVersion: created.body.revision.draftVersion, operations });
+
+    expect(preview.status, JSON.stringify(preview.body)).toBe(400);
+    expect(preview.body.code).toBe('catalogue_validation_failed');
+    expect(preview.body.issues.map((issue: { code: string }) => issue.code)).toEqual([
+      'reference_kinds_required',
+    ]);
+
+    const patch = await api
+      .patch(`/type-catalogue/drafts/${revision}`)
+      .send({ baseRevision, expectedDraftVersion: created.body.revision.draftVersion, operations });
+
+    expect(patch.status, JSON.stringify(patch.body)).toBe(400);
+    expect(patch.body.code).toBe('catalogue_validation_failed');
+    expect(patch.body.issues.map((issue: { code: string }) => issue.code)).toEqual([
+      'reference_kinds_required',
+    ]);
+  });
+
+  it('accepts a reference field once it declares at least one target kind', async () => {
+    const api = apiFor('web');
+    const current = await api.get('/type-catalogue');
+    const baseRevision = current.body.revision.revision;
+    const type = current.body.types[0];
+    const created = await api.post('/type-catalogue/drafts').send({ baseRevision });
+    const revision = created.body.revision.revision;
+
+    const patch = await api.patch(`/type-catalogue/drafts/${revision}`).send({
+      baseRevision,
+      expectedDraftVersion: created.body.revision.draftVersion,
+      operations: [
+        {
+          kind: 'put_field',
+          typeId: type.id,
+          key: 'located_reference',
+          label: 'Located reference',
+          fieldKind: 'reference',
+          cardinality: 'one',
+          storage: 'stored',
+          referenceKinds: ['location'],
+        },
+      ],
+    });
+
+    expect(patch.status, JSON.stringify(patch.body)).toBe(200);
+  });
+
   it('serializes migration-required and forbidden preview diagnostics', async () => {
     const api = apiFor('web');
     const current = await api.get('/type-catalogue');
@@ -727,6 +796,47 @@ describe('type catalogue owner API', () => {
     expect(
       archived.body.draft.types.find((entry: { id: string }) => entry.id === type.id)
     ).toMatchObject({ label: 'Edited equipment', archivedAt: expect.any(String) });
+  });
+
+  it('records the type that replaces an archived one, and refuses an unknown replacement', async () => {
+    const api = apiFor('web');
+    const current = await api.get('/type-catalogue');
+    const baseRevision = current.body.revision.revision;
+    const createdDraft = await api.post('/type-catalogue/drafts').send({ baseRevision });
+    const revision = createdDraft.body.revision.revision;
+    const created = await api.patch(`/type-catalogue/drafts/${revision}`).send({
+      baseRevision,
+      expectedDraftVersion: createdDraft.body.revision.draftVersion,
+      operations: [
+        { kind: 'put_type', key: 'old_meter', label: 'Old meter' },
+        { kind: 'put_type', key: 'meter', label: 'Meter' },
+      ],
+    });
+    const idOf = (key: string): string =>
+      created.body.draft.types.find((entry: { key: string }) => entry.key === key).id;
+
+    const unknown = await api.patch(`/type-catalogue/drafts/${revision}`).send({
+      baseRevision,
+      expectedDraftVersion: created.body.draft.revision.draftVersion,
+      operations: [{ kind: 'archive_type', id: idOf('old_meter'), replacedBy: randomUUID() }],
+    });
+    const replaced = await api.patch(`/type-catalogue/drafts/${revision}`).send({
+      baseRevision,
+      expectedDraftVersion: created.body.draft.revision.draftVersion,
+      operations: [{ kind: 'archive_type', id: idOf('old_meter'), replacedBy: idOf('meter') }],
+    });
+
+    expect(unknown.status).toBe(400);
+    expect(unknown.body.issues).toEqual([
+      expect.objectContaining({ definitionId: idOf('old_meter'), code: 'replacement_unknown' }),
+    ]);
+    expect(replaced.status, JSON.stringify(replaced.body)).toBe(200);
+    expect(
+      replaced.body.draft.types.find((entry: { key: string }) => entry.key === 'old_meter')
+    ).toMatchObject({ archivedAt: expect.any(String), replacedBy: idOf('meter') });
+    expect(
+      replaced.body.draft.types.find((entry: { key: string }) => entry.key === 'meter')
+    ).toMatchObject({ archivedAt: null, replacedBy: null });
   });
 
   it('rejects a draft based on a stale published revision', async () => {

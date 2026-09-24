@@ -21,6 +21,24 @@ export function failIssues(issues: readonly CatalogueIssue[]): never {
   });
 }
 
+/** Refuses a put that would un-archive a definition whose replacement is recorded. */
+export function assertReplacedStaysArchived(
+  id: string,
+  current: { readonly replacedBy: string | null } | undefined,
+  archivedAt: string | null | undefined
+): void {
+  if (current?.replacedBy != null && archivedAt === null) {
+    failIssues([
+      issue(
+        id,
+        'archivedAt',
+        'replacement_requires_archive',
+        'A replaced definition stays archived'
+      ),
+    ]);
+  }
+}
+
 export function requireCatalogue(
   db: CommandDb,
   revision: number,

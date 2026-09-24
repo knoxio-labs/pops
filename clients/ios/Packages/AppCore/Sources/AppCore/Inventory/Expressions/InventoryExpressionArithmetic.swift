@@ -84,6 +84,15 @@ internal enum InventoryExpressionArithmetic {
         }
     }
 
+    /// `decimalEqual`: whether two decimals are the same number at any scale
+    /// (`3.0` and `3`), compared exactly; `invalid_value` when either is not one.
+    static func decimalEqual(_ lhs: String, _ rhs: String) -> Outcome {
+        guard let (left, right) = decimals(.text(lhs), .text(rhs)),
+            let aligned = InventoryExpressionDecimal.aligned(left, right)
+        else { return .failure(.invalidValue) }
+        return .success(.boolean(aligned.left.coefficient == aligned.right.coefficient))
+    }
+
     /// `invalid_value` when the operands are not identical numeric kinds.
     static func lessThan(_ left: InventoryExpressionValue, _ right: InventoryExpressionValue)
         -> Outcome
