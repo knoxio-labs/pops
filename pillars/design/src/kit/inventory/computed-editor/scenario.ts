@@ -1,4 +1,9 @@
-import type { ExpressionContext, ExpressionNode, ValueType } from '@pops/app-inventory/design';
+import type {
+  ExpressionContext,
+  ExpressionNode,
+  PreviewMissingInput,
+  ValueType,
+} from '@pops/app-inventory/design';
 
 /** Server reasons a computed read cannot produce a value (ExpressionUnavailableReason). */
 export type UnavailableReason =
@@ -54,9 +59,7 @@ export type PreviewState =
     })
   | (PreviewEvaluated & {
       readonly state: 'unavailable';
-      readonly reason: Exclude<UnavailableReason, 'evaluation_error'>;
-      readonly missingField: string;
-      readonly missingOn: string;
+      readonly missingInputs: readonly PreviewMissingInput[];
     })
   | (PreviewEvaluated & { readonly state: 'evaluation-error'; readonly code: EvaluationErrorCode });
 

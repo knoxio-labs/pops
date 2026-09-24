@@ -14340,7 +14340,7 @@
                               },
                               "type": "array"
                             },
-                            "missing": {
+                            "missingInputs": {
                               "items": {
                                 "additionalProperties": false,
                                 "properties": {
@@ -14351,16 +14351,16 @@
                                   },
                                   "itemId": {
                                     "type": "string"
+                                  },
+                                  "reason": {
+                                    "type": "string"
                                   }
                                 },
-                                "required": ["fieldId", "itemId"],
+                                "required": ["reason", "fieldId", "itemId"],
                                 "type": "object"
                               },
                               "minItems": 1,
                               "type": "array"
-                            },
-                            "reason": {
-                              "type": "string"
                             },
                             "state": {
                               "enum": ["unavailable"],
@@ -14377,8 +14377,7 @@
                             "dependencies",
                             "traversedItemIds",
                             "state",
-                            "reason",
-                            "missing"
+                            "missingInputs"
                           ],
                           "type": "object"
                         },

@@ -314,6 +314,23 @@ run = [
   "mise run fixture:expression-vectors:vendor",
 ]
 
+# The measurement-units fixture (Inventory ADR-002 D5) pins the client copy of
+# the unit grammar in `pillars/inventory/app` — used by the web catalogue
+# editor and the design kit, which cannot import the server package directly —
+# against this pillar's real unit table.
+[tasks."fixture:measurement-units:vendor"]
+description = "Re-vendor the inventory measurement-units fixture into the app package"
+dir = "{{config_root}}"
+run = "cp pillars/inventory/contracts/measurement-units-v1.json pillars/inventory/app/contracts/measurement-units-v1.json"
+
+[tasks."fixture:measurement-units"]
+description = "Regenerate the inventory measurement-units fixture from the unit table, and re-vendor it"
+dir = "{{config_root}}"
+run = [
+  "pnpm --filter @pops/inventory run generate:measurement-units-vectors",
+  "mise run fixture:measurement-units:vendor",
+]
+
 # The iOS app icon's layers are generated, not drawn. The task lives here rather
 # than under `clients/ios` because it writes into both Icon Composer bundles and
 # its palette is asserted against `libs/sdk`'s nav enum — three units, so it

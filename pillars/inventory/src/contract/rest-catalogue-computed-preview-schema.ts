@@ -1,9 +1,10 @@
 /**
  * Wire shape of the non-mutating "try on an item" preview of a draft computed
- * field. `reason` and `code` are plain strings for the same reason the sync
- * wire keeps `reason` open (Inventory ADR-002 D10): the evaluator may learn a
- * new cause without every client shipping first, and a client phrases the
- * ones it knows and shows the raw code for the rest.
+ * field. Each missing input's `reason` and the failure `code` are plain
+ * strings for the same reason the sync wire keeps them open (Inventory
+ * ADR-002 D10): the evaluator may learn a new cause without every client
+ * shipping first, and a client phrases the ones it knows and shows the raw
+ * code for the rest.
  */
 import { z } from 'zod';
 
@@ -11,7 +12,10 @@ import {
   CatalogueDraftOperationSchema,
   ExpectedDraftVersionSchema,
 } from './rest-catalogue-schemas.js';
-import { SyncComputedDependencySchema } from './rest-sync-computed-schemas.js';
+import {
+  SyncComputedDependencySchema,
+  SyncComputedMissingInputSchema,
+} from './rest-sync-computed-schemas.js';
 
 const AnyJson = z.unknown();
 
@@ -43,9 +47,11 @@ export const ComputedFieldPreviewResultSchema = z.discriminatedUnion('state', [
   z.object({
     ...evaluated,
     state: z.literal('unavailable'),
-    reason: z.string(),
-    /** Each input that had no value, and the item it was read on. */
-    missing: z.array(z.object({ fieldId: z.uuid(), itemId: z.string() })).min(1),
+    /**
+     * Every input that had no value, the item it was read on, and why.
+     * `coalesce` reports one per argument that had none.
+     */
+    missingInputs: z.array(SyncComputedMissingInputSchema).min(1),
   }),
   z.object({ ...evaluated, state: z.literal('error'), code: z.string() }),
 ]);

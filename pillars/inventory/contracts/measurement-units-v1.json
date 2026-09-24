@@ -1,0 +1,225 @@
+{
+  "version": 1,
+  "units": [
+    {
+      "unit": "mm",
+      "dimension": "length"
+    },
+    {
+      "unit": "cm",
+      "dimension": "length"
+    },
+    {
+      "unit": "m",
+      "dimension": "length"
+    },
+    {
+      "unit": "kg",
+      "dimension": "mass"
+    },
+    {
+      "unit": "L",
+      "dimension": "length³"
+    },
+    {
+      "unit": "W",
+      "dimension": "power"
+    },
+    {
+      "unit": "V",
+      "dimension": "voltage"
+    },
+    {
+      "unit": "Gbps",
+      "dimension": "data-rate"
+    },
+    {
+      "unit": "lm",
+      "dimension": "brightness"
+    },
+    {
+      "unit": "K",
+      "dimension": "colour-temperature"
+    }
+  ],
+  "parse": [
+    {
+      "unit": "cm",
+      "parsed": [
+        {
+          "symbol": "cm",
+          "power": 1
+        }
+      ],
+      "formatted": "cm"
+    },
+    {
+      "unit": "cm²",
+      "parsed": [
+        {
+          "symbol": "cm",
+          "power": 2
+        }
+      ],
+      "formatted": "cm²"
+    },
+    {
+      "unit": "cm³",
+      "parsed": [
+        {
+          "symbol": "cm",
+          "power": 3
+        }
+      ],
+      "formatted": "cm³"
+    },
+    {
+      "unit": "kg/m³",
+      "parsed": [
+        {
+          "symbol": "kg",
+          "power": 1
+        },
+        {
+          "symbol": "m",
+          "power": -3
+        }
+      ],
+      "formatted": "kg/m³"
+    },
+    {
+      "unit": "1/s",
+      "parsed": [
+        {
+          "symbol": "s",
+          "power": -1
+        }
+      ],
+      "formatted": "1/s"
+    },
+    {
+      "unit": "each",
+      "parsed": [
+        {
+          "symbol": "each",
+          "power": 1
+        }
+      ],
+      "formatted": "each"
+    },
+    {
+      "unit": "per box",
+      "parsed": null,
+      "formatted": null
+    },
+    {
+      "unit": "cm·cm",
+      "parsed": null,
+      "formatted": null
+    }
+  ],
+  "shifts": [
+    {
+      "from": "mm",
+      "to": "cm",
+      "shift": -1
+    },
+    {
+      "from": "m",
+      "to": "cm",
+      "shift": 2
+    },
+    {
+      "from": "cm",
+      "to": "mm",
+      "shift": 1
+    },
+    {
+      "from": "cm³",
+      "to": "L",
+      "shift": -3
+    },
+    {
+      "from": "L",
+      "to": "cm³",
+      "shift": 3
+    },
+    {
+      "from": "cm",
+      "to": "kg",
+      "shift": null
+    },
+    {
+      "from": "cm",
+      "to": "W",
+      "shift": null
+    },
+    {
+      "from": "each",
+      "to": "cm",
+      "shift": null
+    }
+  ],
+  "combine": [
+    {
+      "left": "cm",
+      "right": "cm",
+      "sign": 1,
+      "term": [
+        {
+          "symbol": "cm",
+          "power": 2
+        }
+      ]
+    },
+    {
+      "left": "cm²",
+      "right": "cm",
+      "sign": 1,
+      "term": [
+        {
+          "symbol": "cm",
+          "power": 3
+        }
+      ]
+    },
+    {
+      "left": "cm³",
+      "right": "cm",
+      "sign": -1,
+      "term": [
+        {
+          "symbol": "cm",
+          "power": 2
+        }
+      ]
+    },
+    {
+      "left": "cm",
+      "right": "mm",
+      "sign": -1,
+      "term": []
+    },
+    {
+      "left": "each",
+      "right": "cm",
+      "sign": 1,
+      "term": [
+        {
+          "symbol": "each",
+          "power": 1
+        },
+        {
+          "symbol": "cm",
+          "power": 1
+        }
+      ]
+    },
+    {
+      "left": "per box",
+      "right": "cm",
+      "sign": 1,
+      "term": null
+    }
+  ]
+}

@@ -143,17 +143,40 @@ describe('static dependencies', () => {
 });
 
 describe('slot types', () => {
-  it('lets a product of measurements take any number, for derived units', () => {
+  it('lets a factor of a non-measurement product take any number', () => {
     const product: ExpressionNode = {
       op: 'multiply',
-      left: { op: 'multiply', left: read('width'), right: read('height') },
+      left: read('price', 'part_of'),
       right: EMPTY,
     };
-    const types = slotTypes(context, product, { kind: 'measurement', unit: 'cm³' });
-    expect(types.get('expression')).toEqual({ kind: 'measurement', unit: 'cm³' });
+    const types = slotTypes(context, product, { kind: 'decimal' });
     expect(types.get('expression.left')).toEqual({ kind: 'number' });
-    expect(types.get('expression.left.right')).toEqual({ kind: 'number' });
     expect(types.get('expression.right')).toEqual({ kind: 'number' });
+  });
+
+  it('opens an empty factor to a decimal or any measurement once its partner is one', () => {
+    const scaled: ExpressionNode = {
+      op: 'multiply',
+      left: read('width'),
+      right: EMPTY,
+    };
+    const types = slotTypes(context, scaled, { kind: 'measurement', unit: 'cm²' });
+    expect(types.get('expression.left')).toEqual({ kind: 'measurement', unit: 'cm' });
+    expect(types.get('expression.right')).toEqual({ kind: 'measurement' });
+  });
+
+  it('derives cm² then cm³ for a chain of measurement products (ADR-002 D5)', () => {
+    const boxVolume: ExpressionNode = {
+      op: 'multiply',
+      left: { op: 'multiply', left: read('width'), right: read('height') },
+      right: read('depth'),
+    };
+    const types = slotTypes(context, boxVolume, { kind: 'measurement', unit: 'L' });
+    expect(types.get('expression')).toEqual({ kind: 'measurement', unit: 'L' });
+    expect(types.get('expression.left')).toEqual({ kind: 'measurement', unit: 'cm²' });
+    expect(types.get('expression.left.left')).toEqual({ kind: 'measurement', unit: 'cm' });
+    expect(types.get('expression.left.right')).toEqual({ kind: 'measurement', unit: 'cm' });
+    expect(types.get('expression.right')).toEqual({ kind: 'measurement', unit: 'cm' });
   });
 
   it('keeps sums in the field type and types comparisons from a field or value', () => {
@@ -173,6 +196,22 @@ describe('slot types', () => {
       false
     );
     expect(fieldFitsSlot({ kind: 'integer', cardinality: 'many' }, undefined)).toBe(false);
+  });
+
+  it('fits a measurement field of the same dimension into a fixed-unit slot (ADR-002 D5)', () => {
+    const width = { kind: 'measurement', unit: 'cm', cardinality: 'one' } as const;
+    const kilograms = { kind: 'measurement', unit: 'kg', cardinality: 'one' } as const;
+    expect(fieldFitsSlot(width, { kind: 'measurement', unit: 'mm' })).toBe(true);
+    expect(fieldFitsSlot(width, { kind: 'measurement', unit: 'kg' })).toBe(false);
+    expect(fieldFitsSlot(kilograms, { kind: 'measurement', unit: 'cm' })).toBe(false);
+  });
+
+  it('fits a decimal, an integer or any measurement into a unit-less measurement slot', () => {
+    const open = { kind: 'measurement' } as const;
+    expect(fieldFitsSlot({ kind: 'measurement', unit: 'cm', cardinality: 'one' }, open)).toBe(true);
+    expect(fieldFitsSlot({ kind: 'decimal', cardinality: 'one' }, open)).toBe(true);
+    expect(fieldFitsSlot({ kind: 'integer', cardinality: 'one' }, open)).toBe(true);
+    expect(fieldFitsSlot({ kind: 'short_text', cardinality: 'one' }, open)).toBe(false);
   });
 });
 

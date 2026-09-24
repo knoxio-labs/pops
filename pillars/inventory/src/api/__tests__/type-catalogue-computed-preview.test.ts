@@ -312,8 +312,13 @@ describe('computed-field preview', () => {
     expect(response.status).toBe(200);
     expect(response.body.result).toMatchObject({
       state: 'unavailable',
-      reason: 'missing_dependency',
-      missing: [{ fieldId: fixture.ids.weightFieldId, itemId: fixture.partId }],
+      missingInputs: [
+        {
+          fieldId: fixture.ids.weightFieldId,
+          itemId: fixture.partId,
+          reason: 'missing_dependency',
+        },
+      ],
       traversedItemIds: [fixture.kitId, fixture.partId],
     });
     expect(response.body.items.map((item: { name: string }) => item.name)).toEqual([
@@ -338,10 +343,17 @@ describe('computed-field preview', () => {
     expect(response.status).toBe(200);
     expect(response.body.result).toMatchObject({
       state: 'unavailable',
-      reason: 'missing_dependency',
-      missing: [
-        { fieldId: fixture.ids.weightFieldId, itemId: fixture.partId },
-        { fieldId: fixture.ids.countFieldId, itemId: fixture.kitId },
+      missingInputs: [
+        {
+          fieldId: fixture.ids.weightFieldId,
+          itemId: fixture.partId,
+          reason: 'missing_dependency',
+        },
+        {
+          fieldId: fixture.ids.countFieldId,
+          itemId: fixture.kitId,
+          reason: 'missing_dependency',
+        },
       ],
     });
   });
@@ -362,7 +374,7 @@ describe('computed-field preview', () => {
     expect(response.status).toBe(200);
     expect(response.body.result).toMatchObject({
       state: 'unavailable',
-      reason: 'reference_deleted',
+      missingInputs: [expect.objectContaining({ reason: 'reference_deleted' })],
     });
   });
 
