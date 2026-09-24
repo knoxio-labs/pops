@@ -165,7 +165,8 @@ function withRoot(items: readonly VectorItem[] | undefined): readonly VectorItem
   return [{ id: ITEM.root, state: 'resolved', revision: 3, fields: [] }, ...listed];
 }
 
-function buildVector(vectorCase: ExpressionVectorCase): ExpressionVector {
+/** Evaluates one case through the server's own code. */
+export function buildExpressionVector(vectorCase: ExpressionVectorCase): ExpressionVector {
   const field: VectorResultField = {
     fieldId: FIELD.computed,
     kind: vectorCase.kind,
@@ -192,5 +193,5 @@ function buildVector(vectorCase: ExpressionVectorCase): ExpressionVector {
 
 /** Evaluates every case through the server's own code, in case order. */
 export function buildExpressionVectors(): readonly ExpressionVector[] {
-  return EXPRESSION_VECTOR_CASES.map(buildVector);
+  return EXPRESSION_VECTOR_CASES.map(buildExpressionVector);
 }

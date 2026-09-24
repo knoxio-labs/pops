@@ -1,5 +1,6 @@
+import { savedExpressionVersion } from '../expression/expression-version';
 import { ExpressionBuilderProvider } from './BuilderContext';
-import { McpPublishRoute, SaveRefused } from './EditorNotices';
+import { ExpressionVersionUpgrade, McpPublishRoute, SaveRefused } from './EditorNotices';
 import { ExpressionPanel } from './ExpressionPanel';
 import { NodeInspector } from './NodeInspector';
 import { OverridePolicyControl } from './OverridePolicyControl';
@@ -23,8 +24,17 @@ export interface ComputedFieldEditorProps {
   readonly saveRefused: boolean;
   /** Set when the draft's compatibility check classifies this field's change as a migration. */
   readonly migration: { readonly draftRevision: number | null } | null;
+  /** The saved field's expression version; absent for a field not saved yet. */
+  readonly storedExpressionVersion?: number | null;
   /** The "Try on an item" panel, wired to the preview route by the caller. */
   readonly preview: ReactNode;
+}
+
+function upgradesVersion(props: ComputedFieldEditorProps): boolean {
+  return (
+    props.storedExpressionVersion === 1 &&
+    savedExpressionVersion(1, props.context, props.expression, props.fieldType) !== 1
+  );
 }
 
 /**
@@ -48,6 +58,7 @@ export function ComputedFieldEditor(props: ComputedFieldEditorProps) {
         {props.migration !== null && (
           <McpPublishRoute draftRevision={props.migration.draftRevision} />
         )}
+        {upgradesVersion(props) && <ExpressionVersionUpgrade />}
         <OverridePolicyControl policy={props.policy} onChange={props.onPolicyChange} />
         <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
           <ExpressionPanel />

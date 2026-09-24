@@ -73,6 +73,7 @@ function field(typeId: string, shape: FieldShape, sortOrder: number): CatalogueF
     presentation: {},
     referenceKinds: [],
     referenceTypeIds: [],
+    replacedBy: null,
     required: false,
     sortOrder,
     storage: 'stored',
@@ -92,6 +93,7 @@ function type(id: string, label: string, fields: readonly FieldShape[]): Catalog
     label,
     legacyLabels: [],
     presentation: {},
+    replacedBy: null,
     revision: 3,
     sortOrder: 0,
   };

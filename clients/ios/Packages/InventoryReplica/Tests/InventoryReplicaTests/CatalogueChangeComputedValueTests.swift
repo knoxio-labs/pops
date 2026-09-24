@@ -92,4 +92,42 @@ internal struct CatalogueChangeComputedValueTests {
             try Setup.display(replica, Setup.box, Setup.volume)
                 == .value(try Setup.decimal("5.00")))
     }
+
+    @Test("a catalogue that archives a computed field stops evaluating it")
+    func archivedComputedFieldIsNotEvaluated() throws {
+        let replica = try LocalComputedValueTests.replica()
+        let next = Setup.revision + 1
+        let archived = InventoryCatalogueSnapshot(
+            revision: InventoryCatalogueRevision(revision: next, minimumProtocol: 2),
+            types: Setup.catalogue.types.map { type in
+                InventoryCatalogueType(
+                    id: type.id, key: type.key, label: type.label, sortOrder: type.sortOrder,
+                    fields: type.fields.map { field in
+                        guard field.id == Setup.volume else { return field }
+                        return InventoryCatalogueField(
+                            id: field.id, typeId: field.typeId, key: field.key,
+                            label: field.label, sortOrder: field.sortOrder, kind: field.kind,
+                            cardinality: field.cardinality, required: field.required,
+                            storage: field.storage, expressionVersion: field.expressionVersion,
+                            expression: field.expression, allowOverride: field.allowOverride,
+                            archivedAt: "2026-09-24T00:00:00.000Z")
+                    })
+            })
+        try Self.publish(archived, to: replica)
+        let seeded = try #require(try Setup.seededRows().first)
+        let resent = InventoryItem(
+            id: seeded.id, revision: seeded.revision, seq: 30, catalogueRevision: next,
+            name: seeded.name, typeId: seeded.typeId, typeKey: seeded.typeKey,
+            fieldValues: seeded.fieldValues,
+            computedValues: seeded.computedValues.filter { $0.fieldId != Setup.volume },
+            placement: .hand, createdAt: Setup.time, updatedAt: Setup.time)
+
+        try replica.apply(
+            InventoryChangesPage(
+                epoch: Fixture.epoch, items: [resent], locations: [], events: [],
+                nextSince: 30, hasMore: false, catalogueVersion: "cat-2",
+                catalogueRevision: next))
+
+        #expect(try Setup.display(replica, Setup.box, Setup.volume) == nil)
+    }
 }

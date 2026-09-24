@@ -146,6 +146,7 @@ export function ComputedFieldSection() {
     <ComputedFieldEditor
       context={context}
       fieldType={fieldValueType(form.kind, form.fixedUnit)}
+      storedExpressionVersion={form.field?.expressionVersion}
       expression={form.expression}
       onExpressionChange={form.setExpression}
       issues={issues}

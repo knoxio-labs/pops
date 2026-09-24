@@ -13,9 +13,10 @@ import {
   updateAt,
   wrapAt,
 } from './edit';
+import { savedExpressionVersion } from './expression-version';
 import { formatLiteral, formula, staticDependencies } from './formula';
 import { OPERATIONS, operationBlockedReason } from './operations';
-import { fieldFitsSlot, slotTypes } from './slot-types';
+import { fieldFitsSlot, needsDimensionalUnits, slotTypes } from './slot-types';
 import {
   expressionStats,
   issueBelongsTo,
@@ -322,5 +323,84 @@ describe('followable references', () => {
     expect(isFollowable(partOf)).toBe(true);
     expect(isFollowable(storedWith)).toBe(false);
     expect(isFollowable(tags)).toBe(false);
+  });
+});
+
+describe('expression version', () => {
+  const read = (fieldId: string): ExpressionNode => ({ op: 'read', path: [], fieldId });
+  const cm = { kind: 'measurement', unit: 'cm' } as const;
+  const mm = { kind: 'measurement', unit: 'mm' } as const;
+  const measure = (amount: string, unit: string): ExpressionNode => ({
+    op: 'literal',
+    value: { amount, unit },
+  });
+
+  it.each<[string, ExpressionNode, { kind: 'measurement'; unit: string } | { kind: 'integer' }]>([
+    ['a read in the field unit', read('width'), cm],
+    ['a sum in the field unit', { op: 'add', left: read('width'), right: read('depth') }, cm],
+    [
+      'a measurement scaled by a decimal',
+      { op: 'multiply', left: read('width'), right: { op: 'literal', value: '2' } },
+      cm,
+    ],
+    [
+      'a comparison of one unit',
+      {
+        op: 'if',
+        condition: { op: 'less_than', left: read('width'), right: measure('3', 'cm') },
+        thenBranch: read('width'),
+        elseBranch: read('depth'),
+      },
+      cm,
+    ],
+    [
+      'plain integers',
+      { op: 'add', left: read('count'), right: { op: 'literal', value: 1 } },
+      { kind: 'integer' },
+    ],
+  ])('validates %s under version 1', (_, node, fieldType) => {
+    expect(needsDimensionalUnits(context, node, fieldType)).toBe(false);
+  });
+
+  it.each<[string, ExpressionNode, { kind: 'measurement'; unit: string }]>([
+    ['a read converted into another unit', read('width'), mm],
+    [
+      'a literal in another unit of the dimension',
+      { op: 'add', left: read('width'), right: measure('5', 'mm') },
+      cm,
+    ],
+    [
+      'a comparison across units',
+      {
+        op: 'if',
+        condition: { op: 'equal', left: read('width'), right: measure('30', 'mm') },
+        thenBranch: read('width'),
+        elseBranch: read('depth'),
+      },
+      cm,
+    ],
+    [
+      'a product of two measurements',
+      { op: 'multiply', left: read('width'), right: read('height') },
+      { kind: 'measurement', unit: 'cm²' },
+    ],
+    [
+      'a scaled measurement converted at the root',
+      { op: 'multiply', left: read('width'), right: { op: 'literal', value: '2' } },
+      mm,
+    ],
+  ])('needs version 2 for %s', (_, node, fieldType) => {
+    expect(needsDimensionalUnits(context, node, fieldType)).toBe(true);
+  });
+
+  it('saves new and version-2 fields as version 2, and keeps a version-1 field unless it needs 2', () => {
+    const product: ExpressionNode = { op: 'multiply', left: read('width'), right: read('height') };
+    expect(savedExpressionVersion(null, context, read('width'), cm)).toBe(2);
+    expect(savedExpressionVersion(undefined, context, read('width'), cm)).toBe(2);
+    expect(savedExpressionVersion(2, context, read('width'), cm)).toBe(2);
+    expect(savedExpressionVersion(1, context, read('width'), cm)).toBe(1);
+    expect(savedExpressionVersion(1, context, product, { kind: 'measurement', unit: 'cm²' })).toBe(
+      2
+    );
   });
 });

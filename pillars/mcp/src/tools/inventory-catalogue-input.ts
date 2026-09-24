@@ -56,14 +56,6 @@ export function objectArray(
   return { ok: true, value };
 }
 
-/** Parses a non-empty array whose members are JSON-style objects. */
-export function requiredObjectArray(
-  args: Record<string, unknown>,
-  key: string
-): Parsed<Record<string, unknown>[]> {
-  return objectArray(args, key, 1);
-}
-
 /** Parses an optional JSON-style object from an MCP argument bag. */
 export function optionalObject(
   args: Record<string, unknown>,

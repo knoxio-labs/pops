@@ -233,7 +233,11 @@ describe('re-sending items a catalogue publication recomputes', () => {
 
     publish(f, { operations: [{ kind: 'archive_field', id: f.catalogue.twoHopFieldId }] });
 
-    expect(ids(await changesSince(f.target, since))).toEqual([f.bundleId]);
+    const feed = await changesSince(f.target, since);
+    expect(ids(feed)).toEqual([f.bundleId]);
+    const fieldIds = row(feed, f.bundleId).computedValues.map((value) => value.fieldId);
+    expect(fieldIds).toContain(f.catalogue.viaKitFieldId);
+    expect(fieldIds).not.toContain(f.catalogue.twoHopFieldId);
   });
 
   it('re-sends the items of a type whose override policy changed', async () => {

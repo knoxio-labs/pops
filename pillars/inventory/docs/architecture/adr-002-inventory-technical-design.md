@@ -202,6 +202,8 @@ Version 2 changes how measurements combine (`measurement-units.ts`, mirrored in 
 - **Result.** Publication requires the expression's dimension to equal the dimension of the field's fixed unit. Width × Height × Depth in cm, cm and mm can fill a Volume declared in `L`, `cm³` or `mm³`, but not one declared in `cm²`. Evaluation converts the result into the fixed unit.
 - **Exactness.** Every conversion only moves the decimal point, and each step keeps the decimal bounds (9 places, 18 significant digits). A step that exceeds them is `precision_overflow`. This includes converting the right operand before a multiply and converting the final result: `0.0000001 mm` in a `m` field overflows, and `0 mm` is `0.000 m`.
 
+A saved version-1 field stays version 1 unless an edit needs unit conversion or a derived unit, which only version 2 validates; the web builder then says so before saving. Moving it silently would change what its `equal` computes and stop phones from before version 2 evaluating it. New fields are version 2. Every other version-1 vector evaluates identically under version 2, and a test pins the exceptions.
+
 `read` with an empty path reads another field on the same item. Each path element must name a `one` item-reference field, and publication resolves the next field against every allowed target type. A path may traverse at most two references; an AST may contain at most 128 nodes and 32 distinct dependencies. The publication graph uses `(typeId, fieldId)` nodes and includes all possible target types for reference reads. Any direct or transitive cycle rejects the whole publication, including a cycle that only appears through references.
 
 Evaluation has three results:

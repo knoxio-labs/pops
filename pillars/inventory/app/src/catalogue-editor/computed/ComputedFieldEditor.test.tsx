@@ -273,3 +273,68 @@ describe('editing a loaded expression', () => {
     expect(screen.getByText(/Published revision 3 allows them/u)).toBeInTheDocument();
   });
 });
+
+describe('expression version on save', () => {
+  const decimalEquality: WireExpression = {
+    op: 'if',
+    condition: { op: 'equal', left: read('price', 'part_of'), right: literal('1.0') },
+    [THEN]: literal('0'),
+    [ELSE]: read('price', 'part_of'),
+  };
+  const UPGRADE = /Saving upgrades this field to expression version 2/u;
+
+  it('keeps a version-1 field on version 1 through a label-only edit, without a notice', () => {
+    const { onOperation } = renderComputedField({
+      volume: loaded(decimalEquality, { kind: 'decimal', fixedUnit: null }),
+    });
+
+    fireEvent.change(screen.getByLabelText('Field label'), { target: { value: 'Unit price' } });
+    save();
+
+    expect(screen.queryByText(UPGRADE)).not.toBeInTheDocument();
+    expect(onOperation).toHaveBeenLastCalledWith(
+      expect.objectContaining({ label: 'Unit price', expressionVersion: 1 })
+    );
+  });
+
+  it('keeps version 1 when an edit only uses constructs version 1 validates', () => {
+    const { onOperation } = renderComputedField({
+      volume: loaded(read('width'), { fixedUnit: 'cm' }),
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Wrap in an operation' }));
+    pick('Add');
+    fireEvent.click(outlineRow('expression.right'));
+    pick('Field');
+    save();
+
+    expect(screen.queryByText(UPGRADE)).not.toBeInTheDocument();
+    expect(onOperation).toHaveBeenLastCalledWith(expect.objectContaining({ expressionVersion: 1 }));
+  });
+
+  it('upgrades a version-1 field whose edit derives a unit, and says so before saving', () => {
+    const { onOperation } = renderComputedField({
+      volume: loaded(read('width'), { fixedUnit: 'cm²' }),
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Wrap in an operation' }));
+    pick('Multiply');
+    fireEvent.click(outlineRow('expression.right'));
+    pick('Field');
+    expect(screen.getByText(UPGRADE)).toBeInTheDocument();
+    save();
+
+    expect(onOperation).toHaveBeenLastCalledWith(expect.objectContaining({ expressionVersion: 2 }));
+  });
+
+  it('never moves a version-2 field back to version 1', () => {
+    const { onOperation } = renderComputedField({
+      volume: { ...loaded(read('count'), INTEGER), expressionVersion: 2 },
+    });
+
+    save();
+
+    expect(screen.queryByText(UPGRADE)).not.toBeInTheDocument();
+    expect(onOperation).toHaveBeenLastCalledWith(expect.objectContaining({ expressionVersion: 2 }));
+  });
+});

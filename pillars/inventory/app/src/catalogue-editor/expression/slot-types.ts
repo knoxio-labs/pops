@@ -168,3 +168,31 @@ export function fieldFitsSlot(
     sameDimension(unitDimension(field.unit), unitDimension(expected.unit))
   );
 }
+
+/**
+ * Whether the tree only validates under expression version 2 (Inventory
+ * ADR-002 D5): a measurement standing where a different fixed unit is
+ * expected (a read, literal or scaled product that version 2 converts), or a
+ * product or quotient of two measurements, which derives its own unit.
+ * Version 1 accepts neither, so anything else validates under both.
+ */
+export function needsDimensionalUnits(
+  context: ExpressionContext,
+  root: ExpressionNode,
+  fieldType: ValueType
+): boolean {
+  const expected = slotTypes(context, root, fieldType);
+  const visit = (node: ExpressionNode, path: string): boolean => {
+    if (
+      isProduct(node) &&
+      isMeasurement(ownType(context, node.left)) &&
+      isMeasurement(ownType(context, node.right))
+    )
+      return true;
+    const own = ownType(context, node);
+    const slot = expected.get(path);
+    if (isMeasurement(own) && isMeasurement(slot) && own.unit !== slot.unit) return true;
+    return nodeChildren(node).some((child) => visit(child.node, `${path}.${child.segment}`));
+  };
+  return visit(root, ROOT_PATH);
+}

@@ -74,7 +74,7 @@ internal enum LocalComputedValues {
             return
         }
         let server = try ComputedValueRows.readServer(itemId: itemId, in: db)
-        let computed = type.fields.filter { $0.storage == .computed }
+        let computed = type.fields.filter { $0.storage == .computed && $0.archivedAt == nil }
         let retired = Set(try ComputedValueRows.read(itemId: itemId, in: db).map(\.fieldId))
             .subtracting(computed.map(\.id))
         try ComputedValueRows.deleteLocal(itemId: itemId, fieldIds: retired, in: db)
