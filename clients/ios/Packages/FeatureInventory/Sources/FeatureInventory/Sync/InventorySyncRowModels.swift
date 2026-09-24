@@ -87,7 +87,7 @@ extension InventorySyncPage {
     internal static func buildRepairRows(
         _ ledger: InventoryReplicaSyncLedger, reading source: any InventoryQuerySource
     ) -> [InventorySyncRepairRow] {
-        let reading = catalogueReading(source)
+        let reading = catalogueReading(source, for: ledger.repairs)
         return ledger.repairs.map { repair in
             let catalogue = reading.detail(repair)
             return InventorySyncRepairRow(
@@ -97,12 +97,39 @@ extension InventorySyncPage {
         }
     }
 
-    /// Reads catalogue repairs against the fields `source` holds now.
+    /// Reads catalogue repairs against the fields `source` holds now, and a
+    /// stale reference against `referenceTargets`. A record deleted since
+    /// the change was queued is still named, so the repair can say which.
     internal static func catalogueReading(
-        _ source: any InventoryQuerySource
+        _ source: any InventoryQuerySource,
+        referenceTargets: [InventoryProtocol2ReferenceTarget]
     ) -> InventoryCatalogueRepairReading {
-        InventoryCatalogueRepairReading(catalogue: source.inventoryProtocol2Catalogue()) {
-            InventoryDetailFields.referenceLabel($0, source: source)
+        InventoryCatalogueRepairReading(
+            catalogue: source.inventoryProtocol2Catalogue(), referenceTargets: referenceTargets
+        ) { reference in
+            InventoryDetailFields.referenceLabel(reference, source: source)
+                ?? deletedRecordName(reference, in: source)
+        }
+    }
+
+    /// Reads `repairs`, gathering the records a reference can name only
+    /// when one of them is about a stale reference.
+    internal static func catalogueReading(
+        _ source: any InventoryQuerySource, for repairs: [InventoryRepair]
+    ) -> InventoryCatalogueRepairReading {
+        let judgesReferences = repairs.contains { $0.catalogue?.staleReference != nil }
+        return catalogueReading(
+            source,
+            referenceTargets: judgesReferences
+                ? InventoryItemFormContext.referenceTargets(in: source) : [])
+    }
+
+    private static func deletedRecordName(
+        _ reference: InventoryReferenceValue, in source: any InventoryQuerySource
+    ) -> String? {
+        switch reference.targetKind {
+        case .item: source.inventoryItem(id: reference.targetId)?.name
+        case .location: source.inventoryLocation(id: reference.targetId)?.name
         }
     }
 

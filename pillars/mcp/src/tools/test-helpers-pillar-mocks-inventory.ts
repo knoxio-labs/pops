@@ -110,6 +110,13 @@ export const mockPillarInventory = {
             result: { state: 'value', value: 12, dependencies: [], traversedItemIds: ['item-1'] },
           })
         ),
+        previewComputedFieldOnPublished: vi.fn().mockResolvedValue(
+          callOk({
+            draftRevision: null,
+            draftVersion: null,
+            result: { state: 'value', value: 12, dependencies: [], traversedItemIds: ['item-1'] },
+          })
+        ),
         publishDraft: vi.fn().mockResolvedValue(callOk({ revision: { revision: 2 }, types: [] })),
         abandonDraft: vi.fn().mockResolvedValue(callOk({ revision: { revision: 2 }, types: [] })),
       },

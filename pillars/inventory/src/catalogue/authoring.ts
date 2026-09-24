@@ -61,7 +61,8 @@ function actorColumns(author: CatalogueAuthor): {
   };
 }
 
-function copyDraftRows(db: CommandDb, baseRevision: number, revision: number): void {
+/** Clones every type/field/enum-option row of `baseRevision` onto `revision`. */
+export function copyDraftRows(db: CommandDb, baseRevision: number, revision: number): void {
   const types = db.select().from(itemTypes).where(eq(itemTypes.revision, baseRevision)).all();
   for (const type of types)
     db.insert(itemTypes)

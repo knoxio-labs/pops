@@ -272,6 +272,82 @@ describe('editing a loaded expression', () => {
 
     expect(screen.getByText(/Published revision 3 allows them/u)).toBeInTheDocument();
   });
+
+  function compatibilityWith(discardedOverrides: { fieldId: string; items: number }[]) {
+    return {
+      classification: 'compatible' as const,
+      affectedIds: [],
+      affectedItems: 0,
+      changes: [],
+      discardedOverrides,
+    };
+  }
+
+  it('reads zero holders when the evidence for the current toggle found none', () => {
+    const published = catalogueTypes({ allowOverride: true })[0]?.fields.find(
+      (candidate) => candidate.id === 'volume'
+    );
+    renderComputedField({
+      volume: loaded(product, { allowOverride: true }),
+      environment: {
+        publishedField: published,
+        publishedRevision: 3,
+        compatibility: compatibilityWith([]),
+        compatibilityOperations: [
+          { kind: 'put_field', id: 'volume', typeId: 'box', allowOverride: false },
+        ],
+      },
+    });
+
+    fireEvent.click(screen.getByLabelText('Always calculated'));
+
+    expect(screen.getByText(/No items hold an override today/u)).toBeInTheDocument();
+  });
+
+  it('reads the literal count when the evidence for the current toggle found holders', () => {
+    const published = catalogueTypes({ allowOverride: true })[0]?.fields.find(
+      (candidate) => candidate.id === 'volume'
+    );
+    renderComputedField({
+      volume: loaded(product, { allowOverride: true }),
+      environment: {
+        publishedField: published,
+        publishedRevision: 3,
+        compatibility: compatibilityWith([{ fieldId: 'volume', items: 5 }]),
+        compatibilityOperations: [
+          { kind: 'put_field', id: 'volume', typeId: 'box', allowOverride: false },
+        ],
+      },
+    });
+
+    fireEvent.click(screen.getByLabelText('Always calculated'));
+
+    expect(screen.getByText(/^5 items hold an override today/u)).toBeInTheDocument();
+  });
+
+  it('falls back to the hedged sentence when the evidence predates the current toggle', () => {
+    const published = catalogueTypes({ allowOverride: true })[0]?.fields.find(
+      (candidate) => candidate.id === 'volume'
+    );
+    renderComputedField({
+      volume: loaded(product, { allowOverride: true }),
+      environment: {
+        publishedField: published,
+        publishedRevision: 3,
+        // The evidence was computed while the toggle was still on: it says
+        // nothing about the field the author has since turned off.
+        compatibility: compatibilityWith([{ fieldId: 'volume', items: 5 }]),
+        compatibilityOperations: [
+          { kind: 'put_field', id: 'volume', typeId: 'box', allowOverride: true },
+        ],
+      },
+    });
+
+    fireEvent.click(screen.getByLabelText('Always calculated'));
+
+    expect(screen.getByText(/Items may hold an override today/u)).toBeInTheDocument();
+    expect(screen.queryByText(/5 items hold an override today/u)).not.toBeInTheDocument();
+  });
 });
 
 describe('expression version on save', () => {

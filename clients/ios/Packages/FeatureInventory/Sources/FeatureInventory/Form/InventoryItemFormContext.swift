@@ -54,15 +54,17 @@ internal struct InventoryItemFormContext: Equatable, Sendable {
                 isOffline = false
             }
             let displays = computedDisplays(of: item, in: source)
+            let targets = referenceTargets(in: source)
             return InventoryItemFormContext(
                 catalogue: source.inventoryCatalogue(),
                 protocol2Catalogue: source.inventoryProtocol2Catalogue(),
-                protocol2ReferenceTargets: referenceTargets(in: source), isOffline: isOffline,
+                protocol2ReferenceTargets: targets, isOffline: isOffline,
                 item: item, computedDisplays: displays,
                 computedMissingInputs: missingInputs(of: item, displays: displays, in: source),
                 placementName: placement.flatMap { name(of: $0, in: source) },
                 photoUploads: source.inventoryPhotoUploads(), repair: repair,
-                repairDetail: repair.flatMap(InventorySyncPage.catalogueReading(source).detail))
+                repairDetail: repair.flatMap(
+                    InventorySyncPage.catalogueReading(source, referenceTargets: targets).detail))
         }
     }
 
@@ -117,7 +119,9 @@ internal struct InventoryItemFormContext: Equatable, Sendable {
         return named
     }
 
-    private static func referenceTargets(
+    /// Every live record a reference value can name, before any field's
+    /// constraint narrows it.
+    internal static func referenceTargets(
         in source: any InventoryQuerySource
     ) -> [InventoryProtocol2ReferenceTarget] {
         let items = source.inventoryItems(includeInactive: true).filter { !$0.isDeleted }.map {

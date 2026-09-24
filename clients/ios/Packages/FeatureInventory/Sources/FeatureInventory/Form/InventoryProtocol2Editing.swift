@@ -64,6 +64,11 @@ internal struct InventoryProtocol2ReferenceTarget: Identifiable, Equatable, Send
     internal var value: InventoryReferenceValue {
         InventoryReferenceValue(targetKind: kind, targetId: id, targetState: .resolved)
     }
+
+    /// Whether `reference` points at this record.
+    internal func names(_ reference: InventoryReferenceValue) -> Bool {
+        reference.targetKind == kind && reference.targetId == id
+    }
 }
 
 internal enum InventoryProtocol2ParseResult {

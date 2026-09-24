@@ -2,21 +2,27 @@ import AppCore
 
 /// The words a `catalogueChanged` repair says, as the approved design says
 /// them: the problem names the definition and what happened to it ("Shielding
-/// was archived", "Screen size was replaced by Diagonal"), and a refused Retry
-/// names what is still in the way.
+/// was archived", "Screen size was replaced by Diagonal", "Socket no longer
+/// allows Hallway"), and a refused Retry names what is still in the way.
 internal struct InventoryCatalogueRepairCopy {
     internal let reading: InventoryCatalogueRepairReading
     /// The change in the problem line: edit, new item, type change.
     internal let noun: String
 
     /// The problem from the first definition the server named, or failing
-    /// that the first value in the way, or failing both the generic line.
+    /// that the first value in the way, or failing both the generic line for
+    /// what the server refused.
     internal func problem(
-        changes: [InventoryCatalogueChange], values: [InventoryQueuedValue]
+        changes: [InventoryCatalogueChange], values: [InventoryQueuedValue],
+        staleReference: InventoryStaleReference?
     ) -> String {
         if let named = changes.first, let line = line(for: named) { return line }
         if let blocking = values.first(where: { $0.fit.blocks }) { return line(for: blocking) }
-        return "A field this change used was archived or replaced."
+        switch staleReference {
+        case .targetMissing: return "A record this \(noun) links to is no longer in Inventory"
+        case .typeNotAllowed: return "A record this \(noun) links to is no longer allowed"
+        case nil: return "A field this change used was archived or replaced."
+        }
     }
 
     /// What Retry says when `value` still stops the change.
@@ -29,6 +35,10 @@ internal struct InventoryCatalogueRepairCopy {
         case .changedKind: "\(value.field) still holds another kind, so nothing was sent."
         case .nowRequired: "\(value.field) is still required, so nothing was sent."
         case .notOnPhone: "The new fields have not arrived yet. Try again after Sync."
+        case .recordGone:
+            "\(value.field) still links to a record no longer in Inventory, so nothing was sent."
+        case .recordNotAllowed:
+            "\(value.field) still does not allow \(value.value), so nothing was sent."
         }
     }
 
@@ -68,6 +78,8 @@ internal struct InventoryCatalogueRepairCopy {
         case .changedKind: "\(value.field) changed"
         case .nowRequired: "\(value.field) is now required"
         case .notOnPhone: needsNewerFields
+        case .recordGone: "\(value.field) links to a record no longer in Inventory"
+        case .recordNotAllowed: "\(value.field) no longer allows \(value.value)"
         }
     }
 }

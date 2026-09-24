@@ -21,10 +21,12 @@ extension InventoryReplica {
     ///   `item.restoreDeleted`;
     /// - a failed photo's attach is sent again, behind a fresh upload of
     ///   the bytes when this phone staged them;
-    /// - a change that no longer fits the catalogue (`catalogueChanged`) is
-    ///   moved onto the replica's current revision and sent against it, or
-    ///   refused with ``AppCore/InventoryRejectedReason/catalogueRepairRequired``
-    ///   naming what still does not fit.
+    /// - a change that no longer fits the catalogue, or whose reference value
+    ///   the server refused (`catalogueChanged`), is moved onto the replica's
+    ///   current revision and sent against it, or refused with
+    ///   ``AppCore/InventoryRejectedReason/catalogueRepairRequired`` naming
+    ///   what still does not fit. `replaceMine` sends Edit item's reworking
+    ///   of it the same way.
     ///
     /// Letting go (`discardMine`, and either choice on a refusal the design
     /// has no repair for) drops the change, releases what depended on it,

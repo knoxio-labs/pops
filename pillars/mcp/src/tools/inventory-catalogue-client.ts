@@ -50,6 +50,13 @@ type CatalogueShape = {
         field: { id: string } | { key: string };
         itemId: string;
       }) => unknown;
+      previewComputedFieldOnPublished: (input: {
+        baseRevision: number;
+        operations: CatalogueOperation[];
+        typeId: string;
+        field: { id: string } | { key: string };
+        itemId: string;
+      }) => unknown;
       publishDraft: (input: {
         revision: number;
         baseRevision: number;

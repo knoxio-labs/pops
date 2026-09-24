@@ -45,20 +45,23 @@ internal enum Protocol2Wire {
 
     /// The fields of the Bulb type at the first revision these suites use.
     internal static let bulbFields = [
-        field(id: lumens, key: "lumens", label: "Lumens"),
+        field(id: lumens, key: "lumens", label: "Lumens", fixedUnit: "lm"),
         efficacyField,
     ]
 
     /// `Lumens` relabelled `Brightness`: same id, kind and cardinality.
     internal static let renamedFields = [
-        field(id: lumens, key: "lumens", label: "Brightness"),
+        field(id: lumens, key: "lumens", label: "Brightness", fixedUnit: "lm"),
         efficacyField,
     ]
 
     /// `Lumens` archived and replaced by a new `Brightness` field.
     internal static let replacedFields = [
-        field(id: lumens, key: "lumens", label: "Lumens", archivedAt: "2026-09-02T00:00:00.000Z"),
-        field(id: brightness, key: "brightness", label: "Brightness", sortOrder: 2),
+        field(
+            id: lumens, key: "lumens", label: "Lumens", archivedAt: "2026-09-02T00:00:00.000Z",
+            fixedUnit: "lm"),
+        field(
+            id: brightness, key: "brightness", label: "Brightness", sortOrder: 2, fixedUnit: "lm"),
         efficacyField,
     ]
 
@@ -67,8 +70,9 @@ internal enum Protocol2Wire {
     internal static let lineageFields = [
         field(
             id: lumens, key: "lumens", label: "Lumens", archivedAt: "2026-09-02T00:00:00.000Z",
-            replacedBy: brightness),
-        field(id: brightness, key: "brightness", label: "Brightness", sortOrder: 2),
+            replacedBy: brightness, fixedUnit: "lm"),
+        field(
+            id: brightness, key: "brightness", label: "Brightness", sortOrder: 2, fixedUnit: "lm"),
         efficacyField,
     ]
 
@@ -108,25 +112,26 @@ internal enum Protocol2Wire {
     }
 
     internal static func snapshot(
-        items: [String], catalogueRevision: Int?, minimumProtocol: Int = 2,
-        highWaterSeq: Int = 10, nextCursor: String? = nil
+        items: [String], locations: [String] = [], catalogueRevision: Int?,
+        minimumProtocol: Int = 2, highWaterSeq: Int = 10, nextCursor: String? = nil
     ) -> String {
         """
         {"epoch":"epoch-1","highWaterSeq":\(highWaterSeq),"minimumProtocol":\(minimumProtocol),\
         "catalogueVersion":"v1","total":\(items.count),\
         "catalogueRevision":\(catalogueRevision.map(String.init) ?? "null"),\
-        "items":[\(items.joined(separator: ","))],"locations":[],\
+        "items":[\(items.joined(separator: ","))],"locations":[\(locations.joined(separator: ","))],\
         "nextCursor":\(nextCursor.map { "\"\($0)\"" } ?? "null")}
         """
     }
 
     internal static func changes(
-        items: [String] = [], catalogueRevision: Int?, minimumProtocol: Int = 2,
-        nextSince: Int = 11
+        items: [String] = [], locations: [String] = [], catalogueRevision: Int?,
+        minimumProtocol: Int = 2, nextSince: Int = 11
     ) -> String {
         """
         {"epoch":"epoch-1","minimumProtocol":\(minimumProtocol),\
-        "items":[\(items.joined(separator: ","))],"locations":[],"events":[],\
+        "items":[\(items.joined(separator: ","))],"locations":[\(locations.joined(separator: ","))],\
+        "events":[],\
         "nextSince":\(nextSince),"hasMore":false,"catalogueVersion":"v1",\
         "catalogueRevision":\(catalogueRevision.map(String.init) ?? "null")}
         """

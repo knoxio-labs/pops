@@ -997,6 +997,23 @@ jobs:
       - name: The committed vector matches on both sides of the seam
         run: node scripts/ci/check-expression-vectors-fixture.mjs
 
+  value-vectors-fixture:
+    name: Inventory protocol-2 value vectors (pillar ↔ BFM ↔ iOS)
+    # Every protocol-2 value kind and state, written by inventory's command
+    # engine (POPS-4403); BFM and `clients/ios` each vendor a copy (ADR-043).
+    # Same copy machinery as `command-vectors-fixture` above, three copies.
+    # Needs no `pnpm install` — reads three JSON files.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Gate self-test (proves the guard catches a changed vector)
+        run: node scripts/ci/check-value-vectors-fixture.mjs --self-test
+      - name: The committed vector matches on every side of the seam
+        run: node scripts/ci/check-value-vectors-fixture.mjs
+
   cross-pillar-expectations:
     name: Backend cross-pillar expectations (ADR-040)
     # The backend counterpart to `cross-pillar-clients` below. A pillar's

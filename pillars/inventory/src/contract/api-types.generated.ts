@@ -989,6 +989,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/type-catalogue/published/computed-preview': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Evaluate an unsaved computed field on one item against the published catalogue, with unsaved operations applied, without creating a draft or writing anything */
+    post: operations['types.manage.previewComputedFieldOnPublished'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/type-catalogue/types/{typeId}': {
     parameters: {
       query?: never;
@@ -6922,8 +6939,8 @@ export interface operations {
         content: {
           'application/json': {
             baseRevision: number;
-            draftRevision: number;
-            draftVersion: number;
+            draftRevision: number | null;
+            draftVersion: number | null;
             /** Format: uuid */
             fieldId: string;
             itemId: string;
@@ -7963,6 +7980,337 @@ export interface operations {
             }[];
             message: string;
             messageKey?: string;
+          };
+        };
+      };
+    };
+  };
+  'types.manage.previewComputedFieldOnPublished': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          baseRevision: number;
+          field:
+            | {
+                /** Format: uuid */
+                id: string;
+              }
+            | {
+                key: string;
+              };
+          itemId: string;
+          /** @default [] */
+          operations: (
+            | {
+                archivedAt?: string | null;
+                capabilities?: string[];
+                description?: string | null;
+                /** Format: uuid */
+                id?: string;
+                key?: string;
+                /** @enum {string} */
+                kind: 'put_type';
+                label?: string;
+                legacyLabels?: string[];
+                presentation?: {
+                  [key: string]: unknown;
+                };
+                sortOrder?: number;
+              }
+            | {
+                allowOverride?: boolean;
+                archivedAt?: string | null;
+                /** @enum {string} */
+                cardinality?: 'one' | 'many';
+                expression?: components['schemas']['ExpressionV1'] | null;
+                /**
+                 * @description How a computed field's expression is evaluated. 1: measurements combine only in one fixed unit and decimals compare by spelling (3.0 ≠ 3). 2: measurements of one dimension convert (cm + mm), measurement × and ÷ measurement derive units (cm × cm is cm²), the result converts into the field's fixedUnit, and equal compares decimals by value (1.5 × 2 = 3). Required with an expression on a computed field; null on a stored field.
+                 * @enum {number|null}
+                 */
+                expressionVersion?: 1 | 2 | null;
+                /** @enum {string} */
+                fieldKind?:
+                  | 'short_text'
+                  | 'long_text'
+                  | 'integer'
+                  | 'decimal'
+                  | 'boolean'
+                  | 'enum'
+                  | 'measurement'
+                  | 'date'
+                  | 'date_time'
+                  | 'url'
+                  | 'reference';
+                fixedUnit?: string | null;
+                help?: string | null;
+                /** Format: uuid */
+                id?: string;
+                key?: string;
+                /** @enum {string} */
+                kind: 'put_field';
+                label?: string;
+                presentation?: {
+                  [key: string]: unknown;
+                };
+                referenceKinds?: ('item' | 'location')[];
+                referenceTypeIds?: string[];
+                required?: boolean;
+                sortOrder?: number;
+                /** @enum {string} */
+                storage?: 'stored' | 'computed';
+                /** Format: uuid */
+                typeId: string;
+              }
+            | {
+                archivedAt?: string | null;
+                /** Format: uuid */
+                fieldId: string;
+                /** Format: uuid */
+                id?: string;
+                key?: string;
+                /** @enum {string} */
+                kind: 'put_enum_option';
+                label?: string;
+                sortOrder?: number;
+              }
+            | {
+                /** Format: uuid */
+                id: string;
+                /** @enum {string} */
+                kind: 'archive_type' | 'archive_field';
+                /** Format: uuid */
+                replacedBy?: string;
+              }
+            | {
+                /** Format: uuid */
+                id: string;
+                /** @enum {string} */
+                kind: 'archive_enum_option';
+              }
+            | {
+                /** @enum {string} */
+                definition: 'type' | 'field' | 'enum_option';
+                ids: string[];
+                /** @enum {string} */
+                kind: 'reorder';
+                /** Format: uuid */
+                parentId?: string | null;
+              }
+          )[];
+          /** Format: uuid */
+          typeId: string;
+        };
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            baseRevision: number;
+            draftRevision: number | null;
+            draftVersion: number | null;
+            /** Format: uuid */
+            fieldId: string;
+            itemId: string;
+            items: {
+              id: string;
+              name: string;
+              typeId: string | null;
+            }[];
+            override: unknown;
+            result:
+              | {
+                  dependencies: {
+                    /** Format: uuid */
+                    fieldId: string;
+                    itemId: string;
+                    revision: number;
+                  }[];
+                  /** @enum {string} */
+                  state: 'value';
+                  traversedItemIds: string[];
+                  value: unknown;
+                }
+              | {
+                  dependencies: {
+                    /** Format: uuid */
+                    fieldId: string;
+                    itemId: string;
+                    revision: number;
+                  }[];
+                  missingInputs: {
+                    /** Format: uuid */
+                    fieldId: string;
+                    itemId: string;
+                    reason: string;
+                  }[];
+                  /** @enum {string} */
+                  state: 'unavailable';
+                  traversedItemIds: string[];
+                }
+              | {
+                  code: string;
+                  dependencies: {
+                    /** Format: uuid */
+                    fieldId: string;
+                    itemId: string;
+                    revision: number;
+                  }[];
+                  /** @enum {string} */
+                  state: 'error';
+                  traversedItemIds: string[];
+                };
+            /** Format: uuid */
+            typeId: string;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            currentDraftVersion?: number;
+            issues?: {
+              code: string;
+              definitionId: string | null;
+              message: string;
+              path: string;
+            }[];
+            message: string;
+            messageKey?: string;
+            preview?: {
+              baseRevision: number;
+              compatibility: {
+                affectedIds: string[];
+                affectedItems: number;
+                changes: {
+                  /** @enum {string} */
+                  classification:
+                    | 'compatible'
+                    | 'protocol_gated'
+                    | 'migration_required'
+                    | 'forbidden';
+                  code: string;
+                  definitionId: string;
+                }[];
+                /** @enum {string} */
+                classification:
+                  | 'compatible'
+                  | 'protocol_gated'
+                  | 'migration_required'
+                  | 'forbidden';
+                discardedOverrides: {
+                  /** Format: uuid */
+                  fieldId: string;
+                  items: number;
+                }[];
+              };
+              draftRevision: number;
+            };
+          };
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            currentDraftVersion?: number;
+            issues?: {
+              code: string;
+              definitionId: string | null;
+              message: string;
+              path: string;
+            }[];
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            currentDraftVersion?: number;
+            issues?: {
+              code: string;
+              definitionId: string | null;
+              message: string;
+              path: string;
+            }[];
+            message: string;
+            messageKey?: string;
+          };
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            code?: string;
+            currentDraftVersion?: number;
+            issues?: {
+              code: string;
+              definitionId: string | null;
+              message: string;
+              path: string;
+            }[];
+            message: string;
+            messageKey?: string;
+            preview?: {
+              baseRevision: number;
+              compatibility: {
+                affectedIds: string[];
+                affectedItems: number;
+                changes: {
+                  /** @enum {string} */
+                  classification:
+                    | 'compatible'
+                    | 'protocol_gated'
+                    | 'migration_required'
+                    | 'forbidden';
+                  code: string;
+                  definitionId: string;
+                }[];
+                /** @enum {string} */
+                classification:
+                  | 'compatible'
+                  | 'protocol_gated'
+                  | 'migration_required'
+                  | 'forbidden';
+                discardedOverrides: {
+                  /** Format: uuid */
+                  fieldId: string;
+                  items: number;
+                }[];
+              };
+              draftRevision: number;
+            };
           };
         };
       };

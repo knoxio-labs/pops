@@ -1,5 +1,8 @@
 import { catalogueClient, mapDraftCallResult } from './inventory-catalogue-client.js';
-import { cataloguePreviewComputedField } from './inventory-catalogue-computed-preview.js';
+import {
+  cataloguePreviewComputedField,
+  cataloguePreviewComputedFieldOnPublished,
+} from './inventory-catalogue-computed-preview.js';
 import {
   expectedDraftVersionSchema,
   optionalObject,
@@ -171,6 +174,7 @@ export const catalogueTools: readonly ToolDef[] = [
   cataloguePatchDraft,
   cataloguePreviewDraft,
   cataloguePreviewComputedField,
+  cataloguePreviewComputedFieldOnPublished,
   cataloguePublishDraft,
   catalogueAbandonDraft,
 ];

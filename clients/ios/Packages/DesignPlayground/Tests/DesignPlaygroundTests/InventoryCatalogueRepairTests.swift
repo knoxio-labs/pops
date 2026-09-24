@@ -81,6 +81,20 @@ internal struct InventoryCatalogueRepairTests {
         #expect(change.values.filter(\.fit.blocks).map(\.field) == ["Shielding"])
     }
 
+    @Test("a stale reference leads with Edit item and names its field in the problem")
+    func staleReferenceLeadsWithEditItem() throws {
+        for repair in [Fixtures.recordGone, Fixtures.recordNotAllowed] {
+            let change = try #require(repair.catalogue)
+            #expect(change.leadingAction == .editItem, "\(repair.id)")
+            #expect(!change.offersRetry, "\(repair.id)")
+            let blocking = change.values.filter(\.fit.blocks)
+            #expect(blocking.count == 1, "\(repair.id)")
+            #expect(repair.problem.hasPrefix(blocking.first?.field ?? "-"), "\(repair.id)")
+        }
+        #expect(InventoryFieldFit.recordGone.caption == "Gone")
+        #expect(InventoryFieldFit.recordNotAllowed.caption == "Not allowed")
+    }
+
     @Test("an unreadable change is stalled, and says so")
     func unreadableIsStalled() {
         #expect(Fixtures.unreadable.hold == .stalled)
@@ -98,7 +112,7 @@ internal struct InventoryCatalogueRepairTests {
     func fitVocabulary() {
         let blocking: [InventoryFieldFit] = [
             .archived, .optionRetired, .replaced(by: "Diagonal"), .changedKind(to: "a number"),
-            .nowRequired, .notOnPhone,
+            .nowRequired, .notOnPhone, .recordGone, .recordNotAllowed,
         ]
         #expect(!InventoryFieldFit.fits.blocks)
         #expect(InventoryFieldFit.fits.caption == nil)
@@ -146,7 +160,8 @@ internal struct InventoryCatalogueRepairTests {
         let named: Set<String> = [
             "updating-fields", "app-too-old", "needs-attention", "several", "item-notice",
             "field-archived", "field-replaced", "type-replaced", "retry-refused", "retried",
-            "let-go", "settled", "edit-item", "blocked-after-change", "stalled",
+            "let-go", "settled", "edit-item", "blocked-after-change", "stalled", "record-gone",
+            "record-not-allowed",
         ]
         #expect(named.isSubset(of: ids), "missing \(named.subtracting(ids))")
         #expect(ids.count == surface.states.count)

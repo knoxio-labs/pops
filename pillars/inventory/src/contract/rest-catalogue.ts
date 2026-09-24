@@ -5,6 +5,7 @@ import { CatalogueCompatibilitySchema } from './rest-catalogue-compatibility-sch
 import {
   ComputedFieldPreviewBodySchema,
   ComputedFieldPreviewResponseSchema,
+  PublishedComputedFieldPreviewBodySchema,
 } from './rest-catalogue-computed-preview-schema.js';
 import { CatalogueMigrationSchema } from './rest-catalogue-migration-schemas.js';
 import { inventoryCatalogueReadContract } from './rest-catalogue-read.js';
@@ -127,6 +128,20 @@ export const inventoryCatalogueContract = c.router({
       },
       summary:
         'Evaluate a draft computed field on one item, with unsaved operations applied, without writing anything',
+    },
+    previewComputedFieldOnPublished: {
+      method: 'POST',
+      path: '/type-catalogue/published/computed-preview',
+      body: PublishedComputedFieldPreviewBodySchema,
+      responses: {
+        200: ComputedFieldPreviewResponseSchema,
+        400: CataloguePreviewErrorBodySchema,
+        401: CatalogueErrorBodySchema,
+        404: CatalogueErrorBodySchema,
+        409: CataloguePreviewErrorBodySchema,
+      },
+      summary:
+        'Evaluate an unsaved computed field on one item against the published catalogue, with unsaved operations applied, without creating a draft or writing anything',
     },
     publishDraft: {
       method: 'POST',

@@ -170,6 +170,8 @@ internal struct EndedInventoryStore: InventoryStore {
 
     func refresh() async {}
 
+    func hasNeverDownloaded() async -> Bool { false }
+
     func photo(_ sha256: String, variant: InventoryPhotoVariant) async throws -> Data {
         throw RepositoryError.dependencyNotBound
     }

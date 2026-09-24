@@ -191,6 +191,9 @@ import type {
   TypesManagePatchDraftResponses,
   TypesManagePreviewComputedFieldData,
   TypesManagePreviewComputedFieldErrors,
+  TypesManagePreviewComputedFieldOnPublishedData,
+  TypesManagePreviewComputedFieldOnPublishedErrors,
+  TypesManagePreviewComputedFieldOnPublishedResponses,
   TypesManagePreviewComputedFieldResponses,
   TypesManagePreviewDraftData,
   TypesManagePreviewDraftErrors,
@@ -1265,6 +1268,29 @@ export const typesManageActivateProtocolRollout = <ThrowOnError extends boolean 
     ThrowOnError
   >({
     url: '/type-catalogue/protocol-rollout',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
+
+/**
+ * Evaluate an unsaved computed field on one item against the published catalogue, with unsaved operations applied, without creating a draft or writing anything
+ */
+export const typesManagePreviewComputedFieldOnPublished = <ThrowOnError extends boolean = false>(
+  options?: Options<TypesManagePreviewComputedFieldOnPublishedData, ThrowOnError>
+): RequestResult<
+  TypesManagePreviewComputedFieldOnPublishedResponses,
+  TypesManagePreviewComputedFieldOnPublishedErrors,
+  ThrowOnError
+> =>
+  (options?.client ?? client).post<
+    TypesManagePreviewComputedFieldOnPublishedResponses,
+    TypesManagePreviewComputedFieldOnPublishedErrors,
+    ThrowOnError
+  >({
+    url: '/type-catalogue/published/computed-preview',
     ...options,
     headers: {
       'Content-Type': 'application/json',

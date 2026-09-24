@@ -21,6 +21,7 @@ private struct RefusingInventoryStore: InventoryStore {
     func resolve(_ repairId: InventoryRepair.ID, with choice: InventoryRepairChoice) async throws {}
     func download() async throws {}
     func refresh() async {}
+    func hasNeverDownloaded() async -> Bool { false }
     func photo(_ sha256: String, variant: InventoryPhotoVariant) async throws -> Data {
         throw RepositoryError.unavailable
     }

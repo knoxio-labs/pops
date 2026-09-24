@@ -161,6 +161,13 @@ public protocol InventoryStore: Sendable {
     /// Catches the replica up from wherever it last stopped.
     func refresh() async
 
+    /// Whether the replica has never completed a first download, read once
+    /// against the stored state rather than through ``status()``, whose
+    /// stream stays open for as long as anything reads it. What
+    /// ``syncNow()`` checks to decide between ``download()`` and
+    /// ``refresh()``.
+    func hasNeverDownloaded() async -> Bool
+
     func photo(_ sha256: String, variant: InventoryPhotoVariant) async throws -> Data
 
     /// Hands a photo's bytes, content-addressed by their own hash, to the
@@ -190,4 +197,24 @@ public protocol InventoryStore: Sendable {
     /// is never sent to the server. A key settled before its type ever
     /// arrived is still recorded, and is not asked about when it does.
     func settleTypeArrival(typeKey: String) async throws
+}
+
+extension InventoryStore {
+    /// Whatever the replica needs to be current: a first download for one
+    /// that has never had one — ``refresh()`` alone leaves that replica
+    /// exactly where it started — and a catch-up refresh, draining anything
+    /// queued, otherwise. Never throws: a failed first download only leaves
+    /// the replica where it started, same as ``refresh()``.
+    ///
+    /// What every automatic sync calls — after pairing, on launch while
+    /// already paired, and on opening the Inventory dashboard — so a fresh
+    /// replica does not sit empty until someone finds the Sync page's own
+    /// Download action.
+    public func syncNow() async {
+        if await hasNeverDownloaded() {
+            try? await download()
+        } else {
+            await refresh()
+        }
+    }
 }

@@ -4,8 +4,10 @@ import AppCore
 /// reopened in the item form against the current fields.
 ///
 /// Every value that still fits is filled into the generic field controls as
-/// if the person had just typed it; every value that does not is listed
-/// under the form, struck through with why (`notCarried`). Saving settles
+/// if the person had just typed it; every value that does not, a reference
+/// to a record the field can no longer take included, is listed under the
+/// form, struck through with why (`notCarried`), and its picker offers only
+/// the records the field allows. Saving settles
 /// the repair with the edited protocol-2 change in the held one's place in
 /// the queue (`InventoryRepairChoice.replaceMine`), then sends whatever else
 /// the form changed (a code, a place) as ordinary changes.
@@ -99,9 +101,11 @@ extension InventoryItemFormModel {
         var seeded = InventoryProtocol2Draft(
             type: type, catalogueRevision: catalogue.revision.revision, item: item)
         seeded.typeSelectionChanged = item == nil && original?.typeId != typeId
+        let staleReferences = Set(notCarried.filter(\.fit.isStaleReference).map(\.id))
         for (fieldId, primitives) in values {
             guard let field = type.fields.first(where: { $0.id == fieldId }),
-                field.archivedAt == nil, Self.fits(primitives, field)
+                field.archivedAt == nil, Self.fits(primitives, field),
+                !staleReferences.contains(fieldId)
             else { continue }
             seeded.prefill(primitives, for: field)
         }

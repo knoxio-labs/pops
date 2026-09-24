@@ -8,21 +8,44 @@ import AppCore
 /// What the server named (``AppCore/InventoryCatalogueChange``) supplies what
 /// the phone cannot see for itself: which definition replaced a field, and
 /// that a field this phone has never heard of is now required.
+///
+/// A stale reference (``AppCore/InventoryCatalogueRepair/staleReference``)
+/// names no value, so each reference value is judged against
+/// `referenceTargets`, the live records the item form's pickers offer: one
+/// its field would not offer is in the way. When every one would be offered
+/// (this phone has not heard of the deletion yet), every reference value is
+/// marked with the server's reason, since one of them is in the way.
 internal struct InventoryCatalogueRepairReading {
     internal let catalogue: InventoryCatalogueSnapshot?
+    internal let referenceTargets: [InventoryProtocol2ReferenceTarget]
     internal let referenceLabel: (InventoryReferenceValue) -> String?
+
+    internal init(
+        catalogue: InventoryCatalogueSnapshot?,
+        referenceTargets: [InventoryProtocol2ReferenceTarget] = [],
+        referenceLabel: @escaping (InventoryReferenceValue) -> String?
+    ) {
+        self.catalogue = catalogue
+        self.referenceTargets = referenceTargets
+        self.referenceLabel = referenceLabel
+    }
 
     internal func detail(_ repair: InventoryRepair) -> InventoryCatalogueRepairDetail? {
         guard repair.kind == .catalogueChanged else { return nil }
         let changes = repair.catalogue?.changes ?? []
+        let stale = repair.catalogue?.staleReference
         let queued = InventoryQueuedChange(repair.catalogue?.queued)
+        var carried = queued.values.map { valueRow($0, changes, stale: stale, assumed: false) }
+        if stale != nil, !carried.contains(where: \.fit.isStaleReference) {
+            carried = queued.values.map { valueRow($0, changes, stale: stale, assumed: true) }
+        }
         let values =
-            typeRow(queued, changes) + queued.values.map { valueRow($0, changes) }
-            + requiredRows(queued) + unknownRows(queued, changes)
+            typeRow(queued, changes) + carried + requiredRows(queued)
+            + unknownRows(queued, changes)
         let copy = InventoryCatalogueRepairCopy(reading: self, noun: queued.noun)
         return InventoryCatalogueRepairDetail(
             title: queued.title,
-            problem: copy.problem(changes: changes, values: values),
+            problem: copy.problem(changes: changes, values: values, staleReference: stale),
             values: values,
             definitionsChanged: repair.catalogue?.definitionsChanged ?? false,
             refusal: values.first { $0.fit.blocks }.map(copy.refusal))
@@ -63,8 +86,11 @@ internal struct InventoryCatalogueRepairReading {
         ]
     }
 
+    /// `assumed` marks every reference value with `stale`, for when none
+    /// is out of the pickers' reach on this phone.
     private func valueRow(
-        _ value: InventoryQueuedChange.Value, _ changes: [InventoryCatalogueChange]
+        _ value: InventoryQueuedChange.Value, _ changes: [InventoryCatalogueChange],
+        stale: InventoryStaleReference?, assumed: Bool
     ) -> InventoryQueuedValue {
         guard let field = field(value.fieldId) else {
             return InventoryQueuedValue(
@@ -72,10 +98,46 @@ internal struct InventoryCatalogueRepairReading {
                 value: value.values.map(InventoryProtocol2ValueText.input).joined(separator: " · "),
                 fit: .notOnPhone)
         }
-        let text = valueText(value.values, field: field)
         let named = changes.first { $0.id == field.id }
+        var fit = fit(of: value, field, named)
+        if fit == .fits, let stale {
+            fit = referenceFit(value.values, field, stale: stale, assumed: assumed) ?? .fits
+        }
+        let shown = fit == .recordGone ? value.values.map(unnamedAsMissing) : value.values
         return InventoryQueuedValue(
-            id: field.id, field: field.label, value: text, fit: fit(of: value, field, named))
+            id: field.id, field: field.label, value: valueText(shown, field: field), fit: fit)
+    }
+
+    /// A reference this phone has no name for, read as missing rather than
+    /// by its id.
+    private func unnamedAsMissing(_ value: InventoryPrimitiveValue) -> InventoryPrimitiveValue {
+        guard case .reference(let reference) = value, referenceLabel(reference) == nil else {
+            return value
+        }
+        return .reference(
+            InventoryReferenceValue(
+                targetKind: reference.targetKind, targetId: reference.targetId,
+                targetState: .missing))
+    }
+
+    private func referenceFit(
+        _ values: [InventoryPrimitiveValue], _ field: InventoryCatalogueField,
+        stale: InventoryStaleReference, assumed: Bool
+    ) -> InventoryFieldFit? {
+        let references = values.compactMap { value -> InventoryReferenceValue? in
+            guard case .reference(let reference) = value else { return nil }
+            return reference
+        }
+        guard !references.isEmpty else { return nil }
+        if assumed { return stale == .targetMissing ? .recordGone : .recordNotAllowed }
+        let offered = InventoryProtocol2ReferenceTargets.allowed(
+            for: field, among: referenceTargets)
+        let outOfReach = references.first { reference in
+            !offered.contains { $0.names(reference) }
+        }
+        guard let outOfReach else { return nil }
+        let live = referenceTargets.contains { $0.names(outOfReach) }
+        return live ? .recordNotAllowed : .recordGone
     }
 
     /// The value as it was queued. A choice reads as its option's label,

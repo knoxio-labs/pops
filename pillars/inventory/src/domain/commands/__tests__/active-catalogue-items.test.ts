@@ -636,6 +636,115 @@ describe('active catalogue item commands', () => {
     ).toEqual({ count: 1 });
   });
 
+  it('refuses a queued reference edit whose target was deleted before replay, across a catalogue change', () => {
+    const harness = openHarness();
+    const catalogue = publishCustomType(harness);
+    const itemId = randomUUID();
+    const targetId = randomUUID();
+    harness.run(
+      mutation(
+        'item.create',
+        itemId,
+        {
+          item: {
+            name: 'Custom sensor',
+            typeId: catalogue.typeId,
+            values: [{ fieldId: catalogue.fieldId, values: ['before'] }],
+          },
+        },
+        { baseRevision: null, catalogueRevision: catalogue.revision }
+      )
+    );
+    seedItem(harness, { id: targetId, typeKey: 'cable' });
+    const queued = mutation(
+      'item.edit',
+      itemId,
+      {
+        values: [
+          {
+            fieldId: catalogue.referenceFieldId,
+            values: [{ targetKind: 'item', targetId }],
+          },
+        ],
+      },
+      { baseRevision: 1, catalogueRevision: catalogue.revision }
+    );
+    publishRenamedDefinitions(harness, catalogue);
+    harness.run(mutation('item.delete', targetId, {}, { baseRevision: 1 }));
+
+    const first = harness.run(queued);
+    const replayed = harness.run(queued);
+
+    expect(first).toMatchObject({ status: 'rejected', reason: 'target_missing' });
+    expect(replayed).toEqual(first);
+    expect(harness.item(itemId).revision).toBe(1);
+    expect(
+      readItemFieldValues(harness.db, itemId).find(
+        (entry) => entry.fieldId === catalogue.referenceFieldId
+      )
+    ).toBeUndefined();
+  });
+
+  it('refuses a queued reference edit whose target was retyped out of the allowed kinds before replay, across a catalogue change', () => {
+    const harness = openHarness();
+    const catalogue = publishCustomType(harness);
+    const itemId = randomUUID();
+    const targetId = randomUUID();
+    harness.run(
+      mutation(
+        'item.create',
+        itemId,
+        {
+          item: {
+            name: 'Custom sensor',
+            typeId: catalogue.typeId,
+            values: [{ fieldId: catalogue.fieldId, values: ['before'] }],
+          },
+        },
+        { baseRevision: null, catalogueRevision: catalogue.revision }
+      )
+    );
+    seedItem(harness, { id: targetId, typeKey: 'cable' });
+    const queued = mutation(
+      'item.edit',
+      itemId,
+      {
+        values: [
+          {
+            fieldId: catalogue.referenceFieldId,
+            values: [{ targetKind: 'item', targetId }],
+          },
+        ],
+      },
+      { baseRevision: 1, catalogueRevision: catalogue.revision }
+    );
+    const activeRevision = publishRenamedDefinitions(harness, catalogue);
+    const retyped = harness.run(
+      mutation(
+        'item.changeType',
+        targetId,
+        {
+          typeId: catalogue.typeId,
+          values: [{ fieldId: catalogue.fieldId, values: ['converted'] }],
+        },
+        { baseRevision: 1, catalogueRevision: activeRevision }
+      )
+    );
+    expect(retyped).toMatchObject({ status: 'applied' });
+
+    const first = harness.run(queued);
+    const replayed = harness.run(queued);
+
+    expect(first).toMatchObject({ status: 'rejected', reason: 'reference_type_mismatch' });
+    expect(replayed).toEqual(first);
+    expect(harness.item(itemId).revision).toBe(1);
+    expect(
+      readItemFieldValues(harness.db, itemId).find(
+        (entry) => entry.fieldId === catalogue.referenceFieldId
+      )
+    ).toBeUndefined();
+  });
+
   it('splits an item while retaining a value from an archived field', () => {
     const harness = openHarness();
     // Non-containment: a grouped item (quantity > 1) can never be a

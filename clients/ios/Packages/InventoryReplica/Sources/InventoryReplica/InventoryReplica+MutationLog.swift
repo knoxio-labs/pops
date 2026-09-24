@@ -133,7 +133,9 @@ extension InventoryReplica {
     /// Catalogue revisions: a change answered `catalogue_update_required` is
     /// logged again under a new id from `mintMutationId` and held until a
     /// newer catalogue arrives (``CatalogueUpdates``); one answered
-    /// `catalogue_repair_required` opens the `catalogueChanged` repair.
+    /// `catalogue_repair_required`, and an item change whose reference value
+    /// is answered `target_missing` or `reference_type_mismatch`, opens the
+    /// `catalogueChanged` repair.
     public func recordOutcomes(
         _ result: InventoryMutationBatchResult,
         mintMutationId: () -> String = { UUID().uuidString.lowercased() }

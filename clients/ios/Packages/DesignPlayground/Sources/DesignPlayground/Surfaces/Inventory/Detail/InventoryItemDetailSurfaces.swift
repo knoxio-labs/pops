@@ -39,6 +39,9 @@ internal enum InventoryItemDetailStaging {
             state("broken-photo", "A broken photo", InventoryItemDetailFixtures.brokenPhoto),
             state("no-provenance", "No provenance", InventoryItemDetailFixtures.noProvenance),
             state(
+                "large-values", "Long text and many values",
+                InventoryItemDetailFixtures.largeValues),
+            state(
                 "conflicting-change", "Conflicting change",
                 InventoryItemDetailFixtures.conflicting),
             DesignState("loading", "Loading") { InventoryItemDetailSkeleton() },

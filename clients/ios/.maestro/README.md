@@ -61,12 +61,15 @@ flows that need the Transactions screen.
 
 `acceptance/inventory-user-defined-type.yaml` is scenario S8 of the
 inventory-types acceptance suite (POPS-4354): an owner publishes a
-user-defined type with a stored `Price` and a computed `Doubled price`
+user-defined type with a stored `Price`, a computed `Doubled price` and a
+stored many-valued `Tags`
 (`scripts/ios-e2e/inventory-user-type.mjs`, reached through the control
 plane's `POST /__e2e/inventory/user-defined-type`), then the flow syncs it,
-creates an item of it through the form's generic fields, waits for the
-computed value, edits it with every relayed sync request failing, and waits
-for the edit to replay.
+creates an item of it through the form's generic fields, adds a second `Tags`
+value, reorders the two and removes one, waits for the computed value, edits
+the item with every relayed sync request failing, and waits for the edit to
+replay — confirming along the way that Item detail reads the surviving `Tags`
+value back in the order the edit left it in.
 
 It sits one directory down so the lane's glob never drives it. Run it with
 the rest of the suite, which records it as evidence:
@@ -81,7 +84,10 @@ or on its own through the lane, which runs exactly the flows it is given:
 POPS_E2E_FLOWS=.maestro/acceptance/inventory-user-defined-type.yaml mise run e2e:ios
 ```
 
-It has been driven on a simulator and passed (POPS-4508). It stays out of
+It has been driven on a simulator and passed (POPS-4508); the `Tags`
+add/reorder/remove steps are new and still want that same confirmation on a
+simulator this repo's own Xcode 27 CI image can build against (POPS-4359).
+It stays out of
 the lane's glob on purpose, not only until a run passed: it boots the real
 inventory pillar on top of everything `mise run e2e:ios` already starts, and
 runs a couple of minutes longer than any flow in the glob, for a scenario

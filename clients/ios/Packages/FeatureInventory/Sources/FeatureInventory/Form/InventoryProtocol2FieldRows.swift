@@ -36,7 +36,9 @@ internal struct InventoryProtocol2FieldRow: View {
         } else if field.cardinality == .many {
             manyEditor
         } else if let entry = entries.first {
-            editor(entry, label: field.label)
+            editor(
+                entry, label: field.label,
+                identifier: InventoryAccessibility.protocol2Field(id: field.id))
         }
     }
 
@@ -51,25 +53,83 @@ internal struct InventoryProtocol2FieldRow: View {
                     .foregroundStyle(Color.popsMutedForeground)
             }
             ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
-                HStack(alignment: .firstTextBaseline, spacing: PopsSpacing.sm) {
-                    editor(entry, label: "Value \(index + 1)")
-                    Menu("Reorder value \(index + 1)", systemImage: "arrow.up.arrow.down") {
-                        Button("Move earlier") { move(entry.id, -1) }
-                            .disabled(index == 0)
-                        Button("Move later") { move(entry.id, 1) }
-                            .disabled(index == entries.count - 1)
-                        Button("Remove", systemImage: "trash", role: .destructive) {
-                            remove(entry.id)
-                        }
-                    }
-                    .labelStyle(.iconOnly)
-                    .accessibilityLabel("Actions for \(field.label) value \(index + 1)")
-                }
+                manyEntryRow(entry, index: index, count: entries.count)
             }
             Button("Add \(field.label)", systemImage: "plus", action: add)
                 .buttonStyle(.borderless)
+                .accessibilityIdentifier(InventoryAccessibility.protocol2FieldAdd(id: field.id))
+                .accessibilityLabel(
+                    InventoryProtocol2RowAccessibility.addEntry(fieldLabel: field.label))
         }
         .padding(.vertical, PopsSpacing.xs)
+    }
+
+    /// One entry of a many-valued field: its scalar editor plus three plain
+    /// icon buttons rather than a `Menu` — a `Menu` is the same flaky
+    /// control class automation already routes around for the Type picker
+    /// (POPS-4556), and iOS 27's own pattern for a row's few actions is
+    /// icon buttons in place, not a disclosure into a popover.
+    private func manyEntryRow(
+        _ entry: InventoryProtocol2DraftEntry, index: Int, count: Int
+    ) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: PopsSpacing.xs) {
+            editor(
+                entry,
+                label: InventoryProtocol2RowAccessibility.entryValue(
+                    fieldLabel: field.label, index: index, count: count),
+                identifier: InventoryAccessibility.protocol2FieldEntry(id: field.id, index: index))
+            moveEarlierButton(entry, index: index, isFirst: index == 0)
+            moveLaterButton(entry, index: index, isLast: index == count - 1)
+            removeButton(entry, index: index)
+        }
+    }
+
+    private func moveEarlierButton(
+        _ entry: InventoryProtocol2DraftEntry, index: Int, isFirst: Bool
+    ) -> some View {
+        Button {
+            move(entry.id, -1)
+        } label: {
+            Image(systemName: "arrow.up")
+        }
+        .buttonStyle(.borderless)
+        .disabled(isFirst)
+        .accessibilityIdentifier(
+            InventoryAccessibility.protocol2FieldMoveEarlier(id: field.id, index: index)
+        )
+        .accessibilityLabel(
+            InventoryProtocol2RowAccessibility.moveEarlier(fieldLabel: field.label, index: index))
+    }
+
+    private func moveLaterButton(
+        _ entry: InventoryProtocol2DraftEntry, index: Int, isLast: Bool
+    ) -> some View {
+        Button {
+            move(entry.id, 1)
+        } label: {
+            Image(systemName: "arrow.down")
+        }
+        .buttonStyle(.borderless)
+        .disabled(isLast)
+        .accessibilityIdentifier(
+            InventoryAccessibility.protocol2FieldMoveLater(id: field.id, index: index)
+        )
+        .accessibilityLabel(
+            InventoryProtocol2RowAccessibility.moveLater(fieldLabel: field.label, index: index))
+    }
+
+    private func removeButton(_ entry: InventoryProtocol2DraftEntry, index: Int) -> some View {
+        Button(role: .destructive) {
+            remove(entry.id)
+        } label: {
+            Image(systemName: "trash")
+        }
+        .buttonStyle(.borderless)
+        .accessibilityIdentifier(
+            InventoryAccessibility.protocol2FieldRemove(id: field.id, index: index)
+        )
+        .accessibilityLabel(
+            InventoryProtocol2RowAccessibility.removeEntry(fieldLabel: field.label, index: index))
     }
 }
 
@@ -129,12 +189,18 @@ extension InventoryProtocol2FieldRow {
             }
         }
         .accessibilityElement(children: .combine)
+        .accessibilityLabel(
+            InventoryProtocol2RowAccessibility.computed(
+                fieldLabel: field.label, valueText: row.text(referenceLabel: referenceLabelLookup),
+                caption: row.caption))
     }
 
     private func overrideEditor(_ entry: InventoryProtocol2DraftEntry) -> some View {
         VStack(alignment: .leading, spacing: PopsSpacing.sm) {
             InventoryProtocol2ValueEditor(
-                field: field, entry: entry, label: field.label, referenceTargets: referenceTargets,
+                field: field, entry: entry, label: field.label,
+                identifier: InventoryAccessibility.protocol2Field(id: field.id),
+                referenceTargets: referenceTargets,
                 setText: { overrideEntry?.setText($0, for: field) },
                 setValue: { overrideEntry?.setValue($0) },
                 setReferenceKind: { overrideEntry?.setReferenceKind($0) })
@@ -157,10 +223,11 @@ extension InventoryProtocol2FieldRow {
 
 extension InventoryProtocol2FieldRow {
     private func editor(
-        _ entry: InventoryProtocol2DraftEntry, label: String
+        _ entry: InventoryProtocol2DraftEntry, label: String, identifier: String
     ) -> some View {
         InventoryProtocol2ValueEditor(
-            field: field, entry: entry, label: label, referenceTargets: referenceTargets,
+            field: field, entry: entry, label: label, identifier: identifier,
+            referenceTargets: referenceTargets,
             setText: { setText($0, entry.id) },
             setValue: { setValue($0, entry.id) },
             setReferenceKind: { setReferenceKind($0, entry.id) })

@@ -141,6 +141,10 @@ public struct UnboundInventoryStore: InventoryStore {
 
     public func refresh() async {}
 
+    /// `false`, so an unbound store's `syncNow()` calls the no-op `refresh()`
+    /// rather than a `download()` that only throws `dependencyNotBound`.
+    public func hasNeverDownloaded() async -> Bool { false }
+
     public func photo(_ sha256: String, variant: InventoryPhotoVariant) async throws -> Data {
         throw RepositoryError.dependencyNotBound
     }

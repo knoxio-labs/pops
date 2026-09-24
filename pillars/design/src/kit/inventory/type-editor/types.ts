@@ -9,6 +9,7 @@ export type TypeEditorMode =
   | 'archive'
   | 'stale'
   | 'destructive'
+  | 'replacement'
   | 'computed'
   | 'dependency-error'
   | 'cycle';

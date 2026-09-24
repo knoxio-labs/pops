@@ -122,7 +122,11 @@ describe('useCatalogueEditor readiness', () => {
       ]);
     });
 
-    expect(result.current.readiness).toEqual({ status: 'ready', compatibility: compatible });
+    expect(result.current.readiness).toEqual({
+      status: 'ready',
+      compatibility: compatible,
+      operations: [{ kind: 'put_type', id: TYPE_ID, label: 'Renamed' }],
+    });
   });
 
   it('marks a prior preview stale once the live draft advances past its version', async () => {
@@ -163,6 +167,7 @@ describe('useCatalogueEditor readiness', () => {
       expect(result.current.readiness).toEqual({
         status: 'live_preview',
         compatibility: compatible,
+        operations: [{ kind: 'put_type', id: TYPE_ID, label: 'Unsaved edit' }],
       })
     );
     expect(api.patchDraft).not.toHaveBeenCalled();

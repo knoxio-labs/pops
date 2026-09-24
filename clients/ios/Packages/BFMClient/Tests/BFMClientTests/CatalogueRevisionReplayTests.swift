@@ -32,12 +32,17 @@ internal struct LocalFirstHarness {
             reachability: reachability, drainClock: ParkedDrainClock())
     }
 
-    /// The lamp downloaded at catalogue revision 2.
-    func downloadLamp() async throws {
+    /// The lamp downloaded at catalogue revision 2, with `fields` and
+    /// `locations`.
+    func downloadLamp(
+        fields: [String] = Protocol2Wire.bulbFields, locations: [String] = []
+    ) async throws {
         await server.enqueue(
             "snapshot",
-            .ok(Protocol2Wire.snapshot(items: [Protocol2Wire.lamp()], catalogueRevision: 2)))
-        await server.set("catalogue:2", .ok(Protocol2Wire.catalogue(revision: 2)))
+            .ok(
+                Protocol2Wire.snapshot(
+                    items: [Protocol2Wire.lamp()], locations: locations, catalogueRevision: 2)))
+        await server.set("catalogue:2", .ok(Protocol2Wire.catalogue(revision: 2, fields: fields)))
         await server.set("changes", .ok(Protocol2Wire.changes(catalogueRevision: 2)))
         try await store.download()
     }
@@ -57,6 +62,22 @@ internal struct LocalFirstHarness {
         get throws { try replica.read(.syncLedger) }
     }
 
+    /// The server applying every mutation in `sent`.
+    static func applied(_ sent: [SentMutation]) -> String {
+        InventoryWire.mutationsResponse(
+            sent.map {
+                InventoryWire.appliedOutcome(mutationId: $0.mutationId, revision: 2, seq: 12)
+            }
+            .joined(separator: ","))
+    }
+
+    /// The server refusing every mutation in `sent` for `reason`.
+    static func rejected(_ sent: [SentMutation], reason: String) -> String {
+        InventoryWire.mutationsResponse(
+            sent.map { InventoryWire.rejectedOutcome(mutationId: $0.mutationId, reason: reason) }
+                .joined(separator: ","))
+    }
+
     static func editLumens() throws -> InventoryCommand {
         .editProtocol2Item(
             id: Protocol2Wire.lampId, catalogueRevision: 2,
@@ -66,18 +87,6 @@ internal struct LocalFirstHarness {
                     values: [.measurement(amount: try InventoryDecimal("900"), unit: "lm")])
             ])
     }
-}
-
-private func applied(_ sent: [SentMutation]) -> String {
-    InventoryWire.mutationsResponse(
-        sent.map { InventoryWire.appliedOutcome(mutationId: $0.mutationId, revision: 2, seq: 12) }
-            .joined(separator: ","))
-}
-
-private func rejected(_ sent: [SentMutation], reason: String) -> String {
-    InventoryWire.mutationsResponse(
-        sent.map { InventoryWire.rejectedOutcome(mutationId: $0.mutationId, reason: reason) }
-            .joined(separator: ","))
 }
 
 /// POPS-4405: a change keeps the catalogue revision it was authored against
@@ -92,7 +101,7 @@ internal struct CatalogueRevisionReplayTests {
     func compatibleRenameReplays() async throws {
         let harness = try LocalFirstHarness(online: false)
         try await harness.downloadLamp()
-        await harness.server.onMutations { applied($0) }
+        await harness.server.onMutations { LocalFirstHarness.applied($0) }
         _ = try await harness.store.perform(try LocalFirstHarness.editLumens())
         await harness.publish(revision: 3, fields: Protocol2Wire.renamedFields)
         await harness.store.refresh()
@@ -117,7 +126,8 @@ internal struct CatalogueRevisionReplayTests {
         await harness.publish(revision: 3, fields: Protocol2Wire.renamedFields)
         await harness.server.onMutations { sent in
             sent.allSatisfy { $0.catalogueRevision == 3 }
-                ? applied(sent) : rejected(sent, reason: "catalogue_update_required")
+                ? LocalFirstHarness.applied(sent)
+                : LocalFirstHarness.rejected(sent, reason: "catalogue_update_required")
         }
 
         _ = try await harness.store.perform(try LocalFirstHarness.editLumens())
@@ -137,7 +147,9 @@ internal struct CatalogueRevisionReplayTests {
         let harness = try LocalFirstHarness()
         try await harness.downloadLamp()
         await harness.publish(revision: 3, fields: Protocol2Wire.replacedFields)
-        await harness.server.onMutations { rejected($0, reason: "catalogue_update_required") }
+        await harness.server.onMutations {
+            LocalFirstHarness.rejected($0, reason: "catalogue_update_required")
+        }
 
         _ = try await harness.store.perform(try LocalFirstHarness.editLumens())
         await harness.store.synchronize()
@@ -158,7 +170,8 @@ internal struct CatalogueRevisionReplayTests {
         await harness.publish(revision: 3, fields: Protocol2Wire.lineageFields)
         await harness.server.onMutations { sent in
             sent.allSatisfy { $0.catalogueRevision == 3 }
-                ? applied(sent) : rejected(sent, reason: "catalogue_update_required")
+                ? LocalFirstHarness.applied(sent)
+                : LocalFirstHarness.rejected(sent, reason: "catalogue_update_required")
         }
 
         _ = try await harness.store.perform(try LocalFirstHarness.editLumens())
@@ -181,7 +194,9 @@ internal struct CatalogueRevisionReplayTests {
         let harness = try LocalFirstHarness()
         try await harness.downloadLamp()
         await harness.publish(revision: 3, fields: Protocol2Wire.replacedFields)
-        await harness.server.onMutations { rejected($0, reason: "catalogue_repair_required") }
+        await harness.server.onMutations {
+            LocalFirstHarness.rejected($0, reason: "catalogue_repair_required")
+        }
 
         _ = try await harness.store.perform(try LocalFirstHarness.editLumens())
         await harness.store.synchronize()
@@ -195,7 +210,7 @@ internal struct CatalogueRevisionReplayTests {
         #expect(try harness.ledger.repairs.map(\.id) == [repair.id])
 
         await harness.publish(revision: 4, fields: Protocol2Wire.renamedFields)
-        await harness.server.onMutations { applied($0) }
+        await harness.server.onMutations { LocalFirstHarness.applied($0) }
         await harness.store.refresh()
         try await harness.store.resolve(repair.id, with: .keepMine())
         await harness.store.synchronize()
@@ -214,7 +229,9 @@ internal struct CatalogueRevisionReplayTests {
         let harness = try LocalFirstHarness()
         try await harness.downloadLamp()
         await harness.publish(revision: 3, fields: Protocol2Wire.renamedFields, minimumProtocol: 3)
-        await harness.server.onMutations { rejected($0, reason: "catalogue_update_required") }
+        await harness.server.onMutations {
+            LocalFirstHarness.rejected($0, reason: "catalogue_update_required")
+        }
 
         _ = try await harness.store.perform(try LocalFirstHarness.editLumens())
         await harness.store.synchronize()

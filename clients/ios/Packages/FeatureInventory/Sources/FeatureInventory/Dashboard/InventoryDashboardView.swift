@@ -33,6 +33,7 @@ internal struct InventoryDashboardView: View {
             }
         }
         .task(id: generation) { await model.observe() }
+        .task(id: generation) { await model.syncOnAppear() }
         .inventoryWriterFeedback(model.writer)
         .inventoryInHandSelectionBar(
             $inHandSelection, items: model.dashboard?.inHand ?? [],

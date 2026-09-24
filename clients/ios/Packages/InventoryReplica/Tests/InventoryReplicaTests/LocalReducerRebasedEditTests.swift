@@ -146,4 +146,51 @@ internal struct LocalReducerRebasedEditTests {
         #expect(try Self.width(of: replica) == (try Setup.decimal("9.0")))
         #expect(try replica.read(.item(id: Setup.box))?.catalogueRevision == Setup.revision + 1)
     }
+
+    /// A typed item the server holds no values for names no catalogue
+    /// revision of its own.
+    private static func bareBox() throws -> InventoryReplica {
+        let replica = try InventoryReplica(now: { Setup.time })
+        try replica.store(Setup.catalogue)
+        let bare = InventoryItem(
+            id: Setup.elsewhere, revision: 1, seq: 1, catalogueRevision: nil, name: "Bare box",
+            typeId: Setup.typeId, typeKey: "box", placement: .hand, createdAt: Setup.time,
+            updatedAt: Setup.time)
+        try replica.apply(Setup.snapshot([bare]))
+        return replica
+    }
+
+    @Test(
+        "a typed item holding no values takes an edit and shows it",
+        arguments: [
+            ("no values", nil),
+            ("a width", "4.0"),
+        ] as [(String, String?)])
+    func typedItemWithNoValuesTakesAnEdit(_ label: String, width: String?) throws {
+        let replica = try Self.bareBox()
+        #expect(try replica.read(.item(id: Setup.elsewhere))?.catalogueRevision == nil)
+        let patches =
+            try width.map {
+                [
+                    InventoryProtocol2FieldPatch(
+                        fieldId: Setup.width, values: [try Setup.decimal($0)])
+                ]
+            } ?? []
+
+        _ = try replica.perform(
+            .editProtocol2Item(
+                id: Setup.elsewhere, catalogueRevision: Setup.revision, values: patches),
+            mutationId: "m1", clientTime: Setup.time)
+
+        #expect(try replica.outboundMutations().map(\.mutationId) == ["m1"], "\(label)")
+        let item = try #require(try replica.read(.item(id: Setup.elsewhere)))
+        let stored = item.fieldValues.filter { $0.source == .stored }
+        if let width {
+            #expect(stored.map(\.fieldId) == [Setup.width])
+            #expect(stored.first?.state == .value([try Setup.decimal(width)]))
+            #expect(item.catalogueRevision == Setup.revision)
+        } else {
+            #expect(stored.isEmpty)
+        }
+    }
 }

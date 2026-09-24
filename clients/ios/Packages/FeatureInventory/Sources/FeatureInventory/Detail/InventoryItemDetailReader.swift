@@ -47,9 +47,9 @@ extension InventoryItemDetail {
         documents = Self.documents(of: item)
         activity = InventoryActivityEntries(source: source, now: now, calendar: calendar)
             .entries(for: events)
-        let reading = InventorySyncPage.catalogueReading(source)
         conflict = ledger.repairs.first { $0.entityId == id }.map {
-            InventoryDetailConflicts.conflict($0, catalogue: reading.detail($0))
+            InventoryDetailConflicts.conflict(
+                $0, catalogue: InventorySyncPage.catalogueReading(source, for: [$0]).detail($0))
         }
         lastSynced = Self.lastSynced(status, now: now)
         lifecycleChange = Self.lifecycleChange(of: item, events: events)

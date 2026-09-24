@@ -48,6 +48,19 @@ extension AppComposition {
         await bound?.dependencies.inventory.refresh()
     }
 
+    /// Syncs the paired device's Inventory the moment it is (or already was,
+    /// at launch) paired, so a fresh replica does not sit empty until the
+    /// phone is backgrounded, its dashboard is opened, or someone finds the
+    /// Sync page's own Download action.
+    ///
+    /// Binds `device`'s dependencies first rather than reading ``bound``,
+    /// which a pairing this fresh has not necessarily done yet: `ContentView`
+    /// only binds them once the shell has a `FeatureSurface` to draw, and
+    /// this runs from the moment a device is paired, ahead of that.
+    internal func syncInventoryOnPairing(_ device: PairedDevice) async {
+        await dependencies(for: device).inventory.syncNow()
+    }
+
     /// Records that the app is in the foreground, which means the phone has
     /// been unlocked since it started (``FirstUnlockProbe``).
     internal func noteForeground() {
