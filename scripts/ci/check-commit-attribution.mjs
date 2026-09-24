@@ -24,7 +24,10 @@
  *
  * - every commit in `<base>..HEAD`: the whole message, and the author and
  *   committer email;
- * - the pull request body, from `PR_BODY`, when the workflow provides one.
+ * - the pull request body, from `PR_BODY`, when the workflow provides one;
+ * - or, with `--message-file <path>`, one commit message about to be written:
+ *   the `.husky/commit-msg` hook, which stops a credit before it is committed
+ *   rather than after it is pushed.
  *
  * On a merge group the range is the queued squash commit itself, so a
  * violation that reached the queue is caught again there, with its trailers
@@ -46,7 +49,7 @@
  */
 
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -107,6 +110,20 @@ export function commitViolations(commit) {
     found.push(`${short}: committed by a fixture identity <${commit.committerEmail}>`);
   }
   return found;
+}
+
+/**
+ * The message git will actually record from a `commit-msg` file: comment
+ * lines dropped and everything under a `--verbose` scissors line cut, as
+ * git's default cleanup does. A template comment is never committed, so it
+ * cannot be what fails the commit.
+ */
+export function committedMessage(/** @type {string} */ raw) {
+  const lines = raw.split('\n');
+  const scissors = lines.findIndex((line) => /^# -+ >8 -+$/u.test(line));
+  return (scissors >= 0 ? lines.slice(0, scissors) : lines)
+    .filter((line) => !line.startsWith('#'))
+    .join('\n');
 }
 
 const FIELD = '\u001f';
@@ -286,6 +303,25 @@ function selfTest() {
     }
   }
 
+  /** @type {[name: string, raw: string, expected: number][]} */
+  const messageCases = [
+    ['a clean message file passes', 'fix: one\n\nPlain body.\n', 0],
+    ['a trailer in a message file is caught', `fix: one\n\n${trailer}\n`, 1],
+    ['a template comment is not committed, so not caught', `fix: one\n# ${footer}\n`, 0],
+    [
+      'the diff under a scissors line is not committed, so not caught',
+      `fix: one\n# ------------------------ >8 ------------------------\n+${footer}\n`,
+      0,
+    ],
+  ];
+  for (const [name, raw, expected] of messageCases) {
+    const actual = attributionLines(committedMessage(raw)).length;
+    if (actual !== expected) {
+      ok = false;
+      console.error(`  self-test FAIL — ${name}: expected ${expected}, got ${actual}`);
+    }
+  }
+
   const unreadable = fixtureRepo();
   try {
     commitsInRange({ base: 'no-such-ref', cwd: unreadable.dir });
@@ -299,15 +335,18 @@ function selfTest() {
 
   console.log(
     ok
-      ? `OK — ${cases.length + 1} self-test mutations behave as stated.`
+      ? `OK — ${cases.length + messageCases.length + 1} self-test mutations behave as stated.`
       : 'FAIL — the guard does not report what its header claims.'
   );
   return ok;
 }
 
-/** @param {string[]} argv */
-function parseBase(argv) {
-  const i = argv.indexOf('--base');
+/**
+ * @param {string[]} argv
+ * @param {string} flag
+ */
+function flagValue(argv, flag) {
+  const i = argv.indexOf(flag);
   const next = i >= 0 ? argv[i + 1] : undefined;
   return next !== undefined && next !== '' ? next : undefined;
 }
@@ -317,6 +356,7 @@ function main() {
   if (argv.includes('--help') || argv.includes('-h')) {
     console.log(
       'Usage: node scripts/ci/check-commit-attribution.mjs --base <ref> [--self-test]\n' +
+        '       node scripts/ci/check-commit-attribution.mjs --message-file <path>\n' +
         'Fails when a commit in <ref>..HEAD, or PR_BODY, credits an AI assistant, or a commit ' +
         'carries a fixture identity.'
     );
@@ -324,7 +364,20 @@ function main() {
   }
   if (argv.includes('--self-test')) process.exit(selfTest() ? 0 : 1);
 
-  const base = parseBase(argv);
+  const messageFile = flagValue(argv, '--message-file');
+  if (messageFile !== undefined) {
+    const found = attributionLines(committedMessage(readFileSync(messageFile, 'utf8')));
+    if (found.length === 0) process.exit(0);
+    console.error('FAIL — this commit message credits an AI assistant:');
+    for (const line of found) console.error(`  "${line}"`);
+    console.error(
+      'Remove the line and commit again. No assistant reference may reach the remote — not a ' +
+        'trailer, a co-author line, a footer, or a body line.'
+    );
+    process.exit(1);
+  }
+
+  const base = flagValue(argv, '--base');
   if (base === undefined) {
     console.error('FAIL — no --base given; there is no range to check.');
     process.exit(2);

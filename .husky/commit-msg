@@ -1,0 +1,4 @@
+# No commit message may credit an AI assistant (POPS-3430). The same guard runs
+# in CI over every commit in the PR; this stops the credit before it is
+# committed, so there is nothing to reword and force-push afterwards.
+node scripts/ci/check-commit-attribution.mjs --message-file "$1"

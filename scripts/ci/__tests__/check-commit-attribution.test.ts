@@ -17,7 +17,9 @@
  */
 
 import { execFileSync } from 'node:child_process';
-import { dirname, resolve } from 'node:path';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
@@ -25,6 +27,7 @@ import { describe, expect, it } from 'vitest';
 import {
   attributionLines,
   commitsInRange,
+  committedMessage,
   commitViolations,
   findViolations,
 } from '../check-commit-attribution.mjs';
@@ -159,3 +162,45 @@ describe('commitViolations', () => {
     expect(commitViolations(clean)).toEqual([]);
   });
 });
+
+describe('committedMessage', () => {
+  it('drops comment lines, which git never commits', () => {
+    expect(committedMessage(`fix: one\n# ${TRAILER}\nBody.`)).toBe('fix: one\nBody.');
+  });
+
+  it('cuts everything under a verbose scissors line', () => {
+    const raw = `fix: one\n# ------------------------ >8 ------------------------\n+${TRAILER}`;
+    expect(committedMessage(raw)).toBe('fix: one');
+  });
+});
+
+describe(
+  '--message-file, as the commit-msg hook runs it',
+  { timeout: REAL_SUBPROCESS_TIMEOUT_MS },
+  () => {
+    const statusFor = (message: string) => {
+      const dir = mkdtempSync(join(tmpdir(), 'commit-msg-'));
+      const file = join(dir, 'COMMIT_EDITMSG');
+      writeFileSync(file, message);
+      try {
+        execFileSync(process.execPath, [guard, '--message-file', file], {
+          stdio: 'pipe',
+          timeout: REAL_SUBPROCESS_TIMEOUT_MS,
+        });
+        return 0;
+      } catch (error) {
+        return (error as { status?: number }).status ?? -1;
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    };
+
+    it('refuses a message carrying a co-author trailer', () => {
+      expect(statusFor(`fix: one\n\n${TRAILER}\n`)).toBe(1);
+    });
+
+    it('accepts a clean message', () => {
+      expect(statusFor('fix: one\n\nPlain body.\n')).toBe(0);
+    });
+  }
+);
