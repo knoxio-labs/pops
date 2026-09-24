@@ -395,6 +395,23 @@ describe('DevicesPage — when the phone finishes pairing', () => {
     expect(screen.queryByRole('heading', { name: 'Device paired' })).not.toBeInTheDocument();
   });
 
+  /**
+   * The page's cached list is whatever it last read. A handset paired from
+   * elsewhere since then must not be credited to the code minted now, which is
+   * why every mint refetches the list before the watcher takes its baseline.
+   */
+  it('does not credit a phone paired elsewhere since the page last read the list', async () => {
+    const user = renderPage();
+    await screen.findByText('No devices paired');
+
+    listDevicesMock.mockResolvedValue(devicesResponse(device({ id: 'dev-elsewhere' })));
+    await mintAndShowCode(user);
+    await act(() => vi.advanceTimersByTimeAsync(6_000));
+
+    expect(screen.getByTestId('pairing-code')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Device paired' })).not.toBeInTheDocument();
+  });
+
   it('adds the new phone to the table behind the dialog', async () => {
     const user = renderPage();
     await mintAndShowCode(user);

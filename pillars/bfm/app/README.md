@@ -81,9 +81,11 @@ its job ran out its clock and reported itself _expired_.
 
 Three details carry the weight:
 
-- The baseline is the first list read _after_ the code is shown, not the list
-  at the moment Pair was clicked. A list still loading then has no ids, and a
-  baseline of nothing would read every handset already paired as the new one.
+- Every mint (Pair, and "Mint another") refetches the list, and the baseline
+  is only taken from a read that landed after that request. The cached list is
+  whatever the page last read, so a handset paired from elsewhere since then
+  would otherwise show up on the next poll and be credited to this code. A list
+  still loading has no ids at all, so nothing is compared until that read lands.
 - The poll carries on after the countdown reaches zero, and an expired code
   still accepts a completion. bfm checks expiry when the phone redeems, so a
   phone that got in during the last second is visible here up to one poll

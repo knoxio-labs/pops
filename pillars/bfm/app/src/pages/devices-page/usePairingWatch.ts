@@ -34,6 +34,12 @@ export function findNewlyPairedDevice(
   return devices.find((device) => device.revokedAt === null && !known.has(device.id)) ?? null;
 }
 
+/** A read of the device list, and when it landed (`Date.now()` milliseconds). */
+export interface DeviceListSnapshot {
+  devices: readonly PairedHandset[];
+  fetchedAt: number;
+}
+
 /**
  * Turns the phone's half of pairing into something the operator can see.
  *
@@ -43,15 +49,19 @@ export function findNewlyPairedDevice(
  * {@link PAIRING_POLL_MS}). So the ids on screen when the code appeared are
  * remembered, and the first new one completes the pairing.
  *
- * The baseline is taken from the first list read after the code is shown, not
- * from the moment the mint was clicked. A list still loading at that moment
- * has no ids to remember, and a baseline of "nothing" would mistake every
- * existing handset for a new one. The phone cannot redeem a code before the
- * operator can see it, so nothing is missed by waiting for that first read.
+ * The baseline is only ever taken from a read that landed at or after `since`
+ * — the moment the mint was requested, when the model also refetches the list.
+ * The cached list is not good enough: it is whatever the page last read, and a
+ * handset paired from somewhere else since then would be missing from it, then
+ * turn up on the next poll and be credited to this code. The refetch starts
+ * before the code exists, so the phone cannot have redeemed it yet; and a list
+ * still loading has no ids at all, which would read every existing handset as
+ * the new one — so until a fresh enough read arrives, nothing is compared.
  */
 export function usePairingWatch(
   pairing: PairingCodeModel,
-  devices: readonly PairedHandset[] | null
+  snapshot: DeviceListSnapshot | null,
+  since: number
 ): void {
   const baseline = useRef<ReadonlySet<string> | null>(null);
   const awaiting = isAwaitingRedemption(pairing.state);
@@ -62,12 +72,12 @@ export function usePairingWatch(
       baseline.current = null;
       return;
     }
-    if (devices === null) return;
+    if (snapshot === null || snapshot.fetchedAt < since) return;
     if (baseline.current === null) {
-      baseline.current = new Set(devices.map((device) => device.id));
+      baseline.current = new Set(snapshot.devices.map((device) => device.id));
       return;
     }
-    const device = findNewlyPairedDevice(baseline.current, devices);
+    const device = findNewlyPairedDevice(baseline.current, snapshot.devices);
     if (device !== null) complete(device);
-  }, [awaiting, devices, complete]);
+  }, [awaiting, snapshot, since, complete]);
 }

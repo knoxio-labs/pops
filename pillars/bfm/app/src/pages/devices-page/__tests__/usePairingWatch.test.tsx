@@ -65,11 +65,17 @@ describe('usePairingWatch', () => {
     };
   }
 
+  type Props = { state: PairingState; ids: string[] | null; fetchedAt?: number; since?: number };
+
   function watch(complete: PairingCodeModel['complete']) {
     return renderHook(
-      ({ state, devices }: { state: PairingState; devices: PairedHandset[] | null }) =>
-        usePairingWatch(model(state, complete), devices),
-      { initialProps: { state: 'idle', devices: [handset('a')] } }
+      ({ state, ids, fetchedAt = 10, since = 0 }: Props) =>
+        usePairingWatch(
+          model(state, complete),
+          ids === null ? null : { devices: ids.map((id) => handset(id)), fetchedAt },
+          since
+        ),
+      { initialProps: { state: 'idle', ids: ['a'] } as Props }
     );
   }
 
@@ -77,34 +83,51 @@ describe('usePairingWatch', () => {
     const complete = vi.fn();
     const { rerender } = watch(complete);
 
-    rerender({ state: 'issued', devices: [handset('a')] });
+    rerender({ state: 'issued', ids: ['a'] });
     expect(complete).not.toHaveBeenCalled();
 
-    rerender({ state: 'issued', devices: [handset('a'), handset('b')] });
+    rerender({ state: 'issued', ids: ['a', 'b'], fetchedAt: 11 });
     expect(complete).toHaveBeenCalledWith(expect.objectContaining({ id: 'b' }));
   });
 
   /**
-   * The list can still be loading when the code appears. A baseline of
-   * "nothing" would read every handset already paired as the new one.
+   * A list still loading has no ids; a baseline of "nothing" would read every
+   * handset already paired as the new one.
    */
   it('waits for the list before taking its baseline', () => {
     const complete = vi.fn();
     const { rerender } = watch(complete);
 
-    rerender({ state: 'issued', devices: null });
-    rerender({ state: 'issued', devices: [handset('a')] });
+    rerender({ state: 'issued', ids: null });
+    rerender({ state: 'issued', ids: ['a'] });
 
     expect(complete).not.toHaveBeenCalled();
+  });
+
+  /**
+   * The cache can predate a handset paired from elsewhere. A read older than
+   * the mint request is never used as the baseline, so that handset cannot be
+   * credited to this code when the fresh read brings it in.
+   */
+  it('ignores a read older than the mint request', () => {
+    const complete = vi.fn();
+    const { rerender } = watch(complete);
+
+    rerender({ state: 'issued', ids: ['a'], fetchedAt: 5, since: 10 });
+    rerender({ state: 'issued', ids: ['a', 'elsewhere'], fetchedAt: 12, since: 10 });
+    expect(complete).not.toHaveBeenCalled();
+
+    rerender({ state: 'issued', ids: ['a', 'elsewhere', 'phone'], fetchedAt: 14, since: 10 });
+    expect(complete).toHaveBeenCalledWith(expect.objectContaining({ id: 'phone' }));
   });
 
   it('takes a fresh baseline for each code', () => {
     const complete = vi.fn();
     const { rerender } = watch(complete);
 
-    rerender({ state: 'issued', devices: [handset('a')] });
-    rerender({ state: 'minting', devices: [handset('a'), handset('b')] });
-    rerender({ state: 'issued', devices: [handset('a'), handset('b')] });
+    rerender({ state: 'issued', ids: ['a'] });
+    rerender({ state: 'minting', ids: ['a', 'b'], fetchedAt: 11 });
+    rerender({ state: 'issued', ids: ['a', 'b'], fetchedAt: 11 });
 
     expect(complete).not.toHaveBeenCalled();
   });
@@ -113,7 +136,7 @@ describe('usePairingWatch', () => {
     const complete = vi.fn();
     const { rerender } = watch(complete);
 
-    rerender({ state: 'idle', devices: [handset('a'), handset('b')] });
+    rerender({ state: 'idle', ids: ['a', 'b'], fetchedAt: 11 });
 
     expect(complete).not.toHaveBeenCalled();
   });

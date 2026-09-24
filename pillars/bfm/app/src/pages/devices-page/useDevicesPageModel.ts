@@ -1,11 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 
 import { unwrap } from '../../bfm-api-helpers.js';
 import { operatorListDevices, operatorRevokeDevice } from '../../bfm-api/index.js';
 import { classifyOperatorFailure, type OperatorFailure } from './operator-failures.js';
 import { usePairingCode, type PairedHandset, type PairingCodeModel } from './usePairingCode.js';
-import { isAwaitingRedemption, PAIRING_POLL_MS, usePairingWatch } from './usePairingWatch.js';
+import {
+  isAwaitingRedemption,
+  PAIRING_POLL_MS,
+  usePairingWatch,
+  type DeviceListSnapshot,
+} from './usePairingWatch.js';
 
 export type PairedDevice = PairedHandset;
 
@@ -38,10 +43,21 @@ export interface DevicesPageModel {
 
 export function useDevicesPageModel(): DevicesPageModel {
   const pairing = usePairingCode();
-  const list = useDeviceList(isAwaitingRedemption(pairing.state));
-  usePairingWatch(pairing, list.state === 'ready' ? list.devices : null);
+  const { list, snapshot, refetch } = useDeviceList(isAwaitingRedemption(pairing.state));
+  const [mintRequestedAt, setMintRequestedAt] = useState(0);
+  usePairingWatch(pairing, snapshot, mintRequestedAt);
 
-  return { list, pairing, revocation: useRevocation() };
+  // Every mint — the page's Pair button and the dialog's "Mint another" —
+  // refetches the list first, so the watcher's baseline is a read taken after
+  // this request rather than whatever the cache last held.
+  const { mint: mintCode } = pairing;
+  const mint = useCallback(() => {
+    setMintRequestedAt(Date.now());
+    void refetch();
+    mintCode();
+  }, [refetch, mintCode]);
+
+  return { list, pairing: { ...pairing, mint }, revocation: useRevocation() };
 }
 
 /**
@@ -54,7 +70,12 @@ export function useDevicesPageModel(): DevicesPageModel {
  * here would have rendered "check your Cloudflare Access session" — advice for
  * a different problem entirely — the day anyone metered the list.
  */
-function useDeviceList(poll: boolean): DeviceListModel {
+function useDeviceList(poll: boolean): {
+  list: DeviceListModel;
+  /** The last successful read, for the pairing watcher; `null` until there is one or while failed. */
+  snapshot: DeviceListSnapshot | null;
+  refetch: () => Promise<unknown>;
+} {
   const query = useQuery({
     queryKey: DEVICES_QUERY_KEY,
     queryFn: async () => unwrap(await operatorListDevices()),
@@ -62,12 +83,24 @@ function useDeviceList(poll: boolean): DeviceListModel {
     refetchInterval: poll ? PAIRING_POLL_MS : false,
   });
 
-  if (query.isPending) return { state: 'loading', failure: null, devices: [] };
-  if (query.error !== null) {
-    return { state: 'failed', failure: classifyOperatorFailure(query.error), devices: [] };
-  }
+  const { refetch, data, dataUpdatedAt } = query;
+  const snapshot = useMemo(
+    () => (data === undefined ? null : { devices: data.devices, fetchedAt: dataUpdatedAt }),
+    [data, dataUpdatedAt]
+  );
 
-  return { state: 'ready', failure: null, devices: query.data.devices };
+  if (query.isPending) {
+    return { list: { state: 'loading', failure: null, devices: [] }, snapshot: null, refetch };
+  }
+  if (query.error !== null) {
+    const failure = classifyOperatorFailure(query.error);
+    return { list: { state: 'failed', failure, devices: [] }, snapshot: null, refetch };
+  }
+  return {
+    list: { state: 'ready', failure: null, devices: query.data.devices },
+    snapshot,
+    refetch,
+  };
 }
 
 /**
