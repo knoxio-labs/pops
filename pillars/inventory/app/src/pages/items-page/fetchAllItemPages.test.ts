@@ -17,7 +17,7 @@ vi.mock('../../inventory-api/index.js', () => ({
   itemsList: (options: ItemsListCallOptions) => mocks.itemsList(options),
 }));
 
-const { fetchAllItemPages } = await import('./useItemsPageModel');
+const { fetchAllItemPages } = await import('./fetchAllItemPages');
 
 function item(id: string): InventoryItem {
   return {
@@ -141,6 +141,60 @@ describe('fetchAllItemPages', () => {
 
     expect(mocks.itemsList).toHaveBeenCalledTimes(500);
     expect(result.data).toHaveLength(500);
+  });
+
+  it('retries the whole walk once when the total changes mid-walk, then returns the stable retry', async () => {
+    mocks.itemsList
+      // Attempt 1: total shifts from 450 to 449 between pages — a delete
+      // raced the walk, so this attempt is discarded.
+      .mockResolvedValueOnce(
+        page([item('a')], { total: 450, limit: 200, offset: 0, hasMore: true })
+      )
+      .mockResolvedValueOnce(
+        page([item('b')], { total: 449, limit: 200, offset: 200, hasMore: true })
+      )
+      .mockResolvedValueOnce(
+        page([item('c')], { total: 449, limit: 200, offset: 400, hasMore: false })
+      )
+      // Attempt 2: nothing changes size mid-walk — kept.
+      .mockResolvedValueOnce(
+        page([item('x')], { total: 449, limit: 200, offset: 0, hasMore: true })
+      )
+      .mockResolvedValueOnce(
+        page([item('y')], { total: 449, limit: 200, offset: 200, hasMore: true })
+      )
+      .mockResolvedValueOnce(
+        page([item('z')], { total: 449, limit: 200, offset: 400, hasMore: false })
+      );
+
+    const result = await fetchAllItemPages(QUERY_INPUT, new AbortController().signal);
+
+    expect(mocks.itemsList).toHaveBeenCalledTimes(6);
+    expect(result.data.map((row) => row.id)).toEqual(['x', 'y', 'z']);
+    expect(result.pagination.total).toBe(449);
+  });
+
+  it('gives up after the bounded number of attempts rather than retrying forever under sustained drift', async () => {
+    let counter = 0;
+    mocks.itemsList.mockImplementation(async ({ query }) => {
+      counter += 1;
+      // A strictly increasing total on every single call guarantees a
+      // mismatch between any two calls of the same walk, so every attempt
+      // sees drift.
+      return page([item(`p${counter}`)], {
+        total: counter,
+        limit: 200,
+        offset: query.offset,
+        hasMore: query.offset === 0,
+      });
+    });
+
+    const result = await fetchAllItemPages(QUERY_INPUT, new AbortController().signal);
+
+    // 3 attempts (MAX_CONSISTENCY_ATTEMPTS) of 2 calls each, then it stops
+    // trying and returns the last attempt's best-effort assembly.
+    expect(mocks.itemsList).toHaveBeenCalledTimes(6);
+    expect(result.data.map((row) => row.id)).toEqual(['p5', 'p6']);
   });
 
   it('propagates an abort instead of issuing the next page', async () => {

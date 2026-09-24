@@ -32,6 +32,15 @@ every row it was given. Column sorting is client-side too, now over the
 complete array rather than a 200-row slice (server-driven sort/paging is
 POPS-43, still open).
 
+Offset pagination has no cursor: a row deleted between two page requests
+shifts everything after it left by one, so the row that would have landed on
+the next page's offset is skipped by both requests. `fetchAllItemPages`
+detects this from a `pagination.total` that changed between pages of the same
+walk and retries the whole walk (bounded at `MAX_CONSISTENCY_ATTEMPTS`) rather
+than silently returning a list with a hole in it. This is a mitigation, not a
+guarantee — closing the race for good needs keyset pagination, which is a
+contract change out of scope here.
+
 ## Location display
 
 The location tree is fetched once here and turned into two derived shapes by

@@ -9,10 +9,10 @@ import { unwrap } from '../../inventory-api-helpers.js';
 import {
   itemsDelete,
   itemsDistinctTypes,
-  itemsList,
   itemsSearchByAssetId,
   locationsTree,
 } from '../../inventory-api/index.js';
+import { fetchAllItemPages } from './fetchAllItemPages';
 import {
   buildQueryInput,
   hasAnyActiveFilter,
@@ -24,50 +24,8 @@ import { buildLocationPathMap, flattenLocations } from './useItemsPageLocations'
 import type { ItemsListResponses } from '../../inventory-api/types.gen.js';
 
 type InventoryItem = ItemsListResponses['200']['data'][number];
-type ItemsListPage = ItemsListResponses['200'];
 
 const VIEW_STORAGE_KEY = 'inventory-view-mode';
-
-// A malformed or adversarial `hasMore`/`offset` pair could otherwise page
-// forever; this bounds a single list fetch well past any real library.
-const MAX_ITEM_PAGES = 500;
-
-/**
- * Fetches every page of `GET /items` for the given filters, starting at
- * offset 0 and following `pagination.hasMore` until the server reports no
- * more rows. `signal` is forwarded to each request so an aborted caller (see
- * `useItemsPageModel`, which cancels a stale walk on filter change) stops
- * issuing further page requests instead of paging in the background.
- */
-export async function fetchAllItemPages(
-  queryInput: ReturnType<typeof buildQueryInput>,
-  signal: AbortSignal
-): Promise<ItemsListPage> {
-  const seenIds = new Set<string>();
-  const data: InventoryItem[] = [];
-  let pagination: ItemsListPage['pagination'] | undefined;
-  let totals: ItemsListPage['totals'] | undefined;
-  let offset = 0;
-
-  for (let page = 0; page < MAX_ITEM_PAGES; page++) {
-    const result = unwrap(await itemsList({ query: { ...queryInput, offset }, signal }));
-    for (const item of result.data) {
-      if (seenIds.has(item.id)) continue;
-      seenIds.add(item.id);
-      data.push(item);
-    }
-    pagination = result.pagination;
-    totals = result.totals;
-    if (!result.pagination.hasMore) break;
-    offset = result.pagination.offset + result.pagination.limit;
-  }
-
-  return {
-    data,
-    pagination: pagination ?? { total: 0, limit: queryInput.limit, offset: 0, hasMore: false },
-    totals: totals ?? { totalReplacementValue: 0, totalResaleValue: 0 },
-  };
-}
 
 export type ViewMode = 'table' | 'grid';
 
