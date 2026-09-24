@@ -25,11 +25,11 @@
   "devDependencies": {
     "@pops/contract-openapi": "workspace:*",
     "@types/express": "^5.0.4",
-    "@types/node": "^24.13.4",
+    "@types/node": "^24.13.6",
     "@types/supertest": "^7.2.1",
     "@vitest/coverage-v8": "^4.1.10",
     "supertest": "^7.1.4",
-    "tsx": "^4.23.13",
+    "tsx": "^4.23.15",
     "typescript": "^6.0.3",
     "vitest": "^4.1.11"
   }
