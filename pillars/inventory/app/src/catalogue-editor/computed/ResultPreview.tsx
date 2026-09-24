@@ -13,6 +13,7 @@ import {
   Skeleton,
 } from '@pops/ui';
 
+import { unavailableSentence } from '../expression/preview-copy';
 import { PreviewDetails, TraversedItems } from './PreviewDetails';
 
 import type { PreviewItem, PreviewState } from './preview-model';
@@ -89,11 +90,7 @@ function Evaluated({
             <CircleSlash className="h-5 w-5 text-muted-foreground" />
             Unavailable
           </p>
-          {preview.sentences.map((sentence) => (
-            <p key={sentence} className="text-sm">
-              {sentence}
-            </p>
-          ))}
+          <p className="text-sm">{unavailableSentence(preview.missingInputs)}</p>
           <TraversedItems items={preview.traversed} />
         </>
       )}

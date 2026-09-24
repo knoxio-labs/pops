@@ -4954,12 +4954,11 @@ export type TypesManagePreviewComputedFieldResponses = {
             itemId: string;
             revision: number;
           }>;
-          missing: Array<{
+          missingInputs: Array<{
             fieldId: string;
             itemId: string;
             reason: string;
           }>;
-          reason: string;
           state: 'unavailable';
           traversedItemIds: Array<string>;
         }

@@ -9463,50 +9463,6 @@
                           {
                             "additionalProperties": false,
                             "properties": {
-                              "catalogueChanges": {
-                                "items": {
-                                  "additionalProperties": false,
-                                  "properties": {
-                                    "change": {
-                                      "type": "string"
-                                    },
-                                    "definition": {
-                                      "type": "string"
-                                    },
-                                    "fieldId": {
-                                      "nullable": true,
-                                      "type": "string"
-                                    },
-                                    "id": {
-                                      "type": "string"
-                                    },
-                                    "replacementId": {
-                                      "nullable": true,
-                                      "type": "string"
-                                    },
-                                    "revision": {
-                                      "maximum": 9007199254740991,
-                                      "minimum": -9007199254740991,
-                                      "type": "integer"
-                                    },
-                                    "typeId": {
-                                      "nullable": true,
-                                      "type": "string"
-                                    }
-                                  },
-                                  "required": [
-                                    "definition",
-                                    "id",
-                                    "typeId",
-                                    "fieldId",
-                                    "change",
-                                    "replacementId",
-                                    "revision"
-                                  ],
-                                  "type": "object"
-                                },
-                                "type": "array"
-                              },
                               "message": {
                                 "type": "string"
                               },
@@ -10674,12 +10630,6 @@
                                   },
                                   "type": "array"
                                 },
-                                "replacedBy": {
-                                  "format": "uuid",
-                                  "nullable": true,
-                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
-                                  "type": "string"
-                                },
                                 "required": {
                                   "type": "boolean"
                                 },
@@ -10717,7 +10667,6 @@
                                 "allowOverride",
                                 "presentation",
                                 "archivedAt",
-                                "replacedBy",
                                 "enumOptions"
                               ],
                               "type": "object"
@@ -10745,12 +10694,6 @@
                             "additionalProperties": {},
                             "type": "object"
                           },
-                          "replacedBy": {
-                            "format": "uuid",
-                            "nullable": true,
-                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
-                            "type": "string"
-                          },
                           "revision": {
                             "exclusiveMinimum": true,
                             "maximum": 9007199254740991,
@@ -10774,7 +10717,6 @@
                           "legacyLabels",
                           "presentation",
                           "archivedAt",
-                          "replacedBy",
                           "fields"
                         ],
                         "type": "object"
@@ -11382,12 +11324,6 @@
                                   },
                                   "type": "array"
                                 },
-                                "replacedBy": {
-                                  "format": "uuid",
-                                  "nullable": true,
-                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
-                                  "type": "string"
-                                },
                                 "required": {
                                   "type": "boolean"
                                 },
@@ -11425,7 +11361,6 @@
                                 "allowOverride",
                                 "presentation",
                                 "archivedAt",
-                                "replacedBy",
                                 "enumOptions"
                               ],
                               "type": "object"
@@ -11453,12 +11388,6 @@
                             "additionalProperties": {},
                             "type": "object"
                           },
-                          "replacedBy": {
-                            "format": "uuid",
-                            "nullable": true,
-                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
-                            "type": "string"
-                          },
                           "revision": {
                             "exclusiveMinimum": true,
                             "maximum": 9007199254740991,
@@ -11482,7 +11411,6 @@
                           "legacyLabels",
                           "presentation",
                           "archivedAt",
-                          "replacedBy",
                           "fields"
                         ],
                         "type": "object"
@@ -11939,12 +11867,6 @@
                                   },
                                   "type": "array"
                                 },
-                                "replacedBy": {
-                                  "format": "uuid",
-                                  "nullable": true,
-                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
-                                  "type": "string"
-                                },
                                 "required": {
                                   "type": "boolean"
                                 },
@@ -11982,7 +11904,6 @@
                                 "allowOverride",
                                 "presentation",
                                 "archivedAt",
-                                "replacedBy",
                                 "enumOptions"
                               ],
                               "type": "object"
@@ -12010,12 +11931,6 @@
                             "additionalProperties": {},
                             "type": "object"
                           },
-                          "replacedBy": {
-                            "format": "uuid",
-                            "nullable": true,
-                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
-                            "type": "string"
-                          },
                           "revision": {
                             "exclusiveMinimum": true,
                             "maximum": 9007199254740991,
@@ -12039,7 +11954,6 @@
                           "legacyLabels",
                           "presentation",
                           "archivedAt",
-                          "replacedBy",
                           "fields"
                         ],
                         "type": "object"
@@ -12285,10 +12199,11 @@
                               "nullable": true
                             },
                             "expressionVersion": {
-                              "description": "How a computed field's expression is evaluated. 1: measurements combine only in one fixed unit and decimals compare by spelling (3.0 ≠ 3). 2: measurements of one dimension convert (cm + mm), measurement × and ÷ measurement derive units (cm × cm is cm²), the result converts into the field's fixedUnit, and equal compares decimals by value (1.5 × 2 = 3). Required with an expression on a computed field; null on a stored field.",
-                              "enum": [1, 2, null],
+                              "exclusiveMinimum": true,
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
                               "nullable": true,
-                              "type": "number"
+                              "type": "integer"
                             },
                             "fieldKind": {
                               "enum": [
@@ -12427,28 +12342,7 @@
                               "type": "string"
                             },
                             "kind": {
-                              "enum": ["archive_type", "archive_field"],
-                              "type": "string"
-                            },
-                            "replacedBy": {
-                              "format": "uuid",
-                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
-                              "type": "string"
-                            }
-                          },
-                          "required": ["kind", "id"],
-                          "type": "object"
-                        },
-                        {
-                          "additionalProperties": false,
-                          "properties": {
-                            "id": {
-                              "format": "uuid",
-                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
-                              "type": "string"
-                            },
-                            "kind": {
-                              "enum": ["archive_enum_option"],
+                              "enum": ["archive_type", "archive_field", "archive_enum_option"],
                               "type": "string"
                             }
                           },
@@ -12865,12 +12759,6 @@
                                       },
                                       "type": "array"
                                     },
-                                    "replacedBy": {
-                                      "format": "uuid",
-                                      "nullable": true,
-                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
-                                      "type": "string"
-                                    },
                                     "required": {
                                       "type": "boolean"
                                     },
@@ -12908,7 +12796,6 @@
                                     "allowOverride",
                                     "presentation",
                                     "archivedAt",
-                                    "replacedBy",
                                     "enumOptions"
                                   ],
                                   "type": "object"
@@ -12936,12 +12823,6 @@
                                 "additionalProperties": {},
                                 "type": "object"
                               },
-                              "replacedBy": {
-                                "format": "uuid",
-                                "nullable": true,
-                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
-                                "type": "string"
-                              },
                               "revision": {
                                 "exclusiveMinimum": true,
                                 "maximum": 9007199254740991,
@@ -12965,7 +12846,6 @@
                               "legacyLabels",
                               "presentation",
                               "archivedAt",
-                              "replacedBy",
                               "fields"
                             ],
                             "type": "object"
@@ -13712,12 +13592,6 @@
                                   },
                                   "type": "array"
                                 },
-                                "replacedBy": {
-                                  "format": "uuid",
-                                  "nullable": true,
-                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
-                                  "type": "string"
-                                },
                                 "required": {
                                   "type": "boolean"
                                 },
@@ -13755,7 +13629,6 @@
                                 "allowOverride",
                                 "presentation",
                                 "archivedAt",
-                                "replacedBy",
                                 "enumOptions"
                               ],
                               "type": "object"
@@ -13783,12 +13656,6 @@
                             "additionalProperties": {},
                             "type": "object"
                           },
-                          "replacedBy": {
-                            "format": "uuid",
-                            "nullable": true,
-                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
-                            "type": "string"
-                          },
                           "revision": {
                             "exclusiveMinimum": true,
                             "maximum": 9007199254740991,
@@ -13812,7 +13679,6 @@
                           "legacyLabels",
                           "presentation",
                           "archivedAt",
-                          "replacedBy",
                           "fields"
                         ],
                         "type": "object"
@@ -14143,10 +14009,11 @@
                               "nullable": true
                             },
                             "expressionVersion": {
-                              "description": "How a computed field's expression is evaluated. 1: measurements combine only in one fixed unit and decimals compare by spelling (3.0 ≠ 3). 2: measurements of one dimension convert (cm + mm), measurement × and ÷ measurement derive units (cm × cm is cm²), the result converts into the field's fixedUnit, and equal compares decimals by value (1.5 × 2 = 3). Required with an expression on a computed field; null on a stored field.",
-                              "enum": [1, 2, null],
+                              "exclusiveMinimum": true,
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
                               "nullable": true,
-                              "type": "number"
+                              "type": "integer"
                             },
                             "fieldKind": {
                               "enum": [
@@ -14285,28 +14152,7 @@
                               "type": "string"
                             },
                             "kind": {
-                              "enum": ["archive_type", "archive_field"],
-                              "type": "string"
-                            },
-                            "replacedBy": {
-                              "format": "uuid",
-                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
-                              "type": "string"
-                            }
-                          },
-                          "required": ["kind", "id"],
-                          "type": "object"
-                        },
-                        {
-                          "additionalProperties": false,
-                          "properties": {
-                            "id": {
-                              "format": "uuid",
-                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
-                              "type": "string"
-                            },
-                            "kind": {
-                              "enum": ["archive_enum_option"],
+                              "enum": ["archive_type", "archive_field", "archive_enum_option"],
                               "type": "string"
                             }
                           },
@@ -14494,7 +14340,7 @@
                               },
                               "type": "array"
                             },
-                            "missing": {
+                            "missingInputs": {
                               "items": {
                                 "additionalProperties": false,
                                 "properties": {
@@ -14510,14 +14356,11 @@
                                     "type": "string"
                                   }
                                 },
-                                "required": ["fieldId", "itemId", "reason"],
+                                "required": ["reason", "fieldId", "itemId"],
                                 "type": "object"
                               },
                               "minItems": 1,
                               "type": "array"
-                            },
-                            "reason": {
-                              "type": "string"
                             },
                             "state": {
                               "enum": ["unavailable"],
@@ -14534,8 +14377,7 @@
                             "dependencies",
                             "traversedItemIds",
                             "state",
-                            "reason",
-                            "missing"
+                            "missingInputs"
                           ],
                           "type": "object"
                         },
@@ -15138,10 +14980,11 @@
                               "nullable": true
                             },
                             "expressionVersion": {
-                              "description": "How a computed field's expression is evaluated. 1: measurements combine only in one fixed unit and decimals compare by spelling (3.0 ≠ 3). 2: measurements of one dimension convert (cm + mm), measurement × and ÷ measurement derive units (cm × cm is cm²), the result converts into the field's fixedUnit, and equal compares decimals by value (1.5 × 2 = 3). Required with an expression on a computed field; null on a stored field.",
-                              "enum": [1, 2, null],
+                              "exclusiveMinimum": true,
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
                               "nullable": true,
-                              "type": "number"
+                              "type": "integer"
                             },
                             "fieldKind": {
                               "enum": [
@@ -15321,6 +15164,7 @@
                       ]
                     },
                     "maxItems": 100,
+                    "minItems": 1,
                     "type": "array"
                   }
                 },
@@ -15842,7 +15686,7 @@
             "description": "409"
           }
         },
-        "summary": "Validate draft operations and preview compatibility without mutating the draft; an empty operations array re-checks the current draft as it stands",
+        "summary": "Validate draft operations and preview compatibility without mutating the draft",
         "tags": ["types", "manage"]
       }
     },
@@ -16376,12 +16220,6 @@
                                   },
                                   "type": "array"
                                 },
-                                "replacedBy": {
-                                  "format": "uuid",
-                                  "nullable": true,
-                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
-                                  "type": "string"
-                                },
                                 "required": {
                                   "type": "boolean"
                                 },
@@ -16419,7 +16257,6 @@
                                 "allowOverride",
                                 "presentation",
                                 "archivedAt",
-                                "replacedBy",
                                 "enumOptions"
                               ],
                               "type": "object"
@@ -16447,12 +16284,6 @@
                             "additionalProperties": {},
                             "type": "object"
                           },
-                          "replacedBy": {
-                            "format": "uuid",
-                            "nullable": true,
-                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
-                            "type": "string"
-                          },
                           "revision": {
                             "exclusiveMinimum": true,
                             "maximum": 9007199254740991,
@@ -16476,7 +16307,6 @@
                           "legacyLabels",
                           "presentation",
                           "archivedAt",
-                          "replacedBy",
                           "fields"
                         ],
                         "type": "object"
@@ -17744,12 +17574,6 @@
                                 },
                                 "type": "array"
                               },
-                              "replacedBy": {
-                                "format": "uuid",
-                                "nullable": true,
-                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
-                                "type": "string"
-                              },
                               "required": {
                                 "type": "boolean"
                               },
@@ -17787,7 +17611,6 @@
                               "allowOverride",
                               "presentation",
                               "archivedAt",
-                              "replacedBy",
                               "enumOptions"
                             ],
                             "type": "object"
@@ -17815,12 +17638,6 @@
                           "additionalProperties": {},
                           "type": "object"
                         },
-                        "replacedBy": {
-                          "format": "uuid",
-                          "nullable": true,
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
-                          "type": "string"
-                        },
                         "revision": {
                           "exclusiveMinimum": true,
                           "maximum": 9007199254740991,
@@ -17844,7 +17661,6 @@
                         "legacyLabels",
                         "presentation",
                         "archivedAt",
-                        "replacedBy",
                         "fields"
                       ],
                       "type": "object"

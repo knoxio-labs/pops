@@ -111,8 +111,7 @@ function previewResult(
   if (evaluation.state === 'unavailable')
     return {
       state: 'unavailable',
-      reason: evaluation.reason,
-      missing: previewMissing(rootItemId, evaluation),
+      missingInputs: previewMissing(rootItemId, evaluation),
       dependencies: evaluation.dependencies,
       traversedItemIds: evaluation.traversedItemIds,
     };

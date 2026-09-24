@@ -1,4 +1,4 @@
-import { sameDimension, unitDimension } from '@pops/inventory';
+import { combineUnits, formatUnitTerm, sameDimension, unitDimension } from '@pops/inventory';
 
 import { resolveRead } from './catalogue-lookup';
 import { isNumericKind } from './model';
@@ -8,6 +8,8 @@ import type { ExpressionContext, ExpressionNode, LiteralValue, SlotType, ValueTy
 
 const BOOLEAN: SlotType = { kind: 'boolean' };
 const ANY_NUMBER: SlotType = { kind: 'number' };
+/** A measurement of any unit: a factor left open while its partner is one derives with it. */
+const MEASUREMENT_ANY: SlotType = { kind: 'measurement' };
 
 function literalType(value: LiteralValue): ValueType {
   if (typeof value === 'boolean') return { kind: 'boolean' };
@@ -19,7 +21,22 @@ function literalType(value: LiteralValue): ValueType {
   return { kind: 'reference' };
 }
 
-/** The type a compared operand carries on its own, used to type the other side. */
+function isMeasurement(type: SlotType | undefined): type is { kind: 'measurement'; unit: string } {
+  return type?.kind === 'measurement' && 'unit' in type && type.unit !== undefined;
+}
+
+function isProduct(
+  node: ExpressionNode
+): node is { op: 'multiply' | 'divide'; left: ExpressionNode; right: ExpressionNode } {
+  return node.op === 'multiply' || node.op === 'divide';
+}
+
+/**
+ * The type a node carries on its own, inferred bottom-up: a read or literal's
+ * type, or, for a chain of measurement products and quotients (Inventory
+ * ADR-002 D5), the unit the combination derives. `undefined` for anything
+ * else, which falls back to the top-down `expected` type.
+ */
 function ownType(context: ExpressionContext, node: ExpressionNode): SlotType | undefined {
   if (node.op === 'read') {
     const { field } = resolveRead(context, node);
@@ -27,7 +44,49 @@ function ownType(context: ExpressionContext, node: ExpressionNode): SlotType | u
     return field.unit === undefined ? { kind: field.kind } : { kind: field.kind, unit: field.unit };
   }
   if (node.op === 'literal') return literalType(node.value);
+  if (isProduct(node)) {
+    const left = ownType(context, node.left);
+    if (!isMeasurement(left)) return undefined;
+    const right = ownType(context, node.right);
+    if (!isMeasurement(right)) return left;
+    const combined = combineUnits(left.unit, right.unit, node.op === 'divide' ? -1 : 1);
+    if (combined === null) return undefined;
+    if (combined.term.length === 0) return { kind: 'decimal' };
+    return { kind: 'measurement', unit: formatUnitTerm(combined.term) };
+  }
   return undefined;
+}
+
+/**
+ * The two slot types of a measurement product or quotient: each side that
+ * already resolves to a measurement keeps its own unit; a side that does not
+ * yet opens to a decimal or any measurement (Inventory ADR-002 D5), and
+ * `undefined` when neither side is a measurement yet, deferring to the old
+ * scalar fallback.
+ */
+function derivedTypes(
+  context: ExpressionContext,
+  node: ExpressionNode
+): readonly [SlotType, SlotType] | undefined {
+  if (!isProduct(node)) return undefined;
+  const left = ownType(context, node.left);
+  const right = ownType(context, node.right);
+  if (!isMeasurement(left) && !isMeasurement(right)) return undefined;
+  return [
+    isMeasurement(left) ? left : MEASUREMENT_ANY,
+    isMeasurement(right) ? right : MEASUREMENT_ANY,
+  ];
+}
+
+/** A measurement product or quotient's derived types, or the old scalar fallback. */
+function multiplyDivideTypes(
+  context: ExpressionContext,
+  node: ExpressionNode,
+  expected: SlotType
+): readonly [SlotType, SlotType] {
+  const derived = derivedTypes(context, node);
+  if (derived !== undefined) return derived;
+  return isNumericKind(expected.kind) ? [ANY_NUMBER, ANY_NUMBER] : [expected, expected];
 }
 
 function childTypes(
@@ -47,7 +106,7 @@ function childTypes(
       return [ownType(context, node.right), ownType(context, node.left)];
     case 'multiply':
     case 'divide':
-      return isNumericKind(expected.kind) ? [ANY_NUMBER, ANY_NUMBER] : [expected, expected];
+      return multiplyDivideTypes(context, node, expected);
     case 'coalesce':
       return node.values.map(() => expected);
     default:
@@ -57,13 +116,15 @@ function childTypes(
 
 /**
  * The type every slot in the tree accepts, keyed by issue path, for the
- * palette's filter and the field picker. It is deliberately looser than the
- * server: a factor of a product or quotient takes any number, since derived
- * units (cm × cm = cm²) are the server's to check; each side of a comparison
- * takes the type of the other side when that side is a field or a fixed value,
- * so the side being chosen never narrows itself; every input of `if` and
- * `coalesce` returns the field's own type. The server's issues are the answer
- * on whether the finished tree types.
+ * palette's filter and the field picker. It mirrors the server more closely
+ * than a scalar factor would: a chain of measurement products and quotients
+ * derives the combined unit (cm × cm = cm², Inventory ADR-002 D5), a factor
+ * not yet a measurement opens to any number or measurement, and a factor of
+ * a non-measurement product still takes any number, since the server is the
+ * final word; each side of a comparison takes the type of the other side
+ * when that side is a field or a fixed value, so the side being chosen never
+ * narrows itself; every input of `if` and `coalesce` returns the field's own
+ * type. The server's issues are the answer on whether the finished tree types.
  */
 export function slotTypes(
   context: ExpressionContext,
@@ -82,17 +143,13 @@ export function slotTypes(
   return types;
 }
 
-function sameUnitDimension(actual: string | undefined, expected: string | undefined): boolean {
-  if (actual === expected) return true;
-  if (actual === undefined || expected === undefined) return false;
-  return sameDimension(unitDimension(actual), unitDimension(expected));
-}
-
 /**
- * Whether a field fits a slot: one value, of the slot's kind, or any number.
- * A measurement fits a measurement slot in any unit of the same dimension
- * (mm where cm is expected), since expression version 2 converts between
- * them exactly; a unit with no known dimension fits only itself.
+ * Whether a field fits a slot: one value, of the slot's exact kind and unit,
+ * any number for a bare number slot, or, for a measurement slot (Inventory
+ * ADR-002 D5), a field of the same dimension when the slot has a fixed unit
+ * (add, subtract and compare convert it), or any decimal, integer or
+ * measurement when the slot is left open for a product or quotient to derive
+ * its own unit.
  */
 export function fieldFitsSlot(
   field: { readonly kind: ValueType['kind']; readonly unit?: string; readonly cardinality: string },
@@ -101,6 +158,13 @@ export function fieldFitsSlot(
   if (field.cardinality !== 'one') return false;
   if (expected === undefined) return true;
   if (expected.kind === 'number') return isNumericKind(field.kind);
-  if (field.kind !== expected.kind) return false;
-  return sameUnitDimension(field.unit, expected.unit);
+  if (expected.kind !== 'measurement')
+    return field.kind === expected.kind && field.unit === expected.unit;
+  if (expected.unit === undefined)
+    return field.kind === 'measurement' || field.kind === 'decimal' || field.kind === 'integer';
+  return (
+    field.kind === 'measurement' &&
+    field.unit !== undefined &&
+    sameDimension(unitDimension(field.unit), unitDimension(expected.unit))
+  );
 }

@@ -1,6 +1,6 @@
 import { electronicsContext, storageBoxContext } from './inventory-computed-catalogue';
+import { dimensionalScenarios } from './inventory-computed-dimensional-scenarios';
 import {
-  boxVolume,
   cycleIssue,
   displayName,
   displayNameInProgress,
@@ -13,7 +13,6 @@ import {
   replacementValue,
   replacementValueCycle,
   shelfLabel,
-  typeMismatchIssue,
   widthWithLid,
 } from './inventory-computed-expressions';
 import {
@@ -146,17 +145,6 @@ export const computedScenarios = {
     policy: { allowOverride: false, publishedAllowOverride: true, itemsWithOverride: 12 },
     preview: adapterOverridden,
   }),
-  'type-mismatch': {
-    ...newDisplayName,
-    context: storageBoxContext,
-    field: { label: 'Volume', type: { kind: 'measurement', unit: 'cm' }, isNew: true },
-    expression: boxVolume,
-    selectedPath: typeMismatchIssue.path,
-    save: 'refused',
-    issues: [typeMismatchIssue],
-    preview: { state: 'invalid' },
-    pickerItems: [],
-  },
   'field-not-on-every-target': replacement({
     save: 'refused',
     expression: replacementFromAnyType,
@@ -187,6 +175,7 @@ export const computedScenarios = {
     preview: dongleShelfDeleted,
   },
   'preview-request-error': replacement({ preview: chargerRequestError }),
+  ...dimensionalScenarios(newDisplayName, replacement),
 } satisfies Record<string, ComputedScenario>;
 
 /** A state name of the computed-field editor screen. */

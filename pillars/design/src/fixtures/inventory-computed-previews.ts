@@ -15,6 +15,8 @@ const dongle = item('item-dongle', 'HDMI dongle');
 const travelKit = item('item-travel-kit', 'Travel kit', 'Bundle');
 const deskKit = item('item-desk-kit', 'Desk kit', 'Bundle');
 const blueCase = item('item-blue-case', 'Blue case', 'Case');
+/** The one Storage box item the dimensional-units scenarios preview against. */
+export const movingCrate: PreviewItem = item('item-moving-crate', 'Moving crate', 'Storage box');
 
 /** Electronics items offered by the preview picker, a scrolling list in the product. */
 export const electronicsPickerItems: readonly PreviewItem[] = [
@@ -59,9 +61,9 @@ export const adapterOverridden: PreviewState = {
 export const cableUnavailable: PreviewState = {
   state: 'unavailable',
   item: cable,
-  reason: 'missing_dependency',
-  missingField: 'Package count',
-  missingOn: cable.label,
+  missingInputs: [
+    { reason: 'missing_dependency', fieldLabel: 'Package count', itemLabel: cable.label },
+  ],
   traversed: [cable],
   dependencies: [{ itemLabel: cable.label, fieldLabel: 'Unit price', revision: 2 }],
 };
@@ -85,9 +87,9 @@ export const adapterShelf: PreviewState = {
 export const spareShelfUnavailable: PreviewState = {
   state: 'unavailable',
   item: spare,
-  reason: 'missing_dependency',
-  missingField: 'Stored in',
-  missingOn: deskKit.label,
+  missingInputs: [
+    { reason: 'missing_dependency', fieldLabel: 'Stored in', itemLabel: deskKit.label },
+  ],
   traversed: [spare, deskKit],
   dependencies: [{ itemLabel: spare.label, fieldLabel: 'Part of', revision: 4 }],
 };
@@ -96,11 +98,49 @@ export const spareShelfUnavailable: PreviewState = {
 export const dongleShelfDeleted: PreviewState = {
   state: 'unavailable',
   item: dongle,
-  reason: 'reference_deleted',
-  missingField: 'Part of',
-  missingOn: dongle.label,
+  missingInputs: [{ reason: 'reference_deleted', fieldLabel: 'Part of', itemLabel: dongle.label }],
   traversed: [dongle],
   dependencies: [{ itemLabel: dongle.label, fieldLabel: 'Part of', revision: 6 }],
+};
+
+/**
+ * Replacement value falling all the way through a three-way coalesce: every
+ * input is missing, on three different items and for three different
+ * reasons, so the preview names all of them at once.
+ */
+export const samplesAllInputsMissing: PreviewState = {
+  state: 'unavailable',
+  item: samples,
+  missingInputs: [
+    { reason: 'missing_dependency', fieldLabel: 'Replacement quote', itemLabel: travelKit.label },
+    { reason: 'reference_deleted', fieldLabel: 'Part of', itemLabel: samples.label },
+    { reason: 'missing_dependency', fieldLabel: 'Unit price', itemLabel: samples.label },
+  ],
+  traversed: [samples, travelKit],
+  dependencies: [{ itemLabel: samples.label, fieldLabel: 'Part of', revision: 1 }],
+};
+
+/** Volume on a crate sized 40 × 30 × 20 cm, shown converted into the field's own unit, litres. */
+export const movingCrateVolume: PreviewState = {
+  state: 'value',
+  item: movingCrate,
+  value: '24.0000 L',
+  workings: 'Width 40 cm × Height 30 cm × Depth 20 cm = 24,000 cm³, converted to litres.',
+  traversed: [movingCrate],
+  dependencies: [
+    { itemLabel: movingCrate.label, fieldLabel: 'Width', revision: 2 },
+    { itemLabel: movingCrate.label, fieldLabel: 'Height', revision: 2 },
+    { itemLabel: movingCrate.label, fieldLabel: 'Depth', revision: 2 },
+  ],
+};
+
+/** Per-unit saving overflowing the decimal's stored precision. */
+export const chargerPrecisionOverflow: PreviewState = {
+  state: 'evaluation-error',
+  item: charger,
+  code: 'precision_overflow',
+  traversed: [charger],
+  dependencies: [{ itemLabel: charger.label, fieldLabel: 'Unit price', revision: 7 }],
 };
 
 /** Display name joined from two text fields and a space. */

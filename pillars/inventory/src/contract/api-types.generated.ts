@@ -6945,13 +6945,12 @@ export interface operations {
                     itemId: string;
                     revision: number;
                   }[];
-                  missing: {
+                  missingInputs: {
                     /** Format: uuid */
                     fieldId: string;
                     itemId: string;
                     reason: string;
                   }[];
-                  reason: string;
                   /** @enum {string} */
                   state: 'unavailable';
                   traversedItemIds: string[];

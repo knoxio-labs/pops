@@ -18,7 +18,9 @@ function read(fieldId: string, ...path: string[]) {
   return { op: 'read' as const, path, fieldId };
 }
 
-function literal(value: string | number | boolean | { optionId: string }) {
+function literal(
+  value: string | number | boolean | { optionId: string } | { amount: string; unit: string }
+) {
   return { op: 'literal' as const, value };
 }
 
@@ -237,7 +239,7 @@ describe('editing a loaded expression', () => {
     expect(savedExpression(onOperation)).toEqual({
       op: 'multiply',
       left: read('width'),
-      right: literal('0'),
+      right: literal({ amount: '0', unit: 'cm' }),
     });
 
     fireEvent.click(screen.getByRole('button', { name: 'Remove node' }));
