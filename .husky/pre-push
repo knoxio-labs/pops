@@ -4,6 +4,16 @@
 # node invocations below each need to read it and a pipe can only be read once.
 refs_input=$(cat)
 
+# No commit on the branch may credit an AI assistant (POPS-3430). The
+# commit-msg hook stops most at commit time; this catches the rest, such as a
+# commit made before `pnpm install` installed the hooks, which still lands on
+# main when the PR squash-merges. It runs first because it takes a second and
+# the typecheck below does not. Skipped only when there is no origin/main to
+# take the range from; CI checks the same range anyway.
+if git rev-parse --verify --quiet origin/main >/dev/null; then
+  node scripts/ci/check-commit-attribution.mjs --base origin/main
+fi
+
 # The typecheck is scoped to what the push contains rather than run
 # unconditionally: it is `tsc -b` over the whole compiled graph plus a fan-out
 # to 24 units, one of which runs `cargo check`, and a branch that touches only

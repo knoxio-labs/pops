@@ -44,6 +44,14 @@ internal struct InventoryFormFieldTests {
         #expect(InventoryFormChoices.isSearchable(long))
     }
 
+    @Test("a field with no value shows nothing, and only the choice list names clearing it")
+    func emptyFieldsAreBlank() {
+        #expect(InventoryFormBlank.placeholder.isEmpty)
+        #expect(InventoryFormBlank.shown(nil).isEmpty)
+        #expect(InventoryFormBlank.shown("USB-C") == "USB-C")
+        #expect(InventoryFormChoiceList.clearTitle == "None")
+    }
+
     @Test("a measurement keeps the unit it was typed in rather than the field's default")
     func measurementKeepsTypedUnit() throws {
         var draft = InventoryItemDraft(id: "new-1")

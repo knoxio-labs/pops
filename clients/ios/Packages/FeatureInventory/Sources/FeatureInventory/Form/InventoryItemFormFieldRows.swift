@@ -16,11 +16,11 @@ internal struct InventoryFormFieldRow: View {
         switch entry {
         case .text(let text):
             InventoryFormTextRow(
-                field.label, placeholder: "Not recorded",
+                field.label, placeholder: InventoryFormBlank.placeholder,
                 text: Binding(get: { text }, set: { set(.text($0)) }))
         case .link(let link):
             InventoryFormTextRow(
-                field.label, placeholder: "Not recorded",
+                field.label, placeholder: InventoryFormBlank.placeholder,
                 text: Binding(get: { link }, set: { set(.link($0)) }))
         case .flag(let isOn):
             Toggle(field.label, isOn: Binding(get: { isOn }, set: { set(.flag($0)) }))
@@ -50,7 +50,7 @@ internal struct InventoryFormChoiceRow: View {
             InventoryFormChoiceList(field: field, chosen: chosen, choose: choose)
         } label: {
             LabeledContent(field.label) {
-                Text(chosen ?? "Not recorded")
+                Text(InventoryFormBlank.shown(chosen))
                     .foregroundStyle(
                         chosen == nil ? Color.popsMutedForeground : Color.popsForeground)
             }
@@ -60,6 +60,9 @@ internal struct InventoryFormChoiceRow: View {
 
 /// The declared values of one choice field, with a check on the current one.
 internal struct InventoryFormChoiceList: View {
+    /// The row that clears the value: the one place an empty choice needs a word.
+    internal static let clearTitle = "None"
+
     internal let field: InventoryFieldDefinition
     internal let chosen: String?
     internal let choose: (String?) -> Void
@@ -69,7 +72,7 @@ internal struct InventoryFormChoiceList: View {
     internal var body: some View {
         List {
             if query.isEmpty {
-                option("Not recorded", value: nil)
+                option(Self.clearTitle, value: nil)
             }
             ForEach(matches, id: \.self) { value in
                 option(value, value: value)

@@ -107,6 +107,17 @@ internal enum InventoryFieldEntry: Hashable, Sendable {
     }
 }
 
+/// What a field with no value shows: nothing. An empty field reads as empty
+/// rather than carrying a "Not recorded" placeholder.
+internal enum InventoryFormBlank {
+    internal static let placeholder = ""
+
+    /// The text a choice row shows for its current value.
+    internal static func shown(_ chosen: String?) -> String {
+        chosen ?? placeholder
+    }
+}
+
 /// The values a choice field offers: exactly the ones its type declares, and
 /// nothing when it declares none. Code-defined like the type itself, so two
 /// people recording the same connector write the same word.
