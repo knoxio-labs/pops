@@ -14,6 +14,7 @@ import {
   listSolvableCharges,
   mintDerivedCharge,
   persistProposedLinks,
+  recomputePurchaseStatuses,
   tearDownUnconfirmedLinks,
   type ReconcileScope,
 } from '../db/index.js';
@@ -122,12 +123,25 @@ export async function runSweep(deps: SweepDeps, scope: ReconcileScope = {}): Pro
       defaultWindowDays,
     });
 
+    const linksTornDown = tearDownUnconfirmedLinks(tx, unconfirmedChargeIds(charges, confirmed));
+    const linksWritten = persistProposedLinks(tx, solved.links);
+
+    // Every order this sweep considered, whether or not its links actually
+    // changed — recomputing an unchanged order is a no-op write, and the
+    // alternative (tracking exactly which orders' coverage moved through
+    // teardown/mint/persist) is three places to get "touched" wrong instead
+    // of one query against the state this transaction already produced.
+    recomputePurchaseStatuses(
+      tx,
+      charges.map((charge) => charge.purchaseId)
+    );
+
     result = {
       kind: 'swept',
       chargesConsidered: charges.length,
       derivedChargesMinted: minted,
-      linksTornDown: tearDownUnconfirmedLinks(tx, unconfirmedChargeIds(charges, confirmed)),
-      linksWritten: persistProposedLinks(tx, solved.links),
+      linksTornDown,
+      linksWritten,
       ruleLinksProposed: solved.links.filter((link) => link.linkType === 'rule').length,
       review: solved.review,
     };

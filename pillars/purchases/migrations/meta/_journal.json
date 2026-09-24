@@ -120,6 +120,13 @@
       "when": 1787900000000,
       "tag": "0016_purchase_edits",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1788000000000,
+      "tag": "0017_purchase_status_from_links",
+      "breakpoints": true
     }
   ]
 }
