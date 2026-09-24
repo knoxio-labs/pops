@@ -55,6 +55,14 @@ where
     /// Purchases' model, or `nil` while Purchases is not searchable.
     public let purchases: SearchPillarModel<PurchasesProvider>?
 
+    /// The tag vocabulary the Tags filter field offers, most-used first.
+    /// Empty until ``loadTags()`` succeeds, and stays empty if it fails or if
+    /// Purchases is not available — a missing vocabulary should not break the
+    /// filter sheet, it just has nothing to offer under Tags.
+    public private(set) var tags: [PurchaseTagCount] = []
+
+    private let purchasesRepository: (any PurchasesRepository)?
+
     /// Creates a model with one pillar model per available provider.
     ///
     /// - Parameters:
@@ -64,19 +72,35 @@ where
     ///     feature is not in `surface.available`.
     ///   - purchasesProvider: Purchases' provider, or `nil` when Purchases'
     ///     feature is not in `surface.available`.
+    ///   - purchasesRepository: Where ``loadTags()`` reads the tag
+    ///     vocabulary from. `nil` when there is nothing to read it from, in
+    ///     which case ``loadTags()`` is a no-op.
     public init(
         tabOrder: [SearchPillar],
         inventoryProvider: InventoryProvider?,
-        purchasesProvider: PurchasesProvider?
+        purchasesProvider: PurchasesProvider?,
+        purchasesRepository: (any PurchasesRepository)? = nil
     ) {
         inventory = inventoryProvider.map(SearchPillarModel.init)
         purchases = purchasesProvider.map(SearchPillarModel.init)
+        self.purchasesRepository = purchasesRepository
         available = tabOrder.filter { pillar in
             switch pillar {
             case .inventory: inventoryProvider != nil
             case .purchases: purchasesProvider != nil
             }
         }
+    }
+
+    /// Loads the tag vocabulary into ``tags``, when Purchases is available
+    /// and a repository was supplied. A failed load leaves ``tags`` exactly
+    /// as it was — empty on the first call, unchanged on a later one — so the
+    /// Tags field degrades to "nothing to offer" rather than breaking the
+    /// filter sheet.
+    public func loadTags() async {
+        guard available.contains(.purchases), let purchasesRepository else { return }
+        guard let loaded = try? await purchasesRepository.purchaseTags() else { return }
+        tags = loaded
     }
 
     /// Updates which pillars are searchable, for when the app learns the BFM

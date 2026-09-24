@@ -50,4 +50,34 @@ internal struct PurchasesTagPickerTests {
         #expect(PurchasesTagPicker.countLabel(0) == "0")
         #expect(PurchasesTagPicker.countLabel(nil) == nil)
     }
+
+    @Test("no tags in use at all, no query: the empty-collection state")
+    internal func emptyStateWithNoTagsAndNoQuery() {
+        let state = PurchasesTagPicker.emptyState(shown: [], tagsInUse: [], isSearching: false)
+
+        #expect(state == .noTagsYet)
+    }
+
+    @Test("no tags in use at all, but a query is typed: the no-match state")
+    internal func emptyStateWithNoTagsButSearching() {
+        let state = PurchasesTagPicker.emptyState(shown: [], tagsInUse: [], isSearching: true)
+
+        #expect(state == .noMatches)
+    }
+
+    @Test("tags exist but a query filtered every one out: the no-match state")
+    internal func emptyStateWithTagsFilteredToNothing() {
+        let state = PurchasesTagPicker.emptyState(
+            shown: [], tagsInUse: Self.tags, isSearching: true)
+
+        #expect(state == .noMatches)
+    }
+
+    @Test("anything shown is not an empty state")
+    internal func emptyStateWithShownRows() {
+        let state = PurchasesTagPicker.emptyState(
+            shown: Self.tags, tagsInUse: Self.tags, isSearching: false)
+
+        #expect(state == .none)
+    }
 }

@@ -47,6 +47,7 @@ internal struct AppSearchTab: View {
             .inventorySearchDestinations(store: dependencies.inventory, entityRouter: entityRouter)
             .purchasesDestinations(dependencies: dependencies)
         }
+        .task { await model.loadTags() }
     }
 
     /// Pushes Inventory's scanner, or `nil` while Inventory cannot be searched.
@@ -104,10 +105,7 @@ internal struct AppSearchTab: View {
                     header(.inventory)
                 }
             case .purchases:
-                // No tag vocabulary is loaded here yet — POPS-4546 wires one
-                // in; until then the Tags row in this particular screen has
-                // nothing to offer but "Any".
-                PurchasesSearchFilterFields(filter: $model.purchasesFilter, tags: []) {
+                PurchasesSearchFilterFields(filter: $model.purchasesFilter, tags: model.tags) {
                     header(.purchases)
                 }
             }
