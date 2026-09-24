@@ -105,7 +105,11 @@ internal struct RootView: View {
                 returningBecause: reason
             )
         case .content(let surface):
-            ContentView(surface: surface, shell: composition.shell, composition: composition)
+            ContentView(
+                surface: surface,
+                shell: composition.shell,
+                composition: composition,
+                purchasesCaptureObserver: nil)
         }
     }
 }

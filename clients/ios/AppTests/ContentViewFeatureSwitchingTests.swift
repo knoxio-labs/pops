@@ -20,7 +20,9 @@ internal enum ContentViewFixture {
     private static let namespace = "com.knoxiolabs.pops.tests.content-view-switching"
 
     internal static func view(
-        available: [MobileFeature], bootstrap: BootstrapPhase = .answered(.fresh)
+        available: [MobileFeature],
+        bootstrap: BootstrapPhase = .answered(.fresh),
+        purchasesCaptureObserver: (@MainActor (Bool) -> Void)? = nil
     ) -> ContentView {
         let bound = AppComposition(
             credentialStore: DeviceCredentialStore(
@@ -33,7 +35,8 @@ internal enum ContentViewFixture {
             surface: FeatureSurface(
                 available: available, unavailable: [], bootstrap: bootstrap),
             shell: bound.shell,
-            composition: bound
+            composition: bound,
+            purchasesCaptureObserver: purchasesCaptureObserver
         )
     }
 
@@ -374,7 +377,7 @@ internal struct ContentViewFeatureSwitchingWiringTests {
 
     @Test("Purchases uses its flow while Receipts keeps the capture screen")
     func purchasesAndReceiptsKeepTheirOwnRoots() {
-        #expect(Self.contentViewSource.contains("PurchasesFlowView(dependencies: dependencies)"))
+        #expect(Self.contentViewSource.contains("captureAvailable: surface.available.contains"))
         #expect(Self.contentViewSource.contains("ReceiptCaptureView(model:"))
     }
 }

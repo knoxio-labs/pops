@@ -34,4 +34,10 @@ internal struct PurchasesFlowViewWiringTests {
         #expect(Self.destination.contains("case .detail"))
         #expect(!Self.destination.contains("default:"))
     }
+
+    @Test("capture completion lands saved identifiers on the owned home model")
+    func captureCompletionLandsOnHome() {
+        #expect(Self.flow.contains(".purchaseCapturePresentation("))
+        #expect(Self.flow.contains("await home.land(savedIDs: savedIDs)"))
+    }
 }
