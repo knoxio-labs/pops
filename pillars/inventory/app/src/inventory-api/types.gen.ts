@@ -4801,7 +4801,12 @@ export type TypesManagePreviewComputedFieldData = {
         }
       | {
           id: string;
-          kind: 'archive_type' | 'archive_field' | 'archive_enum_option';
+          kind: 'archive_type' | 'archive_field';
+          replacedBy?: string;
+        }
+      | {
+          id: string;
+          kind: 'archive_enum_option';
         }
       | {
           definition: 'type' | 'field' | 'enum_option';

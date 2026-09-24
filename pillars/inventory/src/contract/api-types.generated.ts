@@ -6888,7 +6888,15 @@ export interface operations {
                 /** Format: uuid */
                 id: string;
                 /** @enum {string} */
-                kind: 'archive_type' | 'archive_field' | 'archive_enum_option';
+                kind: 'archive_type' | 'archive_field';
+                /** Format: uuid */
+                replacedBy?: string;
+              }
+            | {
+                /** Format: uuid */
+                id: string;
+                /** @enum {string} */
+                kind: 'archive_enum_option';
               }
             | {
                 /** @enum {string} */
