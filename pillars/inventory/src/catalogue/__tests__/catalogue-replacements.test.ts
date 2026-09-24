@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { openMigratedTestDb } from '../../db/__tests__/migrated-db.js';
 import { CatalogueApiError } from '../authoring-types.js';
 import { createCatalogueDraft, patchCatalogueDraft, publishCatalogueDraft } from '../authoring.js';
-import { replacingField } from '../catalogue-replacements.js';
+import { replacingField } from '../catalogue-lineage.js';
 import { loadPublishedCatalogue } from '../catalogue.js';
 
 import type { CommandDb } from '../../domain/commands/index.js';

@@ -37,7 +37,7 @@ extension InventoryCatalogueSnapshot {
         return Self.liveEnd(of: id, in: types, archivedAt: \.archivedAt, replacedBy: \.replacedBy)
     }
 
-    /// Mirrors `liveEnd` in the inventory pillar's `catalogue-replacements.ts`.
+    /// Mirrors `liveEnd` in the inventory pillar's `catalogue/catalogue-lineage.ts`.
     private static func liveEnd<Definition>(
         of id: String, in definitions: [String: Definition],
         archivedAt: (Definition) -> String?, replacedBy: (Definition) -> String?

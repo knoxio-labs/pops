@@ -1,60 +1,13 @@
 import { issue } from './authoring-shared.js';
+import { fieldById, typeById } from './catalogue-lineage.js';
 
 import type { CatalogueIssue } from './authoring-types.js';
+import type { Replaceable } from './catalogue-lineage.js';
 import type {
   PersistedCatalogue,
   PersistedItemType,
   PersistedItemTypeField,
 } from './catalogue-types.js';
-
-interface Replaceable {
-  readonly id: string;
-  readonly archivedAt: string | null;
-  readonly replacedBy: string | null;
-}
-
-function liveEnd<T extends Replaceable>(start: T, find: (id: string) => T | undefined): T | null {
-  const seen = new Set([start.id]);
-  let current = start;
-  while (current.archivedAt !== null && current.replacedBy !== null) {
-    if (seen.has(current.replacedBy)) return null;
-    seen.add(current.replacedBy);
-    const next = find(current.replacedBy);
-    if (next === undefined) return null;
-    current = next;
-  }
-  return current === start || current.archivedAt !== null ? null : current;
-}
-
-function fieldById(catalogue: PersistedCatalogue, id: string): PersistedItemTypeField | undefined {
-  return catalogue.types.flatMap((type) => type.fields).find((field) => field.id === id);
-}
-
-function typeById(catalogue: PersistedCatalogue, id: string): PersistedItemType | undefined {
-  return catalogue.types.find((type) => type.id === id);
-}
-
-/**
- * The live field that stands in for the archived field `fieldId` in
- * `catalogue`, following recorded lineage across later replacements; null
- * when the field is live, unknown, or its lineage ends at an archived field.
- */
-export function replacingField(
-  catalogue: PersistedCatalogue,
-  fieldId: string
-): PersistedItemTypeField | null {
-  const field = fieldById(catalogue, fieldId);
-  return field === undefined ? null : liveEnd(field, (id) => fieldById(catalogue, id));
-}
-
-/** {@link replacingField} for an archived type. */
-export function replacingType(
-  catalogue: PersistedCatalogue,
-  typeId: string
-): PersistedItemType | null {
-  const type = typeById(catalogue, typeId);
-  return type === undefined ? null : liveEnd(type, (id) => typeById(catalogue, id));
-}
 
 function followsCycle<T extends Replaceable>(
   start: T,

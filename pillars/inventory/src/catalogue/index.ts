@@ -63,7 +63,7 @@ export type {
 } from './item-values.js';
 export { classifyCatalogueCompatibility } from './compatibility.js';
 export { sameFieldShape } from './compatibility-fields.js';
-export { replacingField, replacingType } from './catalogue-replacements.js';
+export { replacingField, replacingType } from './catalogue-lineage.js';
 export type {
   CatalogueCompatibilityChange,
   CatalogueCompatibilityClassification,

@@ -1,5 +1,5 @@
+import { validateCatalogueReplacements } from './authoring-replacements.js';
 import { failIssues, issue } from './authoring-shared.js';
-import { validateCatalogueReplacements } from './catalogue-replacements.js';
 import { ExpressionValidationError } from './expression-types.js';
 import { validateCatalogueExpressions } from './expression-validator.js';
 
