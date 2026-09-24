@@ -41,6 +41,15 @@ type CatalogueShape = {
         expectedDraftVersion: number;
         operations: CatalogueOperation[];
       }) => unknown;
+      previewComputedField: (input: {
+        revision: number;
+        baseRevision: number;
+        expectedDraftVersion: number;
+        operations: CatalogueOperation[];
+        typeId: string;
+        field: { id: string } | { key: string };
+        itemId: string;
+      }) => unknown;
       publishDraft: (input: {
         revision: number;
         baseRevision: number;

@@ -146,6 +146,19 @@ changing the persisted draft. Blocked validation responses retain every
 definition-level issue and the same revision-bound compatibility and affected
 item evidence in the standard error envelope.
 
+`POST /type-catalogue/drafts/:revision/computed-preview` evaluates one computed
+field of the draft on one chosen item of its type, after applying any unsaved
+operations, inside the same kind of rolled-back transaction: the draft, its
+version, the item and its override are never written, and the runtime value
+cache is neither read nor filled under the reused draft revision. It checks
+`expectedDraftVersion` like every draft call, refuses operations that leave the
+draft invalid with the issue paths a save would return, and names a field not
+yet saved by its key. The answer is the raw outcome, not the wire degradation:
+the value, or why it is unavailable with each missing input and the item it was
+read on, or the evaluation error code (`division_by_zero`), plus the
+dependencies read, the items traversed with their names, and any override the
+item holds. MCP exposes it as `inventory.catalogue.previewComputedField`.
+
 Computed fields use the bounded, versioned expression AST from D5: no SQL,
 JavaScript, clocks or network access; at most two reference hops; publication
 rejects dependency cycles. A permitted explicit override wins without evaluating

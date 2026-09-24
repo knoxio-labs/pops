@@ -1,6 +1,10 @@
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
 
+import {
+  ComputedFieldPreviewBodySchema,
+  ComputedFieldPreviewResponseSchema,
+} from './rest-catalogue-computed-preview-schema.js';
 import { CatalogueMigrationSchema } from './rest-catalogue-migration-schemas.js';
 import { inventoryCatalogueReadContract } from './rest-catalogue-read.js';
 import {
@@ -107,6 +111,21 @@ export const inventoryCatalogueContract = c.router({
         409: CataloguePreviewErrorBodySchema,
       },
       summary: 'Validate draft operations and preview compatibility without mutating the draft',
+    },
+    previewComputedField: {
+      method: 'POST',
+      path: '/type-catalogue/drafts/:revision/computed-preview',
+      pathParams: z.object({ revision: z.coerce.number().int().positive() }),
+      body: ComputedFieldPreviewBodySchema,
+      responses: {
+        200: ComputedFieldPreviewResponseSchema,
+        400: CataloguePreviewErrorBodySchema,
+        401: CatalogueErrorBodySchema,
+        404: CatalogueErrorBodySchema,
+        409: CataloguePreviewErrorBodySchema,
+      },
+      summary:
+        'Evaluate a draft computed field on one item, with unsaved operations applied, without writing anything',
     },
     publishDraft: {
       method: 'POST',
