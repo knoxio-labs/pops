@@ -26565,6 +26565,8 @@ internal enum Operations {
                                 internal var referenceKinds: Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.TypesPayloadPayload.FieldsPayloadPayload.ReferenceKindsPayload
                                 /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/FieldsPayload/referenceTypeIds`.
                                 internal var referenceTypeIds: [Swift.String]
+                                /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/FieldsPayload/replacedBy`.
+                                internal var replacedBy: Swift.String?
                                 /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/FieldsPayload/required`.
                                 internal var required: Swift.Bool
                                 /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/FieldsPayload/sortOrder`.
@@ -26596,6 +26598,7 @@ internal enum Operations {
                                 ///   - presentation:
                                 ///   - referenceKinds:
                                 ///   - referenceTypeIds:
+                                ///   - replacedBy:
                                 ///   - required:
                                 ///   - sortOrder:
                                 ///   - storage:
@@ -26616,6 +26619,7 @@ internal enum Operations {
                                     presentation: Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.TypesPayloadPayload.FieldsPayloadPayload.PresentationPayload,
                                     referenceKinds: Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.TypesPayloadPayload.FieldsPayloadPayload.ReferenceKindsPayload,
                                     referenceTypeIds: [Swift.String],
+                                    replacedBy: Swift.String? = nil,
                                     required: Swift.Bool,
                                     sortOrder: Swift.Int,
                                     storage: Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.TypesPayloadPayload.FieldsPayloadPayload.StoragePayload,
@@ -26636,6 +26640,7 @@ internal enum Operations {
                                     self.presentation = presentation
                                     self.referenceKinds = referenceKinds
                                     self.referenceTypeIds = referenceTypeIds
+                                    self.replacedBy = replacedBy
                                     self.required = required
                                     self.sortOrder = sortOrder
                                     self.storage = storage
@@ -26657,6 +26662,7 @@ internal enum Operations {
                                     case presentation
                                     case referenceKinds
                                     case referenceTypeIds
+                                    case replacedBy
                                     case required
                                     case sortOrder
                                     case storage
@@ -26724,6 +26730,10 @@ internal enum Operations {
                                         [Swift.String].self,
                                         forKey: .referenceTypeIds
                                     )
+                                    self.replacedBy = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .replacedBy
+                                    )
                                     self.required = try container.decode(
                                         Swift.Bool.self,
                                         forKey: .required
@@ -26756,6 +26766,7 @@ internal enum Operations {
                                         "presentation",
                                         "referenceKinds",
                                         "referenceTypeIds",
+                                        "replacedBy",
                                         "required",
                                         "sortOrder",
                                         "storage",
@@ -26795,6 +26806,8 @@ internal enum Operations {
                             }
                             /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/presentation`.
                             internal var presentation: Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.TypesPayloadPayload.PresentationPayload
+                            /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/replacedBy`.
+                            internal var replacedBy: Swift.String?
                             /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/revision`.
                             internal var revision: Swift.Int
                             /// - Remark: Generated from `#/paths/mobile/inventory/type-catalogue/GET/responses/200/content/json/TypesPayload/sortOrder`.
@@ -26811,6 +26824,7 @@ internal enum Operations {
                             ///   - label:
                             ///   - legacyLabels:
                             ///   - presentation:
+                            ///   - replacedBy:
                             ///   - revision:
                             ///   - sortOrder:
                             internal init(
@@ -26823,6 +26837,7 @@ internal enum Operations {
                                 label: Swift.String,
                                 legacyLabels: [Swift.String],
                                 presentation: Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.TypesPayloadPayload.PresentationPayload,
+                                replacedBy: Swift.String? = nil,
                                 revision: Swift.Int,
                                 sortOrder: Swift.Int
                             ) {
@@ -26835,6 +26850,7 @@ internal enum Operations {
                                 self.label = label
                                 self.legacyLabels = legacyLabels
                                 self.presentation = presentation
+                                self.replacedBy = replacedBy
                                 self.revision = revision
                                 self.sortOrder = sortOrder
                             }
@@ -26848,6 +26864,7 @@ internal enum Operations {
                                 case label
                                 case legacyLabels
                                 case presentation
+                                case replacedBy
                                 case revision
                                 case sortOrder
                             }
@@ -26889,6 +26906,10 @@ internal enum Operations {
                                     Operations.MobileInventory_catalogueRevision.Output.Ok.Body.JsonPayload.TypesPayloadPayload.PresentationPayload.self,
                                     forKey: .presentation
                                 )
+                                self.replacedBy = try container.decodeIfPresent(
+                                    Swift.String.self,
+                                    forKey: .replacedBy
+                                )
                                 self.revision = try container.decode(
                                     Swift.Int.self,
                                     forKey: .revision
@@ -26907,6 +26928,7 @@ internal enum Operations {
                                     "label",
                                     "legacyLabels",
                                     "presentation",
+                                    "replacedBy",
                                     "revision",
                                     "sortOrder"
                                 ])

@@ -7505,6 +7505,12 @@
                                   },
                                   "type": "array"
                                 },
+                                "replacedBy": {
+                                  "format": "uuid",
+                                  "nullable": true,
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                  "type": "string"
+                                },
                                 "required": {
                                   "type": "boolean"
                                 },
@@ -7568,6 +7574,12 @@
                           "presentation": {
                             "additionalProperties": {},
                             "type": "object"
+                          },
+                          "replacedBy": {
+                            "format": "uuid",
+                            "nullable": true,
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                            "type": "string"
                           },
                           "revision": {
                             "exclusiveMinimum": true,
