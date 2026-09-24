@@ -7,7 +7,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
 import { Suspense } from 'react';
 import { createMemoryRouter, Outlet, RouterProvider } from 'react-router';
-import { build } from 'vite';
+import { build, loadConfigFromFile } from 'vite';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { installApiMock, type MockHandler } from '@pops/pillar-sdk/testing/api-mock';
@@ -198,6 +198,17 @@ describe('purchases standalone, on mocks alone', () => {
  * unrelated assertion. Two tests racing to write and read one shared path
  * is what made that suite flaky; giving every run its own directory removes
  * the shared path rather than trying to order around it.
+ *
+ * Redirecting `outDir` means the two `it`s below no longer exercise the
+ * `dist/remote` / `dist/standalone` strings the config files actually
+ * declare — a regression that reintroduced the original collision (e.g.
+ * `vite.standalone.config.ts` going back to plain `dist`) would build fine
+ * against two fresh temp directories and slip past them. The first `it`
+ * below reads the two config files with no build at all and asserts on
+ * those exact strings, so that specific regression is still caught; the two
+ * that follow keep proving the behavioural claim — that one build's
+ * `emptyOutDir` cannot take out the other's output — without the shared
+ * path.
  */
 describe('build and build:standalone coexist regardless of order (POPS-4632)', () => {
   const APP_ROOT = path.resolve(import.meta.dirname, '..', '..');
@@ -214,6 +225,41 @@ describe('build and build:standalone coexist regardless of order (POPS-4632)', (
 
   afterEach(() => {
     rmSync(tmpRoot, { recursive: true, force: true });
+  });
+
+  /** Whether `child` is `parent` itself or sits somewhere underneath it. */
+  function isInside(child: string, parent: string): boolean {
+    const relative = path.relative(parent, child);
+    return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+  }
+
+  it('declares outDirs that cannot collide, per the real config files', async () => {
+    const remoteConfig = await loadConfigFromFile(
+      { command: 'build', mode: 'production' },
+      path.join(APP_ROOT, 'vite.remote.config.ts'),
+      APP_ROOT,
+      'silent'
+    );
+    const standaloneConfig = await loadConfigFromFile(
+      { command: 'build', mode: 'production' },
+      path.join(APP_ROOT, 'vite.standalone.config.ts'),
+      APP_ROOT,
+      'silent'
+    );
+
+    const remoteDeclaredOutDir = remoteConfig?.config.build?.outDir;
+    const standaloneDeclaredOutDir = standaloneConfig?.config.build?.outDir;
+
+    expect(remoteDeclaredOutDir).toBe('dist/remote');
+    expect(standaloneDeclaredOutDir).toBe('dist/standalone');
+
+    const remoteResolved = path.resolve(APP_ROOT, remoteDeclaredOutDir ?? '');
+    const standaloneResolved = path.resolve(APP_ROOT, standaloneDeclaredOutDir ?? '');
+
+    // Neither declared outDir may sit inside the other: that nesting is what
+    // let one build's `emptyOutDir` wipe the other's output (POPS-4632).
+    expect(isInside(remoteResolved, standaloneResolved)).toBe(false);
+    expect(isInside(standaloneResolved, remoteResolved)).toBe(false);
   });
 
   async function buildRemote(): Promise<void> {
