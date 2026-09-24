@@ -16,7 +16,9 @@ import GRDB
 /// and the field keeps reading "Out of date".
 internal enum LocalComputedValues {
     /// Re-evaluates `itemIds` and, transitively, every item whose evaluation
-    /// read one of them. Runs in the caller's transaction.
+    /// read one of them, then re-indexes every one of them for search, since
+    /// what a computed field shows is part of what its item is found by.
+    /// Runs in the caller's transaction.
     static func refresh(_ itemIds: Set<String>, in db: Database) throws {
         guard !itemIds.isEmpty else { return }
         let meta = try SyncMeta.read(db)
@@ -33,6 +35,7 @@ internal enum LocalComputedValues {
             pending.append(
                 contentsOf: try ComputedValueRows.dependents(of: itemId, in: db).subtracting(seen))
         }
+        try ReplicaSearchIndex.reindex(seen, catalogue: SearchCatalogue(catalogue), in: db)
     }
 
     private static func refresh(_ itemId: String, context: ReplicaExpressionContext) throws {

@@ -95,17 +95,9 @@ internal struct SyncMeta {
         try catalogue.map { try StoredJSON.decode(StoredCatalogue.self, from: $0).domainValue() }
     }
 
-    /// The catalogue to index items against: the stored protocol-2 revision
-    /// when one is in use, since `catalogue` (protocol 1) is never written
-    /// alongside it, falling back to the legacy protocol-1 catalogue
-    /// otherwise.
+    /// The catalogue items' types are named from (``SearchCatalogue/read(_:in:)``).
     func searchCatalogue(in db: Database) throws -> InventoryCatalogue? {
-        if let revision = catalogueRevision,
-            let snapshot = try Protocol2CatalogueRows.read(revision: revision, in: db)
-        {
-            return Protocol2SearchIndex.searchableCatalogue(snapshot)
-        }
-        return try storedCatalogue()
+        try SearchCatalogue.read(self, in: db).types
     }
 
     func position(in db: Database) throws -> InventoryReplicaSyncPosition {
