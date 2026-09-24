@@ -34,6 +34,24 @@ export const ComputedFieldPreviewBodySchema = z.object({
   itemId: z.string().min(1),
 });
 
+/**
+ * The published revision, the unsaved edits to apply first, and the field and
+ * item to evaluate. No draft is required or created: the operations are
+ * applied to a scratch copy of the published catalogue and rolled back.
+ */
+export const PublishedComputedFieldPreviewBodySchema = z.object({
+  baseRevision: z.number().int().positive(),
+  /** Unsaved operations applied, validated and rolled back around the evaluation. */
+  operations: z.array(CatalogueDraftOperationSchema).max(100).default([]),
+  typeId: z.uuid(),
+  /** The computed field by id, or by key when it is new and not yet saved. */
+  field: z.union([
+    z.object({ id: z.uuid() }).strict(),
+    z.object({ key: z.string().trim().min(1).max(100) }).strict(),
+  ]),
+  itemId: z.string().min(1),
+});
+
 const evaluated = {
   /** Every item/field revision read, in evaluation order. */
   dependencies: z.array(SyncComputedDependencySchema),
@@ -56,11 +74,15 @@ export const ComputedFieldPreviewResultSchema = z.discriminatedUnion('state', [
   z.object({ ...evaluated, state: z.literal('error'), code: z.string() }),
 ]);
 
-/** A draft computed field evaluated on one item; nothing was written. */
+/**
+ * A computed field evaluated on one item; nothing was written. `draftRevision`
+ * and `draftVersion` are null when the evaluation ran against the published
+ * catalogue rather than an actual draft.
+ */
 export const ComputedFieldPreviewResponseSchema = z.object({
   baseRevision: z.number().int().positive(),
-  draftRevision: z.number().int().positive(),
-  draftVersion: z.number().int().positive(),
+  draftRevision: z.number().int().positive().nullable(),
+  draftVersion: z.number().int().positive().nullable(),
   typeId: z.uuid(),
   fieldId: z.uuid(),
   itemId: z.string(),

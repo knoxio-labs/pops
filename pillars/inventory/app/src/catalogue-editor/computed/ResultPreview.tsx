@@ -26,7 +26,7 @@ const PICKER_OFF: ReadonlySet<PreviewState['state']> = new Set([
 ]);
 
 const MESSAGES: Partial<Record<PreviewState['state'], string>> = {
-  'no-draft': 'Save a change first to start a draft, then try the expression on an item.',
+  'no-draft': 'The catalogue has no published revision yet, so there is nothing to try this on.',
   'no-expression': 'Finish every empty slot to try the expression.',
   invalid: 'Fix the flagged node to try the expression.',
   idle: 'Pick an item to calculate this field for it.',

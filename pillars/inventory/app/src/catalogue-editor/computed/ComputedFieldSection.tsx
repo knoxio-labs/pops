@@ -12,6 +12,7 @@ import { useComputedPreview } from './useComputedPreview';
 
 import type { InventoryApiIssue } from '../../inventory-api-helpers';
 import type { ExpressionContext, ExpressionField } from '../expression/model';
+import type { CatalogueOperation } from '../types';
 import type { ComputedFieldEnvironment } from './computed-environment';
 import type { ExpressionIssue } from './issues';
 import type { PreviewItem, PreviewState } from './preview-model';
@@ -33,7 +34,8 @@ interface PreviewInputs {
 
 function waitingState(inputs: PreviewInputs): PreviewState | null {
   if (!inputs.complete) return { state: 'no-expression' };
-  if (inputs.environment.draft === null) return { state: 'no-draft' };
+  if (inputs.environment.draft === null && inputs.environment.publishedRevision === undefined)
+    return { state: 'no-draft' };
   if (!inputs.itemsLoading && inputs.items.length === 0)
     return { state: 'no-items', typeLabel: inputs.typeLabel };
   if (inputs.issues.length > 0) return { state: 'invalid' };
@@ -86,6 +88,60 @@ function migrationFor(
   return concerns ? { draftRevision: environment.draft?.revision.revision ?? null } : null;
 }
 
+function opTargetsField(
+  operation: CatalogueOperation,
+  field: { readonly id: string | undefined; readonly key: string }
+): boolean {
+  if (operation.kind !== 'put_field') return false;
+  if (field.id !== undefined && operation.id !== undefined) return operation.id === field.id;
+  return operation.key === field.key;
+}
+
+/**
+ * The live count of items holding an override on this field, from the latest
+ * compatibility evidence — but only when that evidence was computed for the
+ * override state as it stands right now. Evidence computed for a different
+ * toggle position (an older preview, a recheck of the persisted draft while
+ * an unsaved toggle is in progress, or evidence about a different field) is
+ * not this field's answer and is reported as unknown rather than shown.
+ */
+function itemsWithOverride(
+  environment: ComputedFieldEnvironment,
+  field: { readonly id: string | undefined; readonly key: string },
+  currentAllowOverride: boolean
+): number | undefined {
+  if (field.id === undefined && field.key === '') return undefined;
+  const current = environment.compatibilityOperations.find((op) => opTargetsField(op, field));
+  if (current === undefined || current.kind !== 'put_field') return undefined;
+  if ((current.allowOverride ?? true) !== currentAllowOverride) return undefined;
+  const fieldId = field.id ?? current.id;
+  if (fieldId === undefined) return undefined;
+  return (
+    environment.compatibility?.discardedOverrides.find((entry) => entry.fieldId === fieldId)
+      ?.items ?? 0
+  );
+}
+
+function overridePolicy(
+  environment: ComputedFieldEnvironment,
+  form: {
+    readonly field?: { readonly id: string };
+    readonly keyValue: string;
+    readonly allowOverride: boolean;
+  }
+) {
+  return {
+    allowOverride: form.allowOverride,
+    publishedAllowOverride: environment.publishedField?.allowOverride,
+    publishedRevision: environment.publishedRevision,
+    itemsWithOverride: itemsWithOverride(
+      environment,
+      { id: form.field?.id, key: form.keyValue },
+      form.allowOverride
+    ),
+  };
+}
+
 function activeIssues(
   saveRefused: boolean,
   environment: ComputedFieldEnvironment,
@@ -119,6 +175,7 @@ export function ComputedFieldSection() {
   const complete = toWire(form.expression) !== null;
   const preview = useComputedPreview({
     draft: environment.draft,
+    publishedRevision: environment.publishedRevision ?? null,
     type: { id: type.id, key: type.key, label: type.label },
     field: form.field === undefined ? { key: form.keyValue } : { id: form.field.id },
     operation: complete ? operation : null,
@@ -150,11 +207,7 @@ export function ComputedFieldSection() {
       expression={form.expression}
       onExpressionChange={form.setExpression}
       issues={issues}
-      policy={{
-        allowOverride: form.allowOverride,
-        publishedAllowOverride: environment.publishedField?.allowOverride,
-        publishedRevision: environment.publishedRevision,
-      }}
+      policy={overridePolicy(environment, form)}
       onPolicyChange={form.setAllowOverride}
       saveRefused={saveRefused}
       migration={migrationFor(environment, form.field?.id)}

@@ -8,12 +8,15 @@ import type { CatalogueDescriptor, CatalogueField } from '../types';
 const mocks = vi.hoisted(() => ({
   webList: vi.fn(),
   typesManagePreviewComputedField: vi.fn(),
+  typesManagePreviewComputedFieldOnPublished: vi.fn(),
 }));
 
 vi.mock('../../inventory-api/index.js', () => ({
   webList: (...args: unknown[]) => mocks.webList(...args),
   typesManagePreviewComputedField: (...args: unknown[]) =>
     mocks.typesManagePreviewComputedField(...args),
+  typesManagePreviewComputedFieldOnPublished: (...args: unknown[]) =>
+    mocks.typesManagePreviewComputedFieldOnPublished(...args),
 }));
 
 const PRODUCT: Partial<CatalogueField> = {
@@ -65,6 +68,27 @@ function answered(result: object, extra: object = {}) {
   };
 }
 
+function answeredOnPublished(result: object, extra: object = {}) {
+  return {
+    data: {
+      baseRevision: 3,
+      draftRevision: null,
+      draftVersion: null,
+      typeId: 'box',
+      fieldId: 'volume',
+      itemId: 'box-1',
+      override: null,
+      items: [
+        { id: 'box-1', name: 'Blue box', typeId: 'box' },
+        { id: 'part-1', name: 'Hinge', typeId: 'part' },
+      ],
+      result: { dependencies: [], traversedItemIds: ['box-1'], ...result },
+      ...extra,
+    },
+    response: new Response(),
+  };
+}
+
 function failed(status: number, body: object) {
   return { error: body, response: new Response(null, { status }) };
 }
@@ -80,16 +104,57 @@ async function pickItem(name = 'Blue box') {
 beforeEach(() => {
   mocks.webList.mockReset();
   mocks.typesManagePreviewComputedField.mockReset();
+  mocks.typesManagePreviewComputedFieldOnPublished.mockReset();
   mocks.webList.mockResolvedValue(listed([{ id: 'box-1', name: 'Blue box' }]));
 });
 
 describe('try on an item', () => {
-  it('asks for a draft before it can calculate', () => {
+  it('says there is nothing to try it on when there is no published catalogue and no draft', () => {
     renderComputedField({ volume: PRODUCT });
 
+    expect(within(preview()).getByText(/no published revision yet/u)).toBeInTheDocument();
+    expect(mocks.typesManagePreviewComputedField).not.toHaveBeenCalled();
+    expect(mocks.typesManagePreviewComputedFieldOnPublished).not.toHaveBeenCalled();
+  });
+
+  it('evaluates a first expression against the published catalogue before any draft exists', async () => {
+    mocks.typesManagePreviewComputedFieldOnPublished.mockResolvedValue(
+      answeredOnPublished({
+        state: 'value',
+        value: { amount: '300', unit: 'cm³' },
+        dependencies: [
+          { itemId: 'box-1', fieldId: 'width', revision: 2 },
+          { itemId: 'box-1', fieldId: 'height', revision: 2 },
+        ],
+      })
+    );
+    renderComputedField({
+      volume: PRODUCT,
+      environment: { draft: null, publishedRevision: 3 },
+    });
+
     expect(
-      within(preview()).getByText(/Save a change first to start a draft/u)
+      await within(preview()).findByText('Pick an item to calculate this field for it.')
     ).toBeInTheDocument();
+    await pickItem();
+
+    expect(await within(preview()).findByText('300 cm³')).toBeInTheDocument();
+    expect(mocks.typesManagePreviewComputedFieldOnPublished).toHaveBeenCalledWith({
+      body: {
+        baseRevision: 3,
+        operations: [
+          expect.objectContaining({
+            kind: 'put_field',
+            id: 'volume',
+            expression: PRODUCT.expression,
+            allowOverride: true,
+          }),
+        ],
+        typeId: 'box',
+        field: { id: 'volume' },
+        itemId: 'box-1',
+      },
+    });
     expect(mocks.typesManagePreviewComputedField).not.toHaveBeenCalled();
   });
 

@@ -350,6 +350,7 @@ describe('inventory catalogue draft management', () => {
       'inventory.catalogue.patchDraft',
       'inventory.catalogue.previewDraft',
       'inventory.catalogue.previewComputedField',
+      'inventory.catalogue.previewComputedFieldOnPublished',
       'inventory.catalogue.publishDraft',
       'inventory.catalogue.abandonDraft',
     ]) {
