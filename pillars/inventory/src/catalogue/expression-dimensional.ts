@@ -1,5 +1,6 @@
 import {
   addOrSubtract,
+  decimalEqual,
   divide,
   lessThan,
   multiply,
@@ -84,9 +85,8 @@ export function dimensionalMeasurementEqual(
   const amount = amountIn(right, left.unit);
   if (amount === null) return { state: 'value', value: false };
   if (typeof amount !== 'string') return amount;
-  const below = lessThan(left.amount, amount);
-  const above = lessThan(amount, left.amount);
-  return below === null || above === null ? INVALID : { state: 'value', value: !below && !above };
+  const same = decimalEqual(left.amount, amount);
+  return same === null ? INVALID : { state: 'value', value: same };
 }
 
 /**

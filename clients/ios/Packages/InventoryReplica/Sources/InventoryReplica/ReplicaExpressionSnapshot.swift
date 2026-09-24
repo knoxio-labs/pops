@@ -13,6 +13,7 @@ import GRDB
 internal final class ReplicaExpressionContext {
     let db: Database
     let catalogue: InventoryCatalogueSnapshot
+    private let fieldKinds: [String: InventoryPrimitiveKind]
     private let complete: Bool
     private var items: [String: InventoryItem?] = [:]
     private var evaluated: [String: InventoryComputedValue?] = [:]
@@ -21,6 +22,7 @@ internal final class ReplicaExpressionContext {
     init(db: Database, catalogue: InventoryCatalogueSnapshot, complete: Bool) {
         self.db = db
         self.catalogue = catalogue
+        self.fieldKinds = catalogue.fieldKinds
         self.complete = complete
     }
 
@@ -51,7 +53,7 @@ internal final class ReplicaExpressionContext {
         guard !evaluating.contains(key) else { return nil }
         evaluating.insert(key)
         defer { evaluating.remove(key) }
-        let value = try? InventoryComputedDefinition(field).evaluate(
+        let value = try? InventoryComputedDefinition(field, fieldKinds: fieldKinds).evaluate(
             override: override(of: field.id, in: item),
             catalogueRevision: catalogue.revision.revision, itemRevision: item.revision,
             in: Snapshot(rootItemId: item.id, context: self))

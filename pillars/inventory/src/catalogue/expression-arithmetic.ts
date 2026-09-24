@@ -192,3 +192,14 @@ export function lessThan(left: PrimitiveWireValue, right: PrimitiveWireValue): b
   const aligned = align(values[0], values[1]);
   return aligned.left < aligned.right;
 }
+
+/**
+ * Whether two decimals are the same number at any scale (`3.0` and `3`,
+ * `1.50` and `1.5`), compared exactly; null when either is not a decimal.
+ */
+export function decimalEqual(left: string, right: string): boolean | null {
+  const values = decimals(left, right);
+  if (values === null) return null;
+  const aligned = align(values[0], values[1]);
+  return aligned.left === aligned.right;
+}

@@ -7,19 +7,24 @@ public struct InventoryExpressionEvaluator {
     typealias Raw = InventoryExpressionEvaluation<InventoryExpressionValue>
 
     let snapshot: any InventoryExpressionSnapshot
-    /// Expression version 2 and later convert and derive measurement units.
+    /// Expression version 2 and later convert and derive measurement units
+    /// and compare decimals by value.
     let dimensional: Bool
+    let fieldKinds: [String: InventoryPrimitiveKind]
 
-    /// Evaluates `expression`, stored as `expressionVersion`, whose declared
-    /// result is `kind` (and `fixedUnit` for a measurement). A version-2
-    /// measurement is first converted into `fixedUnit`; a result that is not
-    /// canonical for the kind is the `invalid_value` error, as on the server.
+    /// Evaluates `definition`'s expression under its stored version, typing
+    /// reads by its `fieldKinds`. A version-2 measurement is first converted
+    /// into the declared `fixedUnit`; a result that is not canonical for the
+    /// declared kind is the `invalid_value` error, as on the server.
     public static func evaluate(
-        _ expression: InventoryExpression, expressionVersion: Int, kind: InventoryPrimitiveKind,
-        fixedUnit: String?, in snapshot: any InventoryExpressionSnapshot
+        _ definition: InventoryComputedDefinition, in snapshot: any InventoryExpressionSnapshot
     ) -> InventoryExpressionEvaluation<InventoryPrimitiveValue> {
-        let dimensional = expressionVersion >= 2
-        switch Self(snapshot: snapshot, dimensional: dimensional).node(expression) {
+        let dimensional = definition.expressionVersion >= 2
+        let kind = definition.kind
+        let fixedUnit = definition.fixedUnit
+        let evaluator = Self(
+            snapshot: snapshot, dimensional: dimensional, fieldKinds: definition.fieldKinds)
+        switch evaluator.node(definition.expression) {
         case .value(let raw, let dependencies):
             var value = raw
             if dimensional {
@@ -79,6 +84,12 @@ public struct InventoryExpressionEvaluator {
             return right.merging(leftDependencies)
         }
         let dependencies = InventoryValueDependency.unique(leftDependencies + rightDependencies)
+        if dimensional, op == .equal, case .text(let lhs) = leftValue,
+            case .text(let rhs) = rightValue,
+            leftNode.comparesDecimals(fieldKinds: fieldKinds)
+        {
+            return Self.lift(InventoryExpressionArithmetic.decimalEqual(lhs, rhs), dependencies)
+        }
         if dimensional, let raw = Self.dimensional(op, leftValue, rightValue, dependencies) {
             return raw
         }
