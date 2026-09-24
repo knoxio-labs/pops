@@ -1,7 +1,7 @@
 appId: com.knoxiolabs.pops.local
 name: Fill in a blank receipt draft and submit it
 ---
-# The manual-entry half of `receipt-manual-entry.yaml`, pulled into its own
+# The manual-entry half of `purchases-hand-entry.yaml`, pulled into its own
 # subflow for the same reason `enter-the-pairing-details.yaml` is: the fields
 # share the one typing hazard that file's own header explains at length —
 # `tapOn` returns once the tap is delivered, not once the tapped field has

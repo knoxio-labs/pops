@@ -12,10 +12,12 @@ internal struct PlaygroundPurchasesRepository: PurchasesRepository {
     let hangs: Bool
 
     func search(
-        text: String, status: AppCore.PurchaseSearchStatus
+        text: String, status: AppCore.PurchaseSearchStatus, tags: Set<String>
     ) async throws -> [AppCore.PurchaseSearchHit] {
         []
     }
+
+    func purchaseTags() async throws -> [AppCore.PurchaseTagCount] { [] }
 
     func purchases(
         after cursor: String?, statusFilter: PurchaseStatusFilter

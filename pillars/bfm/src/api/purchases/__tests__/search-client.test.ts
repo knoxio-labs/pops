@@ -30,7 +30,15 @@ function factoryOver(
         },
       },
       purchase: {
-        tagVocabulary: () => ({ kind: 'ok', value: { tags: ['snack', 'drink'] } }),
+        tagVocabulary: () => ({
+          kind: 'ok',
+          value: {
+            tags: [
+              { tag: 'snack', count: 2 },
+              { tag: 'drink', count: 1 },
+            ],
+          },
+        }),
       },
     })) as PillarHandleFactory;
 }
@@ -207,7 +215,10 @@ describe('tagVocabulary', () => {
 
     expect(isGatewayOk(outcome)).toBe(true);
     if (!isGatewayOk(outcome)) return;
-    expect(outcome.value.tags).toEqual(['snack', 'drink']);
+    expect(outcome.value.tags).toEqual([
+      { tag: 'snack', count: 2 },
+      { tag: 'drink', count: 1 },
+    ]);
   });
 
   it('reports a gateway failure without inventing a vocabulary', async () => {

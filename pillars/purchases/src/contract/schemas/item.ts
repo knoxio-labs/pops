@@ -45,6 +45,16 @@ export const PurchaseItemTagSchema = z.object({
 });
 
 /**
+ * One entry in the item tag vocabulary: the tag plus how many lines carry
+ * it, so a "browse by tag" chooser can show the count next to the tag
+ * instead of just its name (POPS-4544).
+ */
+export const TagVocabularyEntrySchema = z.object({
+  tag: ItemTagSchema,
+  count: z.int().nonnegative(),
+});
+
+/**
  * A list price bound to the marker that says whether to trust it — the same
  * fusion {@link ItemKindClassificationSchema} applies to a classification,
  * applied here to money instead. `confirmedAt` null means a reading proposed
