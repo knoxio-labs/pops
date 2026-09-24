@@ -62,6 +62,8 @@ export type {
   ReferenceTargetState,
 } from './item-values.js';
 export { classifyCatalogueCompatibility } from './compatibility.js';
+export { sameFieldShape } from './compatibility-fields.js';
+export { replacingField, replacingType } from './catalogue-replacements.js';
 export type {
   CatalogueCompatibilityChange,
   CatalogueCompatibilityClassification,

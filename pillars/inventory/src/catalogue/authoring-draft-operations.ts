@@ -44,7 +44,7 @@ export function applyDraftOperations(
     affectedItems: countCompatibilityAffectedItems(db, base, draft, compatibility.affectedIds),
   };
   try {
-    validateCatalogue(draft);
+    validateCatalogue(draft, base);
   } catch (error) {
     if (error instanceof CatalogueApiError) {
       throw new CatalogueApiError(error.status, error.code, error.message, {

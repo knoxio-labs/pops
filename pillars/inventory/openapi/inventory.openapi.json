@@ -10630,6 +10630,12 @@
                                   },
                                   "type": "array"
                                 },
+                                "replacedBy": {
+                                  "format": "uuid",
+                                  "nullable": true,
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                  "type": "string"
+                                },
                                 "required": {
                                   "type": "boolean"
                                 },
@@ -10667,6 +10673,7 @@
                                 "allowOverride",
                                 "presentation",
                                 "archivedAt",
+                                "replacedBy",
                                 "enumOptions"
                               ],
                               "type": "object"
@@ -10694,6 +10701,12 @@
                             "additionalProperties": {},
                             "type": "object"
                           },
+                          "replacedBy": {
+                            "format": "uuid",
+                            "nullable": true,
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                            "type": "string"
+                          },
                           "revision": {
                             "exclusiveMinimum": true,
                             "maximum": 9007199254740991,
@@ -10717,6 +10730,7 @@
                           "legacyLabels",
                           "presentation",
                           "archivedAt",
+                          "replacedBy",
                           "fields"
                         ],
                         "type": "object"
@@ -11324,6 +11338,12 @@
                                   },
                                   "type": "array"
                                 },
+                                "replacedBy": {
+                                  "format": "uuid",
+                                  "nullable": true,
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                  "type": "string"
+                                },
                                 "required": {
                                   "type": "boolean"
                                 },
@@ -11361,6 +11381,7 @@
                                 "allowOverride",
                                 "presentation",
                                 "archivedAt",
+                                "replacedBy",
                                 "enumOptions"
                               ],
                               "type": "object"
@@ -11388,6 +11409,12 @@
                             "additionalProperties": {},
                             "type": "object"
                           },
+                          "replacedBy": {
+                            "format": "uuid",
+                            "nullable": true,
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                            "type": "string"
+                          },
                           "revision": {
                             "exclusiveMinimum": true,
                             "maximum": 9007199254740991,
@@ -11411,6 +11438,7 @@
                           "legacyLabels",
                           "presentation",
                           "archivedAt",
+                          "replacedBy",
                           "fields"
                         ],
                         "type": "object"
@@ -11867,6 +11895,12 @@
                                   },
                                   "type": "array"
                                 },
+                                "replacedBy": {
+                                  "format": "uuid",
+                                  "nullable": true,
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                  "type": "string"
+                                },
                                 "required": {
                                   "type": "boolean"
                                 },
@@ -11904,6 +11938,7 @@
                                 "allowOverride",
                                 "presentation",
                                 "archivedAt",
+                                "replacedBy",
                                 "enumOptions"
                               ],
                               "type": "object"
@@ -11931,6 +11966,12 @@
                             "additionalProperties": {},
                             "type": "object"
                           },
+                          "replacedBy": {
+                            "format": "uuid",
+                            "nullable": true,
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                            "type": "string"
+                          },
                           "revision": {
                             "exclusiveMinimum": true,
                             "maximum": 9007199254740991,
@@ -11954,6 +11995,7 @@
                           "legacyLabels",
                           "presentation",
                           "archivedAt",
+                          "replacedBy",
                           "fields"
                         ],
                         "type": "object"
@@ -12342,7 +12384,28 @@
                               "type": "string"
                             },
                             "kind": {
-                              "enum": ["archive_type", "archive_field", "archive_enum_option"],
+                              "enum": ["archive_type", "archive_field"],
+                              "type": "string"
+                            },
+                            "replacedBy": {
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                              "type": "string"
+                            }
+                          },
+                          "required": ["kind", "id"],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "id": {
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                              "type": "string"
+                            },
+                            "kind": {
+                              "enum": ["archive_enum_option"],
                               "type": "string"
                             }
                           },
@@ -12732,6 +12795,12 @@
                                       },
                                       "type": "array"
                                     },
+                                    "replacedBy": {
+                                      "format": "uuid",
+                                      "nullable": true,
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                      "type": "string"
+                                    },
                                     "required": {
                                       "type": "boolean"
                                     },
@@ -12769,6 +12838,7 @@
                                     "allowOverride",
                                     "presentation",
                                     "archivedAt",
+                                    "replacedBy",
                                     "enumOptions"
                                   ],
                                   "type": "object"
@@ -12796,6 +12866,12 @@
                                 "additionalProperties": {},
                                 "type": "object"
                               },
+                              "replacedBy": {
+                                "format": "uuid",
+                                "nullable": true,
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                "type": "string"
+                              },
                               "revision": {
                                 "exclusiveMinimum": true,
                                 "maximum": 9007199254740991,
@@ -12819,6 +12895,7 @@
                               "legacyLabels",
                               "presentation",
                               "archivedAt",
+                              "replacedBy",
                               "fields"
                             ],
                             "type": "object"
@@ -13511,6 +13588,12 @@
                                   },
                                   "type": "array"
                                 },
+                                "replacedBy": {
+                                  "format": "uuid",
+                                  "nullable": true,
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                  "type": "string"
+                                },
                                 "required": {
                                   "type": "boolean"
                                 },
@@ -13548,6 +13631,7 @@
                                 "allowOverride",
                                 "presentation",
                                 "archivedAt",
+                                "replacedBy",
                                 "enumOptions"
                               ],
                               "type": "object"
@@ -13575,6 +13659,12 @@
                             "additionalProperties": {},
                             "type": "object"
                           },
+                          "replacedBy": {
+                            "format": "uuid",
+                            "nullable": true,
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                            "type": "string"
+                          },
                           "revision": {
                             "exclusiveMinimum": true,
                             "maximum": 9007199254740991,
@@ -13598,6 +13688,7 @@
                           "legacyLabels",
                           "presentation",
                           "archivedAt",
+                          "replacedBy",
                           "fields"
                         ],
                         "type": "object"
@@ -14038,7 +14129,28 @@
                               "type": "string"
                             },
                             "kind": {
-                              "enum": ["archive_type", "archive_field", "archive_enum_option"],
+                              "enum": ["archive_type", "archive_field"],
+                              "type": "string"
+                            },
+                            "replacedBy": {
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                              "type": "string"
+                            }
+                          },
+                          "required": ["kind", "id"],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "id": {
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                              "type": "string"
+                            },
+                            "kind": {
+                              "enum": ["archive_enum_option"],
                               "type": "string"
                             }
                           },
@@ -15054,6 +15166,12 @@
                                   },
                                   "type": "array"
                                 },
+                                "replacedBy": {
+                                  "format": "uuid",
+                                  "nullable": true,
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                  "type": "string"
+                                },
                                 "required": {
                                   "type": "boolean"
                                 },
@@ -15091,6 +15209,7 @@
                                 "allowOverride",
                                 "presentation",
                                 "archivedAt",
+                                "replacedBy",
                                 "enumOptions"
                               ],
                               "type": "object"
@@ -15118,6 +15237,12 @@
                             "additionalProperties": {},
                             "type": "object"
                           },
+                          "replacedBy": {
+                            "format": "uuid",
+                            "nullable": true,
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                            "type": "string"
+                          },
                           "revision": {
                             "exclusiveMinimum": true,
                             "maximum": 9007199254740991,
@@ -15141,6 +15266,7 @@
                           "legacyLabels",
                           "presentation",
                           "archivedAt",
+                          "replacedBy",
                           "fields"
                         ],
                         "type": "object"
@@ -16212,6 +16338,12 @@
                                 },
                                 "type": "array"
                               },
+                              "replacedBy": {
+                                "format": "uuid",
+                                "nullable": true,
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                "type": "string"
+                              },
                               "required": {
                                 "type": "boolean"
                               },
@@ -16249,6 +16381,7 @@
                               "allowOverride",
                               "presentation",
                               "archivedAt",
+                              "replacedBy",
                               "enumOptions"
                             ],
                             "type": "object"
@@ -16276,6 +16409,12 @@
                           "additionalProperties": {},
                           "type": "object"
                         },
+                        "replacedBy": {
+                          "format": "uuid",
+                          "nullable": true,
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
                         "revision": {
                           "exclusiveMinimum": true,
                           "maximum": 9007199254740991,
@@ -16299,6 +16438,7 @@
                         "legacyLabels",
                         "presentation",
                         "archivedAt",
+                        "replacedBy",
                         "fields"
                       ],
                       "type": "object"

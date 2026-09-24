@@ -1,4 +1,5 @@
 import { failIssues, issue } from './authoring-shared.js';
+import { validateCatalogueReplacements } from './catalogue-replacements.js';
 import { ExpressionValidationError } from './expression-types.js';
 import { validateCatalogueExpressions } from './expression-validator.js';
 
@@ -159,9 +160,12 @@ function validateType(
   }
 }
 
-/** Validates uniqueness and cross-definition invariants before publication. */
-export function validateCatalogue(catalogue: PersistedCatalogue): void {
-  const issues: CatalogueIssue[] = [];
+/**
+ * Validates uniqueness and cross-definition invariants before publication,
+ * including the replacement lineage `catalogue` records against `base`.
+ */
+export function validateCatalogue(catalogue: PersistedCatalogue, base: PersistedCatalogue): void {
+  const issues: CatalogueIssue[] = validateCatalogueReplacements(base, catalogue);
   const typeKeys = new Map<string, string>();
   const typeIds = new Set(catalogue.types.map((type) => type.id));
   for (const type of catalogue.types) {

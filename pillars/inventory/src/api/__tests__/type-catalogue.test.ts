@@ -685,6 +685,47 @@ describe('type catalogue owner API', () => {
     ).toMatchObject({ label: 'Edited equipment', archivedAt: expect.any(String) });
   });
 
+  it('records the type that replaces an archived one, and refuses an unknown replacement', async () => {
+    const api = apiFor('web');
+    const current = await api.get('/type-catalogue');
+    const baseRevision = current.body.revision.revision;
+    const createdDraft = await api.post('/type-catalogue/drafts').send({ baseRevision });
+    const revision = createdDraft.body.revision.revision;
+    const created = await api.patch(`/type-catalogue/drafts/${revision}`).send({
+      baseRevision,
+      expectedDraftVersion: createdDraft.body.revision.draftVersion,
+      operations: [
+        { kind: 'put_type', key: 'old_meter', label: 'Old meter' },
+        { kind: 'put_type', key: 'meter', label: 'Meter' },
+      ],
+    });
+    const idOf = (key: string): string =>
+      created.body.draft.types.find((entry: { key: string }) => entry.key === key).id;
+
+    const unknown = await api.patch(`/type-catalogue/drafts/${revision}`).send({
+      baseRevision,
+      expectedDraftVersion: created.body.draft.revision.draftVersion,
+      operations: [{ kind: 'archive_type', id: idOf('old_meter'), replacedBy: randomUUID() }],
+    });
+    const replaced = await api.patch(`/type-catalogue/drafts/${revision}`).send({
+      baseRevision,
+      expectedDraftVersion: created.body.draft.revision.draftVersion,
+      operations: [{ kind: 'archive_type', id: idOf('old_meter'), replacedBy: idOf('meter') }],
+    });
+
+    expect(unknown.status).toBe(400);
+    expect(unknown.body.issues).toEqual([
+      expect.objectContaining({ definitionId: idOf('old_meter'), code: 'replacement_unknown' }),
+    ]);
+    expect(replaced.status, JSON.stringify(replaced.body)).toBe(200);
+    expect(
+      replaced.body.draft.types.find((entry: { key: string }) => entry.key === 'old_meter')
+    ).toMatchObject({ archivedAt: expect.any(String), replacedBy: idOf('meter') });
+    expect(
+      replaced.body.draft.types.find((entry: { key: string }) => entry.key === 'meter')
+    ).toMatchObject({ archivedAt: null, replacedBy: null });
+  });
+
   it('rejects a draft based on a stale published revision', async () => {
     const api = apiFor('web');
     const response = await api.post('/type-catalogue/drafts').send({ baseRevision: 999_999 });

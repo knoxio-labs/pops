@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { CatalogueArchiveDefinitionSchema } from './rest-catalogue-archive-schema.js';
 import { CatalogueActorSchema } from './rest-catalogue-audit-schema.js';
 import { ExpressionV1Schema } from './rest-catalogue-expression-schema.js';
 import { ErrorBodySchema } from './rest-schemas.js';
@@ -63,6 +64,7 @@ const CatalogueDefinitionFieldSchema = z.object({
   allowOverride: z.boolean(),
   presentation: z.record(z.string(), z.unknown()),
   archivedAt: z.string().nullable(),
+  replacedBy: z.uuid().nullable(),
   enumOptions: z.array(CatalogueEnumOptionSchema),
 });
 
@@ -77,6 +79,7 @@ const CatalogueDefinitionTypeSchema = z.object({
   legacyLabels: z.array(z.string()),
   presentation: z.record(z.string(), z.unknown()),
   archivedAt: z.string().nullable(),
+  replacedBy: z.uuid().nullable(),
   fields: z.array(CatalogueDefinitionFieldSchema),
 });
 
@@ -180,10 +183,8 @@ export const CatalogueDraftOperationSchema = z.discriminatedUnion('kind', [
   CataloguePutTypeSchema,
   CataloguePutFieldSchema,
   CataloguePutEnumOptionSchema,
-  z.object({
-    kind: z.enum(['archive_type', 'archive_field', 'archive_enum_option']),
-    id: z.uuid(),
-  }),
+  CatalogueArchiveDefinitionSchema,
+  z.object({ kind: z.literal('archive_enum_option'), id: z.uuid() }),
   z.object({
     kind: z.literal('reorder'),
     definition: z.enum(['type', 'field', 'enum_option']),

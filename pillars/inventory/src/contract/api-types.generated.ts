@@ -5684,6 +5684,8 @@ export interface operations {
                 };
                 referenceKinds: ('item' | 'location')[];
                 referenceTypeIds: string[];
+                /** Format: uuid */
+                replacedBy: string | null;
                 required: boolean;
                 sortOrder: number;
                 /** @enum {string} */
@@ -5699,6 +5701,8 @@ export interface operations {
               presentation: {
                 [key: string]: unknown;
               };
+              /** Format: uuid */
+              replacedBy: string | null;
               revision: number;
               sortOrder: number;
             }[];
@@ -5922,6 +5926,8 @@ export interface operations {
                 };
                 referenceKinds: ('item' | 'location')[];
                 referenceTypeIds: string[];
+                /** Format: uuid */
+                replacedBy: string | null;
                 required: boolean;
                 sortOrder: number;
                 /** @enum {string} */
@@ -5937,6 +5943,8 @@ export interface operations {
               presentation: {
                 [key: string]: unknown;
               };
+              /** Format: uuid */
+              replacedBy: string | null;
               revision: number;
               sortOrder: number;
             }[];
@@ -6100,6 +6108,8 @@ export interface operations {
                 };
                 referenceKinds: ('item' | 'location')[];
                 referenceTypeIds: string[];
+                /** Format: uuid */
+                replacedBy: string | null;
                 required: boolean;
                 sortOrder: number;
                 /** @enum {string} */
@@ -6115,6 +6125,8 @@ export interface operations {
               presentation: {
                 [key: string]: unknown;
               };
+              /** Format: uuid */
+              replacedBy: string | null;
               revision: number;
               sortOrder: number;
             }[];
@@ -6251,7 +6263,15 @@ export interface operations {
                 /** Format: uuid */
                 id: string;
                 /** @enum {string} */
-                kind: 'archive_type' | 'archive_field' | 'archive_enum_option';
+                kind: 'archive_type' | 'archive_field';
+                /** Format: uuid */
+                replacedBy?: string;
+              }
+            | {
+                /** Format: uuid */
+                id: string;
+                /** @enum {string} */
+                kind: 'archive_enum_option';
               }
             | {
                 /** @enum {string} */
@@ -6370,6 +6390,8 @@ export interface operations {
                   };
                   referenceKinds: ('item' | 'location')[];
                   referenceTypeIds: string[];
+                  /** Format: uuid */
+                  replacedBy: string | null;
                   required: boolean;
                   sortOrder: number;
                   /** @enum {string} */
@@ -6385,6 +6407,8 @@ export interface operations {
                 presentation: {
                   [key: string]: unknown;
                 };
+                /** Format: uuid */
+                replacedBy: string | null;
                 revision: number;
                 sortOrder: number;
               }[];
@@ -6627,6 +6651,8 @@ export interface operations {
                 };
                 referenceKinds: ('item' | 'location')[];
                 referenceTypeIds: string[];
+                /** Format: uuid */
+                replacedBy: string | null;
                 required: boolean;
                 sortOrder: number;
                 /** @enum {string} */
@@ -6642,6 +6668,8 @@ export interface operations {
               presentation: {
                 [key: string]: unknown;
               };
+              /** Format: uuid */
+              replacedBy: string | null;
               revision: number;
               sortOrder: number;
             }[];
@@ -6798,7 +6826,15 @@ export interface operations {
                 /** Format: uuid */
                 id: string;
                 /** @enum {string} */
-                kind: 'archive_type' | 'archive_field' | 'archive_enum_option';
+                kind: 'archive_type' | 'archive_field';
+                /** Format: uuid */
+                replacedBy?: string;
+              }
+            | {
+                /** Format: uuid */
+                id: string;
+                /** @enum {string} */
+                kind: 'archive_enum_option';
               }
             | {
                 /** @enum {string} */
@@ -7140,6 +7176,8 @@ export interface operations {
                 };
                 referenceKinds: ('item' | 'location')[];
                 referenceTypeIds: string[];
+                /** Format: uuid */
+                replacedBy: string | null;
                 required: boolean;
                 sortOrder: number;
                 /** @enum {string} */
@@ -7155,6 +7193,8 @@ export interface operations {
               presentation: {
                 [key: string]: unknown;
               };
+              /** Format: uuid */
+              replacedBy: string | null;
               revision: number;
               sortOrder: number;
             }[];
@@ -7570,6 +7610,8 @@ export interface operations {
                 };
                 referenceKinds: ('item' | 'location')[];
                 referenceTypeIds: string[];
+                /** Format: uuid */
+                replacedBy: string | null;
                 required: boolean;
                 sortOrder: number;
                 /** @enum {string} */
@@ -7585,6 +7627,8 @@ export interface operations {
               presentation: {
                 [key: string]: unknown;
               };
+              /** Format: uuid */
+              replacedBy: string | null;
               revision: number;
               sortOrder: number;
             };

@@ -117,6 +117,8 @@ export interface CatalogueTypeWire {
   readonly legacyLabels: string[];
   readonly presentation: Record<string, unknown>;
   readonly archivedAt: string | null;
+  /** The live type that takes this archived type's new items, once authoring named one. */
+  readonly replacedBy: string | null;
   readonly fields: CatalogueFieldWire[];
 }
 
@@ -140,6 +142,8 @@ export interface CatalogueFieldWire {
   readonly allowOverride: boolean;
   readonly presentation: Record<string, unknown>;
   readonly archivedAt: string | null;
+  /** The field that takes this archived field's new values, once authoring named one. */
+  readonly replacedBy: string | null;
   readonly enumOptions: CatalogueOptionWire[];
 }
 

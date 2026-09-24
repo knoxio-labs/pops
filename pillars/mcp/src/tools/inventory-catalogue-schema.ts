@@ -1,3 +1,4 @@
+import { archiveDefinition, archiveEnumOption } from './inventory-catalogue-archive-schema.js';
 import { nullableExpression } from './inventory-catalogue-expression-schema.js';
 
 export {
@@ -90,16 +91,6 @@ const putEnumOption = {
   required: ['kind', 'fieldId'],
 } as const;
 
-const archiveDefinition = {
-  type: 'object',
-  additionalProperties: false,
-  properties: {
-    kind: { enum: ['archive_type', 'archive_field', 'archive_enum_option'] },
-    id: uuid,
-  },
-  required: ['kind', 'id'],
-} as const;
-
 const reorderDefinitions = {
   type: 'object',
   additionalProperties: false,
@@ -114,7 +105,14 @@ const reorderDefinitions = {
 
 /** JSON schema matching every discriminant and required field in the REST draft operation union. */
 export const catalogueOperationSchema = {
-  oneOf: [putType, putField, putEnumOption, archiveDefinition, reorderDefinitions],
+  oneOf: [
+    putType,
+    putField,
+    putEnumOption,
+    archiveDefinition,
+    archiveEnumOption,
+    reorderDefinitions,
+  ],
 } as const;
 
 const migrationStepSchema = {

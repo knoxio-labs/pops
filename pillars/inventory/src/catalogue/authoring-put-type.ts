@@ -4,7 +4,13 @@ import { and, eq } from 'drizzle-orm';
 
 import { itemTypes } from '../db/schema.js';
 import { definitionText } from './authoring-put-shared.js';
-import { existingOrNew, failIssues, issue, persistedTypeRow } from './authoring-shared.js';
+import {
+  assertReplacedStaysArchived,
+  existingOrNew,
+  failIssues,
+  issue,
+  persistedTypeRow,
+} from './authoring-shared.js';
 
 import type { CommandDb } from '../domain/commands/index.js';
 import type { DraftOperation } from './authoring-types.js';
@@ -53,6 +59,7 @@ function writeType(context: TypeWriteContext): void {
   const { db, revision, current, operation, id, key, label } = context;
   const defaults = typeDefaults(current);
   const row = persistedTypeRow(revision, { ...defaults, ...operation, id, key, label });
+  assertReplacedStaysArchived(id, current, row.archivedAt);
   db.insert(itemTypes)
     .values(row)
     .onConflictDoUpdate({

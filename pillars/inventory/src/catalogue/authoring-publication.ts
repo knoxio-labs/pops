@@ -100,7 +100,7 @@ export function publishCatalogueDraft(
         `Activate inventory protocol ${candidate.revision.minimumProtocol} before publishing this catalogue; the active minimum is ${activeMinimumProtocol}`
       );
     }
-    validateCatalogue(candidate);
+    validateCatalogue(candidate, base);
     const migration = requireMigration(compatibility, input, input.baseRevision, revision);
     return writePublication({
       db: tx,

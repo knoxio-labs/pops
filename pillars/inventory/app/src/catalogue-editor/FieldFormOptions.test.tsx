@@ -29,6 +29,7 @@ const field: CatalogueField = {
   presentation: {},
   referenceKinds: [],
   referenceTypeIds: [],
+  replacedBy: null,
   required: false,
   sortOrder: 0,
   storage: 'stored',
