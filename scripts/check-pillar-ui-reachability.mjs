@@ -435,8 +435,9 @@ function selfTest() {
     'the failure says what the wire lacks':
       halfDeclared.reasons[0]?.includes('declares no non-empty pages') === true,
     'pages and assetsBaseUrl without nav is not enough': navMissing.missing.length === 2,
-    'the failure says nav is what the wire lacks':
-      navMissing.reasons[0]?.includes('declares no nav with non-empty items') === true,
+    'the failure says nav is what the wire lacks': navMissing.reasons[0]?.includes(
+      'declares no nav with non-empty items'
+    ),
     // Both shapes the message can take, because each has been ungrammatical at
     // some point and nothing asserted the wording. `halfDeclared` above drives
     // the one-field sentence; this drives the multi-field one.
