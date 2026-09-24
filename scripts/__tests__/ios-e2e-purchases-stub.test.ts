@@ -474,7 +474,7 @@ describe('the purchases stub', () => {
     }
   });
 
-  it('ranks a merchant prefix above a merchant that merely contains the text', async () => {
+  it('classifies a merchant that merely contains the text as a contains match', async () => {
     const stub = await startPurchasesStub();
     try {
       const answered = await fetch(`${stub.url}/search`, {
@@ -501,7 +501,7 @@ describe('the purchases stub', () => {
     }
   });
 
-  it('reports a prefix match ahead of a contains match, and echoes the order fields a hit needs', async () => {
+  it('classifies a merchant prefix as a prefix match, and echoes the order fields a hit needs', async () => {
     const stub = await startPurchasesStub();
     try {
       const answered = await fetch(`${stub.url}/search`, {
@@ -526,6 +526,39 @@ describe('the purchases stub', () => {
           status: 'linked',
         },
       });
+    } finally {
+      await stub.close();
+    }
+  });
+
+  it('ranks a merchant prefix above a merchant that merely contains the text', async () => {
+    const stub = await startPurchasesStub();
+    try {
+      const created = await fetch(`${stub.url}/purchases/manual`, {
+        method: 'POST',
+        body: JSON.stringify({
+          merchantEntityName: 'Old Hardware Barn',
+          totalCents: 100,
+          items: [{ name: 'Shelf', quantity: 1, lineTotalCents: 100 }],
+        }),
+      });
+      const { purchase } = await created.json();
+
+      const answered = await fetch(`${stub.url}/search`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ query: { text: 'hard' } }),
+      });
+
+      // The newer purchase lists first, so only a real ranking puts the older prefix
+      // match "Hardware Shop" above it.
+      const body = await answered.json();
+      expect(
+        body.hits.map((hit: { uri: string; matchType: string }) => [hit.uri, hit.matchType])
+      ).toEqual([
+        ['pops:purchases/purchase/purchase-august-linked', 'prefix'],
+        [`pops:purchases/purchase/${String(purchase.id)}`, 'contains'],
+      ]);
     } finally {
       await stub.close();
     }
