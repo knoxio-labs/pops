@@ -74,10 +74,12 @@ name: S8.1 A user-defined type syncs to the phone, an item of it is created and 
 - tapOn:
     id: inventory-field-${output.userDefinedType.state.userDefinedType.priceFieldId}
 - inputText: '21'
+# id and text on the same selector match the one element that carries both:
+# the TextField itself is what `protocol2Field(id:)` names (it has no
+# children an assertion could target `childOf`), and its value is its text.
 - assertVisible:
+    id: inventory-field-${output.userDefinedType.state.userDefinedType.priceFieldId}
     text: '21'
-    childOf:
-      id: inventory-field-${output.userDefinedType.state.userDefinedType.priceFieldId}
 - tapOn: 'Create'
 - tapOn: Gadget ${output.inventory.run}
 
@@ -146,9 +148,8 @@ name: S8.1 A user-defined type syncs to the phone, an item of it is created and 
             - tapOn: 'Select All'
             - inputText: '30'
             - assertVisible:
+                id: inventory-field-${output.userDefinedType.state.userDefinedType.priceFieldId}
                 text: '30'
-                childOf:
-                  id: inventory-field-${output.userDefinedType.state.userDefinedType.priceFieldId}
 - tapOn: 'Save'
 - tapOn: 'Inventory'
 - tapOn: 'Sync status: .*'
