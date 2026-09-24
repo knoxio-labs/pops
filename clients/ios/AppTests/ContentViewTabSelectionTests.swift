@@ -8,10 +8,10 @@ import Testing
 /// The rule `ContentView` hands its `TabView` for which tab shows.
 ///
 /// The bug that made the selection explicit — the tab dropping back to the
-/// first whenever a tab's root view changed — lives in `TabView` itself and
-/// is caught end to end by `receipt-manual-entry.yaml`. What these pin is the
-/// rule that replaced the implicit selection, including the case it now has to
-/// get right on its own: a reload that removes the chosen feature.
+/// first whenever a tab's root view changed — lives in `TabView` itself. What
+/// these pin is the rule that replaced the implicit selection, including the
+/// case it now has to get right on its own: a reload that removes the chosen
+/// feature.
 @Suite("ContentView tab selection")
 internal struct ContentViewTabSelectionTests {
     private static let transactions = MobileFeature(rawValue: "transactions")
