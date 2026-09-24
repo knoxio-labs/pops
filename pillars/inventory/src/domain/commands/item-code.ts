@@ -52,6 +52,28 @@ export function suggestNextCode(db: CommandDb, code: string, excludeId: string):
 }
 
 /**
+ * Refuses `code` for item `itemId` when another item, live or tombstoned,
+ * already holds it: a `code_collision` conflict naming the holder and the
+ * next free code keeping its stem (ADR-002 D7). No code (absent, `null` or
+ * empty) never collides. Shared by `item.setCode` and `item.create`, so a
+ * create carrying a code either lands with it or not at all.
+ */
+export function assertCodeFree(
+  db: CommandDb,
+  code: string | null | undefined,
+  itemId: string
+): void {
+  if (!code) return;
+  const holder = findCodeHolder(db, code, itemId);
+  if (!holder) return;
+  throw new CommandConflict({
+    kind: 'code_collision',
+    heldBy: holder,
+    suggestedCode: suggestNextCode(db, code, itemId),
+  });
+}
+
+/**
  * `item.setCode { code }`: set or clear an item's sticker code. Unique
  * case-insensitively; a collision is a `code_collision` conflict naming the
  * holder and a deterministic suggestion (ADR-002 D7), never a silent
@@ -65,16 +87,7 @@ export const itemSetCode = defineOp({
   args: setCodeArgs,
   plan(ctx, target, args) {
     const row = requireItem(target);
-    if (args.code !== null) {
-      const holder = findCodeHolder(ctx.db, args.code, row.id);
-      if (holder) {
-        throw new CommandConflict({
-          kind: 'code_collision',
-          heldBy: holder,
-          suggestedCode: suggestNextCode(ctx.db, args.code, row.id),
-        });
-      }
-    }
+    assertCodeFree(ctx.db, args.code, row.id);
     return {
       eventKind: 'code_set',
       changes: { code: args.code },

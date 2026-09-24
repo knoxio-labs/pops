@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { items } from '../../db/index.js';
 import { activeFieldValueSchema, activeStoredChanges } from './active-catalogue-values.js';
 import { CommandRejected } from './errors.js';
+import { assertCodeFree } from './item-code.js';
 import {
   persistCreateCatalogueValues,
   resolveCreateCatalogue,
@@ -42,7 +43,13 @@ const createArgs = z.object({
    * from every caller but the legacy `/items` routes.
    */
   legacy: legacyItemPatchSchema.optional(),
-  /** The legacy `assetId` (`items.code`), written unvalidated: the legacy routes never checked it either, relying on the column's own unique index. */
+  /**
+   * The sticker code the item is created wearing (`items.code`). A code
+   * another item already holds is a `code_collision` conflict, exactly as
+   * `item.setCode` answers, and nothing is created: an item never lands
+   * without the code it was created for. The legacy `/items` routes send
+   * their `assetId` here too.
+   */
   code: z.string().nullable().optional(),
   /** Idempotency key for a fan-out create (POPS-2433); unique when supplied. */
   sourceRef: z.string().nullable().optional(),
@@ -160,14 +167,16 @@ function insertItem({
  * `quantity_container_conflict` when a containment-capable type is
  * requested with `quantity > 1` (ADR-002 D3).
  *
- * `legacy`, `code` and `sourceRef` exist for the legacy `/items` routes
+ * `code` is the sticker code the item is created wearing: a code another
+ * item holds, live or tombstoned, is the same `code_collision` conflict
+ * `item.setCode` gives, and nothing is created (POPS-4063).
+ *
+ * `legacy` and `sourceRef` exist for the legacy `/items` routes
  * (POPS-4053): the provenance and value columns the new model has no field
- * for, the sticker code (unvalidated here, unlike `item.setCode`, matching
- * what the legacy route always did), and the fan-out idempotency key. A
- * `sourceRef` collision raises the column's own unique-index error rather
- * than a typed outcome; the legacy route catches it and returns the
- * existing row, exactly as it did before this slice moved the route onto
- * the command layer.
+ * for, and the fan-out idempotency key. A `sourceRef` collision raises the
+ * column's own unique-index error rather than a typed outcome; the legacy
+ * route catches it and returns the existing row, exactly as it did before
+ * this slice moved the route onto the command layer.
  */
 export const itemCreate = defineOp({
   op: 'item.create',
@@ -184,6 +193,7 @@ export const itemCreate = defineOp({
     assertPlacementAllowed(ctx.db, ctx.mutation.entityId, item.placement);
     const isContainer = type?.capabilities.includes('containment') ?? false;
     assertContainerQuantity(isContainer, item.quantity);
+    assertCodeFree(ctx.db, args.code, ctx.mutation.entityId);
 
     return {
       eventKind: 'created',

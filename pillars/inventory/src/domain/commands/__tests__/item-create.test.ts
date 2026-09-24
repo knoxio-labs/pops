@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { mutation, openHarness, seedLocation, type Harness } from './test-utils.js';
+import { mutation, openHarness, seedItem, seedLocation, type Harness } from './test-utils.js';
 
 let h: Harness;
 
@@ -205,5 +205,72 @@ describe('item.create with legacy fields (POPS-4053)', () => {
     const id = randomUUID();
     h.run(mutation('item.create', id, createArgs(), { baseRevision: null }));
     expect(h.item(id).condition).toBe('Good');
+  });
+});
+
+describe('item.create with a code already held (POPS-4063)', () => {
+  it('is a code_collision conflict naming the holder and a free code, and creates nothing', () => {
+    seedItem(h, { id: 'lamp', code: 'B412' });
+    const id = randomUUID();
+    const outcome = h.run(
+      mutation('item.create', id, { ...createArgs(), code: 'b412' }, { baseRevision: null })
+    );
+    expect(outcome).toMatchObject({
+      status: 'conflict',
+      kind: 'code_collision',
+      heldBy: { id: 'lamp', name: 'lamp' },
+      suggestedCode: 'b413',
+    });
+    expect(h.raw.prepare('select id from items where id = ?').get(id)).toBeUndefined();
+    expect(h.eventsFor(id)).toEqual([]);
+  });
+
+  it('collides with a code a tombstoned item still reserves', () => {
+    seedItem(h, { id: 'old-lamp', code: 'B412', deletedAt: '2026-09-18T01:00:00.000Z' });
+    const id = randomUUID();
+    const outcome = h.run(
+      mutation('item.create', id, { ...createArgs(), code: 'B412' }, { baseRevision: null })
+    );
+    expect(outcome).toMatchObject({
+      status: 'conflict',
+      kind: 'code_collision',
+      heldBy: { id: 'old-lamp' },
+    });
+    expect(h.raw.prepare('select id from items where id = ?').get(id)).toBeUndefined();
+  });
+
+  it('creates with a free code, and a later create wanting the same code collides', () => {
+    const first = randomUUID();
+    const applied = h.run(
+      mutation('item.create', first, { ...createArgs(), code: 'C7' }, { baseRevision: null })
+    );
+    expect(applied).toMatchObject({ status: 'applied' });
+    expect(h.item(first).code).toBe('C7');
+
+    const second = randomUUID();
+    const collided = h.run(
+      mutation('item.create', second, { ...createArgs(), code: 'C7' }, { baseRevision: null })
+    );
+    expect(collided).toMatchObject({
+      status: 'conflict',
+      kind: 'code_collision',
+      heldBy: { id: first, name: 'Kettle' },
+      suggestedCode: 'C8',
+    });
+  });
+
+  it('a code without trailing digits collides with no suggestion', () => {
+    seedItem(h, { id: 'lamp', code: 'KITCHEN' });
+    const outcome = h.run(
+      mutation(
+        'item.create',
+        randomUUID(),
+        { ...createArgs(), code: 'KITCHEN' },
+        {
+          baseRevision: null,
+        }
+      )
+    );
+    expect(outcome).toMatchObject({ status: 'conflict', suggestedCode: null });
   });
 });
