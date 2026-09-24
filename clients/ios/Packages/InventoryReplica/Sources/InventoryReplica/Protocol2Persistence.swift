@@ -8,13 +8,16 @@ private struct Protocol2FieldKinds {
 }
 
 internal enum Protocol2CatalogueRows {
-    static func store(_ catalogue: InventoryCatalogueSnapshot, in db: Database) throws {
+    /// Stores `catalogue` unless its revision is already stored, and says
+    /// whether it inserted it.
+    @discardableResult
+    static func store(_ catalogue: InventoryCatalogueSnapshot, in db: Database) throws -> Bool {
         if let stored = try read(revision: catalogue.revision.revision, in: db) {
             guard stored == catalogue.inStoredOrder else {
                 throw InventoryReplicaError.corruptValue(
                     "catalogue revision \(catalogue.revision.revision) changed")
             }
-            return
+            return false
         }
         let revision = catalogue.revision
         try db.execute(
@@ -29,6 +32,23 @@ internal enum Protocol2CatalogueRows {
             ])
         for type in catalogue.types {
             try store(type, revision: revision.revision, in: db)
+        }
+        return true
+    }
+
+    /// Stores `catalogue`, runs `apply`, and re-indexes every item only when
+    /// the revision was newly stored or is not the one items were indexed
+    /// against. A page under the revision already in use re-indexes just its
+    /// own rows (``MutationLogReplay/rebase(resetting:in:)``), so a paginated
+    /// sync does not rewrite the whole index once per page.
+    static func storeAndReindex(
+        _ catalogue: InventoryCatalogueSnapshot, in db: Database, apply: () throws -> Void
+    ) throws {
+        let indexedRevision = try SyncMeta.read(db).catalogueRevision
+        let inserted = try store(catalogue, in: db)
+        try apply()
+        if inserted || indexedRevision != catalogue.revision.revision {
+            try Protocol2SearchIndex.reindex(catalogue, in: db)
         }
     }
 
@@ -209,11 +229,11 @@ extension InventoryReplica {
     /// Stores a complete immutable protocol-2 catalogue revision without replacing older revisions.
     public func store(_ catalogue: InventoryCatalogueSnapshot) throws {
         try write { db in
-            try Protocol2CatalogueRows.store(catalogue, in: db)
-            var meta = try SyncMeta.read(db)
-            meta.catalogueRevision = catalogue.revision.revision
-            try meta.write(db)
-            try Protocol2SearchIndex.reindex(catalogue, in: db)
+            try Protocol2CatalogueRows.storeAndReindex(catalogue, in: db) {
+                var meta = try SyncMeta.read(db)
+                meta.catalogueRevision = catalogue.revision.revision
+                try meta.write(db)
+            }
         }
     }
 
@@ -230,9 +250,9 @@ extension InventoryReplica {
             throw InventoryReplicaError.corruptValue("snapshot catalogue revision does not match")
         }
         try write { db in
-            try Protocol2CatalogueRows.store(catalogue, in: db)
-            try ReplicaApply.snapshot(page, now: now(), in: db)
-            try Protocol2SearchIndex.reindex(catalogue, in: db)
+            try Protocol2CatalogueRows.storeAndReindex(catalogue, in: db) {
+                try ReplicaApply.snapshot(page, now: now(), in: db)
+            }
         }
     }
 
@@ -244,9 +264,9 @@ extension InventoryReplica {
             throw InventoryReplicaError.corruptValue("feed catalogue revision does not match")
         }
         try write { db in
-            try Protocol2CatalogueRows.store(catalogue, in: db)
-            try ReplicaApply.changes(page, now: now(), in: db)
-            try Protocol2SearchIndex.reindex(catalogue, in: db)
+            try Protocol2CatalogueRows.storeAndReindex(catalogue, in: db) {
+                try ReplicaApply.changes(page, now: now(), in: db)
+            }
         }
     }
 }
