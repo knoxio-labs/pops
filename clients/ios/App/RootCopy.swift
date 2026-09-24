@@ -15,6 +15,8 @@ internal enum RootCopy {
     internal static let degraded =
         "Some of Pops could not be reached, so this may be out of date."
 
+    internal static let dismissDegraded = "Dismiss"
+
     /// A `pops` URL scheme link whose pillar has no screen registered in this
     /// build. Not an error sentence: the code is fine, this build just cannot
     /// show it yet.
