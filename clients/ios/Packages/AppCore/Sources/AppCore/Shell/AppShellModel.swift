@@ -194,7 +194,8 @@ extension AppShellModel {
             return FeatureSurface(
                 available: renderableFeatures,
                 unavailable: [],
-                bootstrap: phase
+                bootstrap: phase,
+                captureAvailable: true
             )
         }
 
@@ -202,8 +203,22 @@ extension AppShellModel {
         return FeatureSurface(
             available: named.filter(\.reachability.isUsable).map(\.id),
             unavailable: named.filter { !$0.reachability.isUsable },
-            bootstrap: phase
+            bootstrap: phase,
+            captureAvailable: captureAvailable(in: snapshot)
         )
+    }
+
+    /// Whether Purchases' own capture entry point should be offered.
+    ///
+    /// `.receiptCapture` is a capability the BFM answers about, not a screen
+    /// of its own — POPS-4294 removed its tab, but the answer still needs to
+    /// reach Purchases, which reads it to decide whether to offer capture at
+    /// all. Read straight from the snapshot rather than through `named`
+    /// above: `named` is filtered to `renderableFeatures`, and
+    /// `.receiptCapture` is deliberately not one of them — see
+    /// `RootFeature.renderable`'s own doc comment.
+    private func captureAvailable(in snapshot: BootstrapSnapshot) -> Bool {
+        snapshot.features.first { $0.id == .receiptCapture }?.reachability.isUsable ?? false
     }
 }
 
