@@ -153,7 +153,7 @@ extension OnlineInventoryStore {
         return nil
     }
 
-    private static func isUnreachable(_ error: any Error) -> Bool {
+    static func isUnreachable(_ error: any Error) -> Bool {
         switch error as? RepositoryError {
         case .transport, .unavailable: true
         default: false

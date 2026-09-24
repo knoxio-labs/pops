@@ -31,8 +31,9 @@ internal enum InventoryDrainPass: Equatable, Sendable {
 /// - `409 resync_required` takes a fresh snapshot, keeping the log, and the
 ///   pass carries on. `401` and `426` show as the blocked interruptions and
 ///   stop the pass. Any other failure shows as offline where it means the
-///   server was unreachable, and is retried after the backoff: 2 seconds,
-///   doubling, at most 5 minutes.
+///   server was unreachable, and otherwise as a sending stall on the Sync
+///   ledger, logged (`report(_:)`), until a pass gets through; either is
+///   retried after the backoff: 2 seconds, doubling, at most 5 minutes.
 /// - After a pass that applied anything, the change feed is read so the
 ///   applied changes settle.
 /// - A change answered `catalogue_update_required` waits for a newer
@@ -67,7 +68,7 @@ internal final class InventoryDrain: Sendable {
     private let reachability: any NetworkReachability
     private let clock: any InventoryDrainClock
     private let batchSize: Int
-    private let now: @Sendable () -> Date
+    let now: @Sendable () -> Date
     private let mintMutationId: @Sendable () -> String
     private let triggers: AsyncStream<Void>
     private let trigger: AsyncStream<Void>.Continuation
@@ -222,9 +223,10 @@ internal final class InventoryDrain: Sendable {
                 }
             }
         } catch {
-            online.noteFailure(error)
+            report(error)
             return OnlineInventoryStore.blockReason(for: error) == nil ? .retryLater : .blocked
         }
+        clearStall()
         if appliedAny { await online.refresh() }
         return deferred.isEmpty ? .drained : .retryLater
     }
@@ -279,10 +281,10 @@ internal final class InventoryDrain: Sendable {
         do {
             try replica.returnToQueue(ids)
         } catch {
-            online.noteFailure(error)
+            report(error)
         }
         if OnlineInventoryStore.needsResync(error) { return .resyncRequired }
-        online.noteFailure(error)
+        report(error)
         return OnlineInventoryStore.blockReason(for: error) == nil ? .failed : .blocked
     }
 }
