@@ -5,6 +5,7 @@ import {
 } from '@/fixtures/inventory-computed-catalogue';
 import {
   boxVolume,
+  boxVolumeInProgress,
   displayNameInProgress,
   insuredValue,
   needsAttention,
@@ -130,11 +131,38 @@ describe('static dependencies', () => {
 });
 
 describe('slot types', () => {
-  it('asks for a plain decimal on the right of a measurement product', () => {
-    const types = slotTypes(storageBoxContext, boxVolume, { kind: 'measurement', unit: 'cm' });
+  it('guesses the field unit on the left and a plain decimal on the right before anything is placed', () => {
+    const empty = { op: 'multiply', left: { op: 'empty' }, right: { op: 'empty' } } as const;
+    const types = slotTypes(storageBoxContext, empty, { kind: 'measurement', unit: 'cm' });
     expect(types.get('expression.left')).toEqual({ kind: 'measurement', unit: 'cm' });
-    expect(types.get('expression.left.right')).toEqual({ kind: 'decimal' });
     expect(types.get('expression.right')).toEqual({ kind: 'decimal' });
+  });
+
+  it('opens the right side to a decimal or any measurement once the left is one', () => {
+    const scaled = {
+      op: 'multiply',
+      left: { op: 'read', path: [], fieldId: 'width' },
+      right: { op: 'literal', value: 2 },
+    } as const;
+    const types = slotTypes(storageBoxContext, scaled, { kind: 'measurement', unit: 'cm' });
+    expect(types.get('expression.left')).toEqual({ kind: 'measurement', unit: 'cm' });
+    expect(types.get('expression.right')).toEqual({ kind: 'measurement' });
+  });
+
+  it('derives cm² then cm³ for a chain of measurement products (ADR-002 D5)', () => {
+    const types = slotTypes(storageBoxContext, boxVolume, { kind: 'measurement', unit: 'L' });
+    expect(types.get('expression.left')).toEqual({ kind: 'measurement', unit: 'cm²' });
+    expect(types.get('expression.left.left')).toEqual({ kind: 'measurement', unit: 'cm' });
+    expect(types.get('expression.left.right')).toEqual({ kind: 'measurement', unit: 'cm' });
+    expect(types.get('expression.right')).toEqual({ kind: 'measurement', unit: 'cm' });
+  });
+
+  it('leaves an empty slot open to a decimal or any measurement while its partner is one', () => {
+    const types = slotTypes(storageBoxContext, boxVolumeInProgress, {
+      kind: 'measurement',
+      unit: 'L',
+    });
+    expect(types.get('expression.right')).toEqual({ kind: 'measurement' });
   });
 
   it('types a comparison from its left operand and its result as yes or no', () => {

@@ -1,25 +1,28 @@
-import type { EvaluationErrorCode, UnavailableReason } from './scenario';
+import type { EvaluationErrorCode, PreviewMissingInput } from './scenario';
+
+/** Names one missing input: the field and the item it was read on. */
+function missingInputSentence(input: PreviewMissingInput): string {
+  switch (input.reason) {
+    case 'missing_dependency':
+      return `${input.fieldLabel} is empty on ${input.itemLabel}`;
+    case 'reference_deleted':
+      return `${input.fieldLabel} on ${input.itemLabel} points at an item that was deleted`;
+    case 'reference_missing':
+      return `${input.fieldLabel} on ${input.itemLabel} points at an item that no longer exists`;
+    case 'reference_unresolved':
+      return `${input.fieldLabel} on ${input.itemLabel} points at an item that could not be read`;
+  }
+}
 
 /**
- * Names the input that stopped the calculation. Every reason names both the
- * field and the item it was read on, because "unavailable" alone gives the
- * author nothing to fix.
+ * Names every input that stopped the calculation, because "unavailable"
+ * alone gives the author nothing to fix. `coalesce` can name several, one per
+ * argument that had none.
  */
-export function unavailableSentence(
-  reason: Exclude<UnavailableReason, 'evaluation_error'>,
-  field: string,
-  item: string
-): string {
-  switch (reason) {
-    case 'missing_dependency':
-      return `${field} is empty on ${item}.`;
-    case 'reference_deleted':
-      return `${field} on ${item} points at an item that was deleted.`;
-    case 'reference_missing':
-      return `${field} on ${item} points at an item that no longer exists.`;
-    case 'reference_unresolved':
-      return `${field} on ${item} points at an item that could not be read.`;
-  }
+export function unavailableSentence(missingInputs: readonly PreviewMissingInput[]): string {
+  if (missingInputs.length <= 1)
+    return `${missingInputs.map(missingInputSentence).join('') || 'Nothing to read'}.`;
+  return `${missingInputs.length} inputs are missing: ${missingInputs.map(missingInputSentence).join('; ')}.`;
 }
 
 const ERROR_COPY: Record<EvaluationErrorCode, string> = {

@@ -15,6 +15,7 @@ import {
 } from '@pops/ui';
 
 import { findType, isFollowable, referenceTargets, resolveRead } from './catalogue-lookup';
+import { matchesType } from './field-match';
 import { EXPRESSION_LIMITS, valueTypeLabel } from './model';
 
 import type { ResolvedRead } from './catalogue-lookup';
@@ -81,13 +82,6 @@ function HopLimitNotice({
           : `To reach past ${next.label}, add a computed field on ${resolved.ownerType.label} that reads it, then read that field here.`}
       </AlertDescription>
     </Alert>
-  );
-}
-
-function matchesType(field: DesignField, expected: ValueType | undefined): boolean {
-  if (expected === undefined) return field.cardinality === 'one';
-  return (
-    field.cardinality === 'one' && field.kind === expected.kind && field.unit === expected.unit
   );
 }
 

@@ -114,9 +114,7 @@ function Evaluated({
             <CircleSlash className="h-5 w-5 text-muted-foreground" />
             Unavailable
           </p>
-          <p className="text-sm">
-            {unavailableSentence(preview.reason, preview.missingField, preview.missingOn)}
-          </p>
+          <p className="text-sm">{unavailableSentence(preview.missingInputs)}</p>
           <TraversedItems items={preview.traversed} />
         </>
       )}

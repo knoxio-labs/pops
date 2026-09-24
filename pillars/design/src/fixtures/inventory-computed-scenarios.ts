@@ -1,4 +1,5 @@
 import { electronicsContext, storageBoxContext } from './inventory-computed-catalogue';
+import { dimensionalScenarios } from './inventory-computed-dimensional-scenarios';
 import {
   boxVolume,
   cycleIssue,
@@ -187,6 +188,7 @@ export const computedScenarios = {
     preview: dongleShelfDeleted,
   },
   'preview-request-error': replacement({ preview: chargerRequestError }),
+  ...dimensionalScenarios(newDisplayName, replacement),
 } satisfies Record<string, ComputedScenario>;
 
 /** A state name of the computed-field editor screen. */

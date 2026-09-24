@@ -37,6 +37,17 @@ interface PreviewEvaluated {
 }
 
 /**
+ * One input a calculation could not read: the field, the item it was read on
+ * and why. `coalesce` reports one per argument that had none, so an
+ * unavailable result can name several.
+ */
+export interface PreviewMissingInput {
+  readonly reason: Exclude<UnavailableReason, 'evaluation_error'>;
+  readonly fieldLabel: string;
+  readonly itemLabel: string;
+}
+
+/**
  * The single-item, non-mutating preview of the draft expression, in every
  * state the request can be in.
  */
@@ -54,9 +65,7 @@ export type PreviewState =
     })
   | (PreviewEvaluated & {
       readonly state: 'unavailable';
-      readonly reason: Exclude<UnavailableReason, 'evaluation_error'>;
-      readonly missingField: string;
-      readonly missingOn: string;
+      readonly missingInputs: readonly PreviewMissingInput[];
     })
   | (PreviewEvaluated & { readonly state: 'evaluation-error'; readonly code: EvaluationErrorCode });
 
