@@ -69,6 +69,7 @@ internal struct PurchaseHandEntryView: View {
         }
         .popsMotion(value: model.formGeneration)
         .popsMotion(value: model.failure)
+        .accessibilityIdentifier(PurchaseHandEntryAccessibility.root)
         .onChange(of: model.formGeneration) {
             draft = model.draft
             opened = model.draft
@@ -118,6 +119,7 @@ internal struct PurchaseHandEntryView: View {
         }
         .receiptDraftProminentBarButton()
         .disabled(!canSave)
+        .accessibilityIdentifier(PurchaseHandEntryAccessibility.save)
     }
 
     private var canSave: Bool {
@@ -137,4 +139,9 @@ internal struct PurchaseHandEntryView: View {
         didFinish = true
         onFinished(model.savedPurchaseIDs)
     }
+}
+
+internal enum PurchaseHandEntryAccessibility {
+    internal static let root = "purchases-hand-entry"
+    internal static let save = "purchases-hand-entry-save"
 }

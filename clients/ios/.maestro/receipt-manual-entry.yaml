@@ -46,6 +46,9 @@ name: A hand-entered purchase reaches the editable form and comes back saved
 
 - runFlow: subflows/enter-a-manual-purchase.yaml
 
+- tapOn:
+    id: 'receipt-draft-save'
+
 # `createManualPurchase` reaching a real HTTP round trip: the bfm calls the
 # purchases pillar, which in this harness is `scripts/ios-e2e/purchases-stub.mjs`
 # answering `POST /purchases/manual` for real rather than refusing it — the one
