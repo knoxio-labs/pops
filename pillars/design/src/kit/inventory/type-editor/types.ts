@@ -5,7 +5,6 @@ export type TypeEditorMode =
   | 'key-collision'
   | 'edit'
   | 'enum'
-  | 'reference'
   | 'preview'
   | 'archive'
   | 'stale'

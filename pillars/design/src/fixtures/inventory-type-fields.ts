@@ -12,6 +12,19 @@ export type CatalogueFieldKind =
   | 'url'
   | 'reference';
 
+/** What a reference field may point at, mirroring `referenceKinds` and `referenceTypeIds`. */
+export interface CatalogueReferenceTargets {
+  kinds: readonly ('item' | 'location')[];
+  /** Allowed item types; empty allows every item type. Never constrains locations. */
+  typeIds: readonly string[];
+}
+
+/** The fixed unit of a measurement field and the physical dimension it resolves to. */
+export interface CatalogueMeasurementUnit {
+  symbol: string;
+  dimension: string;
+}
+
 /** Fictional catalogue field shown in the type-editor outline and inspectors. */
 export interface CatalogueFieldSummary {
   id: string;
@@ -24,15 +37,16 @@ export interface CatalogueFieldSummary {
   highlighted: boolean;
   storage: 'stored' | 'computed';
   archived?: boolean;
+  unit?: CatalogueMeasurementUnit;
+  reference?: CatalogueReferenceTargets;
 }
 
-interface FieldOptions {
-  cardinality?: 'one' | 'many';
-  required?: boolean;
-  highlighted?: boolean;
-  storage?: 'stored' | 'computed';
-  archived?: boolean;
-}
+type FieldOptions = Partial<
+  Pick<
+    CatalogueFieldSummary,
+    'cardinality' | 'required' | 'highlighted' | 'storage' | 'archived' | 'unit' | 'reference'
+  >
+>;
 
 type FieldIdentity = readonly [
   key: string,
@@ -49,11 +63,11 @@ function field(identity: FieldIdentity, options: FieldOptions = {}): CatalogueFi
     label,
     helpText,
     kind,
+    ...options,
     cardinality: options.cardinality ?? 'one',
     required: options.required ?? false,
     highlighted: options.highlighted ?? false,
     storage: options.storage ?? 'stored',
-    ...(options.archived === true ? { archived: true } : {}),
   };
 }
 
@@ -82,6 +96,9 @@ export const electronicsFields: readonly CatalogueFieldSummary[] = [
     { cardinality: 'many' }
   ),
   field(['powered', 'Powered', 'Whether this item requires electrical power.', 'boolean']),
+  field(['weight', 'Weight', 'Shipping weight of one unit.', 'measurement'], {
+    unit: { symbol: 'kg', dimension: 'mass' },
+  }),
   field(['purchased_on', 'Purchased on', 'Calendar date on the purchase receipt.', 'date']),
   field([
     'registered_at',
@@ -90,12 +107,22 @@ export const electronicsFields: readonly CatalogueFieldSummary[] = [
     'date_time',
   ]),
   field(['product_url', 'Product page', 'Canonical HTTPS page for this model.', 'url']),
-  field([
-    'stored_with',
-    'Stored with',
-    'Another item or location that should stay associated with this one.',
-    'reference',
-  ]),
+  field(['works_with', 'Works with', 'Devices this accessory is compatible with.', 'reference'], {
+    cardinality: 'many',
+    reference: { kinds: ['item'], typeIds: ['type-electronics'] },
+  }),
+  field(
+    [
+      'stored_with',
+      'Stored with',
+      'The cabinet or place this item is kept alongside.',
+      'reference',
+    ],
+    { reference: { kinds: ['item', 'location'], typeIds: ['type-furniture'] } }
+  ),
+  field(['home_location', 'Home location', 'Where this item lives when not in use.', 'reference'], {
+    reference: { kinds: ['location'], typeIds: [] },
+  }),
   field(['unit_price', 'Unit price', 'Replacement price for one unit.', 'decimal']),
   field(['package_count', 'Package count', 'Number of units in the package.', 'integer']),
   field(
@@ -107,5 +134,15 @@ export const electronicsFields: readonly CatalogueFieldSummary[] = [
     ],
     { highlighted: true, storage: 'computed' }
   ),
-  field(['voltage', 'Voltage', 'Nominal input voltage.', 'measurement'], { archived: true }),
+  field(['voltage', 'Voltage', 'Nominal input voltage.', 'measurement'], {
+    archived: true,
+    unit: { symbol: 'V', dimension: 'voltage' },
+  }),
 ];
+
+/** Looks up a fictional Electronics field by key, failing loudly on a typo in a state. */
+export function electronicsField(key: string): CatalogueFieldSummary {
+  const found = electronicsFields.find((candidate) => candidate.key === key);
+  if (found === undefined) throw new Error(`Missing fictional field ${key}`);
+  return found;
+}

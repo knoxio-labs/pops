@@ -16,7 +16,7 @@ export interface CatalogueEnumOption {
   key: string;
   label: string;
   itemCount: number;
-  retired?: boolean;
+  archived?: boolean;
 }
 
 export const catalogueTypes: readonly CatalogueTypeSummary[] = [
@@ -27,7 +27,7 @@ export const catalogueTypes: readonly CatalogueTypeSummary[] = [
     description: 'Powered devices, accessories and components.',
     status: 'draft',
     itemCount: 184,
-    fieldCount: 13,
+    fieldCount: 16,
     capabilities: [],
   },
   {
@@ -69,7 +69,7 @@ export const connectorOptions: readonly CatalogueEnumOption[] = [
   { id: 'option-usb-c', key: 'usb_c', label: 'USB-C', itemCount: 93 },
   { id: 'option-thunderbolt-4', key: 'thunderbolt_4', label: 'Thunderbolt 4', itemCount: 28 },
   { id: 'option-hdmi', key: 'hdmi', label: 'HDMI', itemCount: 61 },
-  { id: 'option-lightning', key: 'lightning', label: 'Lightning', itemCount: 17, retired: true },
+  { id: 'option-lightning', key: 'lightning', label: 'Lightning', itemCount: 17, archived: true },
 ];
 
 export const validationItems = [
