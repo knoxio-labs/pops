@@ -158,6 +158,77 @@
   }
 
   --animate-shrink-bar: shrink-bar var(--shrink-duration, 5000ms) linear forwards;
+
+  /*
+   * SuccessBurst — a one-shot celebration, choreographed in four beats: the
+   * disc pops in, the check draws itself, the rings ripple out, the confetti
+   * flies. The delays live here rather than on the elements so the whole
+   * sequence reads in one place. Every beat fills `both`, so each element
+   * holds its first frame until its delay elapses and its last frame after.
+   */
+  --animate-success-pop: success-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  --animate-success-check: success-check 0.4s ease-out 0.3s both;
+  --animate-success-ring: success-ring 0.9s ease-out 0.25s both;
+  --animate-success-ring-late: success-ring 1.1s ease-out 0.45s both;
+  --animate-success-confetti: success-confetti 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.3s both;
+
+  @keyframes success-pop {
+    0% {
+      scale: 0;
+    }
+    60% {
+      scale: 1.12;
+    }
+    100% {
+      scale: 1;
+    }
+  }
+
+  /*
+   * A left-to-right wipe rather than a stroke-dash draw, so the check can stay
+   * a Lucide icon. A tick is drawn left to right anyway — the short stroke
+   * appears first, then the long one — so the wipe reads as the pen moving.
+   */
+  @keyframes success-check {
+    from {
+      clip-path: inset(0 100% 0 0);
+    }
+    to {
+      clip-path: inset(0 0 0 0);
+    }
+  }
+
+  @keyframes success-ring {
+    from {
+      scale: 0.8;
+      opacity: 0.6;
+    }
+    to {
+      scale: 2;
+      opacity: 0;
+    }
+  }
+
+  /*
+   * No `translate` at 100%: a keyframe that omits a property animates it to
+   * the element's own value, so each piece flies from the centre to wherever
+   * its Tailwind translate utilities put it. One keyframe, any number of
+   * directions, and not an inline style in sight.
+   */
+  @keyframes success-confetti {
+    0% {
+      translate: 0 0;
+      scale: 0;
+      opacity: 1;
+    }
+    60% {
+      opacity: 1;
+    }
+    100% {
+      scale: 1;
+      opacity: 0;
+    }
+  }
 }
 
 /*
