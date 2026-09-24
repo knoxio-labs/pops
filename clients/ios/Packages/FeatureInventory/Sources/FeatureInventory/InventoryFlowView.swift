@@ -15,6 +15,7 @@ public struct InventoryFlowView: View {
     @State private var model: InventoryDashboardViewModel
     @State private var path: [InventoryRoute] = []
     private let store: any InventoryStore
+    private let suggester: InventoryCodeSuggester
     private let entityRouter: any EntityRouter
     private let scanDiameter: CGFloat = 60
 
@@ -25,6 +26,10 @@ public struct InventoryFlowView: View {
     /// everything else there.
     public init(dependencies: AppDependencies, entityRouter: any EntityRouter) {
         store = dependencies.inventory
+        suggester = InventoryCodeSuggester { name, typeKey, stem in
+            try await dependencies.codeSuggestions.suggestCodes(
+                name: name, typeKey: typeKey, stem: stem)
+        }
         self.entityRouter = entityRouter
         _model = State(wrappedValue: InventoryDashboardViewModel(store: dependencies.inventory))
     }
@@ -43,7 +48,7 @@ public struct InventoryFlowView: View {
                     InventoryDestinationView(route: route, store: store, entityRouter: entityRouter)
                 }
         }
-        .inventoryItemFormPresentation(store: store)
+        .inventoryItemFormPresentation(store: store, suggester: suggester)
         .inventorySyncInterruptions(store: store)
         .inventoryAnnouncesStorageFullOnEntry()
     }

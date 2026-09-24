@@ -46,7 +46,10 @@ internal struct ShellCopyTests {
     func namedLiteralsMatch() throws {
         let source = try source()
 
-        for (name, mirrored) in [("retry", ShellCopy.retry), ("degraded", ShellCopy.degraded)] {
+        for (name, mirrored) in [
+            ("retry", ShellCopy.retry), ("degraded", ShellCopy.degraded),
+            ("dismissDegraded", ShellCopy.dismissDegraded),
+        ] {
             let pattern = try Regex("static let \(name)\\s*=\\s*\"([^\"]*)\"")
             guard let match = try pattern.firstMatch(in: source), let literal = match[1].substring
             else {

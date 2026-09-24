@@ -57,6 +57,18 @@ describe('item.changeType', () => {
     expect(h.item('crate')).toMatchObject({ isContainer: 0, access: null });
   });
 
+  it('rejects gaining containment while the item is a grouped quantity (ADR-002 D3)', () => {
+    seedItem(h, { id: 'screws', quantity: 40 });
+    const outcome = h.run(
+      mutation('item.changeType', 'screws', {
+        typeKey: 'storage_box',
+        fields: { Width: { value: 40, unit: 'cm' } },
+      })
+    );
+    expect(outcome).toMatchObject({ status: 'rejected', reason: 'quantity_container_conflict' });
+    expect(h.item('screws')).toMatchObject({ isContainer: 0, quantity: 40 });
+  });
+
   it('reverts a type change by removing its persisted stored values', () => {
     h.run(mutation('item.changeType', 'lamp', { typeKey: 'bulb', fields: { Fitting: 'E27' } }));
     const event = h.eventsFor('lamp')[0];

@@ -40,6 +40,8 @@ extension InventoryCopy {
         case .targetMissing: "That place no longer exists, so nothing changed."
         case .notContainer: "Things cannot go in that, so nothing changed."
         case .hasContents: "It still has things in it, so nothing changed."
+        case .quantityContainerConflict:
+            "A container holds one thing, so a group cannot be one, and nothing changed."
         case .illegalTransition: "It cannot go from where it is now to that, so nothing changed."
         case .typeUnknown: "This build does not know that type yet, so nothing changed."
         case .mediaMissing: "A photo did not finish uploading, so nothing changed."

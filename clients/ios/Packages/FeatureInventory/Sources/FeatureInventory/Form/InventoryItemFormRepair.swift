@@ -27,6 +27,7 @@ extension InventoryItemFormModel {
             draft.name = new.name
             draft.note = new.note ?? ""
             draft.quantity = new.quantity
+            draft.code = InventoryCodeEntry(value: new.code ?? "")
             draft.identifiers = new.externalIds.map(InventoryIdentifierDraft.init)
             seedValues(
                 typeId: landingType(new.typeId, in: catalogue, changes: changes),

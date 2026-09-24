@@ -9,6 +9,7 @@ internal enum InventoryAccessibility {
     /// The item form's name field, whose label and placeholder both read
     /// "Name".
     internal static let itemNameField = "inventory-item-name-field"
+    internal static let useFreeCode = "inventory-item-use-free-code"
 
     /// A protocol-2 field's scalar editor, by the catalogue field's own
     /// stable id. A field's label is user-authored and, for a computed

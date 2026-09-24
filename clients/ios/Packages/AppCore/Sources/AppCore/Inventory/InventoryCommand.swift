@@ -39,11 +39,14 @@ public struct InventoryNewItem: Hashable, Sendable {
     public let fields: [String: InventoryFieldValue]
     public let note: String?
     /// Identifiers someone else assigned (a serial, a model number), carried
-    /// by `item.create`'s `Item` on the wire. Never the inventory code, which
-    /// is set by its own dependent `setItemCode`.
+    /// by `item.create`'s `Item` on the wire. Never the inventory code.
     public let externalIds: [InventoryExternalIdentifier]
     public let quantity: Int
     public let placement: InventoryPlacement
+    /// The inventory code the item is created wearing, sent as `item.create`'s
+    /// own `code` so the item lands with it or not at all: a code another
+    /// item holds refuses the whole create as a `codeCollision` (POPS-4063).
+    public let code: String?
 
     public init(
         id: String,
@@ -53,7 +56,8 @@ public struct InventoryNewItem: Hashable, Sendable {
         note: String? = nil,
         externalIds: [InventoryExternalIdentifier] = [],
         quantity: Int = 1,
-        placement: InventoryPlacement
+        placement: InventoryPlacement,
+        code: String? = nil
     ) {
         self.id = id
         self.name = name
@@ -63,6 +67,14 @@ public struct InventoryNewItem: Hashable, Sendable {
         self.externalIds = externalIds
         self.quantity = quantity
         self.placement = placement
+        self.code = code
+    }
+
+    /// The same item created wearing `code` instead.
+    public func wearing(_ code: String?) -> Self {
+        Self(
+            id: id, name: name, typeKey: typeKey, fields: fields, note: note,
+            externalIds: externalIds, quantity: quantity, placement: placement, code: code)
     }
 }
 
@@ -102,12 +114,14 @@ public struct InventoryNewProtocol2Item: Hashable, Sendable {
     public let externalIds: [InventoryExternalIdentifier]
     public let quantity: Int
     public let placement: InventoryPlacement
+    /// See ``InventoryNewItem/code``.
+    public let code: String?
 
     public init(
         id: String, name: String, catalogueRevision: Int, typeId: String,
         values: [InventoryProtocol2FieldValue] = [], note: String? = nil,
         externalIds: [InventoryExternalIdentifier] = [], quantity: Int = 1,
-        placement: InventoryPlacement
+        placement: InventoryPlacement, code: String? = nil
     ) {
         self.id = id
         self.name = name
@@ -118,6 +132,15 @@ public struct InventoryNewProtocol2Item: Hashable, Sendable {
         self.externalIds = externalIds
         self.quantity = quantity
         self.placement = placement
+        self.code = code
+    }
+
+    /// The same item created wearing `code` instead.
+    public func wearing(_ code: String?) -> Self {
+        Self(
+            id: id, name: name, catalogueRevision: catalogueRevision, typeId: typeId,
+            values: values, note: note, externalIds: externalIds, quantity: quantity,
+            placement: placement, code: code)
     }
 }
 

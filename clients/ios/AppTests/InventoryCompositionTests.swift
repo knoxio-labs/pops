@@ -1,5 +1,6 @@
 import AppCore
 import Auth
+import BFMClient
 import FeatureInventory
 import Foundation
 import InventoryReplica
@@ -33,6 +34,29 @@ internal struct InventoryCompositionTests {
         let bound = composition().dependencies(for: try device())
 
         #expect(bound.inventory is LocalFirstInventoryStore)
+    }
+
+    /// POPS-4107: the form's suggest icon reads `dependencies.codeSuggestions`
+    /// through bfm once a device is paired, rather than staying bound to the
+    /// stub every screen got before this slice.
+    @Test("a paired device's code suggestions go through bfm")
+    func pairedDeviceGetsBFMBackedCodeSuggestions() throws {
+        let bound = composition().dependencies(for: try device())
+
+        #expect(bound.codeSuggestions is BFMInventoryTransport)
+    }
+
+    /// Same reasoning as ``unpairedGetsTheUnboundStore``: a screen reachable
+    /// before pairing has no BFM to ask, so it gets the unbound answer
+    /// rather than one built against a base URL nobody chose yet.
+    @Test("before pairing, code suggestions are unbound")
+    func unpairedGetsTheUnboundCodeSuggester() async {
+        let unpaired = composition().pairingDependencies
+
+        await #expect(throws: InventorySyncTransportError.suggestionsUnavailable) {
+            _ = try await unpaired.codeSuggestions.suggestCodes(
+                name: "Drill", typeKey: nil, stem: nil)
+        }
     }
 
     /// The default opener, as the app runs it: on disk, under Application

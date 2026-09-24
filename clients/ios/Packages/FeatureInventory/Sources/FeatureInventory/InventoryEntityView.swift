@@ -12,6 +12,7 @@ public struct InventoryEntityView: View {
     @State private var path: [InventoryRoute] = []
     private let entity: InventoryEntity
     private let store: any InventoryStore
+    private let suggester: InventoryCodeSuggester
     private let entityRouter: any EntityRouter
 
     /// Reads and writes through `dependencies.inventory`, and nothing else.
@@ -24,6 +25,10 @@ public struct InventoryEntityView: View {
     ) {
         self.entity = entity
         store = dependencies.inventory
+        suggester = InventoryCodeSuggester { name, typeKey, stem in
+            try await dependencies.codeSuggestions.suggestCodes(
+                name: name, typeKey: typeKey, stem: stem)
+        }
         self.entityRouter = entityRouter
     }
 
@@ -34,7 +39,7 @@ public struct InventoryEntityView: View {
                     InventoryDestinationView(route: route, store: store, entityRouter: entityRouter)
                 }
         }
-        .inventoryItemFormPresentation(store: store)
+        .inventoryItemFormPresentation(store: store, suggester: suggester)
         .inventorySyncInterruptions(store: store)
     }
 }

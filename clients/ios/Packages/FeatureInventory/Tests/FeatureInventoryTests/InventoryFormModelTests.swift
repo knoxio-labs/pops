@@ -15,8 +15,8 @@ internal struct InventoryFormModelTests {
             request: request, store: store, suggester: suggester, mintId: { "new-1" })
     }
 
-    @Test("create sends item.create, then a dependent set-code for the same id")
-    func createComposesCreateThenCode() async throws {
+    @Test("create sends one item.create carrying the code, and nothing after it")
+    func createCarriesItsCode() async throws {
         let store = RecordingFormStore(
             FormFixtureSource(
                 locations: [
@@ -29,22 +29,22 @@ internal struct InventoryFormModelTests {
         defer { loading.cancel() }
         #expect(form.draft.placementName == "Garage")
         form.draft.name = "  Drill "
-        form.codeChanged(to: "B412")
+        form.codeChanged(to: " B412 ")
 
         #expect(await form.submit())
 
-        guard store.performed.count == 2, case .createItem(let item) = store.performed[0] else {
-            Issue.record("expected create then set-code, got \(store.performed)")
+        guard store.performed.count == 1, case .createItem(let item) = store.performed[0] else {
+            Issue.record("expected one create, got \(store.performed)")
             return
         }
         #expect(item.id == "new-1")
         #expect(item.name == "Drill")
         #expect(item.placement == .location("loc-1"))
-        #expect(store.performed[1] == .setItemCode(id: "new-1", code: "B412"))
+        #expect(item.code == "B412")
     }
 
-    @Test("create without a code sends no set-code")
-    func blankCodeSendsNoSetCode() async {
+    @Test("create without a code sends a create with no code")
+    func blankCodeSendsNoCode() async {
         let store = RecordingFormStore(FormFixtureSource(catalogue: FormFixture.catalogue))
         let form = model(store)
         let loading = await form.startAndAwaitReady()
@@ -53,28 +53,11 @@ internal struct InventoryFormModelTests {
         form.codeChanged(to: "   ")
 
         #expect(await form.submit())
-        #expect(store.performed.count == 1)
-    }
-
-    @Test("a code already held by another item does not block create, only a missing name does")
-    func heldCodeDoesNotBlockCreate() async {
-        let store = RecordingFormStore(
-            FormFixtureSource(
-                items: [FormFixture.item("item-9", "Kitchen 09", code: "B412")],
-                catalogue: FormFixture.catalogue))
-        let form = model(store)
-        let loading = await form.startAndAwaitReady()
-        defer { loading.cancel() }
-        form.draft.name = "Kettle"
-        form.codeChanged(to: "b412")
-        await form.checkCode()
-
-        #expect(form.draft.code.heldBy == "Kitchen 09")
-        #expect(form.issues == [.codeTaken(heldBy: "Kitchen 09")])
-        #expect(form.canSubmit)
-
-        #expect(await form.submit())
-        #expect(store.performed.contains { if case .createItem = $0 { true } else { false } })
+        guard store.performed.count == 1, case .createItem(let item) = store.performed[0] else {
+            Issue.record("expected one create, got \(store.performed)")
+            return
+        }
+        #expect(item.code == nil)
     }
 
     @Test("a missing name blocks create even with no code collision")
@@ -103,29 +86,6 @@ internal struct InventoryFormModelTests {
 
         #expect(form.draft.code.heldBy == nil)
         #expect(form.draft.code.value == "B412")
-    }
-
-    @Test("a code that fails after its create lands is retried alone")
-    func failedCodeRetriesWithoutRecreating() async {
-        let store = RecordingFormStore(FormFixtureSource(catalogue: FormFixture.catalogue))
-        store.fail("setCode")
-        let form = model(store)
-        let loading = await form.startAndAwaitReady()
-        defer { loading.cancel() }
-        form.draft.name = "Drill"
-        form.codeChanged(to: "B412")
-
-        #expect(await form.submit() == false)
-        #expect(form.failure == .repository(.unavailable))
-        let creates = store.performed.filter { if case .createItem = $0 { true } else { false } }
-        #expect(creates.count == 1)
-
-        _ = await form.submit()
-        let createsAfterRetry = store.performed.filter {
-            if case .createItem = $0 { true } else { false }
-        }
-        #expect(createsAfterRetry.count == 1)
-        #expect(store.performed.last == .setItemCode(id: "new-1", code: "B412"))
     }
 
     @Test("offline shows the offline assist state and asks the server nothing")
@@ -202,6 +162,29 @@ internal struct InventoryFormModelTests {
         #expect(form.failure == nil)
     }
 
+    /// Distinct from ``unboundSuggesterIsUnavailable``: a phone that cannot
+    /// reach bfm at all is offline, not merely told the pillar cannot
+    /// suggest one right now. POPS-4107 conflated the two behind one icon;
+    /// the states themselves (`InventoryCodeAssist`) already kept them
+    /// apart, so this pins the suggester side of that distinction.
+    @Test("the suggest call itself failing to reach bfm shows offline, not unavailable")
+    func suggesterTransportFailureShowsOfflineAssist() async {
+        let store = RecordingFormStore(FormFixtureSource(catalogue: FormFixture.catalogue))
+        let form = model(
+            store,
+            suggester: InventoryCodeSuggester { _, _, _ in
+                throw RepositoryError.transport("no route to bfm")
+            })
+        let loading = await form.startAndAwaitReady()
+        defer { loading.cancel() }
+
+        await form.suggestCode()
+
+        #expect(form.draft.code.assist == .offline)
+        #expect(form.draft.code.value.isEmpty)
+        #expect(form.failure == nil)
+    }
+
     @Test("a create lands in the in-memory store with its code and identifiers")
     func createLandsInTheStore() async throws {
         let store = InMemoryInventoryStore(catalogue: FormFixture.catalogue)
@@ -223,7 +206,7 @@ internal struct InventoryFormModelTests {
     }
 }
 
-private actor Counter {
+internal actor Counter {
     private(set) var value = 0
     func increment() { value += 1 }
 }

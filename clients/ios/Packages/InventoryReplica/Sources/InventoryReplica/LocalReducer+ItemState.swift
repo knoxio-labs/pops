@@ -48,6 +48,11 @@ extension LocalReducer {
     func setItemQuantity(id: String, quantity: Int) throws -> Written {
         guard quantity >= 1 else { throw refusal(.invalid, "a quantity is at least 1") }
         let before = try liveItem(id)
+        guard !before.isContainer || quantity <= 1 else {
+            throw refusal(
+                .quantityContainerConflict,
+                "container \(id) must have quantity exactly 1 (ADR-002 D3)")
+        }
         var after = before
         after.quantity = quantity
         return try update(before, to: after, kind: "quantity_changed") ?? unchanged(before)

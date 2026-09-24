@@ -13,6 +13,7 @@ public struct AppDependencies: Sendable {
     public let merchants: any MerchantDirectoryRepository
     public let accounts: any AccountsRepository
     public let inventory: any InventoryStore
+    public let codeSuggestions: any InventoryCodeSuggestionService
 
     public init(
         transactions: any TransactionsRepository,
@@ -28,7 +29,12 @@ public struct AppDependencies: Sendable {
         // wire a real binding as its own Inventory slice lands; until then
         // this keeps them compiling against the same failure-first
         // behaviour `.unbound` already gives every seam nothing has bound.
-        inventory: any InventoryStore = UnboundInventoryStore()
+        inventory: any InventoryStore = UnboundInventoryStore(),
+        // Defaulted for the same reason `inventory` is, and newer still
+        // (POPS-4107): most callers building an `AppDependencies` by hand
+        // have no BFM to suggest a code from either.
+        codeSuggestions: any InventoryCodeSuggestionService =
+            UnboundInventoryCodeSuggestionService()
     ) {
         self.transactions = transactions
         self.pairing = pairing
@@ -38,6 +44,7 @@ public struct AppDependencies: Sendable {
         self.merchants = merchants
         self.accounts = accounts
         self.inventory = inventory
+        self.codeSuggestions = codeSuggestions
     }
 
     /// What the environment holds until something binds it. Every call fails
@@ -53,7 +60,8 @@ public struct AppDependencies: Sendable {
         purchases: UnboundPurchasesRepository(),
         merchants: UnboundMerchantDirectoryRepository(),
         accounts: UnboundAccountsRepository(),
-        inventory: UnboundInventoryStore()
+        inventory: UnboundInventoryStore(),
+        codeSuggestions: UnboundInventoryCodeSuggestionService()
     )
 }
 

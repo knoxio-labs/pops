@@ -107,4 +107,23 @@ internal struct AppDependenciesTests {
 
         #expect(value?.name == "Drill")
     }
+
+    @Test("an unbound code suggester answers unavailable, the same as a server that cannot suggest")
+    func unboundCodeSuggestionsAreUnavailable() async {
+        await #expect(throws: InventorySyncTransportError.suggestionsUnavailable) {
+            _ = try await AppDependencies.unbound.codeSuggestions.suggestCodes(
+                name: "Drill", typeKey: nil, stem: nil)
+        }
+    }
+
+    @Test("a bound code suggester hands back what it was given")
+    func boundCodeSuggestionsResolve() async throws {
+        let dependencies = AppDependencies.fake(
+            codeSuggestions: FakeInventoryCodeSuggestionService { _, _, _ in ["B1"] })
+
+        let suggestions = try await dependencies.codeSuggestions.suggestCodes(
+            name: "Drill", typeKey: nil, stem: nil)
+
+        #expect(suggestions == ["B1"])
+    }
 }

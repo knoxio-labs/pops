@@ -56,6 +56,11 @@ internal enum CommandVectorStates {
             #expect(item.containment == nil)
             #expect(item.createdAt == clock)
         },
+        "item.create-with-code": { replica throws in
+            let item = try #require(try replica.read(.item(id: lamp)))
+            #expect(item.name == "Lamp")
+            #expect(item.code == "B412")
+        },
     ]
 
     private static let moreItemChecks: [String: Check] = [

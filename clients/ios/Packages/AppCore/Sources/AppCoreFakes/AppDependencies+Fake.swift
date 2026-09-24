@@ -11,12 +11,15 @@ extension AppDependencies {
         purchases: any PurchasesRepository = InMemoryPurchasesRepository(),
         merchants: any MerchantDirectoryRepository = InMemoryMerchantDirectoryRepository(),
         accounts: any AccountsRepository = InMemoryAccountsRepository(),
-        inventory: any InventoryStore = InMemoryInventoryStore()
+        inventory: any InventoryStore = InMemoryInventoryStore(),
+        codeSuggestions: any InventoryCodeSuggestionService =
+            UnboundInventoryCodeSuggestionService()
     ) -> AppDependencies {
         AppDependencies(
             transactions: transactions, pairing: pairing, reachability: reachability,
             receiptCapture: receiptCapture, purchases: purchases, merchants: merchants,
             accounts: accounts,
-            inventory: inventory)
+            inventory: inventory,
+            codeSuggestions: codeSuggestions)
     }
 }

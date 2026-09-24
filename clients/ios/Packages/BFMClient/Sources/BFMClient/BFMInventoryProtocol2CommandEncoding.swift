@@ -14,7 +14,8 @@ extension BFMInventoryCommandEncoding {
         for command: InventoryCommand
     ) throws -> [String: (any Sendable)?]? {
         switch command {
-        case .createProtocol2Item(let item): try ["item": protocol2ItemArgs(item)]
+        case .createProtocol2Item(let item):
+            try createArgs(protocol2ItemArgs(item), code: item.code)
         case .editProtocol2Item(_, _, let values):
             try ["values": protocol2Patches(values)]
         case .changeProtocol2ItemType(_, _, let typeId, let values):
