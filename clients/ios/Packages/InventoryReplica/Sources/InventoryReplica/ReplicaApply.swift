@@ -19,6 +19,7 @@ internal enum ReplicaApply {
     static func snapshot(_ page: InventorySnapshotPage, now: Date, in db: Database) throws {
         try requireCatalogue(page.catalogueRevision, in: db)
         var meta = try SyncMeta.read(db)
+        let catalogueMoved = meta.catalogueRevision != page.catalogueRevision
         if let epoch = meta.epoch, epoch != page.epoch {
             try discardServerState(db)
             meta = meta.startingOver()
@@ -38,6 +39,7 @@ internal enum ReplicaApply {
         }
         try meta.write(db)
         try MutationLogReplay.rebase(resetting: changed, in: db)
+        if catalogueMoved { try LocalComputedValues.refreshForCatalogueChange(in: db) }
         try RepairSettlement.settleResolvedElsewhere(at: now, in: db)
     }
 
@@ -50,6 +52,7 @@ internal enum ReplicaApply {
         guard epoch == page.epoch else {
             throw InventoryReplicaError.epochMismatch(stored: epoch, received: page.epoch)
         }
+        let catalogueMoved = meta.catalogueRevision != page.catalogueRevision
         let changed = try upsert(items: page.items, locations: page.locations, in: db)
         for event in page.events {
             try db.execute(
@@ -62,6 +65,7 @@ internal enum ReplicaApply {
         if !page.hasMore { meta.lastRefreshAt = now }
         try meta.write(db)
         try MutationLogReplay.rebase(resetting: changed, in: db)
+        if catalogueMoved { try LocalComputedValues.refreshForCatalogueChange(in: db) }
         try RepairSettlement.settleResolvedElsewhere(at: now, in: db)
     }
 

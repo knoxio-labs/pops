@@ -2,13 +2,16 @@ import AppCore
 
 /// One computed field's line on Item detail, from the server's evaluation
 /// reconciled with this phone's own changes
-/// (``InventoryComputedValue/display(in:revisionOf:)``). A field with no
-/// evaluation yet, such as one on an item created offline, reads as waiting
-/// for sync rather than blank.
+/// (``InventoryComputedValue/display(in:activeCatalogueRevision:revisionOf:)``).
+/// A field with no evaluation yet, such as one on an item created offline,
+/// reads as waiting for sync rather than blank.
 internal struct InventoryComputedDetailLine {
     internal let item: InventoryItem
     internal let type: InventoryCatalogueType
     internal let source: any InventoryQuerySource
+    /// The catalogue revision the phone reads now; an evaluation against an
+    /// older one reads as out of date.
+    internal let activeCatalogueRevision: Int?
 
     internal func line(for field: InventoryCatalogueField) -> InventoryDetailField {
         let display = display(of: field)
@@ -33,7 +36,9 @@ internal struct InventoryComputedDetailLine {
 
     private func display(of field: InventoryCatalogueField) -> InventoryComputedDisplay {
         if let computed = item.computedValues.first(where: { $0.fieldId == field.id }) {
-            return computed.display(in: item) { source.inventoryItem(id: $0)?.revision }
+            return computed.display(in: item, activeCatalogueRevision: activeCatalogueRevision) {
+                source.inventoryItem(id: $0)?.revision
+            }
         }
         let localOverride = item.fieldValues.first {
             $0.fieldId == field.id && $0.source == .override

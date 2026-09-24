@@ -13,7 +13,7 @@ internal struct InventoryItemFormContext: Equatable, Sendable {
     /// has gone.
     internal let item: InventoryItem?
     /// Each computed field's evaluation reconciled with this phone's own
-    /// changes (``InventoryComputedValue/display(in:revisionOf:)``), by field
+    /// changes (``InventoryComputedValue/display(in:activeCatalogueRevision:revisionOf:)``), by field
     /// ID. Empty for a create: nothing has been evaluated for an item that
     /// does not exist on the server yet.
     internal let computedDisplays: [String: InventoryComputedDisplay]
@@ -61,11 +61,14 @@ internal struct InventoryItemFormContext: Equatable, Sendable {
         of item: InventoryItem?, in source: any InventoryQuerySource
     ) -> [String: InventoryComputedDisplay] {
         guard let item else { return [:] }
+        let activeRevision = source.inventoryProtocol2Catalogue()?.revision.revision
         return Dictionary(
             uniqueKeysWithValues: item.computedValues.map { computed in
                 (
                     computed.fieldId,
-                    computed.display(in: item) { source.inventoryItem(id: $0)?.revision }
+                    computed.display(in: item, activeCatalogueRevision: activeRevision) {
+                        source.inventoryItem(id: $0)?.revision
+                    }
                 )
             })
     }

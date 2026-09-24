@@ -59,17 +59,19 @@ internal enum LocalComputedFixture {
                 ])
         ])
 
-    /// The catalogue with one computed field's expression replaced.
-    static func catalogue(replacing fieldId: String, with expression: InventoryJSON)
-        -> InventoryCatalogueSnapshot
-    {
-        catalogue(replacing: [fieldId: expression])
+    /// The catalogue with one computed field's expression replaced, published
+    /// as `revision` (the fixture's own by default).
+    static func catalogue(
+        replacing fieldId: String, with expression: InventoryJSON, revision: Int = revision
+    ) -> InventoryCatalogueSnapshot {
+        catalogue(replacing: [fieldId: expression], revision: revision)
     }
 
     /// The catalogue with each named computed field's expression replaced,
-    /// stored as `expressionVersion`.
+    /// stored as `expressionVersion` and published as `revision`.
     static func catalogue(
-        replacing expressions: [String: InventoryJSON], expressionVersion: Int = 1
+        replacing expressions: [String: InventoryJSON], expressionVersion: Int = 1,
+        revision: Int = revision
     ) -> InventoryCatalogueSnapshot {
         let types = catalogue.types.map { type in
             InventoryCatalogueType(
@@ -82,7 +84,9 @@ internal enum LocalComputedFixture {
                         allowOverride: candidate.allowOverride)
                 })
         }
-        return InventoryCatalogueSnapshot(revision: catalogue.revision, types: types)
+        return InventoryCatalogueSnapshot(
+            revision: InventoryCatalogueRevision(revision: revision, minimumProtocol: 2),
+            types: types)
     }
 
     static func decimal(_ text: String) throws -> InventoryPrimitiveValue {
@@ -162,7 +166,10 @@ internal enum LocalComputedFixture {
         -> InventoryComputedDisplay?
     {
         guard let item = try replica.read(.item(id: itemId)) else { return nil }
-        return item.computedValues.first { $0.fieldId == fieldId }?.display(in: item) { other in
+        let active = try replica.read(.protocol2Catalogue)?.revision.revision
+        return item.computedValues.first { $0.fieldId == fieldId }?.display(
+            in: item, activeCatalogueRevision: active
+        ) { other in
             (try? replica.read(.item(id: other)))??.revision
         }
     }

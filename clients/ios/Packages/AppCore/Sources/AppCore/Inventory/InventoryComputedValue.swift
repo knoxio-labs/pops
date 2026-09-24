@@ -81,7 +81,8 @@ public enum InventoryComputedDisplay: Hashable, Sendable {
     case unavailable(reason: String, failedFieldId: String)
     /// The evaluation read data that has changed since, and the phone could
     /// not evaluate it again: a local edit to the item, a cleared override,
-    /// or a newer revision of an item it depends on.
+    /// a newer revision of an item it depends on, or a newer catalogue than
+    /// the one it was evaluated against.
     case outOfDate
 }
 
@@ -91,13 +92,16 @@ extension InventoryComputedValue {
     /// - Parameters:
     ///   - item: the item carrying this value, as the phone shows it, local
     ///     changes included. An override it holds for the field wins.
+    ///   - activeCatalogueRevision: the catalogue revision the phone reads
+    ///     now, nil when it holds none. An evaluation against an older one
+    ///     may no longer match the field's definition (ADR-002 D5).
     ///   - revisionOf: the revision the phone holds for another item, nil when
     ///     it holds none. Only a revision newer than the one read makes the
     ///     value out of date; an older one means the evaluation is ahead of the
     ///     phone's copy, not behind it.
-    public func display(in item: InventoryItem, revisionOf: (String) -> Int?)
-        -> InventoryComputedDisplay
-    {
+    public func display(
+        in item: InventoryItem, activeCatalogueRevision: Int?, revisionOf: (String) -> Int?
+    ) -> InventoryComputedDisplay {
         let localOverride = item.fieldValues.first {
             $0.fieldId == fieldId && $0.source == .override
         }
@@ -106,6 +110,9 @@ extension InventoryComputedValue {
         }
         if case .overridden = evaluation { return .outOfDate }
         guard item.revision == evaluatedItemRevision else { return .outOfDate }
+        if let activeCatalogueRevision, catalogueRevision < activeCatalogueRevision {
+            return .outOfDate
+        }
         let otherDependencyChanged = dependencies.contains { dependency in
             guard dependency.itemId != item.id, let held = revisionOf(dependency.itemId) else {
                 return false

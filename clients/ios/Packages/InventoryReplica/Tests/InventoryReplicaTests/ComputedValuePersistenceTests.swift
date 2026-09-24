@@ -29,9 +29,10 @@ internal struct ComputedValuePersistenceTests {
         -> InventoryComputedDisplay?
     {
         let item = try #require(try replica.read(.item(id: id)))
-        return item.computedValues.first?.display(in: item) { other in
-            (try? replica.read(.item(id: other)))??.revision
-        }
+        let active = try replica.read(.protocol2Catalogue)?.revision.revision
+        let revisionOf = { (other: String) in (try? replica.read(.item(id: other)))??.revision }
+        return item.computedValues.first?.display(
+            in: item, activeCatalogueRevision: active, revisionOf: revisionOf)
     }
 
     @Test("a snapshot's evaluations are kept with the revision they were made for")
