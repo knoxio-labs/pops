@@ -72,11 +72,11 @@ internal struct ContentView: View {
     ///
     /// The `TabView` is given its selection rather than left to track one on
     /// its own. Left alone, it dropped back to the first tab whenever a tab's
-    /// root view changed type: on the Receipts tab, "Add a purchase" swaps the
-    /// prompt for the draft form, and the app landed on Transactions instead
-    /// of the form. Nothing above this view was rebuilt when it happened; the
-    /// implicit selection was simply lost. `receipt-manual-entry.yaml` is the
-    /// flow that catches it.
+    /// root view changed type: on the Purchases tab, "Add a purchase" swaps
+    /// the prompt for the hand-entry form, and the app landed on Transactions
+    /// instead of the form. Nothing above this view was rebuilt when it
+    /// happened; the implicit selection was simply lost.
+    /// `purchases-hand-entry.yaml` is the flow that catches it.
     @ViewBuilder private var features: some View {
         switch (surface.available.count, hasInventorySearch) {
         case (0, _):
@@ -180,8 +180,6 @@ internal struct ContentView: View {
                     dependencies: dependencies,
                     captureAvailable: surface.available.contains(.receiptCapture))
             }
-        case ReceiptCaptureTab.feature:
-            ReceiptCaptureView(model: ReceiptCaptureViewModel(dependencies: dependencies))
         case FeatureInventory.feature:
             InventoryFlowView(dependencies: dependencies, entityRouter: composition.entityRouter)
         default:

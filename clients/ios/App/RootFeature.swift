@@ -29,7 +29,6 @@ internal enum RootFeature {
         FeatureTransactions.feature,
         FeatureAccounts.feature,
         FeaturePurchases.feature,
-        ReceiptCaptureTab.feature,
         FeatureInventory.feature,
     ]
 
@@ -51,9 +50,6 @@ internal enum RootFeature {
         FeaturePurchases.feature: FeaturePresentation(
             displayName: FeaturePurchases.displayName,
             symbolName: FeaturePurchases.symbolName),
-        ReceiptCaptureTab.feature: FeaturePresentation(
-            displayName: ReceiptCaptureTab.displayName,
-            symbolName: ReceiptCaptureTab.symbolName),
         FeatureInventory.feature: FeaturePresentation(
             displayName: FeatureInventory.displayName,
             symbolName: FeatureInventory.symbolName),

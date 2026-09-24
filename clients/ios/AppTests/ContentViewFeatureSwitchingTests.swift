@@ -39,14 +39,6 @@ internal enum ContentViewFixture {
             purchasesCaptureObserver: purchasesCaptureObserver
         )
     }
-
-    /// The receipt-capture screen as `ContentView` builds it for an unpaired
-    /// composition. What it draws does not depend on the repository behind it —
-    /// nothing is submitted until a receipt has been photographed — so the
-    /// unbound dependencies are the honest ones to render against here.
-    internal static func receiptCapture() -> ReceiptCaptureView {
-        ReceiptCaptureView(model: ReceiptCaptureViewModel(dependencies: .unbound))
-    }
 }
 
 /// The bug this covers only exists when the BFM names more than one feature,
@@ -57,7 +49,7 @@ internal enum ContentViewFixture {
 /// Lives here rather than in a package because `ContentView` is under `App/`,
 /// which is in no package — see `AppTests/README.md`.
 ///
-/// ## Why this renders `.receiptCapture` and never `.transactions`
+/// ## Why the single-feature path is not rendered here
 ///
 /// `TransactionsFlowView` is the one screen this suite must not construct.
 /// Rendering it through `ImageRenderer` — even indirectly, through
@@ -66,12 +58,15 @@ internal enum ContentViewFixture {
 /// action to`, from the list's `.task` starting real async work outside a
 /// SwiftUI transaction `ImageRenderer` never opens. That is the same
 /// limitation `TransactionDetailRenderingTests` documents and works around by
-/// rendering `TransactionDetailCard` rather than the screen it sits in;
-/// `ReceiptCaptureView` is this suite's equivalent safe substitute. It carries
-/// an observable model, but no `.task` and nothing that starts async work to
-/// draw itself — its opening state is a camera prompt — so it rasterises the
-/// way `PairingView` does, and what it proves about `ContentView`'s
-/// single-feature path generalises.
+/// rendering `TransactionDetailCard` rather than the screen it sits in.
+/// `ContentView`'s single-feature path had an equivalent safe substitute —
+/// `ReceiptCaptureView`, a screen with an observable model but no `.task` —
+/// until POPS-4294 removed it; every screen `RootFeature.renderable` maps to
+/// today starts with a `.task` of its own, so nothing left in this build can
+/// stand in for it, and the pixel comparison that regression once protected
+/// lives on in `ContentViewTabSwitcherTests/oneFeatureBuildsNoTabBar`, which
+/// proves the same "no tab bar for a single feature" claim by mounting rather
+/// than rasterising.
 ///
 /// ## Why two-or-more features are not rendered here
 ///
@@ -109,44 +104,6 @@ internal struct ContentViewFeatureSwitchingTests {
         let dark = try #require(Self.render(contentView(available: []), in: .dark))
 
         #expect(light != dark, "the explanation renders identically in both colour schemes")
-    }
-
-    /// What this can and cannot see, since half of it changed under it.
-    ///
-    /// `ReceiptCaptureView`'s content now sits inside a `ScrollView`, and
-    /// `ImageRenderer` lays a scroll view out without rasterising anything in
-    /// it — measured, and recorded in `ReceiptCaptureRenderingTests`. So the
-    /// pixels compared here are the chrome *around* the feature's screen, not
-    /// its interior, and that is precisely the comparison this test is about:
-    /// a tab bar, a banner or padding appearing for a single feature all show
-    /// up, and a tab bar in particular makes `ImageRenderer` produce nothing at
-    /// all, failing the `#require` above the comparison.
-    ///
-    /// The interior is covered where it can be seen — the feature's own suite —
-    /// and the no-tab-bar claim is made from the other end, mounted, in
-    /// ``ContentViewTabSwitcherTests``.
-    @Test("exactly one feature fills the screen, matching the shipped single-feature look")
-    func oneFeatureMatchesTheBareScreen() throws {
-        let throughContentView = try #require(
-            Self.render(contentView(available: [.receiptCapture])))
-        let bareScreen = try #require(Self.render(ContentViewFixture.receiptCapture()))
-
-        #expect(
-            throughContentView == bareScreen,
-            Comment(
-                rawValue: "a single available feature is drawing something other than its own "
-                    + "screen outright — this is the regression the ticket calls out: a tab bar "
-                    + "appearing for one feature"
-            )
-        )
-    }
-
-    @Test("zero features does not look like one feature")
-    func zeroFeaturesDoesNotLookLikeOneFeature() throws {
-        let zero = try #require(Self.render(contentView(available: [])))
-        let one = try #require(Self.render(contentView(available: [.receiptCapture])))
-
-        #expect(zero != one)
     }
 }
 
@@ -375,9 +332,14 @@ internal struct ContentViewFeatureSwitchingWiringTests {
         #expect(Self.contentViewSource.contains("screen(for: feature)"))
     }
 
-    @Test("Purchases uses its flow while Receipts keeps the capture screen")
-    func purchasesAndReceiptsKeepTheirOwnRoots() {
+    @Test("Purchases threads capture availability through its own flow")
+    func purchasesThreadsCaptureAvailability() {
         #expect(Self.contentViewSource.contains("captureAvailable: surface.available.contains"))
-        #expect(Self.contentViewSource.contains("ReceiptCaptureView(model:"))
+    }
+
+    @Test("the retired Receipts tab has no case of its own left to route through")
+    func receiptsTabHasNoScreenCase() {
+        #expect(!Self.contentViewSource.contains("ReceiptCaptureTab.feature"))
+        #expect(!Self.contentViewSource.contains("ReceiptCaptureView(model:"))
     }
 }
