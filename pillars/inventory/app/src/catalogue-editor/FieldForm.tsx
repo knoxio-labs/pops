@@ -96,7 +96,7 @@ function createOperation(value: FieldFormContextValue, typeId: string): Catalogu
           referenceTypeIds: value.kind === 'reference' ? [...value.referenceTypeIds] : [],
         }),
     ...(value.storage === 'computed'
-      ? { expressionVersion: 1, expression, allowOverride: value.allowOverride }
+      ? { expressionVersion: 2, expression, allowOverride: value.allowOverride }
       : { expressionVersion: null, expression: null, allowOverride: false }),
   };
 }

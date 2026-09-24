@@ -14,6 +14,7 @@ import type { PersistedItemTypeField } from './catalogue-types.js';
 import type {
   ComputedFieldPreview,
   ComputedFieldPreviewItem,
+  ComputedFieldPreviewMissing,
   ComputedFieldPreviewResult,
   ComputedFieldPreviewSubject,
 } from './computed-field-preview-types.js';
@@ -84,6 +85,17 @@ function orderedItemIds(
   return [...new Set([rootItemId, ...traversed, ...dependencies.map((entry) => entry.itemId)])];
 }
 
+function previewMissing(
+  rootItemId: string,
+  evaluation: Extract<ExpressionEvaluation, { readonly state: 'unavailable' }>
+): ComputedFieldPreviewMissing[] {
+  if (evaluation.missingInputs.length > 0)
+    return evaluation.missingInputs.map(({ fieldId, itemId }) => ({ fieldId, itemId }));
+  return [
+    { fieldId: evaluation.fieldId, itemId: evaluation.traversedItemIds.at(-1) ?? rootItemId },
+  ];
+}
+
 function previewResult(
   rootItemId: string,
   evaluation: ExpressionEvaluation
@@ -92,12 +104,7 @@ function previewResult(
     return {
       state: 'unavailable',
       reason: evaluation.reason,
-      missing: [
-        {
-          fieldId: evaluation.fieldId,
-          itemId: evaluation.traversedItemIds.at(-1) ?? rootItemId,
-        },
-      ],
+      missing: previewMissing(rootItemId, evaluation),
       dependencies: evaluation.dependencies,
       traversedItemIds: evaluation.traversedItemIds,
     };

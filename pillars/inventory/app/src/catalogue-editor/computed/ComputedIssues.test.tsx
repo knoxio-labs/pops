@@ -46,6 +46,29 @@ describe('server issues on nodes', () => {
     expect(alert).toHaveTextContent('Expected decimal, got measurement.');
   });
 
+  it('names a product whose units cannot be derived', () => {
+    renderComputedField({
+      volume: PRODUCT,
+      environment: {
+        liveIssues: [
+          {
+            definitionId: 'volume',
+            path: 'expression',
+            code: 'expression_unit_unsupported',
+            message:
+              'expression: cannot derive a unit from fl oz and cm; write units as symbols joined by · with superscript powers',
+          },
+        ],
+      },
+    });
+
+    fireEvent.click(outlineButton('expression'));
+
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent('These units do not combine');
+    expect(alert).toHaveTextContent('Cannot derive a unit from fl oz and cm');
+  });
+
   it('ignores issues that belong to another definition', () => {
     renderComputedField({
       volume: PRODUCT,
@@ -98,7 +121,14 @@ describe('publish route', () => {
     classification: 'migration_required',
     affectedIds: ['volume'],
     affectedItems: 4,
-    changes: [{ classification: 'migration_required', definitionId: 'volume', code: 'override' }],
+    discardedOverrides: [{ fieldId: 'volume', items: 4 }],
+    changes: [
+      {
+        classification: 'migration_required',
+        definitionId: 'volume',
+        code: 'computed_overrides_in_use',
+      },
+    ],
   };
 
   it('says the change publishes through MCP when it needs a migration', () => {

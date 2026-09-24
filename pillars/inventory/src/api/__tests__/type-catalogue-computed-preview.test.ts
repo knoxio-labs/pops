@@ -10,6 +10,7 @@ import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { activatePersistedCatalogueProtocol } from '../../catalogue/__tests__/protocol-rollout-fixture.js';
 import {
   createCatalogueDraft,
   patchCatalogueDraft,
@@ -17,7 +18,7 @@ import {
 } from '../../catalogue/authoring.js';
 import { openInventoryDb, type OpenedInventoryDb } from '../../db/index.js';
 import { createInventoryApiApp } from '../app.js';
-import { granting, PROTOCOL, wireMutation, type WireMutation } from './sync-harness.js';
+import { granting, PROTOCOL_2, wireMutation, type WireMutation } from './sync-harness.js';
 import { createTestTransport, type BoundAgent } from './test-http.js';
 
 import type { CatalogueDescriptor } from '../../catalogue/authoring-types.js';
@@ -109,6 +110,7 @@ function publish(db: CommandDb): Ids {
       allowOverride: true,
     },
   ]).draft;
+  activatePersistedCatalogueProtocol(db);
   publishCatalogueDraft(
     db,
     created.revision.revision,
@@ -130,7 +132,7 @@ function publish(db: CommandDb): Ids {
 async function apply(mutation: WireMutation): Promise<void> {
   const response = await api
     .post('/sync/mutations')
-    .set(PROTOCOL)
+    .set(PROTOCOL_2)
     .send({ mutations: [mutation] });
   expect(response.body.outcomes[0]).toMatchObject({ status: 'applied' });
 }
@@ -143,7 +145,7 @@ interface Fixture {
 }
 
 async function setup(
-  options: { weight?: number; count?: number; override?: number } = {}
+  options: { weight?: number; count?: number | null; override?: number } = {}
 ): Promise<Fixture> {
   const ids = publish(inventoryDb.db);
   const partId = randomUUID();
@@ -168,7 +170,9 @@ async function setup(
           typeId: ids.kitTypeId,
           values: [
             { fieldId: ids.partFieldId, values: [{ targetKind: 'item', targetId: partId }] },
-            { fieldId: ids.countFieldId, values: [options.count ?? 4] },
+            ...(options.count === null
+              ? []
+              : [{ fieldId: ids.countFieldId, values: [options.count ?? 4] }]),
           ],
         },
       },
@@ -316,6 +320,30 @@ describe('computed-field preview', () => {
       'Cabinet kit',
       'Hinge',
     ]);
+  });
+
+  it('names every input a coalesce lacked, not only the last one it tried', async () => {
+    const fixture = await setup({ count: null });
+
+    const response = await preview(fixture, {
+      operations: totalExpression(fixture, {
+        op: 'coalesce',
+        values: [
+          { op: 'read', path: [fixture.ids.partFieldId], fieldId: fixture.ids.weightFieldId },
+          { op: 'read', path: [], fieldId: fixture.ids.countFieldId },
+        ],
+      }),
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.result).toMatchObject({
+      state: 'unavailable',
+      reason: 'missing_dependency',
+      missing: [
+        { fieldId: fixture.ids.weightFieldId, itemId: fixture.partId },
+        { fieldId: fixture.ids.countFieldId, itemId: fixture.kitId },
+      ],
+    });
   });
 
   it('reports a reference to a deleted item', async () => {

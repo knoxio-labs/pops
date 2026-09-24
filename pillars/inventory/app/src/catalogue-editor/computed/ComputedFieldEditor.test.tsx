@@ -61,6 +61,7 @@ describe('building each node kind', () => {
       left: read('width'),
       right: read('height'),
     });
+    expect(onOperation).toHaveBeenLastCalledWith(expect.objectContaining({ expressionVersion: 2 }));
   });
 
   it('adds a fixed whole number typed into the literal inspector', () => {

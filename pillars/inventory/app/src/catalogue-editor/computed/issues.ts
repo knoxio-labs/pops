@@ -30,6 +30,7 @@ const TITLES: Record<string, string> = {
   expression_dependencies_exceeded: 'The expression reads too many fields',
   expression_arity_invalid: 'An operation is missing inputs',
   computed_many_forbidden: 'A computed field holds one value',
+  expression_unit_unsupported: 'These units do not combine',
 };
 
 function sentence(message: string): string {
