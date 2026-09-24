@@ -56,14 +56,9 @@ internal struct ContentView: View {
         } else {
             dependencies = composition.pairingDependencies
         }
-        let providers = composition.searchProviders(for: dependencies)
         _searchModel = State(
-            wrappedValue: AppSearchModel(
-                tabOrder: SearchPillar.allCases.filter { surface.available.contains($0.feature) },
-                inventoryProvider: providers.inventory,
-                purchasesProvider: providers.purchases,
-                downloadInventory: providers.inventory.download,
-                inventoryTypeNames: providers.inventory.currentTypeNames))
+            wrappedValue: composition.searchModel(
+                for: dependencies, available: Set(surface.available)))
     }
 
     internal var body: some View {
