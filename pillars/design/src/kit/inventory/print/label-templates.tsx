@@ -5,29 +5,22 @@
  *
  * Everything is solid ink on white: hierarchy is size and weight, never grey
  * or colour, so a monochrome laser prints exactly what the preview shows.
+ * A box label carries no place: after the move every place on it is wrong.
  */
-import { MapPin } from 'lucide-react';
-
 import { QrCode } from '@pops/ui';
 
 import { fitCodePt } from './code-fit';
 import { itemUri } from './print-subject';
+import { LABEL_GAP_MM, textWidthMm } from './sheet-layouts';
 
 import type { ReactNode } from 'react';
 
 import type { LabelTemplateId, PrintSubject } from './print-subject';
 import type { SheetLayout } from './sheet-layouts';
 
-const GAP_MM = 1.5;
-
 interface LabelProps {
   subject: PrintSubject;
   layout: SheetLayout;
-}
-
-function textWidthMm(layout: SheetLayout): number {
-  const { paddingMm, qrMm } = layout.scale;
-  return layout.labelWidthMm - paddingMm * 2 - qrMm - GAP_MM;
 }
 
 function LabelQr({ subject, layout }: LabelProps) {
@@ -47,7 +40,7 @@ function LabelFrame({ subject, layout, children }: LabelProps & { children: Reac
   return (
     <div
       className="flex h-full w-full items-center overflow-hidden"
-      style={{ padding: `${layout.scale.paddingMm}mm`, gap: `${GAP_MM}mm` }}
+      style={{ padding: `${layout.scale.paddingMm}mm`, gap: `${LABEL_GAP_MM}mm` }}
     >
       <LabelQr subject={subject} layout={layout} />
       <div className="flex min-w-0 flex-1 flex-col justify-center" style={{ gap: '1mm' }}>
@@ -57,7 +50,7 @@ function LabelFrame({ subject, layout, children }: LabelProps & { children: Reac
   );
 }
 
-function LabelName({ name, layout, lines }: { name: string; layout: SheetLayout; lines: number }) {
+function LabelName({ name, layout }: { name: string; layout: SheetLayout }) {
   return (
     <p
       className="font-semibold leading-tight break-words"
@@ -65,7 +58,7 @@ function LabelName({ name, layout, lines }: { name: string; layout: SheetLayout;
         fontSize: `${layout.scale.namePt}pt`,
         display: '-webkit-box',
         WebkitBoxOrient: 'vertical',
-        WebkitLineClamp: lines,
+        WebkitLineClamp: layout.scale.nameLines,
         overflow: 'hidden',
       }}
     >
@@ -88,46 +81,50 @@ function LabelCode({ code, layout }: { code: string; layout: SheetLayout }) {
   );
 }
 
-function LabelPlace({ place, layout }: { place: string; layout: SheetLayout }) {
+/**
+ * Where the code goes on an item that has none yet. Only the preview shows
+ * it: the page will not print until every item has a code.
+ */
+function MissingCode({ layout }: { layout: SheetLayout }) {
   return (
     <p
-      className="flex min-w-0 items-center gap-[0.8mm] font-medium"
-      style={{ fontSize: `${layout.scale.placePt}pt` }}
+      className="rounded-[1mm] border border-dashed border-print-rule-strong px-[1mm] py-[0.5mm] font-medium text-print-rule-strong"
+      style={{ fontSize: `${layout.scale.codeMinPt}pt` }}
+      data-missing-code
     >
-      <MapPin className="shrink-0" style={{ width: '1em', height: '1em' }} aria-hidden />
-      <span className="truncate">{place}</span>
+      Needs a code
     </p>
   );
 }
 
-/** QR, name, code and place: the label a box carries. */
+function CodeOrMissing({ subject, layout }: LabelProps) {
+  return subject.code ? (
+    <LabelCode code={subject.code} layout={layout} />
+  ) : (
+    <MissingCode layout={layout} />
+  );
+}
+
+/** QR, name and code: the label a box carries. */
 export function ContainerLabel({ subject, layout }: LabelProps) {
   return (
     <LabelFrame subject={subject} layout={layout}>
-      <LabelName name={subject.name} layout={layout} lines={layout.scale.nameLines} />
-      {subject.code ? <LabelCode code={subject.code} layout={layout} /> : null}
-      {subject.place ? <LabelPlace place={subject.place} layout={layout} /> : null}
+      <LabelName name={subject.name} layout={layout} />
+      <CodeOrMissing subject={subject} layout={layout} />
     </LabelFrame>
   );
 }
 
-/**
- * QR and code: the label a thing carries. An item with no code prints its
- * name in the code's place, so the label is still readable by a person.
- */
+/** QR and code: the label a thing carries. */
 export function ItemLabel({ subject, layout }: LabelProps) {
   return (
     <LabelFrame subject={subject} layout={layout}>
-      {subject.code ? (
-        <LabelCode code={subject.code} layout={layout} />
-      ) : (
-        <LabelName name={subject.name} layout={layout} lines={layout.scale.nameLines} />
-      )}
+      <CodeOrMissing subject={subject} layout={layout} />
     </LabelFrame>
   );
 }
 
-/** One label in the chosen template. */
+/** One label in the given template. */
 export function PrintLabel({
   template,
   subject,

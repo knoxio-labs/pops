@@ -36,14 +36,14 @@ export interface PrintSelectionProps {
 }
 
 function MissingCodes({ job }: { job: PrintJob }) {
-  const uncoded = job.subjects.filter((subject) => subject.code === null);
+  const { uncoded } = job;
   const suggested = uncoded.filter((subject) => subject.suggestedCode !== null);
   if (uncoded.length === 0) return null;
   return (
-    <div className="flex items-center gap-3 rounded-md bg-muted/60 px-3 py-2 text-xs">
+    <div className="flex items-center gap-3 rounded-md bg-muted/60 px-3 py-2 text-xs" role="status">
       <p className="min-w-0 flex-1">
-        {uncoded.length === 1 ? '1 item has' : `${uncoded.length} items have`} no code. The label
-        shows the name instead.
+        {uncoded.length === 1 ? '1 item needs' : `${uncoded.length} items need`} a code before
+        printing.
       </p>
       {suggested.length > 0 ? (
         <Button

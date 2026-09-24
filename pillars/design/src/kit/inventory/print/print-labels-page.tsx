@@ -30,6 +30,8 @@ export interface PrintLabelsPageProps {
   editSeed?: PrintEditSeed;
   addOpen?: boolean;
   addSearch?: string;
+  /** Opens with the custom sheet form showing, for review. */
+  customOpen?: boolean;
   monochrome?: boolean;
 }
 
@@ -77,7 +79,7 @@ export function PrintLabelsPage(props: PrintLabelsPageProps) {
   return (
     <div className="space-y-4">
       <LabelPrintStyles />
-      <Header count={job.labels.length} onPrint={job.print} />
+      <Header count={job.labels.length} onPrint={job.block ? undefined : job.print} />
       <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[20rem_minmax(0,1fr)]">
         <aside className="flex min-w-0 flex-col lg:sticky lg:top-24 lg:max-h-[calc(100vh-8rem)] lg:self-start">
           <PrintSelection
@@ -90,7 +92,7 @@ export function PrintLabelsPage(props: PrintLabelsPageProps) {
           />
         </aside>
         <section className="flex min-w-0 flex-col gap-4" aria-label="Labels">
-          <PrintOptions job={job} />
+          <PrintOptions job={job} customOpen={props.customOpen} />
           <PrintPreview job={job} monochrome={props.monochrome} />
         </section>
       </div>

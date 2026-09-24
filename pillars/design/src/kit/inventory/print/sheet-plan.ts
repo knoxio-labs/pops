@@ -4,7 +4,7 @@
  */
 import { labelsPerSheet } from './sheet-layouts';
 
-import type { SheetLayout } from './sheet-layouts';
+import type { SheetGeometry } from './sheet-layouts';
 
 /** One label position on one sheet. */
 export type SheetSlot =
@@ -18,7 +18,7 @@ export interface SheetPage {
   slots: SheetSlot[];
 }
 
-function assertPlan(labelCount: number, startAt: number, layout: SheetLayout): void {
+function assertPlan(labelCount: number, startAt: number, layout: SheetGeometry): void {
   if (!Number.isInteger(labelCount) || labelCount < 0) {
     throw new RangeError(`label count must be a whole number, got ${labelCount}`);
   }
@@ -33,7 +33,7 @@ function assertPlan(labelCount: number, startAt: number, layout: SheetLayout): v
  * on, so `startAt - 1` labels of that sheet are already peeled off. A job
  * with nothing in it needs no sheets.
  */
-export function pageCount(labelCount: number, startAt: number, layout: SheetLayout): number {
+export function pageCount(labelCount: number, startAt: number, layout: SheetGeometry): number {
   assertPlan(labelCount, startAt, layout);
   if (labelCount === 0) return 0;
   return Math.ceil((startAt - 1 + labelCount) / labelsPerSheet(layout));
@@ -44,7 +44,11 @@ export function pageCount(labelCount: number, startAt: number, layout: SheetLayo
  * first sheet, the job's labels in order, and the blank labels left on the
  * last sheet.
  */
-export function planSheets(labelCount: number, startAt: number, layout: SheetLayout): SheetPage[] {
+export function planSheets(
+  labelCount: number,
+  startAt: number,
+  layout: SheetGeometry
+): SheetPage[] {
   const pages = pageCount(labelCount, startAt, layout);
   const perSheet = labelsPerSheet(layout);
   const skipped = startAt - 1;
@@ -63,18 +67,21 @@ export function planSheets(labelCount: number, startAt: number, layout: SheetLay
  * The label the next job should start on if this one printed: the slot after
  * its last label, or 1 when it finished a sheet exactly.
  */
-export function nextStartAt(labelCount: number, startAt: number, layout: SheetLayout): number {
+export function nextStartAt(labelCount: number, startAt: number, layout: SheetGeometry): number {
   assertPlan(labelCount, startAt, layout);
   return ((startAt - 1 + labelCount) % labelsPerSheet(layout)) + 1;
 }
 
 /**
- * The job's labels in print order: each subject repeated `copies` times,
- * copies side by side so a box's pair peels off together.
+ * The job's labels in print order: each subject repeated as many times as
+ * `copiesOf` says, copies side by side so a box's pair peels off together.
  */
-export function expandCopies<T>(subjects: readonly T[], copies: number): T[] {
-  if (!Number.isInteger(copies) || copies < 1) {
-    throw new RangeError(`copies must be a whole number from 1, got ${copies}`);
-  }
-  return subjects.flatMap((subject) => Array.from({ length: copies }, () => subject));
+export function expandCopies<T>(subjects: readonly T[], copiesOf: (subject: T) => number): T[] {
+  return subjects.flatMap((subject) => {
+    const copies = copiesOf(subject);
+    if (!Number.isInteger(copies) || copies < 1) {
+      throw new RangeError(`copies must be a whole number from 1, got ${copies}`);
+    }
+    return Array.from({ length: copies }, () => subject);
+  });
 }

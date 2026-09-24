@@ -1,91 +1,54 @@
 /**
  * The job's choices, side by side above the preview: template, sheet and
- * copies, and apart from them the label the first sheet starts on. Nothing here is a
- * designer: a template fixes its layout, and the sheet sizes are the three
- * adhesive A4 sheets the page knows the die-cuts of.
+ * copies, and apart from them the label the first sheet starts on. Nothing
+ * here is a designer: a template fixes its layout, the presets are the
+ * standard A4 sheets whose die-cuts the page knows, and a sheet they miss is
+ * measured once as the custom sheet.
  */
-import { Package, Tag } from 'lucide-react';
+import { NumberInput, Tabs, TabsList, TabsTrigger } from '@pops/ui';
 
-import { NumberInput, Select, Tabs, TabsList, TabsTrigger } from '@pops/ui';
+import { OptionField } from './print-option-field';
+import { SheetChoice } from './print-sheet-choice';
+import { labelsPerSheet, MIN_QR_MM } from './sheet-layouts';
 
-import { describeLayout, labelsPerSheet, SHEET_LAYOUTS } from './sheet-layouts';
-
-import type { ReactNode } from 'react';
-
-import type { LabelTemplateId } from './print-subject';
-import type { SheetLayoutId } from './sheet-layouts';
+import type { LabelTemplateChoice, PrintSubject } from './print-subject';
 import type { PrintJob } from './use-print-job';
 
 const COPY_CHOICES = ['1', '2', '3', '4'] as const;
 
-const LAYOUT_OPTIONS = SHEET_LAYOUTS.map((layout) => ({
-  value: layout.id,
-  label: describeLayout(layout),
-}));
-
-function isLayoutId(value: string): value is SheetLayoutId {
-  return SHEET_LAYOUTS.some((layout) => layout.id === value);
-}
-
-function isTemplateId(value: string): value is LabelTemplateId {
-  return value === 'container' || value === 'item';
-}
-
-function Option({
-  label,
-  htmlFor,
-  children,
-}: {
-  label: string;
-  htmlFor?: string;
-  children: ReactNode;
-}) {
-  const caption = 'text-xs font-medium text-muted-foreground';
-  return (
-    <div className="flex flex-col gap-1.5">
-      {htmlFor ? (
-        <label htmlFor={htmlFor} className={caption}>
-          {label}
-        </label>
-      ) : (
-        <span className={caption} aria-hidden>
-          {label}
-        </span>
-      )}
-      {children}
-    </div>
-  );
+function isTemplateChoice(value: string): value is LabelTemplateChoice {
+  return value === 'auto' || value === 'container' || value === 'item';
 }
 
 function TemplateChoice({ job }: { job: PrintJob }) {
+  if (!job.fits.item) return null;
   return (
-    <Option label="Template">
+    <OptionField label="Template">
       <Tabs
         value={job.template}
         onValueChange={(value) => {
-          if (isTemplateId(value)) job.setTemplate(value);
+          if (isTemplateChoice(value)) job.setTemplate(value);
         }}
       >
         <TabsList aria-label="Template">
-          <TabsTrigger value="container">
-            <Package aria-hidden />
-            Container
-          </TabsTrigger>
-          <TabsTrigger value="item">
-            <Tag aria-hidden />
-            Item
-          </TabsTrigger>
+          <TabsTrigger value="auto">Auto</TabsTrigger>
+          {job.fits.container ? <TabsTrigger value="container">Box</TabsTrigger> : null}
+          <TabsTrigger value="item">Item</TabsTrigger>
         </TabsList>
       </Tabs>
-    </Option>
+    </OptionField>
   );
 }
 
-function CopiesChoice({ job }: { job: PrintJob }) {
+function CopiesChoice({ job, kind }: { job: PrintJob; kind: PrintSubject['kind'] }) {
+  const label = kind === 'container' ? 'Copies per box' : 'Copies per item';
   return (
-    <Option label="Copies">
-      <Tabs value={String(job.copies)} onValueChange={(value) => job.setCopies(Number(value))}>
-        <TabsList aria-label="Copies of each label">
+    <OptionField label={label}>
+      <Tabs
+        value={String(job.copies[kind])}
+        onValueChange={(value) => job.setCopies(kind, Number(value))}
+      >
+        <TabsList aria-label={label}>
           {COPY_CHOICES.map((choice) => (
             <TabsTrigger key={choice} value={choice}>
               {choice}
@@ -93,8 +56,31 @@ function CopiesChoice({ job }: { job: PrintJob }) {
           ))}
         </TabsList>
       </Tabs>
-    </Option>
+    </OptionField>
   );
+}
+
+/**
+ * Why a template is missing from this sheet, or why the sheet prints
+ * nothing: a QR smaller than its minimum is a label no phone reads.
+ */
+export function SheetFitNotice({ job }: { job: PrintJob }) {
+  if (!job.fits.item) {
+    return (
+      <p className="rounded-md border border-destructive/40 px-3 py-2 text-sm" role="alert">
+        These labels are too small for a QR code a phone can read, which needs a {MIN_QR_MM} mm
+        square beside its code. Choose a larger sheet.
+      </p>
+    );
+  }
+  if (!job.fits.container) {
+    return (
+      <p className="rounded-md bg-muted/60 px-3 py-2 text-sm" role="status">
+        These labels are too narrow for the box label, so boxes get the item label: QR and code.
+      </p>
+    );
+  }
+  return null;
 }
 
 /**
@@ -121,23 +107,19 @@ export function StartAtControl({ job }: { job: PrintJob }) {
   );
 }
 
-/** Template, sheet and copies, in one wrapping row. */
-export function PrintOptions({ job }: { job: PrintJob }) {
+/** Template, sheet and copies, in one wrapping row, and what the sheet cannot fit. */
+export function PrintOptions({ job, customOpen }: { job: PrintJob; customOpen?: boolean }) {
+  const hasBoxes = job.subjects.some((subject) => subject.kind === 'container');
+  const hasItems = job.subjects.some((subject) => subject.kind === 'item');
   return (
-    <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
-      <TemplateChoice job={job} />
-      <Option label="Sheet" htmlFor="print-sheet">
-        <Select
-          id="print-sheet"
-          value={job.layout.id}
-          options={LAYOUT_OPTIONS}
-          onChange={(event) => {
-            if (isLayoutId(event.target.value)) job.setLayout(event.target.value);
-          }}
-          containerClassName="w-60"
-        />
-      </Option>
-      <CopiesChoice job={job} />
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
+        <SheetChoice job={job} customOpen={customOpen} />
+        <TemplateChoice job={job} />
+        {hasBoxes ? <CopiesChoice job={job} kind="container" /> : null}
+        {hasItems ? <CopiesChoice job={job} kind="item" /> : null}
+      </div>
+      <SheetFitNotice job={job} />
     </div>
   );
 }

@@ -100,7 +100,6 @@ export function PrintPreview({ job, monochrome = false }: { job: PrintJob; monoc
             pages={job.pages}
             labels={job.labels}
             layout={job.layout}
-            template={job.template}
             onStartAt={job.setStartAt}
             monochrome={monochrome}
           />

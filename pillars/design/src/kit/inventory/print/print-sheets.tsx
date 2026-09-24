@@ -11,16 +11,15 @@ import { PrintLabel } from './label-templates';
 import { PRINT_ROOT_CLASS, PRINT_SHEET_CLASS } from './print-styles';
 import { A4_HEIGHT_MM, A4_WIDTH_MM, slotOrigin } from './sheet-layouts';
 
-import type { LabelTemplateId, PrintSubject } from './print-subject';
 import type { SheetLayout } from './sheet-layouts';
 import type { SheetPage, SheetSlot } from './sheet-plan';
+import type { PrintLabelEntry } from './use-print-job';
 
 /** Props for {@link PrintSheets}. */
 export interface PrintSheetsProps {
   pages: SheetPage[];
-  labels: PrintSubject[];
+  labels: PrintLabelEntry[];
   layout: SheetLayout;
-  template: LabelTemplateId;
   /** Called with a 1-based label number when a first-sheet label is chosen as the start. */
   onStartAt: (startAt: number) => void;
   /** Renders the preview the way a black and white printer will. */
@@ -42,9 +41,9 @@ function SlotContent({ slot, props }: SlotProps) {
     );
   }
   if (slot.kind === 'blank') return null;
-  const subject = props.labels[slot.label];
-  if (!subject) return null;
-  return <PrintLabel template={props.template} subject={subject} layout={props.layout} />;
+  const entry = props.labels[slot.label];
+  if (!entry) return null;
+  return <PrintLabel template={entry.template} subject={entry.subject} layout={props.layout} />;
 }
 
 function Slot({ slot, props, firstPage }: SlotProps) {

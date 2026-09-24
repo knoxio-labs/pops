@@ -6,6 +6,7 @@
  * them, and the QR's density depends on the id's length.
  */
 import type { PrintSubject } from '@/kit/inventory/print/print-subject';
+import type { SheetGeometry } from '@/kit/inventory/print/sheet-layouts';
 
 /** A stable, UUIDv4-shaped id for fixture `n`. */
 export function printFixtureId(n: number): string {
@@ -99,3 +100,39 @@ export const printLongNames: PrintSubject[] = [
   espressoMachine,
   packed(42, 'Milk jug, stainless steel with a measuring scale inside', 'KIT-032', 'Kitchen 12'),
 ];
+
+/** A 27-up sheet no preset covers, measured by hand: both templates fit. */
+export const customSheet27: SheetGeometry = {
+  columns: 3,
+  rows: 9,
+  labelWidthMm: 63.5,
+  labelHeightMm: 29.6,
+  marginTopMm: 15.3,
+  marginLeftMm: 7.21,
+  pitchXMm: 66.04,
+  pitchYMm: 29.6,
+};
+
+/** Labels wide enough for the item label's QR and code, too narrow for a box's name. */
+export const customSheetNarrow: SheetGeometry = {
+  columns: 5,
+  rows: 9,
+  labelWidthMm: 38,
+  labelHeightMm: 30,
+  marginTopMm: 13.5,
+  marginLeftMm: 6,
+  pitchXMm: 40,
+  pitchYMm: 30,
+};
+
+/** A 65-up address sheet: no QR that scans fits on a 21.2 mm label. */
+export const customSheetTooSmall: SheetGeometry = {
+  columns: 5,
+  rows: 13,
+  labelWidthMm: 38.1,
+  labelHeightMm: 21.2,
+  marginTopMm: 10.7,
+  marginLeftMm: 4.75,
+  pitchXMm: 40.64,
+  pitchYMm: 21.2,
+};
