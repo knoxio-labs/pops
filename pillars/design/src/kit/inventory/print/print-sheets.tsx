@@ -1,3 +1,4 @@
+import { A4_HEIGHT_MM, A4_WIDTH_MM, slotOrigin } from '@pops/inventory/labels';
 /**
  * The job drawn on its sheets at true size. On screen the sheets are scaled
  * down with `zoom` and show each die-cut, the labels already peeled off the
@@ -9,10 +10,9 @@ import { cn } from '@pops/ui';
 
 import { PrintLabel } from './label-templates';
 import { PRINT_ROOT_CLASS, PRINT_SHEET_CLASS } from './print-styles';
-import { A4_HEIGHT_MM, A4_WIDTH_MM, slotOrigin } from './sheet-layouts';
 
-import type { SheetLayout } from './sheet-layouts';
-import type { SheetPage, SheetSlot } from './sheet-plan';
+import type { SheetLayout, SheetPage, SheetSlot } from '@pops/inventory/labels';
+
 import type { PrintLabelEntry } from './use-print-job';
 
 /** Props for {@link PrintSheets}. */

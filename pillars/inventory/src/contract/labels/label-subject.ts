@@ -3,11 +3,9 @@
  * is an item with the containment capability (ADR-001), so boxes and the
  * things in them share this shape and differ only in `kind`.
  */
-import { templateFits } from './sheet-layouts';
+import { templateFits } from './sheet-layouts.js';
 
-import type { LabelTemplateId, SheetLayout } from './sheet-layouts';
-
-export type { LabelTemplateId } from './sheet-layouts';
+import type { LabelTemplateId, SheetLayout } from './sheet-layouts.js';
 
 export interface PrintSubject {
   /** The item's immutable id; the QR encodes it, never the code. */

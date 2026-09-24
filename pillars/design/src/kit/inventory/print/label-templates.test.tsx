@@ -2,15 +2,19 @@ import { espressoMachine, kitchen12, kitchen12Uncoded } from '@/fixtures/invento
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import {
+  itemUri,
+  customLayout,
+  MIN_QR_MODULE_MM,
+  QR_EXTENT_MODULES,
+  SHEET_PRESETS,
+  sheetLayout,
+} from '@pops/inventory/labels';
 import { decodeQrSvg } from '@pops/ui/testing/decode-qr';
 
 import { ContainerLabel, ItemLabel, PrintLabel } from './label-templates';
-import { itemUri } from './print-subject';
-import { customLayout, MIN_QR_MODULE_MM, QR_EXTENT_MODULES } from './sheet-layouts';
-import { SHEET_PRESETS, sheetLayout } from './sheet-presets';
 
-import type { PrintSubject } from './print-subject';
-import type { SheetLayout } from './sheet-layouts';
+import type { PrintSubject, SheetLayout } from '@pops/inventory/labels';
 
 afterEach(cleanup);
 

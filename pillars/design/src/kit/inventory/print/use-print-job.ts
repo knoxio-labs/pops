@@ -1,19 +1,31 @@
 import { useState } from 'react';
 
+import {
+  DEFAULT_COPIES,
+  resolveTemplate,
+  clampStartAt,
+  CUSTOM_SHEET_ID,
+  customLayout,
+  templateFits,
+  expandCopies,
+  nextStartAt,
+  planSheets,
+  DEFAULT_SHEET_ID,
+  findPreset,
+  sheetLayout,
+} from '@pops/inventory/labels';
+
 import { loadCustomSheet, storeCustomSheet } from './custom-sheet-storage';
-import { DEFAULT_COPIES, resolveTemplate } from './print-subject';
-import { clampStartAt, CUSTOM_SHEET_ID, customLayout, templateFits } from './sheet-layouts';
-import { expandCopies, nextStartAt, planSheets } from './sheet-plan';
-import { DEFAULT_SHEET_ID, findPreset, sheetLayout } from './sheet-presets';
 
 import type {
   CopiesByKind,
   LabelTemplateChoice,
   LabelTemplateId,
   PrintSubject,
-} from './print-subject';
-import type { SheetGeometry, SheetLayout } from './sheet-layouts';
-import type { SheetPage } from './sheet-plan';
+  SheetGeometry,
+  SheetLayout,
+  SheetPage,
+} from '@pops/inventory/labels';
 
 /**
  * What happened after the browser's print dialog closed. Browsers do not

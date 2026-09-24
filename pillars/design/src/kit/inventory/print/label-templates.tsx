@@ -1,3 +1,4 @@
+import { fitCodePt, itemUri, LABEL_GAP_MM, textWidthMm } from '@pops/inventory/labels';
 /**
  * The two label templates. Each fills one die-cut label of the chosen sheet;
  * sizes come from the layout's `LabelScale`, in millimetres and points, so
@@ -9,14 +10,9 @@
  */
 import { QrCode } from '@pops/ui';
 
-import { fitCodePt } from './code-fit';
-import { itemUri } from './print-subject';
-import { LABEL_GAP_MM, textWidthMm } from './sheet-layouts';
-
 import type { ReactNode } from 'react';
 
-import type { LabelTemplateId, PrintSubject } from './print-subject';
-import type { SheetLayout } from './sheet-layouts';
+import type { LabelTemplateId, PrintSubject, SheetLayout } from '@pops/inventory/labels';
 
 interface LabelProps {
   subject: PrintSubject;

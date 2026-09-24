@@ -1,13 +1,17 @@
 import { Pencil } from 'lucide-react';
 import { useState } from 'react';
 
+import {
+  geometryOf,
+  CUSTOM_SHEET_ID,
+  describeLayout,
+  labelsPerSheet,
+  SHEET_PRESETS,
+} from '@pops/inventory/labels';
 import { Button, Select } from '@pops/ui';
 
 import { CustomSheetDialog } from './custom-sheet-dialog';
 import { OptionField } from './print-option-field';
-import { geometryOf } from './sheet-geometry';
-import { CUSTOM_SHEET_ID, describeLayout, labelsPerSheet } from './sheet-layouts';
-import { SHEET_PRESETS } from './sheet-presets';
 
 import type { PrintJob } from './use-print-job';
 

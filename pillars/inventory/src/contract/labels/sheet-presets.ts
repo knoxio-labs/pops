@@ -5,9 +5,9 @@
  * Each grid is centred on the page with Avery's standard gutters, and the
  * three sheets the owner reviewed keep the scale that review settled.
  */
-import { deriveScale } from './sheet-layouts';
+import { deriveScale } from './sheet-layouts.js';
 
-import type { LabelScale, SheetGeometry, SheetLayout } from './sheet-layouts';
+import type { LabelScale, SheetGeometry, SheetLayout } from './sheet-layouts.js';
 
 interface PresetSpec extends SheetGeometry {
   sizeCode: string;

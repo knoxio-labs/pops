@@ -6,6 +6,13 @@
 import { useState } from 'react';
 
 import {
+  sheetGeometryProblems,
+  A4_HEIGHT_MM,
+  A4_WIDTH_MM,
+  labelsPerSheet,
+  slotOrigin,
+} from '@pops/inventory/labels';
+import {
   Button,
   Dialog,
   DialogContent,
@@ -16,10 +23,7 @@ import {
   NumberInput,
 } from '@pops/ui';
 
-import { sheetGeometryProblems } from './sheet-geometry';
-import { A4_HEIGHT_MM, A4_WIDTH_MM, labelsPerSheet, slotOrigin } from './sheet-layouts';
-
-import type { SheetGeometry } from './sheet-layouts';
+import type { SheetGeometry } from '@pops/inventory/labels';
 
 /** Props for {@link CustomSheetDialog}. */
 export interface CustomSheetDialogProps {
