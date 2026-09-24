@@ -14550,9 +14550,36 @@
                                 "forbidden"
                               ],
                               "type": "string"
+                            },
+                            "discardedOverrides": {
+                              "items": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "fieldId": {
+                                    "format": "uuid",
+                                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                    "type": "string"
+                                  },
+                                  "items": {
+                                    "exclusiveMinimum": true,
+                                    "maximum": 9007199254740991,
+                                    "minimum": 0,
+                                    "type": "integer"
+                                  }
+                                },
+                                "required": ["fieldId", "items"],
+                                "type": "object"
+                              },
+                              "type": "array"
                             }
                           },
-                          "required": ["classification", "affectedIds", "affectedItems", "changes"],
+                          "required": [
+                            "classification",
+                            "affectedIds",
+                            "affectedItems",
+                            "discardedOverrides",
+                            "changes"
+                          ],
                           "type": "object"
                         },
                         "draftRevision": {
@@ -14777,9 +14804,36 @@
                                 "forbidden"
                               ],
                               "type": "string"
+                            },
+                            "discardedOverrides": {
+                              "items": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "fieldId": {
+                                    "format": "uuid",
+                                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                    "type": "string"
+                                  },
+                                  "items": {
+                                    "exclusiveMinimum": true,
+                                    "maximum": 9007199254740991,
+                                    "minimum": 0,
+                                    "type": "integer"
+                                  }
+                                },
+                                "required": ["fieldId", "items"],
+                                "type": "object"
+                              },
+                              "type": "array"
                             }
                           },
-                          "required": ["classification", "affectedIds", "affectedItems", "changes"],
+                          "required": [
+                            "classification",
+                            "affectedIds",
+                            "affectedItems",
+                            "discardedOverrides",
+                            "changes"
+                          ],
                           "type": "object"
                         },
                         "draftRevision": {

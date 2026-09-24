@@ -6965,6 +6965,11 @@ export interface operations {
                   | 'protocol_gated'
                   | 'migration_required'
                   | 'forbidden';
+                discardedOverrides: {
+                  /** Format: uuid */
+                  fieldId: string;
+                  items: number;
+                }[];
               };
               draftRevision: number;
             };
@@ -7049,6 +7054,11 @@ export interface operations {
                   | 'protocol_gated'
                   | 'migration_required'
                   | 'forbidden';
+                discardedOverrides: {
+                  /** Format: uuid */
+                  fieldId: string;
+                  items: number;
+                }[];
               };
               draftRevision: number;
             };

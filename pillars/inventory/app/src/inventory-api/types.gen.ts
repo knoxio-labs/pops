@@ -4815,6 +4815,10 @@ export type TypesManagePreviewComputedFieldErrors = {
           definitionId: string;
         }>;
         classification: 'compatible' | 'protocol_gated' | 'migration_required' | 'forbidden';
+        discardedOverrides: Array<{
+          fieldId: string;
+          items: number;
+        }>;
       };
       draftRevision: number;
     };
@@ -4874,6 +4878,10 @@ export type TypesManagePreviewComputedFieldErrors = {
           definitionId: string;
         }>;
         classification: 'compatible' | 'protocol_gated' | 'migration_required' | 'forbidden';
+        discardedOverrides: Array<{
+          fieldId: string;
+          items: number;
+        }>;
       };
       draftRevision: number;
     };
