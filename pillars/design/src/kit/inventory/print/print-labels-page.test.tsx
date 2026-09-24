@@ -119,6 +119,13 @@ describe('items without a code', () => {
     expect(screen.getAllByText('Needs a code')).toHaveLength(2);
   });
 
+  it('will not print again from the cancelled notice while a code is missing', () => {
+    const print = vi.spyOn(window, 'print').mockImplementation(() => {});
+    renderPage({ subjects: kitchen12Uncoded, sheetId: 'L7163', outcome: 'cancelled' });
+    fireEvent.click(screen.getByRole('button', { name: 'Print again' }));
+    expect(print).not.toHaveBeenCalled();
+  });
+
   it('takes a suggested code in one tap', () => {
     renderPage({ subjects: kitchen12Uncoded, sheetId: 'L7163' });
     fireEvent.click(screen.getByRole('button', { name: 'Add KIT-031' }));
