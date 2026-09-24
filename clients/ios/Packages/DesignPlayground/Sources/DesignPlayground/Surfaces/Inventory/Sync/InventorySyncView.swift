@@ -6,12 +6,15 @@ internal enum InventorySyncConnection: Equatable {
     case online(lastSynced: String)
     case offline(lastSynced: String)
     case syncing
+    /// Fetching the catalogue's newer fields before a held change can move.
+    case updatingFields
 
     fileprivate var symbol: InventorySymbol {
         switch self {
         case .online: .synced
         case .offline: .offline
         case .syncing: .queued
+        case .updatingFields: .refreshFields
         }
     }
 }
@@ -107,6 +110,7 @@ internal struct InventorySyncView: View {
         case .online(let lastSynced): "Synced \(lastSynced)"
         case .offline(let lastSynced): "Offline · synced \(lastSynced)"
         case .syncing: "Syncing \(ledger.waiting.count) changes"
+        case .updatingFields: "Updating fields"
         }
     }
 

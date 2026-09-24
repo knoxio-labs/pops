@@ -56,7 +56,7 @@ internal struct InventoryWaitingRow: View {
         InventorySyncRowLabel(
             recordID: operation.recordID, symbol: operation.symbol, title: operation.title
         ) {
-            Text(operation.detail)
+            Text(operation.caption)
                 .font(.popsCaption)
                 .foregroundStyle(Color.popsMutedForeground)
                 .fixedSize(horizontal: false, vertical: true)
@@ -66,7 +66,11 @@ internal struct InventoryWaitingRow: View {
                     .accessibilityLabel(InventorySync.synchronizing.label)
             }
         } trailing: {
-            InventorySyncMarker(sync: operation.progress == nil ? .queued : .synchronizing)
+            if let hold = operation.hold {
+                InventoryQueueHoldMark(hold: hold)
+            } else {
+                InventorySyncMarker(sync: operation.progress == nil ? .queued : .synchronizing)
+            }
         }
         .accessibilityElement(children: .combine)
     }
@@ -122,6 +126,20 @@ internal struct InventoryResolvedRow: View {
                 .accessibilityLabel("Resolved")
         }
         .accessibilityElement(children: .combine)
+    }
+}
+
+/// Why a waiting change is not being sent: turning while the phone fetches
+/// newer fields, amber when only an app update moves it.
+private struct InventoryQueueHoldMark: View {
+    let hold: InventoryQueueHold
+
+    var body: some View {
+        hold.symbol.image
+            .font(.popsCaption.weight(.semibold))
+            .foregroundStyle(hold == .appUpdate ? Color.popsWarning : Color.popsMutedForeground)
+            .symbolEffect(.rotate, isActive: hold == .newFields)
+            .accessibilityLabel(hold.caption)
     }
 }
 
