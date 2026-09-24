@@ -47,7 +47,20 @@ internal struct AppSearchTab: View {
             .inventorySearchDestinations(store: dependencies.inventory, entityRouter: entityRouter)
             .purchasesDestinations(dependencies: dependencies)
         }
-        .task { await model.loadTags() }
+        .task {
+            await model.loadTags()
+            await model.loadInventoryTypes()
+        }
+        .alert(
+            "Couldn't download Inventory", isPresented: downloadFailedBinding,
+            actions: {}, message: { Text("Check your connection and try again.") }
+        )
+    }
+
+    private var downloadFailedBinding: Binding<Bool> {
+        Binding(
+            get: { model.inventoryDownloadFailed },
+            set: { isPresented in if !isPresented { model.clearInventoryDownloadFailure() } })
     }
 
     /// Pushes Inventory's scanner, or `nil` while Inventory cannot be searched.
@@ -72,7 +85,7 @@ internal struct AppSearchTab: View {
                     isScoped: model.scope != .all,
                     showAll: { model.scope = .pillar(.inventory) },
                     retry: { model.inventory?.retry() },
-                    download: {},
+                    download: { Task { await model.downloadInventory() } },
                     rows: {
                         InventorySearchRows(Self.rows(state), query: model.query, session: session)
                     }
@@ -101,7 +114,9 @@ internal struct AppSearchTab: View {
         ForEach(model.available) { pillar in
             switch pillar {
             case .inventory:
-                InventorySearchFilterFields(filter: $model.inventoryFilter, types: []) {
+                InventorySearchFilterFields(
+                    filter: $model.inventoryFilter, types: model.inventoryTypes
+                ) {
                     header(.inventory)
                 }
             case .purchases:
