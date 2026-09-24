@@ -231,7 +231,20 @@ stale base or a stale `draftVersion`) clears the rejected mutation, refetches bo
 rebuilds the open form from the persisted draft without replaying the rejected
 operation. Published field identity and shape stay locked; incompatible
 changes must be expressed as a replacement and an explicit named migration
-rather than edited in place.
+rather than edited in place. The web editor never publishes a migration: a
+change the draft classifies as `migration_required` is published through MCP.
+
+A computed field is authored with the approved outline-and-inspector builder
+(`app/src/catalogue-editor/computed`) over the full expression grammar,
+`coalesce` included: an operation palette filtered by what each slot accepts,
+wrap and replace, reads through at most two references, an override policy,
+and the size bounds. The builder does not type-check the tree beyond that
+filter; the server's issue paths place each refusal on its node. "Try on an
+item" evaluates the unsaved edit on one picked item through
+`computed-preview` and names the missing input and item when it is
+unavailable. The expression model (`app/src/catalogue-editor/expression`) is
+the one the design playground's computed-editor kit reads through
+`@pops/app-inventory/design`.
 
 ## Registration
 

@@ -5,38 +5,7 @@ import { Button, Input, Label } from '@pops/ui';
 
 import { catalogueKeyFromLabel } from './types';
 
-import type { BinaryOperation } from './FieldFormContext';
 import type { CatalogueEnumOption, CatalogueField, CatalogueOperation } from './types';
-
-function isBinaryOperation(value: unknown): value is BinaryOperation {
-  return value === 'add' || value === 'subtract' || value === 'multiply' || value === 'divide';
-}
-
-/** Reads the supported closed binary expression into editor selections. */
-export function expressionSelection(
-  expression: unknown
-): { left: string; operation: BinaryOperation; right: string } | null {
-  if (typeof expression !== 'object' || expression === null) return null;
-  const root = expression as Record<string, unknown>;
-  if (!isBinaryOperation(root.op)) return null;
-  if (
-    typeof root.left !== 'object' ||
-    root.left === null ||
-    typeof root.right !== 'object' ||
-    root.right === null
-  )
-    return null;
-  const left = root.left as Record<string, unknown>;
-  const right = root.right as Record<string, unknown>;
-  if (
-    left.op !== 'read' ||
-    right.op !== 'read' ||
-    typeof left.fieldId !== 'string' ||
-    typeof right.fieldId !== 'string'
-  )
-    return null;
-  return { left: left.fieldId, operation: root.op, right: right.fieldId };
-}
 
 /** Edits the persisted options attached to an enum field. */
 export function EnumOptions({

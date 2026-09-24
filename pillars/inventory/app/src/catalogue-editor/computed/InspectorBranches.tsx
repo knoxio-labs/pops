@@ -1,13 +1,6 @@
 import { ArrowDown, ArrowUp, Plus, X } from 'lucide-react';
 
 import {
-  OPERATIONS,
-  comparedChoiceField,
-  nodeChildren,
-  operationBlockedReason,
-  valueTypeLabel,
-} from '@pops/app-inventory/design';
-import {
   Button,
   Label,
   SelectContent,
@@ -17,17 +10,21 @@ import {
   SelectValue,
 } from '@pops/ui';
 
-import { nodeTitle } from './expression-outline';
-import { SlotRow } from './inspector-parts';
+import {
+  addCoalesceInput,
+  moveCoalesceInput,
+  removeCoalesceInput,
+  switchBinaryOp,
+} from '../expression/edit';
+import { comparedChoiceField } from '../expression/formula';
+import { valueTypeLabel } from '../expression/model';
+import { OPERATIONS, operationBlockedReason } from '../expression/operations';
+import { nodeChildren } from '../expression/tree';
+import { useBuilder } from './BuilderContext';
+import { SlotRow } from './InspectorParts';
+import { nodeTitle } from './node-labels';
 
-import type {
-  BinaryOp,
-  ExpressionContext,
-  ExpressionNode,
-  SlotType,
-} from '@pops/app-inventory/design';
-
-type Types = ReadonlyMap<string, SlotType | undefined>;
+import type { BinaryOp, ExpressionNode } from '../expression/model';
 
 const BINARY_OPS: readonly BinaryOp[] = [
   'add',
@@ -41,14 +38,14 @@ const BINARY_OPS: readonly BinaryOp[] = [
   'or',
 ];
 
+function binaryOp(value: string): BinaryOp | undefined {
+  return BINARY_OPS.find((candidate) => candidate === value);
+}
+
 /** Swaps a two-input operation for another that fits the same slot, keeping both inputs. */
-export function OperationSwitch({
-  op,
-  expected,
-}: {
-  op: BinaryOp;
-  expected: SlotType | undefined;
-}) {
+export function OperationSwitch({ op }: { op: BinaryOp }) {
+  const builder = useBuilder();
+  const expected = builder.slots.get(builder.selectedPath);
   const options = OPERATIONS.filter(
     (info) =>
       BINARY_OPS.some((candidate) => candidate === info.op) &&
@@ -56,9 +53,16 @@ export function OperationSwitch({
   );
   return (
     <div className="space-y-2">
-      <Label>Operation</Label>
-      <SelectPrimitive defaultValue={op}>
-        <SelectTrigger className="min-h-11 w-full">
+      <Label htmlFor="expression-operation">Operation</Label>
+      <SelectPrimitive
+        value={op}
+        onValueChange={(value) => {
+          const next = binaryOp(value);
+          if (next !== undefined)
+            builder.change(switchBinaryOp(builder.root, builder.selectedPath, next));
+        }}
+      >
+        <SelectTrigger id="expression-operation" className="min-h-11 w-full">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -75,17 +79,8 @@ export function OperationSwitch({
 }
 
 /** The inputs of a unary, binary or conditional node, each one step down the tree. */
-export function InputList({
-  context,
-  node,
-  path,
-  types,
-}: {
-  context: ExpressionContext;
-  node: ExpressionNode;
-  path: string;
-  types: Types;
-}) {
+export function InputList({ node }: { node: ExpressionNode }) {
+  const { context, slots, selectedPath } = useBuilder();
   return (
     <div className="space-y-2">
       <Label>Inputs</Label>
@@ -94,8 +89,9 @@ export function InputList({
           <SlotRow
             key={child.segment}
             slot={child.slot}
+            path={`${selectedPath}.${child.segment}`}
             title={nodeTitle(context, child.node, comparedChoiceField(context, node))}
-            expected={types.get(`${path}.${child.segment}`)}
+            expected={slots.get(`${selectedPath}.${child.segment}`)}
             empty={child.node.op === 'empty'}
           />
         ))}
@@ -104,25 +100,18 @@ export function InputList({
   );
 }
 
-function ArgumentControls({
-  slot,
-  first,
-  last,
-  removable,
-}: {
-  slot: string;
-  first: boolean;
-  last: boolean;
-  removable: boolean;
-}) {
+function ArgumentControls({ index, count, slot }: { index: number; count: number; slot: string }) {
+  const builder = useBuilder();
+  const { root, selectedPath } = builder;
   return (
     <>
       <Button
         variant="ghost"
         size="icon"
         className="min-h-9 min-w-9"
-        disabled={first}
+        disabled={index === 0}
         aria-label={`Move ${slot} up`}
+        onClick={() => builder.change(moveCoalesceInput(root, selectedPath, index, -1))}
       >
         <ArrowUp className="h-4 w-4" />
       </Button>
@@ -130,8 +119,9 @@ function ArgumentControls({
         variant="ghost"
         size="icon"
         className="min-h-9 min-w-9"
-        disabled={last}
+        disabled={index === count - 1}
         aria-label={`Move ${slot} down`}
+        onClick={() => builder.change(moveCoalesceInput(root, selectedPath, index, 1))}
       >
         <ArrowDown className="h-4 w-4" />
       </Button>
@@ -139,8 +129,9 @@ function ArgumentControls({
         variant="ghost"
         size="icon"
         className="min-h-9 min-w-9"
-        disabled={!removable}
+        disabled={count <= 2}
         aria-label={`Remove ${slot}`}
+        onClick={() => builder.change(removeCoalesceInput(root, selectedPath, index))}
       >
         <X className="h-4 w-4" />
       </Button>
@@ -152,19 +143,10 @@ function ArgumentControls({
  * The ordered inputs of `coalesce`. Order is the meaning: the first input with
  * a value wins, so each row can move up or down, and the list can grow.
  */
-export function CoalesceInputs({
-  context,
-  node,
-  path,
-  types,
-}: {
-  context: ExpressionContext;
-  node: Extract<ExpressionNode, { op: 'coalesce' }>;
-  path: string;
-  types: Types;
-}) {
-  const last = node.values.length - 1;
-  const inputType = types.get(path);
+export function CoalesceInputs({ node }: { node: Extract<ExpressionNode, { op: 'coalesce' }> }) {
+  const builder = useBuilder();
+  const { context, slots, selectedPath } = builder;
+  const inputType = slots.get(selectedPath);
   return (
     <div className="space-y-2">
       <Label>Tried in order</Label>
@@ -173,21 +155,22 @@ export function CoalesceInputs({
           <SlotRow
             key={child.segment}
             slot={child.slot}
-            title={nodeTitle(context, child.node, comparedChoiceField(context, node))}
+            path={`${selectedPath}.${child.segment}`}
+            title={nodeTitle(context, child.node)}
             expected={undefined}
             empty={child.node.op === 'empty'}
           >
-            <ArgumentControls
-              slot={child.slot}
-              first={index === 0}
-              last={index === last}
-              removable={node.values.length > 2}
-            />
+            <ArgumentControls index={index} count={node.values.length} slot={child.slot} />
           </SlotRow>
         ))}
       </ol>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <Button variant="outline" size="sm" className="min-h-9">
+        <Button
+          variant="outline"
+          size="sm"
+          className="min-h-9"
+          onClick={() => builder.change(addCoalesceInput(builder.root, selectedPath))}
+        >
           <Plus className="h-4 w-4" />
           Add input
         </Button>

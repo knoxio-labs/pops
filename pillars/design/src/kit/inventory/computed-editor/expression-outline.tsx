@@ -1,15 +1,25 @@
 import { AlertCircle } from 'lucide-react';
 
+import {
+  comparedChoiceField,
+  formatLiteral,
+  issueBelongsTo,
+  nodeAt,
+  operationInfo,
+  outlineRows,
+  parentPath,
+  readLabel,
+} from '@pops/app-inventory/design';
 import { cn } from '@pops/ui';
 
-import { readLabel } from './catalogue-lookup';
-import { comparedChoiceField, formatLiteral } from './formula';
-import { operationInfo } from './operations';
-import { issueBelongsTo, nodeAt, outlineRows, parentPath } from './tree';
+import type {
+  ExpressionContext,
+  ExpressionField,
+  ExpressionNode,
+  OutlineRow,
+} from '@pops/app-inventory/design';
 
-import type { DesignField, ExpressionContext, ExpressionNode } from './model';
 import type { ExpressionIssue } from './scenario';
-import type { OutlineRow } from './tree';
 
 function nodeSymbol(node: ExpressionNode): string {
   return node.op === 'empty' ? '?' : operationInfo(node.op).symbol;
@@ -19,7 +29,7 @@ function nodeSymbol(node: ExpressionNode): string {
 export function nodeTitle(
   context: ExpressionContext,
   node: ExpressionNode,
-  choiceField?: DesignField
+  choiceField?: ExpressionField
 ): string {
   if (node.op === 'empty') return 'Choose a value';
   if (node.op === 'read') return readLabel(context, node);
@@ -36,7 +46,7 @@ function RowButton({
   onSelect,
 }: {
   row: OutlineRow;
-  choiceField: DesignField | undefined;
+  choiceField: ExpressionField | undefined;
   context: ExpressionContext;
   selected: boolean;
   issue: ExpressionIssue | undefined;
