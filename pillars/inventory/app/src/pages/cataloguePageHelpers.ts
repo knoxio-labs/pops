@@ -1,3 +1,5 @@
+import { reorderAdjacent } from '../catalogue-editor/reorder';
+
 import type { CatalogueField, CatalogueOperation, CatalogueType } from '../catalogue-editor/types';
 import type { EditorMode } from './cataloguePageTypes';
 
@@ -8,18 +10,12 @@ export function reorderField(
   direction: -1 | 1,
   parentId: string
 ): CatalogueOperation {
-  const ids = fields.map((field) => field.id);
-  const active = fields.filter((field) => field.archivedAt === null);
-  const adjacent = active[active.findIndex((field) => field.id === fieldId) + direction];
-  if (adjacent === undefined) return { kind: 'reorder', definition: 'field', parentId, ids };
-  const from = ids.indexOf(fieldId);
-  const to = ids.indexOf(adjacent.id);
-  if (from >= 0 && to >= 0) {
-    const fromId = ids[from];
-    const toId = ids[to];
-    if (fromId !== undefined && toId !== undefined) [ids[from], ids[to]] = [toId, fromId];
-  }
-  return { kind: 'reorder', definition: 'field', parentId, ids };
+  return {
+    kind: 'reorder',
+    definition: 'field',
+    parentId,
+    ids: reorderAdjacent(fields, fieldId, direction),
+  };
 }
 
 /** Keeps a selected type when present or chooses the first active definition. */

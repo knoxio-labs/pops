@@ -75,6 +75,24 @@ function validateReferenceShape(
       )
     );
   }
+  // Whole-catalogue invariant, same as unit_required/boolean_many/etc. below:
+  // it re-checks every field on every publish/patch, not just the ones an
+  // operation touches. `authoring-put-field-shape.ts`'s `assertReferenceShape`
+  // now rejects this shape at the moment a `put_field` would create it, so no
+  // authoring path can produce it going forward; this stays as defense in
+  // depth for the same reason the other rules here do. No migration or seed
+  // ever created a reference field, so no already-published catalogue can
+  // carry the shape this checks for.
+  if (field.kind === 'reference' && field.referenceKinds.size === 0) {
+    issues.push(
+      issue(
+        field.id,
+        'referenceKinds',
+        'reference_kinds_required',
+        'Reference fields must allow at least one target kind (item or location)'
+      )
+    );
+  }
   if ([...field.referenceTypeIds].some((id) => !typeIds.has(id))) {
     issues.push(
       issue(field.id, 'referenceTypeIds', 'type_unknown', 'Reference target type does not exist')
