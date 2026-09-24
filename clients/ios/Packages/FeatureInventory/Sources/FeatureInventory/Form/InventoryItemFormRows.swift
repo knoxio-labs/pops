@@ -57,11 +57,16 @@ internal struct InventoryFormCodeRow: View {
     internal let entry: InventoryCodeEntry
     internal let onChange: (String) -> Void
     internal let onSuggest: () -> Void
+    /// Set when the form was opened to label an item that has no code yet,
+    /// so the field takes the keyboard as soon as it appears rather than
+    /// leaving the person to find it.
+    internal var focus: FocusState<Bool>.Binding?
 
     internal var body: some View {
         InventoryFormTextRow(
             "Code", placeholder: "Optional",
-            text: Binding(get: { entry.value }, set: { onChange($0) }), monospaced: true
+            text: Binding(get: { entry.value }, set: { onChange($0) }), monospaced: true,
+            focus: focus
         ) {
             suggest
         }
@@ -104,26 +109,31 @@ internal struct InventoryFormTextRow<Accessory: View>: View {
     @Binding private var text: String
     private let monospaced: Bool
     private let identifier: String
+    private let focus: FocusState<Bool>.Binding?
     private let accessory: Accessory
 
     /// `identifier` names the text field itself for a UI flow; a flow cannot
     /// reach it by text, because its label and its placeholder read the same.
+    /// `focus`, when given, lets a caller command the keyboard to this field
+    /// as soon as it appears.
     internal init(
         _ label: String, placeholder: String, text: Binding<String>, monospaced: Bool = false,
-        identifier: String = "", @ViewBuilder accessory: () -> Accessory
+        identifier: String = "", focus: FocusState<Bool>.Binding? = nil,
+        @ViewBuilder accessory: () -> Accessory
     ) {
         self.label = label
         self.placeholder = placeholder
         _text = text
         self.monospaced = monospaced
         self.identifier = identifier
+        self.focus = focus
         self.accessory = accessory()
     }
 
     internal var body: some View {
         LabeledContent {
             HStack(spacing: PopsSpacing.sm) {
-                TextField(placeholder, text: $text)
+                field
                     .font(monospaced && !text.isEmpty ? .popsMonospaced : .popsBody)
                     .multilineTextAlignment(.trailing)
                     .lineLimit(1)
@@ -136,16 +146,24 @@ internal struct InventoryFormTextRow<Accessory: View>: View {
                 .fixedSize()
         }
     }
+
+    @ViewBuilder private var field: some View {
+        if let focus {
+            TextField(placeholder, text: $text).focused(focus)
+        } else {
+            TextField(placeholder, text: $text)
+        }
+    }
 }
 
 extension InventoryFormTextRow where Accessory == EmptyView {
     internal init(
         _ label: String, placeholder: String, text: Binding<String>, monospaced: Bool = false,
-        identifier: String = ""
+        identifier: String = "", focus: FocusState<Bool>.Binding? = nil
     ) {
         self.init(
             label, placeholder: placeholder, text: text, monospaced: monospaced,
-            identifier: identifier
+            identifier: identifier, focus: focus
         ) {
             EmptyView()
         }

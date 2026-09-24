@@ -91,18 +91,17 @@ internal struct InventoryActionTests {
         #expect(!ids(Fixtures.lamp).contains("edit"))
     }
 
-    @Test("a coded item reprints its own code instead of being labelled afresh")
-    func codedItemReprints() {
-        let actions = InventoryAction.available(for: Fixtures.television, style: defaults)
-        let print = actions.first { $0.id == "print" }
+    @Test("a coded item is offered neither label nor print: printing is a web job (POPS-3992)")
+    func codedItemHasNoCodeAction() {
+        let actions = ids(Fixtures.television)
 
-        #expect(print != nil)
-        #expect(print?.note == "Reprints K7Q2")
-        #expect(!actions.map(\.id).contains("label"))
+        #expect(!actions.contains("print"))
+        #expect(!actions.contains("label"))
     }
 
-    @Test("an uncoded item is labelled, never asked to reprint a code it has not got")
-    func uncodedItemHasNothingToReprint() {
+    @Test("an uncoded item is labelled, and print never appears for anything")
+    func uncodedItemIsLabelledNeverPrinted() {
+        #expect(ids(Fixtures.cable).contains("label"))
         #expect(!ids(Fixtures.cable).contains("print"))
     }
 

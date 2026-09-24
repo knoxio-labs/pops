@@ -40,7 +40,7 @@ internal struct InventoryItemFormContext: Equatable, Sendable {
             case .create(let origin):
                 item = nil
                 placement = origin
-            case .edit(let id):
+            case .edit(let id), .labelling(let id):
                 item = liveItem(id, in: source)
                 placement = item?.placement
             case .repair(let id):
