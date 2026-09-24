@@ -12,12 +12,15 @@ public struct InventoryOutboundMutation: Hashable, Sendable {
     public let baseRevision: Int?
     public let dependsOn: [String]
     public let clientTime: Date
-    /// Catalogue revision against which the command's values were authored.
-    public let catalogueRevision: Int
+    /// Catalogue revision against which the command's values were authored,
+    /// or nil when the sender holds none. Never defaulted to a revision the
+    /// sender did not see: nil goes on the wire as absent, which the server
+    /// reads as the legacy (protocol-1) path.
+    public let catalogueRevision: Int?
 
     public init(
         mutationId: String, command: InventoryCommand, baseRevision: Int?, dependsOn: [String],
-        clientTime: Date, catalogueRevision: Int = 1
+        clientTime: Date, catalogueRevision: Int? = nil
     ) {
         self.mutationId = mutationId
         self.command = command
@@ -40,6 +43,14 @@ public enum InventoryRejectedReason: Hashable, Sendable {
     case hasContents
     case illegalTransition
     case mediaMissing
+    /// The catalogue revision the change was authored against is not one
+    /// the server can judge it by, or cannot be rebased onto its active one:
+    /// refresh the definitions and send it again against the newer revision.
+    case catalogueUpdateRequired
+    /// The change was rebased onto the active catalogue and no longer fits
+    /// it (a field or type it used was archived or replaced): it needs a
+    /// person to decide, not a retry.
+    case catalogueRepairRequired
     case unrecognised(String)
 
     public init(wire: String) {
@@ -52,6 +63,8 @@ public enum InventoryRejectedReason: Hashable, Sendable {
         case "has_contents": self = .hasContents
         case "illegal_transition": self = .illegalTransition
         case "media_missing": self = .mediaMissing
+        case "catalogue_update_required": self = .catalogueUpdateRequired
+        case "catalogue_repair_required": self = .catalogueRepairRequired
         default: self = .unrecognised(wire)
         }
     }

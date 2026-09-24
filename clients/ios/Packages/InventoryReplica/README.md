@@ -20,6 +20,8 @@ Protocol-2 catalogues are normalized into immutable revision, type, field and op
 
 Item field values have base and optimistic layers like item rows. Their key includes item, field, source and ordinal: order and duplicates are data, while the row's catalogue revision binds the encoded primitive to the schema that defined it. References deliberately have no database foreign key to their target. Reads derive resolved, missing or deleted state without dropping the target id, so a tombstone or an incomplete local snapshot cannot erase identity.
 
+Computed values also have two layers: `item_computed_value` holds the server's evaluations as the feed delivered them, `item_computed_value_local` the phone's own (`LocalComputedValues`). Logging a change, and every rebase, re-evaluates the items it wrote and, transitively, every item whose evaluation read one of them, with AppCore's evaluator over the optimistic rows. A server value that still matches those rows wins and any local one is dropped; otherwise the local evaluation is stored and read in its place. Nothing local is stored when the phone cannot evaluate (an expression this build cannot parse, a reference to an item the snapshot has not delivered yet), so the field keeps reading "Out of date".
+
 Each mutation is pinned to the current catalogue revision when it enters the log, and that pin survives rebase, repair, retry and relaunch. The server can therefore interpret a queued edit against the schema the author saw even after the phone stores a newer revision.
 
 ## Type arrivals

@@ -112,6 +112,7 @@ The owner-facing REST surface is command-shaped so MCP and the web editor use th
 | Route                                           | Body / result                                                                                            |
 | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | `GET /type-catalogue?revision=`                 | current or exact immutable descriptor; `404 catalogue_revision_unknown`                                  |
+| `GET /type-catalogue/types/:typeId?revision=`   | one type as the current or exact published revision defined it; `404 catalogue_type_unknown`             |
 | `GET /type-catalogue/audit?before=&limit=`      | reverse-chronological publication and abandonment events                                                 |
 | `POST /type-catalogue/drafts`                   | `{ baseRevision }` → the new draft; conflicts if one already exists                                      |
 | `PATCH /type-catalogue/drafts/:revision`        | `{ baseRevision, expectedDraftVersion, operations[] }` → the validated draft and a compatibility preview |
@@ -165,8 +166,8 @@ Anything with historical use is archived, never deleted. An archived type cannot
 
 Publication classifies changes as follows:
 
-- Compatible without value migration: labels, help, order and presentation hints; adding a type; adding an optional stored field; adding an enum option; relaxing `required`; and archiving a definition while retaining its existing values as readable history.
-- Compatible for data but protocol-gated: adding a primitive kind, cardinality rule, reference target kind, expression node or provenance case that an installed client may not understand. The publication sets `minimumProtocol` to the first protocol that understands it and cannot publish until D10's rollout rule is met.
+- Compatible without value migration: labels, help, order and presentation hints; adding a type whose fields use only primitive kinds the base already uses; adding an optional stored field; adding an enum option; relaxing `required`; and archiving a definition while retaining its existing values as readable history.
+- Compatible for data but protocol-gated: adding a primitive kind, cardinality rule, reference target kind or provenance case that an installed client may not understand. An expression node is not gated: phones carry expressions as opaque JSON and a client that cannot parse one keeps the server's evaluation (D11), so a new node degrades to "Out of date" after a local edit rather than failing. The publication sets `minimumProtocol` to the first protocol that understands it and cannot publish until D10's rollout rule is met.
 - Requires an explicit migration: making a field required, removing or remapping values instead of merely archiving their definition, narrowing reference targets, changing a computed expression in a way that changes its declared dependencies, or replacing any immutable field characteristic.
 - Forbidden: mutating or reusing an id/key, editing a published snapshot, publishing values that fail the candidate schema, or deleting audit history.
 
@@ -183,11 +184,12 @@ A computed field has `expressionVersion: 1`, a typed expression AST, and `allowO
 { "op": "add" | "subtract" | "multiply" | "divide" | "concat" |
         "equal" | "less_than" | "and" | "or",
   "left": <expression>, "right": <expression> }
+{ "op": "coalesce", "values": [<expression>, <expression>, ...] }
 { "op": "if", "condition": <expression>,
   "then": <expression>, "else": <expression> }
 ```
 
-`number` means integer, decimal, or a measurement in one fixed unit. `add` and `subtract` require identical numeric kinds (and identical measurement units). `multiply` and `divide` accept integer with integer, decimal with decimal, or measurement with decimal; their result is respectively integer, decimal or the measurement kind. Integer division must be exact. There are no implicit integer/decimal or unit conversions. Integer overflow, decimal precision overflow and division by zero are evaluation errors. `and`, `or` and `if` short-circuit left-to-right. Literals use the primitive wire forms above. No node reads time, network, user identity, SQL or arbitrary code.
+`number` means integer, decimal, or a measurement in one fixed unit. `add` and `subtract` require identical numeric kinds (and identical measurement units). `multiply` and `divide` accept integer with integer, decimal with decimal, or measurement with decimal; their result is respectively integer, decimal or the measurement kind. Integer division must be exact. There are no implicit integer/decimal or unit conversions. Integer overflow, decimal precision overflow and division by zero are evaluation errors. `and`, `or` and `if` short-circuit left-to-right. `coalesce` takes two or more values of one type and returns the first that is available; it is the only node that skips an unavailable argument (an evaluation error still stops it). When every argument is unavailable it reports the last one's reason. Its dependencies include every argument evaluated and, for each skipped one, the input it lacked (at revision 0 when that item is absent), so a fallback goes stale when the input appears. Literals use the primitive wire forms above. No node reads time, network, user identity, SQL or arbitrary code.
 
 `read` with an empty path reads another field on the same item. Each path element must name a `one` item-reference field, and publication resolves the next field against every allowed target type. A path may traverse at most two references; an AST may contain at most 128 nodes and 32 distinct dependencies. The publication graph uses `(typeId, fieldId)` nodes and includes all possible target types for reference reads. Any direct or transitive cycle rejects the whole publication, including a cycle that only appears through references.
 
@@ -199,16 +201,15 @@ Evaluation has three results:
 
 Absent values are exposed as `unavailable`, not as a magic zero, empty string or false. The wire reasons are `missing_dependency`, `reference_unresolved`, `reference_missing`, `reference_deleted` and `evaluation_error`, with the failing field id and traversed item ids. A dependency's unavailable reason propagates unchanged. Errors are logged with item, field and catalogue revision and are exposed as unavailable with reason `evaluation_error`; they do not fail the item response. Only the selected branch of `if`, and only the necessary side of a short-circuit boolean node, contributes a runtime missing dependency. Evaluation is deterministic against one item-read snapshot and the catalogue revision pinned by that response.
 
-When `allowOverride` is false, an explicit value for the computed field is invalid. When true, an override uses the same value grammar and cardinality as the computed result and wins without evaluating dependencies. Clearing an override deletes its value rows and immediately resumes evaluation; it does not copy the last computed value. Effective values expose provenance:
+When `allowOverride` is false, an explicit value for the computed field is invalid. When true, an override uses the same value grammar and cardinality as the computed result and wins without evaluating dependencies. Clearing an override deletes its value rows and immediately resumes evaluation; it does not copy the last computed value. An item's `fieldValues` carry only stored values and overrides; `computedValues` carries one entry per computed field of its type. `state` is closed; `reason` is an open string:
 
 ```json
-{ "fieldId": "<uuid>", "state": "value", "values": ["48.000"],
-  "provenance": { "source": "computed", "catalogueRevision": 12,
-    "dependencies": [{ "itemId": "<uuid>", "fieldId": "<uuid>", "revision": 7 }] } }
-{ "fieldId": "<uuid>", "state": "value", "values": ["50.000"],
-  "provenance": { "source": "override", "catalogueRevision": 12 } }
-{ "fieldId": "<uuid>", "state": "unavailable", "reason": "missing_dependency",
-  "provenance": { "source": "computed", "catalogueRevision": 12 } }
+{ "fieldId": "<uuid>", "source": "computed", "catalogueRevision": 12, "state": "ok", "values": ["48.000"],
+  "dependencies": [{ "itemId": "<uuid>", "fieldId": "<uuid>", "revision": 7 }], "traversedItemIds": ["<uuid>"] }
+{ "fieldId": "<uuid>", "source": "computed", "catalogueRevision": 12, "state": "overridden", "values": ["50.000"],
+  "override": { "catalogueRevision": 11 }, "dependencies": [], "traversedItemIds": [] }
+{ "fieldId": "<uuid>", "source": "computed", "catalogueRevision": 12, "state": "unavailable",
+  "reason": "missing_dependency", "failedFieldId": "<uuid>", "dependencies": [], "traversedItemIds": ["<uuid>"] }
 ```
 
 Computed results are not stored as authority. The server and replica may cache them by `(item revision, catalogue revision, dependency revisions)` and must discard the cache when any key changes. The item event log records setting and clearing overrides; ordinary dependency changes are already visible through their own item events.
@@ -222,12 +223,12 @@ The following examples are normative abbreviations of the shapes above:
 - Scalar: `{ fieldId: voltage, state: 'value', values: ['12.000'], provenance: { source: 'stored', catalogueRevision: 12 } }` for a decimal field.
 - Multi-value: `{ fieldId: protocols, state: 'value', values: [{ optionId: usbC }, { optionId: thunderbolt4 }], ... }`; order is retained.
 - Reference: `{ fieldId: storedWith, state: 'value', values: [{ targetKind: 'item', targetId: boxId, targetState: 'deleted' }], ... }`; the deleted target leaves its id present.
-- Computed: `multiply(read([], packageCount), read([], unitPrice))` over two decimal fields produces `48.000` with `source: 'computed'` and dependency revisions.
-- Overridden: the same field with explicit override `50.000` returns `50.000` with `source: 'override'`, even when `unitPrice` is absent.
-- Cleared override: deleting that override causes the next read to evaluate again and return `48.000` with `source: 'computed'`.
+- Computed: `multiply(read([], packageCount), read([], unitPrice))` over two decimal fields produces `state: 'ok'`, `48.000` and dependency revisions.
+- Overridden: the same field with explicit override `50.000` returns `state: 'overridden'`, `50.000`, even when `unitPrice` is absent.
+- Cleared override: deleting that override causes the next read to evaluate again and return `state: 'ok'`, `48.000`.
 - Unavailable: after clearing the override and removing `unitPrice`, the field returns `state: 'unavailable', reason: 'missing_dependency'`; it does not return null or the old override.
 
-**Consequences.** A new type, field, option or compatible label correction needs no deployment. A new primitive or expression node still needs an app release and protocol rollout. The seven former code definitions were bootstrap input for migration `0017_persisted_item_types` only; after publication the database is the authority and the code templates are removed. The "type arrived" sheet triggers on a published catalogue revision that adds an active type whose `legacyLabels` match `items.legacy_type`.
+**Consequences.** A new type, field, option or compatible label correction needs no deployment. A new primitive still needs an app release and protocol rollout; a new expression node needs an app release for phones to evaluate it, but no protocol rollout. The seven former code definitions were bootstrap input for migration `0017_persisted_item_types` only; after publication the database is the authority and the code templates are removed. The "type arrived" sheet triggers on a published catalogue revision that adds an active type whose `legacyLabels` match `items.legacy_type`.
 
 ### D6. Every write is a command; the command layer is the only writer
 
@@ -273,7 +274,7 @@ Outcomes map one to one to the phone's states, with one addition the direction l
 
 **Decision.** Every `/mobile/inventory/*` request carries `Pops-Inventory-Protocol: <n>`. The server answers `426 client_too_old` below its minimum, which the phone shows as the approved blocking "This app is too old". Additive fields do not bump the protocol. Server-to-client values that may grow (lifecycle, event kind, discard reason, repair kind) are declared as strings on the wire and decoded into Swift enums with an `.unrecognised(String)` case, as `PurchaseSettlement` does, because POPS-1663 and POPS-1992 both broke installed apps with a closed enum.
 
-Protocol and catalogue revision are independent. A label edit increments only the catalogue revision; a new primitive, expression node, provenance case or other syntax an old binary cannot safely preserve requires a new protocol. The persisted value-entry and definition shapes in D5 begin at protocol 2. Publication may name a higher `minimumProtocol`, but it remains a draft until an iOS build supporting that protocol is available. Rollout order is inventory and bfm accepting the new protocol, iOS release, observed minimum supported build, an owner atomically raising `sync_meta.min_protocol` through `POST /type-catalogue/protocol-rollout`, then catalogue publication that uses the new vocabulary. The activation is a compare-and-swap against `expectedMinimumProtocol`, cannot exceed the server build's supported protocol and cannot decrease. Publication reads the same persisted value and refuses a catalogue minimum above it. Reversing that order strands installed offline replicas.
+Protocol and catalogue revision are independent. A label edit increments only the catalogue revision; a new primitive, provenance case or other syntax an old binary cannot safely preserve requires a new protocol. An expression node is not such syntax (D5). The persisted value-entry and definition shapes in D5 begin at protocol 2. Publication may name a higher `minimumProtocol`, but it remains a draft until an iOS build supporting that protocol is available. Rollout order is inventory and bfm accepting the new protocol, iOS release, observed minimum supported build, an owner atomically raising `sync_meta.min_protocol` through `POST /type-catalogue/protocol-rollout`, then catalogue publication that uses the new vocabulary. The activation is a compare-and-swap against `expectedMinimumProtocol`, cannot exceed the server build's supported protocol and cannot decrease. Publication reads the same persisted value and refuses a catalogue minimum above it. Reversing that order strands installed offline replicas.
 
 bfm passes the protocol header unchanged in both directions and never down-converts catalogue data. The server returns its current `minimumProtocol` and `catalogueRevision` on catalogue, snapshot and feed responses. An installed client that understands the protocol but lacks the named catalogue downloads that immutable snapshot before applying dependent rows. A client below the protocol minimum may keep showing its last local replica read-only, but it cannot refresh or enqueue writes.
 
@@ -293,7 +294,7 @@ bfm passes the protocol header unchanged in both directions and never down-conve
 - **Data protection.** Database and media files use `FileProtectionType.completeUntilFirstUserAuthentication` so background refresh works after first unlock. The media cache directory is excluded from backup; the database is not, because it holds unsynced work.
 - **Two row layers.** `item_base` is the last server state (with revision and `seq`); `item` is the optimistic view. A feed page updates `item_base`, then rebases each affected row by replaying its pending mutations over the new base. Commands are applied locally by a Swift reducer whose behaviour is pinned to the server's by shared test vectors (`pillars/inventory/contracts/command-vectors-v1.json`, generated by the TypeScript command tests and vendored to `clients/ios/Contracts`, with the same drift guard as the refresh-message vector).
 - **Catalogue replicas.** Immutable catalogue revisions, definitions and enum options are persisted in GRDB, not flattened into Swift enums. Applying a catalogue and the first rows that name it is one transaction. Item values and queued mutations retain their catalogue revision; old revisions remain until no replica row or mutation references them. The generic editor refuses unknown primitive or expression syntax rather than dropping it on a round trip.
-- **References and computed values.** Reference ids are stored even when their targets are absent or tombstoned. The replica evaluates the same versioned AST with the same decimal library, traversal limits and shared vectors as the server. Its cache uses item, catalogue and dependency revisions and is disposable.
+- **References and computed values.** Reference ids are stored even when their targets are absent or tombstoned. The replica evaluates the same versioned AST with the same exact-decimal arithmetic, traversal limits and shared vectors (`contracts/expression-vectors-v1.json`) as the server. A server evaluation stays authoritative while it still matches the phone's rows. After a local change (an edit, an override set or cleared, an offline create) or a newer revision of something it read, the replica re-evaluates the field and its dependents over its optimistic rows. It shows the server's value as out of date only when it cannot evaluate: syntax the build does not know, or a reference to an item not yet downloaded. Local evaluations are disposable and never sent.
 - **Replay order.** Stable topological order: enqueue order, corrected so nothing precedes its dependency, as the playground's `InventoryQueue.ordered` already specifies. The drain sends batches of up to 50, holds dependents back after a failure of their dependency, and backs off exponentially from 2 s to 5 min. It runs on foreground, after each enqueue, and on an `NWPathMonitor` change to satisfied.
 - **Migrations.** `DatabaseMigrator` with append-only named migrations; a replica migration that cannot run falls back to re-snapshot while preserving the log table.
 - **Media budget.** Thumbnails for every item are kept; full-size images live in an LRU cache capped at 500 MB; photos staged on this phone are pinned until the server acknowledges them. Free space under 200 MB before staging a photo, or `SQLITE_FULL`, raises the approved "Storage full" alert.
@@ -436,7 +437,7 @@ Key/value: `epoch`, `min_protocol`, `catalogue_revision`.
 
 ### `items_fts`
 
-FTS5 over `name`, `code`, `note`, `type_label`, `field_text`, `external_ids`, maintained by the command layer. It resolves labels from the published catalogue snapshot and rebuilds after `catalogue_revision` changes.
+FTS5 over `name`, `code`, `note`, `type_label`, `field_text`, `external_ids`, maintained by the command layer. It resolves labels from the published catalogue snapshot and rebuilds after `catalogue_revision` changes. `field_text` carries each computed field's effective value (the override when present, otherwise the evaluated value, nothing while unavailable); dependents re-sent by a mutation (D5) are reindexed in that mutation's transaction.
 
 `item_uploaded_files`, `item_documents`, `item_connections` and `item_fixture_connections` keep their shapes and are rebuilt only to point at `items`. `fixtures` is untouched; ADR-001's "a fixture is an item with the wired-in capability" is not part of this design.
 

@@ -80,7 +80,7 @@ const ELSE_KEY = 'else' as const;
  * Mirrors `pillars/inventory/src/catalogue/expression-types.ts`'s
  * `ExpressionV1` union: a literal, a same-item or bounded (max 2 hops)
  * reference read, a unary `negate`/`not`, a binary arithmetic/comparison/
- * boolean op, or an `if`. No other syntax — no arbitrary JS/SQL.
+ * boolean op, an `if`, or a `coalesce`. No other syntax — no arbitrary JS/SQL.
  */
 export const expressionSchemaDefs = {
   expressionV1: {
@@ -89,8 +89,10 @@ export const expressionSchemaDefs = {
       "{op:'read', path, fieldId} reads fieldId on the item reached by following " +
       "path (own item when path is [], at most 2 reference hops); {op:'negate'|'not', value} " +
       "a unary op; {op:'add'|'subtract'|'multiply'|'divide'|'concat'|'equal'|'less_than'|'and'|'or', " +
-      "left, right} a binary op; {op:'if', condition, then, else}. " +
-      'Missing dependencies make the computed value unavailable rather than erroring.',
+      "left, right} a binary op; {op:'if', condition, then, else}; " +
+      "{op:'coalesce', values} the first of two or more expressions that has a value. " +
+      'Missing dependencies make the computed value unavailable rather than erroring; ' +
+      'only coalesce skips an unavailable argument.',
     oneOf: [
       {
         type: 'object',
@@ -142,6 +144,15 @@ export const expressionSchemaDefs = {
           [ELSE_KEY]: expressionRef,
         },
         required: ['op', 'condition', THEN_KEY, ELSE_KEY],
+      },
+      {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          op: { const: 'coalesce' },
+          values: { type: 'array', items: expressionRef, minItems: 2 },
+        },
+        required: ['op', 'values'],
       },
     ],
   },

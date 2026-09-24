@@ -170,6 +170,51 @@ describe('validateCatalogueExpressions', () => {
     ).toThrowError(expect.objectContaining({ code: 'expression_dependencies_exceeded' }));
   });
 
+  it('declares a coalesce dependency on every argument and types them alike', () => {
+    const fields = [
+      expressionField({ id: 'measured', key: 'measured' }),
+      expressionField({ id: 'estimated', key: 'estimated' }),
+      computed('best', {
+        op: 'coalesce',
+        values: [read('measured'), read('estimated'), { op: 'literal', value: '0' }],
+      }),
+    ];
+    const [expression] = validateCatalogueExpressions(
+      expressionCatalogue([expressionType('type', fields)])
+    );
+    expect(expression?.dependencies.map((dependency) => dependency.fieldId)).toEqual([
+      'estimated',
+      'measured',
+    ]);
+    expect(expression?.resultType).toEqual({ kind: 'decimal', fixedUnit: null });
+  });
+
+  it('rejects coalesce arguments of different kinds', () => {
+    const fields = [
+      expressionField({ id: 'measured', key: 'measured' }),
+      computed('best', { op: 'coalesce', values: [read('measured'), { op: 'literal', value: 1 }] }),
+    ];
+    expect(() =>
+      validateCatalogueExpressions(expressionCatalogue([expressionType('type', fields)]))
+    ).toThrowError(
+      expect.objectContaining({
+        code: 'expression_literal_type_mismatch',
+        path: 'expression.values.1',
+      })
+    );
+  });
+
+  it('rejects a cycle that only passes through a coalesce fallback', () => {
+    const fields = [
+      expressionField({ id: 'stored', key: 'stored' }),
+      computed('first', { op: 'coalesce', values: [read('stored'), read('second')] }),
+      computed('second', read('first')),
+    ];
+    expect(() =>
+      validateCatalogueExpressions(expressionCatalogue([expressionType('type', fields)]))
+    ).toThrowError(expect.objectContaining({ code: 'expression_cycle' }));
+  });
+
   it('exposes a graph edge for every possible computed dependency', () => {
     const expressions = validateCatalogueExpressions(
       expressionCatalogue([

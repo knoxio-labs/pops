@@ -1,4 +1,5 @@
 import { addOrSubtract, divide, lessThan, multiply, negate } from './expression-arithmetic.js';
+import { evaluateCoalesce } from './expression-coalesce.js';
 import { errorEvaluation, uniqueEvaluatedDependencies } from './expression-evaluation-shared.js';
 import { evaluateRead } from './expression-reader.js';
 import { canonicalExpressionResult } from './expression-result.js';
@@ -158,6 +159,8 @@ function evaluateNode(
   if (expression.op === 'read') return evaluateRead(expression, snapshot);
   if ('value' in expression) return evaluateUnary(expression, snapshot);
   if (expression.op === 'if') return evaluateConditional(expression, snapshot);
+  if (expression.op === 'coalesce')
+    return evaluateCoalesce(expression.values, snapshot, (node) => evaluateNode(node, snapshot));
   return evaluateBinary(expression, snapshot);
 }
 

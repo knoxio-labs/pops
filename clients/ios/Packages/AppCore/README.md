@@ -41,6 +41,14 @@ Purchase search keeps order hits and line hits distinct even when their underlyi
 
 Purchase details keep their ordered receipt URI list separate from the list row's compatibility URI. Receipt reads return decoded bytes with the server media type. The purchase fake seeds details and receipt bytes independently; page, summary, detail, thumbnail, and full-image calls all increment the same one-based call counter before applying scheduled failures.
 
+## Computed field expressions
+
+`Inventory/Expressions/` is the server's expression-version-1 evaluator redone in Swift, so the phone can compute a field from values it holds (Inventory ADR-002 D11). `InventoryComputedDefinition` parses a catalogue field's stored AST; syntax this build does not know is refused with the server's code and path rather than guessed at. Evaluation reads an `InventoryExpressionSnapshot` and returns an `InventoryComputedValue` shaped exactly as the sync wire delivers one.
+
+Numbers never pass through a binary float. Decimals are an `Int128` coefficient and a scale, with the server's bounds: 18 significant digits, 9 places, exact division or `precision_overflow`. Integers stay inside JavaScript's safe range. Text compares by UTF-16 code unit, as JavaScript does, not by Swift's canonical equivalence.
+
+`AppCoreTests/InventoryExpressionVectorTests` replays every vector in `clients/ios/Contracts/expression-vectors-v1.json`, which the inventory pillar generates from its own parser and evaluator, and fails on any difference in value, reason, failing field, dependency or traversed item, or on an op no vector evaluates.
+
 ## The composition root
 
 `App/` is the only place a protocol is bound to a concrete type. Nothing else constructs an implementation and nothing else learns which one it got — that is what makes swapping a transport, or running a whole feature against fakes, a change in one file rather than in every screen.

@@ -934,6 +934,24 @@ jobs:
       - name: The committed vector matches on both sides of the seam
         run: node scripts/ci/check-command-vectors-fixture.mjs
 
+  expression-vectors-fixture:
+    name: Inventory expression vectors (pillar ↔ iOS)
+    # The phone evaluates computed fields itself and must reach the server's
+    # result exactly (Inventory ADR-002 D11). The pillar's evaluator generates
+    # the vectors; `clients/ios` vendors them (ADR-043). Same arrangement and
+    # copy machinery as `command-vectors-fixture` above. Needs no
+    # `pnpm install` — reads two JSON files.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Gate self-test (proves the guard catches a changed vector)
+        run: node scripts/ci/check-expression-vectors-fixture.mjs --self-test
+      - name: The committed vector matches on both sides of the seam
+        run: node scripts/ci/check-expression-vectors-fixture.mjs
+
   cross-pillar-expectations:
     name: Backend cross-pillar expectations (ADR-040)
     # The backend counterpart to `cross-pillar-clients` below. A pillar's

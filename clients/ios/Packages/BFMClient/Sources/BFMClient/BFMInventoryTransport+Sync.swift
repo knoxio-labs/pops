@@ -9,7 +9,7 @@ extension BFMInventoryTransport {
                 query: .init(cursor: cursor, limit: limit)
             )
         } catch let error as ClientError {
-            throw BFMRepositoryFailure.failure(error, operation: Snapshot.id)
+            throw Self.syncReadFailure(error, operation: Snapshot.id)
         }
 
         switch output {
@@ -72,7 +72,7 @@ extension BFMInventoryTransport {
                 query: .init(since: since, epoch: epoch, limit: limit)
             )
         } catch let error as ClientError {
-            throw BFMRepositoryFailure.failure(error, operation: Changes.id)
+            throw Self.syncReadFailure(error, operation: Changes.id)
         }
 
         switch output {

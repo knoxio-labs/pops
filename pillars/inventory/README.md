@@ -121,7 +121,9 @@ the built-in types during rollout.
 Archived enum selections and stale references remain readable when unchanged;
 reference reads add `resolved`, `deleted` or `missing` without discarding the
 target ID. Publication compatibility distinguishes additive, protocol-gated,
-migration-required and forbidden changes. Required rewrites use only the named
+migration-required and forbidden changes. A new type is judged by its fields:
+one whose primitive kind the base catalogue never used is protocol-gated, as
+adding that field to an existing type is. Required rewrites use only the named
 `copy`, `set_default`, `map_enum`, `convert_decimal`, `replace_reference` and
 `drop_value` operations. The server derives the exact affected type and field
 sets from the base-to-draft compatibility diff; a submitted migration cannot
@@ -154,7 +156,11 @@ type/field dependencies, resolves reference reads across every permitted target
 type, and rejects direct, transitive and reference-mediated cycles. Evaluation is
 synchronous against one supplied item snapshot, uses exact integer, decimal and
 fixed-unit measurement arithmetic, and short-circuits boolean and conditional
-branches before attempting their reads. Its disposable LRU cache has no clock:
+branches before attempting their reads. `coalesce` alone skips an unavailable
+argument, and records the input it lacked as a dependency (revision 0 when the
+item is absent) so the fallback goes stale when that input appears. It needs no
+protocol rollout: phones carry expressions as opaque JSON and keep the server's
+value for syntax they cannot parse. Its disposable LRU cache has no clock:
 entries match exact item, catalogue and dependency revisions, with direct
 dependency, item and catalogue invalidation primitives for command and feed paths.
 Draft validation and publication run that expression validator before any snapshot
@@ -166,6 +172,14 @@ revision-checked, event-logged commands; only a computed field with
 `allowOverride` accepts them. Every applied item command invalidates both the
 item's cached subjects and reverse dependencies, while publication clears the
 process-local cache.
+Search indexes each computed field's effective value: the override when one
+exists, otherwise the evaluated value, and nothing while it is unavailable.
+
+The phone evaluates the same AST. `contracts/expression-vectors-v1.json` pins it
+to the server: every case runs through this parser, evaluator and sync
+projection, and the Swift evaluator must reproduce each result. Regenerate with
+`mise run fixture:expression-vectors`; the drift test and the
+`expression-vectors-fixture` CI job fail on a stale copy.
 
 Migration `0012_items_single_identity` built this from `home_inventory` and
 `containers` and dropped both. It aborts, writing nothing, when an id or a
@@ -299,8 +313,9 @@ minimumProtocol }`. The expected value makes concurrent operator actions a
 - When a mutation changes an item that other items' computed values read
   (tracked in `item_computed_dependencies`), those items are re-sent in the
   same change-feed page: their `seq` moves to the mutation's, their `revision`
-  does not. At most 256 are re-sent per mutation. A client replaces a stored
-  item at the same revision when the incoming `seq` is newer.
+  does not, and their search entries are rewritten with the fresh evaluation
+  in the same transaction. At most 256 are re-sent per mutation. A client
+  replaces a stored item at the same revision when the incoming `seq` is newer.
 - The snapshot serves live items and locations in pages whose opaque cursor
   pins the high-water `seq` of the first page; the change feed then serves
   every row (tombstones included) and every event after a `seq`. A cursor or
@@ -345,6 +360,13 @@ minimumProtocol }`. The expected value makes concurrent operator actions a
   Draft creation, patching, publication and abandonment require the owner
   session or `inventory.types.manage`. A catalogue revision is never mutable
   after publication; stale base revisions answer `409`.
+- `GET /type-catalogue/types/:typeId?revision=` reads one type by stable id as
+  the current or an exact published revision defined it, under the same read
+  grant, and writes nothing. An older revision keeps the label, fields and
+  archive state it published. A draft, abandoned or missing revision is
+  `404 catalogue_revision_unknown`; a type that revision does not define is
+  `404 catalogue_type_unknown`. MCP exposes it as
+  `inventory.catalogue.getType`.
 - Events carry `before`/`after` keyed by wire field. A move records both
   `placement` and `previousPlacement`, each in the item row's placement
   shape (`{ kind: 'location', locationId }`, `{ kind: 'container', itemId }`,

@@ -434,7 +434,7 @@ describe('active catalogue item commands', () => {
         { baseRevision: null, catalogueRevision: 1 }
       )
     );
-    expect(stale).toMatchObject({ status: 'rejected', reason: 'type_unknown' });
+    expect(stale).toMatchObject({ status: 'rejected', reason: 'catalogue_update_required' });
     expect(
       harness.raw.prepare(`SELECT count(*) AS count FROM items WHERE id = ?`).get(staleId)
     ).toEqual({ count: 0 });

@@ -7,6 +7,7 @@ import {
 } from '../../catalogue/computed-dependency-index.js';
 import { loadPublishedCatalogue } from '../../catalogue/index.js';
 import { events, items } from '../../db/index.js';
+import { reindexItems } from './search-index.js';
 
 import type { CommandDb } from './entities.js';
 
@@ -32,7 +33,8 @@ export function latestSeq(db: CommandDb): number {
  * edit changes what they read. Each dependent then gets its index rows
  * refreshed (a changed intermediate reference reroutes its traversal) and its
  * `seq` stamped with the mutation's last event `seq`, so the change feed
- * carries it in the same page with a fresh evaluation. Its `revision` does
+ * carries it in the same page with a fresh evaluation, and its search entry
+ * is rewritten with that evaluation. Its `revision` does
  * not move: nothing it owns changed, and a base-revision check against it
  * must not start failing (D8).
  *
@@ -70,5 +72,6 @@ export function resendComputedDependents(
     .set({ seq: latestSeq(db) })
     .where(inArray(items.id, dependents))
     .run();
+  reindexItems(db, dependents);
   return dependents;
 }

@@ -207,6 +207,9 @@ import type {
   TypesReadCatalogueData,
   TypesReadCatalogueErrors,
   TypesReadCatalogueResponses,
+  TypesReadTypeData,
+  TypesReadTypeErrors,
+  TypesReadTypeResponses,
   TypesReadValidateItemData,
   TypesReadValidateItemErrors,
   TypesReadValidateItemResponses,
@@ -1241,6 +1244,17 @@ export const typesManageActivateProtocolRollout = <ThrowOnError extends boolean 
       'Content-Type': 'application/json',
       ...options?.headers,
     },
+  });
+
+/**
+ * Read one type definition at the current or an exact published catalogue revision
+ */
+export const typesReadType = <ThrowOnError extends boolean = false>(
+  options: Options<TypesReadTypeData, ThrowOnError>
+): RequestResult<TypesReadTypeResponses, TypesReadTypeErrors, ThrowOnError> =>
+  (options.client ?? client).get<TypesReadTypeResponses, TypesReadTypeErrors, ThrowOnError>({
+    url: '/type-catalogue/types/{typeId}',
+    ...options,
   });
 
 /**

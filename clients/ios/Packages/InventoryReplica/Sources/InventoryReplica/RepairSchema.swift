@@ -10,7 +10,8 @@ extension ReplicaSchema {
     /// - `repair`: one row per mutation the server would not take, keyed by
     ///   its mutation id, which stays in `mutation_log` in that state while
     ///   the repair is open. `kind` is the outcome's (`field`,
-    ///   `code_collision`, `deleted`, `photo_failed`, `rejected`); `payload`
+    ///   `code_collision`, `deleted`, `photo_failed`, `catalogue_changed`,
+    ///   `rejected`); `payload`
     ///   is the outcome whole, with the change's own side of it. A resolved
     ///   row keeps `resolution`, and `reissued_as` with
     ///   `base_revision_floor` when keeping this phone's side sent the change

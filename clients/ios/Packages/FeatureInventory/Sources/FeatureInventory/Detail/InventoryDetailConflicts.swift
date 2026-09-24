@@ -26,6 +26,10 @@ internal enum InventoryDetailConflicts {
             return InventoryDetailConflict(
                 repairId: repair.id, problem: "A photo did not upload", resolution: "Retry",
                 choice: .keepMine())
+        case .catalogueChanged:
+            return InventoryDetailConflict(
+                repairId: repair.id, problem: "A field in a queued change was replaced",
+                resolution: "Retry", choice: .keepMine())
         case .unrecognised(let reason):
             return InventoryDetailConflict(
                 repairId: repair.id,

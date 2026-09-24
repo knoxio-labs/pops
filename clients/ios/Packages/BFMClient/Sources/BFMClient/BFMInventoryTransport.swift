@@ -76,7 +76,7 @@ public struct BFMInventoryTransport: InventorySyncTransport {
             output = try await client.generated.mobileInventory_catalogueRevision(
                 query: .init(revision: revision))
         } catch let error as ClientError {
-            throw BFMRepositoryFailure.failure(error, operation: CatalogueRevision.id)
+            throw Self.syncReadFailure(error, operation: CatalogueRevision.id)
         }
         switch output {
         case .ok(let ok):
@@ -124,6 +124,21 @@ public struct BFMInventoryTransport: InventorySyncTransport {
             unit: wire.unit, choices: wire.choices, highlighted: wire.highlighted ?? false,
             required: wire.required ?? false
         )
+    }
+
+    /// A sync read the server answered successfully with a body this build
+    /// cannot decode (a field kind, a status, a value shape it has never
+    /// heard of) is a server that moved past this build, so it is refused as
+    /// `426` is: ``InventorySyncTransportError/clientTooOld``, which the
+    /// replica shows as blocked (`appTooOld`) with nothing applied. Every
+    /// other failure reads as ``BFMRepositoryFailure/failure(_:operation:)``
+    /// says, where an undecodable success would otherwise read as the
+    /// network being down.
+    internal static func syncReadFailure(_ error: ClientError, operation: String) -> any Error {
+        if error.response?.status.kind == .successful, error.underlyingError is DecodingError {
+            return InventorySyncTransportError.clientTooOld
+        }
+        return BFMRepositoryFailure.failure(error, operation: operation)
     }
 
     /// Both documented `403` shapes (`device_revoked`, `capability_not_granted`)

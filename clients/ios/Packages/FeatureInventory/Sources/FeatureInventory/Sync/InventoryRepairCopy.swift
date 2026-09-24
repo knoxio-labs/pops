@@ -15,7 +15,7 @@ extension InventoryRepairKind {
         case .conflict: ("Keep mine", InventorySymbol.device)
         case .codeCollision: ("New code", .suggest)
         case .deletedElsewhere: ("Restore", .restore)
-        case .photoFailed: ("Retry", .retry)
+        case .photoFailed, .catalogueChanged: ("Retry", .retry)
         case .unrecognised: ("Let go", .attention)
         }
     }
@@ -27,7 +27,7 @@ extension InventoryRepairKind {
         case .conflict: "Keep"
         case .codeCollision: "Save"
         case .deletedElsewhere: "Restore"
-        case .photoFailed: "Retry"
+        case .photoFailed, .catalogueChanged: "Retry"
         case .unrecognised: nil
         }
     }
@@ -35,7 +35,7 @@ extension InventoryRepairKind {
     internal var letGoTitle: String {
         switch self {
         case .conflict, .codeCollision: "Discard mine"
-        case .deletedElsewhere: "Let go"
+        case .deletedElsewhere, .catalogueChanged: "Let go"
         case .photoFailed: "Remove"
         case .unrecognised: "Let go"
         }
@@ -50,6 +50,7 @@ extension InventoryRepairKind {
         case .codeCollision: "Relabelled"
         case .deletedElsewhere: "Restored"
         case .photoFailed: "Photo sent"
+        case .catalogueChanged: "Sent with current fields"
         case .unrecognised: "Kept mine"
         }
     }
@@ -57,7 +58,7 @@ extension InventoryRepairKind {
     internal var letGoOutcome: String {
         switch self {
         case .conflict, .codeCollision: "Discarded mine"
-        case .deletedElsewhere: "Let go"
+        case .deletedElsewhere, .catalogueChanged: "Let go"
         case .photoFailed: "Photo removed"
         case .unrecognised: "Let go"
         }

@@ -85,6 +85,8 @@ extension InventoryRejectedReason {
         case .hasContents: "has_contents"
         case .illegalTransition: "illegal_transition"
         case .mediaMissing: "media_missing"
+        case .catalogueUpdateRequired: "catalogue_update_required"
+        case .catalogueRepairRequired: "catalogue_repair_required"
         case .unrecognised(let value): value
         }
     }

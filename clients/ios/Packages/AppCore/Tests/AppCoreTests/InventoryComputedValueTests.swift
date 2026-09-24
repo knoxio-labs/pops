@@ -107,7 +107,17 @@ internal struct InventoryComputedValueTests {
 
         #expect(value.display(in: Self.item()) { $0 == "shelf" ? 7 : nil } == .value(Self.six))
         #expect(value.display(in: Self.item()) { $0 == "shelf" ? 8 : nil } == .outOfDate)
-        #expect(value.display(in: Self.item()) { _ in nil } == .outOfDate)
+    }
+
+    @Test("an evaluation ahead of the phone's copy of a referenced item stands")
+    func evaluationAheadOfPhoneStands() {
+        let value = Self.computed(
+            .ok(Self.six),
+            dependencies: [InventoryValueDependency(itemId: "shelf", fieldId: "depth", revision: 7)]
+        )
+
+        #expect(value.display(in: Self.item()) { $0 == "shelf" ? 6 : nil } == .value(Self.six))
+        #expect(value.display(in: Self.item()) { _ in nil } == .value(Self.six))
     }
 
     @Test("the evaluation round-trips through its stored form")

@@ -10,7 +10,7 @@ private struct Protocol2FieldKinds {
 internal enum Protocol2CatalogueRows {
     static func store(_ catalogue: InventoryCatalogueSnapshot, in db: Database) throws {
         if let stored = try read(revision: catalogue.revision.revision, in: db) {
-            guard stored == catalogue else {
+            guard stored == catalogue.inStoredOrder else {
                 throw InventoryReplicaError.corruptValue(
                     "catalogue revision \(catalogue.revision.revision) changed")
             }

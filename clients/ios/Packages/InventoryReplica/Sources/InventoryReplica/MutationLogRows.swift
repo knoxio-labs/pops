@@ -25,7 +25,7 @@ internal struct LogEntry: Sendable {
     var command: LoggedCommand
     var dependsOn: [String]
     var baseRevision: Int?
-    let catalogueRevision: Int
+    var catalogueRevision: Int
     var state: MutationState
     var outcome: StoredOutcome?
     var settlesAtSeq: Int?
@@ -34,6 +34,11 @@ internal struct LogEntry: Sendable {
     var attempts: Int
     let createdAt: Double
     var lastAttemptAt: Double?
+    /// Set while the change waits for a catalogue newer than this revision:
+    /// the server answered `catalogue_update_required` for it. It is not
+    /// sent until the replica holds a newer revision and it has been moved
+    /// onto it (``CatalogueRebase``).
+    var awaitingCatalogueAfter: Int?
 }
 
 /// Reads and writes `mutation_log` rows inside the caller's transaction.
@@ -45,8 +50,8 @@ internal enum MutationLogRows {
             sql: """
                 INSERT INTO \(table) (mutation_id, entity_kind, entity_id, command, depends_on,
                     base_revision, catalogue_revision, state, outcome, outcome_seq, settles_at_seq, touched, change,
-                    attempts, created_at, last_attempt_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    attempts, created_at, last_attempt_at, awaiting_catalogue_after)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
             arguments: StatementArguments(
                 [
@@ -56,7 +61,7 @@ internal enum MutationLogRows {
                     entry.catalogueRevision,
                 ]
                     + (try mutableStateColumns(entry))
-                    + [entry.createdAt, entry.lastAttemptAt]))
+                    + [entry.createdAt, entry.lastAttemptAt, entry.awaitingCatalogueAfter]))
     }
 
     static func update(_ entry: LogEntry, in db: Database) throws {
@@ -64,11 +69,16 @@ internal enum MutationLogRows {
             sql: """
                 UPDATE \(table) SET command = ?, depends_on = ?, base_revision = ?, state = ?,
                     outcome = ?, outcome_seq = ?, settles_at_seq = ?, touched = ?, change = ?,
-                    attempts = ?, last_attempt_at = ?
+                    attempts = ?, last_attempt_at = ?, catalogue_revision = ?,
+                    awaiting_catalogue_after = ?
                 WHERE mutation_id = ?
                 """,
             arguments: StatementArguments(
-                (try mutableColumns(entry)) + [entry.lastAttemptAt, entry.mutationId]))
+                (try mutableColumns(entry))
+                    + [
+                        entry.lastAttemptAt, entry.catalogueRevision,
+                        entry.awaitingCatalogueAfter, entry.mutationId,
+                    ]))
     }
 
     static func delete(_ mutationIds: [String], in db: Database) throws {
@@ -184,6 +194,7 @@ internal enum MutationLogRows {
             change: try change.map { try StoredJSON.decode(PrimaryChange.self, from: $0) },
             attempts: try row.decode(forColumn: "attempts"),
             createdAt: try row.decode(forColumn: "created_at"),
-            lastAttemptAt: try row.decode(forColumn: "last_attempt_at"))
+            lastAttemptAt: try row.decode(forColumn: "last_attempt_at"),
+            awaitingCatalogueAfter: try row.decode(forColumn: "awaiting_catalogue_after"))
     }
 }

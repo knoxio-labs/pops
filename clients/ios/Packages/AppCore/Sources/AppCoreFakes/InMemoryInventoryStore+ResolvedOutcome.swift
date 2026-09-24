@@ -8,7 +8,10 @@ extension InMemoryInventoryStore {
         -> String
     {
         switch (kind, choice) {
-        case (.unrecognised, _), (.deletedElsewhere, .discardMine): "Let go"
+        case (.unrecognised, _), (.deletedElsewhere, .discardMine),
+            (.catalogueChanged, .discardMine):
+            "Let go"
+        case (.catalogueChanged, .keepMine): "Sent with current fields"
         case (.conflict, .keepMine): "Kept mine"
         case (.codeCollision, .keepMine(let code)): code.map { "Relabelled \($0)" } ?? "Relabelled"
         case (.deletedElsewhere, .keepMine): "Restored"

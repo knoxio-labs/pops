@@ -42,6 +42,8 @@ internal enum MutationLogWrites {
             change: application.change, attempts: 0, createdAt: storedDate(time),
             lastAttemptAt: nil)
         try MutationLogRows.insert(entry, in: db)
+        try LocalComputedValues.refresh(
+            Set(application.touched.filter { $0.kind == "item" }.map(\.id)), in: db)
         return application
     }
 
@@ -71,7 +73,8 @@ internal enum MutationLogWrites {
     /// What the drain may send, addressed for the wire, in stable
     /// topological order (``DrainOrder``). A mutation is held back, along
     /// with everything depending on it, when it is in `skipped`, in flight,
-    /// conflicted or rejected, an Undo whose change has no applied outcome
+    /// conflicted or rejected, waiting for a newer catalogue, an Undo whose
+    /// change has no applied outcome
     /// naming its event yet, or an attach of a photo this phone staged and
     /// has not uploaded.
     static func outbound(excluding skipped: Set<String>, in db: Database) throws
@@ -80,7 +83,9 @@ internal enum MutationLogWrites {
         let log = try MutationLogRows.entries(
             in: [.queued, .deferred, .sending, .conflicted, .rejected], db)
         var held = skipped.union(
-            log.filter { !($0.state == .queued || $0.state == .deferred) }.map(\.mutationId))
+            log.filter {
+                !($0.state == .queued || $0.state == .deferred) || $0.awaitingCatalogueAfter != nil
+            }.map(\.mutationId))
         let sendable = DrainOrder.ordered(
             log.filter { !held.contains($0.mutationId) }, id: \.mutationId,
             dependsOn: \.dependsOn)

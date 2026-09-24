@@ -75,6 +75,20 @@ function inferConditional(
   return result;
 }
 
+function inferCoalesce(
+  node: Extract<ExpressionV1, { op: 'coalesce' }>,
+  context: ExpressionValidationContext,
+  path: string,
+  expected: ExpressionValueType | undefined
+): ExpressionValueType {
+  let result = expected;
+  node.values.forEach((value, index) => {
+    result = inferExpressionType(value, context, `${path}.values.${index}`, result);
+  });
+  if (result === undefined) return expressionFail(path, 'expression_arity_invalid', 'is empty');
+  return result;
+}
+
 /** Infers and verifies one expression tree against its declared result type. */
 export function inferExpressionType(
   node: ExpressionV1,
@@ -92,6 +106,7 @@ export function inferExpressionType(
     } else
       result = requireNumericType(inferExpressionType(node.value, context, `${path}.value`), path);
   } else if (node.op === 'if') result = inferConditional(node, context, path, expected);
+  else if (node.op === 'coalesce') result = inferCoalesce(node, context, path, expected);
   else result = inferBinary(node, context, path);
   return expected === undefined ? result : requireExpressionType(result, expected, path);
 }

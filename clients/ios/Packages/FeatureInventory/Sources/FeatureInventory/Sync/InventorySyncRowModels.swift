@@ -173,6 +173,8 @@ extension InventorySyncPage {
             return "This was deleted on another device."
         case .photoFailed:
             return "This photo could not be uploaded."
+        case .catalogueChanged:
+            return "A field this change used was archived or replaced."
         case .unrecognised(let reason):
             if reason == "invalid" || reason == "type_unknown" {
                 return "This change no longer matches the catalogue. "

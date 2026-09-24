@@ -102,7 +102,7 @@ extension LocalReducer {
             throw refusal(.invalid, "a stable field is present more than once")
         }
         let fields = Dictionary(uniqueKeysWithValues: type.fields.map { ($0.id, $0) })
-        for entry in entries {
+        for entry in entries where entry.source != .override {
             guard let field = fields[entry.fieldId], field.storage == .stored,
                 entry.catalogueRevision == revision, case .value(let values) = entry.state,
                 !values.isEmpty

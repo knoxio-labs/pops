@@ -15,6 +15,13 @@ internal enum RepairSettlement {
         let restoreFirst: Bool
         let resolution: RepairResolution
         let code: String?
+        /// The catalogue revision the change is sent against, when it moves.
+        var catalogueRevision: Int?
+        /// Whether the reducer judges the change before it is sent again. A
+        /// change moved onto a newer catalogue is judged by
+        /// ``CatalogueRebase`` instead: the reducer only accepts a protocol-2
+        /// edit at the revision its item row already carries.
+        var checkedByReducer = true
     }
 
     /// Opens the repair a conflicted or rejected outcome calls for, or
@@ -45,7 +52,7 @@ internal enum RepairSettlement {
         else { throw InventoryCommandError.repairNotFound(id) }
         let line: String
         if case .keepMine(let code) = choice, repair.canKeepMine {
-            let reissue = try plan(repair, entry, code: code)
+            let reissue = try plan(repair, entry, code: code, in: db)
             let newId = try send(reissue, of: entry, as: mint, at: time, in: db)
             if repair.kind == .photoFailed, let sha256 = entry.command.attachedPhoto {
                 try MediaRows.restage(sha256, in: db)
@@ -88,9 +95,10 @@ internal enum RepairSettlement {
         }
     }
 
-    private static func plan(_ repair: StoredRepair, _ entry: LogEntry, code: String?) throws
-        -> Reissue
-    {
+    private static func plan(
+        _ repair: StoredRepair, _ entry: LogEntry, code: String?, in db: Database
+    ) throws -> Reissue {
+        if repair.kind == .catalogueChanged { return try rebased(entry, in: db) }
         switch repair.payload.outcome {
         case .conflictField(_, _, _, _, _, let currentRevision):
             return Reissue(
@@ -114,6 +122,25 @@ internal enum RepairSettlement {
         }
     }
 
+    /// The change moved onto the replica's catalogue revision, or the
+    /// reason it still does not fit, thrown so nothing changes.
+    private static func rebased(_ entry: LogEntry, in db: Database) throws -> Reissue {
+        guard let active = try SyncMeta.read(db).catalogueRevision else {
+            throw InventoryCommandError.rejected(
+                reason: .catalogueUpdateRequired,
+                message: "no catalogue is on this phone yet; refresh and try again")
+        }
+        switch try CatalogueRebase.rebase(entry, onto: active, in: db) {
+        case .incompatible(let reason):
+            throw InventoryCommandError.rejected(reason: .catalogueRepairRequired, message: reason)
+        case .rebased(let command, let revision):
+            return Reissue(
+                command: command, baseRevision: entry.baseRevision, baseRevisionFloor: nil,
+                restoreFirst: false, resolution: .rebased, code: nil,
+                catalogueRevision: revision, checkedByReducer: false)
+        }
+    }
+
     private static func relabel(_ entry: LogEntry, code: String) throws -> Reissue {
         let trimmed = code.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, case .command(.setItemCode(let id, _)) = entry.command else {
@@ -134,11 +161,14 @@ internal enum RepairSettlement {
         in db: Database
     ) throws -> String {
         let restore = reissue.restoreFirst ? restoreEntry(for: entry, id: mint(), at: time) : nil
-        try validate([restore?.command, reissue.command].compactMap(\.self), on: entry, in: db)
+        if reissue.checkedByReducer {
+            try validate([restore?.command, reissue.command].compactMap(\.self), on: entry, in: db)
+        }
         let newId = mint()
         try MutationLogRows.rename(entry.mutationId, to: newId, in: db)
         var sent = entry.requeued(as: newId, command: reissue.command)
         sent.baseRevision = reissue.baseRevision
+        sent.catalogueRevision = reissue.catalogueRevision ?? entry.catalogueRevision
         sent.dependsOn = (entry.dependsOn + [restore?.mutationId].compactMap(\.self)).sorted()
         try MutationLogRows.update(sent, in: db)
         if let restore { try MutationLogRows.insert(restore, in: db) }
@@ -162,9 +192,12 @@ internal enum RepairSettlement {
     private static func isAlreadyOnServer(_ entry: LogEntry, in db: Database) throws -> Bool {
         guard case .command = entry.command else { return false }
         var unchanged = false
-        let catalogue = try SyncMeta.read(db).searchCatalogue(in: db)
+        // This savepoint always rolls back, so the reindex `resetView` performs as part of
+        // materializing the view row never reaches disk: there is nothing for a catalogue to
+        // improve here, and reading one just to discard it invites the protocol-1-only bug this
+        // call site once had (POPS-4433).
         try db.inSavepoint {
-            try MutationLogReplay.resetView(entry.entity, catalogue: catalogue, in: db)
+            try MutationLogReplay.resetView(entry.entity, catalogue: nil, in: db)
             do {
                 let application = try LocalReducer.apply(
                     entry.command, primary: entry.entity,

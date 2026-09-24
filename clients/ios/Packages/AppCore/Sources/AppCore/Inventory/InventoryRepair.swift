@@ -26,8 +26,9 @@ public enum InventorySyncSource: Hashable, Sendable {
 ///
 /// A change the server refused outright (a `rejected` outcome) has no
 /// approved repair of its own, so it is `unrecognised` too, carrying the
-/// rejection's reason, and offers only Let go. The one exception is
-/// `media_missing` on a photo attach, which is `photoFailed`.
+/// rejection's reason, and offers only Let go. The exceptions are
+/// `media_missing` on a photo attach, which is `photoFailed`, and
+/// `catalogue_repair_required`, which is `catalogueChanged`.
 public enum InventoryRepairKind: Hashable, Sendable {
     /// The same field was changed here and elsewhere.
     case conflict
@@ -37,6 +38,10 @@ public enum InventoryRepairKind: Hashable, Sendable {
     case deletedElsewhere
     /// A photo taken here could not be uploaded.
     case photoFailed
+    /// A field or type the change used was archived or replaced after it was
+    /// made. Keeping this phone's side sends it again against the current
+    /// definitions, which the replica checks first; letting go drops it.
+    case catalogueChanged
     case unrecognised(String)
 
     public init(wireOutcomeKind: String) {
@@ -116,6 +121,8 @@ public enum InventoryRepairChoice: Hashable, Sendable {
     /// (`codeCollision`, with the code to use, or the suggested one when
     /// nil), or restores a deleted record (`deletedElsewhere`) before
     /// replaying the original change. Retries the upload for `photoFailed`.
+    /// Sends the change again against the current catalogue for
+    /// `catalogueChanged`.
     case keepMine(code: String? = nil)
     /// Discard this phone's value: rebases on the server's value
     /// (`conflict`), drops the code (`codeCollision`), lets the deletion
