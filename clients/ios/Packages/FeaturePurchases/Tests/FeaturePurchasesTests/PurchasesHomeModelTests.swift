@@ -95,7 +95,7 @@ internal struct PurchasesHomeModelTests {
         await model.land(saved)
 
         #expect(model.highlighted == ["saved-1", "saved-2"])
-        #expect(await repository.calls() == callsBeforeLanding + 2)
+        #expect(await repository.calls() == callsBeforeLanding + 3)
     }
 
     @Test("landing IDs highlights them without inventing rows and performs one refresh")
@@ -110,7 +110,7 @@ internal struct PurchasesHomeModelTests {
         let digest = try loaded(model.phase)
         #expect(model.highlighted == ["saved-1", "saved-2"])
         #expect(digest.purchases.map(\.id) == ["server-row"])
-        #expect(await repository.calls() == callsBeforeLanding + 2)
+        #expect(await repository.calls() == callsBeforeLanding + 3)
     }
 
     @Test("an ordinary refresh clears the saved highlight after capture lands")
@@ -183,7 +183,7 @@ internal struct PurchasesHomeModelTests {
         #expect(refresh == .current)
     }
 
-    @Test("summary facts drive the digest instead of the loaded page")
+    @Test("summary facts drive the month; the unmatched tile counts the unsettled backlog")
     func summaryDrivesDigest() async throws {
         let summary = PurchasesMonthSummary(
             totals: [.init(total: money(9_000), netSpend: money(8_000), orderCount: 7)],
@@ -194,15 +194,17 @@ internal struct PurchasesHomeModelTests {
                 .init(merchantName: "Leader", netSpend: money(7_000), orderCount: 6)
             ])
         let repository = InMemoryPurchasesRepository(
-            rows: [.fake(id: "only-page-row")], summary: summary)
+            rows: [.fake(id: "unsettled-row"), .fake(id: "linked-row", status: .linked)],
+            summary: summary)
         let model = PurchasesHomeModel(dependencies: .fake(purchases: repository))
 
         await model.load()
 
         let digest = try loaded(model.phase)
-        #expect(digest.allCount == 1)
+        #expect(digest.allCount == 2)
         #expect(digest.monthCount == 19)
-        #expect(digest.unmatchedCount == 11)
+        #expect(digest.unmatchedCount == 1)
+        #expect(digest.unmatched.map(\.id) == ["unsettled-row"])
         #expect(digest.totals == [money(9_000)])
         #expect(digest.leaders.map(\.name) == ["Leader"])
     }
