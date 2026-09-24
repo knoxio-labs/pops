@@ -116,7 +116,7 @@ export function previewStateFrom(
       state: 'unavailable',
       sentences: result.missing.map((missing) =>
         unavailableSentence(
-          result.reason,
+          missing.reason,
           fieldLabel(context, missing.fieldId, field),
           itemOf(missing.itemId).label
         )

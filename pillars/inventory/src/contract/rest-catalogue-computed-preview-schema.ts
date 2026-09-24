@@ -44,8 +44,10 @@ export const ComputedFieldPreviewResultSchema = z.discriminatedUnion('state', [
     ...evaluated,
     state: z.literal('unavailable'),
     reason: z.string(),
-    /** Each input that had no value, and the item it was read on. */
-    missing: z.array(z.object({ fieldId: z.uuid(), itemId: z.string() })).min(1),
+    /** Each input that had no value, the item it was read on, and why it had none. */
+    missing: z
+      .array(z.object({ fieldId: z.uuid(), itemId: z.string(), reason: z.string() }))
+      .min(1),
   }),
   z.object({ ...evaluated, state: z.literal('error'), code: z.string() }),
 ]);

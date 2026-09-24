@@ -14351,9 +14351,12 @@
                                   },
                                   "itemId": {
                                     "type": "string"
+                                  },
+                                  "reason": {
+                                    "type": "string"
                                   }
                                 },
-                                "required": ["fieldId", "itemId"],
+                                "required": ["fieldId", "itemId", "reason"],
                                 "type": "object"
                               },
                               "minItems": 1,

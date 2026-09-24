@@ -155,7 +155,7 @@ describe('try on an item', () => {
       answered({
         state: 'unavailable',
         reason: 'missing_dependency',
-        missing: [{ fieldId: 'price', itemId: 'part-1' }],
+        missing: [{ fieldId: 'price', itemId: 'part-1', reason: 'missing_dependency' }],
         traversedItemIds: ['box-1', 'part-1'],
       })
     );
@@ -166,6 +166,27 @@ describe('try on an item', () => {
     const traversed = within(preview()).getAllByRole('list', { name: 'Items traversed' })[0];
     expect(traversed).toHaveTextContent('Blue boxStorage box');
     expect(traversed).toHaveTextContent('HingePart');
+  });
+
+  it('words each missing input by its own reason, not the last one tried', async () => {
+    mocks.typesManagePreviewComputedField.mockResolvedValue(
+      answered({
+        state: 'unavailable',
+        reason: 'missing_dependency',
+        missing: [
+          { fieldId: 'price', itemId: 'part-1', reason: 'reference_deleted' },
+          { fieldId: 'price', itemId: 'box-1', reason: 'missing_dependency' },
+        ],
+        traversedItemIds: ['box-1', 'part-1'],
+      })
+    );
+    renderComputedField({ volume: PRODUCT, environment: { draft: DRAFT } });
+    await pickItem();
+
+    expect(
+      await within(preview()).findByText('Price on Hinge points at an item that was deleted.')
+    ).toBeInTheDocument();
+    expect(within(preview()).getByText('Price is empty on Blue box.')).toBeInTheDocument();
   });
 
   it.each([

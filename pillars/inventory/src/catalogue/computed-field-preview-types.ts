@@ -8,10 +8,11 @@ export interface ComputedFieldPreviewSubject {
   readonly itemId: string;
 }
 
-/** An input the preview could not read, and the item it was read on. */
+/** An input the preview could not read, the item it was read on, and why it had no value. */
 export interface ComputedFieldPreviewMissing {
   readonly fieldId: string;
   readonly itemId: string;
+  readonly reason: ExpressionUnavailableReason;
 }
 
 /** The raw outcome of evaluating the draft expression on the chosen item. */
