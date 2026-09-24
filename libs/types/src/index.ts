@@ -45,7 +45,11 @@ export type { AiToolDescriptor, AiToolHandler, AiToolResult } from './ai-tool.js
 export type { MigrationDescriptor } from './migration.js';
 export type { SearchAdapterDescriptor } from './search-adapter.js';
 export type { IngestSourceDescriptor } from './ingest-source.js';
-export { assertModuleManifest, ModuleCaptureOverlayConfigSchema } from './module-manifest.js';
+export {
+  assertModuleManifest,
+  ModuleCaptureOverlayConfigSchema,
+  TopBarWidgetDescriptorSchema,
+} from './module-manifest.js';
 export type {
   ModuleBackendManifest,
   ModuleCaptureOverlayConfig,
@@ -54,6 +58,7 @@ export type {
   ModuleOverlayConfig,
   ModuleSurface,
   OverlayComponentLoader,
+  TopBarWidgetDescriptor,
 } from './module-manifest.js';
 export {
   AppPathSchema,

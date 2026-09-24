@@ -1,5 +1,9 @@
 import { CEREBRUM_NAV } from '../contract/nav.js';
-import { CEREBRUM_CAPTURE_SLOT, CEREBRUM_PAGES } from '../contract/pages.js';
+import {
+  CEREBRUM_CAPTURE_SLOT,
+  CEREBRUM_NUDGE_INDICATOR_SLOT,
+  CEREBRUM_PAGES,
+} from '../contract/pages.js';
 /**
  * Cerebrum pillar manifest payload builder.
  *
@@ -15,6 +19,7 @@ import type {
   ManifestPayload,
   NavConfigDescriptor,
   PageDescriptor,
+  TopBarWidgetDescriptor,
 } from '@pops/pillar-sdk/manifest-schema';
 
 /** Projected from the contract; the `satisfies` is the conformance check. */
@@ -43,6 +48,16 @@ const CEREBRUM_CAPTURE_OVERLAY: CaptureOverlayDescriptor = {
   hotkey: 'mod+shift+k',
   labelKey: 'cerebrum.captureOverlay.label',
 };
+
+/**
+ * The pending-nudges badge in the shell's top bar. Only the slot travels: the
+ * component in this pillar's bundle owns the endpoint it polls and the route
+ * it links to, so a pillar that is not registered contributes no badge and no
+ * poll (POPS-4573).
+ */
+const CEREBRUM_TOP_BAR_WIDGETS = [
+  { bundleSlot: CEREBRUM_NUDGE_INDICATOR_SLOT, order: 10 },
+] as const satisfies readonly TopBarWidgetDescriptor[];
 
 /**
  * Where the shell's runtime loader fetches this pillar's UI bundle from.
@@ -93,6 +108,7 @@ export function buildCerebrumManifest(version: string): ManifestPayload {
     nav: CEREBRUM_WIRE_NAV,
     pages: [...CEREBRUM_WIRE_PAGES],
     captureOverlay: CEREBRUM_CAPTURE_OVERLAY,
+    topBarWidgets: [...CEREBRUM_TOP_BAR_WIDGETS],
     assetsBaseUrl: CEREBRUM_ASSETS_BASE_URL,
   };
 }

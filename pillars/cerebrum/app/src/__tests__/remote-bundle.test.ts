@@ -6,7 +6,7 @@ import { promisify } from 'node:util';
 
 import { beforeAll, describe, expect, it } from 'vitest';
 
-import { CEREBRUM_CAPTURE_SLOT } from '@pops/cerebrum/manifest';
+import { CEREBRUM_CAPTURE_SLOT, CEREBRUM_NUDGE_INDICATOR_SLOT } from '@pops/cerebrum/manifest';
 
 import { allPageSlots } from './page-slots';
 
@@ -68,9 +68,14 @@ describe('cerebrum remote bundle', () => {
 
   it('carries no slot the manifest does not advertise', () => {
     const { bundles } = assertRemoteUiModule(imported);
-    // The overlay slot is in the bundle and not in `pages` — it is a surface,
-    // not a route — so the expected set is the pages plus it.
-    const expected = [...new Set(allPageSlots()), CEREBRUM_CAPTURE_SLOT];
+    // The overlay and nudge-indicator slots are in the bundle and not in
+    // `pages` — they are surfaces, not routes — so the expected set is the
+    // pages plus them.
+    const expected = [
+      ...new Set(allPageSlots()),
+      CEREBRUM_CAPTURE_SLOT,
+      CEREBRUM_NUDGE_INDICATOR_SLOT,
+    ];
     expect(Object.keys(bundles).toSorted()).toEqual(expected.toSorted());
   });
 

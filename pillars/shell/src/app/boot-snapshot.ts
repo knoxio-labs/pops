@@ -118,6 +118,7 @@ function railBundleMap(
           pages: entry.pages,
           captureOverlay: entry.captureOverlay,
           settingsWidgetSlots: entry.settingsWidgetSlots,
+          topBarWidgets: entry.topBarWidgets,
         },
         importer
       );

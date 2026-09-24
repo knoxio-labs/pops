@@ -16,10 +16,12 @@ import {
   CaptureOverlayDescriptorSchema,
   NavConfigDescriptorSchema,
   PageDescriptorSchema,
+  TopBarWidgetDescriptorSchema,
   type CaptureOverlayDescriptor,
   type NavConfigDescriptor,
   type NavItemDescriptor,
   type PageDescriptor,
+  type TopBarWidgetDescriptor,
 } from './ui.js';
 
 const SEMVER = z.string().regex(/^\d+\.\d+\.\d+(-[a-z0-9.]+)?$/, 'must be semver');
@@ -175,6 +177,7 @@ export const ManifestPayloadSchema = z
     pages: z.array(PageDescriptorSchema).optional(),
     assetsBaseUrl: AssetsBaseUrlSchema.optional(),
     captureOverlay: CaptureOverlayDescriptorSchema.optional(),
+    topBarWidgets: z.array(TopBarWidgetDescriptorSchema).optional(),
     features: FEATURES.optional(),
     healthcheck: HEALTHCHECK,
   })
@@ -186,6 +189,12 @@ export type FeatureManifestDescriptor = FeatureDescriptor;
 
 export type { SettingsManifestDescriptor };
 
-export type { CaptureOverlayDescriptor, NavConfigDescriptor, NavItemDescriptor, PageDescriptor };
+export type {
+  CaptureOverlayDescriptor,
+  NavConfigDescriptor,
+  NavItemDescriptor,
+  PageDescriptor,
+  TopBarWidgetDescriptor,
+};
 
 export type ManifestPayload = z.infer<typeof ManifestPayloadSchema>;

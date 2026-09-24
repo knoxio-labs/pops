@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router';
+import userEvent from '@testing-library/user-event';
+import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { NudgeIndicator, nudgeRefetchInterval } from './NudgeIndicator';
@@ -114,5 +115,24 @@ describe('NudgeIndicator', () => {
     await waitFor(() => {
       expect(screen.queryByRole('button')).not.toBeInTheDocument();
     });
+  });
+
+  it('navigates to the nudges page when clicked', async () => {
+    vi.stubGlobal('fetch', () => Promise.resolve(jsonResponse({ nudges: [], total: 2 })));
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <MemoryRouter initialEntries={['/elsewhere']}>
+        <QueryClientProvider client={queryClient}>
+          <Routes>
+            <Route path="/elsewhere" element={<NudgeIndicator />} />
+            <Route path="/cerebrum/nudges" element={<p>nudges page</p>} />
+          </Routes>
+        </QueryClientProvider>
+      </MemoryRouter>
+    );
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Nudges: 2 pending' }));
+
+    expect(await screen.findByText('nudges page')).toBeInTheDocument();
   });
 });

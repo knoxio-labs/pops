@@ -94,6 +94,17 @@ describe('bootEntries — the non-page surfaces (POPS-3266)', () => {
     expect(entry?.captureOverlay).toBeUndefined();
   });
 
+  it('copies topBarWidgets off the wire manifest', () => {
+    const widgets = [{ bundleSlot: 'status-chip', order: 5 }];
+    const [entry] = bootEntries([snapshotEntry('acme', { manifest: { topBarWidgets: widgets } })]);
+    expect(entry?.topBarWidgets).toEqual(widgets);
+  });
+
+  it('leaves topBarWidgets undefined when the manifest declares none', () => {
+    const [entry] = bootEntries([snapshotEntry('acme')]);
+    expect(entry?.topBarWidgets).toBeUndefined();
+  });
+
   /**
    * Widget slots are derived from the settings groups rather than carried as
    * their own wire field, so this asserts the derivation: a group with a

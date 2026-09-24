@@ -22,12 +22,16 @@ import {
   FeatureDescriptorSchema,
   ModuleCaptureOverlayConfigSchema,
   SettingsManifestSchema,
+  TopBarWidgetDescriptorSchema,
   type SettingsGroup,
 } from '@pops/types';
 
 import { ManifestPayloadSchema } from '../manifest-schema/schema.js';
 import { SettingsManifestDescriptorSchema } from '../manifest-schema/settings.js';
-import { CaptureOverlayDescriptorSchema } from '../manifest-schema/ui.js';
+import {
+  CaptureOverlayDescriptorSchema,
+  TopBarWidgetDescriptorSchema as WireTopBarWidgetDescriptorSchema,
+} from '../manifest-schema/ui.js';
 import { validateManifestPayload } from '../manifest-schema/validate.js';
 import { validManifest } from './fixtures.js';
 
@@ -49,10 +53,15 @@ describe('the wire schema has no second declaration', () => {
     expect(CaptureOverlayDescriptorSchema).toBe(ModuleCaptureOverlayConfigSchema);
   });
 
+  it('validates top-bar widgets with the very schema @pops/types declares', () => {
+    expect(WireTopBarWidgetDescriptorSchema).toBe(TopBarWidgetDescriptorSchema);
+  });
+
   it('reaches those schemas from the assembled payload schema, not just from the module', () => {
     const shape = ManifestPayloadSchema.shape;
     expect(shape.settings.unwrap().shape.manifests.element).toBe(SettingsManifestSchema);
     expect(shape.captureOverlay.unwrap()).toBe(ModuleCaptureOverlayConfigSchema);
+    expect(shape.topBarWidgets.unwrap().element).toBe(TopBarWidgetDescriptorSchema);
     expect(shape.features.unwrap().element).toBe(FeatureDescriptorSchema);
   });
 });

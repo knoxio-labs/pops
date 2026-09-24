@@ -83,6 +83,15 @@ module's `bundles` export. Every in-repo pillar arrives this way, by the same
 mechanism an out-of-tree pillar would — there is no in-tree shortcut left to
 diverge from.
 
+Surfaces that are not pages resolve through the same `bundles` record, each
+named by a slot on the manifest: `captureOverlay` for the capture modal, a
+settings group's `widget.bundleSlot` for a settings panel, and
+`topBarWidgets` for the top bar (`src/app/layout/top-bar/TopBarWidgets.tsx`).
+The manifest carries the slot and nothing else; the component in the pillar's
+bundle owns what it fetches and where it links. A pillar missing from the
+registry snapshot therefore contributes no component and makes no request —
+the shell source names no pillar, not even for the nudge bell.
+
 Until POPS-3227 there was a second route: a static bundle map statically
 imported the published `@pops/app-<pillar>` package and the shell mounted its
 routes at build time. That file is gone, and with it the shell's dependency on

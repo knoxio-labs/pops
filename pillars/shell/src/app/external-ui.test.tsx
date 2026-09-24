@@ -615,3 +615,69 @@ describe('synthesizeExternalBundleEntry — capture overlay and settings widgets
     expect(await screen.findByTestId('widget-body')).toBeInTheDocument();
   });
 });
+
+describe('synthesizeExternalBundleEntry — top-bar widgets', () => {
+  const WIDGETS = [
+    { bundleSlot: 'status-chip', order: 20 },
+    { bundleSlot: 'inbox-badge', order: 10 },
+  ] as const;
+
+  function firstWidget(importer: RemoteModuleImporter) {
+    const entry = synthesizeExternalBundleEntry(descriptor({ topBarWidgets: WIDGETS }), importer);
+    const widget = entry?.topBarWidgets?.[0];
+    if (widget === undefined) throw new Error('no top-bar widget for the declared slot');
+    return widget;
+  }
+
+  it('carries no top-bar widgets when the pillar declares none', () => {
+    expect(synthesizeExternalBundleEntry(descriptor())?.topBarWidgets).toBeUndefined();
+    expect(
+      synthesizeExternalBundleEntry(descriptor({ topBarWidgets: [] }))?.topBarWidgets
+    ).toBeUndefined();
+  });
+
+  it('exposes every declared widget with its slot and order, in declaration order', () => {
+    const entry = synthesizeExternalBundleEntry(descriptor({ topBarWidgets: WIDGETS }));
+    expect(entry?.topBarWidgets?.map(({ bundleSlot, order }) => ({ bundleSlot, order }))).toEqual(
+      WIDGETS
+    );
+  });
+
+  it('does not import the bundle while synthesizing the widgets', () => {
+    const importer = vi.fn<RemoteModuleImporter>(() => Promise.resolve(VALID_BUNDLE));
+    synthesizeExternalBundleEntry(descriptor({ topBarWidgets: WIDGETS }), importer);
+    expect(importer).not.toHaveBeenCalled();
+  });
+
+  it('mounts the widget component from the remote bundle', async () => {
+    const Chip = () => <span data-testid="chip-body">chip</span>;
+    const { Component } = firstWidget(() => Promise.resolve({ bundles: { 'status-chip': Chip } }));
+
+    render(<Component />);
+    expect(await screen.findByTestId('chip-body')).toBeInTheDocument();
+  });
+
+  // Unlike a page or a settings panel, the top bar has no room for the
+  // placeholder: a widget that cannot load renders nothing at all.
+  it('renders nothing, not the placeholder, when the bundle lacks the slot', async () => {
+    const importer = vi.fn<RemoteModuleImporter>(() => Promise.resolve({ bundles: {} }));
+    const { Component } = firstWidget(importer);
+
+    const { container } = render(<Component />);
+    await waitFor(() => {
+      expect(importer).toHaveBeenCalled();
+    });
+    await waitFor(() => {
+      expect(screen.queryByTestId('external-pillar-load-error')).not.toBeInTheDocument();
+      expect(container).toBeEmptyDOMElement();
+    });
+  });
+
+  it('renders nothing while the bundle is still loading', () => {
+    const { Component } = firstWidget(() => new Promise<unknown>(() => undefined));
+
+    const { container } = render(<Component />);
+    expect(screen.queryByText('Loading…')).not.toBeInTheDocument();
+    expect(container).toBeEmptyDOMElement();
+  });
+});

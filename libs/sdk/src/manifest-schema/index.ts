@@ -8,6 +8,7 @@ export {
   type NavConfigDescriptor,
   type NavItemDescriptor,
   type PageDescriptor,
+  type TopBarWidgetDescriptor,
 } from './schema.js';
 export {
   validateManifestPayload,
