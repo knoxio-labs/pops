@@ -96,11 +96,13 @@ internal struct PurchasesHomeDigestTests {
         let month = date(day: 1)
 
         let digest = PurchasesHomeDigest(
-            recent: [], allCount: 20, unmatched: [], month: month, summary: summary)
+            recent: [], allCount: 20, unmatched: [], unmatchedCount: 41, month: month,
+            summary: summary)
 
         #expect(digest.totals == [money(2_000, "AUD"), money(900, "USD")])
         #expect(digest.monthCount == 8)
-        #expect(digest.unmatchedCount == 3)
+        // The tile counts the whole unsettled backlog it opens, not the month's 3.
+        #expect(digest.unmatchedCount == 41)
         #expect(
             digest.leaders == [
                 PurchasesHomeDigest.Leader(

@@ -53,10 +53,13 @@ internal struct PurchasesHomeDigest {
         self.recent = Array(recent.prefix(Self.recentLimit))
     }
 
+    /// `unmatched` and `unmatchedCount` are the whole unsettled backlog, the set the Unmatched
+    /// tile opens, not the month's share of it.
     internal init(
         recent: [Purchase],
         allCount: Int,
         unmatched: [Purchase],
+        unmatchedCount: Int,
         month: Date,
         summary: PurchasesMonthSummary
     ) {
@@ -66,8 +69,8 @@ internal struct PurchasesHomeDigest {
         totals = summary.totals.map(\.total).sorted(by: Self.amountsDescending)
         monthCount = summary.purchaseCount
         delta = Self.delta(month: month, summary: summary, currency: totals.first?.currencyCode)
-        self.unmatched = summary.unmatchedCount == 0 ? [] : unmatched.filter(\.status.isUnsettled)
-        unmatchedCount = summary.unmatchedCount
+        self.unmatched = unmatchedCount == 0 ? [] : unmatched.filter(\.status.isUnsettled)
+        self.unmatchedCount = unmatchedCount
         leaders = Self.leaders(summary.merchantLeaders, currency: totals.first?.currencyCode)
         self.recent = Array(recent.prefix(Self.recentLimit))
     }

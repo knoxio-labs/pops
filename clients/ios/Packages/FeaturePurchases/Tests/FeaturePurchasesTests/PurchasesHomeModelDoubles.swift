@@ -175,6 +175,9 @@ internal actor SequencedHomeRepository: PurchasesRepository {
 
     func purchases(after: String?, statusFilter: PurchaseStatusFilter) async throws -> PurchasePage
     {
+        if statusFilter == .unsettled {
+            return PurchasePage(purchases: [], nextCursor: nil, totalCount: 0)
+        }
         let response = pages[pageIndex]
         pageIndex += 1
         recordedCall()
