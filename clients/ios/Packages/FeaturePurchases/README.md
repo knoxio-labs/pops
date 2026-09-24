@@ -58,6 +58,8 @@ Saved-purchase screens share `PurchasesPresentation` for merchant names, settlem
 
 `PurchaseRowContent` turns a saved purchase into the value every list row draws, including whether the merchant is unattributed and whether that context asks for a settlement badge. `PurchaseRowLabel`, `PurchaseRowsPanel`, and `PurchaseMarkStack` compose that value from the shared DesignSystem panel and divided-row primitives.
 
+`PurchaseSearchRow` draws a `PurchaseSearchHit` from `AppCore` in the same row idiom: a line always pushes the order it is on, never its own line identifier — `PurchaseSearchRowContent.route(for:)` is the one place that decides that, so a test can assert it without rendering anything. Highlighted query matches use `popsPurchases`, the same colour every screen in this package tints with `.tint(.popsPurchases)`. The filter section beside it (`PurchasesSearchFilter`, `PurchasesSearchFilterFields`) ships in a follow-up once POPS-4309 lands.
+
 `PurchasesHomeDigest` bounds Recent and merchant leaders while keeping the server's All and Unmatched counts independent from the number of loaded rows. Its summary initializer reads monthly totals, comparisons, and aggregate merchant leaders from `PurchasesMonthSummary`; leaders remain aggregate facts and never require an invented purchase or purchase identifier.
 
 `PurchasesHomeModel` loads that summary and the first unfiltered purchase page together. Refresh failures keep the last digest visible, while a generation counter prevents an older request from replacing a newer refresh. Capture can land complete purchases immediately or report only saved identifiers; both paths highlight every saved identifier and perform one refresh, and the identifier path never fabricates purchase rows.

@@ -14,7 +14,13 @@ internal enum PurchasesPresentation {
     }
 
     internal static func day(_ purchase: Purchase) -> String {
-        purchase.orderedOn.formatted(.dateTime.day().month(.abbreviated))
+        day(of: purchase.orderedOn)
+    }
+
+    nonisolated internal static func day(
+        of date: Date, locale: Locale = .autoupdatingCurrent
+    ) -> String {
+        date.formatted(.dateTime.day().month(.abbreviated).locale(locale))
     }
 
     internal static func month(_ date: Date) -> String {
