@@ -5,7 +5,9 @@ import Testing
 
 @Suite("Replica migration order")
 internal struct ReplicaMigrationOrderTests {
-    @Test("a fresh replica applies the local computed values before the catalogue update hold")
+    @Test(
+        "a fresh replica applies the local computed values, the catalogue update hold, then the nullable revision"
+    )
     func freshReplicaAppliesBoth() throws {
         let queue = try DatabaseQueue()
         let migrator = ReplicaSchema.migrator()
@@ -16,8 +18,9 @@ internal struct ReplicaMigrationOrderTests {
             let applied = try migrator.appliedMigrations(db)
             let expected = [
                 "v8_computed_values", "v9_local_computed_values", "v10_catalogue_update_hold",
+                "v11_nullable_catalogue_revision",
             ]
-            #expect(Array(applied.suffix(3)) == expected)
+            #expect(Array(applied.suffix(4)) == expected)
             #expect(try db.tableExists(ComputedValueRows.localTableName))
             #expect(try Self.mutationLogColumns(db).contains("awaiting_catalogue_after"))
         }
@@ -51,7 +54,7 @@ internal struct ReplicaMigrationOrderTests {
             let revision: Int? = row?["catalogue_revision"]
             let heldAfter: Int? = row?["awaiting_catalogue_after"]
             #expect(state == "queued")
-            #expect(revision == 1)
+            #expect(revision == nil)
             #expect(heldAfter == nil)
             #expect(
                 try Int.fetchOne(

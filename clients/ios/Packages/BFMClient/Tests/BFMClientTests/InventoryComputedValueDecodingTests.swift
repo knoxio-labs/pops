@@ -85,6 +85,29 @@ internal struct InventoryComputedValueDecodingTests {
             value.evaluation == .unavailable(reason: "quota_exceeded", failedFieldId: Self.inputId))
         #expect(value.traversedItemIds == ["item-1", "item-2"])
         #expect(value.knownUnavailableReason == nil)
+        #expect(value.missingInputs.isEmpty)
+    }
+
+    @Test("an unavailable value names every missing input, field and item")
+    func missingInputs() async throws {
+        let item = try await Self.firstItem(
+            computedValues: Self.entry(
+                "unavailable",
+                """
+                "reason":"missing_dependency","failedFieldId":"\(Self.inputId)",\
+                "missingInputs":[\
+                {"reason":"missing_dependency","fieldId":"\(Self.fieldId)","itemId":"item-1"},\
+                {"reason":"reference_deleted","fieldId":"\(Self.inputId)","itemId":"item-2"}],\
+                "dependencies":[],"traversedItemIds":["item-1","item-2"]
+                """))
+        let value = try #require(item.computedValues.first)
+        #expect(
+            value.missingInputs == [
+                InventoryExpressionMissingInput(
+                    reason: "missing_dependency", fieldId: Self.fieldId, itemId: "item-1"),
+                InventoryExpressionMissingInput(
+                    reason: "reference_deleted", fieldId: Self.inputId, itemId: "item-2"),
+            ])
     }
 
     @Test("a state outside the contract fails the page rather than guessing")

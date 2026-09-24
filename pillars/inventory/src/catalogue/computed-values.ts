@@ -1,8 +1,10 @@
 import { evaluateExpression } from './expression-evaluator.js';
 import { ExpressionValidationError } from './expression-types.js';
 
+import type { UnavailableFailure } from './expression-evaluation-shared.js';
 import type {
   EffectiveComputedValue,
+  ExpressionEvaluation,
   ExpressionSnapshot,
   ValidatedExpression,
 } from './expression-types.js';
@@ -55,17 +57,27 @@ export function evaluateComputedValue({
       },
     };
   }
-  const failed = evaluated.state === 'error';
-  if (failed) onEvaluationError?.(evaluated.code);
+  if (evaluated.state === 'error') onEvaluationError?.(evaluated.code);
   return {
     state: 'unavailable',
-    reason: failed ? 'evaluation_error' : evaluated.reason,
-    fieldId: failed ? fieldId : evaluated.fieldId,
-    traversedItemIds: failed ? [snapshot.rootItemId] : evaluated.traversedItemIds,
-    provenance: {
-      source: 'computed',
-      catalogueRevision,
-      dependencies: evaluated.dependencies,
-    },
+    ...unavailableFailure(evaluated, fieldId, snapshot.rootItemId),
+    provenance: { source: 'computed', catalogueRevision, dependencies: evaluated.dependencies },
   };
+}
+
+/** An evaluation error is unavailable on the field itself, with no missing input. */
+function unavailableFailure(
+  evaluated: Exclude<ExpressionEvaluation, { readonly state: 'value' }>,
+  fieldId: string,
+  rootItemId: string
+): UnavailableFailure {
+  if (evaluated.state === 'error')
+    return {
+      reason: 'evaluation_error',
+      fieldId,
+      traversedItemIds: [rootItemId],
+      missingInputs: [],
+    };
+  const { reason, traversedItemIds, missingInputs } = evaluated;
+  return { reason, fieldId: evaluated.fieldId, traversedItemIds, missingInputs };
 }

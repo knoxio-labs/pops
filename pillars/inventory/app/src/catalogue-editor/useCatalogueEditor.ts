@@ -6,7 +6,12 @@ import { catalogueApi } from './catalogue-api';
 import { DRAFT_KEY, PUBLISHED_KEY, useCatalogueMutations } from './useCatalogueMutations';
 import { useCataloguePreview } from './useCataloguePreview';
 
+import type { InventoryApiIssue } from '../inventory-api-helpers';
 import type { CatalogueDescriptor, CatalogueReadiness, CompatibilitySnapshot } from './types';
+
+function issuesOf(error: unknown): readonly InventoryApiIssue[] {
+  return error instanceof InventoryApiError ? error.issues : [];
+}
 
 async function readCurrentDraft(): Promise<CatalogueDescriptor | null> {
   try {
@@ -79,6 +84,7 @@ export function useCatalogueEditor() {
     error,
     readiness: toReadiness(compatibility, catalogue),
     isLoading: publishedQuery.isLoading || draftQuery.isLoading,
+    issues: { saved: issuesOf(patchDraft.error), live: issuesOf(cataloguePreview.error) },
     isPending,
     patchDraft,
     previewOperation: cataloguePreview.preview,

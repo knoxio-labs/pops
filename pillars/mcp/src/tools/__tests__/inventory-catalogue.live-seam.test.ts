@@ -251,6 +251,99 @@ describe('inventory catalogue MCP tools — real HTTP boundary', () => {
     });
   });
 
+  it('surfaces unauthorized (401) for a service account without the inventory scope', async () => {
+    const unscoped = await seam.mintKey('mcp-live-seam-unscoped', ['finance']);
+    seam.useKey(unscoped);
+    try {
+      const result = await catalogueGet.handler({});
+      expect(result.isError).toBe(true);
+      expect(text(result)).toMatch(/authoris/);
+    } finally {
+      seam.useDefaultKey();
+    }
+  });
+
+  it('surfaces unavailable for a connection refused', async () => {
+    seam.useDefaultKey();
+    const closedPort = 39; // never listened on; loopback refuses immediately.
+    process.env['POPS_INVENTORY_API_URL'] = `http://127.0.0.1:${String(closedPort)}`;
+    try {
+      const result = await catalogueGet.handler({});
+      expect(result.isError).toBe(true);
+      expect(text(result)).toMatch(/unavailable/);
+    } finally {
+      delete process.env['POPS_INVENTORY_API_URL'];
+      seam.useDefaultKey();
+    }
+  });
+
+  // Regression test (POPS-4495): the connection-refused test above sets a
+  // `POPS_INVENTORY_API_URL` override, then unsets it and calls
+  // `seam.useDefaultKey()`. That must fully restore real HTTP access —
+  // previously `pillar-client.ts` only forwarded `internalBaseUrls` to
+  // `configureServerSdk` when an override was present, so `configureServerSdk`'s
+  // shallow merge kept the bad override forever once one had been set, and
+  // every following real-HTTP call in this file (or a file sharing this
+  // worker) kept failing regardless of test order. This test's position,
+  // directly after the connection-refused case, is the point of the test:
+  // it must pass whether it runs here or after a reorder.
+  it('reaches inventory over real HTTP again right after a connection-refused failure', async () => {
+    seam.useDefaultKey();
+    const published = ok(await catalogueGet.handler({}));
+    expect(published['types']).toBeInstanceOf(Array);
+  });
+
+  it('evaluates an unsaved computed field by key and refuses an unknown item or stale draft', async () => {
+    const previewComputedField = tool('inventory.catalogue.previewComputedField');
+    const published = ok(await catalogueGet.handler({}));
+    const baseRevision = (published['revision'] as { revision: number }).revision;
+    const [first] = published['types'] as { id: string }[];
+    if (first === undefined) throw new Error('the published catalogue has no types');
+    const created = draftRevision(ok(await createDraft.handler({ baseRevision })));
+    const request = {
+      revision: created.revision,
+      baseRevision,
+      typeId: first.id,
+      fieldKey: 'seam_computed',
+      itemId: crypto.randomUUID(),
+      operations: [
+        {
+          kind: 'put_field',
+          typeId: first.id,
+          key: 'seam_computed',
+          label: 'Seam computed',
+          fieldKind: 'short_text',
+          cardinality: 'one',
+          storage: 'computed',
+          expressionVersion: 1,
+          expression: { op: 'literal', value: 'seam' },
+          allowOverride: false,
+        },
+      ],
+    };
+
+    const unknownItem = await previewComputedField.handler({
+      ...request,
+      expectedDraftVersion: created.draftVersion,
+    });
+    expect(unknownItem.isError).toBe(true);
+    expect(text(unknownItem)).toMatch(/preview_item_unknown/);
+    expect(draftRevision(ok(await readDraft.handler({})))).toEqual(created);
+
+    const stale = await previewComputedField.handler({
+      ...request,
+      expectedDraftVersion: created.draftVersion + 1,
+    });
+    expect(stale.isError).toBe(true);
+    expect(text(stale)).toContain('inventory.catalogue.readDraft');
+
+    await abandonDraft.handler({
+      revision: created.revision,
+      baseRevision,
+      expectedDraftVersion: created.draftVersion,
+    });
+  });
+
   describe('malformed operation payloads, per kind, through the real REST boundary', () => {
     function issuePaths(body: string): string[] {
       const jsonStart = body.indexOf('{');
@@ -353,29 +446,67 @@ describe('inventory catalogue MCP tools — real HTTP boundary', () => {
     });
   });
 
-  it('surfaces unauthorized (401) for a service account without the inventory scope', async () => {
-    const unscoped = await seam.mintKey('mcp-live-seam-unscoped', ['finance']);
-    seam.useKey(unscoped);
-    try {
-      const result = await catalogueGet.handler({});
-      expect(result.isError).toBe(true);
-      expect(text(result)).toMatch(/authoris/);
-    } finally {
-      seam.useDefaultKey();
-    }
-  });
+  describe('the manage scope is distinct from the read scope (POPS-4357, POPS-4362)', () => {
+    it('lets a read-only key read the catalogue but refuses createDraft with an actionable, scope-naming error', async () => {
+      const readOnly = await seam.mintKey('mcp-live-seam-read-only', ['inventory.types.read']);
+      seam.useKey(readOnly);
+      try {
+        const published = ok(await catalogueGet.handler({}));
+        const baseRevision = (published['revision'] as { revision: number }).revision;
 
-  it('surfaces unavailable for a connection refused', async () => {
-    seam.useDefaultKey();
-    const closedPort = 39; // never listened on; loopback refuses immediately.
-    process.env['POPS_INVENTORY_API_URL'] = `http://127.0.0.1:${String(closedPort)}`;
-    try {
-      const result = await catalogueGet.handler({});
-      expect(result.isError).toBe(true);
-      expect(text(result)).toMatch(/unavailable/);
-    } finally {
-      delete process.env['POPS_INVENTORY_API_URL'];
+        const refused = await createDraft.handler({ baseRevision });
+        expect(refused.isError).toBe(true);
+        expect(text(refused)).toMatch(/authoris/);
+        expect(text(refused)).toContain("requires service-account scope 'inventory.types.manage'");
+      } finally {
+        seam.useDefaultKey();
+      }
+    });
+
+    it('completes the full draft lifecycle on a manage-only key, which holds no read grant', async () => {
       seam.useDefaultKey();
-    }
+      const published = ok(await catalogueGet.handler({}));
+      const baseRevision = (published['revision'] as { revision: number }).revision;
+
+      const manageOnly = await seam.mintKey('mcp-live-seam-manage-only', [
+        'inventory.types.manage',
+      ]);
+      seam.useKey(manageOnly);
+      try {
+        const created = draftRevision(ok(await createDraft.handler({ baseRevision })));
+        const patched = draftRevision(
+          ok(
+            await patchDraft.handler({
+              revision: created.revision,
+              baseRevision,
+              expectedDraftVersion: created.draftVersion,
+              operations: [
+                { kind: 'put_type', key: 'manage_only_widget', label: 'Manage-only widget' },
+              ],
+            })
+          )
+        );
+        expect(patched.draftVersion).toBeGreaterThan(created.draftVersion);
+
+        const publishedResult = ok(
+          await publishDraft.handler({
+            revision: patched.revision,
+            baseRevision,
+            expectedDraftVersion: patched.draftVersion,
+            note: 'manage-only lifecycle',
+          })
+        );
+        expect((publishedResult['revision'] as { revision: number }).revision).toBeGreaterThan(
+          baseRevision
+        );
+
+        // The manage-only key still cannot read — the two scopes never merge.
+        const readAttempt = await catalogueGet.handler({});
+        expect(readAttempt.isError).toBe(true);
+        expect(text(readAttempt)).toMatch(/authoris/);
+      } finally {
+        seam.useDefaultKey();
+      }
+    });
   });
 });

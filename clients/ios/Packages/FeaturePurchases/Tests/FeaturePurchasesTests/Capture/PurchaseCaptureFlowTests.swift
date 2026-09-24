@@ -9,10 +9,10 @@ import Testing
 @Suite("Purchase capture flow")
 internal struct PurchaseCaptureFlowTests {
     @Test("hand entry opens without staging")
-    func handEntryStart() {
+    func handEntryStart() async {
         let context = makeContext()
 
-        context.flow.start(.hand)
+        await context.flow.start(.hand)
 
         #expect(context.flow.sheet == .handEntry)
         #expect(context.flow.handEntry != nil)
@@ -21,23 +21,24 @@ internal struct PurchaseCaptureFlowTests {
     }
 
     @Test("a second start while active changes nothing")
-    func activeStartIsIgnored() throws {
+    func activeStartIsIgnored() async throws {
         let context = makeContext()
-        context.flow.start(.scan)
+        await context.flow.start(.photos)
         let staging = try #require(context.flow.staging)
 
-        context.flow.start(.hand)
+        await context.flow.start(.hand)
 
-        #expect(context.flow.sheet == .batch)
+        #expect(context.flow.sheet == nil)
+        #expect(context.flow.picker == .photos)
         #expect(context.flow.staging === staging)
         #expect(context.flow.handEntry == nil)
         #expect(context.invalid.messages.isEmpty)
     }
 
     @Test("reading empty staging reports an invalid transition and stays put")
-    func emptyReadIsNoOp() {
+    func emptyReadIsNoOp() async {
         let context = makeContext()
-        context.flow.start(.photos)
+        await openEmptyBatch(context.flow)
 
         context.flow.read()
 
@@ -47,9 +48,9 @@ internal struct PurchaseCaptureFlowTests {
     }
 
     @Test("review before reading finishes reports an invalid transition")
-    func earlyReviewIsNoOp() throws {
+    func earlyReviewIsNoOp() async throws {
         let context = makeContext()
-        context.flow.start(.file)
+        await openEmptyBatch(context.flow)
         try #require(context.flow.staging).addScanned([.fake()], pageCount: 1)
         context.flow.read()
 
@@ -74,10 +75,10 @@ internal struct PurchaseCaptureFlowTests {
     }
 
     @Test("finishing three saves reports once and resets before callback")
-    func finishReportsOnce() {
+    func finishReportsOnce() async {
         var callbacks: [[Purchase.ID]] = []
         let context = makeContext(onSaved: { callbacks.append($0) })
-        context.flow.start(.hand)
+        await context.flow.start(.hand)
 
         context.flow.finish(savedIDs: ["one", "two", "three"])
         context.flow.finish(savedIDs: ["duplicate"])
@@ -87,10 +88,10 @@ internal struct PurchaseCaptureFlowTests {
     }
 
     @Test("finishing an empty run resets without reporting")
-    func emptyFinishDoesNotReport() {
+    func emptyFinishDoesNotReport() async {
         var callbacks: [[Purchase.ID]] = []
         let context = makeContext(onSaved: { callbacks.append($0) })
-        context.flow.start(.hand)
+        await context.flow.start(.hand)
 
         context.flow.finish(savedIDs: [])
 
@@ -118,11 +119,12 @@ internal struct PurchaseCaptureFlowTests {
     }
 
     @Test("cancelling reading reports nothing and clears every model")
-    func cancelReadingResets() throws {
+    func cancelReadingResets() async throws {
         var callbacks: [[Purchase.ID]] = []
         let context = makeContext(onSaved: { callbacks.append($0) })
-        context.flow.start(.scan)
-        try #require(context.flow.staging).addScanned([.fake()], pageCount: 1)
+        await context.flow.start(.scan)
+        context.flow.didScan(parts: [.fake()], pageCount: 1)
+        context.flow.pickerDismissed()
         context.flow.read()
 
         context.flow.cancel()
@@ -133,11 +135,13 @@ internal struct PurchaseCaptureFlowTests {
 
     private func makeContext(
         repository: FlowRepository = FlowRepository(),
+        camera: FlowCamera = FlowCamera(.authorized),
         onSaved: @escaping ([Purchase.ID]) -> Void = { _ in }
     ) -> FlowContext {
         let invalid = InvalidTransitions()
         let flow = PurchaseCaptureFlow(
             dependencies: .fake(receiptCapture: repository),
+            camera: camera,
             onSaved: onSaved,
             reportInvalidTransition: { invalid.messages.append($0) })
         return FlowContext(flow: flow, invalid: invalid)
@@ -147,14 +151,20 @@ internal struct PurchaseCaptureFlowTests {
         _ flow: PurchaseCaptureFlow,
         receiptCount: Int = 1
     ) async throws {
-        flow.start(.scan)
-        let staging = try #require(flow.staging)
+        await flow.start(.scan)
         for value in 1...receiptCount {
-            staging.addScanned([.fake(data: Data([UInt8(value)]))], pageCount: 1)
+            flow.didScan(parts: [.fake(data: Data([UInt8(value)]))], pageCount: 1)
         }
+        flow.pickerDismissed()
         flow.read()
         await flow.reading?.start()
         #expect(flow.reading?.isFinished == true)
+    }
+
+    private func openEmptyBatch(_ flow: PurchaseCaptureFlow) async {
+        await flow.start(.photos)
+        flow.sheet = .batch
+        flow.pickerDismissed()
     }
 
     private func expectReset(_ flow: PurchaseCaptureFlow) {
@@ -180,6 +190,17 @@ internal struct PurchaseCaptureFlowTests {
         extracted: .fake(),
         capture: nil,
         matchedMerchantEntityID: "merchant-1")
+}
+
+private struct FlowCamera: CameraAuthorizing {
+    let access: CameraAccess
+
+    init(_ access: CameraAccess) {
+        self.access = access
+    }
+
+    func currentAccess() -> CameraAccess { access }
+    func requestAccess() async -> CameraAccess { access }
 }
 
 @MainActor

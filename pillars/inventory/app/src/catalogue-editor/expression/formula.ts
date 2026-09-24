@@ -1,7 +1,7 @@
-import { findType, readLabel, resolveRead } from './catalogue-lookup';
+import { ownerType, readLabel, resolveRead } from './catalogue-lookup';
 import { outlineRows } from './tree';
 
-import type { DesignField, ExpressionContext, ExpressionNode, LiteralValue } from './model';
+import type { ExpressionContext, ExpressionField, ExpressionNode, LiteralValue } from './model';
 
 /** One static field dependency: the field, the type it is on and the path that reaches it. */
 export interface StaticDependency {
@@ -25,11 +25,12 @@ const INFIX: Partial<Record<ExpressionNode['op'], string>> = {
 };
 
 /** Formats a literal the way the author typed it; option ids read as their labels. */
-export function formatLiteral(value: LiteralValue, field?: DesignField): string {
+export function formatLiteral(value: LiteralValue, field?: ExpressionField): string {
   if (typeof value === 'boolean') return value ? 'Yes' : 'No';
   if (typeof value === 'number') return String(value);
   if (typeof value === 'string') return DECIMAL_TEXT.test(value) ? value : `“${value}”`;
   if ('amount' in value) return `${value.amount} ${value.unit}`;
+  if ('targetId' in value) return value.targetId;
   return field?.options?.find((option) => option.id === value.optionId)?.label ?? value.optionId;
 }
 
@@ -44,7 +45,7 @@ function wrap(text: string, node: ExpressionNode): string {
 export function comparedChoiceField(
   context: ExpressionContext,
   parent: ExpressionNode | undefined
-): DesignField | undefined {
+): ExpressionField | undefined {
   if (parent?.op !== 'equal') return undefined;
   const partner = parent.left.op === 'read' ? parent.left : parent.right;
   return partner.op === 'read' ? resolveRead(context, partner).field : undefined;
@@ -57,7 +58,7 @@ export function comparedChoiceField(
 export function formula(
   context: ExpressionContext,
   node: ExpressionNode,
-  choiceField?: DesignField
+  choiceField?: ExpressionField
 ): string {
   const part = (child: ExpressionNode) =>
     wrap(formula(context, child, comparedChoiceField(context, node)), child);
@@ -77,7 +78,7 @@ export function formula(
     case 'if':
       return `if ${formula(context, node.condition)} then ${formula(context, node.thenBranch)} otherwise ${formula(context, node.elseBranch)}`;
     case 'coalesce':
-      return `first available(${node.args.map((arg) => formula(context, arg)).join(', ')})`;
+      return `first available(${node.values.map((value) => formula(context, value)).join(', ')})`;
     default:
       return `${part(node.left)} ${INFIX[node.op] ?? node.op} ${part(node.right)}`;
   }
@@ -92,21 +93,21 @@ export function staticDependencies(
   root: ExpressionNode
 ): readonly StaticDependency[] {
   const unique = new Map<string, StaticDependency>();
-  const add = (typeLabel: string, field: DesignField, via: readonly string[]) => {
+  const add = (typeLabel: string, field: ExpressionField, via: readonly string[]) => {
     const key = `${typeLabel}:${field.id}`;
     if (!unique.has(key)) unique.set(key, { key, typeLabel, fieldLabel: field.label, via });
   };
   for (const row of outlineRows(root)) {
     if (row.node.op !== 'read') continue;
     const resolved = resolveRead(context, row.node);
-    let typeLabel = findType(context, context.ownerTypeId).label;
+    let typeLabel = ownerType(context).label;
     const via: string[] = [];
     for (const hop of resolved.hops) {
       add(typeLabel, hop.field, [...via]);
       via.push(hop.field.label);
       typeLabel = hop.target.label;
     }
-    add(typeLabel, resolved.field, via);
+    if (resolved.field !== undefined) add(typeLabel, resolved.field, via);
   }
   return [...unique.values()];
 }

@@ -57,6 +57,7 @@ internal struct ExpressionVectorFile: Decodable, Sendable {
         let reason: InventoryValueUnavailableReason?
         let failedFieldId: String?
         let traversedItemIds: [String]?
+        let missingInputs: [InventoryExpressionMissingInput]?
     }
 
     struct Item: Decodable, Sendable {
@@ -76,6 +77,7 @@ internal struct ExpressionVectorFile: Decodable, Sendable {
         let override: OverrideRevision?
         let reason: String?
         let failedFieldId: String?
+        let missingInputs: [InventoryExpressionMissingInput]?
         let dependencies: [InventoryValueDependency]
         let traversedItemIds: [String]
     }
@@ -150,7 +152,8 @@ internal struct ExpressionVectorSnapshot: InventoryExpressionSnapshot {
         guard let reason = field.reason, let failedFieldId = field.failedFieldId else { return nil }
         let unavailable = InventoryExpressionUnavailable(
             reason: reason, failedFieldId: failedFieldId,
-            traversedItemIds: field.traversedItemIds ?? [])
+            traversedItemIds: field.traversedItemIds ?? [], missingInputs: field.missingInputs ?? []
+        )
         return .unavailable(unavailable, revision: field.revision, dependencies: dependencies)
     }
 }

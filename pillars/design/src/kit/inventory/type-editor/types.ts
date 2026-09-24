@@ -10,7 +10,6 @@ export type TypeEditorMode =
   | 'archive'
   | 'stale'
   | 'destructive'
-  | 'migration'
   | 'computed'
   | 'dependency-error'
   | 'cycle';

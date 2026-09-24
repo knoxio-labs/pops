@@ -98,7 +98,6 @@ export function createTypeEditorStates(layout: TypeEditorLayout): ScreenStates {
     'validation-preview': () => <TypeEditor mode="preview" layout={layout} />,
     'stale-revision': () => <TypeEditor mode="stale" layout={layout} />,
     'destructive-refusal': () => <TypeEditor mode="destructive" layout={layout} />,
-    'replacement-migration': () => <TypeEditor mode="migration" layout={layout} />,
     'computed-expression': () => <TypeEditor mode="computed" layout={layout} />,
     'dependency-error': () => <TypeEditor mode="dependency-error" layout={layout} />,
     'dependency-cycle': () => <TypeEditor mode="cycle" layout={layout} />,

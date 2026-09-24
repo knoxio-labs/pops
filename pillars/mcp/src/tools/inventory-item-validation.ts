@@ -1,5 +1,6 @@
 import { catalogueClient } from './inventory-catalogue-client.js';
 import { requiredPositiveInteger } from './inventory-catalogue-input.js';
+import { INVENTORY_TYPES_READ_SCOPE } from './inventory-catalogue-scopes.js';
 import {
   requiredUuid,
   requiredValidationFieldValues,
@@ -33,6 +34,7 @@ export const itemValidationTool: ToolDef = {
     },
     required: ['catalogueRevision', 'typeId', 'fieldValues'],
   },
+  scope: INVENTORY_TYPES_READ_SCOPE,
   handler: async (args) => {
     const revision = requiredPositiveInteger(args, 'catalogueRevision');
     if (!revision.ok) return toolError(revision.error);
@@ -50,7 +52,8 @@ export const itemValidationTool: ToolDef = {
         typeId: typeId.value,
         fieldValues: fieldValues.value,
         ...(existingItemId === undefined ? {} : { existingItemId }),
-      })
+      }),
+      INVENTORY_TYPES_READ_SCOPE
     );
   },
 };

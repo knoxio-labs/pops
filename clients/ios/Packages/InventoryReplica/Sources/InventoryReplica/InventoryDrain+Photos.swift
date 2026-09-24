@@ -24,7 +24,7 @@ extension InventoryDrain {
                 continue
             } catch {
                 try replica.returnUpload(upload.sha256)
-                online.noteFailure(error)
+                report(error)
                 return OnlineInventoryStore.blockReason(for: error) == nil ? .retryLater : .blocked
             }
             online.noteReached()

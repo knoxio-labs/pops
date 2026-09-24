@@ -9,8 +9,8 @@ import type { TypeEditorMode } from './types';
 
 function isBlockingMode(
   mode: TypeEditorMode
-): mode is Extract<TypeEditorMode, 'archive' | 'stale' | 'destructive' | 'migration'> {
-  return mode === 'archive' || mode === 'stale' || mode === 'destructive' || mode === 'migration';
+): mode is Extract<TypeEditorMode, 'archive' | 'stale' | 'destructive'> {
+  return mode === 'archive' || mode === 'stale' || mode === 'destructive';
 }
 
 function canPublish(mode: TypeEditorMode): boolean {
@@ -19,8 +19,7 @@ function canPublish(mode: TypeEditorMode): boolean {
     mode !== 'key-collision' &&
     mode !== 'archive' &&
     mode !== 'stale' &&
-    mode !== 'destructive' &&
-    mode !== 'migration'
+    mode !== 'destructive'
   );
 }
 

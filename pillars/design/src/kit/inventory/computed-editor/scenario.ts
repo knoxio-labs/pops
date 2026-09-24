@@ -1,4 +1,4 @@
-import type { ExpressionContext, ExpressionNode, ValueType } from './model';
+import type { ExpressionContext, ExpressionNode, ValueType } from '@pops/app-inventory/design';
 
 /** Server reasons a computed read cannot produce a value (ExpressionUnavailableReason). */
 export type UnavailableReason =

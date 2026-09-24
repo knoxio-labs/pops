@@ -1,9 +1,11 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 
-import { expressionSelection } from './FieldFormOptions';
+import { EMPTY } from './expression/edit';
+import { fromWire, toWire } from './expression/wire';
 import { catalogueKeyFromLabel } from './types';
 
-import type { BinaryOperation, FieldFormContextValue, FieldKind } from './FieldFormContext';
+import type { ExpressionNode } from './expression/model';
+import type { FieldFormContextValue, FieldKind } from './FieldFormContext';
 import type { CatalogueField, CatalogueType } from './types';
 
 interface Args {
@@ -18,12 +20,6 @@ interface State {
   readonly changeLabel: (value: string) => void;
   readonly context: FieldFormContextValue;
   readonly valid: boolean;
-}
-
-function fieldCandidates(type: CatalogueType, field?: CatalogueField): CatalogueField[] {
-  return type.fields.filter(
-    (candidate) => candidate.id !== field?.id && candidate.archivedAt === null
-  );
 }
 
 function orDefault<T>(value: T | null | undefined, defaultValue: T): T {
@@ -58,28 +54,22 @@ function initialReferences(field?: CatalogueField) {
   };
 }
 
-function initialExpression(
-  field: CatalogueField | undefined,
-  candidates: readonly CatalogueField[]
-) {
-  const parsed = expressionSelection(field?.expression);
+function initialExpression(field: CatalogueField | undefined) {
   return {
     allowOverride: orDefault(field?.allowOverride, false),
-    expressionOperation: orDefault(parsed?.operation, 'multiply' as const),
-    leftFieldId: orDefault(parsed?.left, orDefault(candidates[0]?.id, '')),
-    rightFieldId: orDefault(
-      parsed?.right,
-      orDefault(candidates[1]?.id, orDefault(candidates[0]?.id, ''))
-    ),
+    expression:
+      field?.expression === null || field?.expression === undefined
+        ? EMPTY
+        : fromWire(field.expression),
   };
 }
 
-function initialValues(field: CatalogueField | undefined, candidates: readonly CatalogueField[]) {
+function initialValues(field: CatalogueField | undefined) {
   return {
     ...initialIdentity(field),
     ...initialShape(field),
     ...initialReferences(field),
-    ...initialExpression(field, candidates),
+    ...initialExpression(field),
   };
 }
 
@@ -101,15 +91,11 @@ function useFormValues(initial: ReturnType<typeof initialValues>) {
   );
   const [storage, setStorage] = useState<'stored' | 'computed'>(initial.storage);
   const [allowOverride, setAllowOverride] = useState(initial.allowOverride);
-  const [expressionOperation, setExpressionOperation] = useState<BinaryOperation>(
-    initial.expressionOperation
-  );
-  const [leftFieldId, setLeftFieldId] = useState(initial.leftFieldId);
-  const [rightFieldId, setRightFieldId] = useState(initial.rightFieldId);
+  const [expression, setExpression] = useState<ExpressionNode>(initial.expression);
   return {
     allowOverride,
     cardinality,
-    expressionOperation,
+    expression,
     fixedUnit,
     help,
     highlighted,
@@ -117,15 +103,13 @@ function useFormValues(initial: ReturnType<typeof initialValues>) {
     keyValue,
     kind,
     label,
-    leftFieldId,
     referenceKinds,
     referenceTypeIds,
     required,
-    rightFieldId,
     storage,
     setAllowOverride,
     setCardinality,
-    setExpressionOperation,
+    setExpression,
     setFixedUnit,
     setHelp,
     setHighlighted,
@@ -133,21 +117,18 @@ function useFormValues(initial: ReturnType<typeof initialValues>) {
     setKeyValue,
     setKind,
     setLabel,
-    setLeftFieldId,
     setReferenceKinds,
     setReferenceTypeIds,
     setRequired,
-    setRightFieldId,
     setStorage,
   };
 }
 
 function formContext(
   form: ReturnType<typeof useFormValues>,
-  { field, published, types }: Args,
-  candidates: readonly CatalogueField[]
+  { field, published, types }: Args
 ): FieldFormContextValue {
-  return { ...form, candidates, field, shapeLocked: published, types };
+  return { ...form, field, shapeLocked: published, types };
 }
 
 function isValid(value: FieldFormContextValue): boolean {
@@ -155,15 +136,14 @@ function isValid(value: FieldFormContextValue): boolean {
     value.label.trim() !== '' &&
     (value.field !== undefined || value.keyValue !== '') &&
     (value.kind !== 'measurement' || value.fixedUnit.trim() !== '') &&
-    (value.storage === 'stored' || (value.leftFieldId !== '' && value.rightFieldId !== ''))
+    (value.storage === 'stored' || toWire(value.expression) !== null)
   );
 }
 
 /** Owns the controlled values shared by the field-editor sections. */
 export function useFieldFormState(args: Args): State {
-  const candidates = useMemo(() => fieldCandidates(args.type, args.field), [args.field, args.type]);
-  const form = useFormValues(initialValues(args.field, candidates));
-  const context = formContext(form, args, candidates);
+  const form = useFormValues(initialValues(args.field));
+  const context = formContext(form, args);
   return {
     context,
     valid: isValid(context),

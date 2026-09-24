@@ -80,6 +80,25 @@ internal struct InventoryExpressionDecimal {
         )
     }
 
+    /// `shiftDecimal`: `text × 10^places`, as a unit conversion moves the
+    /// decimal point. A positive shift consumes fractional digits first.
+    static func shifted(_ text: String, by places: Int) -> Result<
+        String, InventoryExpressionErrorCode
+    > {
+        guard let value = Self(text) else { return .failure(.invalidValue) }
+        if places < 0 {
+            return Self(coefficient: value.coefficient, scale: value.scale - places).text
+        }
+        let consumed = min(value.scale, places)
+        if value.coefficient == 0 {
+            return Self(coefficient: 0, scale: value.scale - consumed).text
+        }
+        guard let coefficient = value.coefficient.times(power(places - consumed)) else {
+            return .failure(.precisionOverflow)
+        }
+        return Self(coefficient: coefficient, scale: value.scale - consumed).text
+    }
+
     /// The smallest scale up to 9 at which the quotient is exact.
     static func divided(_ left: Self, by right: Self) -> Result<
         String, InventoryExpressionErrorCode
