@@ -16,6 +16,7 @@ import {
 } from '../schema.js';
 import { expectRow, type PurchasesDb } from './internal.js';
 import { recordMatchRule } from './match-rules.js';
+import { recomputeStatusForCharges } from './purchase-status.js';
 import { mutateChunked } from './sqlite-chunk.js';
 
 import type { ProposedLink } from '../../reconcile/types.js';
@@ -167,9 +168,15 @@ export function persistProposedLinks(db: PurchasesDb, links: readonly ProposedLi
  * and probably will. That is the whole difference from {@link rejectLink},
  * and both exist because they answer different questions — "this pin was a
  * mistake, reconsider it" against "these two are not a pair".
+ *
+ * Removing a link can only ever reduce an order's coverage, so this
+ * recomputes the order's status right after the delete — a purchase whose
+ * only link is unlinked here falls back to `awaiting_settlement` rather
+ * than sitting at `linked` for money nothing accounts for any more.
+ * {@link rejectLink} gets this for free, since it calls through here.
  */
 export function unlinkCharge(db: PurchasesDb, chargeId: string, transactionUri: string): boolean {
-  return (
+  const removed =
     db
       .delete(purchaseChargeLinks)
       .where(
@@ -178,8 +185,9 @@ export function unlinkCharge(db: PurchasesDb, chargeId: string, transactionUri: 
           eq(purchaseChargeLinks.transactionUri, transactionUri)
         )
       )
-      .run().changes > 0
-  );
+      .run().changes > 0;
+  if (removed) recomputeStatusForCharges(db, [chargeId]);
+  return removed;
 }
 
 /**
@@ -314,6 +322,12 @@ export function confirmLink(
         )
       )
       .run();
+
+    // Confirming never changes coverage — `computeAccounting` counts a
+    // link whether or not it is confirmed — but recomputing here anyway
+    // means a status pre-dating this feature self-heals the moment a human
+    // touches the order, instead of waiting for the next sweep.
+    recomputeStatusForCharges(tx, [chargeId]);
 
     return { pinned: true, matchRuleId };
   });

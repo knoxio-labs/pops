@@ -15,6 +15,7 @@ import { openTempDb, seedAmazonSource } from '../../db/__tests__/helpers.js';
 import {
   confirmLink,
   createPurchase,
+  getPurchase,
   listReconcileQueue,
   rejectLink,
   unlinkCharge,
@@ -596,5 +597,130 @@ describe('what the rule then does on a later sweep', () => {
       ['AMAZON MKTPLACE', 0],
       ['AMAZON MKTPLACE AU', 1],
     ]);
+  });
+});
+
+describe('POPS-4612: status tracks what the links say, not what created the order', () => {
+  function status(id: string): string | undefined {
+    return getPurchase(db, id)?.purchase.status;
+  }
+
+  it('moves a fully-linked order from awaiting_settlement to linked, in the sweep itself', async () => {
+    const id = anOrder({ checksum: 'a' });
+    expect(status(id)).toBe('awaiting_settlement');
+
+    await runSweep(deps(financeReturning({ id: 't1', amountCents: 4128 })));
+
+    expect(status(id)).toBe('linked');
+  });
+
+  it('leaves an order the sweep only partially explains at partial', async () => {
+    // One of two charges gets a matching transaction; the other has nothing
+    // to match. A single order can't be minted a derived charge alongside a
+    // merchant-stated one (mint only fires when NO charge states anything),
+    // so this uses two merchant-stated charges directly.
+    const id = anOrder({
+      checksum: 'a',
+      totalCents: 5000,
+      charges: [
+        { sourceChargeRef: 'c1', amountCents: 3000, role: 'capture' },
+        { sourceChargeRef: 'c2', amountCents: 2000, role: 'capture' },
+      ],
+    });
+
+    await runSweep(deps(financeReturning({ id: 't1', amountCents: 3000 })));
+
+    expect(status(id)).toBe('partial');
+  });
+
+  it('does not need confirmation — the automatic link alone is enough', async () => {
+    const id = anOrder({ checksum: 'a' });
+    await runSweep(deps(financeReturning({ id: 't1', amountCents: 4128 })));
+
+    // Not confirmed by anyone. `confirmLink` is never called in this test.
+    expect(status(id)).toBe('linked');
+  });
+
+  it('confirming a link does not change a status the sweep already derived', async () => {
+    const id = anOrder({ checksum: 'a' });
+    await runSweep(deps(financeReturning({ id: 't1' })));
+    expect(status(id)).toBe('linked');
+    const link = onlyLink();
+
+    confirmLink(db, link.chargeId, link.uri, NOW);
+
+    expect(status(id)).toBe('linked');
+  });
+
+  it('unlinking returns the order to awaiting_settlement', async () => {
+    const id = anOrder({ checksum: 'a' });
+    await runSweep(deps(financeReturning({ id: 't1' })));
+    expect(status(id)).toBe('linked');
+    const link = onlyLink();
+
+    unlinkCharge(db, link.chargeId, link.uri);
+
+    expect(status(id)).toBe('awaiting_settlement');
+  });
+
+  it('rejecting behaves the same as unlinking, for status', async () => {
+    const id = anOrder({ checksum: 'a' });
+    await runSweep(deps(financeReturning({ id: 't1' })));
+    expect(status(id)).toBe('linked');
+    const link = onlyLink();
+
+    rejectLink(db, link.chargeId, link.uri, NOW);
+
+    expect(status(id)).toBe('awaiting_settlement');
+  });
+
+  it('unlinking one of two links on a fully-linked order leaves it partial, not awaiting_settlement', async () => {
+    const id = anOrder({
+      checksum: 'a',
+      totalCents: 5000,
+      charges: [
+        { sourceChargeRef: 'c1', amountCents: 3000, role: 'capture' },
+        { sourceChargeRef: 'c2', amountCents: 2000, role: 'capture' },
+      ],
+    });
+    const finance = financeReturning(
+      { id: 't1', amountCents: 3000 },
+      { id: 't2', amountCents: 2000 }
+    );
+    await runSweep(deps(finance));
+    expect(status(id)).toBe('linked');
+    const [first] = linkRows();
+    if (first === undefined) throw new Error('expected a link');
+
+    unlinkCharge(db, first.chargeId, first.uri);
+
+    expect(status(id)).toBe('partial');
+  });
+
+  it('never moves an ignored order, even once its links fully cover it', async () => {
+    const id = anOrder({
+      checksum: 'a',
+      totalCents: 4128,
+      charges: [{ sourceChargeRef: 'c1', amountCents: 4128, role: 'capture' }],
+    });
+    opened.raw.prepare("UPDATE purchases SET status = 'ignored' WHERE id = ?").run(id);
+
+    // Ignored orders are excluded from the sweep's own solvable-charge
+    // query, so this exercises the write path the same way a stray manual
+    // link would: directly, the way a hand-run fixup might.
+    const charge = opened.raw
+      .prepare('SELECT id FROM purchase_charges WHERE purchase_id = ?')
+      .get(id) as { id: string } | undefined;
+    if (charge === undefined) throw new Error('expected a charge');
+    opened.raw
+      .prepare(
+        `INSERT INTO purchase_charge_links (id, charge_id, transaction_uri, amount_cents, link_type)
+         VALUES ('link-1', ?, ?, 4128, 'exact')`
+      )
+      .run(charge.id, TXN);
+
+    confirmLink(db, charge.id, TXN, NOW);
+
+    expect(status(id)).toBe('ignored');
   });
 });
