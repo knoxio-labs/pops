@@ -25,7 +25,7 @@ internal struct LogEntry: Sendable {
     var command: LoggedCommand
     var dependsOn: [String]
     var baseRevision: Int?
-    var catalogueRevision: Int
+    var catalogueRevision: Int?
     var state: MutationState
     var outcome: StoredOutcome?
     var settlesAtSeq: Int?

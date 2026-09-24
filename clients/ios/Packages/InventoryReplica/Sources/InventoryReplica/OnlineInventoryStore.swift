@@ -180,25 +180,24 @@ public final class OnlineInventoryStore: InventoryStore, Sendable {
         return outcome
     }
 
-    /// The catalogue revision the command is judged against: the one a
-    /// protocol-2 command was authored against, and otherwise the one the
-    /// replica holds, or none. Never a revision nobody saw: a computed
-    /// override needs one, and without a stored catalogue it is refused
-    /// before anything is sent.
+    /// The catalogue revision the command is judged against
+    /// (`InventoryCommand.sentCatalogueRevision(active:)`), with the one the
+    /// replica holds as the active one. Never a revision nobody saw: a
+    /// computed override needs one, and without a stored catalogue it is
+    /// refused before anything is sent.
     private func catalogueRevision(for command: InventoryCommand) throws -> Int? {
-        if let authored = command.protocol2CatalogueRevision { return authored }
         let stored = try replica.syncPosition().storedCatalogueRevision
         switch command {
         case .setComputedOverride, .clearComputedOverride:
-            guard let stored else {
+            guard stored != nil else {
                 throw InventoryCommandError.rejected(
                     reason: .catalogueUpdateRequired,
                     message: "no catalogue revision is on this phone; refresh and try again")
             }
-            return stored
         default:
-            return stored
+            break
         }
+        return command.sentCatalogueRevision(active: stored)
     }
 
     /// `catalogue_update_required`: refreshes, and answers the mutation moved
@@ -214,11 +213,12 @@ public final class OnlineInventoryStore: InventoryStore, Sendable {
         guard let active = try replica.syncPosition().storedCatalogueRevision,
             active > mutation.catalogueRevision ?? 0
         else { return nil }
+        let moved = mutation.command.movedTo(catalogueRevision: active)
         return InventoryOutboundMutation(
-            mutationId: mintMutationId(),
-            command: mutation.command.movedTo(catalogueRevision: active),
+            mutationId: mintMutationId(), command: moved,
             baseRevision: mutation.baseRevision, dependsOn: mutation.dependsOn,
-            clientTime: mutation.clientTime, catalogueRevision: active)
+            clientTime: mutation.clientTime,
+            catalogueRevision: moved.sentCatalogueRevision(active: active))
     }
 
     /// The revision the replica holds for the command's entity (D8). A

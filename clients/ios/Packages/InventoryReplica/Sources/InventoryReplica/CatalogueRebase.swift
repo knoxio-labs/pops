@@ -12,7 +12,9 @@ import GRDB
 /// change arrives at the newer revision.
 internal enum CatalogueRebase {
     enum Verdict: Equatable {
-        case rebased(LoggedCommand, revision: Int)
+        /// `revision` is what the moved change is sent with
+        /// (`InventoryCommand.sentCatalogueRevision(active:)`).
+        case rebased(LoggedCommand, revision: Int?)
         /// The change still names something the newer revision no longer
         /// has as it was; `reason` says what, for the repair's message.
         case incompatible(reason: String)
@@ -22,13 +24,16 @@ internal enum CatalogueRebase {
     /// that names no catalogue record (every protocol-1 command) always
     /// moves.
     static func rebase(_ entry: LogEntry, onto revision: Int, in db: Database) throws -> Verdict {
-        guard case .command(let command) = entry.command,
-            command.protocol2CatalogueRevision != nil
-        else { return .rebased(entry.command, revision: revision) }
+        guard case .command(let command) = entry.command else {
+            return .rebased(entry.command, revision: nil)
+        }
+        guard let authoredRevision = command.protocol2CatalogueRevision else {
+            return .rebased(entry.command, revision: command.sentCatalogueRevision(active: revision))
+        }
         guard let target = try Protocol2CatalogueRows.read(revision: revision, in: db) else {
             return .incompatible(reason: "catalogue revision \(revision) is not on this phone")
         }
-        let authored = try Protocol2CatalogueRows.read(revision: entry.catalogueRevision, in: db)
+        let authored = try Protocol2CatalogueRows.read(revision: authoredRevision, in: db)
         let check = Check(authored: authored, target: target)
         if let reason = try check.incompatibility(of: command, in: db) {
             return .incompatible(reason: reason)
@@ -112,6 +117,21 @@ internal enum CatalogueRebase {
 }
 
 extension InventoryCommand {
+    /// The catalogue revision this command is sent with, given the one the
+    /// replica holds (`active`): the revision a protocol-2 command was
+    /// authored against; the active one for an override or a split, whose
+    /// outcome on the server depends on the catalogue; and none for any other
+    /// protocol-1 command, which the server judges without one (and refuses
+    /// alongside a type key or named fields). Never a revision this phone did
+    /// not hold (POPS-4492).
+    func sentCatalogueRevision(active: Int?) -> Int? {
+        if let authored = protocol2CatalogueRevision { return authored }
+        switch self {
+        case .setComputedOverride, .clearComputedOverride, .splitItem: return active
+        default: return nil
+        }
+    }
+
     /// This command authored against `catalogueRevision` instead; a command
     /// that carries no revision is returned as it is.
     func movedTo(catalogueRevision revision: Int) -> InventoryCommand {
