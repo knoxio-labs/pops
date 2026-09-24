@@ -126,6 +126,7 @@ describe('useCataloguePreview', () => {
       compatibility: forbidden,
       draftVersion: 3,
       isLivePreview: true,
+      operations: [secondOperation],
     });
   });
 
@@ -180,6 +181,7 @@ describe('useCataloguePreview', () => {
         compatibility: forbidden,
         draftVersion: 3,
         isLivePreview: false,
+        operations: [],
       });
     });
 
@@ -203,6 +205,7 @@ describe('useCataloguePreview', () => {
         compatibility: forbidden,
         draftVersion: 3,
         isLivePreview: false,
+        operations: [],
       });
     });
 
@@ -223,6 +226,7 @@ describe('useCataloguePreview', () => {
         compatibility: forbidden,
         draftVersion: 3,
         isLivePreview: false,
+        operations: [],
       });
     });
 

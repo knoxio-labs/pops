@@ -65,12 +65,13 @@ function useDraftPatching(
         })
       );
     },
-    onSuccess: (result) => {
+    onSuccess: (result, operations) => {
       queryClient.setQueryData(DRAFT_KEY, result.draft);
       setCompatibility({
         compatibility: result.compatibility,
         draftVersion: result.draft.revision.draftVersion,
         isLivePreview: false,
+        operations,
       });
     },
   });

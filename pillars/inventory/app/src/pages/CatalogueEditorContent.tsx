@@ -24,6 +24,7 @@ function computedEnvironment(page: Page, field?: CatalogueField): ComputedFieldE
     saveIssues: page.issues.saved,
     liveIssues: page.issues.live,
     compatibility: 'compatibility' in page.readiness ? page.readiness.compatibility : null,
+    compatibilityOperations: 'operations' in page.readiness ? page.readiness.operations : [],
   };
 }
 
