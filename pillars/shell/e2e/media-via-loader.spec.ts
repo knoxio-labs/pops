@@ -7,8 +7,63 @@
  * rotation surface and four legacy redirects — none of which has a nav item,
  * so losing them would 404 silently.
  */
+import { z } from 'zod';
+
 import { expect, test } from './fixtures/pillar-rest-guard';
-import { stubShellBoot } from './helpers/pillar-rest';
+import { fulfilWith, stubShellBoot } from './helpers/pillar-rest';
+
+/**
+ * `GET /discovery/profile` 200 — mirrors `PreferenceProfileSchema`
+ * (`pillars/media/src/contract/rest-discovery-schemas.ts`) inside the
+ * `{ data }` envelope `rest-discovery.ts` declares. Hand-mirrored for the
+ * reason `media-library-search-add-movie.spec.ts` gives.
+ */
+const PreferenceProfileResponseSchema = z
+  .object({
+    data: z
+      .object({
+        genreAffinities: z.array(
+          z
+            .object({
+              genre: z.string(),
+              avgScore: z.number(),
+              movieCount: z.number(),
+              totalComparisons: z.number(),
+            })
+            .strict()
+        ),
+        dimensionWeights: z.array(
+          z
+            .object({
+              dimensionId: z.number(),
+              name: z.string(),
+              comparisonCount: z.number(),
+              avgScore: z.number(),
+            })
+            .strict()
+        ),
+        genreDistribution: z.array(
+          z.object({ genre: z.string(), watchCount: z.number(), percentage: z.number() }).strict()
+        ),
+        totalMoviesWatched: z.number(),
+        totalComparisons: z.number(),
+      })
+      .strict(),
+  })
+  .strict();
+
+const PREFERENCE_PROFILE = {
+  data: {
+    genreAffinities: [],
+    dimensionWeights: [],
+    genreDistribution: [
+      { genre: 'Drama', watchCount: 3, percentage: 60 },
+      { genre: 'Comedy', watchCount: 2, percentage: 40 },
+    ],
+    totalMoviesWatched: 5,
+    totalComparisons: 0,
+  },
+};
 
 test.describe('media — mounted by the runtime loader', () => {
   let errors: string[] = [];
@@ -78,5 +133,33 @@ test.describe('media — mounted by the runtime loader', () => {
     await page.goto('/media/plex');
 
     await expect(page).toHaveURL(/\/settings#media\.plex/);
+  });
+
+  test.describe('discover with only the preference profile stubbed', () => {
+    test.use({
+      allowUnroutedPillarRest:
+        'the assertion is that the preference profile chart drew, which reads ' +
+        'only discovery/profile; the shelves, session and dismissed-list reads ' +
+        'the page also fires are the media pillar’s own tests’ job',
+    });
+
+    /**
+     * The profile imports `@pops/ui/theme/chart-colors`. When the import map
+     * could not resolve that subpath, the page's chunk failed to link and its
+     * error boundary rendered, with no load-error testid anywhere
+     * (POPS-4034). A drawn chart is only reachable if it linked.
+     */
+    test('the preference profile chart renders', async ({ page }) => {
+      await page.route(
+        /\/media-api\/discovery\/profile$/,
+        fulfilWith(200, PreferenceProfileResponseSchema, PREFERENCE_PROFILE, 'discovery.profile')
+      );
+
+      await page.goto('/media/discover');
+
+      await expect(
+        page.getByTestId('genre-distribution-chart').locator('svg.recharts-surface')
+      ).toBeVisible();
+    });
   });
 });

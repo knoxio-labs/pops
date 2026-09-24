@@ -1,6 +1,12 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 
-import { SHARED_RUNTIME_ENTRY_POINTS } from '@pops/pillar-sdk/remote-build';
+import {
+  isSharedRuntimeSpecifier,
+  SHARED_RUNTIME_ENTRY_POINTS,
+} from '@pops/pillar-sdk/remote-build';
 
 import { sharedRuntimeInternals } from './vite-plugin-shared-runtime.js';
 
@@ -175,6 +181,75 @@ describe('SHARED_RUNTIME_ENTRY_POINTS default-export flags', () => {
       const nodeGaveCommonJs = Object.hasOwn(namespace, '__esModule');
       const browserDefault = !nodeGaveCommonJs && Object.hasOwn(namespace, 'default');
       expect(browserDefault, specifier).toBe(hasDefault);
+    }
+  );
+});
+
+interface PublishedSubpath {
+  readonly specifier: string;
+  readonly target: unknown;
+}
+
+/**
+ * Every subpath `@pops/ui` publishes, read from the manifest the shell
+ * actually installed rather than restated here, so a subpath added to the
+ * kit is covered the moment it exists.
+ */
+function publishedUiSubpaths(): PublishedSubpath[] {
+  const manifest: unknown = JSON.parse(
+    readFileSync(join(import.meta.dirname, 'node_modules', '@pops', 'ui', 'package.json'), 'utf8')
+  );
+  if (typeof manifest !== 'object' || manifest === null || !('exports' in manifest)) {
+    throw new Error('@pops/ui package.json has no exports map');
+  }
+  const { exports } = manifest;
+  if (typeof exports !== 'object' || exports === null) {
+    throw new Error('@pops/ui exports is not an object');
+  }
+  return Object.entries(exports)
+    .filter(([key]) => key !== '.')
+    .map(([key, target]) => ({ specifier: `@pops/ui/${key.replace(/^\.\//, '')}`, target }));
+}
+
+/**
+ * The runtime half of the kit: a subpath resolving straight to a TS module,
+ * other than the test helpers under `testing/`. `./theme` is the stylesheet
+ * the shell already emits; a remote bundle has no business importing it.
+ */
+function isRuntimeModule({ specifier, target }: PublishedSubpath): boolean {
+  return (
+    typeof target === 'string' &&
+    /\.tsx?$/.test(target) &&
+    !specifier.startsWith('@pops/ui/testing/')
+  );
+}
+
+/**
+ * The failure POPS-4034 shipped: the remote build's `external` predicate
+ * matched `@pops/ui/theme/graph-colors` as a subpath of a shared package, so
+ * the bundle carried the bare specifier, while the import map — built from
+ * SHARED_RUNTIME_ENTRY_POINTS — had no entry for it. The browser refused the
+ * import and three pillar pages rendered their error boundary.
+ */
+describe('the remote-build external predicate against the import map', () => {
+  const mapped = new Set(SHARED_RUNTIME_ENTRY_POINTS.map((entry) => entry.specifier));
+  const subpaths = publishedUiSubpaths();
+
+  it('reads at least one published runtime subpath', () => {
+    expect(subpaths.filter(isRuntimeModule).length).toBeGreaterThan(0);
+  });
+
+  it.each(subpaths.map(({ specifier }) => specifier))(
+    'externalises %s only if the import map carries it',
+    (specifier) => {
+      expect(isSharedRuntimeSpecifier(specifier) && !mapped.has(specifier)).toBe(false);
+    }
+  );
+
+  it.each(subpaths.filter(isRuntimeModule).map(({ specifier }) => specifier))(
+    'carries runtime subpath %s on the import map',
+    (specifier) => {
+      expect(mapped.has(specifier)).toBe(true);
     }
   );
 });
