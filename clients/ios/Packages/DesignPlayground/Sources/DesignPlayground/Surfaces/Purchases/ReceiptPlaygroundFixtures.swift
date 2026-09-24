@@ -5,11 +5,10 @@ import AppCore
 /// screens take rather than `AppCore`'s account and transaction ones.
 ///
 /// ``typicalExtracted`` prints the same line twice on purpose — a receipt
-/// commonly does — because both ``ReceiptResultPresentation`` and
-/// `ReceiptDraftPresentation` key a row by its position rather than its
-/// description, and a fixture set without a repeat is one that could never
-/// have caught the row that keys on the wrong thing and disappears under
-/// `ForEach`.
+/// commonly does — because `ReceiptDraftPresentation` keys a row by its
+/// position rather than its description, and a fixture set without a repeat
+/// is one that could never have caught the row that keys on the wrong thing
+/// and disappears under `ForEach`.
 internal enum ReceiptPlaygroundFixtures {
     /// A clean read worth improving rather than fixing: the arithmetic
     /// balances, and the names are exactly what the till printed. The case

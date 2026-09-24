@@ -275,9 +275,7 @@ extension ReceiptDraftForm {
         return .hint(hints.joined(separator: " "))
     }
 
-    /// A named group of fields in one card, with the label outside it — the
-    /// same shape ``ReceiptResultCard`` uses, so the form and the reading it
-    /// replaces are recognisably one screen in two states.
+    /// A named group of fields in one card, with the label outside it.
     internal func section(
         _ title: String, caption: String? = nil, @ViewBuilder rows: () -> some View
     ) -> some View {

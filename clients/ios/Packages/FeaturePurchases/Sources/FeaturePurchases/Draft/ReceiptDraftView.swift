@@ -16,17 +16,14 @@ import SwiftUI
 ///
 /// ## Where the save goes
 ///
-/// Out through a closure. This screen knows a draft was accepted and nothing
-/// about what happens next, which is what lets the same screen serve a
-/// correction, a hand-entered purchase and an edit of a saved one — three
-/// tickets, one form, per this package's README.
-///
-/// ReceiptResultView is the caller today: its `.draft` and `.manualEntry`
-/// states both build this view with `save` wired to
-/// `ReceiptResultViewModel.save(_:)` (POPS-2454). The seam still earns its
-/// keep beyond that one caller — an eventual edit-a-saved-purchase screen
-/// (POPS-2458) can reuse the same view with a different save closure without
-/// this type knowing the difference.
+/// This screen knows a draft was accepted and nothing about what happens
+/// next, which is what lets the same form serve a corrected reading, a
+/// hand-entered purchase and an edit of a saved one — three tickets, one
+/// form, per this package's README. `PurchaseReviewView` and
+/// `PurchaseHandEntryView` commit through their own host's navigation bar
+/// rather than this view's `save` closure; `PurchaseEditSheet` (POPS-2458)
+/// wires `save` directly, reusing the same view with a save closure of its
+/// own.
 public struct ReceiptDraftView: View {
     @State private var ownDraft: ReceiptDraft
     private let hostDraft: Binding<ReceiptDraft>?
@@ -128,8 +125,7 @@ public struct ReceiptDraftView: View {
     }
 
     /// `internal` rather than `private` so the layout can be exercised
-    /// without going through `body`'s scroll — the same affordance
-    /// ``ReceiptResultView/content`` exposes, for the same reason.
+    /// without going through `body`'s scroll.
     @ViewBuilder internal var content: some View {
         VStack(alignment: .leading, spacing: PopsSpacing.lg) {
             if !parts.isEmpty { ReceiptPagesView(parts: parts) }
