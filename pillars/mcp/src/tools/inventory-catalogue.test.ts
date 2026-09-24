@@ -291,7 +291,7 @@ describe('inventory catalogue draft management', () => {
     });
   });
 
-  it('surfaces an authorization refusal as an MCP error', async () => {
+  it('surfaces an authorization refusal as an MCP error with the required scope to grant', async () => {
     types.manage.abandonDraft.mockResolvedValueOnce({
       kind: 'unauthorized',
       pillar: 'inventory',
@@ -305,10 +305,46 @@ describe('inventory catalogue draft management', () => {
     });
 
     expect(result.isError).toBe(true);
-    expect(result.content[0]).toMatchObject({
-      type: 'text',
-      text: "Service account is not authorised for 'inventory.types.manage'",
+    const [content] = result.content;
+    const text = content?.type === 'text' ? content.text : '';
+    expect(text).toContain("Service account is not authorised for 'inventory.types.manage'");
+    expect(text).toContain("requires service-account scope 'inventory.types.manage'");
+  });
+
+  it('declares the manage scope on every draft-authoring tool and the read scope on every read tool', () => {
+    for (const name of [
+      'inventory.catalogue.readDraft',
+      'inventory.catalogue.createDraft',
+      'inventory.catalogue.patchDraft',
+      'inventory.catalogue.previewDraft',
+      'inventory.catalogue.publishDraft',
+      'inventory.catalogue.abandonDraft',
+    ]) {
+      expect(tool(name).scope).toBe('inventory.types.manage');
+    }
+    for (const name of [
+      'inventory.catalogue.get',
+      'inventory.catalogue.getType',
+      'inventory.catalogue.audit',
+    ]) {
+      expect(tool(name).scope).toBe('inventory.types.read');
+    }
+  });
+
+  it('surfaces the read-scope refusal on a read tool with its own scope, not the manage one', async () => {
+    types.read.catalogue.mockResolvedValueOnce({
+      kind: 'unauthorized',
+      pillar: 'inventory',
+      message: "Service account is not authorised for 'inventory.types.read'",
     });
+
+    const result = await tool('inventory.catalogue.get').handler({});
+
+    expect(result.isError).toBe(true);
+    const [content] = result.content;
+    const text = content?.type === 'text' ? content.text : '';
+    expect(text).toContain("requires service-account scope 'inventory.types.read'");
+    expect(text).not.toContain('inventory.types.manage');
   });
 
   it.each([

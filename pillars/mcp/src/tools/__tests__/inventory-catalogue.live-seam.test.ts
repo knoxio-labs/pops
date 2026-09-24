@@ -365,6 +365,70 @@ describe('inventory catalogue MCP tools — real HTTP boundary', () => {
     }
   });
 
+  describe('the manage scope is distinct from the read scope (POPS-4357, POPS-4362)', () => {
+    it('lets a read-only key read the catalogue but refuses createDraft with an actionable, scope-naming error', async () => {
+      const readOnly = await seam.mintKey('mcp-live-seam-read-only', ['inventory.types.read']);
+      seam.useKey(readOnly);
+      try {
+        const published = ok(await catalogueGet.handler({}));
+        const baseRevision = (published['revision'] as { revision: number }).revision;
+
+        const refused = await createDraft.handler({ baseRevision });
+        expect(refused.isError).toBe(true);
+        expect(text(refused)).toMatch(/authoris/);
+        expect(text(refused)).toContain("requires service-account scope 'inventory.types.manage'");
+      } finally {
+        seam.useDefaultKey();
+      }
+    });
+
+    it('completes the full draft lifecycle on a manage-only key, which holds no read grant', async () => {
+      seam.useDefaultKey();
+      const published = ok(await catalogueGet.handler({}));
+      const baseRevision = (published['revision'] as { revision: number }).revision;
+
+      const manageOnly = await seam.mintKey('mcp-live-seam-manage-only', [
+        'inventory.types.manage',
+      ]);
+      seam.useKey(manageOnly);
+      try {
+        const created = draftRevision(ok(await createDraft.handler({ baseRevision })));
+        const patched = draftRevision(
+          ok(
+            await patchDraft.handler({
+              revision: created.revision,
+              baseRevision,
+              expectedDraftVersion: created.draftVersion,
+              operations: [
+                { kind: 'put_type', key: 'manage_only_widget', label: 'Manage-only widget' },
+              ],
+            })
+          )
+        );
+        expect(patched.draftVersion).toBeGreaterThan(created.draftVersion);
+
+        const publishedResult = ok(
+          await publishDraft.handler({
+            revision: patched.revision,
+            baseRevision,
+            expectedDraftVersion: patched.draftVersion,
+            note: 'manage-only lifecycle',
+          })
+        );
+        expect((publishedResult['revision'] as { revision: number }).revision).toBeGreaterThan(
+          baseRevision
+        );
+
+        // The manage-only key still cannot read — the two scopes never merge.
+        const readAttempt = await catalogueGet.handler({});
+        expect(readAttempt.isError).toBe(true);
+        expect(text(readAttempt)).toMatch(/authoris/);
+      } finally {
+        seam.useDefaultKey();
+      }
+    });
+  });
+
   it('surfaces unavailable for a connection refused', async () => {
     seam.useDefaultKey();
     const closedPort = 39; // never listened on; loopback refuses immediately.

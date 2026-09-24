@@ -32,6 +32,12 @@ though nothing enforces it mechanically.
 - **Patch tools forward only keys present in the args.** `0` is a value, not an
   absence. The comment above the `copyNull*` / `copyOpt*` helpers in `utils.ts`
   says which one matches a column's nullability.
+- **A scoped tool declares it in `ToolDef.scope`.** `ListTools` appends it to
+  the listed description (`describeTool` in `../index.ts`), and a call
+  `mapCallResult`/`mapDraftCallResult` maps to `unauthorized` gets the scope
+  named in the refusal — MCP does not itself hold the caller's grant to
+  pre-empt the call (see `ToolDef.scope`'s docstring), so the actionable step
+  is always "grant this scope", never a retry.
 
 ## Routing that does not follow the name
 
@@ -82,7 +88,10 @@ though nothing enforces it mechanically.
   without writing item values, audit rows or sync changes. Read the catalogue
   definition first, send its exact revision and source-tagged values, and use
   the returned field-specific issues to repair enum, reference, cardinality and
-  primitive failures before a mutation.
+  primitive failures before a mutation. It needs `inventory.types.read` — the
+  same non-mutating scope as `inventory.catalogue.get`/`getType`/`audit`, not
+  `inventory.types.manage` — since it validates against a published revision
+  without touching the draft.
 
 ## Not here
 

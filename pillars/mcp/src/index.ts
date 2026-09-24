@@ -16,6 +16,20 @@ import { allTools } from './tools/index.js';
 
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 
+import type { ToolDef } from './tools/tool-def.js';
+
+/**
+ * A tool's listed description, plus the scope it declares (`ToolDef.scope`)
+ * when it has one. Advertising the scope in `ListTools` lets an agent (or
+ * whoever provisioned its credential) see up front which calls a read-only
+ * grant cannot make, rather than discovering it one refused `CallTool` at a
+ * time.
+ */
+export function describeTool(t: ToolDef): string {
+  if (t.scope === undefined) return t.description;
+  return `${t.description} Requires service-account scope '${t.scope}'.`;
+}
+
 /** Structured per-call operational log (CF087) — tool name, ok/error, and latency, so a production issue is visible without re-instrumenting. */
 function logToolCall(
   name: string,
@@ -37,7 +51,7 @@ export function createMcpServer(): Server {
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: allTools.map((t) => ({
       name: t.name,
-      description: t.description,
+      description: describeTool(t),
       inputSchema: t.inputSchema,
     })),
   }));

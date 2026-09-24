@@ -121,6 +121,50 @@ describe('type catalogue owner API', () => {
     expect(create.status).toBe(403);
   });
 
+  it('allows a manage-scoped service account to author a complete draft lifecycle without a read grant', async () => {
+    const owner = apiFor('web');
+    const current = await owner.get('/type-catalogue');
+    const baseRevision = current.body.revision.revision;
+
+    const api = apiFor('service', ['inventory.types.manage']);
+    const readAttempt = await api.get('/type-catalogue').set('x-api-key', SERVICE_KEY);
+    expect(readAttempt.status).toBe(403);
+
+    const draftResponse = await api
+      .post('/type-catalogue/drafts')
+      .set('x-api-key', SERVICE_KEY)
+      .send({ baseRevision });
+    expect(draftResponse.status).toBe(201);
+    const draftRevision = draftResponse.body.revision.revision;
+
+    const patch = await api
+      .patch(`/type-catalogue/drafts/${draftRevision}`)
+      .set('x-api-key', SERVICE_KEY)
+      .send({
+        baseRevision,
+        expectedDraftVersion: draftResponse.body.revision.draftVersion,
+        operations: [
+          { kind: 'put_type', key: 'manage_scope_widget', label: 'Manage-scope widget' },
+        ],
+      });
+    expect(patch.status).toBe(200);
+
+    const published = await api
+      .post(`/type-catalogue/drafts/${draftRevision}/publish`)
+      .set('x-api-key', SERVICE_KEY)
+      .send({
+        baseRevision,
+        expectedDraftVersion: patch.body.draft.revision.draftVersion,
+        note: 'manage-scope lifecycle',
+      });
+    expect(published.status).toBe(200);
+    expect(published.body.revision.status).toBe('published');
+
+    // The manage grant never widens into a read grant.
+    const stillCannotRead = await api.get('/type-catalogue').set('x-api-key', SERVICE_KEY);
+    expect(stillCannotRead.status).toBe(403);
+  });
+
   it('validates an item payload through the read scope without mutating persisted state', async () => {
     const api = apiFor('service', ['inventory.types.read']);
     const catalogue = await api.get('/type-catalogue').set('x-api-key', SERVICE_KEY);
