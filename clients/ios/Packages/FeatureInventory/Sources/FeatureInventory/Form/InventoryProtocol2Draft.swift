@@ -32,11 +32,23 @@ internal struct InventoryProtocol2Draft: Hashable, Sendable {
                     InventoryProtocol2DraftEntry(id: "\(field.id):\(index)", value: value)
                 }
                 if values.isEmpty, field.cardinality == .one, field.archivedAt == nil {
-                    return (field.id, [InventoryProtocol2DraftEntry(id: "\(field.id):empty")])
+                    let empty = InventoryProtocol2DraftEntry(
+                        id: "\(field.id):empty", value: Self.startingValue(for: field))
+                    return (field.id, [empty])
                 }
                 return values.isEmpty ? nil : (field.id, values)
             })
         touched = []
+    }
+
+    /// The value an empty one-value entry starts from. A required flag is
+    /// edited with a switch, which always shows an answer, so it starts as
+    /// the off it shows rather than as a missing value the switch cannot
+    /// display; every other kind starts empty.
+    private static func startingValue(
+        for field: InventoryCatalogueField
+    ) -> InventoryPrimitiveValue? {
+        field.kind == .boolean && field.required ? .boolean(false) : nil
     }
 
     internal var hasStagedWork: Bool {

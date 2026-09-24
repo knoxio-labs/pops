@@ -101,7 +101,10 @@ extension InventoryProtocol2FieldRow {
                     .foregroundStyle(row.isMuted ? Color.popsMutedForeground : .popsForeground)
                 if row.canStartOverride {
                     Button {
-                        self.overrideEntry = InventoryProtocol2DraftEntry(id: "override")
+                        // A switch always shows an answer, so a flag's override
+                        // starts as the off it shows.
+                        self.overrideEntry = InventoryProtocol2DraftEntry(
+                            id: "override", value: field.kind == .boolean ? .boolean(false) : nil)
                     } label: {
                         Image(systemName: "pencil.circle")
                     }
