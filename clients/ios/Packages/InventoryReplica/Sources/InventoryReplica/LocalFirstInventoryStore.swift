@@ -92,6 +92,10 @@ public final class LocalFirstInventoryStore: InventoryStore, Sendable {
         drain?.request()
     }
 
+    public func hasNeverDownloaded() async -> Bool {
+        await online.hasNeverDownloaded()
+    }
+
     /// ``refresh()``, then waits for a drain pass that starts after it to
     /// end, for a background refresh whose time is short: when this returns,
     /// the feed has been read and the log sent as far as the network allowed.

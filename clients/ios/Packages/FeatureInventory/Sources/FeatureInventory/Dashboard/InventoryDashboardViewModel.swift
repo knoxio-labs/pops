@@ -34,9 +34,13 @@ internal final class InventoryDashboardViewModel {
     /// the same runner, so its Undo is the dashboard's capsule.
     internal let typeArrival: InventoryTypeArrivalModel
     private let store: any InventoryStore
+    private let sync: CoalescedInventorySync
 
-    internal init(store: any InventoryStore) {
+    internal init(
+        store: any InventoryStore, now: @escaping @Sendable () -> Date = { Date() }
+    ) {
         self.store = store
+        sync = CoalescedInventorySync(store: store, now: now)
         writer = InventoryWriter(store: store)
         runner = InventoryCommandRunner(store: store)
         typeArrival = InventoryTypeArrivalModel(runner: runner)
@@ -60,6 +64,13 @@ internal final class InventoryDashboardViewModel {
 
     internal func refresh() async {
         await store.refresh()
+    }
+
+    /// Syncs Inventory every time the dashboard is opened — never blocking
+    /// what is already loaded from drawing — joining a sync already in
+    /// flight and doing nothing when one just finished.
+    internal func syncOnAppear() async {
+        await sync.run()
     }
 
     /// Stops a container accepting items. It leaves the open containers panel

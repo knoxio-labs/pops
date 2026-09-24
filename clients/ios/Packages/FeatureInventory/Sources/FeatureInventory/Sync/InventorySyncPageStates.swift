@@ -35,14 +35,17 @@ internal struct InventorySyncSkeleton: View {
     }
 }
 
-/// Nothing has been downloaded to this phone yet.
+/// Nothing has been downloaded to this phone yet. Pairing and opening this
+/// tab both ask for a sync on their own, so reaching this screen means that
+/// has not finished — offline at the time, most often — rather than nobody
+/// having asked; the button retries it by hand.
 internal struct InventorySyncFirstLaunch: View {
     internal let onDownload: () -> Void
 
     internal var body: some View {
         VStack(spacing: PopsSpacing.lg) {
             Spacer(minLength: PopsSpacing.zero)
-            Text("Nothing on this phone yet")
+            Text("Not synced yet")
                 .font(.popsHeadline)
                 .foregroundStyle(Color.popsMutedForeground)
             Button(action: onDownload) {

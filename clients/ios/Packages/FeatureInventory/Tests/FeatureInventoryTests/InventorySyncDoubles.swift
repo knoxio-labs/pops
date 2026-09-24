@@ -58,6 +58,8 @@ internal struct FailingInventoryStore: InventoryStore {
 
     func refresh() async {}
 
+    func hasNeverDownloaded() async -> Bool { false }
+
     func photo(_ sha256: String, variant: InventoryPhotoVariant) async throws -> Data {
         throw RepositoryError.unavailable
     }
@@ -105,6 +107,8 @@ internal struct RefusingResolveStore: InventoryStore {
     func download() async throws { try await inner.download() }
 
     func refresh() async { await inner.refresh() }
+
+    func hasNeverDownloaded() async -> Bool { await inner.hasNeverDownloaded() }
 
     func photo(_ sha256: String, variant: InventoryPhotoVariant) async throws -> Data {
         try await inner.photo(sha256, variant: variant)

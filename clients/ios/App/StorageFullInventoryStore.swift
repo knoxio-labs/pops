@@ -48,6 +48,10 @@ internal struct StorageFullInventoryStore: InventoryStore {
 
     internal func refresh() async {}
 
+    internal func hasNeverDownloaded() async -> Bool {
+        await reads.hasNeverDownloaded()
+    }
+
     internal func photo(_ sha256: String, variant: InventoryPhotoVariant) async throws -> Data {
         try await reads.photo(sha256, variant: variant)
     }

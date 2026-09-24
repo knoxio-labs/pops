@@ -133,6 +133,16 @@ public final class OnlineInventoryStore: InventoryStore, Sendable {
         try await sequencer.run { try await self.refreshNow() }
     }
 
+    /// A plain read of the replica's own stored position, not the observed
+    /// stream `status()` answers from — reading it once never leaves a
+    /// subscription behind. An unreadable replica counts as never
+    /// downloaded, so the caller's own `download()` surfaces the same
+    /// failure rather than this silently answering `false`.
+    public func hasNeverDownloaded() async -> Bool {
+        guard case .empty = (try? replica.read(.replicaStatus)) ?? .empty else { return false }
+        return true
+    }
+
     /// ``download()``'s one-at-a-time rule, for a resync the drain asks for.
     func resyncKeepingLog() async throws {
         try await sequencer.run { try await self.resyncNow() }
