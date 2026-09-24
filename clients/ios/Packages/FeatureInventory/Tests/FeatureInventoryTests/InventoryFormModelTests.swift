@@ -202,6 +202,29 @@ internal struct InventoryFormModelTests {
         #expect(form.failure == nil)
     }
 
+    /// Distinct from ``unboundSuggesterIsUnavailable``: a phone that cannot
+    /// reach bfm at all is offline, not merely told the pillar cannot
+    /// suggest one right now. POPS-4107 conflated the two behind one icon;
+    /// the states themselves (`InventoryCodeAssist`) already kept them
+    /// apart, so this pins the suggester side of that distinction.
+    @Test("the suggest call itself failing to reach bfm shows offline, not unavailable")
+    func suggesterTransportFailureShowsOfflineAssist() async {
+        let store = RecordingFormStore(FormFixtureSource(catalogue: FormFixture.catalogue))
+        let form = model(
+            store,
+            suggester: InventoryCodeSuggester { _, _, _ in
+                throw RepositoryError.transport("no route to bfm")
+            })
+        let loading = await form.startAndAwaitReady()
+        defer { loading.cancel() }
+
+        await form.suggestCode()
+
+        #expect(form.draft.code.assist == .offline)
+        #expect(form.draft.code.value.isEmpty)
+        #expect(form.failure == nil)
+    }
+
     @Test("a create lands in the in-memory store with its code and identifiers")
     func createLandsInTheStore() async throws {
         let store = InMemoryInventoryStore(catalogue: FormFixture.catalogue)
