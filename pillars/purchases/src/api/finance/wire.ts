@@ -150,6 +150,27 @@ export function financeTransactionUri(id: string): string {
   return `pops://finance/transaction/${id}`;
 }
 
+/**
+ * Flip finance's sign convention to this pillar's.
+ *
+ * Finance signs `amount` by cash direction: negative is money leaving the
+ * account (a card charge), positive is money coming back (a refund or
+ * credit). Purchases signs `amountCents` by settlement role instead: a
+ * capture is positive, a refund is negative (see {@link SolvableCharge} in
+ * `reconcile/types.ts`). Those are mirror images of the same charge, so an
+ * unmodified pass-through paired a $106.99 Amazon capture against nothing —
+ * `eligibilityWith` in `reconcile/stages.ts` blocks on matching sign, and a
+ * −$106.99 finance row never has the same sign as a +$106.99 capture.
+ *
+ * The sign of the amount is authoritative for this, not finance's `type`
+ * field: `type` is an open, producer-defined vocabulary (see
+ * {@link FinanceTransactionWireSchema.type}) and a value this pillar does
+ * not recognise must still flip correctly.
+ */
+function toPurchasesAmountCents(financeDollars: number): number {
+  return -dollarsToCents(financeDollars);
+}
+
 export function toCandidateTransaction(
   wire: z.infer<typeof FinanceTransactionWireSchema>
 ): CandidateTransaction {
@@ -158,7 +179,7 @@ export function toCandidateTransaction(
     uri: financeTransactionUri(wire.id),
     description: wire.description,
     accountId: wire.accountId,
-    amountCents: dollarsToCents(wire.amount),
+    amountCents: toPurchasesAmountCents(wire.amount),
     settlementCurrency: FINANCE_SETTLEMENT_CURRENCY,
     foreignAmountMinor: wire.foreignAmountMinor ?? null,
     foreignCurrency: wire.foreignCurrency ?? null,
