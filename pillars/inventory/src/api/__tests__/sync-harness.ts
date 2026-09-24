@@ -24,6 +24,9 @@ export const SYNC_KEY = 'pops_sa_synctest.not-a-real-secret';
 /** The protocol header every sync request carries. */
 export const PROTOCOL: Record<string, string> = { 'Pops-Inventory-Protocol': '1' };
 
+/** The header for suites whose catalogue needed the protocol-2 rollout minimum. */
+export const PROTOCOL_2: Record<string, string> = { 'Pops-Inventory-Protocol': '2' };
+
 /** A verifier granting `scopes` to the account `name`. */
 export function granting(scopes: readonly string[], name = 'bfm'): ServiceAccountVerifier {
   const verification: ServiceAccountVerification = {
@@ -123,6 +126,10 @@ export function createItem(
 }
 
 /** POST a batch as an uncredentialled caller and return the response. */
-export function send(api: BoundAgent, mutations: readonly WireMutation[]): Test {
-  return api.post('/sync/mutations').set(PROTOCOL).send({ mutations });
+export function send(
+  api: BoundAgent,
+  mutations: readonly WireMutation[],
+  protocol: Record<string, string> = PROTOCOL
+): Test {
+  return api.post('/sync/mutations').set(protocol).send({ mutations });
 }

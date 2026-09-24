@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 
 import { openMigratedTestDb } from '../../db/__tests__/migrated-db.js';
 import { createCatalogueDraft, patchCatalogueDraft, publishCatalogueDraft } from '../authoring.js';
+import { activatePersistedCatalogueProtocol } from './protocol-rollout-fixture.js';
 
 import type { DraftOperation } from '../authoring-types.js';
 
@@ -62,6 +63,7 @@ describe('publishing a new type that introduces a primitive kind', () => {
 
   it('records the protocol gate in the compatibility proof it publishes', () => {
     const { db, raw, revision, patched } = draftWithType('date_time');
+    activatePersistedCatalogueProtocol(db);
 
     publishCatalogueDraft(
       db,

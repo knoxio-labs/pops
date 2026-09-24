@@ -26,6 +26,7 @@ function compatibility(
   return {
     affectedIds: ['field-voltage'],
     affectedItems: 12,
+    discardedOverrides: [],
     changes: [
       {
         classification,

@@ -127,6 +127,7 @@ function renderPage() {
 const compatibleResult = {
   affectedIds: [],
   affectedItems: 0,
+  discardedOverrides: [],
   changes: [],
   classification: 'compatible',
 } as const;
@@ -145,6 +146,7 @@ beforeEach(() => {
       compatibility: {
         affectedIds: [],
         affectedItems: 0,
+        discardedOverrides: [],
         changes: [],
         classification: 'compatible',
       },
@@ -179,6 +181,7 @@ describe('TypeCataloguePage', () => {
         compatibility: {
           affectedIds: [createdType.id],
           affectedItems: 0,
+          discardedOverrides: [],
           changes: [],
           classification: 'compatible',
         },
@@ -581,6 +584,7 @@ describe('TypeCataloguePage', () => {
         compatibility: {
           affectedIds: [FIELD_ID],
           affectedItems: 3,
+          discardedOverrides: [],
           changes: [
             { classification: 'forbidden', code: 'field_kind_changed', definitionId: FIELD_ID },
           ],

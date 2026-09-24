@@ -12404,9 +12404,36 @@
                             "forbidden"
                           ],
                           "type": "string"
+                        },
+                        "discardedOverrides": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "fieldId": {
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                "type": "string"
+                              },
+                              "items": {
+                                "exclusiveMinimum": true,
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              }
+                            },
+                            "required": ["fieldId", "items"],
+                            "type": "object"
+                          },
+                          "type": "array"
                         }
                       },
-                      "required": ["classification", "affectedIds", "affectedItems", "changes"],
+                      "required": [
+                        "classification",
+                        "affectedIds",
+                        "affectedItems",
+                        "discardedOverrides",
+                        "changes"
+                      ],
                       "type": "object"
                     },
                     "draft": {
@@ -12893,9 +12920,36 @@
                                 "forbidden"
                               ],
                               "type": "string"
+                            },
+                            "discardedOverrides": {
+                              "items": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "fieldId": {
+                                    "format": "uuid",
+                                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                    "type": "string"
+                                  },
+                                  "items": {
+                                    "exclusiveMinimum": true,
+                                    "maximum": 9007199254740991,
+                                    "minimum": 0,
+                                    "type": "integer"
+                                  }
+                                },
+                                "required": ["fieldId", "items"],
+                                "type": "object"
+                              },
+                              "type": "array"
                             }
                           },
-                          "required": ["classification", "affectedIds", "affectedItems", "changes"],
+                          "required": [
+                            "classification",
+                            "affectedIds",
+                            "affectedItems",
+                            "discardedOverrides",
+                            "changes"
+                          ],
                           "type": "object"
                         },
                         "draftRevision": {
@@ -13120,9 +13174,36 @@
                                 "forbidden"
                               ],
                               "type": "string"
+                            },
+                            "discardedOverrides": {
+                              "items": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "fieldId": {
+                                    "format": "uuid",
+                                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                    "type": "string"
+                                  },
+                                  "items": {
+                                    "exclusiveMinimum": true,
+                                    "maximum": 9007199254740991,
+                                    "minimum": 0,
+                                    "type": "integer"
+                                  }
+                                },
+                                "required": ["fieldId", "items"],
+                                "type": "object"
+                              },
+                              "type": "array"
                             }
                           },
-                          "required": ["classification", "affectedIds", "affectedItems", "changes"],
+                          "required": [
+                            "classification",
+                            "affectedIds",
+                            "affectedItems",
+                            "discardedOverrides",
+                            "changes"
+                          ],
                           "type": "object"
                         },
                         "draftRevision": {
@@ -14106,9 +14187,36 @@
                             "forbidden"
                           ],
                           "type": "string"
+                        },
+                        "discardedOverrides": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "fieldId": {
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                "type": "string"
+                              },
+                              "items": {
+                                "exclusiveMinimum": true,
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              }
+                            },
+                            "required": ["fieldId", "items"],
+                            "type": "object"
+                          },
+                          "type": "array"
                         }
                       },
-                      "required": ["classification", "affectedIds", "affectedItems", "changes"],
+                      "required": [
+                        "classification",
+                        "affectedIds",
+                        "affectedItems",
+                        "discardedOverrides",
+                        "changes"
+                      ],
                       "type": "object"
                     },
                     "draftRevision": {
@@ -14225,9 +14333,36 @@
                                 "forbidden"
                               ],
                               "type": "string"
+                            },
+                            "discardedOverrides": {
+                              "items": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "fieldId": {
+                                    "format": "uuid",
+                                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                    "type": "string"
+                                  },
+                                  "items": {
+                                    "exclusiveMinimum": true,
+                                    "maximum": 9007199254740991,
+                                    "minimum": 0,
+                                    "type": "integer"
+                                  }
+                                },
+                                "required": ["fieldId", "items"],
+                                "type": "object"
+                              },
+                              "type": "array"
                             }
                           },
-                          "required": ["classification", "affectedIds", "affectedItems", "changes"],
+                          "required": [
+                            "classification",
+                            "affectedIds",
+                            "affectedItems",
+                            "discardedOverrides",
+                            "changes"
+                          ],
                           "type": "object"
                         },
                         "draftRevision": {
@@ -14452,9 +14587,36 @@
                                 "forbidden"
                               ],
                               "type": "string"
+                            },
+                            "discardedOverrides": {
+                              "items": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "fieldId": {
+                                    "format": "uuid",
+                                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                    "type": "string"
+                                  },
+                                  "items": {
+                                    "exclusiveMinimum": true,
+                                    "maximum": 9007199254740991,
+                                    "minimum": 0,
+                                    "type": "integer"
+                                  }
+                                },
+                                "required": ["fieldId", "items"],
+                                "type": "object"
+                              },
+                              "type": "array"
                             }
                           },
-                          "required": ["classification", "affectedIds", "affectedItems", "changes"],
+                          "required": [
+                            "classification",
+                            "affectedIds",
+                            "affectedItems",
+                            "discardedOverrides",
+                            "changes"
+                          ],
                           "type": "object"
                         },
                         "draftRevision": {
@@ -15154,6 +15316,104 @@
                     },
                     "messageKey": {
                       "type": "string"
+                    },
+                    "preview": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "baseRevision": {
+                          "exclusiveMinimum": true,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "compatibility": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "affectedIds": {
+                              "items": {
+                                "type": "string"
+                              },
+                              "type": "array"
+                            },
+                            "affectedItems": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "changes": {
+                              "items": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "classification": {
+                                    "enum": [
+                                      "compatible",
+                                      "protocol_gated",
+                                      "migration_required",
+                                      "forbidden"
+                                    ],
+                                    "type": "string"
+                                  },
+                                  "code": {
+                                    "type": "string"
+                                  },
+                                  "definitionId": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["classification", "definitionId", "code"],
+                                "type": "object"
+                              },
+                              "type": "array"
+                            },
+                            "classification": {
+                              "enum": [
+                                "compatible",
+                                "protocol_gated",
+                                "migration_required",
+                                "forbidden"
+                              ],
+                              "type": "string"
+                            },
+                            "discardedOverrides": {
+                              "items": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "fieldId": {
+                                    "format": "uuid",
+                                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                    "type": "string"
+                                  },
+                                  "items": {
+                                    "exclusiveMinimum": true,
+                                    "maximum": 9007199254740991,
+                                    "minimum": 0,
+                                    "type": "integer"
+                                  }
+                                },
+                                "required": ["fieldId", "items"],
+                                "type": "object"
+                              },
+                              "type": "array"
+                            }
+                          },
+                          "required": [
+                            "classification",
+                            "affectedIds",
+                            "affectedItems",
+                            "discardedOverrides",
+                            "changes"
+                          ],
+                          "type": "object"
+                        },
+                        "draftRevision": {
+                          "exclusiveMinimum": true,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      },
+                      "required": ["baseRevision", "draftRevision", "compatibility"],
+                      "type": "object"
                     }
                   },
                   "required": ["message"],
@@ -15310,6 +15570,104 @@
                     },
                     "messageKey": {
                       "type": "string"
+                    },
+                    "preview": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "baseRevision": {
+                          "exclusiveMinimum": true,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "compatibility": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "affectedIds": {
+                              "items": {
+                                "type": "string"
+                              },
+                              "type": "array"
+                            },
+                            "affectedItems": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "changes": {
+                              "items": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "classification": {
+                                    "enum": [
+                                      "compatible",
+                                      "protocol_gated",
+                                      "migration_required",
+                                      "forbidden"
+                                    ],
+                                    "type": "string"
+                                  },
+                                  "code": {
+                                    "type": "string"
+                                  },
+                                  "definitionId": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["classification", "definitionId", "code"],
+                                "type": "object"
+                              },
+                              "type": "array"
+                            },
+                            "classification": {
+                              "enum": [
+                                "compatible",
+                                "protocol_gated",
+                                "migration_required",
+                                "forbidden"
+                              ],
+                              "type": "string"
+                            },
+                            "discardedOverrides": {
+                              "items": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "fieldId": {
+                                    "format": "uuid",
+                                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                    "type": "string"
+                                  },
+                                  "items": {
+                                    "exclusiveMinimum": true,
+                                    "maximum": 9007199254740991,
+                                    "minimum": 0,
+                                    "type": "integer"
+                                  }
+                                },
+                                "required": ["fieldId", "items"],
+                                "type": "object"
+                              },
+                              "type": "array"
+                            }
+                          },
+                          "required": [
+                            "classification",
+                            "affectedIds",
+                            "affectedItems",
+                            "discardedOverrides",
+                            "changes"
+                          ],
+                          "type": "object"
+                        },
+                        "draftRevision": {
+                          "exclusiveMinimum": true,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      },
+                      "required": ["baseRevision", "draftRevision", "compatibility"],
+                      "type": "object"
                     }
                   },
                   "required": ["message"],

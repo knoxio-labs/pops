@@ -1,5 +1,6 @@
 import { CatalogueApiError } from './authoring-types.js';
 import { loadPublishedCatalogue } from './catalogue.js';
+import { findDiscardedOverrides } from './compatibility-preview.js';
 import { classifyCatalogueCompatibility } from './compatibility.js';
 
 import type { CommandDb } from '../domain/commands/entities.js';
@@ -131,7 +132,11 @@ export function validateMigrationHeader(
       `Migration ${migration.name} base revision is not published`
     );
   }
-  const compatibility = classifyCatalogueCompatibility(base, candidate);
+  const compatibility = classifyCatalogueCompatibility(
+    base,
+    candidate,
+    new Set(findDiscardedOverrides(db, base, candidate).map((entry) => entry.fieldId))
+  );
   if (compatibility.classification !== 'migration_required') {
     throw new CatalogueApiError(
       400,

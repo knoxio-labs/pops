@@ -4334,6 +4334,10 @@ export type TypesManagePatchDraftErrors = {
           definitionId: string;
         }>;
         classification: 'compatible' | 'protocol_gated' | 'migration_required' | 'forbidden';
+        discardedOverrides: Array<{
+          fieldId: string;
+          items: number;
+        }>;
       };
       draftRevision: number;
     };
@@ -4393,6 +4397,10 @@ export type TypesManagePatchDraftErrors = {
           definitionId: string;
         }>;
         classification: 'compatible' | 'protocol_gated' | 'migration_required' | 'forbidden';
+        discardedOverrides: Array<{
+          fieldId: string;
+          items: number;
+        }>;
       };
       draftRevision: number;
     };
@@ -4416,6 +4424,10 @@ export type TypesManagePatchDraftResponses = {
         definitionId: string;
       }>;
       classification: 'compatible' | 'protocol_gated' | 'migration_required' | 'forbidden';
+      discardedOverrides: Array<{
+        fieldId: string;
+        items: number;
+      }>;
     };
     draft: {
       revision: {
@@ -4784,6 +4796,10 @@ export type TypesManagePreviewDraftErrors = {
           definitionId: string;
         }>;
         classification: 'compatible' | 'protocol_gated' | 'migration_required' | 'forbidden';
+        discardedOverrides: Array<{
+          fieldId: string;
+          items: number;
+        }>;
       };
       draftRevision: number;
     };
@@ -4843,6 +4859,10 @@ export type TypesManagePreviewDraftErrors = {
           definitionId: string;
         }>;
         classification: 'compatible' | 'protocol_gated' | 'migration_required' | 'forbidden';
+        discardedOverrides: Array<{
+          fieldId: string;
+          items: number;
+        }>;
       };
       draftRevision: number;
     };
@@ -4867,6 +4887,10 @@ export type TypesManagePreviewDraftResponses = {
         definitionId: string;
       }>;
       classification: 'compatible' | 'protocol_gated' | 'migration_required' | 'forbidden';
+      discardedOverrides: Array<{
+        fieldId: string;
+        items: number;
+      }>;
     };
     draftRevision: number;
   };
@@ -4951,6 +4975,24 @@ export type TypesManagePublishDraftErrors = {
     }>;
     message: string;
     messageKey?: string;
+    preview?: {
+      baseRevision: number;
+      compatibility: {
+        affectedIds: Array<string>;
+        affectedItems: number;
+        changes: Array<{
+          classification: 'compatible' | 'protocol_gated' | 'migration_required' | 'forbidden';
+          code: string;
+          definitionId: string;
+        }>;
+        classification: 'compatible' | 'protocol_gated' | 'migration_required' | 'forbidden';
+        discardedOverrides: Array<{
+          fieldId: string;
+          items: number;
+        }>;
+      };
+      draftRevision: number;
+    };
   };
   /**
    * 401
@@ -4996,6 +5038,24 @@ export type TypesManagePublishDraftErrors = {
     }>;
     message: string;
     messageKey?: string;
+    preview?: {
+      baseRevision: number;
+      compatibility: {
+        affectedIds: Array<string>;
+        affectedItems: number;
+        changes: Array<{
+          classification: 'compatible' | 'protocol_gated' | 'migration_required' | 'forbidden';
+          code: string;
+          definitionId: string;
+        }>;
+        classification: 'compatible' | 'protocol_gated' | 'migration_required' | 'forbidden';
+        discardedOverrides: Array<{
+          fieldId: string;
+          items: number;
+        }>;
+      };
+      draftRevision: number;
+    };
   };
 };
 
