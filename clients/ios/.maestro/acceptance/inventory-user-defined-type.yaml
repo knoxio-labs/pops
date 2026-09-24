@@ -1,0 +1,89 @@
+appId: com.knoxiolabs.pops.local
+name: S8.1 A user-defined type syncs to the phone, an item of it is created and edited through its generic fields, its computed value shows, and an edit made offline replays
+---
+# The inventory-types acceptance flow (POPS-4354, scenario S8). It lives one
+# directory below the lane's own flows so the default `mise run e2e:ios` glob
+# does not pick it up; `mise run inventory:acceptance -- --ios` runs it by
+# setting POPS_E2E_FLOWS. `../README.md` says how to run it and what it has
+# and has not been run against.
+- clearState
+- clearKeychain
+- launchApp
+
+- assertVisible:
+    id: 'pairing-code-field'
+
+# Armed before pairing, for the reason `inventory-smoke.yaml` gives.
+- runScript: ../scripts/inventory-becomes-available.js
+- assertTrue: ${output.inventory.status == 200}
+
+# The type is published by an owner before the phone ever sees it: it
+# reaches the phone as data, not as a build.
+- runScript: ../scripts/inventory-user-defined-type.js
+- assertTrue: ${output.userDefinedType.status == 200}
+
+- runFlow:
+    file: ../subflows/enter-the-pairing-details.yaml
+    env:
+      SERVER_URL: ${CONTROL_BASE_URL}
+
+- tapOn: 'Inventory'
+- assertVisible: 'Set up inventory on this phone'
+- tapOn: 'Start synchronization'
+- tapOn: 'Download'
+- assertVisible: 'Synced'
+
+# Create an item of the synced type, through the form's generic protocol-2
+# fields rather than any code written for this type.
+- tapOn: 'Inventory'
+- tapOn: 'Items, \d+'
+- tapOn: 'Add an item|New item'
+- tapOn:
+    id: 'inventory-item-name-field'
+- inputText: Gadget ${output.inventory.run}
+- tapOn: 'Type.*'
+- tapOn: 'Phone gadget'
+- tapOn: 'Price'
+- inputText: '21'
+- tapOn: 'Create'
+- tapOn: Gadget ${output.inventory.run}
+
+# The computed value is the server's evaluation, relayed through the BFM:
+# Price + Price.
+- extendedWaitUntil:
+    visible: 'Doubled price.*42.*'
+    timeout: 60000
+
+# Offline: every relayed sync request fails. An edit still lands on the phone
+# first and waits; once the pillar answers again, it replays and the computed
+# value follows it.
+- runScript:
+    file: ../scripts/inventory-sync-outage.js
+    env:
+      SYNC: down
+- assertTrue: ${output.syncOutage.state.inventorySyncOutage == true}
+- tapOn: 'Edit'
+- tapOn: 'Price'
+- eraseText
+- inputText: '30'
+- tapOn: 'Save'
+- tapOn: 'Inventory'
+- tapOn: 'Sync status: .*'
+- assertVisible: 'Waiting to sync'
+- runScript:
+    file: ../scripts/inventory-sync-outage.js
+    env:
+      SYNC: up
+- assertTrue: ${output.syncOutage.state.inventorySyncOutage == false}
+- swipe:
+    start: 50%, 35%
+    end: 50%, 85%
+- extendedWaitUntil:
+    notVisible: 'Waiting to sync'
+    timeout: 60000
+- tapOn: 'Inventory'
+- tapOn: 'Items, \d+'
+- tapOn: Gadget ${output.inventory.run}
+- extendedWaitUntil:
+    visible: 'Doubled price.*60.*'
+    timeout: 60000
