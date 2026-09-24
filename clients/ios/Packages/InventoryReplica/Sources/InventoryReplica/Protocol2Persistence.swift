@@ -244,28 +244,48 @@ extension InventoryReplica {
         try database.read { try Protocol2CatalogueRows.read(revision: revision, in: $0) }
     }
 
-    /// Stores a required catalogue and its first snapshot page in one transaction.
+    /// The revisions among `revisions` this replica holds no catalogue for.
+    func unheldCatalogueRevisions(_ revisions: Set<Int>) throws -> Set<Int> {
+        guard !revisions.isEmpty else { return [] }
+        return try database.read { db in
+            revisions.subtracting(
+                try Int.fetchAll(db, sql: "SELECT revision FROM catalogue_revision"))
+        }
+    }
+
+    /// Stores the catalogue a snapshot page pins, every older revision its
+    /// items' values still name (`referencedCatalogues`), and the page, in one
+    /// transaction. Only the pinned revision becomes the replica's current one.
     public func apply(
-        _ page: InventorySnapshotPage, catalogue: InventoryCatalogueSnapshot
+        _ page: InventorySnapshotPage, catalogue: InventoryCatalogueSnapshot,
+        referencedCatalogues: [InventoryCatalogueSnapshot] = []
     ) throws {
         guard page.catalogueRevision == catalogue.revision.revision else {
             throw InventoryReplicaError.corruptValue("snapshot catalogue revision does not match")
         }
         try write { db in
+            for referenced in referencedCatalogues {
+                try Protocol2CatalogueRows.store(referenced, in: db)
+            }
             try Protocol2CatalogueRows.storeAndReindex(catalogue, in: db) {
                 try ReplicaApply.snapshot(page, now: now(), in: db)
             }
         }
     }
 
-    /// Stores a newly announced catalogue and the first dependent feed page atomically.
+    /// Stores the catalogue a feed page pins, every older revision its items'
+    /// values still name (`referencedCatalogues`), and the page, atomically.
     public func apply(
-        _ page: InventoryChangesPage, catalogue: InventoryCatalogueSnapshot
+        _ page: InventoryChangesPage, catalogue: InventoryCatalogueSnapshot,
+        referencedCatalogues: [InventoryCatalogueSnapshot] = []
     ) throws {
         guard page.catalogueRevision == catalogue.revision.revision else {
             throw InventoryReplicaError.corruptValue("feed catalogue revision does not match")
         }
         try write { db in
+            for referenced in referencedCatalogues {
+                try Protocol2CatalogueRows.store(referenced, in: db)
+            }
             try Protocol2CatalogueRows.storeAndReindex(catalogue, in: db) {
                 try ReplicaApply.changes(page, now: now(), in: db)
             }

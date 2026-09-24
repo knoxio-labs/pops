@@ -158,9 +158,8 @@ internal struct Protocol2KindDecodeTests {
         #expect(try Self.lamp(harness) == nil)
     }
 
-    @Test(
-        "a computed field left at a revision the phone never fetched is typed by the field's kind")
-    func computedAtUnheldRevisionReadsBackTyped() async throws {
+    @Test("a computed field left at an older revision is typed by the field's kind")
+    func computedAtOlderRevisionReadsBackTyped() async throws {
         let cases = try Protocol2KindWire.cases()
         let decimal = try #require(cases.first { $0.kind == "decimal" })
         let date = try #require(cases.first { $0.kind == "date" })
@@ -172,6 +171,8 @@ internal struct Protocol2KindDecodeTests {
                     date.computedId, date.one, revision: 1, overrideRevision: 1),
             ])
         let harness = try LocalFirstHarness()
+        await harness.server.set(
+            "catalogue:1", .ok(Protocol2KindWire.catalogue(cases, revision: 1)))
         try await Self.download(harness, item: item, cases: cases)
 
         let lamp = try #require(try Self.lamp(harness))
@@ -214,15 +215,15 @@ internal struct Protocol2KindDecodeTests {
         #expect(try Self.lamp(harness) == nil)
     }
 
-    @Test("a stored value at a revision the phone does not hold refuses the page")
-    func storedAtUnheldRevisionRefusesPage() async throws {
+    @Test("a stored value at a revision the server cannot serve refuses the page")
+    func storedAtUnservableRevisionRefusesPage() async throws {
         let cases = try Protocol2KindWire.cases()
         let shortText = try #require(cases.first { $0.kind == "short_text" })
         let item = Protocol2KindWire.item(
             stored: [(shortText.storedOneId, [shortText.one])], computed: [], catalogueRevision: 1)
         let harness = try LocalFirstHarness()
 
-        await #expect(throws: RepositoryError.contractMismatch) {
+        await #expect(throws: RepositoryError.unavailable) {
             try await Self.download(harness, item: item, cases: cases)
         }
         #expect(try Self.lamp(harness) == nil)

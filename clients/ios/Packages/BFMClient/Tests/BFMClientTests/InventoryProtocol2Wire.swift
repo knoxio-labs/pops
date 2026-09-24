@@ -78,11 +78,11 @@ internal enum Protocol2Wire {
 
     /// A protocol-2 lamp with a stored lumens value and a computed efficacy.
     internal static func lamp(
-        revision: Int = 1, seq: Int = 1, catalogueRevision: Int = 2, amount: String = "800",
-        name: String = "Lamp"
+        id: String = lampId, revision: Int = 1, seq: Int = 1, catalogueRevision: Int = 2,
+        amount: String = "800", name: String = "Lamp"
     ) -> String {
         InventoryWire.item(
-            id: lampId, revision: revision, seq: seq, name: name, typeId: bulbType,
+            id: id, revision: revision, seq: seq, name: name, typeId: bulbType,
             catalogueRevision: catalogueRevision,
             fieldValues: """
                 [{"fieldId":"\(lumens)","source":"stored","catalogueRevision":\(catalogueRevision),\
@@ -91,8 +91,8 @@ internal enum Protocol2Wire {
             computedValues: """
                 [{"fieldId":"\(efficacy)","source":"computed",\
                 "catalogueRevision":\(catalogueRevision),"state":"ok","values":[80],\
-                "dependencies":[{"itemId":"\(lampId)","fieldId":"\(lumens)","revision":\(revision)}],\
-                "traversedItemIds":["\(lampId)"]}]
+                "dependencies":[{"itemId":"\(id)","fieldId":"\(lumens)","revision":\(revision)}],\
+                "traversedItemIds":["\(id)"]}]
                 """)
     }
 
