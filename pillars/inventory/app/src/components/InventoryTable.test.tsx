@@ -1,6 +1,6 @@
-import { render, screen } from '@testing-library/react';
-import { MemoryRouter } from 'react-router';
-import { describe, expect, it } from 'vitest';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter, Route, Routes } from 'react-router';
+import { describe, expect, it, vi } from 'vitest';
 
 import { InventoryTable, type InventoryTableItem } from './InventoryTable';
 
@@ -176,5 +176,41 @@ describe('Null field handling', () => {
     // Date formatting is locale-dependent; check something non-empty renders
     const dateCell = screen.getByText(/2024/);
     expect(dateCell).toBeInTheDocument();
+  });
+});
+
+describe('Row selection', () => {
+  function renderSelectable(onSelectionChange: (ids: string[]) => void) {
+    return render(
+      <MemoryRouter initialEntries={['/inventory']}>
+        <Routes>
+          <Route
+            path="/inventory"
+            element={
+              <InventoryTable
+                items={[baseItem, { ...baseItem, id: 'item-2', itemName: 'Kettle' }]}
+                onSelectionChange={onSelectionChange}
+              />
+            }
+          />
+          <Route path="/inventory/items/:id" element={<p>Detail page</p>} />
+        </Routes>
+      </MemoryRouter>
+    );
+  }
+
+  it('offers no checkboxes unless the caller wants the selection', () => {
+    renderTable([baseItem]);
+    expect(screen.queryByRole('checkbox')).toBeNull();
+  });
+
+  it('reports ticked items by id without opening the row', async () => {
+    const onSelectionChange = vi.fn();
+    renderSelectable(onSelectionChange);
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select Kettle' }));
+    await waitFor(() => expect(onSelectionChange).toHaveBeenLastCalledWith(['item-2']));
+    expect(screen.queryByText('Detail page')).toBeNull();
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select all items on this page' }));
+    await waitFor(() => expect(onSelectionChange).toHaveBeenLastCalledWith(['item-1', 'item-2']));
   });
 });

@@ -124,6 +124,34 @@ describe('web.items.list', () => {
     expect(page.items.map((item) => item.id)).toEqual([toaster.data.id]);
   });
 
+  it('narrows to the ids asked for, and combines with other filters', async () => {
+    const box = await client().items.create({ itemName: 'Box' });
+    const lamp = await client().items.create({ itemName: 'Lamp' });
+    await client().items.create({ itemName: 'Kettle' });
+    const retired = await client().items.create({ itemName: 'Retired' });
+    inventoryDb.raw
+      .prepare(`UPDATE items SET lifecycle = 'retired' WHERE id = ?`)
+      .run(retired.data.id);
+
+    const page = await client().web.listItems({
+      limit: 50,
+      ids: [box.data.id, lamp.data.id, retired.data.id, 'no-such-item'].join(','),
+    });
+    expect(new Set(page.items.map((item) => item.id))).toEqual(
+      new Set([box.data.id, lamp.data.id])
+    );
+  });
+
+  it('refuses more than 200 ids, or a malformed list', async () => {
+    const ids = Array.from({ length: 201 }, (_, index) => `id-${index}`).join(',');
+    await expect(client().web.listItems({ ids })).rejects.toMatchObject({ status: 400 });
+    await expect(client().web.listItems({ ids: 'a,,b' })).rejects.toMatchObject({ status: 400 });
+    const exactly200 = Array.from({ length: 200 }, (_, index) => `id-${index}`).join(',');
+    await expect(client().web.listItems({ ids: exactly200 })).resolves.toMatchObject({
+      items: [],
+    });
+  });
+
   it('narrows by placementKind', async () => {
     const kitchen = await client().locations.create({ name: 'Kitchen' });
     const placed = await client().items.create({

@@ -5,8 +5,8 @@
  * opens when it scans one. Ids are UUIDv4 because ADR-002 has clients mint
  * them, and the QR's density depends on the id's length.
  */
-import type { PrintSubject } from '@/kit/inventory/print/print-subject';
-import type { SheetGeometry } from '@/kit/inventory/print/sheet-layouts';
+import type { PrintSubject } from '@pops/inventory/labels';
+import type { SheetGeometry } from '@pops/inventory/labels';
 
 /** A stable, UUIDv4-shaped id for fixture `n`. */
 export function printFixtureId(n: number): string {

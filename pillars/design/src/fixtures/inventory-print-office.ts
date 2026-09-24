@@ -4,7 +4,7 @@
  */
 import { office04, printFixtureId } from './inventory-print';
 
-import type { PrintSubject } from '@/kit/inventory/print/print-subject';
+import type { PrintSubject } from '@pops/inventory/labels';
 
 const officeLines: [name: string, quantity: number][] = [
   ['USB-A to USB-C cable', 1],

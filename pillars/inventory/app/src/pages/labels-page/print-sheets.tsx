@@ -13,7 +13,7 @@ import { PRINT_ROOT_CLASS, PRINT_SHEET_CLASS } from './print-styles';
 
 import type { SheetLayout, SheetPage, SheetSlot } from '@pops/inventory/labels';
 
-import type { PrintLabelEntry } from './use-print-job';
+import type { PrintLabelEntry } from './useLabelJob';
 
 /** Props for {@link PrintSheets}. */
 export interface PrintSheetsProps {

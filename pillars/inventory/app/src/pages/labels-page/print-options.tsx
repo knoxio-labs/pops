@@ -13,7 +13,7 @@ import { SheetChoice } from './print-sheet-choice';
 
 import type { LabelTemplateChoice, PrintSubject } from '@pops/inventory/labels';
 
-import type { PrintJob } from './use-print-job';
+import type { PrintJob } from './useLabelJob';
 
 const COPY_CHOICES = ['1', '2', '3', '4'] as const;
 

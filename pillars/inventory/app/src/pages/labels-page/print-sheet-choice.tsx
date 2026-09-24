@@ -13,7 +13,7 @@ import { Button, Select } from '@pops/ui';
 import { CustomSheetDialog } from './custom-sheet-dialog';
 import { OptionField } from './print-option-field';
 
-import type { PrintJob } from './use-print-job';
+import type { PrintJob } from './useLabelJob';
 
 function sheetOptions(job: PrintJob) {
   const custom = job.customSheet

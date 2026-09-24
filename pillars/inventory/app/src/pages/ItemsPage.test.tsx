@@ -41,7 +41,13 @@ vi.mock('../inventory-api/index.js', () => ({
 }));
 
 vi.mock('../components/InventoryTable', () => ({
-  InventoryTable: () => <div data-testid="inventory-table" />,
+  InventoryTable: ({ onSelectionChange }: { onSelectionChange?: (ids: string[]) => void }) => (
+    <div data-testid="inventory-table">
+      <button type="button" onClick={() => onSelectionChange?.(['item-a', 'item-b'])}>
+        Tick two
+      </button>
+    </div>
+  ),
 }));
 
 vi.mock('../components/InventoryCard', () => ({
@@ -334,5 +340,58 @@ describe('ItemsPage', () => {
 
       expect(await screen.findByText('No items match your filters.')).toBeInTheDocument();
     });
+  });
+});
+
+const ONE_ITEM_PAYLOAD: ItemsListPayload = {
+  data: [
+    {
+      assetId: 'K7Q2',
+      brand: null,
+      condition: null,
+      containerId: null,
+      deductible: false,
+      id: 'item-a',
+      inUse: null,
+      itemId: null,
+      itemName: 'Television',
+      lastEditedTime: '2026-09-01T00:00:00Z',
+      location: null,
+      locationId: null,
+      model: null,
+      notes: null,
+      purchaseDate: null,
+      purchasePrice: null,
+      purchaseTransactionId: null,
+      purchasedFromId: null,
+      purchasedFromName: null,
+      replacementValue: null,
+      resaleValue: null,
+      room: null,
+      type: null,
+      warrantyExpires: null,
+    },
+  ],
+  pagination: { hasMore: false, limit: 200, offset: 0, total: 1 },
+  totals: { totalReplacementValue: 0, totalResaleValue: 0 },
+};
+
+describe('ItemsPage label printing', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    window.localStorage.clear();
+    mockItemsList(ONE_ITEM_PAYLOAD);
+    mockDistinctTypes([]);
+    mockLocationsTree([]);
+  });
+
+  it('opens the label page on the ticked items', async () => {
+    renderWithProviders();
+    expect(screen.queryByRole('link', { name: /Print .* labels?/ })).toBeNull();
+    fireEvent.click(await screen.findByRole('button', { name: 'Tick two' }));
+    expect(screen.getByRole('link', { name: 'Print 2 labels' })).toHaveAttribute(
+      'href',
+      '/inventory/labels?ids=item-a%2Citem-b'
+    );
   });
 });

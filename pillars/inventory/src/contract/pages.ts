@@ -33,6 +33,7 @@ export const INVENTORY_PAGES = [
   { path: 'warranties', bundleSlot: 'inventory-warranties' },
   { path: 'locations', bundleSlot: 'inventory-location-tree' },
   { path: 'types', bundleSlot: 'inventory-type-catalogue' },
+  { path: 'labels', bundleSlot: 'inventory-labels' },
   {
     path: 'reports',
     bundleSlot: 'inventory-reports-group',

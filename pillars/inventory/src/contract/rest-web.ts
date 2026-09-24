@@ -24,6 +24,16 @@ const c = initContract();
 /** Where an item sits, mirroring `PLACEMENT_KINDS` (`db/schema/items.ts`). */
 export const WEB_PLACEMENT_KINDS = ['location', 'container', 'hand'] as const;
 
+/** The most items one `ids` filter may name; a page of labels, not a catalogue export. */
+export const WEB_ITEMS_MAX_IDS = 200;
+
+const IdList = z
+  .string()
+  .regex(/^[^,\s]+(,[^,\s]+)*$/, 'a comma-separated list of item ids')
+  .refine((value) => value.split(',').length <= WEB_ITEMS_MAX_IDS, {
+    message: `at most ${WEB_ITEMS_MAX_IDS} ids`,
+  });
+
 const WebItemsQuery = z.object({
   cursor: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(200).default(50),
@@ -31,6 +41,8 @@ const WebItemsQuery = z.object({
   placementKind: z.enum(WEB_PLACEMENT_KINDS).optional(),
   locationId: z.string().optional(),
   containingItemId: z.string().optional(),
+  /** Only these items, as comma-separated ids (at most 200); combines with every other filter. */
+  ids: IdList.optional(),
   /** Active items only unless `true` (Inventory ADR-002: "excluded from … search unless Include inactive is on"). */
   includeInactive: QueryBool.optional(),
 });
