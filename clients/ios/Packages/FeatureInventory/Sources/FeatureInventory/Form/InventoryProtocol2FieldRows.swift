@@ -95,7 +95,8 @@ internal struct InventoryProtocol2FieldRow: View {
         .buttonStyle(.borderless)
         .disabled(isFirst)
         .accessibilityIdentifier(
-            InventoryAccessibility.protocol2FieldMoveEarlier(id: field.id, index: index))
+            InventoryAccessibility.protocol2FieldMoveEarlier(id: field.id, index: index)
+        )
         .accessibilityLabel(
             InventoryProtocol2RowAccessibility.moveEarlier(fieldLabel: field.label, index: index))
     }
@@ -111,7 +112,8 @@ internal struct InventoryProtocol2FieldRow: View {
         .buttonStyle(.borderless)
         .disabled(isLast)
         .accessibilityIdentifier(
-            InventoryAccessibility.protocol2FieldMoveLater(id: field.id, index: index))
+            InventoryAccessibility.protocol2FieldMoveLater(id: field.id, index: index)
+        )
         .accessibilityLabel(
             InventoryProtocol2RowAccessibility.moveLater(fieldLabel: field.label, index: index))
     }
@@ -124,7 +126,8 @@ internal struct InventoryProtocol2FieldRow: View {
         }
         .buttonStyle(.borderless)
         .accessibilityIdentifier(
-            InventoryAccessibility.protocol2FieldRemove(id: field.id, index: index))
+            InventoryAccessibility.protocol2FieldRemove(id: field.id, index: index)
+        )
         .accessibilityLabel(
             InventoryProtocol2RowAccessibility.removeEntry(fieldLabel: field.label, index: index))
     }
