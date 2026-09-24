@@ -41,12 +41,14 @@ const secondOperation: CatalogueOperation = { ...firstOperation, label: 'Second 
 const compatible: CatalogueCompatibility = {
   affectedIds: [],
   affectedItems: 0,
+  discardedOverrides: [],
   changes: [],
   classification: 'compatible',
 };
 const forbidden: CatalogueCompatibility = {
   affectedIds: [firstOperation.id ?? ''],
   affectedItems: 1,
+  discardedOverrides: [],
   changes: [
     {
       classification: 'forbidden',

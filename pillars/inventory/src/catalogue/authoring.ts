@@ -16,7 +16,7 @@ import { toCatalogueDescriptor } from './authoring-wire.js';
 import type { CommandDb } from '../domain/commands/index.js';
 import type { DraftTarget } from './authoring-draft-operations.js';
 import type { CatalogueAuthor, CatalogueDescriptor, DraftOperation } from './authoring-types.js';
-import type { CatalogueCompatibilityResult } from './compatibility.js';
+import type { CatalogueCompatibilityAssessment } from './compatibility-preview.js';
 
 export { readCatalogueAudit, toCatalogueDescriptor } from './authoring-wire.js';
 export { publishCatalogueDraft } from './authoring-publication.js';
@@ -141,7 +141,7 @@ export function patchCatalogueDraft(
   operations: readonly DraftOperation[]
 ): {
   draft: CatalogueDescriptor;
-  compatibility: CatalogueCompatibilityResult & { readonly affectedItems: number };
+  compatibility: CatalogueCompatibilityAssessment;
 } {
   return db.transaction((tx) => applyDraftOperations(tx, target, operations));
 }

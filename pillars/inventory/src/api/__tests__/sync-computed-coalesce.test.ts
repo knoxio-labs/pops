@@ -7,6 +7,7 @@ import { randomUUID } from 'node:crypto';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { activatePersistedCatalogueProtocol } from '../../catalogue/__tests__/protocol-rollout-fixture.js';
 import {
   createCatalogueDraft,
   patchCatalogueDraft,
@@ -14,7 +15,13 @@ import {
 } from '../../catalogue/authoring.js';
 import { SyncItemSchema } from '../../contract/rest-sync-schemas.js';
 import { readMinimumProtocol } from '../../protocol/rollout.js';
-import { openSyncHarness, PROTOCOL, send, wireMutation, type SyncHarness } from './sync-harness.js';
+import {
+  openSyncHarness,
+  PROTOCOL_2,
+  send,
+  wireMutation,
+  type SyncHarness,
+} from './sync-harness.js';
 import { createTestTransport } from './test-http.js';
 
 import type { CatalogueDescriptor } from '../../catalogue/authoring-types.js';
@@ -55,6 +62,7 @@ function find(draft: CatalogueDescriptor, key: string, fieldKey?: string): strin
 
 /** A part with an optional weight, and a kit whose `best` is `coalesce(part.weight, 0)`. */
 function publish(db: CommandDb): Ids {
+  activatePersistedCatalogueProtocol(db);
   const created = createCatalogueDraft(db, 1, AUTHOR);
   const types = patchCatalogueDraft(db, target(created), [
     { kind: 'put_type', key: 'part', label: 'Part' },
@@ -129,12 +137,12 @@ async function apply(
   target: SyncHarness,
   mutation: ReturnType<typeof wireMutation>
 ): Promise<void> {
-  const response = await send(target.api, [mutation]);
+  const response = await send(target.api, [mutation], PROTOCOL_2);
   expect(response.body.outcomes[0]).toMatchObject({ status: 'applied' });
 }
 
 async function kitBest(target: SyncHarness, kitId: string, bestFieldId: string) {
-  const response = await target.api.get('/sync/snapshot').set(PROTOCOL).query({ limit: 500 });
+  const response = await target.api.get('/sync/snapshot').set(PROTOCOL_2).query({ limit: 500 });
   const kit = SyncItemSchema.array()
     .parse(response.body.items)
     .find((item) => item.id === kitId);
@@ -145,6 +153,7 @@ describe('coalesce', () => {
   it('publishes under the protocol-2 minimum, which protocol-2 phones can carry opaquely', () => {
     const harness = openSyncHarness(transport);
     h = harness;
+    activatePersistedCatalogueProtocol(harness.db.db);
     const active = readMinimumProtocol(harness.db.db);
     expect(() => publish(harness.db.db)).not.toThrow();
     expect(readMinimumProtocol(harness.db.db)).toBe(active);

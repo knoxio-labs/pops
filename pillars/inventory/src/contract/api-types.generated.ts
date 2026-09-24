@@ -6280,6 +6280,11 @@ export interface operations {
               }[];
               /** @enum {string} */
               classification: 'compatible' | 'protocol_gated' | 'migration_required' | 'forbidden';
+              discardedOverrides: {
+                /** Format: uuid */
+                fieldId: string;
+                items: number;
+              }[];
             };
             draft: {
               revision: {
@@ -6421,6 +6426,11 @@ export interface operations {
                   | 'protocol_gated'
                   | 'migration_required'
                   | 'forbidden';
+                discardedOverrides: {
+                  /** Format: uuid */
+                  fieldId: string;
+                  items: number;
+                }[];
               };
               draftRevision: number;
             };
@@ -6505,6 +6515,11 @@ export interface operations {
                   | 'protocol_gated'
                   | 'migration_required'
                   | 'forbidden';
+                discardedOverrides: {
+                  /** Format: uuid */
+                  fieldId: string;
+                  items: number;
+                }[];
               };
               draftRevision: number;
             };
@@ -6828,6 +6843,11 @@ export interface operations {
               }[];
               /** @enum {string} */
               classification: 'compatible' | 'protocol_gated' | 'migration_required' | 'forbidden';
+              discardedOverrides: {
+                /** Format: uuid */
+                fieldId: string;
+                items: number;
+              }[];
             };
             draftRevision: number;
           };
@@ -6871,6 +6891,11 @@ export interface operations {
                   | 'protocol_gated'
                   | 'migration_required'
                   | 'forbidden';
+                discardedOverrides: {
+                  /** Format: uuid */
+                  fieldId: string;
+                  items: number;
+                }[];
               };
               draftRevision: number;
             };
@@ -6955,6 +6980,11 @@ export interface operations {
                   | 'protocol_gated'
                   | 'migration_required'
                   | 'forbidden';
+                discardedOverrides: {
+                  /** Format: uuid */
+                  fieldId: string;
+                  items: number;
+                }[];
               };
               draftRevision: number;
             };
@@ -7169,6 +7199,35 @@ export interface operations {
             }[];
             message: string;
             messageKey?: string;
+            preview?: {
+              baseRevision: number;
+              compatibility: {
+                affectedIds: string[];
+                affectedItems: number;
+                changes: {
+                  /** @enum {string} */
+                  classification:
+                    | 'compatible'
+                    | 'protocol_gated'
+                    | 'migration_required'
+                    | 'forbidden';
+                  code: string;
+                  definitionId: string;
+                }[];
+                /** @enum {string} */
+                classification:
+                  | 'compatible'
+                  | 'protocol_gated'
+                  | 'migration_required'
+                  | 'forbidden';
+                discardedOverrides: {
+                  /** Format: uuid */
+                  fieldId: string;
+                  items: number;
+                }[];
+              };
+              draftRevision: number;
+            };
           };
         };
       };
@@ -7229,6 +7288,35 @@ export interface operations {
             }[];
             message: string;
             messageKey?: string;
+            preview?: {
+              baseRevision: number;
+              compatibility: {
+                affectedIds: string[];
+                affectedItems: number;
+                changes: {
+                  /** @enum {string} */
+                  classification:
+                    | 'compatible'
+                    | 'protocol_gated'
+                    | 'migration_required'
+                    | 'forbidden';
+                  code: string;
+                  definitionId: string;
+                }[];
+                /** @enum {string} */
+                classification:
+                  | 'compatible'
+                  | 'protocol_gated'
+                  | 'migration_required'
+                  | 'forbidden';
+                discardedOverrides: {
+                  /** Format: uuid */
+                  fieldId: string;
+                  items: number;
+                }[];
+              };
+              draftRevision: number;
+            };
           };
         };
       };

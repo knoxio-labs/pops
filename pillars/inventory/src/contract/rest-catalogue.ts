@@ -1,10 +1,10 @@
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
 
+import { CatalogueCompatibilitySchema } from './rest-catalogue-compatibility-schema.js';
 import { CatalogueMigrationSchema } from './rest-catalogue-migration-schemas.js';
 import { inventoryCatalogueReadContract } from './rest-catalogue-read.js';
 import {
-  CatalogueCompatibilitySchema,
   CatalogueDraftOperationSchema,
   CatalogueErrorBodySchema,
   CataloguePreviewErrorBodySchema,
@@ -122,10 +122,10 @@ export const inventoryCatalogueContract = c.router({
       }),
       responses: {
         200: TypeCatalogueDescriptorSchema,
-        400: CatalogueErrorBodySchema,
+        400: CataloguePreviewErrorBodySchema,
         401: CatalogueErrorBodySchema,
         404: CatalogueErrorBodySchema,
-        409: CatalogueErrorBodySchema,
+        409: CataloguePreviewErrorBodySchema,
       },
       summary: 'Publish a validated draft atomically, including any named value migration',
     },
