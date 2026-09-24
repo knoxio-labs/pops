@@ -90,8 +90,10 @@ internal actor DetailRepositoryDouble: PurchasesRepository {
     }
 
     internal func search(
-        text: String, status: PurchaseSearchStatus
+        text: String, status: PurchaseSearchStatus, tags: Set<String>
     ) async throws -> [PurchaseSearchHit] { [] }
+
+    internal func purchaseTags() async throws -> [PurchaseTagCount] { [] }
 
     internal func monthSummary(for: Date) async throws -> PurchasesMonthSummary { .empty }
 

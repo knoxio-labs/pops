@@ -30,7 +30,8 @@ public struct PurchasesSearchProvider: SearchProvider {
                             return
                         }
                     }
-                    let hits = try await repository.search(text: query, status: filter.status)
+                    let hits = try await repository.search(
+                        text: query, status: filter.status, tags: filter.tags)
                     continuation.yield(.results(hits.filter(filter.includes)))
                 } catch is CancellationError {
                 } catch {
