@@ -98,6 +98,8 @@ export interface ItemListQuery {
   deductible?: 'true' | 'false';
   locationId?: string;
   containerId?: string;
+  limit?: number;
+  offset?: number;
 }
 
 const transport = createTestTransport();
