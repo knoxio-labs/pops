@@ -24,7 +24,7 @@ That boundary is asserted, not merely intended: `ModuleBoundaryTests` in `AppCor
 | Camera permission, and the Settings deep link                                               | `AppCore` — `CameraAuthorizing`, `SystemSettings`                                                                      |
 | The extraction and save/manual contract types                                               | `AppCore` — `ReceiptCaptureRepository`, `ReceiptExtraction`, `ReceiptDraftSavePayload`, `ReceiptManualPurchasePayload` |
 | `POST /mobile/purchases/receipts/extract`, `/receipts` and `/manual`                        | `BFMClient` — `BFMReceiptCaptureRepository`                                                                            |
-| An end-to-end Maestro flow                                                                  | `.maestro/receipt-manual-entry.yaml` — the manual path, which needs no camera                                          |
+| An end-to-end Maestro flow                                                                  | `.maestro/purchases-hand-entry.yaml` — hand entry from the purchases home, which needs no camera                       |
 
 ### The surface, and why it is shaped this way
 
@@ -196,7 +196,7 @@ There is an open UIKit defect — reproduced by others on iOS 26, not fixed as o
 
 ### Reachable, end to end
 
-`ReceiptCaptureTab.feature` is registered in `RootFeature.renderable`, the BFM's bootstrap advertises it, and `ContentView` maps it to `ReceiptCaptureView`. A paired device's `AppDependencies.receiptCapture` is a `BFMReceiptCaptureRepository` pointed at that device's own BFM, so a capture submitted from the screen reaches the purchases pillar.
+`FeaturePurchases.feature` is registered in `RootFeature.renderable`, the BFM's bootstrap advertises it, and `ContentView` maps it to `PurchasesFlowView`, whose capture presenter is gated on `MobileFeature.receiptCapture`'s own reachability. A paired device's `AppDependencies.receiptCapture` is a `BFMReceiptCaptureRepository` pointed at that device's own BFM, so a capture submitted from the presenter reaches the purchases pillar.
 
 `AppComposition`'s other construction site — the pairing screen's dependencies — leaves the seam unbound on purpose, alongside `transactions`: the base URL arrives with the pairing code, so before pairing there is no BFM to point a client at, and a capture attempted from there would fail with `dependencyNotBound`. Nothing can reach this screen from there; `CompositionRootTests` asserts both halves.
 
@@ -210,7 +210,7 @@ swift test --package-path Packages/FeaturePurchases
 
 ### How the look is checked, and what nothing checks
 
-No Maestro flow reaches the result screens through the camera: the Simulator has no camera, so `receipt-capture-says-there-is-no-camera.yaml` proves the refusal and stops there (POPS-2398, POPS-2407). `receipt-manual-entry.yaml` reaches them the other way in — manual entry needs no camera, so it drives the tab, the form, a real `saveDraft`/`createManualPurchase` round trip through the harness's own `purchases` stub, and the saved result screen, end to end. Everything past the shutter that only a capture can produce is still answered by unit tests, and the design work is deliberately arranged so most of it can be.
+No Maestro flow reaches the result screens through the camera: the Simulator has no camera, so `purchases-scan-says-there-is-no-camera.yaml` proves the refusal and stops there (POPS-2398, POPS-2407). `purchases-hand-entry.yaml` reaches them the other way in — hand entry needs no camera, so it drives the purchases home, the form, a real `createManualPurchase` round trip through the harness's own `purchases` stub, and the saved purchase landing on the home, end to end. Everything past the shutter that only a capture can produce is still answered by unit tests, and the design work is deliberately arranged so most of it can be.
 
 **Values and copy, not pixels, wherever a value will do.** `ReceiptSurfaceTests` asserts that the three outcomes carry three different tones, that `needsReview` is not toned as a failure, that each camera refusal has a heading of its own and that none of them draws in the failure tone, that a non-image page is never handed to an image decoder, and that a line item stacks at exactly the accessibility text sizes. Every one of those is a claim a render comparison could only make where the colour catalogue compiled — and on the `test:packages` host lane it may not have, in which case two screens that differ by a glyph and a colour rasterise to the same blank canvas. `ReceiptResultPresentationTests` pins the reading's whole ordered shape, so a group being internally right while the order between groups went wrong is still a failure.
 

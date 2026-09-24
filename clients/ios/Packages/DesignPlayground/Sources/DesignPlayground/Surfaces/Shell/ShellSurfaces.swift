@@ -49,9 +49,6 @@ internal enum ShellSurfaces {
                 DesignState("nothing-usable", "Nothing usable") {
                     ErrorStateView(message: ShellCopy.nothingUsable, retryTitle: ShellCopy.retry) {}
                 },
-                DesignState("tabs-4", "Tab bar — four features") {
-                    ShellTabBarView(count: 4)
-                },
                 DesignState("tabs-3", "Tab bar — three features") {
                     ShellTabBarView(count: 3)
                 },
