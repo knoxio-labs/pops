@@ -15,15 +15,17 @@ import {
 
 /**
  * Pins this package's measurement-units copy against
- * `pillars/inventory/contracts/measurement-units-v1.json`, vendored from the
- * server's real unit table (`mise run fixture:measurement-units`). A change
- * to the server's known units, their dimensions or their powers of ten shows
- * up here as a mismatch until the client copy and the vendored vector are
- * both regenerated, so the two cannot drift silently.
+ * `pillars/inventory/app/contracts/measurement-units-v1.json`, this
+ * package's own vendored copy of the server's real unit table (`mise run
+ * fixture:measurement-units`, which also regenerates it) — this test never
+ * reaches into the server pillar's own `contracts/` directory, the same
+ * boundary the iOS client's vendored copies respect. A change to the
+ * server's known units, their dimensions or their powers of ten shows up
+ * here as a mismatch until the client copy and the vendored vector are both
+ * regenerated, so the two cannot drift silently.
  */
 const vectorPath = join(
   dirname(fileURLToPath(import.meta.url)),
-  '..',
   '..',
   '..',
   '..',
