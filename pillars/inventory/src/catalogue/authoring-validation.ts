@@ -74,6 +74,16 @@ function validateReferenceShape(
       )
     );
   }
+  // Whole-catalogue invariant, same as unit_required/boolean_many/etc. below:
+  // it re-checks every field on every publish/patch, not just the ones an
+  // operation touches. No `put_field` before this rule shipped could ever
+  // produce a reference field with a non-empty referenceKinds either (the
+  // default was `[]`, and the web form's own default started at `['item']`),
+  // so a published catalogue can only carry this shape if an owner drove the
+  // pre-fix web UI to zero out both target-kind checkboxes; no migration or
+  // seed does. There is no backfill for that case: as with the other rules
+  // here, the field must be fixed (or archived) before anything else in the
+  // same catalogue can be re-saved.
   if (field.kind === 'reference' && field.referenceKinds.size === 0) {
     issues.push(
       issue(

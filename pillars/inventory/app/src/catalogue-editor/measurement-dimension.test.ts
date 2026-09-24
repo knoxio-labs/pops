@@ -25,11 +25,11 @@ describe('measurementDimensionReadout', () => {
     expect(measurementDimensionReadout('cm/m')).toBe('dimensionless');
   });
 
-  it('reads an unrecognised symbol as a custom unit', () => {
-    expect(measurementDimensionReadout('widgets')).toBe('Custom unit');
+  it('reads an unrecognised symbol back as itself, not a guessed dimension', () => {
+    expect(measurementDimensionReadout('widgets')).toBe('widgets');
   });
 
-  it('reads text outside the unit-term grammar as a custom unit', () => {
-    expect(measurementDimensionReadout('bags of 12')).toBe('Custom unit');
+  it('reads text outside the unit-term grammar back as itself', () => {
+    expect(measurementDimensionReadout('bags of 12')).toBe('bags of 12');
   });
 });

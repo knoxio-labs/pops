@@ -11,6 +11,6 @@
 export * from './types/index.js';
 export * from './schemas/index.js';
 export * from './errors.js';
-export { sameDimension, unitDimension } from './measurement-units.js';
+export { describeDimension, sameDimension, unitDimension } from './measurement-units.js';
 export type { UnitDimension } from './measurement-units.js';
 export type { InventoryContract } from './manifest.js';

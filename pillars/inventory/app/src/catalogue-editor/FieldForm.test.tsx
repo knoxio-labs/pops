@@ -306,10 +306,10 @@ describe('FieldForm configuration branches', () => {
     expect(screen.getByText('mass·length⁻³')).toBeInTheDocument();
   });
 
-  it('reads an unrecognised measurement unit as a custom unit rather than guessing a dimension', () => {
+  it('reads an unrecognised measurement unit back as itself rather than guessing a dimension', () => {
     renderField(field({ kind: 'measurement', fixedUnit: 'crates' }));
 
-    expect(screen.getByText('Custom unit')).toBeInTheDocument();
+    expect(screen.getByText('crates')).toBeInTheDocument();
   });
 
   it('shows a value-rule hint under the primitive kind picker', () => {
