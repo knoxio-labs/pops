@@ -4,11 +4,10 @@ import { useCallback, useRef, useState } from 'react';
 import { unwrap } from '../../bfm-api-helpers.js';
 import { operatorListDevices, operatorRevokeDevice } from '../../bfm-api/index.js';
 import { classifyOperatorFailure, type OperatorFailure } from './operator-failures.js';
-import { usePairingCode, type PairingCodeModel } from './usePairingCode.js';
+import { usePairingCode, type PairedHandset, type PairingCodeModel } from './usePairingCode.js';
+import { isAwaitingRedemption, PAIRING_POLL_MS, usePairingWatch } from './usePairingWatch.js';
 
-import type { OperatorListDevicesResponses } from '../../bfm-api/types.gen.js';
-
-export type PairedDevice = OperatorListDevicesResponses['200']['devices'][number];
+export type PairedDevice = PairedHandset;
 
 const DEVICES_QUERY_KEY = ['bfm', 'operator', 'devices'] as const;
 
@@ -38,24 +37,29 @@ export interface DevicesPageModel {
 }
 
 export function useDevicesPageModel(): DevicesPageModel {
-  return {
-    list: useDeviceList(),
-    pairing: usePairingCode(),
-    revocation: useRevocation(),
-  };
+  const pairing = usePairingCode();
+  const list = useDeviceList(isAwaitingRedemption(pairing.state));
+  usePairingWatch(pairing, list.state === 'ready' ? list.devices : null);
+
+  return { list, pairing, revocation: useRevocation() };
 }
 
 /**
+ * `poll` is on while a pairing code is waiting to be redeemed: the list is the
+ * only place the page can see the phone arrive (see `usePairingWatch`), and the
+ * new row landing in the table is part of the confirmation.
+ *
  * The classifier's verdict is carried through rather than folded down to the
  * two shapes this route can currently produce. Folding it meant a 429 arriving
  * here would have rendered "check your Cloudflare Access session" — advice for
  * a different problem entirely — the day anyone metered the list.
  */
-function useDeviceList(): DeviceListModel {
+function useDeviceList(poll: boolean): DeviceListModel {
   const query = useQuery({
     queryKey: DEVICES_QUERY_KEY,
     queryFn: async () => unwrap(await operatorListDevices()),
     retry: false,
+    refetchInterval: poll ? PAIRING_POLL_MS : false,
   });
 
   if (query.isPending) return { state: 'loading', failure: null, devices: [] };

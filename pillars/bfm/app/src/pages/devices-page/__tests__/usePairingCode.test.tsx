@@ -199,3 +199,86 @@ describe('usePairingCode — the state never disagrees with what is on screen', 
     expect(result.current.state).toBe('expired');
   });
 });
+
+describe('usePairingCode — a redeemed code', () => {
+  const HANDSET = {
+    id: 'dev-new',
+    name: 'Kitchen iPhone',
+    model: 'iPhone 17',
+    createdAt: '2026-08-08T12:00:30.000Z',
+    lastSeenAt: '2026-08-08T12:00:30.000Z',
+    revokedAt: null,
+  };
+
+  it('drops the spent plaintext and reports the handset', async () => {
+    issuePairingCodeMock.mockResolvedValue(codeExpiringIn(300_000));
+    const { result } = renderPairing();
+
+    act(() => result.current.mint());
+    await waitFor(() => expect(result.current.state).toBe('issued'));
+
+    act(() => result.current.complete(HANDSET));
+
+    expect(result.current.state).toBe('paired');
+    expect(result.current.paired).toEqual(HANDSET);
+    expect(result.current.issued).toBeNull();
+  });
+
+  it('stops the countdown, so the code is never later called expired', async () => {
+    issuePairingCodeMock.mockResolvedValue(codeExpiringIn(30_000));
+    const { result } = renderPairing();
+
+    act(() => result.current.mint());
+    await waitFor(() => expect(result.current.state).toBe('issued'));
+    act(() => result.current.complete(HANDSET));
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(60_000);
+    });
+
+    expect(result.current.state).toBe('paired');
+  });
+
+  it('accepts a redemption first seen after the countdown ran out', async () => {
+    issuePairingCodeMock.mockResolvedValue(codeExpiringIn(30_000));
+    const { result } = renderPairing();
+
+    act(() => result.current.mint());
+    await waitFor(() => expect(result.current.state).toBe('issued'));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(31_000);
+    });
+    await waitFor(() => expect(result.current.state).toBe('expired'));
+
+    act(() => result.current.complete(HANDSET));
+
+    expect(result.current.state).toBe('paired');
+  });
+
+  it('ignores a completion when no code was ever shown', () => {
+    const { result } = renderPairing();
+
+    act(() => result.current.complete(HANDSET));
+
+    expect(result.current.state).toBe('idle');
+    expect(result.current.paired).toBeNull();
+  });
+
+  it('forgets the handset on dismiss and on the next mint', async () => {
+    issuePairingCodeMock.mockResolvedValue(codeExpiringIn(300_000));
+    const { result } = renderPairing();
+
+    act(() => result.current.mint());
+    await waitFor(() => expect(result.current.state).toBe('issued'));
+    act(() => result.current.complete(HANDSET));
+    act(() => result.current.dismiss());
+    expect(result.current.paired).toBeNull();
+    expect(result.current.state).toBe('idle');
+
+    act(() => result.current.mint());
+    await waitFor(() => expect(result.current.state).toBe('issued'));
+    act(() => result.current.complete(HANDSET));
+    act(() => result.current.mint());
+    expect(result.current.paired).toBeNull();
+  });
+});

@@ -66,6 +66,31 @@ a hostname and learns where its bfm lives from what it scans (see
 [`BuiltInBaseURL.swift`](../../../clients/ios/Packages/BFMClient/Sources/BFMClient/BuiltInBaseURL.swift)),
 so a code-only QR would scan perfectly and pair nothing.
 
+## Knowing the phone finished
+
+The phone redeems the code with bfm, not with this page, and bfm has no way to
+tell the operator's browser it happened. What the page can see is the device
+list, and every pairing inserts a fresh device row with a fresh id — re-pairing
+the same handset included. So while a code is showing, `useDevicesPageModel`
+polls `GET /operator/devices` every two seconds (`PAIRING_POLL_MS`), and
+`usePairingWatch` remembers the ids on screen when the code appeared. The first
+trusted id that was not among them completes the pairing: the plaintext is
+dropped (it is spent), the countdown stops, and the dialog turns into a
+`SuccessBurst` from `@pops/ui` naming the handset. Without that, a code that did
+its job ran out its clock and reported itself _expired_.
+
+Three details carry the weight:
+
+- The baseline is the first list read _after_ the code is shown, not the list
+  at the moment Pair was clicked. A list still loading then has no ids, and a
+  baseline of nothing would read every handset already paired as the new one.
+- The poll carries on after the countdown reaches zero, and an expired code
+  still accepts a completion. bfm checks expiry when the phone redeems, so a
+  phone that got in during the last second is visible here up to one poll
+  later; without this it would be paired while the dialog insisted otherwise.
+- It stops the moment the dialog closes or a new code is minted, and each code
+  takes its own baseline. React Query also pauses it while the tab is hidden.
+
 ## Failure shapes
 
 Failures are split rather than pooled, because they send the operator after

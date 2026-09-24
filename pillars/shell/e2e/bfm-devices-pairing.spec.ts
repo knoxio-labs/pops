@@ -42,6 +42,16 @@ const IssuedPairingCodeResponseSchema = z
   })
   .strict();
 
+/** The handset that redeems the code, in the test that has one do so. */
+const NEW_PHONE = {
+  id: 'dev-e2e-2',
+  name: 'Kitchen iPhone',
+  model: 'iPhone 17',
+  createdAt: '2026-08-08T12:00:00.000Z',
+  lastSeenAt: '2026-08-08T12:00:00.000Z',
+  revokedAt: null,
+};
+
 const DeviceSchema = z
   .object({
     id: z.string(),
@@ -69,13 +79,17 @@ const RevokedDeviceResponseSchema = z
  * `revokedAt` is held in a closure rather than hardcoded per-response so the
  * list genuinely reflects the revocation the test performed — a fixture that
  * always answered "revoked" would pass whether or not the DELETE ever fired.
+ *
+ * `pairPhone` is the phone's half of pairing, which never touches the page:
+ * from the next list read on, bfm reports one more handset.
  */
 async function stubOperatorApi(
   page: Page,
   options: { ttlSeconds?: number; revokeStatus?: number } = {}
-): Promise<void> {
+): Promise<{ pairPhone: () => void }> {
   const ttlSeconds = options.ttlSeconds ?? 300;
   let revokedAt: string | null = null;
+  let phonePaired = false;
 
   await page.route('**/bfm-api/operator/pairing/codes', (route) => {
     // `expiresAt` is computed here, inside the handler, not up front like
@@ -99,7 +113,9 @@ async function stubOperatorApi(
     // Body depends on `revokedAt`, mutated after this route is registered —
     // validated per-call rather than once at setup, unlike the other two
     // routes here, so a later revocation is checked against the contract too.
-    const body = { devices: [{ ...TRUSTED_DEVICE, revokedAt }] };
+    const body = {
+      devices: [{ ...TRUSTED_DEVICE, revokedAt }, ...(phonePaired ? [NEW_PHONE] : [])],
+    };
     assertMatchesContract(DeviceListResponseSchema, body, 'operator.listDevices');
     return json(route, 200, body);
   });
@@ -117,6 +133,12 @@ async function stubOperatorApi(
     assertMatchesContract(RevokedDeviceResponseSchema, body, 'operator.revokeDevice');
     return json(route, 200, body);
   });
+
+  return {
+    pairPhone: () => {
+      phonePaired = true;
+    },
+  };
 }
 
 async function openDevices(page: Page): Promise<void> {
@@ -166,6 +188,26 @@ test.describe('bfm — Devices', () => {
     await expect(dialog.getByTestId('pairing-code')).toBeHidden();
     await expect(dialog.getByRole('img', { name: 'Pairing QR code' })).toBeHidden();
     await expect(dialog.getByText(/That code has expired/)).toBeVisible();
+  });
+
+  test('confirms the pairing once the phone has redeemed the code', async ({ page }) => {
+    const bfm = await stubOperatorApi(page);
+    await openDevices(page);
+
+    await page.getByRole('button', { name: 'Pair a new device' }).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog.getByTestId('pairing-code')).toBeVisible();
+
+    bfm.pairPhone();
+
+    // The page polls the list every two seconds while the code is showing.
+    await expect(dialog.getByRole('heading', { name: 'Device paired' })).toBeVisible();
+    await expect(dialog.getByRole('img', { name: 'Pairing complete' })).toBeVisible();
+    await expect(dialog.getByTestId('paired-device-name')).toHaveText('Kitchen iPhone');
+    await expect(dialog.getByTestId('pairing-code')).toBeHidden();
+
+    await dialog.getByRole('button', { name: 'Done' }).click();
+    await expect(page.getByRole('row', { name: /Kitchen iPhone/ })).toBeVisible();
   });
 
   test('keeps the code out of storage and out of the URL', async ({ page }) => {
