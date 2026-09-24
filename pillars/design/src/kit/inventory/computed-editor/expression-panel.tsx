@@ -5,12 +5,12 @@ import {
   expressionStats,
   formula,
   staticDependencies,
-} from '@pops/app-inventory/design';
+} from '@pops/inventory/expression';
 import { cn } from '@pops/ui';
 
 import { ExpressionOutline } from './expression-outline';
 
-import type { ExpressionContext, ExpressionNode } from '@pops/app-inventory/design';
+import type { ExpressionContext, ExpressionNode } from '@pops/inventory/expression';
 
 import type { ExpressionIssue } from './scenario';
 

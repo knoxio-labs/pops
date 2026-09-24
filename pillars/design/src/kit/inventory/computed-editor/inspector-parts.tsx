@@ -1,9 +1,9 @@
 import { AlertCircle, ArrowRight, Parentheses, Replace, Trash2 } from 'lucide-react';
 
-import { valueTypeLabel } from '@pops/app-inventory/design';
+import { valueTypeLabel } from '@pops/inventory/expression';
 import { Alert, AlertDescription, AlertTitle, Badge, Button, cn } from '@pops/ui';
 
-import type { SlotType } from '@pops/app-inventory/design';
+import type { SlotType } from '@pops/inventory/expression';
 
 import type { ExpressionIssue, InspectorPanel } from './scenario';
 

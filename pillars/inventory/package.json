@@ -18,6 +18,10 @@
       "types": "./dist/contract/manifest.d.ts",
       "default": "./dist/contract/manifest.js"
     },
+    "./expression": {
+      "types": "./dist/contract/expression/index.d.ts",
+      "default": "./dist/contract/expression/index.js"
+    },
     "./api-types": {
       "types": "./dist/contract/api-types.generated.d.ts",
       "default": "./dist/contract/api-types.generated.js"

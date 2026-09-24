@@ -1,9 +1,19 @@
-import { readLabel } from '../expression/catalogue-lookup';
-import { comparedChoiceField, formatLiteral } from '../expression/formula';
-import { operationInfo } from '../expression/operations';
-import { ROOT_PATH, nodeAt, outlineRows, parentPath } from '../expression/tree';
+import {
+  readLabel,
+  comparedChoiceField,
+  formatLiteral,
+  operationInfo,
+  ROOT_PATH,
+  nodeAt,
+  outlineRows,
+  parentPath,
+} from '@pops/inventory/expression';
 
-import type { ExpressionContext, ExpressionField, ExpressionNode } from '../expression/model';
+import type {
+  ExpressionContext,
+  ExpressionField,
+  ExpressionNode,
+} from '@pops/inventory/expression';
 
 /** The symbol an outline row shows in its badge. */
 export function nodeSymbol(node: ExpressionNode): string {

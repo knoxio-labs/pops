@@ -1,4 +1,4 @@
-import type { ExpressionContext, ExpressionField, ExpressionType, ReadNode } from './model';
+import type { ExpressionContext, ExpressionField, ExpressionType, ReadNode } from './model.js';
 
 /** One followed reference in a read path, and the type it lands on. */
 export interface ResolvedHop {

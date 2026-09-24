@@ -1,6 +1,14 @@
 import { ChevronRight, Plus, X } from 'lucide-react';
 
 import {
+  isFollowable,
+  ownerType,
+  referenceTargets,
+  resolveRead,
+  EXPRESSION_LIMITS,
+  valueTypeLabel,
+} from '@pops/inventory/expression';
+import {
   Badge,
   Button,
   Label,
@@ -11,19 +19,11 @@ import {
   SelectValue,
 } from '@pops/ui';
 
-import {
-  isFollowable,
-  ownerType,
-  referenceTargets,
-  resolveRead,
-} from '../expression/catalogue-lookup';
-import { EXPRESSION_LIMITS, valueTypeLabel } from '../expression/model';
 import { chooseReadField, fittingFields, followReference, unfollowFrom } from './builder-actions';
 import { useBuilder } from './BuilderContext';
 import { HopLimitNotice } from './HopLimitNotice';
 
-import type { ResolvedRead } from '../expression/catalogue-lookup';
-import type { ExpressionField, ReadNode } from '../expression/model';
+import type { ResolvedRead, ExpressionField, ReadNode } from '@pops/inventory/expression';
 
 function followBlockedReason(field: ExpressionField): string | null {
   if (isFollowable(field)) return null;

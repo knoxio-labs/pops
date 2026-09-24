@@ -3,7 +3,7 @@ import type {
   ExpressionNode,
   PreviewMissingInput,
   ValueType,
-} from '@pops/app-inventory/design';
+} from '@pops/inventory/expression';
 
 /** Server reasons a computed read cannot produce a value (ExpressionUnavailableReason). */
 export type UnavailableReason =

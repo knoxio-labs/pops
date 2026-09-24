@@ -9,11 +9,11 @@ import type { ReactNode } from 'react';
  * The POPS web chrome, as a facsimile: top bar, app rail, page nav, content.
  *
  * A facsimile rather than the shell's own `RootLayout` because importing that
- * would reach past `@pops/app-*`'s entry into shell internals (ISO-R2) and
- * drag the boot registry, the overlay hosts and the search stack in with it.
- * What is real is the data: the rail and the page nav are drawn from each app
- * package's actual `navConfig`. Retiring this in favour of an extracted
- * chrome lib is POPS-2783.
+ * would reach into shell internals (ISO-R2) and drag the boot registry, the
+ * overlay hosts and the search stack in with it. What is real is the data:
+ * the rail and the page nav are drawn from each pillar's nav as its contract
+ * declares it. Retiring this in favour of an extracted chrome lib is
+ * POPS-2783.
  *
  * Breakpoints match `RootLayout`: rail and page nav from 1024, rail alone
  * from 768, neither below. The frame is inside the canvas iframe, so those

@@ -1,6 +1,6 @@
-import { isNumericKind, isTextKind, valueTypeLabel } from './model';
+import { isNumericKind, isTextKind, valueTypeLabel } from './model.js';
 
-import type { NodeOp, SlotType } from './model';
+import type { NodeOp, SlotType } from './model.js';
 
 /** Palette groups, in the order the builder lists them. */
 export type OperationGroup = 'values' | 'numbers' | 'text' | 'compare' | 'logic' | 'choose';

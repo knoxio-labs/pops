@@ -1,8 +1,12 @@
-import { evaluationErrorSentence } from '../expression/preview-copy';
+import { evaluationErrorSentence } from '@pops/inventory/expression';
+
+import type {
+  ExpressionContext,
+  ExpressionField,
+  PreviewMissingInput,
+} from '@pops/inventory/expression';
 
 import type { TypesManagePreviewComputedFieldResponses } from '../../inventory-api/types.gen';
-import type { ExpressionContext, ExpressionField } from '../expression/model';
-import type { PreviewMissingInput } from '../expression/preview-copy';
 
 /** The preview route's answer. */
 export type ComputedPreviewResponse = TypesManagePreviewComputedFieldResponses[200];

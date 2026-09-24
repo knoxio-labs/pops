@@ -1,4 +1,4 @@
-import { valueTypeLabel } from '@pops/app-inventory/design';
+import { valueTypeLabel } from '@pops/inventory/expression';
 import {
   Badge,
   Input,
@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from '@pops/ui';
 
-import type { ExpressionField, LiteralValue, SlotType } from '@pops/app-inventory/design';
+import type { ExpressionField, LiteralValue, SlotType } from '@pops/inventory/expression';
 
 function textHint(value: string): string {
   if (value.trim() === '' && value.length > 0)

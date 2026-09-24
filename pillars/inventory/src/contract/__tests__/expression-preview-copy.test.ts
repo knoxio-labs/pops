@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { unavailableSentence } from './preview-copy';
+import { unavailableSentence } from '../expression/preview-copy.js';
 
-import type { PreviewMissingInput } from './preview-copy';
+import type { PreviewMissingInput } from '../expression/preview-copy.js';
 
 describe('unavailableSentence', () => {
   it('names the one missing input as a plain sentence', () => {

@@ -1,20 +1,22 @@
 import { AlertCircle, Braces } from 'lucide-react';
 
-import { cn } from '@pops/ui';
-
-import { comparedChoiceField, formula, staticDependencies } from '../expression/formula';
-import { EXPRESSION_LIMITS } from '../expression/model';
 import {
+  comparedChoiceField,
+  formula,
+  staticDependencies,
+  EXPRESSION_LIMITS,
   expressionStats,
   issueNodePath,
   nodeAt,
   outlineRows,
   parentPath,
-} from '../expression/tree';
+} from '@pops/inventory/expression';
+import { cn } from '@pops/ui';
+
 import { useBuilder } from './BuilderContext';
 import { nodeSymbol, nodeTitle } from './node-labels';
 
-import type { OutlineRow } from '../expression/tree';
+import type { OutlineRow } from '@pops/inventory/expression';
 
 function Limits() {
   const { context, root } = useBuilder();

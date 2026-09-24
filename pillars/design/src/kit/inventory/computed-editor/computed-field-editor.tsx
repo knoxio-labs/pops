@@ -7,7 +7,7 @@ import {
   issueBelongsTo,
   slotTypes,
   valueTypeLabel,
-} from '@pops/app-inventory/design';
+} from '@pops/inventory/expression';
 import { Badge, Button, cn } from '@pops/ui';
 
 import { McpPublishRoute, MigrationRequiredRefusal, SaveRefused } from './editor-notices';

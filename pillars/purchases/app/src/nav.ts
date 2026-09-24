@@ -13,9 +13,7 @@ import { navConfigFromWire } from '@pops/navigation';
  * (POPS-3359).
  *
  * Its own module rather than part of `routes.tsx` so that reading the nav
- * does not pull the route table's lazy page imports in with it — the design
- * playground draws the POPS chrome from these configs and has no use for
- * every page of every app.
+ * does not pull the route table's lazy page imports in with it.
  */
 import { PURCHASES_NAV } from '@pops/purchases/manifest';
 

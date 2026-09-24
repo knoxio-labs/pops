@@ -1,6 +1,6 @@
 import type { ExpressionIssue } from '@/kit/inventory/computed-editor/scenario';
 
-import type { BinaryOp, ExpressionNode, LiteralValue } from '@pops/app-inventory/design';
+import type { BinaryOp, ExpressionNode, LiteralValue } from '@pops/inventory/expression';
 
 const EMPTY: ExpressionNode = { op: 'empty' };
 

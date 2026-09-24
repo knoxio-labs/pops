@@ -9,7 +9,7 @@ import {
   outlineRows,
   parentPath,
   readLabel,
-} from '@pops/app-inventory/design';
+} from '@pops/inventory/expression';
 import { cn } from '@pops/ui';
 
 import type {
@@ -17,7 +17,7 @@ import type {
   ExpressionField,
   ExpressionNode,
   OutlineRow,
-} from '@pops/app-inventory/design';
+} from '@pops/inventory/expression';
 
 import type { ExpressionIssue } from './scenario';
 

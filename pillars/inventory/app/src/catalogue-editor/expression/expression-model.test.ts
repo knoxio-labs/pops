@@ -1,7 +1,26 @@
 import { describe, expect, it } from 'vitest';
 
+import {
+  isFollowable,
+  readLabel,
+  resolveRead,
+  formatLiteral,
+  formula,
+  staticDependencies,
+  OPERATIONS,
+  operationBlockedReason,
+  fieldFitsSlot,
+  needsDimensionalUnits,
+  slotTypes,
+  expressionStats,
+  issueBelongsTo,
+  issueNodePath,
+  nodeAt,
+  outlineRows,
+  parentPath,
+} from '@pops/inventory/expression';
+
 import { catalogueTypes } from '../computed/test-utils';
-import { isFollowable, readLabel, resolveRead } from './catalogue-lookup';
 import {
   addCoalesceInput,
   clearAt,
@@ -14,21 +33,9 @@ import {
   wrapAt,
 } from './edit';
 import { savedExpressionVersion } from './expression-version';
-import { formatLiteral, formula, staticDependencies } from './formula';
-import { OPERATIONS, operationBlockedReason } from './operations';
-import { fieldFitsSlot, needsDimensionalUnits, slotTypes } from './slot-types';
-import {
-  expressionStats,
-  issueBelongsTo,
-  issueNodePath,
-  nodeAt,
-  outlineRows,
-  parentPath,
-} from './tree';
 import { expressionContext, fromWire, toWire } from './wire';
 
-import type { ExpressionNode, ReadNode } from './model';
-import type { OperationInfo } from './operations';
+import type { ExpressionNode, ReadNode, OperationInfo } from '@pops/inventory/expression';
 
 const context = expressionContext(catalogueTypes(), 'box', 'volume');
 

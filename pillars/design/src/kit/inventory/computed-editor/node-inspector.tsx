@@ -5,7 +5,7 @@ import {
   operationInfo,
   outlineRows,
   parentPath,
-} from '@pops/app-inventory/design';
+} from '@pops/inventory/expression';
 
 import { nodeTitle } from './expression-outline';
 import { CoalesceInputs, InputList, OperationSwitch } from './inspector-branches';
@@ -20,7 +20,7 @@ import type {
   ExpressionNode,
   OutlineRow,
   SlotType,
-} from '@pops/app-inventory/design';
+} from '@pops/inventory/expression';
 
 import type { ExpressionIssue, InspectorPanel } from './scenario';
 

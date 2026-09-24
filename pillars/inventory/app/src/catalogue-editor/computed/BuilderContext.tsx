@@ -1,11 +1,16 @@
 import { createContext, useContext, useMemo, useState } from 'react';
 
-import { slotTypes } from '../expression/slot-types';
-import { ROOT_PATH, nodeAt } from '../expression/tree';
+import { slotTypes, ROOT_PATH, nodeAt } from '@pops/inventory/expression';
 
 import type { ReactNode } from 'react';
 
-import type { ExpressionContext, ExpressionNode, SlotType, ValueType } from '../expression/model';
+import type {
+  ExpressionContext,
+  ExpressionNode,
+  SlotType,
+  ValueType,
+} from '@pops/inventory/expression';
+
 import type { ExpressionIssue } from './issues';
 
 /** What the inspector column shows for the selected node. */

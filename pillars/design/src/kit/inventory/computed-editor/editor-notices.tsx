@@ -1,4 +1,4 @@
-import { AlertCircle, Copy, Terminal, TriangleAlert } from 'lucide-react';
+import { AlertCircle, Copy, Route, Terminal, TriangleAlert } from 'lucide-react';
 
 import { Alert, AlertDescription, AlertTitle, Button } from '@pops/ui';
 
@@ -75,6 +75,33 @@ export function SaveRefused({ issues }: { issues: readonly ExpressionIssue[] }) 
           ? `${issues[0]?.title ?? 'One problem'}. The flagged node shows what to change.`
           : `${issues.length} problems. Each flagged node shows what to change.`}{' '}
         Your edits are still here.
+      </AlertDescription>
+    </Alert>
+  );
+}
+
+/**
+ * The traversal-limit state: a read already follows two references, so the
+ * way past is a computed field on the type it stands on. The playground keeps
+ * its own copy of the catalogue editor's notice: the kit is the seam an
+ * implementation builds against, so it describes the control rather than
+ * importing the app's.
+ */
+export function HopLimitNotice({
+  typeLabel,
+  nextReference,
+}: {
+  typeLabel: string;
+  nextReference: string | undefined;
+}) {
+  return (
+    <Alert>
+      <Route />
+      <AlertTitle>Reads stop at two references</AlertTitle>
+      <AlertDescription>
+        {nextReference === undefined
+          ? `${typeLabel} has no references to follow.`
+          : `To reach past ${nextReference}, add a computed field on ${typeLabel} that reads it, then read that field here.`}
       </AlertDescription>
     </Alert>
   );

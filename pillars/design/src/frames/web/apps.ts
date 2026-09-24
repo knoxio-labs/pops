@@ -1,37 +1,55 @@
 /**
- * The rail's contents: every in-repo app's real `navConfig`, in the order the
- * shell ranks them (`navOrder` in the shell's bundle map: finance first,
- * bfm last).
+ * The rail's contents: every in-repo pillar's nav, projected the way its app
+ * projects it, in the order the shell ranks them (finance first, bfm last).
  *
- * Read from each package's `./design` entry rather than copied, so a nav item
- * added to an app shows up in the frame with no second edit. The order is the
- * one thing this file states rather than derives: `navOrder` lives in the
- * shell's bundle map, which is shell-internal and off limits here (ISO-R2).
- * A parity test pins the two lists together instead.
+ * Read from each pillar's contract package (`@pops/<pillar>/manifest`), where
+ * the nav is declared once (POPS-3359) — the one cross-pillar import ADR-026
+ * permits. A nav item added to a pillar shows up in the frame with no second
+ * edit, and the playground never builds against a pillar's app.
  */
-import { navConfig as ai } from '@pops/app-ai/design';
-import { navConfig as bfm } from '@pops/app-bfm/design';
-import { navConfig as cerebrum } from '@pops/app-cerebrum/design';
-import { navConfig as finance } from '@pops/app-finance/design';
-import { navConfig as food } from '@pops/app-food/design';
-import { navConfig as inventory } from '@pops/app-inventory/design';
-import { navConfig as lists } from '@pops/app-lists/design';
-import { navConfig as media } from '@pops/app-media/design';
-import { navConfig as purchases } from '@pops/app-purchases/design';
+import { AI_NAV } from '@pops/ai/manifest';
+import { BFM_NAV } from '@pops/bfm/manifest';
+import { CEREBRUM_NAV } from '@pops/cerebrum/manifest';
+import { FINANCE_NAV } from '@pops/finance/manifest';
+import { FOOD_NAV } from '@pops/food/manifest';
+import { INVENTORY_NAV } from '@pops/inventory/manifest';
+import { LISTS_NAV } from '@pops/lists/manifest';
+import { MEDIA_NAV } from '@pops/media/manifest';
+import { navConfigFromWire } from '@pops/navigation';
+import { PURCHASES_NAV } from '@pops/purchases/manifest';
 
-import type { AppNavConfig } from '@pops/navigation';
+import type { AppNavConfig, WireNavConfig } from '@pops/navigation';
 
-export const WEB_APPS: readonly AppNavConfig[] = [
-  finance,
-  purchases,
-  media,
-  inventory,
-  food,
-  lists,
-  cerebrum,
-  ai,
-  bfm,
-];
+const WIRE_NAVS = [
+  AI_NAV,
+  BFM_NAV,
+  CEREBRUM_NAV,
+  FINANCE_NAV,
+  FOOD_NAV,
+  INVENTORY_NAV,
+  LISTS_NAV,
+  MEDIA_NAV,
+  PURCHASES_NAV,
+] as const;
+
+/**
+ * Wire navs in rail order: ascending `order`, ties broken on `id`, a nav with
+ * no `order` last — the ranking the shell applies to `navOrder`, which it
+ * reads from the same wire field.
+ */
+export function railOrder<T extends WireNavConfig>(navs: readonly T[]): T[] {
+  return navs.toSorted((a, b) => {
+    const byOrder = (a.order ?? Number.MAX_SAFE_INTEGER) - (b.order ?? Number.MAX_SAFE_INTEGER);
+    if (byOrder !== 0) return byOrder;
+    if (a.id === b.id) return 0;
+    return a.id < b.id ? -1 : 1;
+  });
+}
+
+/** Every in-repo pillar's rail entry and page nav, in rail order. */
+export const WEB_APPS: readonly AppNavConfig[] = railOrder(WIRE_NAVS).map((wire) =>
+  navConfigFromWire(wire)
+);
 
 /**
  * The app a screen belongs to. Screens are addressed `s/<area>/<slug>` and

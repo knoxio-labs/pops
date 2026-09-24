@@ -4,7 +4,8 @@ import { EMPTY } from './expression/edit';
 import { fromWire, toWire } from './expression/wire';
 import { catalogueKeyFromLabel } from './types';
 
-import type { ExpressionNode } from './expression/model';
+import type { ExpressionNode } from '@pops/inventory/expression';
+
 import type { FieldFormContextValue, FieldKind } from './FieldFormContext';
 import type { CatalogueField, CatalogueType } from './types';
 

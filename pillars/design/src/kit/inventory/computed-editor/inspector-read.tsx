@@ -3,13 +3,12 @@ import { ChevronRight, Plus, X } from 'lucide-react';
 import {
   EXPRESSION_LIMITS,
   fieldFitsSlot,
-  HopLimitNotice,
   isFollowable,
   ownerType,
   referenceTargets,
   resolveRead,
   valueTypeLabel,
-} from '@pops/app-inventory/design';
+} from '@pops/inventory/expression';
 import {
   Badge,
   Button,
@@ -21,13 +20,15 @@ import {
   SelectValue,
 } from '@pops/ui';
 
+import { HopLimitNotice } from './editor-notices';
+
 import type {
   ExpressionContext,
   ExpressionField,
   ExpressionNode,
   ResolvedRead,
   SlotType,
-} from '@pops/app-inventory/design';
+} from '@pops/inventory/expression';
 
 function followBlockedReason(field: ExpressionField): string | null {
   if (isFollowable(field)) return null;

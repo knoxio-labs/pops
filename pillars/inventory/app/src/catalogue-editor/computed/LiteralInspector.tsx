@@ -1,3 +1,4 @@
+import { valueTypeLabel } from '@pops/inventory/expression';
 import {
   Badge,
   Input,
@@ -11,12 +12,11 @@ import {
   SelectValue,
 } from '@pops/ui';
 
-import { valueTypeLabel } from '../expression/model';
 import { setLiteral } from './builder-actions';
 import { useBuilder } from './BuilderContext';
 import { choiceFieldAt } from './node-labels';
 
-import type { ExpressionField, LiteralValue } from '../expression/model';
+import type { ExpressionField, LiteralValue } from '@pops/inventory/expression';
 
 type Commit = (value: LiteralValue) => void;
 

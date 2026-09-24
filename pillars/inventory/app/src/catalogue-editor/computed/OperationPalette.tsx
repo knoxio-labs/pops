@@ -1,15 +1,18 @@
 import { ChevronRight, X } from 'lucide-react';
 
+import {
+  valueTypeLabel,
+  OPERATIONS,
+  operationBlockedReason,
+  nodeAt,
+} from '@pops/inventory/expression';
 import { Button, Collapsible, CollapsibleContent, CollapsibleTrigger } from '@pops/ui';
 
-import { valueTypeLabel } from '../expression/model';
-import { OPERATIONS, operationBlockedReason } from '../expression/operations';
-import { nodeAt } from '../expression/tree';
 import { place, placedNode, wrap } from './builder-actions';
 import { useBuilder } from './BuilderContext';
 import { choiceFieldAt, nodeTitle, slotDescription } from './node-labels';
 
-import type { OperationInfo } from '../expression/operations';
+import type { OperationInfo } from '@pops/inventory/expression';
 
 type PaletteMode = 'insert' | 'wrap';
 
