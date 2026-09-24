@@ -3,7 +3,7 @@ import type {
   ExpressionType,
   ExpressionContext,
   ValueKind,
-} from '@pops/app-inventory/design';
+} from '@pops/inventory/expression';
 
 type FieldExtras = Omit<Partial<ExpressionField>, 'id' | 'label' | 'kind'>;
 

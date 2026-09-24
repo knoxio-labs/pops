@@ -1,8 +1,14 @@
 import { EMPTY } from './edit';
 
+import type {
+  ExpressionContext,
+  ExpressionField,
+  ExpressionNode,
+  ValueType,
+} from '@pops/inventory/expression';
+
 import type { ExpressionV1 } from '../../inventory-api/types.gen';
 import type { CatalogueField, CatalogueType } from '../types';
-import type { ExpressionContext, ExpressionField, ExpressionNode, ValueType } from './model';
 
 const THEN_KEY = 'then' as const;
 const ELSE_KEY = 'else' as const;

@@ -1260,36 +1260,36 @@ importers:
       '@babel/types':
         specifier: ^8.0.5
         version: 8.0.5
-      '@pops/app-ai':
+      '@pops/ai':
         specifier: workspace:*
-        version: link:../ai/app
-      '@pops/app-bfm':
+        version: link:../ai
+      '@pops/bfm':
         specifier: workspace:*
-        version: link:../bfm/app
-      '@pops/app-cerebrum':
+        version: link:../bfm
+      '@pops/cerebrum':
         specifier: workspace:*
-        version: link:../cerebrum/app
-      '@pops/app-finance':
+        version: link:../cerebrum
+      '@pops/finance':
         specifier: workspace:*
-        version: link:../finance/app
-      '@pops/app-food':
+        version: link:../finance
+      '@pops/food':
         specifier: workspace:*
-        version: link:../food/app
-      '@pops/app-inventory':
+        version: link:../food
+      '@pops/inventory':
         specifier: workspace:*
-        version: link:../inventory/app
-      '@pops/app-lists':
+        version: link:../inventory
+      '@pops/lists':
         specifier: workspace:*
-        version: link:../lists/app
-      '@pops/app-media':
+        version: link:../lists
+      '@pops/media':
         specifier: workspace:*
-        version: link:../media/app
-      '@pops/app-purchases':
-        specifier: workspace:*
-        version: link:../purchases/app
+        version: link:../media
       '@pops/navigation':
         specifier: workspace:*
         version: link:../../libs/navigation
+      '@pops/purchases':
+        specifier: workspace:*
+        version: link:../purchases
       '@testing-library/jest-dom':
         specifier: ^7.0.1
         version: 7.0.1(@testing-library/dom@10.4.1)(vitest@4.1.11)

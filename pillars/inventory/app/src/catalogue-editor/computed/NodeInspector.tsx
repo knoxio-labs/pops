@@ -1,5 +1,5 @@
-import { operationInfo } from '../expression/operations';
-import { issueNodePath, nodeAt } from '../expression/tree';
+import { operationInfo, issueNodePath, nodeAt } from '@pops/inventory/expression';
+
 import { useBuilder } from './BuilderContext';
 import { CoalesceInputs, InputList, OperationSwitch } from './InspectorBranches';
 import { IssueAlert, NodeHeader } from './InspectorParts';
@@ -8,7 +8,7 @@ import { choiceFieldAt, nodeTitle, slotDescription } from './node-labels';
 import { OperationPalette } from './OperationPalette';
 import { ReadInspector } from './ReadInspector';
 
-import type { ExpressionNode } from '../expression/model';
+import type { ExpressionNode } from '@pops/inventory/expression';
 
 function InspectorBody({ node }: { node: ExpressionNode }) {
   const { panel } = useBuilder();

@@ -1,9 +1,13 @@
-import { isFollowable, resolveRead } from '../expression/catalogue-lookup';
-import { operationNode, replaceAt, updateAt, wrapAt } from '../expression/edit';
-import { fieldFitsSlot } from '../expression/slot-types';
-import { nodeAt, nodeChildren } from '../expression/tree';
+import {
+  isFollowable,
+  resolveRead,
+  fieldFitsSlot,
+  nodeAt,
+  nodeChildren,
+} from '@pops/inventory/expression';
 
-import type { WrappingOp } from '../expression/edit';
+import { operationNode, replaceAt, updateAt, wrapAt } from '../expression/edit';
+
 import type {
   ExpressionContext,
   ExpressionField,
@@ -12,7 +16,9 @@ import type {
   NodeOp,
   ReadNode,
   SlotType,
-} from '../expression/model';
+} from '@pops/inventory/expression';
+
+import type { WrappingOp } from '../expression/edit';
 
 /** The fields of a type a read in a slot may land on, in catalogue order. */
 export function fittingFields(

@@ -1,6 +1,13 @@
 import { ArrowDown, ArrowUp, Plus, X } from 'lucide-react';
 
 import {
+  comparedChoiceField,
+  valueTypeLabel,
+  OPERATIONS,
+  operationBlockedReason,
+  nodeChildren,
+} from '@pops/inventory/expression';
+import {
   Button,
   Label,
   SelectContent,
@@ -16,15 +23,11 @@ import {
   removeCoalesceInput,
   switchBinaryOp,
 } from '../expression/edit';
-import { comparedChoiceField } from '../expression/formula';
-import { valueTypeLabel } from '../expression/model';
-import { OPERATIONS, operationBlockedReason } from '../expression/operations';
-import { nodeChildren } from '../expression/tree';
 import { useBuilder } from './BuilderContext';
 import { SlotRow } from './InspectorParts';
 import { nodeTitle } from './node-labels';
 
-import type { BinaryOp, ExpressionNode } from '../expression/model';
+import type { BinaryOp, ExpressionNode } from '@pops/inventory/expression';
 
 const BINARY_OPS: readonly BinaryOp[] = [
   'add',

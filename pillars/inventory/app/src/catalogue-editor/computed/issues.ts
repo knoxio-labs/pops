@@ -1,8 +1,8 @@
-import { ownerType } from '../expression/catalogue-lookup';
-import { ROOT_PATH } from '../expression/tree';
+import { ownerType, ROOT_PATH } from '@pops/inventory/expression';
+
+import type { ExpressionContext } from '@pops/inventory/expression';
 
 import type { InventoryApiIssue } from '../../inventory-api-helpers';
-import type { ExpressionContext } from '../expression/model';
 
 /** A server refusal placed on one node of the expression, phrased for the author. */
 export interface ExpressionIssue {

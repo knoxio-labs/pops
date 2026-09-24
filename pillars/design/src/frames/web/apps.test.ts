@@ -6,12 +6,34 @@ import { describe, expect, it } from 'vitest';
 
 import { iconMap } from '@pops/navigation';
 
-import { activeItemPath, appForArea, WEB_APPS } from './apps';
+import { activeItemPath, appForArea, railOrder, WEB_APPS } from './apps';
 
 import type { AppNavConfig } from '@pops/navigation';
 
+describe('railOrder', () => {
+  const wire = (id: string, order?: number) => ({
+    id,
+    label: id,
+    labelKey: id,
+    icon: 'bot',
+    basePath: `/${id}`,
+    ...(order === undefined ? {} : { order }),
+    items: [],
+  });
+
+  it('ranks by the wire nav.order, not by declaration order', () => {
+    const ranked = railOrder([wire('c', 30), wire('a', 20), wire('b', 10)]);
+    expect(ranked.map((nav) => nav.id)).toEqual(['b', 'a', 'c']);
+  });
+
+  it('breaks a tie on id and puts a nav with no order last, as the shell does', () => {
+    const ranked = railOrder([wire('z'), wire('m', 10), wire('b', 10)]);
+    expect(ranked.map((nav) => nav.id)).toEqual(['b', 'm', 'z']);
+  });
+});
+
 describe('WEB_APPS', () => {
-  it('is the shell rail order (navOrder in the shell bundle map), finance first', () => {
+  it('is the shell rail order (each pillar contract nav.order), finance first', () => {
     expect(WEB_APPS.map((app) => app.id)).toEqual([
       'finance',
       'purchases',
@@ -39,7 +61,7 @@ describe('WEB_APPS', () => {
     // sibling `label`, so a key absent from a catalogue reaches the user as
     // the raw key, `finance.accounts` where "Accounts" belongs. Two shipped
     // that way (POPS-2775, POPS-2810) because nothing compared the two
-    // sides. `WEB_APPS` holds each pillar's real navConfig, so this covers
+    // sides. `WEB_APPS` holds each pillar's contract nav, so this covers
     // every app without a second edit when one gains a page.
     const here = dirname(fileURLToPath(import.meta.url));
     const localesDir = join(here, '../../../../../libs/locales');

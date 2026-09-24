@@ -2,7 +2,8 @@ import { createContext, useContext } from 'react';
 
 import type { Dispatch, SetStateAction } from 'react';
 
-import type { ExpressionNode } from './expression/model';
+import type { ExpressionNode } from '@pops/inventory/expression';
+
 import type { CatalogueField, CatalogueType } from './types';
 
 /** A primitive field kind accepted by catalogue authoring. */

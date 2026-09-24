@@ -1,6 +1,6 @@
 import { CircleSlash, FlaskConical, RefreshCw, TriangleAlert } from 'lucide-react';
 
-import { evaluationErrorSentence, unavailableSentence } from '@pops/app-inventory/design';
+import { evaluationErrorSentence, unavailableSentence } from '@pops/inventory/expression';
 import {
   Alert,
   AlertDescription,

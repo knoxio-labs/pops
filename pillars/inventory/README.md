@@ -242,9 +242,13 @@ and the size bounds. The builder does not type-check the tree beyond that
 filter; the server's issue paths place each refusal on its node. "Try on an
 item" evaluates the unsaved edit on one picked item through
 `computed-preview` and names the missing input and item when it is
-unavailable. The expression model (`app/src/catalogue-editor/expression`) is
-the one the design playground's computed-editor kit reads through
-`@pops/app-inventory/design`.
+unavailable. The expression model — the tree, issue paths, slot typing, the
+operation palette and the readback — is contract surface
+(`src/contract/expression`, published as `@pops/inventory/expression`): the
+catalogue editor and the design playground's computed-editor kit both read
+it, so the approved design and the shipping editor cannot drift apart. The
+editor-only parts (tree edits, the wire mapping, the saved version) stay in
+`app/src/catalogue-editor/expression`.
 
 ## Registration
 

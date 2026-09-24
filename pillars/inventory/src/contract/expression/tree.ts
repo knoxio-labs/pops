@@ -1,4 +1,4 @@
-import type { ExpressionNode } from './model';
+import type { ExpressionNode } from './model.js';
 
 /** One input of a node: the slot's author-facing name and its path segment. */
 export interface NodeChild {

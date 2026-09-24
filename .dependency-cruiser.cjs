@@ -59,12 +59,20 @@ module.exports = {
       name: 'design-no-cross-internal',
       severity: 'error',
       comment:
-        "ISO-R2 (design): the design playground draws the POPS web chrome around a screen under review, and draws it from each app package's real navConfig rather than a copy — so it needs the same one edge the shell has, and no more. Allowed: an app package's entry (app/src/index.ts) and the surface it publishes to the playground (app/src/design.ts). Everything past those is the reach ISO-R2 forbids — another pillar's src|db|migrations, an app's pages, its generated client. Reaching for the shell's own RootLayout is the specific thing this rule exists to stop: the chrome is a facsimile until it is extracted into a lib (POPS-2783).",
+        "ISO-R2 (design): the design playground consumes another pillar exactly as any pillar may — through its published contract package (@pops/<pillar>, which resolves into pillars/<pillar>/dist/contract/ once built). It reads each pillar's nav and the inventory expression model from there. Everything past the contract is the reach ISO-R2 forbids — another pillar's src|db|migrations, and the shell's own RootLayout in particular: the chrome is a facsimile until it is extracted into a lib (POPS-2783). A pillar's app is design-no-app-import's to refuse.",
       from: { path: '^pillars/design/' },
       to: {
         path: '^pillars/[^/]+/',
-        pathNot: ['^pillars/design/', '^pillars/[^/]+/app/src/(index|design)\\.ts$'],
+        pathNot: ['^pillars/design/', '^pillars/[^/]+/dist/contract/', '^pillars/[^/]+/app/'],
       },
+    },
+    {
+      name: 'design-no-app-import',
+      severity: 'error',
+      comment:
+        "ISO-R2 (design): the design playground never builds against a pillar's app package (@pops/app-<pillar>). A nav comes from the pillar's contract, a shared pure model is published by the contract, and a control the playground reviews is a kit copy — the kit is the seam an implementation builds against (pillars/design/README.md). Matched both as the bare specifier, which is what dep-cruiser records when the playground does not declare the package, and as the app's source, which is where it resolves when it does.",
+      from: { path: '^pillars/design/' },
+      to: { path: '^(@pops/app-[^/]+|pillars/[^/]+/app/)' },
     },
     {
       name: 'shell-no-cross-internal',

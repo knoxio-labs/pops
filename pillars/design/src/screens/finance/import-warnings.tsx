@@ -1,4 +1,5 @@
-import { ImportWarningBanner } from '@pops/app-finance/design';
+import { ImportWarningBanner } from '@/kit/import-warning-banner';
+
 import { PageHeader } from '@pops/ui';
 
 import type { ScreenMeta, ScreenStates } from '@/contract';
@@ -22,9 +23,9 @@ const API_ERROR: Warning = {
 };
 
 /**
- * The warning banner as the import flow actually shows it: the real
- * component from `@pops/app-finance`, not a look-alike, so the review is of
- * the shipping thing. Only the warnings are fixtures.
+ * The warning banner as the import flow shows it, drawn from the kit's copy
+ * of the control — the playground does not build against a pillar's app.
+ * Only the warnings are fixtures.
  */
 function Screen({ warnings }: { warnings: readonly Warning[] }) {
   return (

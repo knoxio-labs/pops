@@ -1,9 +1,9 @@
 import { ChevronRight, X } from 'lucide-react';
 
-import { OPERATIONS, operationBlockedReason, valueTypeLabel } from '@pops/app-inventory/design';
+import { OPERATIONS, operationBlockedReason, valueTypeLabel } from '@pops/inventory/expression';
 import { Button, Collapsible, CollapsibleContent, CollapsibleTrigger } from '@pops/ui';
 
-import type { OperationInfo, SlotType } from '@pops/app-inventory/design';
+import type { OperationInfo, SlotType } from '@pops/inventory/expression';
 
 function OperationButton({ info }: { info: OperationInfo }) {
   return (

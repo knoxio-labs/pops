@@ -1,15 +1,15 @@
 import { AlertCircle, ArrowRight, Parentheses, Replace, Trash2 } from 'lucide-react';
 
+import { valueTypeLabel, ROOT_PATH } from '@pops/inventory/expression';
 import { Alert, AlertDescription, AlertTitle, Badge, Button, cn } from '@pops/ui';
 
 import { clearAt } from '../expression/edit';
-import { valueTypeLabel } from '../expression/model';
-import { ROOT_PATH } from '../expression/tree';
 import { useBuilder } from './BuilderContext';
 
 import type { ReactNode } from 'react';
 
-import type { SlotType } from '../expression/model';
+import type { SlotType } from '@pops/inventory/expression';
+
 import type { ExpressionIssue } from './issues';
 
 function NodeActions() {

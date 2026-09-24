@@ -1,6 +1,6 @@
-import { needsDimensionalUnits } from './slot-types';
+import { needsDimensionalUnits } from '@pops/inventory/expression';
 
-import type { ExpressionContext, ExpressionNode, ValueType } from './model';
+import type { ExpressionContext, ExpressionNode, ValueType } from '@pops/inventory/expression';
 
 /** The expression version a new computed field is saved with. */
 export const LATEST_EXPRESSION_VERSION = 2 as const;

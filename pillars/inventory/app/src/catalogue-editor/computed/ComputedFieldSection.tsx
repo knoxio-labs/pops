@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 
-import { formula } from '../expression/formula';
+import { formula } from '@pops/inventory/expression';
+
 import { expressionContext, fieldValueType, toWire } from '../expression/wire';
 import { useFieldFormContext } from '../FieldFormContext';
 import { useComputedSection } from './computed-environment';
@@ -10,8 +11,9 @@ import { previewStateFrom } from './preview-model';
 import { ResultPreview } from './ResultPreview';
 import { useComputedPreview } from './useComputedPreview';
 
+import type { ExpressionContext, ExpressionField } from '@pops/inventory/expression';
+
 import type { InventoryApiIssue } from '../../inventory-api-helpers';
-import type { ExpressionContext, ExpressionField } from '../expression/model';
 import type { ComputedFieldEnvironment } from './computed-environment';
 import type { ExpressionIssue } from './issues';
 import type { PreviewItem, PreviewState } from './preview-model';

@@ -1,6 +1,6 @@
-import { ROOT_PATH } from './tree';
+import { ROOT_PATH } from '@pops/inventory/expression';
 
-import type { BinaryOp, ExpressionNode, NodeOp } from './model';
+import type { BinaryOp, ExpressionNode, NodeOp } from '@pops/inventory/expression';
 
 /** The editor-only placeholder for a slot nothing fills yet. */
 export const EMPTY: ExpressionNode = { op: 'empty' };

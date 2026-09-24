@@ -1,7 +1,7 @@
-import { ownerType, readLabel, resolveRead } from './catalogue-lookup';
-import { outlineRows } from './tree';
+import { ownerType, readLabel, resolveRead } from './catalogue-lookup.js';
+import { outlineRows } from './tree.js';
 
-import type { ExpressionContext, ExpressionField, ExpressionNode, LiteralValue } from './model';
+import type { ExpressionContext, ExpressionField, ExpressionNode, LiteralValue } from './model.js';
 
 /** One static field dependency: the field, the type it is on and the path that reaches it. */
 export interface StaticDependency {
@@ -60,7 +60,7 @@ export function formula(
   node: ExpressionNode,
   choiceField?: ExpressionField
 ): string {
-  const part = (child: ExpressionNode) =>
+  const part = (child: ExpressionNode): string =>
     wrap(formula(context, child, comparedChoiceField(context, node)), child);
   switch (node.op) {
     case 'empty':
@@ -93,7 +93,7 @@ export function staticDependencies(
   root: ExpressionNode
 ): readonly StaticDependency[] {
   const unique = new Map<string, StaticDependency>();
-  const add = (typeLabel: string, field: ExpressionField, via: readonly string[]) => {
+  const add = (typeLabel: string, field: ExpressionField, via: readonly string[]): void => {
     const key = `${typeLabel}:${field.id}`;
     if (!unique.has(key)) unique.set(key, { key, typeLabel, fieldLabel: field.label, via });
   };

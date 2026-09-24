@@ -1,10 +1,20 @@
-import { combineUnits, formatUnitTerm, sameDimension, unitDimension } from '@pops/inventory';
+import {
+  combineUnits,
+  formatUnitTerm,
+  sameDimension,
+  unitDimension,
+} from '../measurement-units.js';
+import { resolveRead } from './catalogue-lookup.js';
+import { isNumericKind } from './model.js';
+import { ROOT_PATH, nodeChildren } from './tree.js';
 
-import { resolveRead } from './catalogue-lookup';
-import { isNumericKind } from './model';
-import { ROOT_PATH, nodeChildren } from './tree';
-
-import type { ExpressionContext, ExpressionNode, LiteralValue, SlotType, ValueType } from './model';
+import type {
+  ExpressionContext,
+  ExpressionNode,
+  LiteralValue,
+  SlotType,
+  ValueType,
+} from './model.js';
 
 const BOOLEAN: SlotType = { kind: 'boolean' };
 const ANY_NUMBER: SlotType = { kind: 'number' };
@@ -132,7 +142,7 @@ export function slotTypes(
   fieldType: ValueType
 ): ReadonlyMap<string, SlotType | undefined> {
   const types = new Map<string, SlotType | undefined>();
-  const visit = (node: ExpressionNode, path: string, expected: SlotType | undefined) => {
+  const visit = (node: ExpressionNode, path: string, expected: SlotType | undefined): void => {
     types.set(path, expected);
     const expectations = expected === undefined ? [] : childTypes(context, node, expected);
     nodeChildren(node).forEach((child, index) => {

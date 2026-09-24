@@ -6,7 +6,7 @@ import {
   nodeChildren,
   operationBlockedReason,
   valueTypeLabel,
-} from '@pops/app-inventory/design';
+} from '@pops/inventory/expression';
 import {
   Button,
   Label,
@@ -25,7 +25,7 @@ import type {
   ExpressionContext,
   ExpressionNode,
   SlotType,
-} from '@pops/app-inventory/design';
+} from '@pops/inventory/expression';
 
 type Types = ReadonlyMap<string, SlotType | undefined>;
 

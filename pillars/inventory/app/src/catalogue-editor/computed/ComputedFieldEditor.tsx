@@ -7,7 +7,8 @@ import { OverridePolicyControl } from './OverridePolicyControl';
 
 import type { ReactNode } from 'react';
 
-import type { ExpressionContext, ExpressionNode, ValueType } from '../expression/model';
+import type { ExpressionContext, ExpressionNode, ValueType } from '@pops/inventory/expression';
+
 import type { ExpressionIssue } from './issues';
 import type { OverridePolicy } from './OverridePolicyControl';
 
