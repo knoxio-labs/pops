@@ -116,6 +116,16 @@ internal struct PurchaseSearchRowTests {
 
         #expect(ranges.count == 2)
     }
+
+    @Test(
+        "a day reads as the locale's day and short month",
+        arguments: [("en_AU", "15 Jan"), ("en_US", "Jan 15")] as [(String, String)])
+    func dayFollowsLocale(identifier: String, expected: String) {
+        let midJanuaryNoonUTC = Date(timeIntervalSince1970: 1_263_556_800)
+        #expect(
+            PurchasesPresentation.day(of: midJanuaryNoonUTC, locale: Locale(identifier: identifier))
+                == expected)
+    }
 }
 
 extension PurchaseSearchOrder {
