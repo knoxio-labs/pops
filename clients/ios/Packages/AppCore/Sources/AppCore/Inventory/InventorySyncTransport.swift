@@ -61,22 +61,23 @@ public enum InventoryRejectedReason: Hashable, Sendable {
     case unrecognised(String)
 
     public init(wire: String) {
-        switch wire {
-        case "invalid": self = .invalid
-        case "type_unknown": self = .typeUnknown
-        case "cycle": self = .cycle
-        case "target_missing": self = .targetMissing
-        case "reference_type_mismatch": self = .referenceTypeMismatch
-        case "not_container": self = .notContainer
-        case "has_contents": self = .hasContents
-        case "quantity_container_conflict": self = .quantityContainerConflict
-        case "illegal_transition": self = .illegalTransition
-        case "media_missing": self = .mediaMissing
-        case "catalogue_update_required": self = .catalogueUpdateRequired
-        case "catalogue_repair_required": self = .catalogueRepairRequired
-        default: self = .unrecognised(wire)
-        }
+        self = Self.byWireName[wire] ?? .unrecognised(wire)
     }
+
+    private static let byWireName: [String: InventoryRejectedReason] = [
+        "invalid": .invalid,
+        "type_unknown": .typeUnknown,
+        "cycle": .cycle,
+        "target_missing": .targetMissing,
+        "reference_type_mismatch": .referenceTypeMismatch,
+        "not_container": .notContainer,
+        "has_contents": .hasContents,
+        "quantity_container_conflict": .quantityContainerConflict,
+        "illegal_transition": .illegalTransition,
+        "media_missing": .mediaMissing,
+        "catalogue_update_required": .catalogueUpdateRequired,
+        "catalogue_repair_required": .catalogueRepairRequired,
+    ]
 }
 
 /// One mutation's result, the shape ADR-002's wire contract declares for
