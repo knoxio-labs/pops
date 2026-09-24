@@ -57,6 +57,17 @@ describe('type-editor primitive states', () => {
   });
 });
 
+describe('type-editor computed states', () => {
+  it.each(['computed-expression', 'dependency-error', 'dependency-cycle'])(
+    'selects the field actually marked computed in %s, not a stored field',
+    (name) => {
+      renderState(name);
+      expect(screen.getByLabelText('Field label')).toHaveValue('Replacement value');
+      expect(screen.getByRole('switch', { name: 'Computed field' })).toBeChecked();
+    }
+  );
+});
+
 describe('type-editor reference states', () => {
   it('configures an item-only reference with an item-type constraint', () => {
     renderState('reference-targets');

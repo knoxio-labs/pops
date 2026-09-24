@@ -102,9 +102,15 @@ export function createTypeEditorStates(layout: TypeEditorLayout): ScreenStates {
     'destructive-refusal': () => (
       <TypeEditor fieldKey="connectors" mode="destructive" layout={layout} />
     ),
-    'computed-expression': () => <TypeEditor mode="computed" layout={layout} />,
-    'dependency-error': () => <TypeEditor mode="dependency-error" layout={layout} />,
-    'dependency-cycle': () => <TypeEditor mode="cycle" layout={layout} />,
+    'computed-expression': () => (
+      <TypeEditor fieldKey="replacement_value" mode="computed" layout={layout} />
+    ),
+    'dependency-error': () => (
+      <TypeEditor fieldKey="replacement_value" mode="dependency-error" layout={layout} />
+    ),
+    'dependency-cycle': () => (
+      <TypeEditor fieldKey="replacement_value" mode="cycle" layout={layout} />
+    ),
   };
 }
 
