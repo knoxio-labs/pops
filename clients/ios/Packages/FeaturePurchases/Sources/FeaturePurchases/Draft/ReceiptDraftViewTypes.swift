@@ -1,4 +1,3 @@
-import AppCore
 import DesignSystem
 
 extension ReceiptDraftView {
