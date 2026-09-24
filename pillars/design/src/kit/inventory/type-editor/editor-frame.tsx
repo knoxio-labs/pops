@@ -1,17 +1,16 @@
-import { Archive, Check, Eye, Save, Settings2, Sparkles } from 'lucide-react';
+import { Archive, Check, Save, Sparkles } from 'lucide-react';
 
-import { Badge, Button, Tabs, TabsContent, TabsList, TabsTrigger } from '@pops/ui';
+import { Badge, Button } from '@pops/ui';
 
-import { ComputedEditor } from './computed-editor';
 import { EnumOptions } from './enum-options';
 import { FieldSettings } from './field-settings';
-import { ValidationPreview } from './validation-preview';
+import { DryRunValidation } from './validation-preview';
 
 import type { CatalogueFieldSummary } from '@/fixtures/inventory-type-fields';
 
 import type { TypeEditorMode } from './types';
 
-/** Type-level identity, draft status and primary actions. */
+/** Type-level identity and draft status. */
 export function EditorHeader({ creating = false }: { creating?: boolean }) {
   return (
     <div className="flex flex-col gap-4 border-b pb-5 sm:flex-row sm:items-start sm:justify-between">
@@ -30,21 +29,11 @@ export function EditorHeader({ creating = false }: { creating?: boolean }) {
             : '184 items · last published revision 12'}
         </p>
       </div>
-      <div className="flex flex-wrap items-center gap-2">
-        {creating && <Badge variant="outline">Unsaved</Badge>}
-        {!creating && (
-          <Button variant="outline">
-            <Archive className="h-4 w-4" />
-            Archive
-          </Button>
-        )}
-        {!creating && (
-          <Button>
-            <Save className="h-4 w-4" />
-            Save draft
-          </Button>
-        )}
-      </div>
+      {creating && (
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge variant="outline">Unsaved</Badge>
+        </div>
+      )}
     </div>
   );
 }
@@ -54,70 +43,78 @@ interface InspectorProps {
   field: CatalogueFieldSummary;
 }
 
-function Inspector({ mode, field }: InspectorProps) {
+function computedErrorFor(mode: TypeEditorMode): 'dependency' | 'cycle' | undefined {
+  if (mode === 'dependency-error') return 'dependency';
+  if (mode === 'cycle') return 'cycle';
+  return undefined;
+}
+
+function isComputedMode(mode: TypeEditorMode): boolean {
+  return mode === 'computed' || mode === 'dependency-error' || mode === 'cycle';
+}
+
+/**
+ * The field form's settings, with the computed-field switch opening the
+ * builder inline instead of a separate Computation tab.
+ */
+export function FieldInspector({ field, mode }: InspectorProps) {
   if (mode === 'enum') return <EnumOptions />;
-  if (mode === 'preview') return <ValidationPreview />;
-  if (mode === 'computed') return <ComputedEditor />;
-  if (mode === 'dependency-error') return <ComputedEditor error="dependency" />;
-  if (mode === 'cycle') return <ComputedEditor error="cycle" />;
-  return <FieldSettings field={field} />;
-}
-
-function editorTab(mode: TypeEditorMode): 'field' | 'computed' | 'preview' {
-  if (mode === 'preview') return 'preview';
-  if (mode === 'computed' || mode === 'dependency-error' || mode === 'cycle') return 'computed';
-  return 'field';
-}
-
-/** Field settings, computed-expression and validation-preview panels. */
-export function EditorTabs({ mode, field }: InspectorProps) {
-  const tab = editorTab(mode);
   return (
-    <Tabs value={tab} className="space-y-5">
-      <TabsList className="h-auto min-h-11 flex-wrap justify-start">
-        <TabsTrigger value="field" className="min-h-9">
-          <Settings2 className="h-4 w-4" />
-          Field settings
-        </TabsTrigger>
-        <TabsTrigger value="computed" className="min-h-9">
-          <Sparkles className="h-4 w-4" />
-          Computation
-        </TabsTrigger>
-        <TabsTrigger value="preview" className="min-h-9">
-          <Eye className="h-4 w-4" />
-          Validation preview
-        </TabsTrigger>
-      </TabsList>
-      <TabsContent value="field">
-        <Inspector mode={mode} field={field} />
-      </TabsContent>
-      <TabsContent value="computed">
-        <Inspector mode={mode} field={field} />
-      </TabsContent>
-      <TabsContent value="preview">
-        <Inspector mode={mode} field={field} />
-      </TabsContent>
-    </Tabs>
+    <FieldSettings
+      field={field}
+      computedOpen={isComputedMode(mode)}
+      computedError={computedErrorFor(mode)}
+    />
   );
 }
 
-/** Publication readiness summary and final review action. */
-export function PublishBar() {
+/** Per-field save/create and archive/restore actions, matching the web editor's form footer. */
+export function FieldFormFooter({ field }: { field: CatalogueFieldSummary }) {
+  const archived = field.archived === true;
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-primary/30 bg-primary/10 p-4 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex gap-3">
-        <Check className="mt-0.5 h-5 w-5 text-primary" />
-        <div>
-          <p className="text-sm font-medium">Draft validates against 184 affected items</p>
-          <p className="text-xs text-muted-foreground">
-            3 compatible changes · no migration required
-          </p>
-        </div>
+    <div className="flex flex-wrap justify-between gap-2 border-t pt-4">
+      <div>
+        {archived ? (
+          <Button type="button" variant="outline">
+            Restore field
+          </Button>
+        ) : (
+          <Button type="button" variant="outline">
+            <Archive className="h-4 w-4" />
+            Archive field
+          </Button>
+        )}
       </div>
-      <Button>
-        <Sparkles className="h-4 w-4" />
-        Review and publish
+      <Button type="button">
+        <Save className="h-4 w-4" />
+        Save field
       </Button>
+    </div>
+  );
+}
+
+/** Dry-run validation and the final review action, matching the web editor's publish panel. */
+export function PublishBar({ mode }: { mode: TypeEditorMode }) {
+  return (
+    <div className="space-y-3">
+      <div className="lg:max-h-56 lg:overflow-y-auto">
+        <DryRunValidation ready={mode === 'preview'} />
+      </div>
+      <div className="flex flex-col gap-3 rounded-lg border border-primary/30 bg-primary/10 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex gap-3">
+          <Check className="mt-0.5 h-5 w-5 text-primary" />
+          <div>
+            <p className="text-sm font-medium">Draft validates against 184 affected items</p>
+            <p className="text-xs text-muted-foreground">
+              3 compatible changes · no migration required
+            </p>
+          </div>
+        </div>
+        <Button>
+          <Sparkles className="h-4 w-4" />
+          Review and publish
+        </Button>
+      </div>
     </div>
   );
 }

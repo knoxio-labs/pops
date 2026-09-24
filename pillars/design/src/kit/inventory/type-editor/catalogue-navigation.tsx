@@ -2,10 +2,11 @@ import { catalogueTypes, electronicsFields } from '@/fixtures/inventory-type-cat
 import {
   Archive,
   Boxes,
+  ChevronDown,
   ChevronRight,
+  ChevronUp,
   CircleDot,
   Eye,
-  GripVertical,
   Plus,
   Search,
 } from 'lucide-react';
@@ -35,6 +36,7 @@ function TypeRow({ type, selected }: { type: CatalogueTypeSummary; selected?: bo
   return (
     <button
       type="button"
+      aria-pressed={selected}
       className={cn(
         'flex min-h-11 w-full items-start gap-3 rounded-lg border p-3 text-left transition-colors',
         selected ? 'border-primary bg-primary/10' : 'border-transparent hover:bg-muted'
@@ -54,7 +56,7 @@ function TypeRow({ type, selected }: { type: CatalogueTypeSummary; selected?: bo
   );
 }
 
-/** Type catalogue navigation used by the list screen and workspace layout. */
+/** Type catalogue navigation used by every named condition, matching the web editor's permanent list column. */
 export function CatalogueList({ compact = false }: { compact?: boolean }) {
   return (
     <section className={cn('space-y-4', !compact && 'rounded-xl border bg-card p-5')}>
@@ -78,7 +80,7 @@ export function CatalogueList({ compact = false }: { compact?: boolean }) {
       </div>
       <div className="space-y-1">
         {catalogueTypes.map((type) => (
-          <TypeRow key={type.id} type={type} selected={compact && type.id === 'type-electronics'} />
+          <TypeRow key={type.id} type={type} selected={type.id === 'type-electronics'} />
         ))}
       </div>
       <Button variant="outline" className="w-full">
@@ -89,41 +91,91 @@ export function CatalogueList({ compact = false }: { compact?: boolean }) {
   );
 }
 
-function FieldRow({ field, selected }: { field: CatalogueFieldSummary; selected?: boolean }) {
+function FieldMoveButtons({
+  disabled,
+  field,
+  index,
+  total,
+}: {
+  disabled: boolean;
+  field: CatalogueFieldSummary;
+  index: number;
+  total: number;
+}) {
   return (
-    <button
-      type="button"
-      className={cn(
-        'group flex min-h-11 w-full items-center gap-2 rounded-md border px-2 py-2 text-left',
-        selected ? 'border-primary bg-primary/10' : 'border-transparent hover:bg-muted'
-      )}
-    >
-      <GripVertical className="h-4 w-4 shrink-0 text-muted-foreground" />
-      <span className="min-w-0 flex-1">
-        <span
-          className={cn('block truncate text-sm font-medium', field.archived && 'line-through')}
-        >
-          {field.label}
-        </span>
-        <span className="block text-xs text-muted-foreground">
-          {field.storage === 'computed' ? 'Computed · ' : ''}
-          {field.kind} · {field.cardinality}
-        </span>
-      </span>
-      {field.required && <CircleDot className="h-3.5 w-3.5 text-primary" aria-label="Required" />}
-      <ChevronRight className="h-4 w-4 text-muted-foreground" />
-    </button>
+    <div className="flex flex-col">
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="min-h-11 min-w-11"
+        aria-label={`Move ${field.label} up`}
+        disabled={disabled || index === 0}
+      >
+        <ChevronUp className="h-3 w-3" />
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="min-h-11 min-w-11"
+        aria-label={`Move ${field.label} down`}
+        disabled={disabled || index === total - 1}
+      >
+        <ChevronDown className="h-3 w-3" />
+      </Button>
+    </div>
   );
 }
 
-/** Ordered field navigation shared by both type-editor layouts. */
+function FieldRow({
+  field,
+  index,
+  selected,
+  total,
+}: {
+  field: CatalogueFieldSummary;
+  index: number;
+  selected?: boolean;
+  total: number;
+}) {
+  const isArchived = field.archived === true;
+  return (
+    <div
+      className={cn(
+        'flex min-h-11 items-center rounded-md border px-1 py-1',
+        selected ? 'border-primary bg-primary/10' : 'border-transparent'
+      )}
+    >
+      <FieldMoveButtons field={field} index={index} total={total} disabled={isArchived} />
+      <button
+        type="button"
+        className="flex min-h-11 min-w-11 flex-1 items-center gap-2 px-1 py-1 text-left"
+      >
+        <span className="min-w-0 flex-1">
+          <span className={cn('block truncate text-sm font-medium', isArchived && 'line-through')}>
+            {field.label}
+          </span>
+          <span className="block text-xs text-muted-foreground">
+            {field.storage === 'computed' ? 'Computed · ' : ''}
+            {field.kind} · {field.cardinality}
+          </span>
+        </span>
+        {field.required && <CircleDot className="h-3.5 w-3.5 text-primary" aria-label="Required" />}
+        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+      </button>
+    </div>
+  );
+}
+
+/** Ordered field outline with move up/down controls, matching the web editor's field order UI. */
 export function FieldOutline({ selectedKey }: { selectedKey: string }) {
   return (
     <section className="space-y-4">
       <div className="flex items-center justify-between gap-2">
         <div>
           <h2 className="text-lg font-semibold">Fields</h2>
-          <p className="text-xs text-muted-foreground">Drag to set form order</p>
+          <p className="text-xs text-muted-foreground">Set item form order</p>
         </div>
         <Button variant="outline" size="sm">
           <Plus className="h-4 w-4" />
@@ -131,8 +183,14 @@ export function FieldOutline({ selectedKey }: { selectedKey: string }) {
         </Button>
       </div>
       <div className="space-y-1">
-        {electronicsFields.map((field) => (
-          <FieldRow key={field.id} field={field} selected={field.key === selectedKey} />
+        {electronicsFields.map((field, index) => (
+          <FieldRow
+            key={field.id}
+            field={field}
+            index={index}
+            total={electronicsFields.length}
+            selected={field.key === selectedKey}
+          />
         ))}
       </div>
       <Button variant="ghost" className="w-full justify-start text-muted-foreground">

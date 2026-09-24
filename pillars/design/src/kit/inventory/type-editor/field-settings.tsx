@@ -18,10 +18,13 @@ import {
   Textarea,
 } from '@pops/ui';
 
+import { ComputedEditor } from './computed-editor';
 import { EnumOptions } from './enum-options';
 import { MeasurementUnit, ReferenceTargets } from './field-constraints';
 
 import type { CatalogueFieldKind, CatalogueFieldSummary } from '@/fixtures/inventory-type-fields';
+
+type ComputedError = 'dependency' | 'cycle';
 
 /** Yes / no fields always store exactly one value, so their cardinality is fixed. */
 export function cardinalityLocked(kind: CatalogueFieldKind): boolean {
@@ -134,9 +137,19 @@ function FieldToggle({
 /**
  * One stored field's settings for any primitive kind: identity, kind and
  * cardinality, the kind's own constraints (unit, reference targets or
- * options), and the required and highlighted switches.
+ * options), the required, highlighted and computed switches, and the
+ * computed-field builder inline once the computed switch is on, matching the
+ * web editor's interaction model.
  */
-export function FieldSettings({ field }: { field: CatalogueFieldSummary }) {
+export function FieldSettings({
+  computedError,
+  computedOpen = false,
+  field,
+}: {
+  computedError?: ComputedError;
+  computedOpen?: boolean;
+  field: CatalogueFieldSummary;
+}) {
   return (
     <div className="space-y-5">
       <FieldIdentity field={field} />
@@ -158,7 +171,14 @@ export function FieldSettings({ field }: { field: CatalogueFieldSummary }) {
           detail="Show this value in item summaries."
           checked={field.highlighted}
         />
+        <FieldToggle
+          id="field-computed"
+          label="Computed field"
+          detail="Evaluate a closed expression instead of storing a value."
+          checked={computedOpen}
+        />
       </div>
+      {computedOpen && <ComputedEditor error={computedError} />}
     </div>
   );
 }

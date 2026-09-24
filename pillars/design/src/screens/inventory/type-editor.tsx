@@ -83,7 +83,7 @@ export function createTypeEditorStates(layout: TypeEditorLayout): ScreenStates {
     'key-collision': () => <TypeEditor mode="key-collision" layout={layout} />,
     edit: () => <TypeEditor mode="edit" layout={layout} />,
     archive: () => <TypeEditor mode="archive" layout={layout} />,
-    'enum-options': () => <TypeEditor mode="enum" layout={layout} />,
+    'enum-options': () => <TypeEditor fieldKey="connectors" mode="enum" layout={layout} />,
     'reference-targets': () => <TypeEditor fieldKey="works_with" layout={layout} />,
     'reference-items-and-locations': () => <TypeEditor fieldKey="stored_with" layout={layout} />,
     'primitive-short-text': () => <TypeEditor fieldKey="manufacturer" layout={layout} />,
@@ -99,7 +99,9 @@ export function createTypeEditorStates(layout: TypeEditorLayout): ScreenStates {
     'primitive-reference': () => <TypeEditor fieldKey="home_location" layout={layout} />,
     'validation-preview': () => <TypeEditor mode="preview" layout={layout} />,
     'stale-revision': () => <TypeEditor mode="stale" layout={layout} />,
-    'destructive-refusal': () => <TypeEditor mode="destructive" layout={layout} />,
+    'destructive-refusal': () => (
+      <TypeEditor fieldKey="connectors" mode="destructive" layout={layout} />
+    ),
     'computed-expression': () => <TypeEditor mode="computed" layout={layout} />,
     'dependency-error': () => <TypeEditor mode="dependency-error" layout={layout} />,
     'dependency-cycle': () => <TypeEditor mode="cycle" layout={layout} />,
