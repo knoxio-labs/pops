@@ -8,7 +8,7 @@ import Testing
 
 /// A drain whose backoff never elapses on its own, so only the store's own
 /// requests start a pass.
-private struct ParkedDrainClock: InventoryDrainClock {
+internal struct ParkedDrainClock: InventoryDrainClock {
     func sleep(for duration: Duration) async throws {
         try await Task.sleep(for: .seconds(86_400))
     }
@@ -16,7 +16,7 @@ private struct ParkedDrainClock: InventoryDrainClock {
 
 /// The local-first store over a scripted BFM: changes are logged on the
 /// phone and replayed by the drain through the real transport.
-private struct LocalFirstHarness {
+internal struct LocalFirstHarness {
     let server = ScriptedInventoryServer()
     let replica: InventoryReplica
     let reachability: ScriptedNetworkReachability

@@ -1,0 +1,91 @@
+import AppCore
+import GRDB
+
+/// Types every value a page delivers by the kind its catalogue field
+/// declares, before anything is stored. The wire leaves a decimal, date,
+/// date-time and URL as plain strings, and a computed value is stored whole,
+/// so this is the one place its kind is decided.
+///
+/// A value that is not its field's kind, or names a field no held catalogue
+/// revision declares, is ``RepositoryError/contractMismatch``: the page's
+/// transaction rolls back and nothing of it is stored, where storing it would
+/// break every later read of the item.
+///
+/// A stored or override value must name a revision this phone holds, as its
+/// row references `catalogue_field`. A computed value is stored without that
+/// reference and may name a revision the phone never fetched; a published
+/// field's kind never changes (`compatibility-fields.ts`), so any held
+/// revision that declares the field gives its kind.
+internal enum ReplicaValueKinds {
+    static func conformed(_ entries: [InventoryItemFieldEntry], in db: Database) throws
+        -> [InventoryItemFieldEntry]
+    {
+        try entries.map { entry in
+            guard entry.source != .computed, case .value(let values) = entry.state else {
+                return entry
+            }
+            let kind = try kind(
+                fieldId: entry.fieldId, revision: entry.catalogueRevision, exact: true, in: db)
+            return InventoryItemFieldEntry(
+                fieldId: entry.fieldId, state: .value(try values.map { try conform($0, kind) }),
+                source: entry.source, catalogueRevision: entry.catalogueRevision,
+                dependencies: entry.dependencies)
+        }
+    }
+
+    static func conformed(_ values: [InventoryComputedValue], in db: Database) throws
+        -> [InventoryComputedValue]
+    {
+        try values.map { value in
+            let evaluation: InventoryComputedEvaluation
+            switch value.evaluation {
+            case .ok(let primitive):
+                evaluation = .ok(try conform(primitive, kind(of: value, in: db)))
+            case .overridden(let primitive, let revision):
+                evaluation = .overridden(
+                    try conform(primitive, kind(of: value, in: db)),
+                    overrideCatalogueRevision: revision)
+            case .unavailable: return value
+            }
+            return InventoryComputedValue(
+                fieldId: value.fieldId, catalogueRevision: value.catalogueRevision,
+                evaluation: evaluation, dependencies: value.dependencies,
+                traversedItemIds: value.traversedItemIds,
+                evaluatedItemRevision: value.evaluatedItemRevision)
+        }
+    }
+
+    private static func kind(of value: InventoryComputedValue, in db: Database) throws
+        -> InventoryPrimitiveKind
+    {
+        try kind(fieldId: value.fieldId, revision: value.catalogueRevision, exact: false, in: db)
+    }
+
+    private static func conform(_ value: InventoryPrimitiveValue, _ kind: InventoryPrimitiveKind)
+        throws -> InventoryPrimitiveValue
+    {
+        guard let conformed = value.conformed(to: kind) else {
+            throw RepositoryError.contractMismatch
+        }
+        return conformed
+    }
+
+    private static func kind(fieldId: String, revision: Int, exact: Bool, in db: Database)
+        throws -> InventoryPrimitiveKind
+    {
+        let kindText = try String.fetchOne(
+            db,
+            sql: """
+                SELECT kind FROM catalogue_field
+                WHERE id = ? AND (revision = ? OR NOT ?)
+                ORDER BY revision = ? DESC, revision DESC
+                LIMIT 1
+                """,
+            arguments: [fieldId, revision, exact, revision])
+        guard let kindText else { throw RepositoryError.contractMismatch }
+        guard let kind = InventoryPrimitiveKind(rawValue: kindText) else {
+            throw InventoryReplicaError.corruptValue("primitive kind \(kindText)")
+        }
+        return kind
+    }
+}

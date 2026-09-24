@@ -17,15 +17,25 @@ internal enum Protocol2Wire {
     internal static func field(
         id: String, key: String, label: String, kind: String = "measurement",
         storage: String = "stored", required: Bool = false, archivedAt: String? = nil,
-        sortOrder: Int = 0
+        sortOrder: Int = 0, cardinality: String = "one", fixedUnit: String? = nil,
+        referenceKinds: [String] = [], enumOptionIds: [String] = []
     ) -> String {
-        """
-        {"id":"\(id)","typeId":"\(bulbType)","key":"\(key)","label":"\(label)","help":null,\
-        "sortOrder":\(sortOrder),"kind":"\(kind)","cardinality":"one","required":\(required),\
-        "storage":"\(storage)","fixedUnit":null,"referenceKinds":[],"referenceTypeIds":[],\
-        "expressionVersion":null,"expression":null,"allowOverride":false,"presentation":{},\
-        "archivedAt":\(archivedAt.map { "\"\($0)\"" } ?? "null"),"enumOptions":[]}
-        """
+        let kinds = referenceKinds.map { "\"\($0)\"" }.joined(separator: ",")
+        let options = enumOptionIds.enumerated().map { index, optionId in
+            """
+            {"id":"\(optionId)","key":"option-\(index)","label":"Option \(index)",\
+            "sortOrder":\(index),"archivedAt":null}
+            """
+        }.joined(separator: ",")
+        return """
+            {"id":"\(id)","typeId":"\(bulbType)","key":"\(key)","label":"\(label)","help":null,\
+            "sortOrder":\(sortOrder),"kind":"\(kind)","cardinality":"\(cardinality)",\
+            "required":\(required),"storage":"\(storage)",\
+            "fixedUnit":\(fixedUnit.map { "\"\($0)\"" } ?? "null"),\
+            "referenceKinds":[\(kinds)],"referenceTypeIds":[],\
+            "expressionVersion":null,"expression":null,"allowOverride":false,"presentation":{},\
+            "archivedAt":\(archivedAt.map { "\"\($0)\"" } ?? "null"),"enumOptions":[\(options)]}
+            """
     }
 
     internal static let efficacyField = field(

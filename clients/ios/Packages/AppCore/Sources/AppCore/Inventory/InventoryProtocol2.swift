@@ -121,6 +121,15 @@ public struct InventoryCanonicalURL: Codable, Hashable, Sendable {
         }
         self.text = canonical
     }
+
+    /// Keeps a URL the server already canonicalised exactly as it spelled it,
+    /// once it parses as an absolute HTTPS URL. The server canonicalises with
+    /// WHATWG `URL.href`, which need not match Foundation's form in every
+    /// case, and a value read from the server goes back to it unchanged.
+    public init(canonical text: String) throws {
+        _ = try Self(text)
+        self.text = text
+    }
 }
 
 /// Closed primitive field vocabulary introduced by inventory protocol 2.
@@ -260,5 +269,45 @@ public struct InventoryItemFieldEntry: Codable, Hashable, Sendable {
         self.source = source
         self.catalogueRevision = catalogueRevision
         self.dependencies = dependencies
+    }
+}
+
+extension InventoryInteger {
+    /// Decodes through the validating initialiser, so a non-canonical value
+    /// is `DecodingError.dataCorrupted`.
+    public init(from decoder: any Decoder) throws {
+        self = try decodeCanonical(Int64.self, key: .value, from: decoder, Self.init(_:))
+    }
+}
+
+extension InventoryDecimal {
+    /// Decodes through the validating initialiser, so a non-canonical value
+    /// is `DecodingError.dataCorrupted`.
+    public init(from decoder: any Decoder) throws {
+        self = try decodeCanonical(String.self, key: .text, from: decoder, Self.init(_:))
+    }
+}
+
+extension InventoryCanonicalDate {
+    /// Decodes through the validating initialiser, so a non-canonical value
+    /// is `DecodingError.dataCorrupted`.
+    public init(from decoder: any Decoder) throws {
+        self = try decodeCanonical(String.self, key: .text, from: decoder, Self.init(_:))
+    }
+}
+
+extension InventoryCanonicalDateTime {
+    /// Decodes through the validating initialiser, so a non-canonical value
+    /// is `DecodingError.dataCorrupted`.
+    public init(from decoder: any Decoder) throws {
+        self = try decodeCanonical(String.self, key: .text, from: decoder, Self.init(_:))
+    }
+}
+
+extension InventoryCanonicalURL {
+    /// Decodes through the validating initialiser, so a non-canonical value
+    /// is `DecodingError.dataCorrupted`.
+    public init(from decoder: any Decoder) throws {
+        self = try decodeCanonical(String.self, key: .text, from: decoder, Self.init(canonical:))
     }
 }
