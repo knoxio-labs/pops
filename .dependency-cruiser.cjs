@@ -30,6 +30,10 @@
  */
 const GENERATED_CLIENT = '(^|/)[a-z0-9-]+-api(/|-runtime-config\\.ts$)';
 
+const { discoverPillarPackageIdsOrThrow } = require('./scripts/ci/discover-pillar-package-ids.cjs');
+
+const PILLAR_PACKAGE_IDS = discoverPillarPackageIdsOrThrow(__dirname);
+
 module.exports = {
   forbidden: [
     {
@@ -40,12 +44,7 @@ module.exports = {
       from: { path: '^libs/' },
       to: {
         pathNot: '^libs/',
-        path: [
-          '^pillars/',
-          // KNOWN_PILLAR_IDS (disk-derived; `core` is now `registry` post-rename):
-          '^@pops/(ai|cerebrum|contacts|registry|docs|documents|finance|food|inventory|lists|mcp|media|moltbot|orchestrator|shell)(/|$)',
-          '^@pops/app-',
-        ],
+        path: ['^pillars/', `^@pops/(${PILLAR_PACKAGE_IDS.join('|')})(/|$)`, '^@pops/app-'],
       },
     },
     {
@@ -71,7 +70,7 @@ module.exports = {
       name: 'shell-no-cross-internal',
       severity: 'error',
       comment:
-        "ISO-R2 (shell): the shell composes the single in-repo SPA (ADR-002) by importing every pillar's @pops/app-<id> package, so that one edge is allowed — but only as far as the exports map goes. Those packages point `main` at src/index.ts rather than a built dist/ (which every other pillar package does, and doNotFollow skips), which is the only reason this edge resolves into the cruised tree at all. Everything past the entrypoint is the reach ISO-R2 forbids: not another pillar's src|db|migrations, and not an app's pages or generated client either.",
+        "ISO-R2 (shell): the shell mounts every pillar's UI from the registry at runtime, importing each pillar's built bundle by URL rather than any pillar's source (POPS-3227) — so the one edge this rule still allows, `pillars/<x>/app/src/index.ts`, is only as far as the exports map goes. Those packages point `main` at src/index.ts rather than a built dist/ (which every other pillar package does, and doNotFollow skips), which is the only reason this edge resolves into the cruised tree at all. Everything past the entrypoint is the reach ISO-R2 forbids: not another pillar's src|db|migrations, and not an app's pages or generated client either.",
       from: { path: '^pillars/shell/' },
       to: {
         path: '^pillars/[^/]+/',
