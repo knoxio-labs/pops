@@ -391,7 +391,7 @@ export type MobilePurchaseSearchResponse = z.infer<typeof MobilePurchaseSearchRe
 /** One entry in `GET /mobile/purchases/tags`'s vocabulary: the tag plus its use count. */
 export const MobileTagCountSchema = z.object({
   tag: z.string(),
-  count: z.number().int().nonnegative(),
+  count: z.int().nonnegative(),
 });
 
 /**
