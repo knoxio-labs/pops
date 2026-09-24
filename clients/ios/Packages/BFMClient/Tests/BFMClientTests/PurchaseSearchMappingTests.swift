@@ -19,7 +19,7 @@ internal struct PurchaseSearchMappingTests {
         let transport = StubTransport(status: .ok, json: #"{"hits":[]}"#)
         let repository = try BFMPurchasesRepository.stubbed(transport)
 
-        _ = try await repository.search(text: "kmart", status: status)
+        _ = try await repository.search(text: "kmart", status: status, tags: [])
 
         let sent = try #require(await transport.recorded.all.first)
         #expect(sent.request.path == "/mobile/purchases/search?q=kmart&status=\(wire)")
@@ -30,7 +30,7 @@ internal struct PurchaseSearchMappingTests {
         let transport = StubTransport(status: .ok, json: #"{"hits":[]}"#)
         let repository = try BFMPurchasesRepository.stubbed(transport)
 
-        _ = try await repository.search(text: "kmart", status: .any)
+        _ = try await repository.search(text: "kmart", status: .any, tags: [])
 
         let sent = try #require(await transport.recorded.all.first)
         #expect(sent.request.path == "/mobile/purchases/search?q=kmart")
@@ -41,7 +41,7 @@ internal struct PurchaseSearchMappingTests {
         let transport = StubTransport(status: .badRequest, json: "{}")
         let repository = try BFMPurchasesRepository.stubbed(transport)
 
-        let hits = try await repository.search(text: text, status: .unmatched)
+        let hits = try await repository.search(text: text, status: .unmatched, tags: [])
 
         #expect(hits.isEmpty)
         #expect(await transport.recorded.all.isEmpty)
@@ -60,7 +60,7 @@ internal struct PurchaseSearchMappingTests {
             )
         )
 
-        let hits = try await repository.search(text: "km-42", status: .any)
+        let hits = try await repository.search(text: "km-42", status: .any, tags: [])
 
         let order = PurchaseSearchOrder(
             id: "purchase-1",
@@ -77,7 +77,7 @@ internal struct PurchaseSearchMappingTests {
             StubTransport(status: .ok, json: Self.lineHit(matchField: "tag", matchedText: "garden"))
         )
 
-        let hits = try await repository.search(text: "garden", status: .any)
+        let hits = try await repository.search(text: "garden", status: .any, tags: [])
 
         let order = PurchaseSearchOrder(
             id: "purchase-7",
@@ -100,7 +100,8 @@ internal struct PurchaseSearchMappingTests {
             StubTransport(status: .ok, json: Self.lineHit(matchField: "name", matchedText: "Hose"))
         )
 
-        let hit = try #require(try await repository.search(text: "hose", status: .any).first)
+        let hit = try #require(
+            try await repository.search(text: "hose", status: .any, tags: []).first)
 
         guard case .line(_, _, _, _, _, let tagMatch) = hit else {
             Issue.record("expected a line hit, got \(hit)")
@@ -123,7 +124,7 @@ internal struct PurchaseSearchMappingTests {
         )
 
         await #expect(throws: RepositoryError.contractMismatch) {
-            try await repository.search(text: "x", status: .any)
+            try await repository.search(text: "x", status: .any, tags: [])
         }
     }
 
@@ -135,7 +136,68 @@ internal struct PurchaseSearchMappingTests {
         )
 
         await #expect(throws: RepositoryError.unauthorized) {
-            try await repository.search(text: "x", status: .any)
+            try await repository.search(text: "x", status: .any, tags: [])
+        }
+    }
+
+    @Test("chosen tags are sent as repeated query items, sorted for a stable request")
+    func sendsTags() async throws {
+        let transport = StubTransport(status: .ok, json: #"{"hits":[]}"#)
+        let repository = try BFMPurchasesRepository.stubbed(transport)
+
+        _ = try await repository.search(text: "kmart", status: .any, tags: ["garden", "camping"])
+
+        let sent = try #require(await transport.recorded.all.first)
+        #expect(sent.request.path == "/mobile/purchases/search?q=kmart&tags=camping&tags=garden")
+    }
+
+    @Test("no chosen tags sends no tags filter")
+    func emptyTagsOmitsFilter() async throws {
+        let transport = StubTransport(status: .ok, json: #"{"hits":[]}"#)
+        let repository = try BFMPurchasesRepository.stubbed(transport)
+
+        _ = try await repository.search(text: "kmart", status: .any, tags: [])
+
+        let sent = try #require(await transport.recorded.all.first)
+        #expect(sent.request.path == "/mobile/purchases/search?q=kmart")
+    }
+
+    @Test("the tags in use keep the server's most-used-first order")
+    func mapsTagsInUse() async throws {
+        let repository = try BFMPurchasesRepository.stubbed(
+            StubTransport(status: .ok, json: #"{"tags":["garden","camping","kitchen"]}"#)
+        )
+
+        let tags = try await repository.purchaseTags()
+
+        #expect(
+            tags == [
+                PurchaseTagCount(tag: "garden"),
+                PurchaseTagCount(tag: "camping"),
+                PurchaseTagCount(tag: "kitchen"),
+            ])
+    }
+
+    @Test("no tags in use is an empty list, not a failure")
+    func mapsNoTagsInUse() async throws {
+        let repository = try BFMPurchasesRepository.stubbed(
+            StubTransport(status: .ok, json: #"{"tags":[]}"#)
+        )
+
+        let tags = try await repository.purchaseTags()
+
+        #expect(tags.isEmpty)
+    }
+
+    @Test("an unauthorized tags-in-use response is the app's unauthorized error")
+    func purchaseTagsUnauthorized() async throws {
+        let repository = try BFMPurchasesRepository.stubbed(
+            StubTransport(
+                status: .unauthorized, json: TransactionsWire.failure(code: "invalid_token"))
+        )
+
+        await #expect(throws: RepositoryError.unauthorized) {
+            try await repository.purchaseTags()
         }
     }
 

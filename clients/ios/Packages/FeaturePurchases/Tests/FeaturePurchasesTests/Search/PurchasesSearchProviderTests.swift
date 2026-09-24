@@ -75,6 +75,32 @@ internal struct PurchasesSearchProviderTests {
         #expect(await repository.searchCalls.first?.status == .matched)
     }
 
+    @Test("chosen tags are sent to the repository on the next ask")
+    internal func tagsReachRepository() async throws {
+        let repository = InMemoryPurchasesRepository(hits: [Self.purchaseHit])
+        let reachability = ScriptedNetworkReachability(satisfied: true)
+        var events = PurchasesSearchProvider(repository: repository, reachability: reachability)
+            .answers(to: "bunnings", filter: PurchasesSearchFilter(tags: ["garden", "camping"]))
+            .makeAsyncIterator()
+
+        _ = await events.next()
+
+        #expect(await repository.searchCalls.first?.tags == ["garden", "camping"])
+    }
+
+    @Test("no chosen tags sends an empty set to the repository")
+    internal func noTagsSendsEmptySet() async throws {
+        let repository = InMemoryPurchasesRepository(hits: [Self.purchaseHit])
+        let reachability = ScriptedNetworkReachability(satisfied: true)
+        var events = PurchasesSearchProvider(repository: repository, reachability: reachability)
+            .answers(to: "bunnings", filter: PurchasesSearchFilter())
+            .makeAsyncIterator()
+
+        _ = await events.next()
+
+        #expect(await repository.searchCalls.first?.tags.isEmpty == true)
+    }
+
     @Test("a transport failure yields .failed")
     internal func transportFailure() async throws {
         let repository = InMemoryPurchasesRepository(hits: [Self.purchaseHit])
@@ -181,11 +207,15 @@ private struct DelayedPurchasesRepository: PurchasesRepository {
     let delay: Duration
     let tracker: CompletionTracker
 
-    func search(text: String, status: PurchaseSearchStatus) async throws -> [PurchaseSearchHit] {
+    func search(
+        text: String, status: PurchaseSearchStatus, tags: Set<String>
+    ) async throws -> [PurchaseSearchHit] {
         try await Task.sleep(for: delay)
         await tracker.markCompleted()
         return hits
     }
+
+    func purchaseTags() async throws -> [PurchaseTagCount] { [] }
 
     func purchases(
         after cursor: String?, statusFilter: PurchaseStatusFilter
