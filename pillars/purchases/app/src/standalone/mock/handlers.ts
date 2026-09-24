@@ -4,8 +4,29 @@ import { ORDER_INDEX_ROW } from '../fixtures/order-index';
 import { PRODUCT_DICTIONARY } from '../fixtures/product-dictionary';
 import { RECEIPT_DRAFT } from '../fixtures/receipt-draft';
 import { RECONCILE_QUEUE } from '../fixtures/reconcile-queue';
+import {
+  RECEIPT_IMAGE,
+  RECEIPT_SHA256,
+  SOURCE,
+  attachDocument,
+  createInventoryItem,
+  decideInventoryProposal,
+  patchItem,
+  reconcileLinks,
+  renameProduct,
+  updateAlias,
+} from './fixture-answers';
 
 import type { MockHandler, MockHandlers } from '@pops/pillar-sdk/testing/api-mock';
+
+import type {
+  AnalyticsProductLeaderboardResponses,
+  PurchaseCreateResponses,
+  PurchaseItemsByTagResponses,
+  ReconcileConfirmResponses,
+  ReconcileLinksBatchResponses,
+  ReconcileSweepResponses,
+} from '../../purchases-api/types.gen';
 
 /**
  * One handler per operation the purchases OpenAPI document declares.
@@ -27,8 +48,12 @@ import type { MockHandler, MockHandlers } from '@pops/pillar-sdk/testing/api-moc
  */
 
 const ok =
-  (body: unknown): MockHandler =>
+  <T>(body: T): MockHandler =>
   () => ({ body });
+
+const created =
+  <T>(body: T): MockHandler =>
+  () => ({ status: 201, body });
 
 /** `{ ok: true }`, the contract's answer for a write with nothing to report. */
 const acknowledged: MockHandler = () => ({ body: { ok: true } });
@@ -36,17 +61,18 @@ const acknowledged: MockHandler = () => ({ body: { ok: true } });
 export const handlers: MockHandlers = {
   // ── Reconcile ────────────────────────────────────────────────────────────
   'GET /reconcile/queue': ok(RECONCILE_QUEUE),
-  'GET /reconcile/links': ok({ purchases: [] }),
-  'POST /reconcile/links/batch': ok({ purchases: [] }),
-  'POST /reconcile/confirm': acknowledged,
+  'GET /reconcile/links': reconcileLinks,
+  'POST /reconcile/links/batch': ok<ReconcileLinksBatchResponses[200]>({ transactions: [] }),
+  'POST /reconcile/confirm': ok<ReconcileConfirmResponses[200]>({ ok: true, matchRuleId: null }),
   'POST /reconcile/unlink': acknowledged,
   'POST /reconcile/reject': acknowledged,
-  'POST /reconcile/sweep': ok({
+  'POST /reconcile/sweep': ok<ReconcileSweepResponses[200]>({
     kind: 'swept',
     chargesConsidered: RECONCILE_QUEUE.items.length,
     derivedChargesMinted: 0,
     linksTornDown: 0,
     linksWritten: 0,
+    reviewCount: RECONCILE_QUEUE.items.length,
   }),
 
   // ── Orders ───────────────────────────────────────────────────────────────
@@ -58,23 +84,26 @@ export const handlers: MockHandlers = {
     params['id'] === ORDER_ID
       ? { body: ORDER }
       : { status: 404, body: { code: 'NOT_FOUND', message: 'No such purchase' } },
-  'POST /purchases': ok(ORDER),
+  'POST /purchases': created<PurchaseCreateResponses[201]>(ORDER),
   'PATCH /purchases/{id}': ok(ORDER),
   'DELETE /purchases/{id}': acknowledged,
   'DELETE /purchases/{id}/capture/location': acknowledged,
-  'PATCH /purchases/{id}/items/{itemId}': ok(ORDER),
-  'POST /purchases/{id}/documents': ok(ORDER),
+  'PATCH /purchases/{id}/items/{itemId}': patchItem,
+  'POST /purchases/{id}/documents': attachDocument,
   'GET /purchases/{id}/inventory-proposals': ok({ proposals: [] }),
-  'POST /purchases/{id}/items/{itemId}/inventory-item': acknowledged,
-  'POST /purchases/{id}/items/{itemId}/inventory-proposal': acknowledged,
-  'GET /items': ok({ items: [] }),
+  'POST /purchases/{id}/items/{itemId}/inventory-item': createInventoryItem,
+  'POST /purchases/{id}/items/{itemId}/inventory-proposal': decideInventoryProposal,
+  'GET /items': ok<PurchaseItemsByTagResponses[200]>({
+    items: [],
+    pagination: { hasMore: false, limit: 50, offset: 0, total: 0 },
+  }),
   'GET /items/tags': ok({ tags: [] }),
 
   // ── Products ─────────────────────────────────────────────────────────────
   'GET /products': ok(PRODUCT_DICTIONARY),
-  'PATCH /products/{productId}': acknowledged,
+  'PATCH /products/{productId}': renameProduct,
   'DELETE /products/{productId}': acknowledged,
-  'PATCH /products/aliases/{aliasId}': acknowledged,
+  'PATCH /products/aliases/{aliasId}': updateAlias,
   'DELETE /products/aliases/{aliasId}': acknowledged,
   // Reported in full because the panel renders every counter, including the
   // retirals, which is the number the page exists to make visible.
@@ -109,8 +138,9 @@ export const handlers: MockHandlers = {
     unmatchedCount: 1,
     merchantLeaders: [],
   }),
-  'GET /analytics/product-leaderboard': ok({
+  'GET /analytics/product-leaderboard': ok<AnalyticsProductLeaderboardResponses[200]>({
     minOrderCount: 1,
+    period: { from: null, to: null },
     products: [],
     coverage: {
       confirmedProductLines: 2,
@@ -135,7 +165,7 @@ export const handlers: MockHandlers = {
   // lines rather than by wiring a second fixture.
   'POST /receipts/extract': ok({
     kind: 'draft',
-    receiptUris: [`pops://purchases/receipt/${'a'.repeat(64)}`],
+    receiptUris: [`pops://purchases/receipt/${RECEIPT_SHA256}`],
     reconciled: true,
     failures: [],
     matchedMerchantEntityId: null,
@@ -143,21 +173,13 @@ export const handlers: MockHandlers = {
   }),
   'POST /receipts/draft': ok(ORDER),
   'POST /purchases/manual': ok(ORDER),
-  'GET /receipts/{sha256}': ok({ contentType: 'image/jpeg', data: '', sha256: '' }),
-  'GET /receipts/{sha256}/thumbnail': ok({ contentType: 'image/jpeg', data: '', sha256: '' }),
+  'GET /receipts/{sha256}': ok(RECEIPT_IMAGE),
+  'GET /receipts/{sha256}/thumbnail': ok(RECEIPT_IMAGE),
 
   // ── Sources ──────────────────────────────────────────────────────────────
   'GET /sources': ok({ items: [] }),
-  'GET /sources/{id}': ok({
-    autoLinkPolicy: 'review',
-    createdAt: '2026-07-02T10:00:00.000Z',
-    descriptorPattern: null,
-    id: 'hardware-barn',
-    ingestAdapter: null,
-    label: 'Hardware Barn',
-    settlementWindowDays: 7,
-  }),
-  'PUT /sources/{id}': acknowledged,
+  'GET /sources/{id}': ok(SOURCE),
+  'PUT /sources/{id}': ok(SOURCE),
   'DELETE /sources/{id}': acknowledged,
 
   // ── Search ───────────────────────────────────────────────────────────────

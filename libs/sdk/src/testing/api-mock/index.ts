@@ -16,3 +16,8 @@ export {
 } from './install.js';
 export { matchOperation, type MatchedOperation, type OperationKey } from './router.js';
 export { contractCoverage, contractOperations, type ContractCoverage } from './contract.js';
+export {
+  contractResponseConformance,
+  type ResponseConformance,
+  type SampleRequest,
+} from './responses.js';

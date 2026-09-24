@@ -5,14 +5,18 @@ import { done, notFound, ok, page } from '../respond';
 import type { MockHandler, MockHandlers } from '@pops/pillar-sdk/testing/api-mock';
 
 import type {
+  CorrectionsAnalyzeCorrectionResponses,
   CorrectionsApplyExistingResponses,
   CorrectionsPreviewChangeSetResponses,
   CorrectionsProposeChangeSetResponses,
   CorrectionsRuleMatchPreviewResponses,
   TagRulesApplyExistingResponses,
+  TagRulesApplyResponses,
   TagRulesFacetsResponses,
   TagRulesMatchPreviewResponses,
   TagRulesPreviewResponses,
+  TagRulesProposeResponses,
+  TagRulesUpdateResponses,
 } from '../../../finance-api/types.gen';
 
 /**
@@ -22,7 +26,21 @@ import type {
  */
 
 const [grocerRule] = CORRECTIONS;
-const [firstTagRule] = TAG_RULES;
+/** A tag rule as a write returns it: the stored row, without the list's ledger-match annotations. */
+function storedTagRule({
+  ledgerMatchStatus: _ledgerMatchStatus,
+  overlaps: _overlaps,
+  ...rule
+}: (typeof TAG_RULES)[number]): TagRulesUpdateResponses[200]['data'] {
+  return rule;
+}
+
+const tagRuleUpdated: MockHandler = ({ params }) => {
+  const rule = TAG_RULES.find((r) => r.id === params['id']);
+  if (rule === undefined) return notFound('tag rule');
+  const body: TagRulesUpdateResponses[200] = { data: storedTagRule(rule), message: 'updated' };
+  return { body };
+};
 
 const correctionById: MockHandler = ({ params }) => {
   const rule = CORRECTIONS.find((r) => r.id === params['id']);
@@ -70,7 +88,9 @@ export const ruleHandlers: MockHandlers = {
   'POST /corrections/{id}/apply-existing': ok<CorrectionsApplyExistingResponses[200]>({
     data: { dryRun: true, matched: 1, updated: 0, skippedManual: 0, skippedUncertain: 0 },
   }),
-  'POST /corrections/analyze': ok({ data: { pattern: 'HBR GROCER', confidence: 0.8 } }),
+  'POST /corrections/analyze': ok<CorrectionsAnalyzeCorrectionResponses[200]>({
+    data: { pattern: 'HBR GROCER', confidence: 0.8, matchType: 'contains' },
+  }),
   'POST /corrections/find-match': ok({ data: grocerRule, status: 'matched' }),
   'POST /corrections/generate-rules': ok({ proposals: [] }),
   'POST /corrections/list-merged': (request) => ({ body: page(CORRECTIONS, request) }),
@@ -88,7 +108,7 @@ export const ruleHandlers: MockHandlers = {
 
   'GET /tag-rules': (request) => ({ body: page(TAG_RULES, request) }),
   'GET /tag-rules/{id}': tagRuleById,
-  'PATCH /tag-rules/{id}': ok({ data: firstTagRule, message: 'updated' }),
+  'PATCH /tag-rules/{id}': tagRuleUpdated,
   'DELETE /tag-rules/{id}': done,
   'POST /tag-rules/{id}/disable': done,
   'POST /tag-rules/{id}/apply-existing': ok<TagRulesApplyExistingResponses[200]>({
@@ -103,12 +123,23 @@ export const ruleHandlers: MockHandlers = {
     counts: { affected: 0, newTagProposals: 0, removed: 0, suggestionChanges: 0 },
     newTags: [],
   }),
-  'POST /tag-rules/propose': ok({
-    changeSet: { ops: [] },
-    preview: { affected: [], counts: { affected: 0 } },
-    rationale: 'Nothing to propose.',
+  'POST /tag-rules/propose': ok<TagRulesProposeResponses[200]>({
+    changeSet: {
+      ops: [
+        {
+          op: 'add',
+          data: { descriptionPattern: 'FUEL', matchType: 'contains', tags: ['transport'] },
+        },
+      ],
+    },
+    preview: {
+      affected: [],
+      counts: { affected: 0, newTagProposals: 0, removed: 0, suggestionChanges: 0 },
+      newTags: [],
+    },
+    rationale: 'Fuel stations are transport.',
   }),
-  'POST /tag-rules/apply': ok({ rules: TAG_RULES }),
+  'POST /tag-rules/apply': ok<TagRulesApplyResponses[200]>({ rules: TAG_RULES.map(storedTagRule) }),
   'POST /tag-rules/reject': done,
   'POST /tag-rules/resolve-add-collisions': ok({ collisions: [] }),
 };

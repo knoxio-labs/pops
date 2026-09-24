@@ -3,7 +3,13 @@ import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { contractCoverage, type MockHandlers } from '@pops/pillar-sdk/testing/api-mock';
+import {
+  contractCoverage,
+  contractOperations,
+  contractResponseConformance,
+  type MockHandlers,
+  type SampleRequest,
+} from '@pops/pillar-sdk/testing/api-mock';
 
 import { contactsHandlers, contactsUnavailableHandlers } from './contacts-handlers';
 import { financeHandlers } from './finance-handlers';
@@ -33,6 +39,10 @@ interface ContractCase {
   readonly handlers: MockHandlers;
   /** A floor below the real count: a spec this could not read would make every other assertion vacuous. */
   readonly atLeast: number;
+  /** Whether every body is checked against the contract; false for a set that answers only an out-of-contract status. */
+  readonly conforms: boolean;
+  /** Requests that reach a fixture where the synthesized default would miss it. */
+  readonly samples?: Readonly<Record<string, SampleRequest>>;
 }
 
 const CONTRACTS: readonly ContractCase[] = [
@@ -41,24 +51,38 @@ const CONTRACTS: readonly ContractCase[] = [
     spec: '../openapi/finance.openapi.json',
     handlers: financeHandlers,
     atLeast: 100,
+    conforms: true,
+    samples: {
+      'DELETE /transactions/{id}': { params: { id: 'txn-hbr-0904' } },
+      'PATCH /tag-rules/{id}': { params: { id: 'tag-rule-groceries' } },
+      'POST /accounts/{id}/merge/preview': { params: { id: 'acc-everyday' } },
+    },
   },
   {
     name: 'contacts',
     spec: 'contracts/contacts.openapi.json',
     handlers: contactsHandlers,
     atLeast: 15,
+    conforms: true,
   },
   {
     name: 'contacts (absent)',
     spec: 'contracts/contacts.openapi.json',
     handlers: contactsUnavailableHandlers,
     atLeast: 15,
+    conforms: false,
   },
   {
     name: 'purchases',
     spec: 'contracts/purchases.openapi.json',
     handlers: purchasesHandlers,
     atLeast: 35,
+    conforms: true,
+    samples: {
+      'GET /reconcile/links': {
+        query: new URLSearchParams({ transactionUri: 'pops://finance/transaction/txn-hbr-0904' }),
+      },
+    },
   },
 ];
 
@@ -77,6 +101,30 @@ describe.each(CONTRACTS)('the $name mock layer covers its contract', (contract) 
     expect(coverage.unexpected).toEqual([]);
   });
 });
+
+describe.each(CONTRACTS.filter((contract) => contract.conforms))(
+  'the $name mock layer answers every operation with a contract-shaped body',
+  async (contract) => {
+    const conformance = await contractResponseConformance(
+      readSpec(contract.spec),
+      contract.handlers,
+      contract.samples
+    );
+
+    it('checks every declared operation', () => {
+      expect(conformance.map((result) => result.operation)).toEqual(
+        contractOperations(readSpec(contract.spec))
+      );
+    });
+
+    it.each(conformance.map((result) => [result.operation, result] as const))(
+      '%s',
+      (_operation, { operationId, schemaPath, issues }) => {
+        expect(issues, `${operationId ?? 'no operationId'} against ${schemaPath}`).toEqual([]);
+      }
+    );
+  }
+);
 
 describe('contacts, absent', () => {
   it.each(Object.entries(contactsUnavailableHandlers))(
