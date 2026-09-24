@@ -2,8 +2,7 @@ import { createInstance, type i18n } from 'i18next';
 import { useMemo } from 'react';
 import { I18nextProvider, initReactI18next } from 'react-i18next';
 
-import enAUFood from '@pops/locales/en-AU/food.json';
-
+import enAUFood from '../../../locales/en-AU.json';
 import { SubstitutionsTable } from './SubstitutionsTable';
 
 import type { Meta, StoryObj } from '@storybook/react-vite';

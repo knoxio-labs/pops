@@ -7,7 +7,7 @@ import { I18nextProvider, initReactI18next } from 'react-i18next';
 import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import enAUFood from '@pops/locales/en-AU/food.json';
+import enAUFood from '../../../locales/en-AU.json';
 
 const recipesCreateMock = vi.hoisted(() => vi.fn());
 

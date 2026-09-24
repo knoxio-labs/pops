@@ -7,6 +7,7 @@ import { promisify } from 'node:util';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import { MEDIA_PAGES, MEDIA_SETTINGS_WIDGET_SLOTS } from '@pops/media/manifest';
+import { RemotePillarI18nSchema } from '@pops/pillar-sdk';
 
 const run = promisify(execFile);
 
@@ -58,6 +59,16 @@ describe('media remote bundle', () => {
 
   it('satisfies the module shape the shell narrows to', () => {
     expect(() => assertRemoteUiModule(imported)).not.toThrow();
+  });
+
+  it('exports the translations the shell registers, inlined into the bundle', () => {
+    const exported =
+      typeof imported === 'object' && imported !== null && 'i18n' in imported
+        ? imported.i18n
+        : undefined;
+    const i18n = RemotePillarI18nSchema.parse(exported);
+    expect(i18n.namespace).toBe('media');
+    expect(Object.keys(i18n.resources['pt-BR']).length).toBeGreaterThan(0);
   });
 
   it('resolves every page slot to a component', () => {

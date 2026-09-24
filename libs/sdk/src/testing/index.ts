@@ -4,6 +4,7 @@ export {
   configureDiscoveryForTest,
 } from './discovery.js';
 export { fakePillarHandle, type FakeProcedure, type FakeRouterTree } from './fake-handle.js';
+export { localeCatalogueProblems } from './locale-parity.js';
 export { resolvePillarDir } from './pillar-dir.js';
 export { pageTreeMismatches, type RouteTreeNode } from './route-tree.js';
 export {

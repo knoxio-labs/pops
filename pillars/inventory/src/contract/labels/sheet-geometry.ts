@@ -1,9 +1,11 @@
 /**
  * Checking a sheet a person measured by hand before anything prints on it.
  */
-import { A4_HEIGHT_MM, A4_WIDTH_MM } from './sheet-layouts';
+import { z } from 'zod';
 
-import type { SheetGeometry } from './sheet-layouts';
+import { A4_HEIGHT_MM, A4_WIDTH_MM } from './sheet-layouts.js';
+
+import type { SheetGeometry } from './sheet-layouts.js';
 
 const EPSILON_MM = 0.01;
 
@@ -82,4 +84,35 @@ function overflowProblems(geometry: SheetGeometry): string[] {
 export function sheetGeometryProblems(geometry: SheetGeometry): string[] {
   const problems = [...countProblems(geometry), ...measureProblems(geometry)];
   return problems.length > 0 ? problems : overflowProblems(geometry);
+}
+
+const StoredSheet = z.object({
+  columns: z.number(),
+  rows: z.number(),
+  labelWidthMm: z.number(),
+  labelHeightMm: z.number(),
+  marginTopMm: z.number(),
+  marginLeftMm: z.number(),
+  pitchXMm: z.number(),
+  pitchYMm: z.number(),
+}) satisfies z.ZodType<SheetGeometry>;
+
+function parseJson(raw: string): unknown {
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Reads a sheet geometry back from its JSON form (what a browser stored for
+ * the custom sheet), or null when it is absent, malformed or no longer
+ * printable.
+ */
+export function parseSheetGeometry(raw: string | null): SheetGeometry | null {
+  if (raw === null) return null;
+  const parsed = StoredSheet.safeParse(parseJson(raw));
+  if (!parsed.success) return null;
+  return sheetGeometryProblems(parsed.data).length === 0 ? parsed.data : null;
 }

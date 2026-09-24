@@ -3,7 +3,7 @@ import '@testing-library/jest-dom/vitest';
 import { createInstance } from 'i18next';
 import { initReactI18next } from 'react-i18next';
 
-import enAUFinance from '@pops/locales/en-AU/finance.json';
+import enAUFinance from './locales/en-AU.json';
 
 // jsdom ships neither ResizeObserver nor Element.scrollIntoView; cmdk and the
 // Radix popover/select primitives use both on mount.

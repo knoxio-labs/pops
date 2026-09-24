@@ -5,8 +5,7 @@ import { I18nextProvider, initReactI18next, useTranslation } from 'react-i18next
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it } from 'vitest';
 
-import enAULists from '@pops/locales/en-AU/lists.json';
-
+import enAULists from '../../../locales/en-AU.json';
 import { ListDetailHeader } from '../../detail/ListDetailHeader';
 import { ListRow } from '../../lists-index/ListRow';
 import { ListKindChip } from '../ListKindChip';

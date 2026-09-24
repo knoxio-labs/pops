@@ -9,7 +9,7 @@ import { Button, SearchPickerDialog } from '@pops/ui';
 
 import type { ReactElement } from 'react';
 
-import type { PrintSubject } from './print-subject';
+import type { PrintSubject } from '@pops/inventory/labels';
 
 /** One pickable item, with what it contains when it is a box. */
 export interface PrintCatalogueEntry {

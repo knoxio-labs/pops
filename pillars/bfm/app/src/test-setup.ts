@@ -3,7 +3,7 @@ import '@testing-library/jest-dom/vitest';
 import { createInstance } from 'i18next';
 import { initReactI18next } from 'react-i18next';
 
-import enAUBfm from '@pops/locales/en-AU/bfm.json';
+import enAUBfm from './locales/en-AU.json';
 
 const i18n = createInstance();
 

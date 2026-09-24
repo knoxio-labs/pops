@@ -1,50 +1,31 @@
 /**
  * i18next initialization for the POPS shell.
  *
- * Supported locales: en-AU (default), pt-BR.
- * Namespaces: common, shell, navigation, inventory, cerebrum, finance, food, lists, ai, media, bfm, purchases, ui.
+ * Locales are the `SUPPORTED_LOCALES` `@pops/pillar-sdk` declares, falling
+ * back to its `DEFAULT_LOCALE`. The shell registers only the namespaces it and
+ * the kit read — `common`, `shell`, `navigation` and `ui`, from
+ * `@pops/locales`. Each pillar owns its own namespace and ships it in its
+ * remote bundle's `i18n` export; the runtime loader adds it to this instance
+ * when that pillar is first loaded (`app/remote-translations.ts`), so nothing
+ * here names a pillar.
  *
  * Language preference is persisted to localStorage under the key `pops-locale`.
  */
 import { createInstance } from 'i18next';
 import { initReactI18next } from 'react-i18next';
 
-import enAUAi from '@pops/locales/en-AU/ai.json';
-import enAUBfm from '@pops/locales/en-AU/bfm.json';
-import enAUCerebrum from '@pops/locales/en-AU/cerebrum.json';
 import enAUCommon from '@pops/locales/en-AU/common.json';
-import enAUFinance from '@pops/locales/en-AU/finance.json';
-import enAUFood from '@pops/locales/en-AU/food.json';
-import enAUInventory from '@pops/locales/en-AU/inventory.json';
-import enAULists from '@pops/locales/en-AU/lists.json';
-import enAUMedia from '@pops/locales/en-AU/media.json';
 import enAUNavigation from '@pops/locales/en-AU/navigation.json';
-import enAUPurchases from '@pops/locales/en-AU/purchases.json';
 import enAUShell from '@pops/locales/en-AU/shell.json';
 import enAUUi from '@pops/locales/en-AU/ui.json';
-import ptBRAi from '@pops/locales/pt-BR/ai.json';
-import ptBRBfm from '@pops/locales/pt-BR/bfm.json';
-import ptBRCerebrum from '@pops/locales/pt-BR/cerebrum.json';
 import ptBRCommon from '@pops/locales/pt-BR/common.json';
-import ptBRFinance from '@pops/locales/pt-BR/finance.json';
-import ptBRFood from '@pops/locales/pt-BR/food.json';
-import ptBRInventory from '@pops/locales/pt-BR/inventory.json';
-import ptBRLists from '@pops/locales/pt-BR/lists.json';
-import ptBRMedia from '@pops/locales/pt-BR/media.json';
 import ptBRNavigation from '@pops/locales/pt-BR/navigation.json';
-import ptBRPurchases from '@pops/locales/pt-BR/purchases.json';
 import ptBRShell from '@pops/locales/pt-BR/shell.json';
 import ptBRUi from '@pops/locales/pt-BR/ui.json';
+import { DEFAULT_LOCALE, SUPPORTED_LOCALES, type SupportedLocale } from '@pops/pillar-sdk';
 
 /** LocalStorage key for persisting the user's locale choice. */
 export const LOCALE_STORAGE_KEY = 'pops-locale';
-
-/** Supported locale codes. */
-export const SUPPORTED_LOCALES = ['en-AU', 'pt-BR'] as const;
-export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
-
-/** Default locale. */
-export const DEFAULT_LOCALE: SupportedLocale = 'en-AU';
 
 function getStoredLocale(): SupportedLocale {
   const stored = localStorage.getItem(LOCALE_STORAGE_KEY);
@@ -54,22 +35,8 @@ function getStoredLocale(): SupportedLocale {
   return DEFAULT_LOCALE;
 }
 
-/** Namespaces registered with i18next, in resource-loading order. */
-export const NAMESPACES = [
-  'common',
-  'shell',
-  'navigation',
-  'inventory',
-  'cerebrum',
-  'finance',
-  'food',
-  'lists',
-  'ai',
-  'media',
-  'bfm',
-  'purchases',
-  'ui',
-] as const;
+/** The shared namespaces the shell registers at init, in resource-loading order. */
+export const NAMESPACES = ['common', 'shell', 'navigation', 'ui'] as const;
 
 const i18n = createInstance();
 
@@ -93,35 +60,22 @@ void i18n.use(initReactI18next).init({
   ns: [...NAMESPACES],
   defaultNS: 'common',
   interpolation: { escapeValue: false },
+  // A pillar's namespace is added when its bundle loads, which can be after
+  // the shell has rendered something keyed into it — the capture modal's
+  // title names the overlay pillar's namespace — so an added bundle has to
+  // re-render whatever reads through `useTranslation`.
+  react: { bindI18nStore: 'added' },
   resources: {
     'en-AU': {
       common: enAUCommon,
       shell: enAUShell,
       navigation: enAUNavigation,
-      inventory: enAUInventory,
-      cerebrum: enAUCerebrum,
-      finance: enAUFinance,
-      food: enAUFood,
-      lists: enAULists,
-      ai: enAUAi,
-      media: enAUMedia,
-      bfm: enAUBfm,
-      purchases: enAUPurchases,
       ui: enAUUi,
     },
     'pt-BR': {
       common: ptBRCommon,
       shell: ptBRShell,
       navigation: ptBRNavigation,
-      inventory: ptBRInventory,
-      cerebrum: ptBRCerebrum,
-      finance: ptBRFinance,
-      food: ptBRFood,
-      lists: ptBRLists,
-      ai: ptBRAi,
-      media: ptBRMedia,
-      bfm: ptBRBfm,
-      purchases: ptBRPurchases,
       ui: ptBRUi,
     },
   },

@@ -5,8 +5,7 @@ import { useMemo, type ReactElement } from 'react';
 import { I18nextProvider, initReactI18next } from 'react-i18next';
 import { describe, expect, it, vi } from 'vitest';
 
-import enAUFood from '@pops/locales/en-AU/food.json';
-
+import enAUFood from '../../../locales/en-AU.json';
 import { type FailedRow } from '../inbox-types.js';
 import { ViewSourceDialog } from '../ViewSourceDialog.js';
 

@@ -107,20 +107,24 @@ internal struct PurchaseCapturePresentationModifier: ViewModifier {
     private var batch: some View {
         @Bindable var flow = flow
 
+        // The destination belongs inside the stack: attached to the NavigationStack itself it is
+        // never registered, and every push renders SwiftUI's missing-destination placeholder.
         return NavigationStack(path: $flow.path) {
-            if let staging = flow.staging {
-                PurchaseStagingGrid(
-                    model: staging,
-                    onRead: flow.read,
-                    onCancel: flow.cancel,
-                    onAdd: { source in Task { await flow.pick(source) } },
-                    onReplace: { pageID, source in
-                        Task { await flow.pick(source, replacing: pageID) }
-                    })
+            Group {
+                if let staging = flow.staging {
+                    PurchaseStagingGrid(
+                        model: staging,
+                        onRead: flow.read,
+                        onCancel: flow.cancel,
+                        onAdd: { source in Task { await flow.pick(source) } },
+                        onReplace: { pageID, source in
+                            Task { await flow.pick(source, replacing: pageID) }
+                        })
+                }
             }
-        }
-        .navigationDestination(for: PurchaseCaptureRoute.self) { route in
-            destination(route)
+            .navigationDestination(for: PurchaseCaptureRoute.self) { route in
+                destination(route)
+            }
         }
     }
 

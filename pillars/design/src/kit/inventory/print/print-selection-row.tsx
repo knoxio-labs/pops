@@ -8,8 +8,9 @@ import { Button } from '@pops/ui';
 
 import { PrintCodeField } from './print-code-field';
 
+import type { PrintSubject } from '@pops/inventory/labels';
+
 import type { TakenCode } from './print-code-field';
-import type { PrintSubject } from './print-subject';
 
 /** Props for {@link PrintSelectionRow}. */
 export interface PrintSelectionRowProps {
