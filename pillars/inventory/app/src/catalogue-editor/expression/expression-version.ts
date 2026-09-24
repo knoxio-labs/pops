@@ -3,7 +3,7 @@ import { needsDimensionalUnits } from './slot-types';
 import type { ExpressionContext, ExpressionNode, ValueType } from './model';
 
 /** The expression version a new computed field is saved with. */
-export const LATEST_EXPRESSION_VERSION = 2;
+export const LATEST_EXPRESSION_VERSION = 2 as const;
 
 /**
  * The expression version a computed field's save sends. A new field, or one
@@ -17,7 +17,7 @@ export function savedExpressionVersion(
   context: ExpressionContext,
   expression: ExpressionNode,
   fieldType: ValueType
-): number {
+): 1 | 2 {
   if (storedVersion !== 1) return LATEST_EXPRESSION_VERSION;
   return needsDimensionalUnits(context, expression, fieldType) ? LATEST_EXPRESSION_VERSION : 1;
 }
