@@ -85,6 +85,7 @@ export function validatedExpression(
     dependencies: [],
     field: { typeId: 'type', fieldId: 'computed' },
     resultType,
+    fieldKinds: new Map(),
   };
 }
 

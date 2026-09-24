@@ -14,9 +14,8 @@ internal struct InventoryProtocol2FieldRow: View {
     /// override before Create has run).
     let overridesEnabled: Bool
     let referenceTargets: [InventoryProtocol2ReferenceTarget]
-    /// The label of another field on this type, for naming what a computed
-    /// field is waiting on.
-    let dependencyLabel: (String) -> String?
+    /// What a computed field is waiting on while it is unavailable, named.
+    let missingInputs: [InventoryMissingInput]
     let setText: (String, String) -> Void
     let setValue: (InventoryPrimitiveValue?, String) -> Void
     let setReferenceKind: (InventoryReferenceTargetKind, String) -> Void
@@ -77,7 +76,8 @@ internal struct InventoryProtocol2FieldRow: View {
 extension InventoryProtocol2FieldRow {
     private var computedFieldRow: InventoryProtocol2ComputedFieldRow {
         InventoryProtocol2ComputedFieldRow(
-            field: field, display: computedDisplay, overridesEnabled: overridesEnabled)
+            field: field, display: computedDisplay, overridesEnabled: overridesEnabled,
+            missingInputs: missingInputs)
     }
 
     @ViewBuilder private var computedRow: some View {
@@ -85,41 +85,47 @@ extension InventoryProtocol2FieldRow {
         if let overrideEntry {
             overrideEditor(overrideEntry)
         } else {
-            LabeledContent {
-                HStack(spacing: PopsSpacing.sm) {
-                    Text(
-                        row.text(
-                            referenceLabel: referenceLabelLookup, dependencyLabel: dependencyLabel)
-                    )
-                    .foregroundStyle(row.isMuted ? Color.popsMutedForeground : .popsForeground)
-                    if row.canStartOverride {
-                        Button {
-                            self.overrideEntry = InventoryProtocol2DraftEntry(id: "override")
-                        } label: {
-                            Image(systemName: "pencil.circle")
-                        }
-                        .buttonStyle(.borderless)
-                        .accessibilityLabel("Override \(field.label)")
-                    } else if row.canClearOverride {
-                        Button(action: clearOverride) {
-                            Image(systemName: "arrow.uturn.backward.circle")
-                        }
-                        .buttonStyle(.borderless)
-                        .accessibilityLabel("Clear \(field.label) override")
-                    }
-                }
-            } label: {
-                VStack(alignment: .leading, spacing: PopsSpacing.xs) {
-                    Text(field.label)
-                    if let caption = row.caption {
-                        Text(caption)
-                            .font(.popsCaption)
-                            .foregroundStyle(Color.popsMutedForeground)
-                    }
+            VStack(alignment: .leading, spacing: PopsSpacing.xs) {
+                computedValue(row)
+                if !row.listedMissingInputs.isEmpty {
+                    InventoryMissingInputsList(inputs: row.listedMissingInputs)
                 }
             }
-            .accessibilityElement(children: .combine)
         }
+    }
+
+    private func computedValue(_ row: InventoryProtocol2ComputedFieldRow) -> some View {
+        LabeledContent {
+            HStack(spacing: PopsSpacing.sm) {
+                Text(row.text(referenceLabel: referenceLabelLookup))
+                    .foregroundStyle(row.isMuted ? Color.popsMutedForeground : .popsForeground)
+                if row.canStartOverride {
+                    Button {
+                        self.overrideEntry = InventoryProtocol2DraftEntry(id: "override")
+                    } label: {
+                        Image(systemName: "pencil.circle")
+                    }
+                    .buttonStyle(.borderless)
+                    .accessibilityLabel("Override \(field.label)")
+                } else if row.canClearOverride {
+                    Button(action: clearOverride) {
+                        Image(systemName: "arrow.uturn.backward.circle")
+                    }
+                    .buttonStyle(.borderless)
+                    .accessibilityLabel("Clear \(field.label) override")
+                }
+            }
+        } label: {
+            VStack(alignment: .leading, spacing: PopsSpacing.xs) {
+                Text(field.label)
+                if let caption = row.caption {
+                    Text(caption)
+                        .font(.popsCaption)
+                        .foregroundStyle(Color.popsMutedForeground)
+                }
+            }
+        }
+        .accessibilityElement(children: .combine)
     }
 
     private func overrideEditor(_ entry: InventoryProtocol2DraftEntry) -> some View {

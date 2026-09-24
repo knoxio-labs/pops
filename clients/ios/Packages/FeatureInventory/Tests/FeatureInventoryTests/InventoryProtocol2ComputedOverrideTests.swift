@@ -151,11 +151,10 @@ internal struct InventoryProtocol2ComputedOverrideTests {
         defer { opened.loading.cancel() }
         let row = InventoryProtocol2ComputedFieldRow(
             field: Self.volume, display: opened.form.protocol2ComputedDisplays[Self.volume.id],
-            overridesEnabled: opened.form.mode == .edit)
+            overridesEnabled: opened.form.mode == .edit,
+            missingInputs: opened.form.protocol2ComputedMissingInputs[Self.volume.id] ?? [])
 
-        #expect(
-            row.text(referenceLabel: { _ in nil }, dependencyLabel: { _ in "Width" })
-                == "Unavailable until Width is set")
+        #expect(row.text(referenceLabel: { _ in nil }) == "Unavailable until Width is set")
         #expect(row.canStartOverride)
 
         await opened.form.setComputedOverride(.string("6 l"), for: Self.volume)

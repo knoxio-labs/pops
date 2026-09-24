@@ -53,6 +53,8 @@ export interface ValidatedExpression {
   readonly field: ExpressionFieldKey;
   /** The computed field's declared type, which the result is converted into and checked against. */
   readonly resultType: ExpressionValueType;
+  /** Every catalogue field's declared kind by id, which types a version-2 `equal` on a read. */
+  readonly fieldKinds: ReadonlyMap<string, PrimitiveKind>;
 }
 
 /** Stable runtime identity and revision of one value read during evaluation. */

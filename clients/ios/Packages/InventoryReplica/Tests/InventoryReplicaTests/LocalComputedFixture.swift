@@ -28,14 +28,14 @@ internal enum LocalComputedFixture {
 
     static func field(
         _ id: String, key: String, kind: InventoryPrimitiveKind, expression: InventoryJSON? = nil,
-        allowOverride: Bool = false
+        expressionVersion: Int = 1, allowOverride: Bool = false
     ) -> InventoryCatalogueField {
         InventoryCatalogueField(
             id: id, typeId: typeId, key: key, label: key, sortOrder: 0, kind: kind,
             cardinality: .one, required: false, storage: expression == nil ? .stored : .computed,
             references: InventoryReferenceConstraint(
                 targetKinds: kind == .reference ? [.item] : []),
-            expressionVersion: expression == nil ? nil : 1, expression: expression,
+            expressionVersion: expression == nil ? nil : expressionVersion, expression: expression,
             allowOverride: allowOverride)
     }
 
@@ -63,13 +63,22 @@ internal enum LocalComputedFixture {
     static func catalogue(replacing fieldId: String, with expression: InventoryJSON)
         -> InventoryCatalogueSnapshot
     {
+        catalogue(replacing: [fieldId: expression])
+    }
+
+    /// The catalogue with each named computed field's expression replaced,
+    /// stored as `expressionVersion`.
+    static func catalogue(
+        replacing expressions: [String: InventoryJSON], expressionVersion: Int = 1
+    ) -> InventoryCatalogueSnapshot {
         let types = catalogue.types.map { type in
             InventoryCatalogueType(
                 id: type.id, key: type.key, label: type.label, sortOrder: type.sortOrder,
                 fields: type.fields.map { candidate in
-                    guard candidate.id == fieldId else { return candidate }
+                    guard let expression = expressions[candidate.id] else { return candidate }
                     return field(
-                        fieldId, key: candidate.key, kind: candidate.kind, expression: expression,
+                        candidate.id, key: candidate.key, kind: candidate.kind,
+                        expression: expression, expressionVersion: expressionVersion,
                         allowOverride: candidate.allowOverride)
                 })
         }

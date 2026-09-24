@@ -31,7 +31,8 @@ internal struct InventoryComputedDefinitionTests {
 
     @Test("a catalogue field's expression parses and evaluates")
     func parsesCatalogueField() throws {
-        let definition = try InventoryComputedDefinition(Self.field(expression: Self.literal("7")))
+        let definition = try InventoryComputedDefinition(
+            Self.field(expression: Self.literal("7")), fieldKinds: [:])
         let value = try definition.evaluate(
             override: nil, catalogueRevision: 4, itemRevision: 2, in: Empty())
         #expect(value.evaluation == .ok(.integer(try InventoryInteger(7))))
@@ -54,7 +55,8 @@ internal struct InventoryComputedDefinitionTests {
             throws: InventoryExpressionRejection(
                 code: "computed_expression_required", path: "00000000-0000-4000-8000-000000000201")
         ) {
-            try InventoryComputedDefinition(Self.field(storage: .stored, expression: nil))
+            try InventoryComputedDefinition(
+                Self.field(storage: .stored, expression: nil), fieldKinds: [:])
         }
     }
 
@@ -65,7 +67,8 @@ internal struct InventoryComputedDefinitionTests {
             throws: InventoryExpressionRejection(
                 code: "expression_op_unknown", path: "expression.op")
         ) {
-            try InventoryComputedDefinition(Self.field(expression: json))
+            try InventoryComputedDefinition(
+                Self.field(expression: json), fieldKinds: [:])
         }
     }
 }

@@ -12,22 +12,26 @@ internal struct InventoryProtocol2ComputedFieldRow {
     /// Whether an override can be set or cleared right now: only once the
     /// item exists, since the reducer requires it.
     internal let overridesEnabled: Bool
+    /// What the value is waiting on while it is unavailable, named.
+    internal var missingInputs: [InventoryMissingInput] = []
 
-    internal func text(
-        referenceLabel: (InventoryReferenceValue) -> String?,
-        dependencyLabel: (String) -> String?
-    ) -> String {
+    internal func text(referenceLabel: (InventoryReferenceValue) -> String?) -> String {
         guard let display else { return "Not calculated yet" }
         switch display {
         case .value(let value), .overridden(let value):
             return InventoryProtocol2Display.text(
                 for: [value], field: field, referenceLabel: referenceLabel)
-        case .unavailable(let reason, let failedFieldId):
-            return InventoryProtocol2Display.unavailable(
-                reason: reason, failedFieldId: failedFieldId, dependencyLabel: dependencyLabel)
+        case .unavailable(let reason, _):
+            return InventoryProtocol2Display.unavailable(reason: reason, missing: missingInputs)
         case .outOfDate:
             return "Out of date"
         }
+    }
+
+    /// The missing inputs listed under the row; see ``InventoryMissingInputs/listed(_:)``.
+    internal var listedMissingInputs: [InventoryMissingInput] {
+        guard case .unavailable? = display else { return [] }
+        return InventoryMissingInputs.listed(missingInputs)
     }
 
     internal var caption: String? {

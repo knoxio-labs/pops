@@ -1,4 +1,10 @@
-import { addOrSubtract, divide, lessThan, multiply } from './expression-arithmetic.js';
+import {
+  addOrSubtract,
+  decimalEqual,
+  divide,
+  lessThan,
+  multiply,
+} from './expression-arithmetic.js';
 import {
   dimensionalAddOrSubtract,
   dimensionalLessThan,
@@ -15,10 +21,12 @@ import type {
 } from './expression-types.js';
 import type { PrimitiveWireValue } from './value-types.js';
 
-/** The revisions both operands read, and whether version-2 unit semantics apply. */
+/** The revisions both operands read, and which version-2 semantics apply. */
 export interface BinaryContext {
   readonly dependencies: readonly EvaluatedDependency[];
   readonly dimensional: boolean;
+  /** Version 2 `equal` on operands typed decimal compares them by value. */
+  readonly decimalOperands: boolean;
 }
 
 type BinaryOp = Extract<ExpressionV1, { left: ExpressionV1 }>['op'];
@@ -56,24 +64,36 @@ function arithmetic(
   return divide(left, right);
 }
 
+function equalValues(
+  left: PrimitiveWireValue,
+  right: PrimitiveWireValue,
+  context: Omit<BinaryContext, 'dependencies'>
+): ArithmeticResult {
+  if (
+    context.dimensional &&
+    typeof left === 'object' &&
+    'amount' in left &&
+    typeof right === 'object' &&
+    'amount' in right
+  )
+    return dimensionalMeasurementEqual(left, right);
+  if (context.decimalOperands && typeof left === 'string' && typeof right === 'string') {
+    const same = decimalEqual(left, right);
+    return same === null
+      ? { state: 'error', code: 'invalid_value' }
+      : { state: 'value', value: same };
+  }
+  return { state: 'value', value: equal(left, right) };
+}
+
 function compared(
   op: 'equal' | 'less_than',
   left: PrimitiveWireValue,
   right: PrimitiveWireValue,
-  dimensional: boolean
+  context: Omit<BinaryContext, 'dependencies'>
 ): ArithmeticResult {
-  if (op === 'equal') {
-    if (
-      dimensional &&
-      typeof left === 'object' &&
-      'amount' in left &&
-      typeof right === 'object' &&
-      'amount' in right
-    )
-      return dimensionalMeasurementEqual(left, right);
-    return { state: 'value', value: equal(left, right) };
-  }
-  if (dimensional) return dimensionalLessThan(left, right);
+  if (op === 'equal') return equalValues(left, right, context);
+  if (context.dimensional) return dimensionalLessThan(left, right);
   const less = lessThan(left, right);
   return less === null
     ? { state: 'error', code: 'invalid_value' }
@@ -84,11 +104,11 @@ function combined(
   op: BinaryOp,
   left: PrimitiveWireValue,
   right: PrimitiveWireValue,
-  dimensional: boolean
+  context: BinaryContext
 ): ArithmeticResult {
   if (op === 'add' || op === 'subtract' || op === 'multiply' || op === 'divide')
-    return arithmetic(op, left, right, dimensional);
-  if (op === 'equal' || op === 'less_than') return compared(op, left, right, dimensional);
+    return arithmetic(op, left, right, context.dimensional);
+  if (op === 'equal' || op === 'less_than') return compared(op, left, right, context);
   return textOrLogic(op, left, right);
 }
 
@@ -113,5 +133,5 @@ export function binaryValue(
   right: PrimitiveWireValue,
   context: BinaryContext
 ): ExpressionEvaluation {
-  return lifted(combined(op, left, right, context.dimensional), context);
+  return lifted(combined(op, left, right, context), context);
 }

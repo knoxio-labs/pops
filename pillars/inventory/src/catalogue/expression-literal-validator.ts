@@ -8,7 +8,11 @@ const DECIMAL = /^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/u;
 const DATE = /^\d{4}-\d{2}-\d{2}$/u;
 const DATE_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/u;
 
-function stringKind(value: string): PrimitiveKind {
+/**
+ * The kind a string literal has when nothing around it fixes one: a decimal
+ * when it is spelled as one, then a date-time, date, https URL or text.
+ */
+export function stringKind(value: string): PrimitiveKind {
   if (DECIMAL.test(value)) return 'decimal';
   if (DATE_TIME.test(value)) return 'date_time';
   if (DATE.test(value)) return 'date';

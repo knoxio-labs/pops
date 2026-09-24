@@ -20,12 +20,17 @@ public struct InventoryComputedDefinition: Hashable, Sendable {
     public let fixedUnit: String?
     public let allowOverride: Bool
     public let expression: InventoryExpression
-    /// The stored expression version, which decides how measurements combine.
+    /// The stored expression version, which decides how measurements combine
+    /// and decimals compare.
     public let expressionVersion: Int
+    /// Every catalogue field's declared kind by id, which types a version-2
+    /// `equal` on a read; a field missing here compares by spelling.
+    public let fieldKinds: [String: InventoryPrimitiveKind]
 
     public init(
         fieldId: String, kind: InventoryPrimitiveKind, fixedUnit: String?, allowOverride: Bool,
-        expression: InventoryExpression, expressionVersion: Int
+        expression: InventoryExpression, expressionVersion: Int,
+        fieldKinds: [String: InventoryPrimitiveKind]
     ) {
         self.fieldId = fieldId
         self.kind = kind
@@ -33,12 +38,17 @@ public struct InventoryComputedDefinition: Hashable, Sendable {
         self.allowOverride = allowOverride
         self.expression = expression
         self.expressionVersion = expressionVersion
+        self.fieldKinds = fieldKinds
     }
 
-    /// Parses a catalogue field's expression. Throws when the field is not
-    /// computed, or its expression uses syntax this build does not know; the
-    /// caller then cannot evaluate it and keeps whatever the server sent.
-    public init(_ field: InventoryCatalogueField) throws(InventoryExpressionRejection) {
+    /// Parses a catalogue field's expression, typing its reads by
+    /// `fieldKinds` (every field of the same catalogue revision). Throws when
+    /// the field is not computed, or its expression uses syntax this build
+    /// does not know; the caller then cannot evaluate it and keeps whatever
+    /// the server sent.
+    public init(_ field: InventoryCatalogueField, fieldKinds: [String: InventoryPrimitiveKind])
+        throws(InventoryExpressionRejection)
+    {
         guard field.storage == .computed, let version = field.expressionVersion,
             let json = field.expression
         else {
@@ -48,7 +58,7 @@ public struct InventoryComputedDefinition: Hashable, Sendable {
             fieldId: field.id, kind: field.kind, fixedUnit: field.fixedUnit,
             allowOverride: field.allowOverride,
             expression: try InventoryExpression.parse(version: version, json: json),
-            expressionVersion: version)
+            expressionVersion: version, fieldKinds: fieldKinds)
     }
 
     /// `evaluateComputedValue` plus the sync projection: an override wins
@@ -72,10 +82,7 @@ public struct InventoryComputedDefinition: Hashable, Sendable {
                 traversed: [])
         }
         let root = snapshot.rootItemId
-        switch InventoryExpressionEvaluator.evaluate(
-            expression, expressionVersion: expressionVersion, kind: kind, fixedUnit: fixedUnit,
-            in: snapshot)
-        {
+        switch InventoryExpressionEvaluator.evaluate(self, in: snapshot) {
         case .value(let result, let dependencies):
             var traversed: [String] = []
             for itemId in [root] + dependencies.map(\.itemId) where !traversed.contains(itemId) {
@@ -111,5 +118,16 @@ public struct InventoryComputedDefinition: Hashable, Sendable {
             fieldId: fieldId, catalogueRevision: catalogueRevision, evaluation: evaluation,
             dependencies: dependencies, traversedItemIds: traversed,
             evaluatedItemRevision: itemRevision, missingInputs: missingInputs)
+    }
+}
+
+extension InventoryCatalogueSnapshot {
+    /// Every field's declared kind by id, which ``InventoryComputedDefinition``
+    /// types a version-2 `equal` on a read by. Field ids are unique within a
+    /// catalogue revision.
+    public var fieldKinds: [String: InventoryPrimitiveKind] {
+        Dictionary(
+            types.flatMap(\.fields).map { ($0.id, $0.kind) },
+            uniquingKeysWith: { first, _ in first })
     }
 }
