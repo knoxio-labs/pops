@@ -48,11 +48,15 @@ export interface ComputedFieldPreviewItem {
   readonly typeId: string | null;
 }
 
-/** Everything a non-mutating computed-field preview answers. */
+/**
+ * Everything a non-mutating computed-field preview answers. `draftRevision`
+ * and `draftVersion` are null when the preview evaluated against the
+ * published catalogue rather than an actual draft.
+ */
 export interface ComputedFieldPreview {
   readonly baseRevision: number;
-  readonly draftRevision: number;
-  readonly draftVersion: number;
+  readonly draftRevision: number | null;
+  readonly draftVersion: number | null;
   readonly typeId: string;
   readonly fieldId: string;
   readonly itemId: string;

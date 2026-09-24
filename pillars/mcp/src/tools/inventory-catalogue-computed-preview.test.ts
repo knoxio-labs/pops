@@ -145,3 +145,85 @@ describe('inventory.catalogue.previewComputedField', () => {
     );
   });
 });
+
+function previewOnPublishedTool() {
+  const found = catalogueTools.find(
+    (candidate) => candidate.name === 'inventory.catalogue.previewComputedFieldOnPublished'
+  );
+  if (!found) throw new Error('previewComputedFieldOnPublished is not registered');
+  return found;
+}
+
+describe('inventory.catalogue.previewComputedFieldOnPublished', () => {
+  it('evaluates against the published catalogue with no draft, and no operations', async () => {
+    const result = await previewOnPublishedTool().handler({
+      baseRevision: 4,
+      typeId: TYPE_ID,
+      fieldId: FIELD_ID,
+      itemId: 'item-1',
+    });
+
+    expect(types.manage.previewComputedFieldOnPublished).toHaveBeenCalledWith({
+      baseRevision: 4,
+      operations: [],
+      typeId: TYPE_ID,
+      field: { id: FIELD_ID },
+      itemId: 'item-1',
+    });
+    expect(parseResult(result)).toMatchObject({ result: { state: 'value', value: 12 } });
+    expect(types.manage.previewComputedField).not.toHaveBeenCalled();
+    expect(types.manage.patchDraft).not.toHaveBeenCalled();
+  });
+
+  it('evaluates a brand-new field by key after its creating operation, no draft needed', async () => {
+    const operations = [{ kind: 'put_field', typeId: TYPE_ID, key: 'volume', storage: 'computed' }];
+
+    await previewOnPublishedTool().handler({
+      baseRevision: 4,
+      operations,
+      typeId: TYPE_ID,
+      fieldKey: 'volume',
+      itemId: 'item-1',
+    });
+
+    expect(types.manage.previewComputedFieldOnPublished).toHaveBeenCalledWith(
+      expect.objectContaining({ operations, field: { key: 'volume' } })
+    );
+  });
+
+  it.each([
+    ['both field names', { fieldId: FIELD_ID, fieldKey: 'volume' }],
+    ['no field name', {}],
+    ['a missing item', { fieldId: FIELD_ID, itemId: undefined }],
+    ['operations that are not objects', { fieldId: FIELD_ID, operations: ['put_field'] }],
+    ['no baseRevision', { fieldId: FIELD_ID, baseRevision: undefined }],
+  ])('refuses %s before calling inventory', async (_name, extra) => {
+    const result = await previewOnPublishedTool().handler({
+      baseRevision: 4,
+      typeId: TYPE_ID,
+      itemId: 'item-1',
+      ...extra,
+    });
+
+    expect(result.isError).toBe(true);
+    expect(types.manage.previewComputedFieldOnPublished).not.toHaveBeenCalled();
+  });
+
+  it('reports the conflict when the published catalogue moved', async () => {
+    types.manage.previewComputedFieldOnPublished.mockResolvedValueOnce({
+      kind: 'conflict',
+      pillar: 'inventory',
+      code: 'catalogue_conflict',
+      message: 'The published catalogue has changed',
+    });
+
+    const result = await previewOnPublishedTool().handler({
+      baseRevision: 4,
+      typeId: TYPE_ID,
+      fieldId: FIELD_ID,
+      itemId: 'item-1',
+    });
+
+    expect(result.isError).toBe(true);
+  });
+});

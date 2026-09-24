@@ -22,6 +22,8 @@ export interface ComputedFieldEnvironment {
   readonly liveIssues: readonly InventoryApiIssue[];
   /** The latest compatibility evidence for the draft, saved or live. */
   readonly compatibility: CatalogueCompatibility | null;
+  /** The operations `compatibility` was computed against, empty when it came from a recheck. */
+  readonly compatibilityOperations: readonly CatalogueOperation[];
 }
 
 /** An environment with no draft, no issues and no compatibility evidence. */
@@ -32,6 +34,7 @@ export const EMPTY_COMPUTED_ENVIRONMENT: ComputedFieldEnvironment = {
   saveIssues: [],
   liveIssues: [],
   compatibility: null,
+  compatibilityOperations: [],
 };
 
 /** The field form's side of the computed editor: its type, its operation and its last submit. */

@@ -93,3 +93,59 @@ export const cataloguePreviewComputedField: ToolDef = {
     );
   },
 };
+
+/**
+ * Non-mutating "try on an item" against the published catalogue: evaluates an
+ * unsaved computed field on one item, optionally after unsaved operations,
+ * with no draft required or created. Nothing is written.
+ */
+export const cataloguePreviewComputedFieldOnPublished: ToolDef = {
+  name: 'inventory.catalogue.previewComputedFieldOnPublished',
+  description:
+    'Evaluate one computed field against the published catalogue on one item, optionally after unsaved operations, without creating a draft and without writing anything. Name the field by fieldId, or by fieldKey when an operation creates it. Returns the value, or why it is unavailable as missingInputs (each input with no value, the item it was read on, and its reason), or the raw evaluation error code (e.g. division_by_zero), plus the dependencies read and the item names. Refused with catalogue_conflict when the published catalogue has moved since baseRevision was read.',
+  inputSchema: {
+    type: 'object',
+    $defs: expressionSchemaDefs,
+    properties: {
+      baseRevision: {
+        type: 'integer',
+        minimum: 1,
+        description: 'Published revision to preview against',
+      },
+      operations: {
+        type: 'array',
+        items: catalogueOperationSchema,
+        maxItems: 100,
+        description: 'Unsaved operations applied, validated and rolled back around the evaluation',
+      },
+      typeId: { type: 'string', format: 'uuid', description: 'Type that owns the computed field' },
+      fieldId: { type: 'string', format: 'uuid', description: 'Computed field id' },
+      fieldKey: { type: 'string', description: 'Key of a computed field an operation creates' },
+      itemId: { type: 'string', description: 'Item of that type to evaluate on' },
+    },
+    required: ['baseRevision', 'typeId', 'itemId'],
+  },
+  scope: INVENTORY_TYPES_MANAGE_SCOPE,
+  handler: async (args) => {
+    const baseRevision = requiredPositiveInteger(args, 'baseRevision');
+    if (!baseRevision.ok) return toolError(baseRevision.error);
+    const typeId = optStr(args, 'typeId');
+    const itemId = optStr(args, 'itemId');
+    if (typeId === undefined || itemId === undefined)
+      return toolError('Missing or invalid required field: typeId and itemId');
+    const field = previewField(args);
+    if (field === null) return toolError('Give exactly one of fieldId or fieldKey');
+    const operations = optionalOperations(args);
+    if (operations === null) return toolError('Invalid field: operations');
+    return mapDraftCallResult(
+      await catalogueClient().manage.previewComputedFieldOnPublished({
+        baseRevision: baseRevision.value,
+        operations,
+        typeId,
+        field,
+        itemId,
+      }),
+      INVENTORY_TYPES_MANAGE_SCOPE
+    );
+  },
+};

@@ -205,6 +205,55 @@ function preview(fixture: Fixture, body: Record<string, unknown> = {}) {
     });
 }
 
+/** Setup with no draft created: only the published catalogue and its items. */
+async function setupPublishedOnly(
+  options: { weight?: number; count?: number | null } = {}
+): Promise<Omit<Fixture, 'draft'>> {
+  const ids = publish(inventoryDb.db);
+  const partId = randomUUID();
+  const kitId = randomUUID();
+  const partValues =
+    options.weight === undefined ? [] : [{ fieldId: ids.weightFieldId, values: [options.weight] }];
+  await apply(
+    wireMutation(
+      'item.create',
+      partId,
+      { item: { name: 'Hinge', typeId: ids.partTypeId, values: partValues } },
+      { catalogueRevision: ids.revision }
+    )
+  );
+  await apply(
+    wireMutation(
+      'item.create',
+      kitId,
+      {
+        item: {
+          name: 'Cabinet kit',
+          typeId: ids.kitTypeId,
+          values: [
+            { fieldId: ids.partFieldId, values: [{ targetKind: 'item', targetId: partId }] },
+            ...(options.count === null
+              ? []
+              : [{ fieldId: ids.countFieldId, values: [options.count ?? 4] }]),
+          ],
+        },
+      },
+      { catalogueRevision: ids.revision }
+    )
+  );
+  return { ids, partId, kitId };
+}
+
+function previewOnPublished(fixture: Omit<Fixture, 'draft'>, body: Record<string, unknown> = {}) {
+  return api.post('/type-catalogue/published/computed-preview').send({
+    baseRevision: fixture.ids.revision,
+    typeId: fixture.ids.kitTypeId,
+    field: { id: fixture.ids.totalFieldId },
+    itemId: fixture.kitId,
+    ...body,
+  });
+}
+
 function totalExpression(fixture: Fixture, expression: unknown) {
   return [
     {
@@ -507,5 +556,122 @@ describe('computed-field preview', () => {
     expect(stored.body.code).toBe('preview_field_not_computed');
     expect(otherType.status).toBe(400);
     expect(otherType.body.code).toBe('preview_item_type_mismatch');
+  });
+});
+
+/**
+ * `POST /type-catalogue/published/computed-preview`: the same non-mutating
+ * evaluation, but against the published catalogue with no draft in progress
+ * at all (POPS-4522) — proven both by row-count-before-equals-after and by a
+ * full row snapshot around the call.
+ */
+describe('computed-field preview without a draft', () => {
+  it('evaluates a first unsaved expression against the published catalogue with no draft', async () => {
+    const fixture = await setupPublishedOnly({ weight: 3, count: 4 });
+    const before = snapshotRows();
+
+    const response = await previewOnPublished(fixture);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({
+      baseRevision: fixture.ids.revision,
+      draftRevision: null,
+      draftVersion: null,
+      fieldId: fixture.ids.totalFieldId,
+      itemId: fixture.kitId,
+      override: null,
+      result: { state: 'value', value: 12, traversedItemIds: [fixture.kitId, fixture.partId] },
+    });
+    expect(snapshotRows()).toEqual(before);
+  });
+
+  it('applies unsaved operations without creating a draft and writes nothing', async () => {
+    const fixture = await setupPublishedOnly({ weight: 3, count: 4 });
+    const beforeRevisionCount = inventoryDb.raw
+      .prepare('SELECT COUNT(*) AS count FROM catalogue_revisions')
+      .get() as { count: number };
+    const before = snapshotRows();
+
+    const response = await previewOnPublished(fixture, {
+      operations: [
+        {
+          kind: 'put_field',
+          id: fixture.ids.totalFieldId,
+          typeId: fixture.ids.kitTypeId,
+          expressionVersion: 1,
+          expression: {
+            op: 'add',
+            left: { op: 'read', path: [], fieldId: fixture.ids.countFieldId },
+            right: { op: 'literal', value: 1 },
+          },
+        },
+      ],
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.result).toMatchObject({ state: 'value', value: 5 });
+    expect(snapshotRows()).toEqual(before);
+    const afterRevisionCount = inventoryDb.raw
+      .prepare('SELECT COUNT(*) AS count FROM catalogue_revisions')
+      .get() as { count: number };
+    expect(afterRevisionCount.count).toBe(beforeRevisionCount.count);
+
+    const again = await previewOnPublished(fixture);
+    expect(again.status).toBe(200);
+    expect(again.body.result).toMatchObject({ state: 'value', value: 12 });
+  });
+
+  it('evaluates a brand-new unsaved field addressed by key, with no draft ever created', async () => {
+    const fixture = await setupPublishedOnly({ weight: 3, count: 4 });
+
+    const response = await previewOnPublished(fixture, {
+      operations: [
+        {
+          kind: 'put_field',
+          typeId: fixture.ids.kitTypeId,
+          key: 'doubled',
+          label: 'doubled',
+          fieldKind: 'integer',
+          cardinality: 'one',
+          required: false,
+          storage: 'computed',
+          expressionVersion: 1,
+          expression: {
+            op: 'add',
+            left: { op: 'read', path: [], fieldId: fixture.ids.countFieldId },
+            right: { op: 'read', path: [], fieldId: fixture.ids.countFieldId },
+          },
+          allowOverride: false,
+        },
+      ],
+      field: { key: 'doubled' },
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.result).toMatchObject({ state: 'value', value: 8 });
+    const field = inventoryDb.raw
+      .prepare("SELECT id FROM item_type_fields WHERE key = 'doubled'")
+      .get();
+    expect(field).toBeUndefined();
+  });
+
+  it('refuses when the published catalogue has moved since baseRevision', async () => {
+    const fixture = await setupPublishedOnly({ weight: 3 });
+    const draft = createCatalogueDraft(inventoryDb.db, fixture.ids.revision, AUTHOR);
+    publishCatalogueDraft(
+      inventoryDb.db,
+      draft.revision.revision,
+      {
+        baseRevision: fixture.ids.revision,
+        expectedDraftVersion: draft.revision.draftVersion,
+        note: null,
+      },
+      AUTHOR
+    );
+
+    const response = await previewOnPublished(fixture);
+
+    expect(response.status).toBe(409);
+    expect(response.body.code).toBe('catalogue_conflict');
   });
 });

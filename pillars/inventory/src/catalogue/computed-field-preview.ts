@@ -1,9 +1,10 @@
-import { eq, inArray } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 
 import { items } from '../db/schema.js';
 import { applyDraftOperations } from './authoring-draft-operations.js';
 import { requireCatalogue } from './authoring-shared.js';
 import { CatalogueApiError } from './authoring-types.js';
+import { namedItems, orderedItemIds, previewResult } from './computed-field-preview-result.js';
 import { EffectiveValueReader } from './effective-item-values.js';
 import { readItemFieldValues } from './item-values.js';
 
@@ -13,20 +14,26 @@ import type { DraftOperation } from './authoring-types.js';
 import type { PersistedItemTypeField } from './catalogue-types.js';
 import type {
   ComputedFieldPreview,
-  ComputedFieldPreviewItem,
-  ComputedFieldPreviewMissing,
   ComputedFieldPreviewResult,
   ComputedFieldPreviewSubject,
 } from './computed-field-preview-types.js';
-import type { EvaluatedDependency, ExpressionEvaluation } from './expression-types.js';
 
-class PreviewRollback extends Error {
+/** What a preview answer traces its evaluation back to: a draft, or the published catalogue. */
+export interface PreviewProvenance {
+  readonly baseRevision: number;
+  readonly draftRevision: number | null;
+  readonly draftVersion: number | null;
+}
+
+/** Thrown to unwind a preview transaction that must never commit. */
+export class PreviewRollback extends Error {
   constructor(readonly preview: ComputedFieldPreview) {
     super('Rollback non-mutating computed-field preview');
   }
 }
 
-function previewField(
+/** Resolves the computed field a preview names, on the catalogue at `revision`. */
+export function previewField(
   db: CommandDb,
   revision: number,
   subject: ComputedFieldPreviewSubject
@@ -57,7 +64,8 @@ function previewField(
   return field;
 }
 
-function previewItemType(db: CommandDb, subject: ComputedFieldPreviewSubject): void {
+/** Confirms `subject.itemId` exists and is an item of `subject.typeId`. */
+export function previewItemType(db: CommandDb, subject: ComputedFieldPreviewSubject): void {
   const row = db
     .select({ typeId: items.typeId })
     .from(items)
@@ -77,68 +85,47 @@ function previewItemType(db: CommandDb, subject: ComputedFieldPreviewSubject): v
     );
 }
 
-function orderedItemIds(
-  rootItemId: string,
-  traversed: readonly string[],
-  dependencies: readonly EvaluatedDependency[]
-): string[] {
-  return [...new Set([rootItemId, ...traversed, ...dependencies.map((entry) => entry.itemId)])];
+/** Evaluates a computed field on one item within a `draft`-status revision. */
+export function evaluateOn(
+  db: CommandDb,
+  catalogueRevision: number,
+  subject: ComputedFieldPreviewSubject
+): { readonly field: PersistedItemTypeField; readonly result: ComputedFieldPreviewResult } {
+  const field = previewField(db, catalogueRevision, subject);
+  previewItemType(db, subject);
+  const catalogue = requireCatalogue(db, catalogueRevision, ['draft']);
+  const evaluation = new EffectiveValueReader(db, catalogue, null).evaluate(
+    subject.itemId,
+    field.id
+  );
+  if (evaluation === null) throw new Error(`computed field ${field.id} was not evaluated`);
+  return { field, result: previewResult(subject.itemId, evaluation) };
 }
 
-function previewMissing(
-  rootItemId: string,
-  evaluation: Extract<ExpressionEvaluation, { readonly state: 'unavailable' }>
-): ComputedFieldPreviewMissing[] {
-  if (evaluation.missingInputs.length > 0)
-    return evaluation.missingInputs.map(({ fieldId, itemId, reason }) => ({
-      fieldId,
-      itemId,
-      reason,
-    }));
-  return [
-    {
-      fieldId: evaluation.fieldId,
-      itemId: evaluation.traversedItemIds.at(-1) ?? rootItemId,
-      reason: evaluation.reason,
-    },
-  ];
-}
-
-function previewResult(
-  rootItemId: string,
-  evaluation: ExpressionEvaluation
-): ComputedFieldPreviewResult {
-  if (evaluation.state === 'unavailable')
-    return {
-      state: 'unavailable',
-      missingInputs: previewMissing(rootItemId, evaluation),
-      dependencies: evaluation.dependencies,
-      traversedItemIds: evaluation.traversedItemIds,
-    };
-  const traversedItemIds = orderedItemIds(rootItemId, [], evaluation.dependencies);
-  if (evaluation.state === 'value')
-    return {
-      state: 'value',
-      value: evaluation.value,
-      dependencies: evaluation.dependencies,
-      traversedItemIds,
-    };
+/** Assembles the wire preview answer from its provenance and evaluated outcome. */
+export function previewOutcome(
+  db: CommandDb,
+  provenance: PreviewProvenance,
+  subject: ComputedFieldPreviewSubject,
+  evaluation: {
+    readonly field: PersistedItemTypeField;
+    readonly result: ComputedFieldPreviewResult;
+  }
+): ComputedFieldPreview {
+  const { field, result } = evaluation;
+  const override = readItemFieldValues(db, subject.itemId).find(
+    (entry) => entry.fieldId === field.id && entry.source === 'override'
+  )?.values[0];
+  const ids = orderedItemIds(subject.itemId, result.traversedItemIds, result.dependencies);
   return {
-    state: 'error',
-    code: evaluation.code,
-    dependencies: evaluation.dependencies,
-    traversedItemIds,
+    ...provenance,
+    typeId: subject.typeId,
+    fieldId: field.id,
+    itemId: subject.itemId,
+    result,
+    override: override ?? null,
+    items: namedItems(db, ids),
   };
-}
-
-function namedItems(db: CommandDb, ids: readonly string[]): ComputedFieldPreviewItem[] {
-  if (ids.length === 0) return [];
-  const rows = db
-    .select({ id: items.id, name: items.name, typeId: items.typeId })
-    .from(items)
-    .where(inArray(items.id, [...ids]))
-    .all();
-  return ids.flatMap((id) => rows.filter((row) => row.id === id));
 }
 
 function evaluateInDraft(
@@ -148,27 +135,17 @@ function evaluateInDraft(
   subject: ComputedFieldPreviewSubject
 ): ComputedFieldPreview {
   applyDraftOperations(db, target, operations);
-  const field = previewField(db, target.revision, subject);
-  previewItemType(db, subject);
-  const draft = requireCatalogue(db, target.revision, ['draft']);
-  const evaluation = new EffectiveValueReader(db, draft, null).evaluate(subject.itemId, field.id);
-  if (evaluation === null) throw new Error(`computed field ${field.id} was not evaluated`);
-  const result = previewResult(subject.itemId, evaluation);
-  const override = readItemFieldValues(db, subject.itemId).find(
-    (entry) => entry.fieldId === field.id && entry.source === 'override'
-  )?.values[0];
-  const ids = orderedItemIds(subject.itemId, result.traversedItemIds, result.dependencies);
-  return {
-    baseRevision: target.baseRevision,
-    draftRevision: target.revision,
-    draftVersion: target.expectedDraftVersion,
-    typeId: subject.typeId,
-    fieldId: field.id,
-    itemId: subject.itemId,
-    result,
-    override: override ?? null,
-    items: namedItems(db, ids),
-  };
+  const evaluation = evaluateOn(db, target.revision, subject);
+  return previewOutcome(
+    db,
+    {
+      baseRevision: target.baseRevision,
+      draftRevision: target.revision,
+      draftVersion: target.expectedDraftVersion,
+    },
+    subject,
+    evaluation
+  );
 }
 
 /**

@@ -1,3 +1,4 @@
+import { previewComputedFieldOnPublished } from '../../catalogue/computed-field-preview-published.js';
 import { previewComputedField } from '../../catalogue/computed-field-preview.js';
 import { runCatalogue } from './type-catalogue-responses.js';
 
@@ -61,6 +62,19 @@ export function makeComputedPreviewHandlers(
           body.operations,
           { typeId: body.typeId, field: body.field, itemId: body.itemId }
         );
+        return { status: 200 as const, body: previewBody(preview) };
+      }),
+    previewComputedFieldOnPublished: ({
+      body,
+      res,
+    }: TypesRequest['manage']['previewComputedFieldOnPublished'] & { res: Response }) =>
+      runCatalogue(() => {
+        authorise(res);
+        const preview = previewComputedFieldOnPublished(db, body.baseRevision, body.operations, {
+          typeId: body.typeId,
+          field: body.field,
+          itemId: body.itemId,
+        });
         return { status: 200 as const, body: previewBody(preview) };
       }),
   };

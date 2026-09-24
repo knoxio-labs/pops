@@ -40,8 +40,16 @@ function toReadiness(
   if (catalogue === undefined || snapshot.draftVersion !== catalogue.revision.draftVersion)
     return { status: 'stale' };
   if (snapshot.isLivePreview)
-    return { status: 'live_preview', compatibility: snapshot.compatibility };
-  return { status: 'ready', compatibility: snapshot.compatibility };
+    return {
+      status: 'live_preview',
+      compatibility: snapshot.compatibility,
+      operations: snapshot.operations,
+    };
+  return {
+    status: 'ready',
+    compatibility: snapshot.compatibility,
+    operations: snapshot.operations,
+  };
 }
 
 /** Loads and mutates the persisted catalogue draft while keeping its published base visible. */

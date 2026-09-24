@@ -2,7 +2,11 @@ import { useQuery } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 
 import { InventoryApiError, unwrap } from '../../inventory-api-helpers';
-import { typesManagePreviewComputedField, webList } from '../../inventory-api/index.js';
+import {
+  typesManagePreviewComputedField,
+  typesManagePreviewComputedFieldOnPublished,
+  webList,
+} from '../../inventory-api/index.js';
 import { draftPreconditions } from '../catalogue-draft';
 
 import type { InventoryApiIssue } from '../../inventory-api-helpers';
@@ -12,9 +16,15 @@ import type { ComputedPreviewResponse, PreviewItem } from './preview-model';
 const PREVIEW_DELAY_MS = 250;
 const PICKER_LIMIT = 50;
 
-/** What the preview evaluates: the draft, the unsaved edit, and the field it names. */
+/**
+ * What the preview evaluates: the draft when one exists, the published
+ * revision to fall back to when it does not, the unsaved edit, and the field
+ * it names.
+ */
 export interface ComputedPreviewRequest {
   readonly draft: CatalogueDescriptor | null;
+  /** The current published revision, used when no draft exists yet. */
+  readonly publishedRevision: number | null;
   readonly type: { readonly id: string; readonly key: string; readonly label: string };
   readonly field: { readonly id: string } | { readonly key: string };
   /** The unsaved field operation, or null while the expression is unfinished. */
@@ -41,16 +51,37 @@ function usePickerItems(typeKey: string, typeLabel: string) {
   });
 }
 
+/**
+ * Requests the preview against the draft when one exists, or otherwise
+ * against the published catalogue: the unsaved expression never needs a
+ * draft created just to be tried out.
+ */
 async function requestPreview(
-  request: ComputedPreviewRequest & { readonly draft: CatalogueDescriptor },
+  request: ComputedPreviewRequest & { readonly operation: CatalogueOperation },
   itemId: string
 ): Promise<ComputedPreviewResponse> {
+  const operations = [request.operation];
+  if (request.draft !== null) {
+    return unwrap(
+      await typesManagePreviewComputedField({
+        path: { revision: request.draft.revision.revision },
+        body: {
+          ...draftPreconditions(request.draft),
+          operations,
+          typeId: request.type.id,
+          field: request.field,
+          itemId,
+        },
+      })
+    );
+  }
+  if (request.publishedRevision === null)
+    throw new Error('No catalogue revision to preview against');
   return unwrap(
-    await typesManagePreviewComputedField({
-      path: { revision: request.draft.revision.revision },
+    await typesManagePreviewComputedFieldOnPublished({
       body: {
-        ...draftPreconditions(request.draft),
-        operations: request.operation === null ? [] : [request.operation],
+        baseRevision: request.publishedRevision,
+        operations,
         typeId: request.type.id,
         field: request.field,
         itemId,
@@ -81,8 +112,9 @@ export function useComputedPreview(request: ComputedPreviewRequest) {
   const latest = useRef(request);
   const operationKey = request.operation === null ? null : JSON.stringify(request.operation);
   const draftVersion = request.draft?.revision.draftVersion ?? null;
-  const ready = itemId !== null && operationKey !== null && draftVersion !== null;
-  const key = JSON.stringify([itemId, operationKey, draftVersion, attempt]);
+  const catalogueKey = draftVersion ?? request.publishedRevision;
+  const ready = itemId !== null && operationKey !== null && catalogueKey !== null;
+  const key = JSON.stringify([itemId, operationKey, catalogueKey, attempt]);
 
   useEffect(() => {
     latest.current = request;
@@ -90,11 +122,17 @@ export function useComputedPreview(request: ComputedPreviewRequest) {
 
   useEffect(() => {
     const current = latest.current;
-    const draft = current.draft;
-    if (itemId === null || draft === null || current.operation === null) return undefined;
+    const operation = current.operation;
+    if (
+      itemId === null ||
+      operation === null ||
+      (current.draft === null && current.publishedRevision === null)
+    ) {
+      return undefined;
+    }
     let live = true;
     const timer = setTimeout(() => {
-      requestPreview({ ...current, draft }, itemId).then(
+      requestPreview({ ...current, operation }, itemId).then(
         (response) => {
           if (live) setSettled({ key, outcome: { kind: 'answered', response } });
         },

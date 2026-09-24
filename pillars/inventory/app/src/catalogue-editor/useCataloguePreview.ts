@@ -48,6 +48,7 @@ function runCataloguePreview(
           compatibility: result.compatibility,
           draftVersion: draft.revision.draftVersion,
           isLivePreview,
+          operations,
         });
     } catch (previewError) {
       if (state.sequence.current === requestSequence) state.setError(previewError);

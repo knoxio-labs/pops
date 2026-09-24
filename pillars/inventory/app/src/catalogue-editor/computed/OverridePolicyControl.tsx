@@ -25,13 +25,21 @@ export interface OverridePolicy {
   readonly itemsWithOverride?: number;
 }
 
+/**
+ * Words the discarded-override count for the change note: unknown evidence
+ * stays hedged, a confirmed zero says so plainly, and a confirmed count is
+ * stated as read.
+ */
+function overrideHeldSentence(itemsWithOverride: number | undefined): string {
+  if (itemsWithOverride === undefined) return 'Items may hold an override today.';
+  if (itemsWithOverride === 0) return 'No items hold an override today.';
+  return `${itemsWithOverride} items hold an override today.`;
+}
+
 function OverrideChangeNote({ policy }: { policy: OverridePolicy }) {
   const turnedOff = policy.publishedAllowOverride === true && !policy.allowOverride;
   if (!turnedOff) return null;
-  const held =
-    policy.itemsWithOverride === undefined
-      ? 'Items may hold an override today.'
-      : `${policy.itemsWithOverride} items hold an override today.`;
+  const held = overrideHeldSentence(policy.itemsWithOverride);
   const revision =
     policy.publishedRevision === undefined
       ? 'The published revision'

@@ -30,6 +30,8 @@ export type CompatibilitySnapshot = {
   readonly compatibility: CatalogueCompatibility;
   readonly draftVersion: number;
   readonly isLivePreview: boolean;
+  /** The operations this compatibility proof was computed against, empty for a recheck. */
+  readonly operations: readonly CatalogueOperation[];
 } | null;
 
 /**
@@ -44,8 +46,16 @@ export type CompatibilitySnapshot = {
 export type CatalogueReadiness =
   | { readonly status: 'not_previewed' }
   | { readonly status: 'stale' }
-  | { readonly status: 'live_preview'; readonly compatibility: CatalogueCompatibility }
-  | { readonly status: 'ready'; readonly compatibility: CatalogueCompatibility };
+  | {
+      readonly status: 'live_preview';
+      readonly compatibility: CatalogueCompatibility;
+      readonly operations: readonly CatalogueOperation[];
+    }
+  | {
+      readonly status: 'ready';
+      readonly compatibility: CatalogueCompatibility;
+      readonly operations: readonly CatalogueOperation[];
+    };
 
 /** Converts an owner-facing label into the stable-key candidate shown by create forms. */
 export function catalogueKeyFromLabel(label: string): string {
