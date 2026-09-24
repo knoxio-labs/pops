@@ -35,14 +35,24 @@ public struct FeatureSurface: Hashable, Sendable {
     /// Where the answer above came from.
     public let bootstrap: BootstrapPhase
 
+    /// Whether the BFM says Purchases' own capture entry point is usable.
+    ///
+    /// `.receiptCapture` names a capability Purchases reads, not a screen —
+    /// it never appears in ``available`` or ``unavailable``, which are both
+    /// scoped to features this build gives their own tab. See
+    /// `AppShellModel.captureAvailable(in:)` for how this is derived.
+    public let captureAvailable: Bool
+
     public init(
         available: [MobileFeature],
         unavailable: [FeatureAvailability],
-        bootstrap: BootstrapPhase
+        bootstrap: BootstrapPhase,
+        captureAvailable: Bool = false
     ) {
         self.available = available
         self.unavailable = unavailable
         self.bootstrap = bootstrap
+        self.captureAvailable = captureAvailable
     }
 }
 

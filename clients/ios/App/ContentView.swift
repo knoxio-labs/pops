@@ -173,12 +173,12 @@ internal struct ContentView: View {
             if let purchasesCaptureObserver {
                 PurchasesFlowView(
                     dependencies: dependencies,
-                    captureAvailable: surface.available.contains(.receiptCapture),
+                    captureAvailable: surface.captureAvailable,
                     captureObserver: purchasesCaptureObserver)
             } else {
                 PurchasesFlowView(
                     dependencies: dependencies,
-                    captureAvailable: surface.available.contains(.receiptCapture))
+                    captureAvailable: surface.captureAvailable)
             }
         case FeatureInventory.feature:
             InventoryFlowView(dependencies: dependencies, entityRouter: composition.entityRouter)

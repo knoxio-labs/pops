@@ -334,7 +334,7 @@ internal struct ContentViewFeatureSwitchingWiringTests {
 
     @Test("Purchases threads capture availability through its own flow")
     func purchasesThreadsCaptureAvailability() {
-        #expect(Self.contentViewSource.contains("captureAvailable: surface.available.contains"))
+        #expect(Self.contentViewSource.contains("captureAvailable: surface.captureAvailable"))
     }
 
     @Test("the retired Receipts tab has no case of its own left to route through")
