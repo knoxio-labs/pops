@@ -69,12 +69,7 @@ export {
   unitConversionShift,
   unitDimension,
 } from '@pops/inventory';
-export type {
-  CombinedUnit,
-  UnitDimension,
-  UnitFactor,
-  UnitTerm,
-} from '@pops/inventory';
+export type { CombinedUnit, UnitDimension, UnitFactor, UnitTerm } from '@pops/inventory';
 export {
   evaluationErrorSentence,
   unavailableSentence,
