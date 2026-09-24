@@ -4,6 +4,7 @@ import { created, notFound, ok, page } from './respond';
 import type { MockHandler, MockHandlers } from '@pops/pillar-sdk/testing/api-mock';
 
 import type {
+  AddressMutation,
   EntitiesLookupResponses,
   EntityResponse,
   HealthResponse,
@@ -35,6 +36,19 @@ const entityById: MockHandler = ({ params }) => {
 
 const mutation = { data: firstEntity, message: 'ok' };
 
+const addressCreated: MockHandler = ({ params }) => {
+  const body: AddressMutation = {
+    data: {
+      entityId: params['id'] ?? '',
+      id: 'addr-standalone',
+      lastEditedTime: '2026-09-05T08:00:00.000Z',
+      value: '1 Wharf St',
+    },
+    message: 'ok',
+  };
+  return { status: 201, body };
+};
+
 export const contactsHandlers: MockHandlers = {
   'GET /': ok('contacts'),
   'GET /health': ok<HealthResponse>({
@@ -54,7 +68,7 @@ export const contactsHandlers: MockHandlers = {
   'PATCH /entities/{id}': ok(mutation),
   'DELETE /entities/{id}': ok({ message: 'deleted' }),
   'GET /entities/{id}/addresses': ok({ data: [] }),
-  'POST /entities/{id}/addresses': created({ data: null, message: 'ok' }),
+  'POST /entities/{id}/addresses': addressCreated,
   'GET /entities/{id}/avatar': () => notFound('avatar'),
   'PUT /entities/{id}/avatar': ok(mutation),
   'DELETE /entities/{id}/avatar': ok(mutation),

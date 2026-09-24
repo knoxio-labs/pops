@@ -1,7 +1,7 @@
 import { ENTITY_USAGE } from '../../fixtures/entities';
 import { BUDGETS, CURRENCIES, NUDGES, WISHLIST } from '../../fixtures/overview';
 import { TAG_VOCABULARY } from '../../fixtures/rules';
-import { TRANSACTIONS } from '../../fixtures/transactions';
+import { TRANSACTIONS, type FixtureTransaction } from '../../fixtures/transactions';
 import { created, done, notFound, ok, page } from '../respond';
 
 import type { MockHandler, MockHandlers } from '@pops/pillar-sdk/testing/api-mock';
@@ -11,6 +11,7 @@ import type {
   DataQualityNudgesResponses,
   SettingsListResponses,
   SummaryGetResponses,
+  TransactionsDeleteResponses,
   TransactionsGetResponses,
 } from '../../../finance-api/types.gen';
 
@@ -41,6 +42,46 @@ const transactionById: MockHandler = ({ params }) => {
   const found = TRANSACTIONS.find((t) => t.id === params['id']);
   if (found === undefined) return notFound('transaction');
   const body: TransactionsGetResponses[200] = { data: found };
+  return { body };
+};
+
+/** A deleted row as the pillar snapshots it for undo: stored columns, tags serialised. */
+function snapshotOf(t: FixtureTransaction): TransactionsDeleteResponses[200]['snapshot'] {
+  return {
+    accountId: t.accountId,
+    amount: t.amount,
+    checksum: null,
+    country: t.country,
+    date: t.date,
+    description: t.description,
+    entityId: t.entityId,
+    entityName: t.entityName,
+    foreignAmountMinor: t.foreignAmountMinor,
+    foreignCurrency: t.foreignCurrency,
+    fxCaptureSource: t.fxCaptureSource,
+    fxFeeCents: t.fxFeeCents,
+    id: t.id,
+    lastEditedTime: t.lastEditedTime,
+    location: t.location,
+    matchConfidence: null,
+    matchRuleId: null,
+    matchType: null,
+    notes: t.notes,
+    notionId: null,
+    rawRow: null,
+    relatedTransactionId: t.relatedTransactionId,
+    tags: JSON.stringify(t.tags),
+    type: t.type,
+  };
+}
+
+const deleteTransaction: MockHandler = ({ params }) => {
+  const found = TRANSACTIONS.find((t) => t.id === params['id']);
+  if (found === undefined) return notFound('transaction');
+  const body: TransactionsDeleteResponses[200] = {
+    message: 'deleted',
+    snapshot: snapshotOf(found),
+  };
   return { body };
 };
 
@@ -86,7 +127,7 @@ export const ledgerHandlers: MockHandlers = {
   'POST /transactions': created({ data: firstTransaction, message: 'created' }),
   'GET /transactions/{id}': transactionById,
   'PATCH /transactions/{id}': ok({ data: firstTransaction, message: 'updated' }),
-  'DELETE /transactions/{id}': ok({ message: 'deleted', snapshot: firstTransaction }),
+  'DELETE /transactions/{id}': deleteTransaction,
   'POST /transactions/restore': created({ data: firstTransaction, message: 'restored' }),
   'POST /transactions/{id}/unlink-transfer': ok({ data: firstTransaction, message: 'unlinked' }),
   'GET /transactions/suggest-tags': ok({ tags: [{ tag: 'groceries', source: 'rule' }] }),

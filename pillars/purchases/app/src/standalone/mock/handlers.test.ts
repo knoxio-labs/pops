@@ -3,8 +3,9 @@ import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { contractCoverage } from '@pops/pillar-sdk/testing/api-mock';
+import { contractCoverage, contractResponseConformance } from '@pops/pillar-sdk/testing/api-mock';
 
+import { ORDER_ID } from '../fixtures/order';
 import { handlers } from './handlers';
 
 /**
@@ -41,6 +42,40 @@ describe('the mock layer covers the purchases contract', () => {
 
   it('has no handler for an operation the contract does not declare', () => {
     expect(coverage.unexpected).toEqual([]);
+  });
+
+  describe('answers every operation with a contract-shaped body', async () => {
+    const conformance = await contractResponseConformance(
+      JSON.parse(readFileSync(SPEC_PATH, 'utf8')),
+      handlers,
+      {
+        'GET /purchases/{id}': { params: { id: ORDER_ID } },
+        'PATCH /purchases/{id}/items/{itemId}': { params: { id: ORDER_ID, itemId: 'itm_drill' } },
+        'POST /purchases/{id}/documents': { params: { id: ORDER_ID } },
+        'POST /purchases/{id}/items/{itemId}/inventory-item': {
+          params: { id: ORDER_ID, itemId: 'itm_drill' },
+        },
+        'POST /purchases/{id}/items/{itemId}/inventory-proposal': {
+          params: { id: ORDER_ID, itemId: 'itm_drill' },
+        },
+        'PATCH /products/{productId}': { params: { productId: 'prd_drill' } },
+        'PATCH /products/aliases/{aliasId}': { params: { aliasId: 'als_1' } },
+        'GET /reconcile/links': {
+          query: new URLSearchParams({ transactionUri: 'pops://finance/transaction/txn_5512' }),
+        },
+      }
+    );
+
+    it('checks every declared operation', () => {
+      expect(conformance.map((result) => result.operation)).toEqual(coverage.operations);
+    });
+
+    it.each(conformance.map((result) => [result.operation, result] as const))(
+      '%s',
+      (_operation, { operationId, schemaPath, issues }) => {
+        expect(issues, `${operationId ?? 'no operationId'} against ${schemaPath}`).toEqual([]);
+      }
+    );
   });
 
   it('returns a contract-shaped receipt extraction draft', async () => {
