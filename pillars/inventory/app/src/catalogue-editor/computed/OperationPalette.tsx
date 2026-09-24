@@ -20,7 +20,7 @@ function OperationButton({ info, onPick }: { info: OperationInfo; onPick: () => 
       aria-label={info.label}
       title={info.hint}
       onClick={onPick}
-      className="flex min-h-11 w-full items-start gap-2 rounded-md border px-2 py-1.5 text-left hover:border-primary hover:bg-primary/5"
+      className="flex min-h-11 min-w-11 w-full items-start gap-2 rounded-md border px-2 py-1.5 text-left hover:border-primary hover:bg-primary/5"
     >
       <span className="mt-0.5 flex h-6 min-w-8 items-center justify-center rounded border bg-background px-1 font-mono text-xs">
         {info.symbol}

@@ -107,7 +107,7 @@ export function SlotRow({
         type="button"
         onClick={() => select(path)}
         className={cn(
-          'min-h-9 min-w-0 flex-1 truncate rounded px-1 text-left text-sm hover:bg-muted',
+          'min-h-11 min-w-11 flex-1 truncate rounded px-1 text-left text-sm hover:bg-muted',
           empty && 'italic text-muted-foreground'
         )}
       >
