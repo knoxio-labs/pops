@@ -1,8 +1,9 @@
 /**
  * Publishes the user-defined type the inventory-types acceptance flow
  * (`clients/ios/.maestro/acceptance/`) syncs to the phone: `Phone gadget`,
- * with a stored integer `Price` and a computed, overridable `Doubled price`
- * (`Price + Price`), at catalogue minimum protocol 2.
+ * with a stored integer `Price`, a computed, overridable `Doubled price`
+ * (`Price + Price`), and a stored many-valued short-text `Tags`, at
+ * catalogue minimum protocol 2.
  *
  * Done the way an owner does it, against the real pillar behind the gate:
  * raise the sync minimum through the rollout route, then draft, patch and
@@ -64,7 +65,7 @@ function fieldId(descriptor, key) {
 
 /**
  * @param {{ inventoryBaseUrl: string, apiKey: string }} options
- * @returns {Promise<{ typeId: string, revision: number, priceFieldId: string, doubledFieldId: string }>}
+ * @returns {Promise<{ typeId: string, revision: number, priceFieldId: string, doubledFieldId: string, tagsFieldId: string }>}
  */
 export async function publishUserDefinedType({ inventoryBaseUrl, apiKey }) {
   /**
@@ -131,11 +132,23 @@ export async function publishUserDefinedType({ inventoryBaseUrl, apiKey }) {
         expression: { op: 'add', left: read, right: read },
       },
     ]);
+    const withTags = await patch(withDoubled, [
+      {
+        kind: 'put_field',
+        typeId,
+        key: 'tags',
+        label: 'Tags',
+        fieldKind: 'short_text',
+        cardinality: 'many',
+        required: false,
+        storage: 'stored',
+      },
+    ]);
     published = descriptorSchema.parse(
       await at(`${draftPath}/publish`, {
         body: {
           baseRevision,
-          expectedDraftVersion: withDoubled.revision.draftVersion,
+          expectedDraftVersion: withTags.revision.draftVersion,
           minimumProtocol: 2,
           note: 'ios-e2e inventory-types acceptance',
         },
@@ -149,5 +162,6 @@ export async function publishUserDefinedType({ inventoryBaseUrl, apiKey }) {
     revision: published.revision.revision,
     priceFieldId: fieldId(published, 'price'),
     doubledFieldId: fieldId(published, 'doubled'),
+    tagsFieldId: fieldId(published, 'tags'),
   };
 }

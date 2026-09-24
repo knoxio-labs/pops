@@ -80,6 +80,39 @@ name: S8.1 A user-defined type syncs to the phone, an item of it is created and 
 - assertVisible:
     id: inventory-field-${output.userDefinedType.state.userDefinedType.priceFieldId}
     text: '21'
+
+# `Tags` is the seeded type's many-valued field (POPS-4359's many-cardinality
+# gap): add two values, reorder them, remove one, and confirm the survivor is
+# read back from Item detail once saved. Every entry's editor and its
+# move/remove buttons are plain rows and icon buttons, addressed by
+# `InventoryAccessibility.protocol2FieldEntry(id:index:)` and its
+# `...MoveEarlier`/`...MoveLater`/`...Remove` siblings — never the `Menu` class
+# of control POPS-4556 already rules out for the Type picker.
+- tapOn:
+    id: inventory-field-${output.userDefinedType.state.userDefinedType.tagsFieldId}-add
+- tapOn:
+    id: inventory-field-${output.userDefinedType.state.userDefinedType.tagsFieldId}-0
+- inputText: 'blue'
+- tapOn:
+    id: inventory-field-${output.userDefinedType.state.userDefinedType.tagsFieldId}-add
+- tapOn:
+    id: inventory-field-${output.userDefinedType.state.userDefinedType.tagsFieldId}-1
+- inputText: 'red'
+# Moving the second entry earlier swaps the two positions: the identifier
+# that now reads "red" is index 0, not index 1, because the id is the row's
+# position, not the entry's own.
+- tapOn:
+    id: inventory-field-${output.userDefinedType.state.userDefinedType.tagsFieldId}-1-move-earlier
+- assertVisible:
+    id: inventory-field-${output.userDefinedType.state.userDefinedType.tagsFieldId}-0
+    text: 'red'
+# Removing the entry now at index 1 ("blue") leaves "red" as the one
+# surviving value, at index 0.
+- tapOn:
+    id: inventory-field-${output.userDefinedType.state.userDefinedType.tagsFieldId}-1-remove
+- assertVisible:
+    id: inventory-field-${output.userDefinedType.state.userDefinedType.tagsFieldId}-0
+    text: 'red'
 - tapOn: 'Create'
 - tapOn: Gadget ${output.inventory.run}
 
@@ -88,6 +121,14 @@ name: S8.1 A user-defined type syncs to the phone, an item of it is created and 
 - extendedWaitUntil:
     visible: 'Doubled price.*42.*'
     timeout: 60000
+
+# Tags reads back "red" only: the reorder moved it to the surviving
+# position, and the remove took out "blue", so Item detail's Details
+# section — which joins a many-valued field's entries with " · "
+# (`InventoryProtocol2Display.text`) — shows exactly one value, in the order
+# the edit left it in.
+- assertVisible: 'red'
+- assertNotVisible: 'blue'
 
 # Offline: every relayed sync request fails. An edit still lands on the phone
 # first and waits; once the pillar answers again, it replays and the computed
