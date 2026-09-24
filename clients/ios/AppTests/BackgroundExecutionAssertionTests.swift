@@ -27,19 +27,23 @@ private final class FakeApplication {
     }
 }
 
-/// Work that runs until `finish()`.
+/// Work that signals `started`, then runs until `complete()`.
 @MainActor
 private final class HeldWork {
+    let started: AsyncStream<Void>
+    private let start: AsyncStream<Void>.Continuation
     private let finished: AsyncStream<Void>
     private let finish: AsyncStream<Void>.Continuation
     private(set) var ran = false
 
     init() {
+        (started, start) = AsyncStream.makeStream()
         (finished, finish) = AsyncStream.makeStream()
     }
 
     func run() async {
         ran = true
+        start.yield()
         for await _ in finished {}
     }
 
@@ -58,7 +62,7 @@ internal struct BackgroundExecutionAssertionTests {
 
         let task = BackgroundExecutionAssertion.hold(
             begin: application.begin, end: application.end, while: work.run)
-        await Task.yield()
+        for await _ in work.started { break }
         #expect(application.ended.isEmpty)
 
         work.complete()
