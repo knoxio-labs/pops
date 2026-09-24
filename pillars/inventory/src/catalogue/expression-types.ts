@@ -47,8 +47,11 @@ export interface ExpressionDependency extends ExpressionFieldKey {
 /** A parsed and type-checked computed-field expression. */
 export interface ValidatedExpression {
   readonly ast: ExpressionV1;
+  /** The stored expression version; 2 and later derive and convert measurement units. */
+  readonly version: number;
   readonly dependencies: readonly ExpressionDependency[];
   readonly field: ExpressionFieldKey;
+  /** The computed field's declared type, which the result is converted into and checked against. */
   readonly resultType: ExpressionValueType;
 }
 
@@ -67,6 +70,16 @@ export type ExpressionUnavailableReason =
   | 'reference_deleted'
   | 'evaluation_error';
 
+/**
+ * One input an unavailable evaluation lacked: the field that had no value, the
+ * item the read had reached, and why. `coalesce` reports one per argument.
+ */
+export interface ExpressionMissingInput {
+  readonly reason: ExpressionUnavailableReason;
+  readonly fieldId: string;
+  readonly itemId: string;
+}
+
 /** A snapshot field supplied synchronously to the deterministic evaluator. */
 export type SnapshotFieldValue =
   | {
@@ -82,6 +95,8 @@ export type SnapshotFieldValue =
       readonly traversedItemIds: readonly string[];
       readonly revision: number;
       readonly dependencies?: readonly EvaluatedDependency[];
+      /** Every input the field's own evaluation lacked; absent or empty means only `fieldId`. */
+      readonly missingInputs?: readonly ExpressionMissingInput[];
     };
 
 /** A snapshot item supplied synchronously to the deterministic evaluator. */
@@ -114,6 +129,7 @@ export type ExpressionEvaluation =
       readonly reason: ExpressionUnavailableReason;
       readonly fieldId: string;
       readonly traversedItemIds: readonly string[];
+      readonly missingInputs: readonly ExpressionMissingInput[];
       readonly dependencies: readonly EvaluatedDependency[];
     }
   | {
@@ -144,6 +160,8 @@ export type EffectiveComputedValue =
       readonly reason: ExpressionUnavailableReason;
       readonly fieldId: string;
       readonly traversedItemIds: readonly string[];
+      /** Every input without a value; empty when the expression itself failed. */
+      readonly missingInputs: readonly ExpressionMissingInput[];
       readonly provenance: {
         readonly source: 'computed';
         readonly catalogueRevision: number;

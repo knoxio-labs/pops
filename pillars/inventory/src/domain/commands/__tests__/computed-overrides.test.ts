@@ -166,6 +166,7 @@ describe('computed field override commands', () => {
       reason: 'missing_dependency',
       failedFieldId: catalogue.inputFieldId,
       traversedItemIds: [itemId],
+      missingInputs: [{ reason: 'missing_dependency', fieldId: catalogue.inputFieldId, itemId }],
       provenance: {
         source: 'computed',
         catalogueRevision: catalogue.revision,

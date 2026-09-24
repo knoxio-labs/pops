@@ -148,6 +148,7 @@ describe('computed values on the sync wire', () => {
       state: 'unavailable',
       reason: 'missing_dependency',
       failedFieldId: catalogue.inputFieldId,
+      missingInputs: [{ reason: 'missing_dependency', fieldId: catalogue.inputFieldId, itemId }],
       dependencies: [],
       traversedItemIds: [itemId],
     });

@@ -281,6 +281,7 @@ describe('evaluateExpression', () => {
       reason: 'missing_dependency',
       fieldId: 'missing',
       traversedItemIds: ['root'],
+      missingInputs: [{ reason: 'missing_dependency', fieldId: 'missing', itemId: 'root' }],
       dependencies: [{ itemId: 'root', fieldId: 'condition', revision: 4 }],
     });
   });
@@ -303,6 +304,7 @@ describe('evaluateExpression', () => {
       reason: 'reference_deleted',
       fieldId: 'amount',
       traversedItemIds: ['root', 'child'],
+      missingInputs: [{ reason: 'reference_deleted', fieldId: 'amount', itemId: 'child' }],
       dependencies: [{ itemId: 'root', fieldId: 'peer', revision: 7 }],
     });
   });
@@ -331,6 +333,7 @@ describe('evaluateExpression', () => {
       reason: 'reference_unresolved',
       fieldId: 'upstream',
       traversedItemIds: ['root', 'remote'],
+      missingInputs: [{ reason: 'reference_unresolved', fieldId: 'upstream', itemId: 'remote' }],
       dependencies: [
         { itemId: 'remote', fieldId: 'input', revision: 4 },
         { itemId: 'root', fieldId: 'computed', revision: 9 },
@@ -434,6 +437,7 @@ describe('evaluateComputedValue', () => {
       reason: 'evaluation_error',
       fieldId: 'ratio',
       traversedItemIds: ['root'],
+      missingInputs: [],
       provenance: { source: 'computed', catalogueRevision: 12, dependencies: [] },
     });
     expect(onEvaluationError).toHaveBeenCalledExactlyOnceWith('division_by_zero');

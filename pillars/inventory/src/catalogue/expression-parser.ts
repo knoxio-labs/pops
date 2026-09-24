@@ -206,9 +206,16 @@ function parseNode(value: unknown, path: string, state: ParseState): ExpressionV
   return fail(`${path}.op`, 'expression_op_unknown', 'is not an expression-v1 operation');
 }
 
-/** Parses only expression version 1 and enforces its structural resource bounds. */
+/**
+ * The expression versions this server stores. Both share one grammar;
+ * version 2 derives and converts measurement units (ADR-002 D5), so a client
+ * that only evaluates version 1 keeps the server's value for it.
+ */
+export const EXPRESSION_VERSIONS: readonly number[] = [1, 2];
+
+/** Parses a supported expression version and enforces its structural resource bounds. */
 export function parseExpression(version: number, value: unknown): ExpressionV1 {
-  if (version !== 1)
+  if (!EXPRESSION_VERSIONS.includes(version))
     throw new ExpressionValidationError(
       'expression_version_unknown',
       'expressionVersion',

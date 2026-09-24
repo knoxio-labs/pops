@@ -4931,6 +4931,12 @@ export interface operations {
                     failedFieldId: string;
                     /** Format: uuid */
                     fieldId: string;
+                    missingInputs: {
+                      /** Format: uuid */
+                      fieldId: string;
+                      itemId: string;
+                      reason: string;
+                    }[];
                     reason: string;
                     /** @enum {string} */
                     source: 'computed';
@@ -5436,6 +5442,12 @@ export interface operations {
                     failedFieldId: string;
                     /** Format: uuid */
                     fieldId: string;
+                    missingInputs: {
+                      /** Format: uuid */
+                      fieldId: string;
+                      itemId: string;
+                      reason: string;
+                    }[];
                     reason: string;
                     /** @enum {string} */
                     source: 'computed';
@@ -7965,6 +7977,12 @@ export interface operations {
                     failedFieldId: string;
                     /** Format: uuid */
                     fieldId: string;
+                    missingInputs: {
+                      /** Format: uuid */
+                      fieldId: string;
+                      itemId: string;
+                      reason: string;
+                    }[];
                     reason: string;
                     /** @enum {string} */
                     source: 'computed';
@@ -8230,6 +8248,12 @@ export interface operations {
                     failedFieldId: string;
                     /** Format: uuid */
                     fieldId: string;
+                    missingInputs: {
+                      /** Format: uuid */
+                      fieldId: string;
+                      itemId: string;
+                      reason: string;
+                    }[];
                     reason: string;
                     /** @enum {string} */
                     source: 'computed';

@@ -2302,6 +2302,11 @@ export type MobileInventoryChangesResponses = {
             }>;
             failedFieldId: string;
             fieldId: string;
+            missingInputs?: Array<{
+              fieldId: string;
+              itemId: string;
+              reason: string;
+            }>;
             reason: string;
             source: 'computed';
             state: 'unavailable';
@@ -2545,6 +2550,11 @@ export type MobileInventorySnapshotResponses = {
             }>;
             failedFieldId: string;
             fieldId: string;
+            missingInputs?: Array<{
+              fieldId: string;
+              itemId: string;
+              reason: string;
+            }>;
             reason: string;
             source: 'computed';
             state: 'unavailable';

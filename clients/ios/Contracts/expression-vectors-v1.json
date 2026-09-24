@@ -523,6 +523,7 @@
           "state": "unavailable",
           "reason": "evaluation_error",
           "failedFieldId": "00000000-0000-4000-8000-000000000201",
+          "missingInputs": [],
           "dependencies": [],
           "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
         }
@@ -565,6 +566,7 @@
           "state": "unavailable",
           "reason": "evaluation_error",
           "failedFieldId": "00000000-0000-4000-8000-000000000201",
+          "missingInputs": [],
           "dependencies": [],
           "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
         }
@@ -604,6 +606,7 @@
           "state": "unavailable",
           "reason": "evaluation_error",
           "failedFieldId": "00000000-0000-4000-8000-000000000201",
+          "missingInputs": [],
           "dependencies": [],
           "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
         }
@@ -703,6 +706,13 @@
           "state": "unavailable",
           "reason": "missing_dependency",
           "failedFieldId": "00000000-0000-4000-8000-00000000020c",
+          "missingInputs": [
+            {
+              "reason": "missing_dependency",
+              "fieldId": "00000000-0000-4000-8000-00000000020c",
+              "itemId": "00000000-0000-4000-8000-000000000101"
+            }
+          ],
           "dependencies": [],
           "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
         }
@@ -829,6 +839,13 @@
           "state": "unavailable",
           "reason": "reference_deleted",
           "failedFieldId": "00000000-0000-4000-8000-000000000202",
+          "missingInputs": [
+            {
+              "reason": "reference_deleted",
+              "fieldId": "00000000-0000-4000-8000-000000000202",
+              "itemId": "00000000-0000-4000-8000-000000000105"
+            }
+          ],
           "dependencies": [
             {
               "itemId": "00000000-0000-4000-8000-000000000101",
@@ -1292,6 +1309,13 @@
           "state": "unavailable",
           "reason": "missing_dependency",
           "failedFieldId": "00000000-0000-4000-8000-000000000208",
+          "missingInputs": [
+            {
+              "reason": "missing_dependency",
+              "fieldId": "00000000-0000-4000-8000-000000000208",
+              "itemId": "00000000-0000-4000-8000-000000000101"
+            }
+          ],
           "dependencies": [],
           "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
         }
@@ -1342,6 +1366,13 @@
           "state": "unavailable",
           "reason": "reference_missing",
           "failedFieldId": "00000000-0000-4000-8000-000000000202",
+          "missingInputs": [
+            {
+              "reason": "reference_missing",
+              "fieldId": "00000000-0000-4000-8000-000000000202",
+              "itemId": "00000000-0000-4000-8000-000000000104"
+            }
+          ],
           "dependencies": [
             {
               "itemId": "00000000-0000-4000-8000-000000000101",
@@ -1407,6 +1438,13 @@
           "state": "unavailable",
           "reason": "reference_deleted",
           "failedFieldId": "00000000-0000-4000-8000-000000000202",
+          "missingInputs": [
+            {
+              "reason": "reference_deleted",
+              "fieldId": "00000000-0000-4000-8000-000000000202",
+              "itemId": "00000000-0000-4000-8000-000000000105"
+            }
+          ],
           "dependencies": [
             {
               "itemId": "00000000-0000-4000-8000-000000000101",
@@ -1472,6 +1510,13 @@
           "state": "unavailable",
           "reason": "reference_unresolved",
           "failedFieldId": "00000000-0000-4000-8000-000000000202",
+          "missingInputs": [
+            {
+              "reason": "reference_unresolved",
+              "fieldId": "00000000-0000-4000-8000-000000000202",
+              "itemId": "00000000-0000-4000-8000-000000000106"
+            }
+          ],
           "dependencies": [
             {
               "itemId": "00000000-0000-4000-8000-000000000101",
@@ -1537,6 +1582,13 @@
           "state": "unavailable",
           "reason": "reference_deleted",
           "failedFieldId": "00000000-0000-4000-8000-000000000208",
+          "missingInputs": [
+            {
+              "reason": "reference_deleted",
+              "fieldId": "00000000-0000-4000-8000-000000000208",
+              "itemId": "00000000-0000-4000-8000-000000000105"
+            }
+          ],
           "dependencies": [
             {
               "itemId": "00000000-0000-4000-8000-000000000101",
@@ -1602,6 +1654,13 @@
           "state": "unavailable",
           "reason": "missing_dependency",
           "failedFieldId": "00000000-0000-4000-8000-000000000202",
+          "missingInputs": [
+            {
+              "reason": "missing_dependency",
+              "fieldId": "00000000-0000-4000-8000-000000000202",
+              "itemId": "00000000-0000-4000-8000-000000000102"
+            }
+          ],
           "dependencies": [
             {
               "itemId": "00000000-0000-4000-8000-000000000101",
@@ -1661,6 +1720,7 @@
           "state": "unavailable",
           "reason": "evaluation_error",
           "failedFieldId": "00000000-0000-4000-8000-000000000201",
+          "missingInputs": [],
           "dependencies": [
             {
               "itemId": "00000000-0000-4000-8000-000000000101",
@@ -1714,6 +1774,7 @@
           "state": "unavailable",
           "reason": "evaluation_error",
           "failedFieldId": "00000000-0000-4000-8000-000000000201",
+          "missingInputs": [],
           "dependencies": [
             {
               "itemId": "00000000-0000-4000-8000-000000000101",
@@ -1769,6 +1830,13 @@
           "state": "unavailable",
           "reason": "missing_dependency",
           "failedFieldId": "00000000-0000-4000-8000-00000000020c",
+          "missingInputs": [
+            {
+              "reason": "missing_dependency",
+              "fieldId": "00000000-0000-4000-8000-00000000020c",
+              "itemId": "00000000-0000-4000-8000-000000000101"
+            }
+          ],
           "dependencies": [
             {
               "itemId": "00000000-0000-4000-8000-000000000101",
@@ -2001,6 +2069,7 @@
           "state": "unavailable",
           "reason": "evaluation_error",
           "failedFieldId": "00000000-0000-4000-8000-000000000201",
+          "missingInputs": [],
           "dependencies": [],
           "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
         }
@@ -2047,6 +2116,7 @@
           "state": "unavailable",
           "reason": "evaluation_error",
           "failedFieldId": "00000000-0000-4000-8000-000000000201",
+          "missingInputs": [],
           "dependencies": [],
           "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
         }
@@ -2093,6 +2163,7 @@
           "state": "unavailable",
           "reason": "evaluation_error",
           "failedFieldId": "00000000-0000-4000-8000-000000000201",
+          "missingInputs": [],
           "dependencies": [],
           "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
         }
@@ -2139,6 +2210,7 @@
           "state": "unavailable",
           "reason": "evaluation_error",
           "failedFieldId": "00000000-0000-4000-8000-000000000201",
+          "missingInputs": [],
           "dependencies": [],
           "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
         }
@@ -2545,6 +2617,7 @@
           "state": "unavailable",
           "reason": "evaluation_error",
           "failedFieldId": "00000000-0000-4000-8000-000000000201",
+          "missingInputs": [],
           "dependencies": [],
           "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
         }
@@ -2591,6 +2664,7 @@
           "state": "unavailable",
           "reason": "evaluation_error",
           "failedFieldId": "00000000-0000-4000-8000-000000000201",
+          "missingInputs": [],
           "dependencies": [],
           "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
         }
@@ -2637,6 +2711,7 @@
           "state": "unavailable",
           "reason": "evaluation_error",
           "failedFieldId": "00000000-0000-4000-8000-000000000201",
+          "missingInputs": [],
           "dependencies": [],
           "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
         }
@@ -2773,6 +2848,7 @@
           "state": "unavailable",
           "reason": "evaluation_error",
           "failedFieldId": "00000000-0000-4000-8000-000000000201",
+          "missingInputs": [],
           "dependencies": [],
           "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
         }
@@ -2819,6 +2895,7 @@
           "state": "unavailable",
           "reason": "evaluation_error",
           "failedFieldId": "00000000-0000-4000-8000-000000000201",
+          "missingInputs": [],
           "dependencies": [],
           "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
         }
@@ -2910,6 +2987,7 @@
           "state": "unavailable",
           "reason": "evaluation_error",
           "failedFieldId": "00000000-0000-4000-8000-000000000201",
+          "missingInputs": [],
           "dependencies": [],
           "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
         }
@@ -2956,6 +3034,7 @@
           "state": "unavailable",
           "reason": "evaluation_error",
           "failedFieldId": "00000000-0000-4000-8000-000000000201",
+          "missingInputs": [],
           "dependencies": [],
           "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
         }
@@ -3047,6 +3126,7 @@
           "state": "unavailable",
           "reason": "evaluation_error",
           "failedFieldId": "00000000-0000-4000-8000-000000000201",
+          "missingInputs": [],
           "dependencies": [],
           "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
         }
@@ -3608,6 +3688,7 @@
           "state": "unavailable",
           "reason": "evaluation_error",
           "failedFieldId": "00000000-0000-4000-8000-000000000201",
+          "missingInputs": [],
           "dependencies": [
             {
               "itemId": "00000000-0000-4000-8000-000000000101",
@@ -3705,6 +3786,7 @@
           "state": "unavailable",
           "reason": "evaluation_error",
           "failedFieldId": "00000000-0000-4000-8000-000000000201",
+          "missingInputs": [],
           "dependencies": [],
           "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
         }
@@ -3804,6 +3886,7 @@
           "state": "unavailable",
           "reason": "evaluation_error",
           "failedFieldId": "00000000-0000-4000-8000-000000000201",
+          "missingInputs": [],
           "dependencies": [],
           "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
         }
@@ -4462,6 +4545,7 @@
           "state": "unavailable",
           "reason": "evaluation_error",
           "failedFieldId": "00000000-0000-4000-8000-000000000201",
+          "missingInputs": [],
           "dependencies": [],
           "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
         }
@@ -4653,6 +4737,13 @@
           "state": "unavailable",
           "reason": "missing_dependency",
           "failedFieldId": "00000000-0000-4000-8000-00000000020c",
+          "missingInputs": [
+            {
+              "reason": "missing_dependency",
+              "fieldId": "00000000-0000-4000-8000-00000000020c",
+              "itemId": "00000000-0000-4000-8000-000000000101"
+            }
+          ],
           "dependencies": [
             {
               "itemId": "00000000-0000-4000-8000-000000000101",
@@ -5072,6 +5163,13 @@
           "state": "unavailable",
           "reason": "missing_dependency",
           "failedFieldId": "00000000-0000-4000-8000-00000000020c",
+          "missingInputs": [
+            {
+              "reason": "missing_dependency",
+              "fieldId": "00000000-0000-4000-8000-00000000020c",
+              "itemId": "00000000-0000-4000-8000-000000000101"
+            }
+          ],
           "dependencies": [
             {
               "itemId": "00000000-0000-4000-8000-000000000101",
@@ -5129,6 +5227,13 @@
           "state": "unavailable",
           "reason": "missing_dependency",
           "failedFieldId": "00000000-0000-4000-8000-00000000020c",
+          "missingInputs": [
+            {
+              "reason": "missing_dependency",
+              "fieldId": "00000000-0000-4000-8000-00000000020c",
+              "itemId": "00000000-0000-4000-8000-000000000101"
+            }
+          ],
           "dependencies": [],
           "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
         }
@@ -5193,6 +5298,7 @@
           "state": "unavailable",
           "reason": "evaluation_error",
           "failedFieldId": "00000000-0000-4000-8000-000000000201",
+          "missingInputs": [],
           "dependencies": [
             {
               "itemId": "00000000-0000-4000-8000-000000000101",
@@ -5259,6 +5365,7 @@
           "state": "unavailable",
           "reason": "evaluation_error",
           "failedFieldId": "00000000-0000-4000-8000-000000000201",
+          "missingInputs": [],
           "dependencies": [
             {
               "itemId": "00000000-0000-4000-8000-000000000101",
@@ -5561,6 +5668,18 @@
           "state": "unavailable",
           "reason": "missing_dependency",
           "failedFieldId": "00000000-0000-4000-8000-00000000020c",
+          "missingInputs": [
+            {
+              "reason": "reference_missing",
+              "fieldId": "00000000-0000-4000-8000-000000000202",
+              "itemId": "00000000-0000-4000-8000-000000000104"
+            },
+            {
+              "reason": "missing_dependency",
+              "fieldId": "00000000-0000-4000-8000-00000000020c",
+              "itemId": "00000000-0000-4000-8000-000000000101"
+            }
+          ],
           "dependencies": [
             {
               "itemId": "00000000-0000-4000-8000-000000000101",
@@ -5582,6 +5701,522 @@
             "00000000-0000-4000-8000-000000000101",
             "00000000-0000-4000-8000-000000000104"
           ]
+        }
+      }
+    },
+    {
+      "name": "coalesce with no value names every missing input and its item",
+      "expressionVersion": 1,
+      "expression": {
+        "op": "coalesce",
+        "values": [
+          {
+            "op": "read",
+            "path": [],
+            "fieldId": "00000000-0000-4000-8000-00000000020c"
+          },
+          {
+            "op": "read",
+            "path": ["00000000-0000-4000-8000-000000000208"],
+            "fieldId": "00000000-0000-4000-8000-000000000202"
+          },
+          {
+            "op": "read",
+            "path": [],
+            "fieldId": "00000000-0000-4000-8000-000000000203"
+          }
+        ]
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "decimal",
+        "fixedUnit": null,
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000202",
+              "state": "value",
+              "value": "2.50",
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000208",
+              "state": "value",
+              "value": {
+                "targetKind": "item",
+                "targetId": "00000000-0000-4000-8000-000000000104"
+              },
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["coalesce", "read"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "unavailable",
+          "reason": "missing_dependency",
+          "failedFieldId": "00000000-0000-4000-8000-000000000203",
+          "missingInputs": [
+            {
+              "reason": "missing_dependency",
+              "fieldId": "00000000-0000-4000-8000-00000000020c",
+              "itemId": "00000000-0000-4000-8000-000000000101"
+            },
+            {
+              "reason": "reference_missing",
+              "fieldId": "00000000-0000-4000-8000-000000000202",
+              "itemId": "00000000-0000-4000-8000-000000000104"
+            },
+            {
+              "reason": "missing_dependency",
+              "fieldId": "00000000-0000-4000-8000-000000000203",
+              "itemId": "00000000-0000-4000-8000-000000000101"
+            }
+          ],
+          "dependencies": [
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-000000000203",
+              "revision": 3
+            },
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-000000000208",
+              "revision": 3
+            },
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020c",
+              "revision": 3
+            },
+            {
+              "itemId": "00000000-0000-4000-8000-000000000104",
+              "fieldId": "00000000-0000-4000-8000-000000000202",
+              "revision": 0
+            }
+          ],
+          "traversedItemIds": [
+            "00000000-0000-4000-8000-000000000101",
+            "00000000-0000-4000-8000-000000000104"
+          ]
+        }
+      }
+    },
+    {
+      "name": "coalesce names each missing input once",
+      "expressionVersion": 1,
+      "expression": {
+        "op": "coalesce",
+        "values": [
+          {
+            "op": "read",
+            "path": [],
+            "fieldId": "00000000-0000-4000-8000-00000000020c"
+          },
+          {
+            "op": "read",
+            "path": [],
+            "fieldId": "00000000-0000-4000-8000-000000000203"
+          },
+          {
+            "op": "read",
+            "path": [],
+            "fieldId": "00000000-0000-4000-8000-00000000020c"
+          }
+        ]
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "decimal",
+        "fixedUnit": null,
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000202",
+              "state": "value",
+              "value": "2.50",
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000208",
+              "state": "value",
+              "value": {
+                "targetKind": "item",
+                "targetId": "00000000-0000-4000-8000-000000000104"
+              },
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["coalesce", "read"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "unavailable",
+          "reason": "missing_dependency",
+          "failedFieldId": "00000000-0000-4000-8000-00000000020c",
+          "missingInputs": [
+            {
+              "reason": "missing_dependency",
+              "fieldId": "00000000-0000-4000-8000-00000000020c",
+              "itemId": "00000000-0000-4000-8000-000000000101"
+            },
+            {
+              "reason": "missing_dependency",
+              "fieldId": "00000000-0000-4000-8000-000000000203",
+              "itemId": "00000000-0000-4000-8000-000000000101"
+            }
+          ],
+          "dependencies": [
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-000000000203",
+              "revision": 3
+            },
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020c",
+              "revision": 3
+            }
+          ],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "nested coalesce flattens its missing inputs",
+      "expressionVersion": 1,
+      "expression": {
+        "op": "coalesce",
+        "values": [
+          {
+            "op": "coalesce",
+            "values": [
+              {
+                "op": "read",
+                "path": [],
+                "fieldId": "00000000-0000-4000-8000-00000000020c"
+              },
+              {
+                "op": "read",
+                "path": [],
+                "fieldId": "00000000-0000-4000-8000-000000000203"
+              }
+            ]
+          },
+          {
+            "op": "read",
+            "path": [],
+            "fieldId": "00000000-0000-4000-8000-000000000205"
+          }
+        ]
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "decimal",
+        "fixedUnit": null,
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000202",
+              "state": "value",
+              "value": "2.50",
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000208",
+              "state": "value",
+              "value": {
+                "targetKind": "item",
+                "targetId": "00000000-0000-4000-8000-000000000104"
+              },
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["coalesce", "read"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "unavailable",
+          "reason": "missing_dependency",
+          "failedFieldId": "00000000-0000-4000-8000-000000000205",
+          "missingInputs": [
+            {
+              "reason": "missing_dependency",
+              "fieldId": "00000000-0000-4000-8000-00000000020c",
+              "itemId": "00000000-0000-4000-8000-000000000101"
+            },
+            {
+              "reason": "missing_dependency",
+              "fieldId": "00000000-0000-4000-8000-000000000203",
+              "itemId": "00000000-0000-4000-8000-000000000101"
+            },
+            {
+              "reason": "missing_dependency",
+              "fieldId": "00000000-0000-4000-8000-000000000205",
+              "itemId": "00000000-0000-4000-8000-000000000101"
+            }
+          ],
+          "dependencies": [
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-000000000203",
+              "revision": 3
+            },
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-000000000205",
+              "revision": 3
+            },
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020c",
+              "revision": 3
+            }
+          ],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "coalesce passes on a computed input’s own missing inputs",
+      "expressionVersion": 1,
+      "expression": {
+        "op": "coalesce",
+        "values": [
+          {
+            "op": "read",
+            "path": [],
+            "fieldId": "00000000-0000-4000-8000-000000000209"
+          },
+          {
+            "op": "read",
+            "path": [],
+            "fieldId": "00000000-0000-4000-8000-00000000020c"
+          }
+        ]
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "decimal",
+        "fixedUnit": null,
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000209",
+              "state": "unavailable",
+              "reason": "reference_missing",
+              "failedFieldId": "00000000-0000-4000-8000-000000000202",
+              "traversedItemIds": [
+                "00000000-0000-4000-8000-000000000101",
+                "00000000-0000-4000-8000-000000000104"
+              ],
+              "revision": 3,
+              "missingInputs": [
+                {
+                  "reason": "missing_dependency",
+                  "fieldId": "00000000-0000-4000-8000-000000000203",
+                  "itemId": "00000000-0000-4000-8000-000000000101"
+                },
+                {
+                  "reason": "reference_missing",
+                  "fieldId": "00000000-0000-4000-8000-000000000202",
+                  "itemId": "00000000-0000-4000-8000-000000000104"
+                }
+              ]
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000208",
+              "state": "value",
+              "value": {
+                "targetKind": "item",
+                "targetId": "00000000-0000-4000-8000-000000000104"
+              },
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["coalesce", "read"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "unavailable",
+          "reason": "missing_dependency",
+          "failedFieldId": "00000000-0000-4000-8000-00000000020c",
+          "missingInputs": [
+            {
+              "reason": "missing_dependency",
+              "fieldId": "00000000-0000-4000-8000-000000000203",
+              "itemId": "00000000-0000-4000-8000-000000000101"
+            },
+            {
+              "reason": "reference_missing",
+              "fieldId": "00000000-0000-4000-8000-000000000202",
+              "itemId": "00000000-0000-4000-8000-000000000104"
+            },
+            {
+              "reason": "missing_dependency",
+              "fieldId": "00000000-0000-4000-8000-00000000020c",
+              "itemId": "00000000-0000-4000-8000-000000000101"
+            }
+          ],
+          "dependencies": [
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-000000000209",
+              "revision": 3
+            },
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020c",
+              "revision": 3
+            },
+            {
+              "itemId": "00000000-0000-4000-8000-000000000104",
+              "fieldId": "00000000-0000-4000-8000-000000000202",
+              "revision": 0
+            }
+          ],
+          "traversedItemIds": [
+            "00000000-0000-4000-8000-000000000101",
+            "00000000-0000-4000-8000-000000000104"
+          ]
+        }
+      }
+    },
+    {
+      "name": "a computed input without recorded missing inputs names itself",
+      "expressionVersion": 1,
+      "expression": {
+        "op": "coalesce",
+        "values": [
+          {
+            "op": "read",
+            "path": [],
+            "fieldId": "00000000-0000-4000-8000-000000000209"
+          },
+          {
+            "op": "read",
+            "path": [],
+            "fieldId": "00000000-0000-4000-8000-00000000020c"
+          }
+        ]
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "decimal",
+        "fixedUnit": null,
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000209",
+              "state": "unavailable",
+              "reason": "evaluation_error",
+              "failedFieldId": "00000000-0000-4000-8000-000000000209",
+              "traversedItemIds": ["00000000-0000-4000-8000-000000000101"],
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["coalesce", "read"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "unavailable",
+          "reason": "missing_dependency",
+          "failedFieldId": "00000000-0000-4000-8000-00000000020c",
+          "missingInputs": [
+            {
+              "reason": "evaluation_error",
+              "fieldId": "00000000-0000-4000-8000-000000000209",
+              "itemId": "00000000-0000-4000-8000-000000000101"
+            },
+            {
+              "reason": "missing_dependency",
+              "fieldId": "00000000-0000-4000-8000-00000000020c",
+              "itemId": "00000000-0000-4000-8000-000000000101"
+            }
+          ],
+          "dependencies": [
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-000000000209",
+              "revision": 3
+            },
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020c",
+              "revision": 3
+            }
+          ],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
         }
       }
     },
@@ -5652,6 +6287,7 @@
           "state": "unavailable",
           "reason": "evaluation_error",
           "failedFieldId": "00000000-0000-4000-8000-000000000201",
+          "missingInputs": [],
           "dependencies": [
             {
               "itemId": "00000000-0000-4000-8000-000000000101",
@@ -5730,6 +6366,7 @@
           "state": "unavailable",
           "reason": "evaluation_error",
           "failedFieldId": "00000000-0000-4000-8000-000000000201",
+          "missingInputs": [],
           "dependencies": [
             {
               "itemId": "00000000-0000-4000-8000-000000000101",
@@ -5930,6 +6567,5047 @@
         "outcome": "rejected",
         "code": "expression_node_invalid",
         "path": "expression"
+      }
+    },
+    {
+      "name": "cm × cm is cm²",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "multiply",
+        "left": {
+          "op": "read",
+          "path": [],
+          "fieldId": "00000000-0000-4000-8000-00000000020d"
+        },
+        "right": {
+          "op": "read",
+          "path": [],
+          "fieldId": "00000000-0000-4000-8000-00000000020e"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "measurement",
+        "fixedUnit": "cm²",
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "state": "value",
+              "value": {
+                "amount": "20",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020e",
+              "state": "value",
+              "value": {
+                "amount": "30",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020f",
+              "state": "value",
+              "value": {
+                "amount": "400",
+                "unit": "mm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000210",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "kg"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000211",
+              "state": "value",
+              "value": {
+                "amount": "1.5",
+                "unit": "L"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000212",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "rpm"
+              },
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["multiply", "read"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": [
+            {
+              "amount": "600",
+              "unit": "cm²"
+            }
+          ],
+          "dependencies": [
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "revision": 3
+            },
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020e",
+              "revision": 3
+            }
+          ],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "cm² × cm is cm³",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "multiply",
+        "left": {
+          "op": "multiply",
+          "left": {
+            "op": "read",
+            "path": [],
+            "fieldId": "00000000-0000-4000-8000-00000000020d"
+          },
+          "right": {
+            "op": "read",
+            "path": [],
+            "fieldId": "00000000-0000-4000-8000-00000000020e"
+          }
+        },
+        "right": {
+          "op": "read",
+          "path": [],
+          "fieldId": "00000000-0000-4000-8000-00000000020d"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "measurement",
+        "fixedUnit": "cm³",
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "state": "value",
+              "value": {
+                "amount": "20",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020e",
+              "state": "value",
+              "value": {
+                "amount": "30",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020f",
+              "state": "value",
+              "value": {
+                "amount": "400",
+                "unit": "mm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000210",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "kg"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000211",
+              "state": "value",
+              "value": {
+                "amount": "1.5",
+                "unit": "L"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000212",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "rpm"
+              },
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["multiply", "read"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": [
+            {
+              "amount": "12000",
+              "unit": "cm³"
+            }
+          ],
+          "dependencies": [
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "revision": 3
+            },
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020e",
+              "revision": 3
+            }
+          ],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "cm² × cm² is cm⁴",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "multiply",
+        "left": {
+          "op": "multiply",
+          "left": {
+            "op": "read",
+            "path": [],
+            "fieldId": "00000000-0000-4000-8000-00000000020d"
+          },
+          "right": {
+            "op": "read",
+            "path": [],
+            "fieldId": "00000000-0000-4000-8000-00000000020e"
+          }
+        },
+        "right": {
+          "op": "multiply",
+          "left": {
+            "op": "read",
+            "path": [],
+            "fieldId": "00000000-0000-4000-8000-00000000020d"
+          },
+          "right": {
+            "op": "read",
+            "path": [],
+            "fieldId": "00000000-0000-4000-8000-00000000020e"
+          }
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "measurement",
+        "fixedUnit": "cm⁴",
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "state": "value",
+              "value": {
+                "amount": "20",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020e",
+              "state": "value",
+              "value": {
+                "amount": "30",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020f",
+              "state": "value",
+              "value": {
+                "amount": "400",
+                "unit": "mm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000210",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "kg"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000211",
+              "state": "value",
+              "value": {
+                "amount": "1.5",
+                "unit": "L"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000212",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "rpm"
+              },
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["multiply", "read"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": [
+            {
+              "amount": "360000",
+              "unit": "cm⁴"
+            }
+          ],
+          "dependencies": [
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "revision": 3
+            },
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020e",
+              "revision": 3
+            }
+          ],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "width × height × depth supplies a volume in L",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "multiply",
+        "left": {
+          "op": "multiply",
+          "left": {
+            "op": "read",
+            "path": [],
+            "fieldId": "00000000-0000-4000-8000-00000000020d"
+          },
+          "right": {
+            "op": "read",
+            "path": [],
+            "fieldId": "00000000-0000-4000-8000-00000000020e"
+          }
+        },
+        "right": {
+          "op": "read",
+          "path": [],
+          "fieldId": "00000000-0000-4000-8000-00000000020f"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "measurement",
+        "fixedUnit": "L",
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "state": "value",
+              "value": {
+                "amount": "20",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020e",
+              "state": "value",
+              "value": {
+                "amount": "30",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020f",
+              "state": "value",
+              "value": {
+                "amount": "400",
+                "unit": "mm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000210",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "kg"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000211",
+              "state": "value",
+              "value": {
+                "amount": "1.5",
+                "unit": "L"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000212",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "rpm"
+              },
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["multiply", "read"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": [
+            {
+              "amount": "24.0000",
+              "unit": "L"
+            }
+          ],
+          "dependencies": [
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "revision": 3
+            },
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020e",
+              "revision": 3
+            },
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020f",
+              "revision": 3
+            }
+          ],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "a mixed-unit volume in cm³",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "multiply",
+        "left": {
+          "op": "multiply",
+          "left": {
+            "op": "read",
+            "path": [],
+            "fieldId": "00000000-0000-4000-8000-00000000020d"
+          },
+          "right": {
+            "op": "read",
+            "path": [],
+            "fieldId": "00000000-0000-4000-8000-00000000020e"
+          }
+        },
+        "right": {
+          "op": "read",
+          "path": [],
+          "fieldId": "00000000-0000-4000-8000-00000000020f"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "measurement",
+        "fixedUnit": "cm³",
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "state": "value",
+              "value": {
+                "amount": "20",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020e",
+              "state": "value",
+              "value": {
+                "amount": "30",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020f",
+              "state": "value",
+              "value": {
+                "amount": "400",
+                "unit": "mm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000210",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "kg"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000211",
+              "state": "value",
+              "value": {
+                "amount": "1.5",
+                "unit": "L"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000212",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "rpm"
+              },
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["multiply", "read"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": [
+            {
+              "amount": "24000.0",
+              "unit": "cm³"
+            }
+          ],
+          "dependencies": [
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "revision": 3
+            },
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020e",
+              "revision": 3
+            },
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020f",
+              "revision": 3
+            }
+          ],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "a mixed-unit volume in mm³",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "multiply",
+        "left": {
+          "op": "multiply",
+          "left": {
+            "op": "read",
+            "path": [],
+            "fieldId": "00000000-0000-4000-8000-00000000020d"
+          },
+          "right": {
+            "op": "read",
+            "path": [],
+            "fieldId": "00000000-0000-4000-8000-00000000020e"
+          }
+        },
+        "right": {
+          "op": "read",
+          "path": [],
+          "fieldId": "00000000-0000-4000-8000-00000000020f"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "measurement",
+        "fixedUnit": "mm³",
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "state": "value",
+              "value": {
+                "amount": "20",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020e",
+              "state": "value",
+              "value": {
+                "amount": "30",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020f",
+              "state": "value",
+              "value": {
+                "amount": "400",
+                "unit": "mm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000210",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "kg"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000211",
+              "state": "value",
+              "value": {
+                "amount": "1.5",
+                "unit": "L"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000212",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "rpm"
+              },
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["multiply", "read"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": [
+            {
+              "amount": "24000000",
+              "unit": "mm³"
+            }
+          ],
+          "dependencies": [
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "revision": 3
+            },
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020e",
+              "revision": 3
+            },
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020f",
+              "revision": 3
+            }
+          ],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "cm³ ÷ cm is cm²",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "divide",
+        "left": {
+          "op": "multiply",
+          "left": {
+            "op": "multiply",
+            "left": {
+              "op": "read",
+              "path": [],
+              "fieldId": "00000000-0000-4000-8000-00000000020d"
+            },
+            "right": {
+              "op": "read",
+              "path": [],
+              "fieldId": "00000000-0000-4000-8000-00000000020e"
+            }
+          },
+          "right": {
+            "op": "read",
+            "path": [],
+            "fieldId": "00000000-0000-4000-8000-00000000020d"
+          }
+        },
+        "right": {
+          "op": "read",
+          "path": [],
+          "fieldId": "00000000-0000-4000-8000-00000000020d"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "measurement",
+        "fixedUnit": "cm²",
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "state": "value",
+              "value": {
+                "amount": "20",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020e",
+              "state": "value",
+              "value": {
+                "amount": "30",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020f",
+              "state": "value",
+              "value": {
+                "amount": "400",
+                "unit": "mm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000210",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "kg"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000211",
+              "state": "value",
+              "value": {
+                "amount": "1.5",
+                "unit": "L"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000212",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "rpm"
+              },
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["divide", "multiply", "read"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": [
+            {
+              "amount": "600",
+              "unit": "cm²"
+            }
+          ],
+          "dependencies": [
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "revision": 3
+            },
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020e",
+              "revision": 3
+            }
+          ],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "cm ÷ mm is a plain number",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "divide",
+        "left": {
+          "op": "read",
+          "path": [],
+          "fieldId": "00000000-0000-4000-8000-00000000020d"
+        },
+        "right": {
+          "op": "read",
+          "path": [],
+          "fieldId": "00000000-0000-4000-8000-00000000020f"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "decimal",
+        "fixedUnit": null,
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "state": "value",
+              "value": {
+                "amount": "20",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020e",
+              "state": "value",
+              "value": {
+                "amount": "30",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020f",
+              "state": "value",
+              "value": {
+                "amount": "400",
+                "unit": "mm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000210",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "kg"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000211",
+              "state": "value",
+              "value": {
+                "amount": "1.5",
+                "unit": "L"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000212",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "rpm"
+              },
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["divide", "read"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": ["0.5"],
+          "dependencies": [
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "revision": 3
+            },
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020f",
+              "revision": 3
+            }
+          ],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "cm ÷ cm is a plain number",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "divide",
+        "left": {
+          "op": "read",
+          "path": [],
+          "fieldId": "00000000-0000-4000-8000-00000000020e"
+        },
+        "right": {
+          "op": "read",
+          "path": [],
+          "fieldId": "00000000-0000-4000-8000-00000000020d"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "decimal",
+        "fixedUnit": null,
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "state": "value",
+              "value": {
+                "amount": "20",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020e",
+              "state": "value",
+              "value": {
+                "amount": "30",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020f",
+              "state": "value",
+              "value": {
+                "amount": "400",
+                "unit": "mm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000210",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "kg"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000211",
+              "state": "value",
+              "value": {
+                "amount": "1.5",
+                "unit": "L"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000212",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "rpm"
+              },
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["divide", "read"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": ["1.5"],
+          "dependencies": [
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "revision": 3
+            },
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020e",
+              "revision": 3
+            }
+          ],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "L ÷ cm³ cancels to a plain number",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "divide",
+        "left": {
+          "op": "read",
+          "path": [],
+          "fieldId": "00000000-0000-4000-8000-000000000211"
+        },
+        "right": {
+          "op": "multiply",
+          "left": {
+            "op": "multiply",
+            "left": {
+              "op": "read",
+              "path": [],
+              "fieldId": "00000000-0000-4000-8000-00000000020d"
+            },
+            "right": {
+              "op": "read",
+              "path": [],
+              "fieldId": "00000000-0000-4000-8000-00000000020e"
+            }
+          },
+          "right": {
+            "op": "read",
+            "path": [],
+            "fieldId": "00000000-0000-4000-8000-00000000020d"
+          }
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "decimal",
+        "fixedUnit": null,
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "state": "value",
+              "value": {
+                "amount": "20",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020e",
+              "state": "value",
+              "value": {
+                "amount": "30",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020f",
+              "state": "value",
+              "value": {
+                "amount": "400",
+                "unit": "mm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000210",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "kg"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000211",
+              "state": "value",
+              "value": {
+                "amount": "1.5",
+                "unit": "L"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000212",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "rpm"
+              },
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["divide", "multiply", "read"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": ["0.125"],
+          "dependencies": [
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "revision": 3
+            },
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020e",
+              "revision": 3
+            },
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-000000000211",
+              "revision": 3
+            }
+          ],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "kg ÷ L is kg/L",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "divide",
+        "left": {
+          "op": "read",
+          "path": [],
+          "fieldId": "00000000-0000-4000-8000-000000000210"
+        },
+        "right": {
+          "op": "read",
+          "path": [],
+          "fieldId": "00000000-0000-4000-8000-000000000211"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "measurement",
+        "fixedUnit": "kg/L",
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "state": "value",
+              "value": {
+                "amount": "20",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020e",
+              "state": "value",
+              "value": {
+                "amount": "30",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020f",
+              "state": "value",
+              "value": {
+                "amount": "400",
+                "unit": "mm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000210",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "kg"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000211",
+              "state": "value",
+              "value": {
+                "amount": "1.5",
+                "unit": "L"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000212",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "rpm"
+              },
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["divide", "read"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": [
+            {
+              "amount": "2",
+              "unit": "kg/L"
+            }
+          ],
+          "dependencies": [
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-000000000210",
+              "revision": 3
+            },
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-000000000211",
+              "revision": 3
+            }
+          ],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "kg ÷ L converts into kg/m³",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "divide",
+        "left": {
+          "op": "read",
+          "path": [],
+          "fieldId": "00000000-0000-4000-8000-000000000210"
+        },
+        "right": {
+          "op": "read",
+          "path": [],
+          "fieldId": "00000000-0000-4000-8000-000000000211"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "measurement",
+        "fixedUnit": "kg/m³",
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "state": "value",
+              "value": {
+                "amount": "20",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020e",
+              "state": "value",
+              "value": {
+                "amount": "30",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020f",
+              "state": "value",
+              "value": {
+                "amount": "400",
+                "unit": "mm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000210",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "kg"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000211",
+              "state": "value",
+              "value": {
+                "amount": "1.5",
+                "unit": "L"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000212",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "rpm"
+              },
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["divide", "read"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": [
+            {
+              "amount": "2000",
+              "unit": "kg/m³"
+            }
+          ],
+          "dependencies": [
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-000000000210",
+              "revision": 3
+            },
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-000000000211",
+              "revision": 3
+            }
+          ],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "an unknown unit squares",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "multiply",
+        "left": {
+          "op": "read",
+          "path": [],
+          "fieldId": "00000000-0000-4000-8000-000000000212"
+        },
+        "right": {
+          "op": "read",
+          "path": [],
+          "fieldId": "00000000-0000-4000-8000-000000000212"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "measurement",
+        "fixedUnit": "rpm²",
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "state": "value",
+              "value": {
+                "amount": "20",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020e",
+              "state": "value",
+              "value": {
+                "amount": "30",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020f",
+              "state": "value",
+              "value": {
+                "amount": "400",
+                "unit": "mm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000210",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "kg"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000211",
+              "state": "value",
+              "value": {
+                "amount": "1.5",
+                "unit": "L"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000212",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "rpm"
+              },
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["multiply", "read"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": [
+            {
+              "amount": "9",
+              "unit": "rpm²"
+            }
+          ],
+          "dependencies": [
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-000000000212",
+              "revision": 3
+            }
+          ],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "a product matches a field unit written in another order",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "multiply",
+        "left": {
+          "op": "read",
+          "path": [],
+          "fieldId": "00000000-0000-4000-8000-000000000212"
+        },
+        "right": {
+          "op": "read",
+          "path": [],
+          "fieldId": "00000000-0000-4000-8000-00000000020d"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "measurement",
+        "fixedUnit": "cm·rpm",
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "state": "value",
+              "value": {
+                "amount": "20",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020e",
+              "state": "value",
+              "value": {
+                "amount": "30",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020f",
+              "state": "value",
+              "value": {
+                "amount": "400",
+                "unit": "mm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000210",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "kg"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000211",
+              "state": "value",
+              "value": {
+                "amount": "1.5",
+                "unit": "L"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000212",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "rpm"
+              },
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["multiply", "read"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": [
+            {
+              "amount": "60",
+              "unit": "cm·rpm"
+            }
+          ],
+          "dependencies": [
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "revision": 3
+            },
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-000000000212",
+              "revision": 3
+            }
+          ],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "a measurement times a decimal keeps its unit",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "multiply",
+        "left": {
+          "op": "read",
+          "path": [],
+          "fieldId": "00000000-0000-4000-8000-00000000020d"
+        },
+        "right": {
+          "op": "literal",
+          "value": "2"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "measurement",
+        "fixedUnit": "cm",
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "state": "value",
+              "value": {
+                "amount": "20",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020e",
+              "state": "value",
+              "value": {
+                "amount": "30",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020f",
+              "state": "value",
+              "value": {
+                "amount": "400",
+                "unit": "mm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000210",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "kg"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000211",
+              "state": "value",
+              "value": {
+                "amount": "1.5",
+                "unit": "L"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000212",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "rpm"
+              },
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["literal", "multiply", "read"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": [
+            {
+              "amount": "40",
+              "unit": "cm"
+            }
+          ],
+          "dependencies": [
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "revision": 3
+            }
+          ],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "negating a derived unit",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "negate",
+        "value": {
+          "op": "multiply",
+          "left": {
+            "op": "read",
+            "path": [],
+            "fieldId": "00000000-0000-4000-8000-00000000020d"
+          },
+          "right": {
+            "op": "read",
+            "path": [],
+            "fieldId": "00000000-0000-4000-8000-00000000020e"
+          }
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "measurement",
+        "fixedUnit": "cm²",
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "state": "value",
+              "value": {
+                "amount": "20",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020e",
+              "state": "value",
+              "value": {
+                "amount": "30",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020f",
+              "state": "value",
+              "value": {
+                "amount": "400",
+                "unit": "mm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000210",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "kg"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000211",
+              "state": "value",
+              "value": {
+                "amount": "1.5",
+                "unit": "L"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000212",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "rpm"
+              },
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["multiply", "negate", "read"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": [
+            {
+              "amount": "-600",
+              "unit": "cm²"
+            }
+          ],
+          "dependencies": [
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "revision": 3
+            },
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020e",
+              "revision": 3
+            }
+          ],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "cm + mm adds in cm",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "add",
+        "left": {
+          "op": "read",
+          "path": [],
+          "fieldId": "00000000-0000-4000-8000-00000000020d"
+        },
+        "right": {
+          "op": "read",
+          "path": [],
+          "fieldId": "00000000-0000-4000-8000-00000000020f"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "measurement",
+        "fixedUnit": "cm",
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "state": "value",
+              "value": {
+                "amount": "20",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020e",
+              "state": "value",
+              "value": {
+                "amount": "30",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020f",
+              "state": "value",
+              "value": {
+                "amount": "400",
+                "unit": "mm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000210",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "kg"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000211",
+              "state": "value",
+              "value": {
+                "amount": "1.5",
+                "unit": "L"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000212",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "rpm"
+              },
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["add", "read"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": [
+            {
+              "amount": "60.0",
+              "unit": "cm"
+            }
+          ],
+          "dependencies": [
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "revision": 3
+            },
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020f",
+              "revision": 3
+            }
+          ],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "cm + mm into an mm field",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "add",
+        "left": {
+          "op": "read",
+          "path": [],
+          "fieldId": "00000000-0000-4000-8000-00000000020d"
+        },
+        "right": {
+          "op": "read",
+          "path": [],
+          "fieldId": "00000000-0000-4000-8000-00000000020f"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "measurement",
+        "fixedUnit": "mm",
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "state": "value",
+              "value": {
+                "amount": "20",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020e",
+              "state": "value",
+              "value": {
+                "amount": "30",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020f",
+              "state": "value",
+              "value": {
+                "amount": "400",
+                "unit": "mm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000210",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "kg"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000211",
+              "state": "value",
+              "value": {
+                "amount": "1.5",
+                "unit": "L"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000212",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "rpm"
+              },
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["add", "read"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": [
+            {
+              "amount": "600",
+              "unit": "mm"
+            }
+          ],
+          "dependencies": [
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "revision": 3
+            },
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020f",
+              "revision": 3
+            }
+          ],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "mm − cm subtracts in mm",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "subtract",
+        "left": {
+          "op": "read",
+          "path": [],
+          "fieldId": "00000000-0000-4000-8000-00000000020f"
+        },
+        "right": {
+          "op": "read",
+          "path": [],
+          "fieldId": "00000000-0000-4000-8000-00000000020d"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "measurement",
+        "fixedUnit": "mm",
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "state": "value",
+              "value": {
+                "amount": "20",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020e",
+              "state": "value",
+              "value": {
+                "amount": "30",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020f",
+              "state": "value",
+              "value": {
+                "amount": "400",
+                "unit": "mm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000210",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "kg"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000211",
+              "state": "value",
+              "value": {
+                "amount": "1.5",
+                "unit": "L"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000212",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "rpm"
+              },
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["read", "subtract"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": [
+            {
+              "amount": "200",
+              "unit": "mm"
+            }
+          ],
+          "dependencies": [
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "revision": 3
+            },
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020f",
+              "revision": 3
+            }
+          ],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "mm < cm compares converted amounts",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "less_than",
+        "left": {
+          "op": "read",
+          "path": [],
+          "fieldId": "00000000-0000-4000-8000-00000000020f"
+        },
+        "right": {
+          "op": "read",
+          "path": [],
+          "fieldId": "00000000-0000-4000-8000-00000000020d"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "boolean",
+        "fixedUnit": null,
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "state": "value",
+              "value": {
+                "amount": "20",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020e",
+              "state": "value",
+              "value": {
+                "amount": "30",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020f",
+              "state": "value",
+              "value": {
+                "amount": "400",
+                "unit": "mm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000210",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "kg"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000211",
+              "state": "value",
+              "value": {
+                "amount": "1.5",
+                "unit": "L"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000212",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "rpm"
+              },
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["less_than", "read"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": [false],
+          "dependencies": [
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "revision": 3
+            },
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020f",
+              "revision": 3
+            }
+          ],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "20 cm equals 200 mm",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "equal",
+        "left": {
+          "op": "read",
+          "path": [],
+          "fieldId": "00000000-0000-4000-8000-00000000020d"
+        },
+        "right": {
+          "op": "literal",
+          "value": {
+            "amount": "200",
+            "unit": "mm"
+          }
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "boolean",
+        "fixedUnit": null,
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "state": "value",
+              "value": {
+                "amount": "20",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020e",
+              "state": "value",
+              "value": {
+                "amount": "30",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020f",
+              "state": "value",
+              "value": {
+                "amount": "400",
+                "unit": "mm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000210",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "kg"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000211",
+              "state": "value",
+              "value": {
+                "amount": "1.5",
+                "unit": "L"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000212",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "rpm"
+              },
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["equal", "literal", "read"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": [true],
+          "dependencies": [
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "revision": 3
+            }
+          ],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "20 cm equals 20.00 cm",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "equal",
+        "left": {
+          "op": "read",
+          "path": [],
+          "fieldId": "00000000-0000-4000-8000-00000000020d"
+        },
+        "right": {
+          "op": "literal",
+          "value": {
+            "amount": "20.00",
+            "unit": "cm"
+          }
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "boolean",
+        "fixedUnit": null,
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "state": "value",
+              "value": {
+                "amount": "20",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020e",
+              "state": "value",
+              "value": {
+                "amount": "30",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020f",
+              "state": "value",
+              "value": {
+                "amount": "400",
+                "unit": "mm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000210",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "kg"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000211",
+              "state": "value",
+              "value": {
+                "amount": "1.5",
+                "unit": "L"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000212",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "rpm"
+              },
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["equal", "literal", "read"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": [true],
+          "dependencies": [
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "revision": 3
+            }
+          ],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "measurements of different dimensions are not equal",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "equal",
+        "left": {
+          "op": "read",
+          "path": [],
+          "fieldId": "00000000-0000-4000-8000-00000000020d"
+        },
+        "right": {
+          "op": "read",
+          "path": [],
+          "fieldId": "00000000-0000-4000-8000-000000000210"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "boolean",
+        "fixedUnit": null,
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "state": "value",
+              "value": {
+                "amount": "20",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020e",
+              "state": "value",
+              "value": {
+                "amount": "30",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020f",
+              "state": "value",
+              "value": {
+                "amount": "400",
+                "unit": "mm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000210",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "kg"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000211",
+              "state": "value",
+              "value": {
+                "amount": "1.5",
+                "unit": "L"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000212",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "rpm"
+              },
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["equal", "read"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": [false],
+          "dependencies": [
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "revision": 3
+            },
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-000000000210",
+              "revision": 3
+            }
+          ],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "a literal in m fills a cm field",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "literal",
+        "value": {
+          "amount": "1",
+          "unit": "m"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "measurement",
+        "fixedUnit": "cm",
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "state": "value",
+              "value": {
+                "amount": "20",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020e",
+              "state": "value",
+              "value": {
+                "amount": "30",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020f",
+              "state": "value",
+              "value": {
+                "amount": "400",
+                "unit": "mm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000210",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "kg"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000211",
+              "state": "value",
+              "value": {
+                "amount": "1.5",
+                "unit": "L"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000212",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "rpm"
+              },
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["literal"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": [
+            {
+              "amount": "100",
+              "unit": "cm"
+            }
+          ],
+          "dependencies": [],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "branches in different units convert into the field unit",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "if",
+        "condition": {
+          "op": "literal",
+          "value": true
+        },
+        "then": {
+          "op": "literal",
+          "value": {
+            "amount": "1",
+            "unit": "m"
+          }
+        },
+        "else": {
+          "op": "read",
+          "path": [],
+          "fieldId": "00000000-0000-4000-8000-00000000020d"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "measurement",
+        "fixedUnit": "cm",
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "state": "value",
+              "value": {
+                "amount": "20",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020e",
+              "state": "value",
+              "value": {
+                "amount": "30",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020f",
+              "state": "value",
+              "value": {
+                "amount": "400",
+                "unit": "mm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000210",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "kg"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000211",
+              "state": "value",
+              "value": {
+                "amount": "1.5",
+                "unit": "L"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000212",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "rpm"
+              },
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["if", "literal", "read"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": [
+            {
+              "amount": "100",
+              "unit": "cm"
+            }
+          ],
+          "dependencies": [],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "an area into a volume field is an evaluation error",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "multiply",
+        "left": {
+          "op": "read",
+          "path": [],
+          "fieldId": "00000000-0000-4000-8000-00000000020d"
+        },
+        "right": {
+          "op": "read",
+          "path": [],
+          "fieldId": "00000000-0000-4000-8000-00000000020e"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "measurement",
+        "fixedUnit": "L",
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "state": "value",
+              "value": {
+                "amount": "20",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020e",
+              "state": "value",
+              "value": {
+                "amount": "30",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020f",
+              "state": "value",
+              "value": {
+                "amount": "400",
+                "unit": "mm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000210",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "kg"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000211",
+              "state": "value",
+              "value": {
+                "amount": "1.5",
+                "unit": "L"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000212",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "rpm"
+              },
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["multiply", "read"],
+        "evaluationErrorCode": "invalid_value",
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "unavailable",
+          "reason": "evaluation_error",
+          "failedFieldId": "00000000-0000-4000-8000-000000000201",
+          "missingInputs": [],
+          "dependencies": [
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "revision": 3
+            },
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020e",
+              "revision": 3
+            }
+          ],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "adding different dimensions is an evaluation error",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "add",
+        "left": {
+          "op": "read",
+          "path": [],
+          "fieldId": "00000000-0000-4000-8000-00000000020d"
+        },
+        "right": {
+          "op": "read",
+          "path": [],
+          "fieldId": "00000000-0000-4000-8000-000000000210"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "measurement",
+        "fixedUnit": "cm",
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "state": "value",
+              "value": {
+                "amount": "20",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020e",
+              "state": "value",
+              "value": {
+                "amount": "30",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020f",
+              "state": "value",
+              "value": {
+                "amount": "400",
+                "unit": "mm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000210",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "kg"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000211",
+              "state": "value",
+              "value": {
+                "amount": "1.5",
+                "unit": "L"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000212",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "rpm"
+              },
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["add", "read"],
+        "evaluationErrorCode": "invalid_value",
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "unavailable",
+          "reason": "evaluation_error",
+          "failedFieldId": "00000000-0000-4000-8000-000000000201",
+          "missingInputs": [],
+          "dependencies": [
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "revision": 3
+            },
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-000000000210",
+              "revision": 3
+            }
+          ],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "comparing different dimensions is an evaluation error",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "less_than",
+        "left": {
+          "op": "read",
+          "path": [],
+          "fieldId": "00000000-0000-4000-8000-00000000020d"
+        },
+        "right": {
+          "op": "read",
+          "path": [],
+          "fieldId": "00000000-0000-4000-8000-000000000210"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "boolean",
+        "fixedUnit": null,
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "state": "value",
+              "value": {
+                "amount": "20",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020e",
+              "state": "value",
+              "value": {
+                "amount": "30",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020f",
+              "state": "value",
+              "value": {
+                "amount": "400",
+                "unit": "mm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000210",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "kg"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000211",
+              "state": "value",
+              "value": {
+                "amount": "1.5",
+                "unit": "L"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000212",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "rpm"
+              },
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["less_than", "read"],
+        "evaluationErrorCode": "invalid_value",
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "unavailable",
+          "reason": "evaluation_error",
+          "failedFieldId": "00000000-0000-4000-8000-000000000201",
+          "missingInputs": [],
+          "dependencies": [
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "revision": 3
+            },
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-000000000210",
+              "revision": 3
+            }
+          ],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "a plain-number quotient into a measurement field is an evaluation error",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "divide",
+        "left": {
+          "op": "read",
+          "path": [],
+          "fieldId": "00000000-0000-4000-8000-00000000020e"
+        },
+        "right": {
+          "op": "read",
+          "path": [],
+          "fieldId": "00000000-0000-4000-8000-00000000020d"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "measurement",
+        "fixedUnit": "cm",
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "state": "value",
+              "value": {
+                "amount": "20",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020e",
+              "state": "value",
+              "value": {
+                "amount": "30",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020f",
+              "state": "value",
+              "value": {
+                "amount": "400",
+                "unit": "mm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000210",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "kg"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000211",
+              "state": "value",
+              "value": {
+                "amount": "1.5",
+                "unit": "L"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000212",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "rpm"
+              },
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["divide", "read"],
+        "evaluationErrorCode": "invalid_value",
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "unavailable",
+          "reason": "evaluation_error",
+          "failedFieldId": "00000000-0000-4000-8000-000000000201",
+          "missingInputs": [],
+          "dependencies": [
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "revision": 3
+            },
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020e",
+              "revision": 3
+            }
+          ],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "a unit that is not a unit term cannot multiply",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "multiply",
+        "left": {
+          "op": "literal",
+          "value": {
+            "amount": "1",
+            "unit": "fl oz"
+          }
+        },
+        "right": {
+          "op": "read",
+          "path": [],
+          "fieldId": "00000000-0000-4000-8000-00000000020d"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "measurement",
+        "fixedUnit": "cm",
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "state": "value",
+              "value": {
+                "amount": "20",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020e",
+              "state": "value",
+              "value": {
+                "amount": "30",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020f",
+              "state": "value",
+              "value": {
+                "amount": "400",
+                "unit": "mm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000210",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "kg"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000211",
+              "state": "value",
+              "value": {
+                "amount": "1.5",
+                "unit": "L"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000212",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "rpm"
+              },
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["literal", "multiply", "read"],
+        "evaluationErrorCode": "invalid_value",
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "unavailable",
+          "reason": "evaluation_error",
+          "failedFieldId": "00000000-0000-4000-8000-000000000201",
+          "missingInputs": [],
+          "dependencies": [
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "revision": 3
+            }
+          ],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "identical non-term units still add",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "add",
+        "left": {
+          "op": "literal",
+          "value": {
+            "amount": "1",
+            "unit": "fl oz"
+          }
+        },
+        "right": {
+          "op": "literal",
+          "value": {
+            "amount": "2",
+            "unit": "fl oz"
+          }
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "measurement",
+        "fixedUnit": "fl oz",
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "state": "value",
+              "value": {
+                "amount": "20",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020e",
+              "state": "value",
+              "value": {
+                "amount": "30",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020f",
+              "state": "value",
+              "value": {
+                "amount": "400",
+                "unit": "mm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000210",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "kg"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000211",
+              "state": "value",
+              "value": {
+                "amount": "1.5",
+                "unit": "L"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000212",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "rpm"
+              },
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["add", "literal"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": [
+            {
+              "amount": "3",
+              "unit": "fl oz"
+            }
+          ],
+          "dependencies": [],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "a non-canonical unit is not the derived unit",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "multiply",
+        "left": {
+          "op": "read",
+          "path": [],
+          "fieldId": "00000000-0000-4000-8000-00000000020d"
+        },
+        "right": {
+          "op": "read",
+          "path": [],
+          "fieldId": "00000000-0000-4000-8000-00000000020e"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "measurement",
+        "fixedUnit": "cm2",
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "state": "value",
+              "value": {
+                "amount": "20",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020e",
+              "state": "value",
+              "value": {
+                "amount": "30",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020f",
+              "state": "value",
+              "value": {
+                "amount": "400",
+                "unit": "mm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000210",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "kg"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000211",
+              "state": "value",
+              "value": {
+                "amount": "1.5",
+                "unit": "L"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000212",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "rpm"
+              },
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["multiply", "read"],
+        "evaluationErrorCode": "invalid_value",
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "unavailable",
+          "reason": "evaluation_error",
+          "failedFieldId": "00000000-0000-4000-8000-000000000201",
+          "missingInputs": [],
+          "dependencies": [
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "revision": 3
+            },
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020e",
+              "revision": 3
+            }
+          ],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "a measurement divided by a zero measurement",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "divide",
+        "left": {
+          "op": "read",
+          "path": [],
+          "fieldId": "00000000-0000-4000-8000-00000000020d"
+        },
+        "right": {
+          "op": "literal",
+          "value": {
+            "amount": "0",
+            "unit": "cm"
+          }
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "decimal",
+        "fixedUnit": null,
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "state": "value",
+              "value": {
+                "amount": "20",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020e",
+              "state": "value",
+              "value": {
+                "amount": "30",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020f",
+              "state": "value",
+              "value": {
+                "amount": "400",
+                "unit": "mm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000210",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "kg"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000211",
+              "state": "value",
+              "value": {
+                "amount": "1.5",
+                "unit": "L"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000212",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "rpm"
+              },
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["divide", "literal", "read"],
+        "evaluationErrorCode": "division_by_zero",
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "unavailable",
+          "reason": "evaluation_error",
+          "failedFieldId": "00000000-0000-4000-8000-000000000201",
+          "missingInputs": [],
+          "dependencies": [
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "revision": 3
+            }
+          ],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "a conversion at nine places",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "literal",
+        "value": {
+          "amount": "0.000001",
+          "unit": "mm"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "measurement",
+        "fixedUnit": "m",
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "state": "value",
+              "value": {
+                "amount": "20",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020e",
+              "state": "value",
+              "value": {
+                "amount": "30",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020f",
+              "state": "value",
+              "value": {
+                "amount": "400",
+                "unit": "mm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000210",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "kg"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000211",
+              "state": "value",
+              "value": {
+                "amount": "1.5",
+                "unit": "L"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000212",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "rpm"
+              },
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["literal"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": [
+            {
+              "amount": "0.000000001",
+              "unit": "m"
+            }
+          ],
+          "dependencies": [],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "a conversion past nine places is precision_overflow",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "literal",
+        "value": {
+          "amount": "0.0000001",
+          "unit": "mm"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "measurement",
+        "fixedUnit": "m",
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "state": "value",
+              "value": {
+                "amount": "20",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020e",
+              "state": "value",
+              "value": {
+                "amount": "30",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020f",
+              "state": "value",
+              "value": {
+                "amount": "400",
+                "unit": "mm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000210",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "kg"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000211",
+              "state": "value",
+              "value": {
+                "amount": "1.5",
+                "unit": "L"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000212",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "rpm"
+              },
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["literal"],
+        "evaluationErrorCode": "precision_overflow",
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "unavailable",
+          "reason": "evaluation_error",
+          "failedFieldId": "00000000-0000-4000-8000-000000000201",
+          "missingInputs": [],
+          "dependencies": [],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "a conversion at eighteen digits",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "literal",
+        "value": {
+          "amount": "999999999999999",
+          "unit": "m"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "measurement",
+        "fixedUnit": "mm",
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "state": "value",
+              "value": {
+                "amount": "20",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020e",
+              "state": "value",
+              "value": {
+                "amount": "30",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020f",
+              "state": "value",
+              "value": {
+                "amount": "400",
+                "unit": "mm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000210",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "kg"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000211",
+              "state": "value",
+              "value": {
+                "amount": "1.5",
+                "unit": "L"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000212",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "rpm"
+              },
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["literal"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": [
+            {
+              "amount": "999999999999999000",
+              "unit": "mm"
+            }
+          ],
+          "dependencies": [],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "a conversion past eighteen digits is precision_overflow",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "literal",
+        "value": {
+          "amount": "9999999999999999",
+          "unit": "m"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "measurement",
+        "fixedUnit": "mm",
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "state": "value",
+              "value": {
+                "amount": "20",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020e",
+              "state": "value",
+              "value": {
+                "amount": "30",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020f",
+              "state": "value",
+              "value": {
+                "amount": "400",
+                "unit": "mm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000210",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "kg"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000211",
+              "state": "value",
+              "value": {
+                "amount": "1.5",
+                "unit": "L"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000212",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "rpm"
+              },
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["literal"],
+        "evaluationErrorCode": "precision_overflow",
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "unavailable",
+          "reason": "evaluation_error",
+          "failedFieldId": "00000000-0000-4000-8000-000000000201",
+          "missingInputs": [],
+          "dependencies": [],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "a zero amount converts and keeps the shifted scale",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "literal",
+        "value": {
+          "amount": "0",
+          "unit": "mm"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "measurement",
+        "fixedUnit": "m",
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "state": "value",
+              "value": {
+                "amount": "20",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020e",
+              "state": "value",
+              "value": {
+                "amount": "30",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020f",
+              "state": "value",
+              "value": {
+                "amount": "400",
+                "unit": "mm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000210",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "kg"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000211",
+              "state": "value",
+              "value": {
+                "amount": "1.5",
+                "unit": "L"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000212",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "rpm"
+              },
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["literal"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": [
+            {
+              "amount": "0.000",
+              "unit": "m"
+            }
+          ],
+          "dependencies": [],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "converting the right operand past nine places is precision_overflow",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "multiply",
+        "left": {
+          "op": "literal",
+          "value": {
+            "amount": "1",
+            "unit": "m"
+          }
+        },
+        "right": {
+          "op": "literal",
+          "value": {
+            "amount": "0.0000001",
+            "unit": "mm"
+          }
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "measurement",
+        "fixedUnit": "m²",
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "state": "value",
+              "value": {
+                "amount": "20",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020e",
+              "state": "value",
+              "value": {
+                "amount": "30",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020f",
+              "state": "value",
+              "value": {
+                "amount": "400",
+                "unit": "mm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000210",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "kg"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000211",
+              "state": "value",
+              "value": {
+                "amount": "1.5",
+                "unit": "L"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000212",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "rpm"
+              },
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["literal", "multiply"],
+        "evaluationErrorCode": "precision_overflow",
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "unavailable",
+          "reason": "evaluation_error",
+          "failedFieldId": "00000000-0000-4000-8000-000000000201",
+          "missingInputs": [],
+          "dependencies": [],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "a derived product past eighteen digits is precision_overflow",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "multiply",
+        "left": {
+          "op": "literal",
+          "value": {
+            "amount": "999999999999",
+            "unit": "m"
+          }
+        },
+        "right": {
+          "op": "literal",
+          "value": {
+            "amount": "9999999",
+            "unit": "m"
+          }
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "measurement",
+        "fixedUnit": "m²",
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "state": "value",
+              "value": {
+                "amount": "20",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020e",
+              "state": "value",
+              "value": {
+                "amount": "30",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020f",
+              "state": "value",
+              "value": {
+                "amount": "400",
+                "unit": "mm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000210",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "kg"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000211",
+              "state": "value",
+              "value": {
+                "amount": "1.5",
+                "unit": "L"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000212",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "rpm"
+              },
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["literal", "multiply"],
+        "evaluationErrorCode": "precision_overflow",
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "unavailable",
+          "reason": "evaluation_error",
+          "failedFieldId": "00000000-0000-4000-8000-000000000201",
+          "missingInputs": [],
+          "dependencies": [],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "a large power converts exactly when it fits",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "multiply",
+        "left": {
+          "op": "multiply",
+          "left": {
+            "op": "literal",
+            "value": {
+              "amount": "1",
+              "unit": "m"
+            }
+          },
+          "right": {
+            "op": "literal",
+            "value": {
+              "amount": "1",
+              "unit": "m"
+            }
+          }
+        },
+        "right": {
+          "op": "literal",
+          "value": {
+            "amount": "1",
+            "unit": "m"
+          }
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "measurement",
+        "fixedUnit": "mm³",
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "state": "value",
+              "value": {
+                "amount": "20",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020e",
+              "state": "value",
+              "value": {
+                "amount": "30",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020f",
+              "state": "value",
+              "value": {
+                "amount": "400",
+                "unit": "mm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000210",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "kg"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000211",
+              "state": "value",
+              "value": {
+                "amount": "1.5",
+                "unit": "L"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000212",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "rpm"
+              },
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["literal", "multiply"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": [
+            {
+              "amount": "1000000000",
+              "unit": "mm³"
+            }
+          ],
+          "dependencies": [],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "a large power past eighteen digits is precision_overflow",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "multiply",
+        "left": {
+          "op": "multiply",
+          "left": {
+            "op": "multiply",
+            "left": {
+              "op": "literal",
+              "value": {
+                "amount": "1",
+                "unit": "m"
+              }
+            },
+            "right": {
+              "op": "literal",
+              "value": {
+                "amount": "1",
+                "unit": "m"
+              }
+            }
+          },
+          "right": {
+            "op": "multiply",
+            "left": {
+              "op": "literal",
+              "value": {
+                "amount": "1",
+                "unit": "m"
+              }
+            },
+            "right": {
+              "op": "literal",
+              "value": {
+                "amount": "1",
+                "unit": "m"
+              }
+            }
+          }
+        },
+        "right": {
+          "op": "multiply",
+          "left": {
+            "op": "multiply",
+            "left": {
+              "op": "literal",
+              "value": {
+                "amount": "1",
+                "unit": "m"
+              }
+            },
+            "right": {
+              "op": "literal",
+              "value": {
+                "amount": "1",
+                "unit": "m"
+              }
+            }
+          },
+          "right": {
+            "op": "literal",
+            "value": {
+              "amount": "1",
+              "unit": "m"
+            }
+          }
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "measurement",
+        "fixedUnit": "mm⁷",
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "state": "value",
+              "value": {
+                "amount": "20",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020e",
+              "state": "value",
+              "value": {
+                "amount": "30",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020f",
+              "state": "value",
+              "value": {
+                "amount": "400",
+                "unit": "mm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000210",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "kg"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000211",
+              "state": "value",
+              "value": {
+                "amount": "1.5",
+                "unit": "L"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000212",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "rpm"
+              },
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["literal", "multiply"],
+        "evaluationErrorCode": "precision_overflow",
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "unavailable",
+          "reason": "evaluation_error",
+          "failedFieldId": "00000000-0000-4000-8000-000000000201",
+          "missingInputs": [],
+          "dependencies": [],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "version 1 still refuses measurement × measurement",
+      "expressionVersion": 1,
+      "expression": {
+        "op": "multiply",
+        "left": {
+          "op": "read",
+          "path": [],
+          "fieldId": "00000000-0000-4000-8000-00000000020d"
+        },
+        "right": {
+          "op": "read",
+          "path": [],
+          "fieldId": "00000000-0000-4000-8000-00000000020e"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "measurement",
+        "fixedUnit": "cm²",
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "state": "value",
+              "value": {
+                "amount": "20",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020e",
+              "state": "value",
+              "value": {
+                "amount": "30",
+                "unit": "cm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-00000000020f",
+              "state": "value",
+              "value": {
+                "amount": "400",
+                "unit": "mm"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000210",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "kg"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000211",
+              "state": "value",
+              "value": {
+                "amount": "1.5",
+                "unit": "L"
+              },
+              "revision": 3
+            },
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000212",
+              "state": "value",
+              "value": {
+                "amount": "3",
+                "unit": "rpm"
+              },
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["multiply", "read"],
+        "evaluationErrorCode": "invalid_value",
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "unavailable",
+          "reason": "evaluation_error",
+          "failedFieldId": "00000000-0000-4000-8000-000000000201",
+          "missingInputs": [],
+          "dependencies": [
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020d",
+              "revision": 3
+            },
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-00000000020e",
+              "revision": 3
+            }
+          ],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "version 1 still refuses a result in another unit of the same dimension",
+      "expressionVersion": 1,
+      "expression": {
+        "op": "literal",
+        "value": {
+          "amount": "1",
+          "unit": "m"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "measurement",
+        "fixedUnit": "cm",
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": []
+        }
+      ],
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["literal"],
+        "evaluationErrorCode": "invalid_value",
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "unavailable",
+          "reason": "evaluation_error",
+          "failedFieldId": "00000000-0000-4000-8000-000000000201",
+          "missingInputs": [],
+          "dependencies": [],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
       }
     },
     {
@@ -7149,8 +12827,8 @@
       }
     },
     {
-      "name": "expression version 2 is rejected",
-      "expressionVersion": 2,
+      "name": "expression version 3 is rejected",
+      "expressionVersion": 3,
       "expression": {
         "op": "literal",
         "value": "1"

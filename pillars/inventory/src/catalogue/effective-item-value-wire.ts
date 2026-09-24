@@ -14,6 +14,7 @@ export function computedWire(
         reason: value.reason,
         failedFieldId: value.fieldId,
         traversedItemIds: value.traversedItemIds,
+        missingInputs: value.missingInputs,
         provenance: value.provenance,
       };
 }

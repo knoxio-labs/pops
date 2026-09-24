@@ -40,6 +40,7 @@ export function toComputedWire(
       state: 'unavailable',
       reason: value.reason,
       failedFieldId: value.failedFieldId,
+      missingInputs: value.missingInputs.map((input) => ({ ...input })),
       dependencies: [...value.provenance.dependencies],
       traversedItemIds: [...value.traversedItemIds],
     };

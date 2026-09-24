@@ -27,11 +27,21 @@ public struct InventoryComputedValue: Codable, Hashable, Sendable {
     /// The item itself and every item a reference hop reached; empty when overridden.
     public let traversedItemIds: [String]
     public let evaluatedItemRevision: Int
+    /// Every input an unavailable evaluation lacked, field and item for each
+    /// (a `coalesce` names each argument's). Empty when available, when the
+    /// expression itself failed, and when the value predates the list; the
+    /// unavailable evaluation's `failedFieldId` always names one of them.
+    public let missingInputs: [InventoryExpressionMissingInput]
+
+    private enum CodingKeys: String, CodingKey {
+        case fieldId, catalogueRevision, evaluation, dependencies, traversedItemIds
+        case evaluatedItemRevision, missingInputs
+    }
 
     public init(
         fieldId: String, catalogueRevision: Int, evaluation: InventoryComputedEvaluation,
         dependencies: [InventoryValueDependency], traversedItemIds: [String],
-        evaluatedItemRevision: Int
+        evaluatedItemRevision: Int, missingInputs: [InventoryExpressionMissingInput] = []
     ) {
         self.fieldId = fieldId
         self.catalogueRevision = catalogueRevision
@@ -39,6 +49,21 @@ public struct InventoryComputedValue: Codable, Hashable, Sendable {
         self.dependencies = dependencies
         self.traversedItemIds = traversedItemIds
         self.evaluatedItemRevision = evaluatedItemRevision
+        self.missingInputs = missingInputs
+    }
+
+    /// Decodes a stored value, including one persisted before `missingInputs` existed.
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        fieldId = try container.decode(String.self, forKey: .fieldId)
+        catalogueRevision = try container.decode(Int.self, forKey: .catalogueRevision)
+        evaluation = try container.decode(InventoryComputedEvaluation.self, forKey: .evaluation)
+        dependencies = try container.decode([InventoryValueDependency].self, forKey: .dependencies)
+        traversedItemIds = try container.decode([String].self, forKey: .traversedItemIds)
+        evaluatedItemRevision = try container.decode(Int.self, forKey: .evaluatedItemRevision)
+        missingInputs =
+            try container.decodeIfPresent(
+                [InventoryExpressionMissingInput].self, forKey: .missingInputs) ?? []
     }
 
     /// The server's reason as a known case, or nil for one this build predates.
