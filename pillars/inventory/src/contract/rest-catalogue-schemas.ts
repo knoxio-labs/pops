@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { CatalogueActorSchema } from './rest-catalogue-audit-schema.js';
+import { CatalogueCompatibilitySchema } from './rest-catalogue-compatibility-schema.js';
 import {
   CatalogueExpressionVersionSchema,
   ExpressionV1Schema,
@@ -116,19 +117,6 @@ export const ProtocolRolloutStateSchema = z.object({
   minimumProtocol: z.number().int().positive(),
   supportedProtocol: z.number().int().positive(),
   catalogueMinimumProtocol: z.number().int().positive(),
-});
-
-const CatalogueCompatibilityChangeSchema = z.object({
-  classification: z.enum(['compatible', 'protocol_gated', 'migration_required', 'forbidden']),
-  definitionId: z.string(),
-  code: z.string(),
-});
-
-export const CatalogueCompatibilitySchema = z.object({
-  classification: z.enum(['compatible', 'protocol_gated', 'migration_required', 'forbidden']),
-  affectedIds: z.array(z.string()),
-  affectedItems: z.number().int().nonnegative(),
-  changes: z.array(CatalogueCompatibilityChangeSchema),
 });
 
 export const CataloguePutTypeSchema = z.object({

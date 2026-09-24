@@ -14,7 +14,7 @@ import {
 import { SyncItemSchema } from '../../contract/rest-sync-schemas.js';
 import {
   openSyncHarness,
-  PROTOCOL,
+  PROTOCOL_2,
   send,
   wireMutation,
   type SyncHarness,
@@ -35,7 +35,7 @@ afterEach(() => {
 });
 
 async function apply(target: SyncHarness, mutation: WireMutation): Promise<void> {
-  const response = await send(target.api, [mutation]);
+  const response = await send(target.api, [mutation], PROTOCOL_2);
   expect(response.status).toBe(200);
   expect(response.body.outcomes[0]).toMatchObject({ status: 'applied' });
 }
@@ -67,7 +67,7 @@ async function setup(): Promise<{
 }
 
 async function snapshotItem(target: SyncHarness, itemId: string): Promise<SyncItem> {
-  const response = await target.api.get('/sync/snapshot').set(PROTOCOL);
+  const response = await target.api.get('/sync/snapshot').set(PROTOCOL_2);
   expect(response.status).toBe(200);
   const item = SyncItemSchema.array()
     .parse(response.body.items)

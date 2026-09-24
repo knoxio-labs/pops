@@ -1,43 +1,43 @@
-import { eq } from 'drizzle-orm';
-
-import { items } from '../db/schema.js';
 import { computedValueCacheFor } from './computed-value-runtime-cache.js';
 import { evaluateComputedValue } from './computed-values.js';
+import { EffectiveItemRows } from './effective-item-rows.js';
 import { computedWire, storedWire } from './effective-item-value-wire.js';
+import { evaluateExpression } from './expression-evaluator.js';
 import { validateCatalogueExpressions } from './expression-validator.js';
-import { readItemFieldValues } from './item-values.js';
 
 import type { CommandDb } from '../domain/commands/entities.js';
 import type { PersistedCatalogue, PersistedItemTypeField } from './catalogue-types.js';
+import type { SnapshotItemRecord } from './effective-item-rows.js';
+import type { ComputedValueCache } from './expression-cache.js';
 import type {
   EffectiveComputedValue,
+  ExpressionEvaluation,
   ExpressionSnapshot,
-  ExpressionSnapshotItem,
   SnapshotFieldValue,
   ValidatedExpression,
 } from './expression-types.js';
 import type { EffectiveItemFieldValue, ReadItemFieldValue } from './item-value-types.js';
 
-interface SnapshotItemRecord {
-  readonly item: ExpressionSnapshotItem;
-  readonly typeId: string | null;
-  readonly deleted: boolean;
-}
-
 function expressionKey(typeId: string, fieldId: string): string {
   return `${typeId}:${fieldId}`;
 }
 
-class EffectiveValueReader {
-  readonly #items = new Map<string, SnapshotItemRecord | null>();
-  readonly #values = new Map<string, readonly ReadItemFieldValue[]>();
+/**
+ * Reads effective values against one catalogue snapshot. Pass a null cache to
+ * evaluate an unpublished draft: its revision is reused across edits, so a
+ * value cached under it could be stale on the next read.
+ */
+export class EffectiveValueReader {
+  readonly #rows: EffectiveItemRows;
   readonly #evaluating = new Set<string>();
   readonly #expressions: ReadonlyMap<string, ValidatedExpression>;
 
   constructor(
-    private readonly db: CommandDb,
-    private readonly catalogue: PersistedCatalogue
+    db: CommandDb,
+    private readonly catalogue: PersistedCatalogue,
+    private readonly cache: ComputedValueCache | null = computedValueCacheFor(db)
   ) {
+    this.#rows = new EffectiveItemRows(db);
     this.#expressions = new Map(
       validateCatalogueExpressions(catalogue).map((expression) => [
         expressionKey(expression.field.typeId, expression.field.fieldId),
@@ -47,11 +47,11 @@ class EffectiveValueReader {
   }
 
   read(itemId: string): readonly EffectiveItemFieldValue[] {
-    const record = this.item(itemId);
+    const record = this.#rows.item(itemId);
     if (record === null || record.typeId === null) return [];
     const type = this.catalogue.types.find((candidate) => candidate.id === record.typeId);
     if (type === undefined) return [];
-    const persisted = this.values(itemId);
+    const persisted = this.#rows.values(itemId);
     const effective: EffectiveItemFieldValue[] = persisted
       .filter((entry) => entry.source === 'stored')
       .map(storedWire);
@@ -62,43 +62,19 @@ class EffectiveValueReader {
     return effective.toSorted((left, right) => left.fieldId.localeCompare(right.fieldId));
   }
 
-  private item(itemId: string): SnapshotItemRecord | null {
-    if (this.#items.has(itemId)) return this.#items.get(itemId) ?? null;
-    const row = this.db
-      .select({
-        id: items.id,
-        revision: items.revision,
-        typeId: items.typeId,
-        deletedAt: items.deletedAt,
-      })
-      .from(items)
-      .where(eq(items.id, itemId))
-      .get();
-    const record =
-      row === undefined
-        ? null
-        : {
-            item: { id: row.id, revision: row.revision, fields: new Map() },
-            typeId: row.typeId,
-            deleted: row.deletedAt !== null,
-          };
-    this.#items.set(itemId, record);
-    return record;
-  }
-
-  private values(itemId: string): readonly ReadItemFieldValue[] {
-    const cached = this.#values.get(itemId);
-    if (cached !== undefined) return cached;
-    const values = readItemFieldValues(this.db, itemId);
-    this.#values.set(itemId, values);
-    return values;
+  /** Raw evaluation of one computed field on one item, ignoring any override; null when absent. */
+  evaluate(itemId: string, fieldId: string): ExpressionEvaluation | null {
+    const typeId = this.#rows.item(itemId)?.typeId ?? null;
+    const expression =
+      typeId === null ? undefined : this.#expressions.get(expressionKey(typeId, fieldId));
+    return expression === undefined ? null : evaluateExpression(expression, this.snapshot(itemId));
   }
 
   private snapshot(rootItemId: string): ExpressionSnapshot {
     return {
       rootItemId,
       readItem: (itemId) => {
-        const record = this.item(itemId);
+        const record = this.#rows.item(itemId);
         if (record === null) return { state: 'missing' };
         if (record.deleted && itemId !== rootItemId) return { state: 'deleted' };
         return { state: 'resolved', item: record.item };
@@ -108,21 +84,21 @@ class EffectiveValueReader {
   }
 
   private snapshotField(itemId: string, fieldId: string): SnapshotFieldValue | undefined {
-    const record = this.item(itemId);
+    const record = this.#rows.item(itemId);
     if (record === null || record.typeId === null) return undefined;
     const type = this.catalogue.types.find((candidate) => candidate.id === record.typeId);
     const field = type?.fields.find((candidate) => candidate.id === fieldId);
     if (field === undefined) return undefined;
     if (field.storage === 'stored') {
-      const persisted = this.values(itemId).find(
-        (entry) => entry.fieldId === fieldId && entry.source === 'stored'
-      );
+      const persisted = this.#rows
+        .values(itemId)
+        .find((entry) => entry.fieldId === fieldId && entry.source === 'stored');
       const value = persisted?.values[0];
       return value === undefined
         ? undefined
         : { state: 'value', value, revision: record.item.revision };
     }
-    const effective = this.computed(itemId, record, field, this.values(itemId));
+    const effective = this.computed(itemId, record, field, this.#rows.values(itemId));
     const revision = record.item.revision;
     if (effective.state === 'unavailable') {
       const { provenance, ...failure } = effective;
@@ -148,10 +124,10 @@ class EffectiveValueReader {
       itemRevision: record.item.revision,
       catalogueRevision: this.catalogue.revision.revision,
     };
-    const cache = computedValueCacheFor(this.db);
-    const cached = cache.get(
+    const cache = this.cache;
+    const cached = cache?.get(
       subject,
-      (dependencyItemId) => this.item(dependencyItemId)?.item.revision ?? null
+      (dependencyItemId) => this.#rows.item(dependencyItemId)?.item.revision ?? null
     );
     if (cached !== undefined) return cached;
     const evaluationKey = `${itemId}:${field.id}`;
@@ -178,7 +154,7 @@ class EffectiveValueReader {
             code,
           }),
       });
-      if (value.state === 'value') cache.set(subject, value);
+      if (value.state === 'value') cache?.set(subject, value);
       return value;
     } finally {
       this.#evaluating.delete(evaluationKey);

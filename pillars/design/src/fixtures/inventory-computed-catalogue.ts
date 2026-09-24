@@ -1,13 +1,18 @@
 import type {
-  DesignField,
-  DesignType,
+  ExpressionField,
+  ExpressionType,
   ExpressionContext,
   ValueKind,
-} from '@/kit/inventory/computed-editor/model';
+} from '@pops/app-inventory/design';
 
-type FieldExtras = Omit<Partial<DesignField>, 'id' | 'label' | 'kind'>;
+type FieldExtras = Omit<Partial<ExpressionField>, 'id' | 'label' | 'kind'>;
 
-function field(id: string, label: string, kind: ValueKind, extras: FieldExtras = {}): DesignField {
+function field(
+  id: string,
+  label: string,
+  kind: ValueKind,
+  extras: FieldExtras = {}
+): ExpressionField {
   return { id, label, kind, cardinality: 'one', storage: 'stored', ...extras };
 }
 
@@ -16,7 +21,7 @@ function itemReference(typeIds: readonly string[]): FieldExtras {
 }
 
 /** Fictional Electronics type: the owner of every computed field on this screen. */
-export const electronicsType: DesignType = {
+export const electronicsType: ExpressionType = {
   id: 'electronics',
   label: 'Electronics',
   fields: [
@@ -53,7 +58,7 @@ export const electronicsType: DesignType = {
 };
 
 /** Fictional Bundle type, reached from Electronics through Part of. */
-export const bundleType: DesignType = {
+export const bundleType: ExpressionType = {
   id: 'bundle',
   label: 'Bundle',
   fields: [
@@ -66,7 +71,7 @@ export const bundleType: DesignType = {
 };
 
 /** Fictional Case type, two references away from Electronics. */
-export const caseType: DesignType = {
+export const caseType: ExpressionType = {
   id: 'case',
   label: 'Case',
   fields: [
@@ -77,7 +82,7 @@ export const caseType: DesignType = {
 };
 
 /** Fictional Storage box type with fixed-unit measurements. */
-export const storageBoxType: DesignType = {
+export const storageBoxType: ExpressionType = {
   id: 'storage_box',
   label: 'Storage box',
   fields: [

@@ -210,6 +210,136 @@ describe('classifyCatalogueCompatibility', () => {
     });
   });
 
+  describe('computed fields', () => {
+    const expression = JSON.stringify({ op: 'literal', value: 'a' });
+    const computed = field({
+      id: 'field-computed',
+      key: 'computed',
+      storage: 'computed',
+      expressionVersion: 1,
+      expressionJson: expression,
+    });
+
+    it('adds a computed field compatibly, even a required one, because its values are derived', () => {
+      const base = catalogue(1, [type([field()])]);
+      const candidate = catalogue(2, [type([field(), { ...computed, required: true }])]);
+
+      expect(classifyCatalogueCompatibility(base, candidate)).toMatchObject({
+        classification: 'compatible',
+        changes: [
+          {
+            classification: 'compatible',
+            definitionId: 'field-computed',
+            code: 'computed_field_added',
+          },
+        ],
+      });
+    });
+
+    it('still protocol-gates a computed field whose primitive kind the base never used', () => {
+      const base = catalogue(1, [type([field()])]);
+      const candidate = catalogue(2, [type([field(), { ...computed, kind: 'integer' }])]);
+
+      expect(classifyCatalogueCompatibility(base, candidate).changes).toEqual([
+        {
+          classification: 'protocol_gated',
+          definitionId: 'field-computed',
+          code: 'primitive_kind_added',
+        },
+      ]);
+    });
+
+    it('keeps adding a required stored field migration-required', () => {
+      const base = catalogue(1, [type([field()])]);
+      const candidate = catalogue(2, [
+        type([field(), field({ id: 'field-b', key: 'field-b', required: true })]),
+      ]);
+
+      expect(classifyCatalogueCompatibility(base, candidate).classification).toBe(
+        'migration_required'
+      );
+    });
+
+    it('changes an expression, including to a coalesce node, compatibly and without a protocol gate', () => {
+      const base = catalogue(1, [type([field(), computed])]);
+      const coalesce = JSON.stringify({
+        op: 'coalesce',
+        values: [
+          { op: 'read', path: [], fieldId: 'field-a' },
+          { op: 'literal', value: 'a' },
+        ],
+      });
+      const candidate = catalogue(2, [type([field(), { ...computed, expressionJson: coalesce }])]);
+
+      expect(classifyCatalogueCompatibility(base, candidate)).toMatchObject({
+        classification: 'compatible',
+        changes: [
+          {
+            classification: 'compatible',
+            definitionId: 'field-computed',
+            code: 'computed_expression_changed',
+          },
+        ],
+      });
+    });
+
+    it('enables overrides compatibly', () => {
+      const base = catalogue(1, [type([computed])]);
+      const candidate = catalogue(2, [type([{ ...computed, allowOverride: true }])]);
+
+      expect(classifyCatalogueCompatibility(base, candidate).changes).toEqual([
+        {
+          classification: 'compatible',
+          definitionId: 'field-computed',
+          code: 'computed_overrides_enabled',
+        },
+      ]);
+    });
+
+    it('disables overrides compatibly when no live item holds one', () => {
+      const base = catalogue(1, [type([{ ...computed, allowOverride: true }])]);
+      const candidate = catalogue(2, [type([computed])]);
+
+      expect(
+        classifyCatalogueCompatibility(base, candidate, new Set(['another-field'])).changes
+      ).toEqual([
+        {
+          classification: 'compatible',
+          definitionId: 'field-computed',
+          code: 'computed_overrides_disabled',
+        },
+      ]);
+    });
+
+    it('requires a migration to disable overrides that live items hold', () => {
+      const base = catalogue(1, [type([{ ...computed, allowOverride: true }])]);
+      const candidate = catalogue(2, [type([computed])]);
+
+      expect(
+        classifyCatalogueCompatibility(base, candidate, new Set(['field-computed']))
+      ).toMatchObject({
+        classification: 'migration_required',
+        changes: [
+          {
+            classification: 'migration_required',
+            definitionId: 'field-computed',
+            code: 'computed_overrides_in_use',
+          },
+        ],
+      });
+    });
+
+    it('ignores override holdings when the policy does not change', () => {
+      const overridable = { ...computed, allowOverride: true };
+      const base = catalogue(1, [type([overridable])]);
+      const candidate = catalogue(2, [type([overridable])]);
+
+      expect(
+        classifyCatalogueCompatibility(base, candidate, new Set(['field-computed'])).changes
+      ).toEqual([]);
+    });
+  });
+
   it('forbids mutating or removing published identities', () => {
     const baseField = field();
     const base = catalogue(1, [type([baseField])]);

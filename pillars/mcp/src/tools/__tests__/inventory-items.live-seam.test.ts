@@ -79,6 +79,14 @@ describe('inventory item MCP tools — real HTTP boundary', () => {
   beforeAll(async () => {
     seam = await startLiveSeam(import.meta.url);
     seam.useDefaultKey();
+    // The fixture publishes integer fields, which need protocol 2 active. MCP has no
+    // rollout tool (activation is an owner operation), so it goes to Inventory directly.
+    const rollout = await fetch(`${seam.inventoryBaseUrl}/type-catalogue/protocol-rollout`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-api-key': seam.apiKey },
+      body: JSON.stringify({ expectedMinimumProtocol: 1, minimumProtocol: 2 }),
+    });
+    expect(rollout.status, await rollout.text()).toBe(200);
 
     const published = ok(await catalogueGet.handler({}));
     const baseRevision = (published['revision'] as { revision: number }).revision;

@@ -149,6 +149,31 @@ describe('getPillar — base-URL resolution', () => {
     );
   });
 
+  it('explicitly clears a previous internalBaseUrls override once its env var is unset (POPS-4495)', () => {
+    process.env['POPS_INVENTORY_API_URL'] = 'http://localhost:4102';
+    getPillar('inventory');
+    expect(configureServerSdk).toHaveBeenLastCalledWith(
+      expect.objectContaining({ internalBaseUrls: { inventory: 'http://localhost:4102' } })
+    );
+
+    __resetPillarClientForTests();
+    configureServerSdk.mockClear();
+    delete process.env['POPS_INVENTORY_API_URL'];
+
+    getPillar('inventory');
+
+    // `configureServerSdk` shallow-merges into module-level config, so a key
+    // this call OMITS keeps whatever a previous call set. The override must
+    // be forwarded as an explicit `undefined` to actually clear it, not just
+    // left out of the object.
+    const lastCall = configureServerSdk.mock.calls.at(-1)?.[0] as
+      | Record<string, unknown>
+      | undefined;
+    expect(lastCall).toBeDefined();
+    expect(lastCall).toHaveProperty('internalBaseUrls');
+    expect(lastCall?.['internalBaseUrls']).toBeUndefined();
+  });
+
   it('trims surrounding whitespace from an explicit POPS_<PILLAR>_API_URL override', () => {
     process.env['POPS_INVENTORY_API_URL'] = '  http://localhost:4102  ';
 

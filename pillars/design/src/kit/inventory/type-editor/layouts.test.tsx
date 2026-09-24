@@ -6,11 +6,12 @@ import { FocusedEditor } from './layouts';
 afterEach(cleanup);
 
 describe('FocusedEditor publish state', () => {
-  it('does not offer direct publishing when a replacement migration is required', () => {
-    render(<FocusedEditor mode="migration" />);
+  it('does not offer direct publishing when a destructive change is refused', () => {
+    render(<FocusedEditor mode="destructive" />);
 
-    expect(screen.getByText('Replacement ready; migration required')).toBeInTheDocument();
+    expect(screen.getByText('Cardinality cannot change in place')).toBeInTheDocument();
     expect(screen.queryByText(/no migration required/u)).toBeNull();
+    expect(screen.queryByText('Review migration')).toBeNull();
   });
 
   it('offers direct publishing for a compatible edit', () => {

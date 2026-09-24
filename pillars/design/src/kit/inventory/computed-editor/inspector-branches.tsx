@@ -1,6 +1,13 @@
 import { ArrowDown, ArrowUp, Plus, X } from 'lucide-react';
 
 import {
+  OPERATIONS,
+  comparedChoiceField,
+  nodeChildren,
+  operationBlockedReason,
+  valueTypeLabel,
+} from '@pops/app-inventory/design';
+import {
   Button,
   Label,
   SelectContent,
@@ -11,15 +18,16 @@ import {
 } from '@pops/ui';
 
 import { nodeTitle } from './expression-outline';
-import { comparedChoiceField } from './formula';
 import { SlotRow } from './inspector-parts';
-import { valueTypeLabel } from './model';
-import { OPERATIONS, operationBlockedReason } from './operations';
-import { nodeChildren } from './tree';
 
-import type { BinaryOp, ExpressionContext, ExpressionNode, ValueType } from './model';
+import type {
+  BinaryOp,
+  ExpressionContext,
+  ExpressionNode,
+  SlotType,
+} from '@pops/app-inventory/design';
 
-type Types = ReadonlyMap<string, ValueType | undefined>;
+type Types = ReadonlyMap<string, SlotType | undefined>;
 
 const BINARY_OPS: readonly BinaryOp[] = [
   'add',
@@ -39,7 +47,7 @@ export function OperationSwitch({
   expected,
 }: {
   op: BinaryOp;
-  expected: ValueType | undefined;
+  expected: SlotType | undefined;
 }) {
   const options = OPERATIONS.filter(
     (info) =>
@@ -155,7 +163,7 @@ export function CoalesceInputs({
   path: string;
   types: Types;
 }) {
-  const last = node.args.length - 1;
+  const last = node.values.length - 1;
   const inputType = types.get(path);
   return (
     <div className="space-y-2">
@@ -173,7 +181,7 @@ export function CoalesceInputs({
               slot={child.slot}
               first={index === 0}
               last={index === last}
-              removable={node.args.length > 2}
+              removable={node.values.length > 2}
             />
           </SlotRow>
         ))}
