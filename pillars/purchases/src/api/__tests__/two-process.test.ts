@@ -42,7 +42,9 @@ const TRANSACTION = {
   accountId: 'smoke',
   foreignAmountMinor: null,
   foreignCurrency: null,
-  amount: 41.28,
+  // Finance signs spend negative — money leaving the account. The order
+  // this settles is a positive capture in purchases' own convention.
+  amount: -41.28,
   date: '2026-03-06',
   type: 'purchase',
   entityId: null,

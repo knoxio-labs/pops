@@ -206,7 +206,9 @@ describe('the leg resolves against finance real contract', () => {
           accountId: 'everyday',
           foreignAmountMinor: null,
           foreignCurrency: null,
-          amount: 19.99,
+          // Finance signs spend negative; the boundary flips it to the
+          // positive capture amount purchases matches against.
+          amount: -19.99,
           date: '2026-03-04',
           type: 'purchase',
           entityId: null,
