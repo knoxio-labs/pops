@@ -5,8 +5,6 @@ import Foundation
 /// and `FeaturePairing`: the app has no localisation layer, and copy
 /// scattered through a view makes adding one a hunt.
 internal enum ReceiptCaptureCopy {
-    internal static let captureAnother = "Photograph another receipt"
-
     // MARK: camera refusals
 
     /// Undoable from Settings, so this is the only one offered a link.

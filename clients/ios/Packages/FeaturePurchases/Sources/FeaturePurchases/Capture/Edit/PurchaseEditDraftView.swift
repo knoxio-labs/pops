@@ -15,8 +15,8 @@ extension ReceiptDraftView {
             merchantPreview: { _ in nil },
             addressesForMerchant: { _ in [] },
             addressPreview: { _, _ in nil },
-            parts: [], secondaryAction: nil,
-            addAnother: nil, lock: lock, commit: .navigationBar, onChange: onChange,
+            parts: [],
+            lock: lock, commit: .navigationBar, onChange: onChange,
             lineRemovalNotice: lineRemovalNotice, formPresentation: .savedPurchase,
             saveEligibility: saveEligibility, isSaving: isSaving, save: save)
     }

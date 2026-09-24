@@ -70,8 +70,6 @@
                     for: PreviewReceipt.failures.map(\.kind)),
                 caption: ReceiptResultCopy.photoCount(2)),
             parts: PreviewReceipt.pages(2),
-            secondaryAction: ReceiptDraftView.SecondaryAction(
-                title: ReceiptCaptureCopy.captureAnother, action: {}),
             save: { _ in }
         )
     }
@@ -88,8 +86,6 @@
                 heading: ReceiptResultCopy.createdHeading,
                 message: ReceiptResultCopy.createdMessage),
             parts: PreviewReceipt.pages(1),
-            secondaryAction: ReceiptDraftView.SecondaryAction(
-                title: ReceiptCaptureCopy.captureAnother, action: {}),
             save: { _ in }
         )
     }
@@ -114,8 +110,6 @@
             title: ReceiptDraftCopy.title,
             subtitle: ReceiptDraftCopy.subtitle,
             parts: PreviewReceipt.pages(1),
-            secondaryAction: ReceiptDraftView.SecondaryAction(
-                title: ReceiptCaptureCopy.captureAnother, action: {}),
             save: { _ in }
         )
         .dynamicTypeSize(.accessibility5)

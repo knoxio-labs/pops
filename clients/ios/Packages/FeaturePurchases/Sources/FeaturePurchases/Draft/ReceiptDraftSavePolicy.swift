@@ -1,6 +1,6 @@
 extension ReceiptDraftView {
-    /// Whether either save can be pressed. Held while one is in flight, which
-    /// is half of what stops a double tap creating two purchases. Public so a
+    /// Whether Save can be pressed. Held while a save is in flight, which is
+    /// half of what stops a double tap creating two purchases. Public so a
     /// host committing from its own navigation bar gates on the same rule.
     public static func canSave(_ draft: ReceiptDraft, isSaving: Bool) -> Bool {
         draft.isSaveable && !isSaving
