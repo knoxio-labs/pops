@@ -225,7 +225,13 @@ targets:
         link: false
       - package: AppCore
         link: false
+      # Not a dependency of the app target, so unlike the others here this one
+      # needs an actual link, not just an import path.
+      - package: AppCore
+        product: AppCoreFakes
       - package: FeatureInventory
+        link: false
+      - package: FeaturePurchases
         link: false
       - package: InventoryReplica
         link: false

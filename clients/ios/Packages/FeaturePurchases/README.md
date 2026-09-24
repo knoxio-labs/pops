@@ -190,6 +190,8 @@ There is an open UIKit defect — reproduced by others on iOS 26, not fixed as o
 
 `PurchasesSearchProvider` answers universal search from the BFM rather than an on-device replica, so it never claims a result the phone cannot currently reach. Asking it while the phone is offline yields `.offline` immediately and sends no request; it then waits on `NetworkReachability.updates()` and searches only once the path is satisfied again, rather than polling or guessing when the network might be back. `PurchasesSearchFilter` narrows by settlement `status`, sent to the server, and by `kind` (purchases, products, or either), applied on the phone because the server contract has no such filter — a caller that wants both narrowings named in one line reads `filter.summary`.
 
+`PurchasesSearchFilterFields` is `PurchasesSearchFilter`'s Show and Status pickers as `Section` content, following `FeatureInventory`'s `InventorySearchFilterFields` idiom so a shared filter sheet can place a pillar's fields with its own header. The picker option lists live in plain functions (`purchasesSearchKindOptions()`, `purchasesSearchStatusOptions()`) rather than inline in the view, because `PurchaseSearchStatus` is not `CaseIterable` and the presentation order is worth a test independent of rendering.
+
 ### Reachable, end to end
 
 `ReceiptCaptureTab.feature` is registered in `RootFeature.renderable`, the BFM's bootstrap advertises it, and `ContentView` maps it to `ReceiptCaptureView`. A paired device's `AppDependencies.receiptCapture` is a `BFMReceiptCaptureRepository` pointed at that device's own BFM, so a capture submitted from the screen reaches the purchases pillar.
