@@ -28,19 +28,9 @@ import { buildActionsColumn, buildSelectColumn } from './InventoryTable.columns'
 
 import type { ColumnDef } from '@tanstack/react-table';
 
-export interface InventoryTableItem {
-  id: string;
-  itemName: string;
-  brand: string | null;
-  type: string | null;
-  condition: string | null;
-  location: string | null;
-  locationId: string | null;
-  replacementValue: number | null;
-  purchaseDate: string | null;
-  inUse: boolean;
-  assetId: string | null;
-}
+import type { InventoryTableItem } from './InventoryTable.columns';
+
+export type { InventoryTableItem } from './InventoryTable.columns';
 
 /** Known condition values (lowercase canonical + legacy Title Case). */
 const VALID_CONDITIONS = new Set<string>([

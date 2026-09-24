@@ -4,7 +4,19 @@ import { Button, Checkbox, DropdownMenu, DropdownMenuItem, DropdownMenuSeparator
 
 import type { ColumnDef } from '@tanstack/react-table';
 
-import type { InventoryTableItem } from './InventoryTable';
+export interface InventoryTableItem {
+  id: string;
+  itemName: string;
+  brand: string | null;
+  type: string | null;
+  condition: string | null;
+  location: string | null;
+  locationId: string | null;
+  replacementValue: number | null;
+  purchaseDate: string | null;
+  inUse: boolean;
+  assetId: string | null;
+}
 
 export function buildActionsColumn(args: {
   onEdit: (id: string) => void;
