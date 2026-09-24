@@ -4,7 +4,7 @@ import Testing
 @testable import AppCore
 
 @Suite("QR focus geometry")
-struct QRFocusGeometryTests {
+internal struct QRFocusGeometryTests {
     @Test("A code fills the chosen fraction of the frame at the computed distance")
     func subjectDistanceMatchesTheFieldOfView() throws {
         // 90° horizontal: the visible width equals twice the distance, so a
