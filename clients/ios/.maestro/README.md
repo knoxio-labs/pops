@@ -18,6 +18,7 @@ an unpaired launch:
 | `purchases-scan-says-there-is-no-camera.yaml`   | Purchases Scan reaches the capture presenter and reports the Simulator's unavailable camera.                                                                                                                                                                                                                       |
 | `inventory-smoke.yaml`                          | Inventory downloads from the real inventory pillar, then creates a place and an item, moves it, discards it and undoes the discard, each write landing on the phone first and draining to the pillar; then creates a place while every relayed sync request fails and sees it drain once the pillar answers again. |
 | `search-inventory-scope.yaml`                   | The universal search screen scoped to Inventory matches the shipped Inventory search: ranking, opening a result, the scoped recent, the filter sheet showing only Inventory's fields, bulk Pick up and Undo, Move, a waiting-to-sync mark under a sync outage, and the scan glyph.                                 |
+| `search-purchases.yaml`                         | Search finds a seeded purchase by merchant, shows the Purchases section and chip count in All, scopes to it, fails and recovers when the search route alone refuses, and opens the purchase's detail.                                                                                                              |
 
 ## Running them
 
