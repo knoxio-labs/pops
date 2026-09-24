@@ -98,7 +98,7 @@ public struct InventoryItem: Identifiable, Hashable, Sendable {
     /// Empty while the replica is reading the protocol-1 compatibility projection.
     public let fieldValues: [InventoryItemFieldEntry]
     /// The server's evaluation of each computed field of the item's type.
-    /// Read through ``InventoryComputedValue/display(in:revisionOf:)``,
+    /// Read through ``InventoryComputedValue/display(in:activeCatalogueRevision:revisionOf:)``,
     /// which accounts for this phone's own changes since.
     public let computedValues: [InventoryComputedValue]
     /// The free-text type the item carried before types existed, kept

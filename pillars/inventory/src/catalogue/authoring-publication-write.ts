@@ -6,11 +6,13 @@ import {
   catalogueRevisions,
   syncMeta,
 } from '../db/schema.js';
+import { latestSeq } from '../domain/commands/computed-dependents.js';
 import { rebuildSearchIndexForCatalogue } from '../domain/commands/search-index.js';
 import { json, requireCatalogue } from './authoring-shared.js';
 import { toCatalogueDescriptor } from './authoring-wire.js';
 import { rebuildComputedDependencyIndex } from './computed-dependency-index.js';
 import { executeCatalogueMigrationInTransaction, type CatalogueMigration } from './migrations.js';
+import { resendAfterPublication } from './publication-resend.js';
 
 import type { CommandDb } from '../domain/commands/index.js';
 import type {
@@ -29,26 +31,11 @@ export interface PublicationWriteContext {
   readonly candidate: ReturnType<typeof requireCatalogue>;
   readonly compatibility: CatalogueCompatibilityResult;
   readonly migration: CatalogueMigration | undefined;
+  readonly computedDependentLimit: number;
 }
 
-/** Commits the catalogue revision, audit event, migration, search and computed-dependency rebuilds. */
-export function writePublication(context: PublicationWriteContext): CatalogueDescriptor {
-  const { db, revision, input, author, base, candidate, compatibility, migration } = context;
-  const now = new Date().toISOString();
-  const affectedItems =
-    migration === undefined
-      ? 0
-      : executeCatalogueMigrationInTransaction(db, migration, candidate, now).affectedItems;
-  const migrationName = migration?.name ?? input.migrationName ?? null;
-  db.insert(catalogueCompatibility)
-    .values({
-      fromRevision: input.baseRevision,
-      toRevision: revision,
-      classification: compatibility.classification,
-      affectedIdsJson: json(compatibility.affectedIds),
-      migrationName,
-    })
-    .run();
+function markPublished(context: PublicationWriteContext, now: string): void {
+  const { db, revision, input, author } = context;
   db.update(catalogueRevisions)
     .set({
       status: 'published',
@@ -64,6 +51,32 @@ export function writePublication(context: PublicationWriteContext): CatalogueDes
     .set({ value: String(revision) })
     .where(eq(syncMeta.key, 'catalogue_revision'))
     .run();
+}
+
+/**
+ * Commits the catalogue revision, audit event, migration, search and
+ * computed-dependency rebuilds, then re-sends the items whose computed values
+ * the publication changed.
+ */
+export function writePublication(context: PublicationWriteContext): CatalogueDescriptor {
+  const { db, revision, input, author, base, candidate, compatibility, migration } = context;
+  const now = new Date().toISOString();
+  const sinceSeq = latestSeq(db);
+  const affectedItems =
+    migration === undefined
+      ? 0
+      : executeCatalogueMigrationInTransaction(db, migration, candidate, now).affectedItems;
+  const migrationName = migration?.name ?? input.migrationName ?? null;
+  db.insert(catalogueCompatibility)
+    .values({
+      fromRevision: input.baseRevision,
+      toRevision: revision,
+      classification: compatibility.classification,
+      affectedIdsJson: json(compatibility.affectedIds),
+      migrationName,
+    })
+    .run();
+  markPublished(context, now);
   const published = requireCatalogue(db, revision, ['published']);
   const before = toCatalogueDescriptor(db, base);
   const after = toCatalogueDescriptor(db, published);
@@ -83,5 +96,12 @@ export function writePublication(context: PublicationWriteContext): CatalogueDes
     .run();
   rebuildSearchIndexForCatalogue(db, published);
   rebuildComputedDependencyIndex(db, published);
+  resendAfterPublication(db, {
+    base,
+    published,
+    sinceSeq,
+    now,
+    dependentLimit: context.computedDependentLimit,
+  });
   return after;
 }

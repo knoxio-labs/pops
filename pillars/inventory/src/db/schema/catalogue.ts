@@ -27,9 +27,14 @@ export const itemTypes = sqliteTable(
     legacyLabelsJson: text('legacy_labels_json').notNull(),
     presentationJson: text('presentation_json').notNull(),
     archivedAt: text('archived_at'),
+    replacedBy: text('replaced_by'),
   },
   (table) => [
     primaryKey({ columns: [table.revision, table.id] }),
+    check(
+      'ck_item_types_replaced_by',
+      sql`${table.replacedBy} IS NULL OR (${table.archivedAt} IS NOT NULL AND ${table.replacedBy} <> ${table.id})`
+    ),
     uniqueIndex('item_types_revision_key').on(table.revision, sql`${table.key} COLLATE NOCASE`),
     check('ck_item_types_sort_order', sql`${table.sortOrder} >= 0`),
     check(
@@ -70,9 +75,14 @@ export const itemTypeFields = sqliteTable(
     allowOverride: integer('allow_override').notNull(),
     presentationJson: text('presentation_json').notNull(),
     archivedAt: text('archived_at'),
+    replacedBy: text('replaced_by'),
   },
   (table) => [
     primaryKey({ columns: [table.revision, table.id] }),
+    check(
+      'ck_item_type_fields_replaced_by',
+      sql`${table.replacedBy} IS NULL OR (${table.archivedAt} IS NOT NULL AND ${table.replacedBy} <> ${table.id})`
+    ),
     foreignKey({
       columns: [table.revision, table.typeId],
       foreignColumns: [itemTypes.revision, itemTypes.id],

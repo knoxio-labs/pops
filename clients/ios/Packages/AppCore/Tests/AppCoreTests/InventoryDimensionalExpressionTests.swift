@@ -70,7 +70,8 @@ internal struct InventoryDimensionalExpressionTests {
 
     @Test("a version-2 field derives and converts; version 1 refuses the same expression")
     func versionGate() throws {
-        let derived = try InventoryComputedDefinition(Self.field(version: 2, unit: "mm²"))
+        let derived = try InventoryComputedDefinition(
+            Self.field(version: 2, unit: "mm²"), fieldKinds: [:])
         #expect(derived.expressionVersion == 2)
         let value = try derived.evaluate(
             override: nil, catalogueRevision: 1, itemRevision: 1, in: Box())
@@ -78,7 +79,8 @@ internal struct InventoryDimensionalExpressionTests {
             value.evaluation
                 == .ok(.measurement(amount: try InventoryDecimal("60000"), unit: "mm²")))
 
-        let legacy = try InventoryComputedDefinition(Self.field(version: 1, unit: "cm²"))
+        let legacy = try InventoryComputedDefinition(
+            Self.field(version: 1, unit: "cm²"), fieldKinds: [:])
         let refused = try legacy.evaluate(
             override: nil, catalogueRevision: 1, itemRevision: 1, in: Box())
         #expect(
@@ -93,7 +95,8 @@ internal struct InventoryDimensionalExpressionTests {
             throws: InventoryExpressionRejection(
                 code: "expression_version_unknown", path: "expressionVersion")
         ) {
-            try InventoryComputedDefinition(Self.field(version: 3, unit: "cm²"))
+            try InventoryComputedDefinition(
+                Self.field(version: 3, unit: "cm²"), fieldKinds: [:])
         }
     }
 
@@ -106,7 +109,7 @@ internal struct InventoryDimensionalExpressionTests {
         let definition = InventoryComputedDefinition(
             fieldId: "computed", kind: .measurement, fixedUnit: "cm", allowOverride: false,
             expression: try InventoryExpression.parse(version: 2, json: expression),
-            expressionVersion: 2)
+            expressionVersion: 2, fieldKinds: [:])
         let value = try definition.evaluate(
             override: nil, catalogueRevision: 1, itemRevision: 1, in: Box())
         #expect(

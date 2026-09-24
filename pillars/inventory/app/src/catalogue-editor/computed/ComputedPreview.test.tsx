@@ -154,8 +154,7 @@ describe('try on an item', () => {
     mocks.typesManagePreviewComputedField.mockResolvedValue(
       answered({
         state: 'unavailable',
-        reason: 'missing_dependency',
-        missing: [{ fieldId: 'price', itemId: 'part-1', reason: 'missing_dependency' }],
+        missingInputs: [{ fieldId: 'price', itemId: 'part-1', reason: 'missing_dependency' }],
         traversedItemIds: ['box-1', 'part-1'],
       })
     );
@@ -172,8 +171,7 @@ describe('try on an item', () => {
     mocks.typesManagePreviewComputedField.mockResolvedValue(
       answered({
         state: 'unavailable',
-        reason: 'missing_dependency',
-        missing: [
+        missingInputs: [
           { fieldId: 'price', itemId: 'part-1', reason: 'reference_deleted' },
           { fieldId: 'price', itemId: 'box-1', reason: 'missing_dependency' },
         ],
@@ -184,9 +182,30 @@ describe('try on an item', () => {
     await pickItem();
 
     expect(
-      await within(preview()).findByText('Price on Hinge points at an item that was deleted.')
+      await within(preview()).findByText(/Price on Hinge points at an item that was deleted/u)
     ).toBeInTheDocument();
-    expect(within(preview()).getByText('Price is empty on Blue box.')).toBeInTheDocument();
+    expect(within(preview()).getByText(/Price is empty on Blue box/u)).toBeInTheDocument();
+  });
+
+  it('names every missing input when a coalesce leaves several unanswered', async () => {
+    mocks.typesManagePreviewComputedField.mockResolvedValue(
+      answered({
+        state: 'unavailable',
+        missingInputs: [
+          { fieldId: 'price', itemId: 'part-1', reason: 'missing_dependency' },
+          { fieldId: 'volume', itemId: 'box-1', reason: 'reference_deleted' },
+        ],
+        traversedItemIds: ['box-1', 'part-1'],
+      })
+    );
+    renderComputedField({ volume: PRODUCT, environment: { draft: DRAFT } });
+    await pickItem();
+
+    expect(await within(preview()).findByText(/2 inputs are missing/u)).toBeInTheDocument();
+    expect(within(preview()).getByText(/Price is empty on Hinge/u)).toBeInTheDocument();
+    expect(
+      within(preview()).getByText(/Volume on Blue box points at an item that was deleted/u)
+    ).toBeInTheDocument();
   });
 
   it.each([

@@ -21,7 +21,7 @@ extension InventoryCatalogueType {
             fields: fields.sorted { storedOrder(($0.sortOrder, $0.key), ($1.sortOrder, $1.key)) }
                 .map(\.inStoredOrder),
             capabilities: capabilities, legacyLabels: legacyLabels, presentation: presentation,
-            archivedAt: archivedAt)
+            archivedAt: archivedAt, replacedBy: replacedBy)
     }
 }
 
@@ -32,7 +32,7 @@ extension InventoryCatalogueField {
             kind: kind, cardinality: cardinality, required: required, storage: storage,
             fixedUnit: fixedUnit, references: references, expressionVersion: expressionVersion,
             expression: expression, allowOverride: allowOverride, presentation: presentation,
-            archivedAt: archivedAt,
+            archivedAt: archivedAt, replacedBy: replacedBy,
             enumOptions: enumOptions.sorted {
                 storedOrder(($0.sortOrder, $0.key), ($1.sortOrder, $1.key))
             })

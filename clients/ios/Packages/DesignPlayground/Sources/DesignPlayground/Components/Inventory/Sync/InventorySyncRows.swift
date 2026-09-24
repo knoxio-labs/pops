@@ -56,7 +56,7 @@ internal struct InventoryWaitingRow: View {
         InventorySyncRowLabel(
             recordID: operation.recordID, symbol: operation.symbol, title: operation.title
         ) {
-            Text(operation.detail)
+            Text(operation.caption)
                 .font(.popsCaption)
                 .foregroundStyle(Color.popsMutedForeground)
                 .fixedSize(horizontal: false, vertical: true)
@@ -66,7 +66,11 @@ internal struct InventoryWaitingRow: View {
                     .accessibilityLabel(InventorySync.synchronizing.label)
             }
         } trailing: {
-            InventorySyncMarker(sync: operation.progress == nil ? .queued : .synchronizing)
+            if let hold = operation.hold {
+                InventoryQueueHoldMark(hold: hold)
+            } else {
+                InventorySyncMarker(sync: operation.progress == nil ? .queued : .synchronizing)
+            }
         }
         .accessibilityElement(children: .combine)
     }
@@ -92,16 +96,25 @@ internal struct InventoryRepairListRow: View {
             .font(.popsCaption)
             .labelStyle(InventorySyncCaptionLabelStyle())
         } trailing: {
-            Button(action: onFix) {
-                repair.kind.fix.symbol.image
-                    .font(.popsHeadline)
-                    .foregroundStyle(Color.popsInventory)
-                    .frame(width: PopsSize.touchTarget, height: PopsSize.touchTarget)
-                    .contentShape(.rect)
+            if repair.kind.opensRepair {
+                icon.accessibilityHidden(true)
+            } else {
+                Button(action: onFix) { icon }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(repair.kind.fix.title)
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel(repair.kind.fix.title)
         }
+        .accessibilityHint(repair.kind.opensRepair ? repair.kind.fix.title : "")
+    }
+
+    /// A repair that opens its own screen draws the icon without a button,
+    /// so a tap anywhere on the row opens it.
+    private var icon: some View {
+        repair.kind.fix.symbol.image
+            .font(.popsHeadline)
+            .foregroundStyle(Color.popsInventory)
+            .frame(width: PopsSize.touchTarget, height: PopsSize.touchTarget)
+            .contentShape(.rect)
     }
 }
 
@@ -122,6 +135,28 @@ internal struct InventoryResolvedRow: View {
                 .accessibilityLabel("Resolved")
         }
         .accessibilityElement(children: .combine)
+    }
+}
+
+/// Why a waiting change is not being sent: turning while the phone fetches
+/// newer fields, amber when only an app update moves it.
+private struct InventoryQueueHoldMark: View {
+    let hold: InventoryQueueHold
+
+    var body: some View {
+        hold.symbol.image
+            .font(.popsCaption.weight(.semibold))
+            .foregroundStyle(tint)
+            .symbolEffect(.rotate, isActive: hold == .newFields)
+            .accessibilityLabel(hold.caption)
+    }
+
+    private var tint: Color {
+        switch hold {
+        case .appUpdate: .popsWarning
+        case .stalled: .popsDestructive
+        case .newFields, .behindRepair: .popsMutedForeground
+        }
     }
 }
 

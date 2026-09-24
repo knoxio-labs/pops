@@ -5,7 +5,11 @@ import AppCore
 /// change. The full choice of both sides is the Sync page's; this is only the
 /// notice and its shortcut.
 internal enum InventoryDetailConflicts {
-    internal static func conflict(_ repair: InventoryRepair) -> InventoryDetailConflict {
+    /// `catalogue` is the repair read against the current fields, for a
+    /// `catalogueChanged` repair's problem line.
+    internal static func conflict(
+        _ repair: InventoryRepair, catalogue: InventoryCatalogueRepairDetail? = nil
+    ) -> InventoryDetailConflict {
         let elsewhere = otherSide(of: repair)
         switch repair.kind {
         case .conflict:
@@ -27,9 +31,10 @@ internal enum InventoryDetailConflicts {
                 repairId: repair.id, problem: "A photo did not upload", resolution: "Retry",
                 choice: .keepMine())
         case .catalogueChanged:
+            let problem = catalogue.map { "\($0.title): \($0.problem)" }
             return InventoryDetailConflict(
-                repairId: repair.id, problem: "A field in a queued change was replaced",
-                resolution: "Retry", choice: .keepMine())
+                repairId: repair.id, problem: problem ?? "A field in a queued change was replaced",
+                resolution: repair.kind.fix.title, choice: .keepMine(), opensRepair: true)
         case .unrecognised(let reason):
             return InventoryDetailConflict(
                 repairId: repair.id,

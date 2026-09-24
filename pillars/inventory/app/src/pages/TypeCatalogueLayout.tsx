@@ -60,6 +60,7 @@ export function TypeCatalogueLayout({ onAbandon, onOperation, onPublish, page }:
               onReload={() => void page.reload()}
               onAbandon={onAbandon}
               onPublish={onPublish}
+              onRecheck={page.recheckCompatibility}
             />
           </CardContent>
         </Card>

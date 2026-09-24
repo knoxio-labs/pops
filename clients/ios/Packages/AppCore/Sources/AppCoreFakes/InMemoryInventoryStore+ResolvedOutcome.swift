@@ -11,13 +11,17 @@ extension InMemoryInventoryStore {
         case (.unrecognised, _), (.deletedElsewhere, .discardMine),
             (.catalogueChanged, .discardMine):
             "Let go"
-        case (.catalogueChanged, .keepMine): "Sent with current fields"
+        case (.catalogueChanged, .keepMine), (.catalogueChanged, .replaceMine):
+            "Sent with current fields"
         case (.conflict, .keepMine): "Kept mine"
         case (.codeCollision, .keepMine(let code)): code.map { "Relabelled \($0)" } ?? "Relabelled"
         case (.deletedElsewhere, .keepMine): "Restored"
         case (.photoFailed, .keepMine): "Photo retried"
         case (.photoFailed, .discardMine): "Photo removed"
         case (.conflict, .discardMine), (.codeCollision, .discardMine): "Discarded mine"
+        case (.conflict, .replaceMine), (.codeCollision, .replaceMine),
+            (.deletedElsewhere, .replaceMine), (.photoFailed, .replaceMine):
+            "Kept mine"
         }
     }
 }

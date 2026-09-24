@@ -96,20 +96,42 @@ extension OnlineInventoryStore {
     private func apply(_ page: InventorySnapshotPage) async throws {
         try Self.requireSupported(page.minimumProtocol)
         guard let revision = page.catalogueRevision else { return try replica.apply(page) }
-        try replica.apply(page, catalogue: try await pinnedCatalogue(revision))
+        let catalogue = try await exactCatalogue(revision)
+        try replica.apply(
+            page, catalogue: catalogue,
+            referencedCatalogues: try await unheldCatalogues(namedBy: page.items, pinned: revision))
     }
 
     private func apply(_ page: InventoryChangesPage) async throws {
         try Self.requireSupported(page.minimumProtocol)
         guard let revision = page.catalogueRevision else { return try replica.apply(page) }
-        try replica.apply(page, catalogue: try await pinnedCatalogue(revision))
+        let catalogue = try await exactCatalogue(revision)
+        try replica.apply(
+            page, catalogue: catalogue,
+            referencedCatalogues: try await unheldCatalogues(namedBy: page.items, pinned: revision))
+    }
+
+    /// Every revision other than the pinned one that the page's items name
+    /// and this phone does not hold. A publication leaves an unchanged item's
+    /// values at the revision they were written under, so a page can name
+    /// revisions older than the one it pins; each is fetched once, oldest
+    /// first, and a failed fetch applies nothing, so the next sync asks again.
+    private func unheldCatalogues(namedBy items: [InventoryItem], pinned: Int) async throws
+        -> [InventoryCatalogueSnapshot]
+    {
+        let named = Set(items.flatMap(\.namedCatalogueRevisions)).subtracting([pinned])
+        var catalogues: [InventoryCatalogueSnapshot] = []
+        for revision in try replica.unheldCatalogueRevisions(named).sorted() {
+            catalogues.append(try await exactCatalogue(revision))
+        }
+        return catalogues
     }
 
     /// The exact revision a page names, fetched before the page is applied
     /// so its rows and cursor are never stored against a catalogue this
     /// phone does not hold. Any other revision (a race with a publish) is a
     /// mismatch, and nothing is applied; the next refresh asks again.
-    private func pinnedCatalogue(_ revision: Int) async throws -> InventoryCatalogueSnapshot {
+    private func exactCatalogue(_ revision: Int) async throws -> InventoryCatalogueSnapshot {
         let catalogue = try await transport.fetchCatalogue(revision: revision)
         guard catalogue.revision.revision == revision else {
             throw RepositoryError.contractMismatch
@@ -172,13 +194,27 @@ extension OnlineInventoryStore {
                 heldById: heldById, heldByName: heldByName, suggestedCode: suggestedCode)
         case .conflictDeleted(let source, let at):
             InventoryCommandError.deletedElsewhere(source: source, at: at)
-        case .rejected(let reason, let message):
+        case .rejected(let reason, let message, _):
             InventoryCommandError.rejected(reason: reason, message: message)
         // A mutation sent alone depends on nothing, so it has nothing to wait
         // for; and `applied` is not a failure at all.
         case .deferred, .applied:
             RepositoryError.contractMismatch
         }
+    }
+}
+
+extension InventoryItem {
+    fileprivate var namedCatalogueRevisions: [Int] {
+        var revisions = fieldValues.map(\.catalogueRevision)
+        if let catalogueRevision { revisions.append(catalogueRevision) }
+        for computed in computedValues {
+            revisions.append(computed.catalogueRevision)
+            if case .overridden(_, let overrideRevision) = computed.evaluation {
+                revisions.append(overrideRevision)
+            }
+        }
+        return revisions
     }
 }
 

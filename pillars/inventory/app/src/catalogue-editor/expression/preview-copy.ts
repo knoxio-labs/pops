@@ -1,22 +1,41 @@
-const UNAVAILABLE_COPY: Record<string, (field: string, item: string) => string> = {
-  missing_dependency: (field, item) => `${field} is empty on ${item}.`,
-  reference_deleted: (field, item) => `${field} on ${item} points at an item that was deleted.`,
-  reference_missing: (field, item) =>
-    `${field} on ${item} points at an item that no longer exists.`,
+/**
+ * One input a preview's calculation could not read: the field, the item it
+ * was read on, and why (the server's raw `reason` string, open per Inventory
+ * ADR-002 D10 so a client without the newest copy still shows something
+ * sensible). `coalesce` reports one per argument that had none, so an
+ * unavailable result can name several.
+ */
+export interface PreviewMissingInput {
+  readonly reason: string;
+  readonly fieldLabel: string;
+  readonly itemLabel: string;
+}
+
+const MISSING_INPUT_COPY: Record<string, (field: string, item: string) => string> = {
+  missing_dependency: (field, item) => `${field} is empty on ${item}`,
+  reference_deleted: (field, item) => `${field} on ${item} points at an item that was deleted`,
+  reference_missing: (field, item) => `${field} on ${item} points at an item that no longer exists`,
   reference_unresolved: (field, item) =>
-    `${field} on ${item} points at an item that could not be read.`,
-  evaluation_error: (field, item) => `${field} could not be calculated on ${item}.`,
+    `${field} on ${item} points at an item that could not be read`,
 };
 
+/** Names one missing input: the field and the item it was read on. */
+function missingInputSentence(input: PreviewMissingInput): string {
+  const copy = MISSING_INPUT_COPY[input.reason];
+  return copy === undefined
+    ? `${input.fieldLabel} on ${input.itemLabel} is unavailable (${input.reason})`
+    : copy(input.fieldLabel, input.itemLabel);
+}
+
 /**
- * Names the input that stopped the calculation. Every reason names both the
- * field and the item it was read on, because "unavailable" alone gives the
- * author nothing to fix. A reason this client does not know yet still names
- * both, with the server's code.
+ * Names every input that stopped the calculation, because "unavailable"
+ * alone gives the author nothing to fix. `coalesce` can leave several
+ * arguments without a value, so this counts and lists every one of them.
  */
-export function unavailableSentence(reason: string, field: string, item: string): string {
-  const copy = UNAVAILABLE_COPY[reason];
-  return copy === undefined ? `${field} on ${item} is unavailable (${reason}).` : copy(field, item);
+export function unavailableSentence(missingInputs: readonly PreviewMissingInput[]): string {
+  if (missingInputs.length <= 1)
+    return `${missingInputs.map(missingInputSentence).join('') || 'Nothing to read'}.`;
+  return `${missingInputs.length} inputs are missing: ${missingInputs.map(missingInputSentence).join('; ')}.`;
 }
 
 const ERROR_COPY: Record<string, string> = {

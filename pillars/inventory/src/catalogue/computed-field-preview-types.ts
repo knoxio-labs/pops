@@ -8,7 +8,7 @@ export interface ComputedFieldPreviewSubject {
   readonly itemId: string;
 }
 
-/** An input the preview could not read, the item it was read on, and why it had no value. */
+/** An input the preview could not read, the item it was read on, and why. */
 export interface ComputedFieldPreviewMissing {
   readonly fieldId: string;
   readonly itemId: string;
@@ -25,8 +25,8 @@ export type ComputedFieldPreviewResult =
     }
   | {
       readonly state: 'unavailable';
-      readonly reason: ExpressionUnavailableReason;
-      readonly missing: readonly ComputedFieldPreviewMissing[];
+      /** Every input the calculation could not read; `coalesce` reports one per argument. */
+      readonly missingInputs: readonly ComputedFieldPreviewMissing[];
       readonly dependencies: readonly EvaluatedDependency[];
       readonly traversedItemIds: readonly string[];
     }

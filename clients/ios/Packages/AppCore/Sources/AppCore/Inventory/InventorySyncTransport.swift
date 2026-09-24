@@ -79,7 +79,12 @@ public enum InventoryMutationOutcome: Hashable, Sendable {
         currentRevision: Int)
     case conflictCodeCollision(heldById: String, heldByName: String, suggestedCode: String)
     case conflictDeleted(source: InventorySyncSource, at: Date)
-    case rejected(reason: InventoryRejectedReason, message: String)
+    /// `catalogueChanges` names what stands in the way of a
+    /// `catalogueUpdateRequired` or `catalogueRepairRequired` refusal; empty
+    /// for every other reason, and from a server that predates them.
+    case rejected(
+        reason: InventoryRejectedReason, message: String,
+        catalogueChanges: [InventoryCatalogueChange] = [])
     case deferred(waitingOn: String)
 }
 

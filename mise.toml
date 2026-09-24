@@ -230,6 +230,16 @@ description = "Boot a real BFM against a temp database and drive the iOS app's p
 dir = "{{config_root}}"
 run = "node scripts/ios-e2e/run.mjs"
 
+# The inventory-types acceptance suite (POPS-4354) spans the mcp, bfm,
+# inventory and shell units and the iOS client, so, like `e2e:ios`, it lives
+# here. `--web` adds the Playwright scenario, `--ios` the Maestro one;
+# `--pull-request <n> --pr-issue <TICKET>` writes evidence packets. The script
+# says what each layer runs and where the evidence lands.
+[tasks."inventory:acceptance"]
+description = "Run the inventory-types acceptance scenarios against real pillar processes and write evidence records"
+dir = "{{config_root}}"
+run = "node scripts/inventory-acceptance/run.mjs"
+
 # The iOS↔BFM signature fixture exists twice on purpose — canonical under
 # `clients/ios`, vendored inside the BFM's unit boundary (ADR-043) — and the
 # copy step belongs to neither unit: a pillar must not read a path under

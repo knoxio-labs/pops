@@ -11,7 +11,8 @@ import { parseExpression } from '../../../catalogue/expression-parser.js';
 import { ExpressionValidationError } from '../../../catalogue/expression-types.js';
 import { toComputedWire } from '../computed-wire.js';
 import { EXPRESSION_VECTOR_CASES } from './cases.js';
-import { FIELD, ITEM, VECTOR_CATALOGUE_REVISION, VECTOR_OVERRIDE_REVISION } from './fixture.js';
+import { ITEM, FIELD, VECTOR_CATALOGUE_REVISION, VECTOR_OVERRIDE_REVISION } from './fixture.js';
+import { expressionOps, vectorFieldKinds } from './walk.js';
 
 import type {
   ExpressionSnapshot,
@@ -19,6 +20,7 @@ import type {
   SnapshotFieldValue,
 } from '../../../catalogue/expression-types.js';
 import type { ReadItemFieldValue } from '../../../catalogue/item-value-types.js';
+import type { PrimitiveKind } from '../../../catalogue/value-types.js';
 import type { SyncComputedValue } from '../../../contract/rest-sync-computed-schemas.js';
 import type {
   ExpressionVectorCase,
@@ -52,6 +54,8 @@ export interface ExpressionVector {
   readonly override: { readonly value: unknown; readonly catalogueRevision: number } | null;
   readonly rootItemId: string;
   readonly items: readonly VectorItem[];
+  /** The declared kind of every field the expression reads, by field id. */
+  readonly fieldKinds: Readonly<Record<string, PrimitiveKind>>;
   readonly expected: ExpressionVectorExpectation;
 }
 
@@ -94,23 +98,6 @@ function snapshot(items: readonly VectorItem[]): ExpressionSnapshot {
   };
 }
 
-function ops(node: ExpressionV1, found: Set<ExpressionV1['op']>): Set<ExpressionV1['op']> {
-  found.add(node.op);
-  if (node.op === 'literal' || node.op === 'read') return found;
-  if (node.op === 'coalesce') {
-    for (const value of node.values) ops(value, found);
-    return found;
-  }
-  if ('value' in node) return ops(node.value, found);
-  if (node.op === 'if') {
-    ops(node.condition, found);
-    ops(node.thenBranch, found);
-    return ops(node.elseBranch, found);
-  }
-  ops(node.left, found);
-  return ops(node.right, found);
-}
-
 function overrideRows(vectorCase: ExpressionVectorCase, fieldId: string): ReadItemFieldValue[] {
   if (vectorCase.override === undefined) return [];
   return [
@@ -126,7 +113,8 @@ function overrideRows(vectorCase: ExpressionVectorCase, fieldId: string): ReadIt
 function expect(
   vectorCase: ExpressionVectorCase,
   field: VectorResultField,
-  items: readonly VectorItem[]
+  items: readonly VectorItem[],
+  fieldKinds: Readonly<Record<string, PrimitiveKind>>
 ): ExpressionVectorExpectation {
   let ast: ExpressionV1;
   try {
@@ -141,6 +129,7 @@ function expect(
         dependencies: [],
         field: { typeId: 'vector', fieldId: field.fieldId },
         resultType: { kind: field.kind, fixedUnit: field.fixedUnit },
+        fieldKinds: new Map(Object.entries(fieldKinds)),
       },
       fieldId: field.fieldId,
       override:
@@ -160,7 +149,7 @@ function expect(
     if (value === null) throw new Error(`${vectorCase.name}: a computed field projected as stored`);
     return {
       outcome: 'evaluated',
-      ops: [...ops(ast, new Set())].toSorted(),
+      ops: expressionOps(ast),
       evaluationErrorCode,
       value,
     };
@@ -176,7 +165,8 @@ function withRoot(items: readonly VectorItem[] | undefined): readonly VectorItem
   return [{ id: ITEM.root, state: 'resolved', revision: 3, fields: [] }, ...listed];
 }
 
-function buildVector(vectorCase: ExpressionVectorCase): ExpressionVector {
+/** Evaluates one case through the server's own code. */
+export function buildExpressionVector(vectorCase: ExpressionVectorCase): ExpressionVector {
   const field: VectorResultField = {
     fieldId: FIELD.computed,
     kind: vectorCase.kind,
@@ -184,6 +174,7 @@ function buildVector(vectorCase: ExpressionVectorCase): ExpressionVector {
     allowOverride: vectorCase.allowOverride ?? false,
   };
   const items = withRoot(vectorCase.items);
+  const fieldKinds = vectorFieldKinds(vectorCase);
   return {
     name: vectorCase.name,
     expressionVersion: vectorCase.expressionVersion ?? 1,
@@ -195,11 +186,12 @@ function buildVector(vectorCase: ExpressionVectorCase): ExpressionVector {
         : { value: vectorCase.override, catalogueRevision: VECTOR_OVERRIDE_REVISION },
     rootItemId: ITEM.root,
     items,
-    expected: expect(vectorCase, field, items),
+    fieldKinds,
+    expected: expect(vectorCase, field, items, fieldKinds),
   };
 }
 
 /** Evaluates every case through the server's own code, in case order. */
 export function buildExpressionVectors(): readonly ExpressionVector[] {
-  return EXPRESSION_VECTOR_CASES.map(buildVector);
+  return EXPRESSION_VECTOR_CASES.map(buildExpressionVector);
 }

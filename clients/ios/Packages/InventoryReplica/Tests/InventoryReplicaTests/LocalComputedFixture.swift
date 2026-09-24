@@ -28,14 +28,14 @@ internal enum LocalComputedFixture {
 
     static func field(
         _ id: String, key: String, kind: InventoryPrimitiveKind, expression: InventoryJSON? = nil,
-        allowOverride: Bool = false
+        expressionVersion: Int = 1, allowOverride: Bool = false
     ) -> InventoryCatalogueField {
         InventoryCatalogueField(
             id: id, typeId: typeId, key: key, label: key, sortOrder: 0, kind: kind,
             cardinality: .one, required: false, storage: expression == nil ? .stored : .computed,
             references: InventoryReferenceConstraint(
                 targetKinds: kind == .reference ? [.item] : []),
-            expressionVersion: expression == nil ? nil : 1, expression: expression,
+            expressionVersion: expression == nil ? nil : expressionVersion, expression: expression,
             allowOverride: allowOverride)
     }
 
@@ -59,21 +59,34 @@ internal enum LocalComputedFixture {
                 ])
         ])
 
-    /// The catalogue with one computed field's expression replaced.
-    static func catalogue(replacing fieldId: String, with expression: InventoryJSON)
-        -> InventoryCatalogueSnapshot
-    {
+    /// The catalogue with one computed field's expression replaced, published
+    /// as `revision` (the fixture's own by default).
+    static func catalogue(
+        replacing fieldId: String, with expression: InventoryJSON, revision: Int = revision
+    ) -> InventoryCatalogueSnapshot {
+        catalogue(replacing: [fieldId: expression], revision: revision)
+    }
+
+    /// The catalogue with each named computed field's expression replaced,
+    /// stored as `expressionVersion` and published as `revision`.
+    static func catalogue(
+        replacing expressions: [String: InventoryJSON], expressionVersion: Int = 1,
+        revision: Int = revision
+    ) -> InventoryCatalogueSnapshot {
         let types = catalogue.types.map { type in
             InventoryCatalogueType(
                 id: type.id, key: type.key, label: type.label, sortOrder: type.sortOrder,
                 fields: type.fields.map { candidate in
-                    guard candidate.id == fieldId else { return candidate }
+                    guard let expression = expressions[candidate.id] else { return candidate }
                     return field(
-                        fieldId, key: candidate.key, kind: candidate.kind, expression: expression,
+                        candidate.id, key: candidate.key, kind: candidate.kind,
+                        expression: expression, expressionVersion: expressionVersion,
                         allowOverride: candidate.allowOverride)
                 })
         }
-        return InventoryCatalogueSnapshot(revision: catalogue.revision, types: types)
+        return InventoryCatalogueSnapshot(
+            revision: InventoryCatalogueRevision(revision: revision, minimumProtocol: 2),
+            types: types)
     }
 
     static func decimal(_ text: String) throws -> InventoryPrimitiveValue {
@@ -153,7 +166,10 @@ internal enum LocalComputedFixture {
         -> InventoryComputedDisplay?
     {
         guard let item = try replica.read(.item(id: itemId)) else { return nil }
-        return item.computedValues.first { $0.fieldId == fieldId }?.display(in: item) { other in
+        let active = try replica.read(.protocol2Catalogue)?.revision.revision
+        return item.computedValues.first { $0.fieldId == fieldId }?.display(
+            in: item, activeCatalogueRevision: active
+        ) { other in
             (try? replica.read(.item(id: other)))??.revision
         }
     }

@@ -86,6 +86,9 @@ public struct InventoryRepair: Identifiable, Hashable, Sendable {
     /// Who already holds the colliding code, for `codeCollision`'s "B412 is
     /// on Kitchen 09" line. Mirrors the wire outcome's `heldBy.name`.
     public let heldByName: String?
+    /// What a `catalogueChanged` repair's change was and what stands in its
+    /// way; nil for every other kind.
+    public let catalogue: InventoryCatalogueRepair?
     public let openedAt: Date
 
     public init(
@@ -97,6 +100,7 @@ public struct InventoryRepair: Identifiable, Hashable, Sendable {
         options: [InventoryRepairOption] = [],
         suggestedCode: String? = nil,
         heldByName: String? = nil,
+        catalogue: InventoryCatalogueRepair? = nil,
         openedAt: Date
     ) {
         self.id = id
@@ -107,8 +111,38 @@ public struct InventoryRepair: Identifiable, Hashable, Sendable {
         self.options = options
         self.suggestedCode = suggestedCode
         self.heldByName = heldByName
+        self.catalogue = catalogue
         self.openedAt = openedAt
     }
+}
+
+/// A `catalogueChanged` repair's change, what stands in its way, and
+/// whether this phone's fields have moved since it opened.
+public struct InventoryCatalogueRepair: Hashable, Sendable {
+    /// The change as it was queued; nil when this build cannot read it back.
+    public let queued: InventoryCommand?
+    /// What the server (or the replica moving the change itself) named as
+    /// standing in its way, first cause first. Empty from a server that
+    /// predates naming them.
+    public let changes: [InventoryCatalogueChange]
+    /// The catalogue revision this phone held when the repair opened.
+    public let openedAtRevision: Int?
+    /// The catalogue revision this phone holds now.
+    public let currentRevision: Int?
+
+    public init(
+        queued: InventoryCommand?, changes: [InventoryCatalogueChange],
+        openedAtRevision: Int?, currentRevision: Int?
+    ) {
+        self.queued = queued
+        self.changes = changes
+        self.openedAtRevision = openedAtRevision
+        self.currentRevision = currentRevision
+    }
+
+    /// Whether the fields changed since the repair opened, which is the only
+    /// time sending the change again unedited can turn out differently.
+    public var definitionsChanged: Bool { currentRevision != openedAtRevision }
 }
 
 /// The choice a person makes on a repair, passed to
@@ -124,6 +158,9 @@ public enum InventoryRepairChoice: Hashable, Sendable {
     /// Sends the change again against the current catalogue for
     /// `catalogueChanged`.
     case keepMine(code: String? = nil)
+    /// Send `command` in place of this phone's change, in its place in the
+    /// queue: a `catalogueChanged` change edited against the current fields.
+    case replaceMine(InventoryCommand)
     /// Discard this phone's value: rebases on the server's value
     /// (`conflict`), drops the code (`codeCollision`), lets the deletion
     /// stand (`deletedElsewhere`), or drops the attach and unpins the bytes

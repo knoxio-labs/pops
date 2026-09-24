@@ -79,9 +79,29 @@ export const perUnitSaving: ExpressionNode = binary(
   binary('divide', read('replacement_quote', 'part_of'), read('package_count'))
 );
 
-/** Volume as the box example states it, which v1 cannot type: cm × cm needs a plain number. */
+/**
+ * Volume as the box example states it: Width × Height × Depth. Expression v2
+ * derives cm² then cm³ from the two products (Inventory ADR-002 D5).
+ */
 export const boxVolume: ExpressionNode = binary(
   'multiply',
+  binary('multiply', read('width'), read('height')),
+  read('depth')
+);
+
+/** Volume half built: Width × Height placed, Depth still an empty slot. */
+export const boxVolumeInProgress: ExpressionNode = binary(
+  'multiply',
+  binary('multiply', read('width'), read('height')),
+  EMPTY
+);
+
+/**
+ * A dimension mismatch: Width × Height (cm²) plus Depth (cm) do not share a
+ * dimension, so nothing to convert makes them addable.
+ */
+export const dimensionMismatchExpression: ExpressionNode = binary(
+  'add',
   binary('multiply', read('width'), read('height')),
   read('depth')
 );
@@ -93,13 +113,13 @@ export const widthWithLid: ExpressionNode = binary(
   literal({ amount: '2', unit: 'cm' })
 );
 
-/** The refusal for multiplying a measurement by a measurement. */
-export const typeMismatchIssue: ExpressionIssue = {
-  path: 'expression.left.right',
+/** The refusal for adding a plain length to an area. */
+export const dimensionMismatchIssue: ExpressionIssue = {
+  path: 'expression.right',
   code: 'expression_type_mismatch',
-  title: 'Height cannot go here',
+  title: 'Depth cannot go here',
   message:
-    'Multiplying a measurement takes a plain number on the right, and Height is a measurement in cm. The result would stay in cm, not become a volume.',
+    'Adding takes both sides in the same dimension, converting one into the other. The left side is measurement in cm² (length²) and Depth is measurement in cm (length), so nothing converts one into the other.',
 };
 
 /** The refusal for a definition that reads itself through another type. */

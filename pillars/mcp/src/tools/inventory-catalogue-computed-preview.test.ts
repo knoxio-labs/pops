@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { mockPillarInventory, parseResult, pillarMockGetter } from './test-helpers.js';
+import { callOk, mockPillarInventory, parseResult, pillarMockGetter } from './test-helpers.js';
 
 vi.mock('../pillar-client.js', () => ({
   getPillar: pillarMockGetter,
@@ -45,6 +45,29 @@ describe('inventory.catalogue.previewComputedField', () => {
     });
     expect(parseResult(result)).toMatchObject({ result: { state: 'value', value: 12 } });
     expect(types.manage.patchDraft).not.toHaveBeenCalled();
+  });
+
+  it('passes every missing input through with its item and reason', async () => {
+    const missingInputs = [
+      { fieldId: FIELD_ID, itemId: 'item-1', reason: 'missing_dependency' },
+      { fieldId: FIELD_ID, itemId: 'item-2', reason: 'reference_deleted' },
+    ];
+    types.manage.previewComputedField.mockResolvedValueOnce(
+      callOk({
+        draftRevision: 2,
+        result: { state: 'unavailable', missingInputs, dependencies: [], traversedItemIds: [] },
+      })
+    );
+
+    const result = await previewTool().handler({
+      ...target,
+      typeId: TYPE_ID,
+      fieldId: FIELD_ID,
+      itemId: 'item-1',
+    });
+
+    expect(result.isError).toBeFalsy();
+    expect(parseResult(result)).toMatchObject({ result: { state: 'unavailable', missingInputs } });
   });
 
   it('evaluates a new field by key after its creating operation', async () => {

@@ -17,15 +17,26 @@ internal enum Protocol2Wire {
     internal static func field(
         id: String, key: String, label: String, kind: String = "measurement",
         storage: String = "stored", required: Bool = false, archivedAt: String? = nil,
-        sortOrder: Int = 0
+        replacedBy: String? = nil, sortOrder: Int = 0, cardinality: String = "one",
+        fixedUnit: String? = nil, referenceKinds: [String] = [], enumOptionIds: [String] = []
     ) -> String {
-        """
-        {"id":"\(id)","typeId":"\(bulbType)","key":"\(key)","label":"\(label)","help":null,\
-        "sortOrder":\(sortOrder),"kind":"\(kind)","cardinality":"one","required":\(required),\
-        "storage":"\(storage)","fixedUnit":null,"referenceKinds":[],"referenceTypeIds":[],\
-        "expressionVersion":null,"expression":null,"allowOverride":false,"presentation":{},\
-        "archivedAt":\(archivedAt.map { "\"\($0)\"" } ?? "null"),"enumOptions":[]}
-        """
+        let kinds = referenceKinds.map { "\"\($0)\"" }.joined(separator: ",")
+        let options = enumOptionIds.enumerated().map { index, optionId in
+            """
+            {"id":"\(optionId)","key":"option-\(index)","label":"Option \(index)",\
+            "sortOrder":\(index),"archivedAt":null}
+            """
+        }.joined(separator: ",")
+        return """
+            {"id":"\(id)","typeId":"\(bulbType)","key":"\(key)","label":"\(label)","help":null,\
+            "sortOrder":\(sortOrder),"kind":"\(kind)","cardinality":"\(cardinality)",\
+            "required":\(required),"storage":"\(storage)",\
+            "fixedUnit":\(fixedUnit.map { "\"\($0)\"" } ?? "null"),\
+            "referenceKinds":[\(kinds)],"referenceTypeIds":[],\
+            "expressionVersion":null,"expression":null,"allowOverride":false,"presentation":{},\
+            "archivedAt":\(archivedAt.map { "\"\($0)\"" } ?? "null"),\
+            "replacedBy":\(replacedBy.map { "\"\($0)\"" } ?? "null"),"enumOptions":[\(options)]}
+            """
     }
 
     internal static let efficacyField = field(
@@ -51,6 +62,16 @@ internal enum Protocol2Wire {
         efficacyField,
     ]
 
+    /// `Lumens` archived with the catalogue recording the new `Brightness`
+    /// field, of the same kind, as its replacement.
+    internal static let lineageFields = [
+        field(
+            id: lumens, key: "lumens", label: "Lumens", archivedAt: "2026-09-02T00:00:00.000Z",
+            replacedBy: brightness),
+        field(id: brightness, key: "brightness", label: "Brightness", sortOrder: 2),
+        efficacyField,
+    ]
+
     internal static func catalogue(
         revision: Int, minimumProtocol: Int = 2, fields: [String] = bulbFields
     ) -> String {
@@ -68,11 +89,11 @@ internal enum Protocol2Wire {
 
     /// A protocol-2 lamp with a stored lumens value and a computed efficacy.
     internal static func lamp(
-        revision: Int = 1, seq: Int = 1, catalogueRevision: Int = 2, amount: String = "800",
-        name: String = "Lamp"
+        id: String = lampId, revision: Int = 1, seq: Int = 1, catalogueRevision: Int = 2,
+        amount: String = "800", name: String = "Lamp"
     ) -> String {
         InventoryWire.item(
-            id: lampId, revision: revision, seq: seq, name: name, typeId: bulbType,
+            id: id, revision: revision, seq: seq, name: name, typeId: bulbType,
             catalogueRevision: catalogueRevision,
             fieldValues: """
                 [{"fieldId":"\(lumens)","source":"stored","catalogueRevision":\(catalogueRevision),\
@@ -81,8 +102,8 @@ internal enum Protocol2Wire {
             computedValues: """
                 [{"fieldId":"\(efficacy)","source":"computed",\
                 "catalogueRevision":\(catalogueRevision),"state":"ok","values":[80],\
-                "dependencies":[{"itemId":"\(lampId)","fieldId":"\(lumens)","revision":\(revision)}],\
-                "traversedItemIds":["\(lampId)"]}]
+                "dependencies":[{"itemId":"\(id)","fieldId":"\(lumens)","revision":\(revision)}],\
+                "traversedItemIds":["\(id)"]}]
                 """)
     }
 

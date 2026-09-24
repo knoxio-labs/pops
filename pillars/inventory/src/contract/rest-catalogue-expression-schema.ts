@@ -116,3 +116,14 @@ export const ExpressionV1Schema: z.ZodType<ExpressionV1Shape> = z
     ])
   )
   .meta({ id: 'ExpressionV1' });
+
+/** The expression versions a `put_field` may store (the server's `EXPRESSION_VERSIONS`). */
+export const CatalogueExpressionVersionSchema = z
+  .literal([1, 2])
+  .describe(
+    "How a computed field's expression is evaluated. 1: measurements combine only in one " +
+      'fixed unit and decimals compare by spelling (3.0 ≠ 3). 2: measurements of one dimension ' +
+      'convert (cm + mm), measurement × and ÷ measurement derive units (cm × cm is cm²), the ' +
+      "result converts into the field's fixedUnit, and equal compares decimals by value " +
+      '(1.5 × 2 = 3). Required with an expression on a computed field; null on a stored field.'
+  );

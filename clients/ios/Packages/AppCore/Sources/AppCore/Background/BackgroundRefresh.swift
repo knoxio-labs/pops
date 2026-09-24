@@ -4,8 +4,9 @@ import Foundation
 /// it to `BGTaskScheduler`; tests record the requests.
 public protocol BackgroundRefreshScheduler: Sendable {
     /// Submits a refresh request no earlier than `earliestBeginDate`,
-    /// replacing any pending one with the same identifier.
-    func submitRefresh(identifier: String, earliestBeginDate: Date) throws
+    /// replacing any pending one with the same identifier. May take an
+    /// arbitrary time to return, so it is never awaited ahead of other work.
+    func submitRefresh(identifier: String, earliestBeginDate: Date) async throws
 }
 
 /// How one background refresh ended.
@@ -22,7 +23,7 @@ public enum BackgroundRefreshOutcome: Equatable, Sendable {
 }
 
 /// One background refresh, as the system grants it (Inventory ADR-002 D11):
-/// reschedule the next one first, so a run cut short still has a successor;
+/// ask for the next one first, so a run cut short still has a successor;
 /// do nothing before the first unlock after a restart; then run the work,
 /// cancelling it at `budget` or when the system expires the task, whichever
 /// comes first.
@@ -74,9 +75,9 @@ public struct BackgroundRefresh: Sendable {
     ///   refresh turned off, or too many pending); the next foreground or
     ///   refresh asks again.
     @discardableResult
-    public func schedule() -> Bool {
+    public func schedule() async -> Bool {
         do {
-            try scheduler.submitRefresh(
+            try await scheduler.submitRefresh(
                 identifier: identifier, earliestBeginDate: now().addingTimeInterval(interval))
             return true
         } catch {
@@ -84,13 +85,23 @@ public struct BackgroundRefresh: Sendable {
         }
     }
 
-    /// Runs one refresh: reschedules, checks the phone has been unlocked
-    /// since it started, then runs `work` inside the budget. `work` is
+    /// Runs one refresh: asks for the next one, checks the phone has been
+    /// unlocked since it started, then runs `work` inside the budget. The
+    /// request is in flight alongside the work rather than ahead of it,
+    /// because the system can take an arbitrary time to accept it. `work` is
     /// cancelled when the budget runs out or the calling task is cancelled,
-    /// and this returns once it has stopped.
+    /// and this returns once it has stopped and the request has been answered.
     public func run(_ work: @escaping @Sendable () async -> Void) async -> BackgroundRefreshOutcome
     {
-        schedule()
+        async let rescheduled = schedule()
+        let outcome = await runWithinBudget(work)
+        _ = await rescheduled
+        return outcome
+    }
+
+    private func runWithinBudget(
+        _ work: @escaping @Sendable () async -> Void
+    ) async -> BackgroundRefreshOutcome {
         guard isUnlockedSinceBoot() else { return .lockedSinceBoot }
         let outcome = await withTaskGroup(of: BackgroundRefreshOutcome?.self) { group in
             group.addTask {

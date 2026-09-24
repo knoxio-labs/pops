@@ -89,6 +89,12 @@ export function readComputedDependents(
  * the revision it was built for. Runs in the caller's transaction: catalogue
  * publication, whose expressions may change every item's dependencies, and
  * the boot backfill after migration `0019_item_computed_dependencies`.
+ *
+ * A soft-deleted item is excluded, matching `readComputedDependents`: a
+ * publication migration only discards a disallowed override from a live
+ * item (deleted ones are invisible to it), so evaluating a deleted item's
+ * computed fields here could otherwise throw `override_forbidden` and fail
+ * the whole publication over data no read path uses until it is restored.
  */
 export function rebuildComputedDependencyIndex(db: CommandDb, catalogue: PersistedCatalogue): void {
   db.delete(itemComputedDependencies).run();
@@ -99,7 +105,7 @@ export function rebuildComputedDependencyIndex(db: CommandDb, catalogue: Persist
     const ids = db
       .select({ id: items.id })
       .from(items)
-      .where(inArray(items.typeId, computedTypeIds))
+      .where(and(isNull(items.deletedAt), inArray(items.typeId, computedTypeIds)))
       .orderBy(asc(items.id))
       .all()
       .map((row) => row.id);

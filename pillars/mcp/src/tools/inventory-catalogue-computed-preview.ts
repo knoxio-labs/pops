@@ -32,13 +32,13 @@ function optionalOperations(args: Record<string, unknown>): Record<string, unkno
 /**
  * Non-mutating "try on an item": evaluates a draft computed field on one item,
  * optionally after unsaved operations, and returns the raw outcome (value,
- * unavailable with the missing inputs, or an evaluation error code) with the
+ * unavailable with every missing input, the item it was read on and why, or an evaluation error code) with the
  * dependencies and items it read.
  */
 export const cataloguePreviewComputedField: ToolDef = {
   name: 'inventory.catalogue.previewComputedField',
   description:
-    'Read inventory.catalogue.readDraft first, then evaluate one computed field of that draft on one item, optionally after unsaved operations, without writing anything. Name the field by fieldId, or by fieldKey when an operation creates it. Returns the value, or why it is unavailable naming each missing input and the item it was read on, or the raw evaluation error code (e.g. division_by_zero), plus the dependencies read and the item names. Refused with catalogue_draft_conflict when expectedDraftVersion is stale, and with the save issue paths when the operations are invalid.',
+    'Read inventory.catalogue.readDraft first, then evaluate one computed field of that draft on one item, optionally after unsaved operations, without writing anything. Name the field by fieldId, or by fieldKey when an operation creates it. Returns the value, or why it is unavailable as missingInputs (each input with no value, the item it was read on, and its reason), or the raw evaluation error code (e.g. division_by_zero), plus the dependencies read and the item names. Refused with catalogue_draft_conflict when expectedDraftVersion is stale, and with the save issue paths when the operations are invalid.',
   inputSchema: {
     type: 'object',
     $defs: expressionSchemaDefs,

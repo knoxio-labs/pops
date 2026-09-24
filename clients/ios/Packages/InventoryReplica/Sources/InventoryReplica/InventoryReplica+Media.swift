@@ -106,7 +106,8 @@ extension InventoryReplica {
                 continue
             }
             let outcome = StoredOutcome.rejected(
-                reason: failure.rejectionReason, message: failure.rejectionMessage)
+                reason: failure.rejectionReason, message: failure.rejectionMessage,
+                catalogueChanges: nil)
             entry.outcome = outcome
             entry.state = outcome.state
             try MutationLogRows.update(entry, in: db)

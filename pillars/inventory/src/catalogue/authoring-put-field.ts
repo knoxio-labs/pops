@@ -5,7 +5,13 @@ import { and, eq } from 'drizzle-orm';
 import { itemTypeFields, itemTypes } from '../db/schema.js';
 import { fieldValues, type FieldValues } from './authoring-put-field-shape.js';
 import { choose } from './authoring-put-shared.js';
-import { existingOrNew, failIssues, issue, persistedFieldRow } from './authoring-shared.js';
+import {
+  assertReplacedStaysArchived,
+  existingOrNew,
+  failIssues,
+  issue,
+  persistedFieldRow,
+} from './authoring-shared.js';
 
 import type { CommandDb } from '../domain/commands/index.js';
 import type { DraftOperation } from './authoring-types.js';
@@ -28,6 +34,7 @@ function writeField(context: FieldWriteContext): void {
     help: choose(operation.help, current?.help ?? null),
     sortOrder: choose(operation.sortOrder, current?.sortOrder ?? 0),
   });
+  assertReplacedStaysArchived(id, current, row.archivedAt);
   db.insert(itemTypeFields)
     .values(row)
     .onConflictDoUpdate({

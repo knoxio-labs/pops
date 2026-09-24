@@ -24,6 +24,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["literal"],
@@ -62,6 +63,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["literal"],
@@ -102,6 +104,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["literal"],
@@ -140,6 +143,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["literal"],
@@ -178,6 +182,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["literal"],
@@ -218,6 +223,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["literal"],
@@ -263,6 +269,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["literal"],
@@ -306,6 +313,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["literal"],
@@ -344,6 +352,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["literal"],
@@ -382,6 +391,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["literal"],
@@ -423,6 +433,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["literal"],
@@ -469,6 +480,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["literal"],
@@ -512,6 +524,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["literal"],
@@ -555,6 +568,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["literal"],
@@ -595,6 +609,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["literal"],
@@ -643,6 +658,9 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000202": "decimal"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["read"],
@@ -695,6 +713,9 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-00000000020c": "decimal"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["read"],
@@ -756,6 +777,9 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000209": "decimal"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["read"],
@@ -828,6 +852,9 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000209": "decimal"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["read"],
@@ -918,6 +945,10 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000202": "decimal",
+        "00000000-0000-4000-8000-000000000203": "decimal"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["add", "read"],
@@ -991,6 +1022,9 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000202": "decimal"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["read"],
@@ -1083,6 +1117,9 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000202": "decimal"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["read"],
@@ -1174,6 +1211,9 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000202": "decimal"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["read"],
@@ -1248,6 +1288,9 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000202": "decimal"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["read"],
@@ -1298,6 +1341,9 @@
           "fields": []
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000202": "decimal"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["read"],
@@ -1355,6 +1401,9 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000202": "decimal"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["read"],
@@ -1427,6 +1476,9 @@
           "fields": []
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000202": "decimal"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["read"],
@@ -1499,6 +1551,9 @@
           "fields": []
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000202": "decimal"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["read"],
@@ -1571,6 +1626,9 @@
           "fields": []
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000202": "decimal"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["read"],
@@ -1643,6 +1701,9 @@
           "fields": []
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000202": "decimal"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["read"],
@@ -1709,6 +1770,9 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000202": "decimal"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["read"],
@@ -1763,6 +1827,9 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000202": "decimal"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["read"],
@@ -1819,6 +1886,9 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000202": "decimal"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["read"],
@@ -1878,6 +1948,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["add", "literal"],
@@ -1923,6 +1994,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["literal", "subtract"],
@@ -1968,6 +2040,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["literal", "multiply"],
@@ -2013,6 +2086,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["divide", "literal"],
@@ -2058,6 +2132,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["divide", "literal"],
@@ -2105,6 +2180,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["divide", "literal"],
@@ -2152,6 +2228,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["add", "literal"],
@@ -2199,6 +2276,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["literal", "multiply"],
@@ -2246,6 +2324,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["add", "literal"],
@@ -2291,6 +2370,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["add", "literal"],
@@ -2336,6 +2416,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["literal", "subtract"],
@@ -2381,6 +2462,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["literal", "subtract"],
@@ -2426,6 +2508,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["literal", "multiply"],
@@ -2471,6 +2554,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["literal", "multiply"],
@@ -2516,6 +2600,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["divide", "literal"],
@@ -2561,6 +2646,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["divide", "literal"],
@@ -2606,6 +2692,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["divide", "literal"],
@@ -2653,6 +2740,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["divide", "literal"],
@@ -2700,6 +2788,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["divide", "literal"],
@@ -2747,6 +2836,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["divide", "literal"],
@@ -2792,6 +2882,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["divide", "literal"],
@@ -2837,6 +2928,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["add", "literal"],
@@ -2884,6 +2976,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["literal", "multiply"],
@@ -2931,6 +3024,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["literal", "multiply"],
@@ -2976,6 +3070,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["literal", "multiply"],
@@ -3023,6 +3118,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["divide", "literal"],
@@ -3070,6 +3166,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["divide", "literal"],
@@ -3115,6 +3212,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["add", "literal"],
@@ -3158,6 +3256,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["literal", "negate"],
@@ -3199,6 +3298,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["literal", "negate"],
@@ -3240,6 +3340,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["literal", "negate"],
@@ -3281,6 +3382,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["literal", "negate"],
@@ -3340,6 +3442,9 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000207": "measurement"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["add", "literal", "read"],
@@ -3410,6 +3515,9 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000207": "measurement"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["literal", "read", "subtract"],
@@ -3477,6 +3585,9 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000207": "measurement"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["literal", "multiply", "read"],
@@ -3544,6 +3655,9 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000207": "measurement"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["divide", "literal", "read"],
@@ -3607,6 +3721,9 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000207": "measurement"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["negate", "read"],
@@ -3677,6 +3794,9 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000207": "measurement"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["add", "literal", "read"],
@@ -3730,6 +3850,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["concat", "literal"],
@@ -3775,6 +3896,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["concat", "literal"],
@@ -3822,6 +3944,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["concat", "literal"],
@@ -3875,6 +3998,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["add", "literal"],
@@ -3922,6 +4046,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["equal", "literal"],
@@ -3967,6 +4092,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["equal", "literal"],
@@ -4012,6 +4138,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["equal", "literal"],
@@ -4061,6 +4188,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["equal", "literal"],
@@ -4106,6 +4234,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["equal", "literal"],
@@ -4151,6 +4280,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["equal", "literal"],
@@ -4202,6 +4332,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["equal", "literal"],
@@ -4253,6 +4384,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["equal", "literal"],
@@ -4303,6 +4435,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["equal", "literal"],
@@ -4348,6 +4481,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["less_than", "literal"],
@@ -4393,6 +4527,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["less_than", "literal"],
@@ -4438,6 +4573,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["less_than", "literal"],
@@ -4489,6 +4625,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["less_than", "literal"],
@@ -4534,6 +4671,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["less_than", "literal"],
@@ -4591,6 +4729,9 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000206": "boolean"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["not", "read"],
@@ -4660,6 +4801,10 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000206": "boolean",
+        "00000000-0000-4000-8000-00000000020c": "decimal"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["and", "not", "read"],
@@ -4726,6 +4871,10 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000206": "boolean",
+        "00000000-0000-4000-8000-00000000020c": "decimal"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["and", "read"],
@@ -4799,6 +4948,9 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000206": "boolean"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["and", "literal", "read"],
@@ -4865,6 +5017,10 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000206": "boolean",
+        "00000000-0000-4000-8000-00000000020c": "decimal"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["or", "read"],
@@ -4933,6 +5089,9 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000206": "boolean"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["literal", "not", "or", "read"],
@@ -5004,6 +5163,11 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000202": "decimal",
+        "00000000-0000-4000-8000-000000000206": "boolean",
+        "00000000-0000-4000-8000-00000000020c": "decimal"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["if", "read"],
@@ -5082,6 +5246,10 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000206": "boolean",
+        "00000000-0000-4000-8000-00000000020c": "decimal"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["if", "literal", "not", "read"],
@@ -5152,6 +5320,10 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000206": "boolean",
+        "00000000-0000-4000-8000-00000000020c": "decimal"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["if", "literal", "read"],
@@ -5216,6 +5388,9 @@
           "fields": []
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-00000000020c": "decimal"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["if", "literal", "read"],
@@ -5287,6 +5462,9 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000202": "decimal"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["if", "literal", "read"],
@@ -5354,6 +5532,9 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000202": "decimal"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["divide", "literal", "read"],
@@ -5427,6 +5608,10 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000202": "decimal",
+        "00000000-0000-4000-8000-00000000020c": "decimal"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["coalesce", "read"],
@@ -5508,6 +5693,10 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000202": "decimal",
+        "00000000-0000-4000-8000-00000000020c": "decimal"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["coalesce", "read"],
@@ -5578,6 +5767,9 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000202": "decimal"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["coalesce", "literal", "read"],
@@ -5657,6 +5849,10 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000202": "decimal",
+        "00000000-0000-4000-8000-00000000020c": "decimal"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["coalesce", "read"],
@@ -5759,6 +5955,11 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000202": "decimal",
+        "00000000-0000-4000-8000-000000000203": "decimal",
+        "00000000-0000-4000-8000-00000000020c": "decimal"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["coalesce", "read"],
@@ -5871,6 +6072,10 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000203": "decimal",
+        "00000000-0000-4000-8000-00000000020c": "decimal"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["coalesce", "read"],
@@ -5970,6 +6175,11 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000203": "decimal",
+        "00000000-0000-4000-8000-000000000205": "short_text",
+        "00000000-0000-4000-8000-00000000020c": "decimal"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["coalesce", "read"],
@@ -6086,6 +6296,10 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000209": "decimal",
+        "00000000-0000-4000-8000-00000000020c": "decimal"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["coalesce", "read"],
@@ -6181,6 +6395,10 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000209": "decimal",
+        "00000000-0000-4000-8000-00000000020c": "decimal"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["coalesce", "read"],
@@ -6276,6 +6494,9 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000202": "decimal"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["coalesce", "divide", "literal", "read"],
@@ -6355,6 +6576,9 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-00000000020c": "decimal"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["coalesce", "divide", "literal", "read"],
@@ -6435,6 +6659,10 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000202": "decimal",
+        "00000000-0000-4000-8000-00000000020c": "decimal"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["add", "coalesce", "literal", "read"],
@@ -6489,6 +6717,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "rejected",
         "code": "expression_arity_invalid",
@@ -6521,6 +6750,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "rejected",
         "code": "expression_arity_invalid",
@@ -6563,6 +6793,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "rejected",
         "code": "expression_node_invalid",
@@ -6656,6 +6887,10 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-00000000020d": "measurement",
+        "00000000-0000-4000-8000-00000000020e": "measurement"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["multiply", "read"],
@@ -6782,6 +7017,10 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-00000000020d": "measurement",
+        "00000000-0000-4000-8000-00000000020e": "measurement"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["multiply", "read"],
@@ -6916,6 +7155,10 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-00000000020d": "measurement",
+        "00000000-0000-4000-8000-00000000020e": "measurement"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["multiply", "read"],
@@ -7042,6 +7285,11 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-00000000020d": "measurement",
+        "00000000-0000-4000-8000-00000000020e": "measurement",
+        "00000000-0000-4000-8000-00000000020f": "measurement"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["multiply", "read"],
@@ -7173,6 +7421,11 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-00000000020d": "measurement",
+        "00000000-0000-4000-8000-00000000020e": "measurement",
+        "00000000-0000-4000-8000-00000000020f": "measurement"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["multiply", "read"],
@@ -7304,6 +7557,11 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-00000000020d": "measurement",
+        "00000000-0000-4000-8000-00000000020e": "measurement",
+        "00000000-0000-4000-8000-00000000020f": "measurement"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["multiply", "read"],
@@ -7443,6 +7701,10 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-00000000020d": "measurement",
+        "00000000-0000-4000-8000-00000000020e": "measurement"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["divide", "multiply", "read"],
@@ -7561,6 +7823,10 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-00000000020d": "measurement",
+        "00000000-0000-4000-8000-00000000020f": "measurement"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["divide", "read"],
@@ -7674,6 +7940,10 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-00000000020d": "measurement",
+        "00000000-0000-4000-8000-00000000020e": "measurement"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["divide", "read"],
@@ -7803,6 +8073,11 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-00000000020d": "measurement",
+        "00000000-0000-4000-8000-00000000020e": "measurement",
+        "00000000-0000-4000-8000-000000000211": "measurement"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["divide", "multiply", "read"],
@@ -7921,6 +8196,10 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000210": "measurement",
+        "00000000-0000-4000-8000-000000000211": "measurement"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["divide", "read"],
@@ -8039,6 +8318,10 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000210": "measurement",
+        "00000000-0000-4000-8000-000000000211": "measurement"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["divide", "read"],
@@ -8157,6 +8440,9 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000212": "measurement"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["multiply", "read"],
@@ -8270,6 +8556,10 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-00000000020d": "measurement",
+        "00000000-0000-4000-8000-000000000212": "measurement"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["multiply", "read"],
@@ -8387,6 +8677,9 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-00000000020d": "measurement"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["literal", "multiply", "read"],
@@ -8503,6 +8796,10 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-00000000020d": "measurement",
+        "00000000-0000-4000-8000-00000000020e": "measurement"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["multiply", "negate", "read"],
@@ -8621,6 +8918,10 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-00000000020d": "measurement",
+        "00000000-0000-4000-8000-00000000020f": "measurement"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["add", "read"],
@@ -8739,6 +9040,10 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-00000000020d": "measurement",
+        "00000000-0000-4000-8000-00000000020f": "measurement"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["add", "read"],
@@ -8857,6 +9162,10 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-00000000020d": "measurement",
+        "00000000-0000-4000-8000-00000000020f": "measurement"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["read", "subtract"],
@@ -8975,6 +9284,10 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-00000000020d": "measurement",
+        "00000000-0000-4000-8000-00000000020f": "measurement"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["less_than", "read"],
@@ -9090,6 +9403,9 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-00000000020d": "measurement"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["equal", "literal", "read"],
@@ -9200,6 +9516,9 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-00000000020d": "measurement"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["equal", "literal", "read"],
@@ -9308,6 +9627,10 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-00000000020d": "measurement",
+        "00000000-0000-4000-8000-000000000210": "measurement"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["equal", "read"],
@@ -9415,6 +9738,7 @@
           ]
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["literal"],
@@ -9528,6 +9852,9 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-00000000020d": "measurement"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["if", "literal", "read"],
@@ -9635,6 +9962,10 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-00000000020d": "measurement",
+        "00000000-0000-4000-8000-00000000020e": "measurement"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["multiply", "read"],
@@ -9750,6 +10081,10 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-00000000020d": "measurement",
+        "00000000-0000-4000-8000-000000000210": "measurement"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["add", "read"],
@@ -9865,6 +10200,10 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-00000000020d": "measurement",
+        "00000000-0000-4000-8000-000000000210": "measurement"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["less_than", "read"],
@@ -9980,6 +10319,10 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-00000000020d": "measurement",
+        "00000000-0000-4000-8000-00000000020e": "measurement"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["divide", "read"],
@@ -10097,6 +10440,9 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-00000000020d": "measurement"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["literal", "multiply", "read"],
@@ -10211,6 +10557,7 @@
           ]
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["add", "literal"],
@@ -10318,6 +10665,10 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-00000000020d": "measurement",
+        "00000000-0000-4000-8000-00000000020e": "measurement"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["multiply", "read"],
@@ -10435,6 +10786,9 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-00000000020d": "measurement"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["divide", "literal", "read"],
@@ -10539,6 +10893,7 @@
           ]
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["literal"],
@@ -10640,6 +10995,7 @@
           ]
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["literal"],
@@ -10738,6 +11094,7 @@
           ]
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["literal"],
@@ -10839,6 +11196,7 @@
           ]
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["literal"],
@@ -10937,6 +11295,7 @@
           ]
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["literal"],
@@ -11048,6 +11407,7 @@
           ]
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["literal", "multiply"],
@@ -11156,6 +11516,7 @@
           ]
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["literal", "multiply"],
@@ -11274,6 +11635,7 @@
           ]
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["literal", "multiply"],
@@ -11435,6 +11797,7 @@
           ]
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["literal", "multiply"],
@@ -11539,6 +11902,10 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-00000000020d": "measurement",
+        "00000000-0000-4000-8000-00000000020e": "measurement"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["multiply", "read"],
@@ -11593,6 +11960,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["literal"],
@@ -11605,6 +11973,1436 @@
           "reason": "evaluation_error",
           "failedFieldId": "00000000-0000-4000-8000-000000000201",
           "missingInputs": [],
+          "dependencies": [],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "v1 equal compares a product by spelling: 1.5 × 2 = 3 is false",
+      "expressionVersion": 1,
+      "expression": {
+        "op": "equal",
+        "left": {
+          "op": "multiply",
+          "left": {
+            "op": "literal",
+            "value": "1.5"
+          },
+          "right": {
+            "op": "literal",
+            "value": "2"
+          }
+        },
+        "right": {
+          "op": "literal",
+          "value": "3"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "boolean",
+        "fixedUnit": null,
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": []
+        }
+      ],
+      "fieldKinds": {},
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["equal", "literal", "multiply"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": [false],
+          "dependencies": [],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "v1 equal compares read decimals by spelling",
+      "expressionVersion": 1,
+      "expression": {
+        "op": "equal",
+        "left": {
+          "op": "read",
+          "path": [],
+          "fieldId": "00000000-0000-4000-8000-000000000202"
+        },
+        "right": {
+          "op": "literal",
+          "value": "1.5"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "boolean",
+        "fixedUnit": null,
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000202",
+              "state": "value",
+              "value": "1.50",
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000202": "decimal"
+      },
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["equal", "literal", "read"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": [false],
+          "dependencies": [
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-000000000202",
+              "revision": 3
+            }
+          ],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "v1 equal compares negative zero by spelling",
+      "expressionVersion": 1,
+      "expression": {
+        "op": "equal",
+        "left": {
+          "op": "literal",
+          "value": "-0"
+        },
+        "right": {
+          "op": "literal",
+          "value": "0"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "boolean",
+        "fixedUnit": null,
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": []
+        }
+      ],
+      "fieldKinds": {},
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["equal", "literal"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": [false],
+          "dependencies": [],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "v1 less_than already compares decimals by value",
+      "expressionVersion": 1,
+      "expression": {
+        "op": "less_than",
+        "left": {
+          "op": "literal",
+          "value": "1.50"
+        },
+        "right": {
+          "op": "literal",
+          "value": "1.5"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "boolean",
+        "fixedUnit": null,
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": []
+        }
+      ],
+      "fieldKinds": {},
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["less_than", "literal"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": [false],
+          "dependencies": [],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "v2 equal compares a product by value: 1.5 × 2 = 3",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "equal",
+        "left": {
+          "op": "multiply",
+          "left": {
+            "op": "literal",
+            "value": "1.5"
+          },
+          "right": {
+            "op": "literal",
+            "value": "2"
+          }
+        },
+        "right": {
+          "op": "literal",
+          "value": "3"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "boolean",
+        "fixedUnit": null,
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": []
+        }
+      ],
+      "fieldKinds": {},
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["equal", "literal", "multiply"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": [true],
+          "dependencies": [],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "v2 equal: 3.0 = 3",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "equal",
+        "left": {
+          "op": "literal",
+          "value": "3.0"
+        },
+        "right": {
+          "op": "literal",
+          "value": "3"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "boolean",
+        "fixedUnit": null,
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": []
+        }
+      ],
+      "fieldKinds": {},
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["equal", "literal"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": [true],
+          "dependencies": [],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "v2 equal: a read 1.50 = 1.5",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "equal",
+        "left": {
+          "op": "read",
+          "path": [],
+          "fieldId": "00000000-0000-4000-8000-000000000202"
+        },
+        "right": {
+          "op": "literal",
+          "value": "1.5"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "boolean",
+        "fixedUnit": null,
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000202",
+              "state": "value",
+              "value": "1.50",
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000202": "decimal"
+      },
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["equal", "literal", "read"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": [true],
+          "dependencies": [
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-000000000202",
+              "revision": 3
+            }
+          ],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "v2 equal: 1.5 = a read 1.50",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "equal",
+        "left": {
+          "op": "literal",
+          "value": "1.5"
+        },
+        "right": {
+          "op": "read",
+          "path": [],
+          "fieldId": "00000000-0000-4000-8000-000000000202"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "boolean",
+        "fixedUnit": null,
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000202",
+              "state": "value",
+              "value": "1.50",
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000202": "decimal"
+      },
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["equal", "literal", "read"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": [true],
+          "dependencies": [
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-000000000202",
+              "revision": 3
+            }
+          ],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "v2 equal: 1.5 ≠ 1.51",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "equal",
+        "left": {
+          "op": "literal",
+          "value": "1.5"
+        },
+        "right": {
+          "op": "literal",
+          "value": "1.51"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "boolean",
+        "fixedUnit": null,
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": []
+        }
+      ],
+      "fieldKinds": {},
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["equal", "literal"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": [false],
+          "dependencies": [],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "v2 equal: -1.50 = -1.5",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "equal",
+        "left": {
+          "op": "literal",
+          "value": "-1.50"
+        },
+        "right": {
+          "op": "literal",
+          "value": "-1.5"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "boolean",
+        "fixedUnit": null,
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": []
+        }
+      ],
+      "fieldKinds": {},
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["equal", "literal"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": [true],
+          "dependencies": [],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "v2 equal: -1.5 ≠ 1.5",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "equal",
+        "left": {
+          "op": "literal",
+          "value": "-1.5"
+        },
+        "right": {
+          "op": "literal",
+          "value": "1.5"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "boolean",
+        "fixedUnit": null,
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": []
+        }
+      ],
+      "fieldKinds": {},
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["equal", "literal"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": [false],
+          "dependencies": [],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "v2 equal: negative zero equals zero",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "equal",
+        "left": {
+          "op": "literal",
+          "value": "-0"
+        },
+        "right": {
+          "op": "literal",
+          "value": "0.0"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "boolean",
+        "fixedUnit": null,
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": []
+        }
+      ],
+      "fieldKinds": {},
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["equal", "literal"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": [true],
+          "dependencies": [],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "v2 equal: 0 = 0.000000000",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "equal",
+        "left": {
+          "op": "literal",
+          "value": "0"
+        },
+        "right": {
+          "op": "literal",
+          "value": "0.000000000"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "boolean",
+        "fixedUnit": null,
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": []
+        }
+      ],
+      "fieldKinds": {},
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["equal", "literal"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": [true],
+          "dependencies": [],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "v2 equal: 18 significant digits differ in the ninth place",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "equal",
+        "left": {
+          "op": "literal",
+          "value": "123456789.123456789"
+        },
+        "right": {
+          "op": "literal",
+          "value": "123456789.123456788"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "boolean",
+        "fixedUnit": null,
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": []
+        }
+      ],
+      "fieldKinds": {},
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["equal", "literal"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": [false],
+          "dependencies": [],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "v2 equal: 18 integer digits equal the same with 9 zero places",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "equal",
+        "left": {
+          "op": "literal",
+          "value": "999999999999999999"
+        },
+        "right": {
+          "op": "literal",
+          "value": "999999999999999999.000000000"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "boolean",
+        "fixedUnit": null,
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": []
+        }
+      ],
+      "fieldKinds": {},
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["equal", "literal"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": [true],
+          "dependencies": [],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "v2 equal: 0.000000001 = 0.0000000010",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "equal",
+        "left": {
+          "op": "literal",
+          "value": "0.000000001"
+        },
+        "right": {
+          "op": "literal",
+          "value": "0.0000000010"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "boolean",
+        "fixedUnit": null,
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": []
+        }
+      ],
+      "fieldKinds": {},
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["equal", "literal"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": [true],
+          "dependencies": [],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "v2 equal: 0.000000001 ≠ 0.000000002",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "equal",
+        "left": {
+          "op": "literal",
+          "value": "0.000000001"
+        },
+        "right": {
+          "op": "literal",
+          "value": "0.000000002"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "boolean",
+        "fixedUnit": null,
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": []
+        }
+      ],
+      "fieldKinds": {},
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["equal", "literal"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": [false],
+          "dependencies": [],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "v2 equal types an if by its then branch",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "equal",
+        "left": {
+          "op": "if",
+          "condition": {
+            "op": "literal",
+            "value": true
+          },
+          "then": {
+            "op": "literal",
+            "value": "3.0"
+          },
+          "else": {
+            "op": "read",
+            "path": [],
+            "fieldId": "00000000-0000-4000-8000-000000000202"
+          }
+        },
+        "right": {
+          "op": "literal",
+          "value": "3"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "boolean",
+        "fixedUnit": null,
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": []
+        }
+      ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000202": "decimal"
+      },
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["equal", "if", "literal", "read"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": [true],
+          "dependencies": [],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "v2 equal on text still compares spelling",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "equal",
+        "left": {
+          "op": "read",
+          "path": [],
+          "fieldId": "00000000-0000-4000-8000-000000000205"
+        },
+        "right": {
+          "op": "literal",
+          "value": "3"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "boolean",
+        "fixedUnit": null,
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000205",
+              "state": "value",
+              "value": "3.0",
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000205": "short_text"
+      },
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["equal", "literal", "read"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": [false],
+          "dependencies": [
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-000000000205",
+              "revision": 3
+            }
+          ],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "v2 equal on text literals compares spelling",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "equal",
+        "left": {
+          "op": "literal",
+          "value": "a"
+        },
+        "right": {
+          "op": "literal",
+          "value": "a"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "boolean",
+        "fixedUnit": null,
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": []
+        }
+      ],
+      "fieldKinds": {},
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["equal", "literal"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": [true],
+          "dependencies": [],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "v2 equal: a leading zero spells text, so 007 ≠ 7",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "equal",
+        "left": {
+          "op": "literal",
+          "value": "007"
+        },
+        "right": {
+          "op": "literal",
+          "value": "7"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "boolean",
+        "fixedUnit": null,
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": []
+        }
+      ],
+      "fieldKinds": {},
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["equal", "literal"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": [false],
+          "dependencies": [],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "v2 equal types a coalesce by its first argument, so a text default stays text",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "equal",
+        "left": {
+          "op": "coalesce",
+          "values": [
+            {
+              "op": "read",
+              "path": [],
+              "fieldId": "00000000-0000-4000-8000-000000000205"
+            },
+            {
+              "op": "literal",
+              "value": "0"
+            }
+          ]
+        },
+        "right": {
+          "op": "literal",
+          "value": "0.0"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "boolean",
+        "fixedUnit": null,
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": []
+        }
+      ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000205": "short_text"
+      },
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["coalesce", "equal", "literal", "read"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": [false],
+          "dependencies": [
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-000000000205",
+              "revision": 3
+            }
+          ],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "v2 equal on a read the catalogue does not type compares spelling",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "equal",
+        "left": {
+          "op": "read",
+          "path": [],
+          "fieldId": "00000000-0000-4000-8000-000000000202"
+        },
+        "right": {
+          "op": "literal",
+          "value": "1.5"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "boolean",
+        "fixedUnit": null,
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000202",
+              "state": "value",
+              "value": "1.50",
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "fieldKinds": {},
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["equal", "literal", "read"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": [false],
+          "dependencies": [
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-000000000202",
+              "revision": 3
+            }
+          ],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "v2 equal between a decimal and a non-decimal is an evaluation error",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "equal",
+        "left": {
+          "op": "read",
+          "path": [],
+          "fieldId": "00000000-0000-4000-8000-000000000202"
+        },
+        "right": {
+          "op": "literal",
+          "value": "abc"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "boolean",
+        "fixedUnit": null,
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": [
+            {
+              "fieldId": "00000000-0000-4000-8000-000000000202",
+              "state": "value",
+              "value": "1.5",
+              "revision": 3
+            }
+          ]
+        }
+      ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000202": "decimal"
+      },
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["equal", "literal", "read"],
+        "evaluationErrorCode": "invalid_value",
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "unavailable",
+          "reason": "evaluation_error",
+          "failedFieldId": "00000000-0000-4000-8000-000000000201",
+          "missingInputs": [],
+          "dependencies": [
+            {
+              "itemId": "00000000-0000-4000-8000-000000000101",
+              "fieldId": "00000000-0000-4000-8000-000000000202",
+              "revision": 3
+            }
+          ],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "v2 less_than: 1.50 < 1.5 is false",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "less_than",
+        "left": {
+          "op": "literal",
+          "value": "1.50"
+        },
+        "right": {
+          "op": "literal",
+          "value": "1.5"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "boolean",
+        "fixedUnit": null,
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": []
+        }
+      ],
+      "fieldKinds": {},
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["less_than", "literal"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": [false],
+          "dependencies": [],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "v2 less_than: 2.9 < 3.0",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "less_than",
+        "left": {
+          "op": "literal",
+          "value": "2.9"
+        },
+        "right": {
+          "op": "literal",
+          "value": "3.0"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "boolean",
+        "fixedUnit": null,
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": []
+        }
+      ],
+      "fieldKinds": {},
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["less_than", "literal"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": [true],
+          "dependencies": [],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "v2 less_than: -0.1 < 0",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "less_than",
+        "left": {
+          "op": "literal",
+          "value": "-0.1"
+        },
+        "right": {
+          "op": "literal",
+          "value": "0"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "boolean",
+        "fixedUnit": null,
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": []
+        }
+      ],
+      "fieldKinds": {},
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["less_than", "literal"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": [true],
+          "dependencies": [],
+          "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
+        }
+      }
+    },
+    {
+      "name": "v2 less_than at 9 places",
+      "expressionVersion": 2,
+      "expression": {
+        "op": "less_than",
+        "left": {
+          "op": "literal",
+          "value": "0.000000001"
+        },
+        "right": {
+          "op": "literal",
+          "value": "0.0000000010"
+        }
+      },
+      "field": {
+        "fieldId": "00000000-0000-4000-8000-000000000201",
+        "kind": "boolean",
+        "fixedUnit": null,
+        "allowOverride": false
+      },
+      "override": null,
+      "rootItemId": "00000000-0000-4000-8000-000000000101",
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "state": "resolved",
+          "revision": 3,
+          "fields": []
+        }
+      ],
+      "fieldKinds": {},
+      "expected": {
+        "outcome": "evaluated",
+        "ops": ["less_than", "literal"],
+        "evaluationErrorCode": null,
+        "value": {
+          "fieldId": "00000000-0000-4000-8000-000000000201",
+          "source": "computed",
+          "catalogueRevision": 12,
+          "state": "ok",
+          "values": [false],
           "dependencies": [],
           "traversedItemIds": ["00000000-0000-4000-8000-000000000101"]
         }
@@ -12014,6 +13812,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "evaluated",
         "ops": ["literal", "negate"],
@@ -12436,6 +14235,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "rejected",
         "code": "expression_nodes_exceeded",
@@ -12470,6 +14270,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "rejected",
         "code": "reference_hops_exceeded",
@@ -12506,6 +14307,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "rejected",
         "code": "expression_op_unknown",
@@ -12537,6 +14339,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "rejected",
         "code": "expression_op_unknown",
@@ -12570,6 +14373,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "rejected",
         "code": "expression_node_invalid",
@@ -12600,6 +14404,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "rejected",
         "code": "expression_node_invalid",
@@ -12640,6 +14445,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "rejected",
         "code": "expression_node_invalid",
@@ -12669,6 +14475,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "rejected",
         "code": "expression_node_invalid",
@@ -12698,6 +14505,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "rejected",
         "code": "expression_node_invalid",
@@ -12727,6 +14535,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "rejected",
         "code": "expression_node_invalid",
@@ -12760,6 +14569,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "rejected",
         "code": "literal_invalid",
@@ -12790,6 +14600,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "rejected",
         "code": "field_id_invalid",
@@ -12820,6 +14631,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "rejected",
         "code": "reference_path_invalid",
@@ -12849,6 +14661,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "rejected",
         "code": "expression_version_unknown",
@@ -12903,6 +14716,10 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000202": "decimal",
+        "00000000-0000-4000-8000-000000000203": "decimal"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["multiply", "read"],
@@ -12963,6 +14780,10 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000202": "decimal",
+        "00000000-0000-4000-8000-000000000203": "decimal"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["multiply", "read"],
@@ -13026,6 +14847,10 @@
           ]
         }
       ],
+      "fieldKinds": {
+        "00000000-0000-4000-8000-000000000202": "decimal",
+        "00000000-0000-4000-8000-000000000203": "decimal"
+      },
       "expected": {
         "outcome": "evaluated",
         "ops": ["multiply", "read"],
@@ -13078,6 +14903,7 @@
           "fields": []
         }
       ],
+      "fieldKinds": {},
       "expected": {
         "outcome": "rejected",
         "code": "override_forbidden",

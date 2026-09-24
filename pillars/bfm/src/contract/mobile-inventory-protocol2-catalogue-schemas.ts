@@ -2,6 +2,12 @@ import { z } from 'zod';
 
 const AnyJson = z.unknown();
 const Actor = z.object({ kind: z.string(), id: z.string().nullable(), label: z.string() });
+/**
+ * The live definition of the same kind that took over an archived type or
+ * field. Optional so a catalogue from an Inventory that predates lineage
+ * still parses; absent and null both mean none was recorded.
+ */
+const ReplacedBy = z.uuid().nullable().optional();
 
 /** Immutable protocol-2 catalogue revision and its stable definitions. */
 export const MobileInventoryCatalogueRevisionDescriptorSchema = z.object({
@@ -26,6 +32,7 @@ export const MobileInventoryCatalogueRevisionDescriptorSchema = z.object({
       legacyLabels: z.array(z.string()),
       presentation: z.record(z.string(), AnyJson),
       archivedAt: z.string().nullable(),
+      replacedBy: ReplacedBy,
       fields: z.array(
         z.object({
           id: z.uuid(),
@@ -58,6 +65,7 @@ export const MobileInventoryCatalogueRevisionDescriptorSchema = z.object({
           allowOverride: z.boolean(),
           presentation: z.record(z.string(), AnyJson),
           archivedAt: z.string().nullable(),
+          replacedBy: ReplacedBy,
           enumOptions: z.array(
             z.object({
               id: z.uuid(),

@@ -1,4 +1,4 @@
-import { Check, Sparkles, TriangleAlert } from 'lucide-react';
+import { Check, RefreshCw, Sparkles, TriangleAlert } from 'lucide-react';
 import { useState } from 'react';
 
 import { Alert, AlertDescription, AlertTitle, Badge, Button } from '@pops/ui';
@@ -18,6 +18,7 @@ interface PublishPanelProps {
   readonly onAbandon: () => void;
   readonly onPublish: (input: { note: string | null; minimumProtocol?: number }) => void;
   readonly onReload: () => void;
+  readonly onRecheck: () => void;
 }
 
 const labels: Record<CatalogueCompatibility['classification'], string> = {
@@ -30,7 +31,7 @@ const labels: Record<CatalogueCompatibility['classification'], string> = {
 function summaryText(readiness: CatalogueReadiness): string {
   if (readiness.status === 'not_previewed') return 'Not yet previewed. Edit the draft to publish.';
   if (readiness.status === 'stale')
-    return 'The last preview is stale. Repeat the edit to preview the current draft.';
+    return 'The last preview is stale. Recheck or repeat the edit to preview the current draft.';
   if (readiness.status === 'live_preview')
     return 'Live preview of an unsaved edit. Save it to validate the persisted draft.';
   const { compatibility } = readiness;
@@ -55,6 +56,7 @@ export function PublishPanel({
   onAbandon,
   onPublish,
   onReload,
+  onRecheck,
 }: PublishPanelProps) {
   const [open, setOpen] = useState(false);
   const apiError = error instanceof InventoryApiError ? error : null;
@@ -77,6 +79,10 @@ export function PublishPanel({
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={onRecheck} disabled={isPending}>
+            <RefreshCw className="h-4 w-4" />
+            Recheck
+          </Button>
           <Button variant="outline" onClick={onAbandon} disabled={isPending}>
             Abandon draft
           </Button>

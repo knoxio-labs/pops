@@ -38,6 +38,7 @@ function field(overrides: Partial<CatalogueField> = {}): CatalogueField {
     presentation: {},
     referenceKinds: [],
     referenceTypeIds: [],
+    replacedBy: null,
     required: false,
     sortOrder: 0,
     storage: 'stored',
@@ -57,6 +58,7 @@ function type(fields: CatalogueField[]): CatalogueType {
     label: 'Equipment',
     legacyLabels: [],
     presentation: {},
+    replacedBy: null,
     revision: 1,
     sortOrder: 0,
   };
@@ -262,5 +264,67 @@ describe('FieldForm configuration branches', () => {
 
     expect(screen.getByText('No expression yet')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Save field' })).toBeDisabled();
+  });
+
+  it('blocks saving a reference field with no target kind checked and explains why', () => {
+    renderField(field({ kind: 'reference', referenceKinds: [] }));
+
+    expect(screen.getByLabelText('Inventory item')).not.toBeChecked();
+    expect(screen.getByLabelText('Location')).not.toBeChecked();
+    expect(
+      screen.getByText(/Choose at least one target kind: item, location, or both\./)
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save field' })).toBeDisabled();
+  });
+
+  it('re-enables saving a reference field once a target kind is checked', () => {
+    renderField(field({ kind: 'reference', referenceKinds: [] }));
+
+    fireEvent.click(screen.getByLabelText('Location'));
+
+    expect(
+      screen.queryByText(/Choose at least one target kind: item, location, or both\./)
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save field' })).toBeEnabled();
+  });
+
+  it('shows the no-target-kind guidance for allowed item types', () => {
+    renderField(field({ kind: 'reference', referenceKinds: ['item'] }));
+
+    expect(
+      screen.getByText('None checked allows every item type. Types never limit locations.')
+    ).toBeInTheDocument();
+  });
+
+  it('shows the unit dimension readout for a recognised measurement unit', () => {
+    renderField(field({ kind: 'measurement', fixedUnit: 'cm' }));
+
+    expect(screen.getByText('length')).toBeInTheDocument();
+  });
+
+  it('shows the compound unit dimension for a derived measurement unit', () => {
+    renderField(field({ kind: 'measurement', fixedUnit: 'kg/m³' }));
+
+    expect(screen.getByText('mass·length⁻³')).toBeInTheDocument();
+  });
+
+  it('reads an unrecognised measurement unit back as itself rather than guessing a dimension', () => {
+    renderField(field({ kind: 'measurement', fixedUnit: 'crates' }));
+
+    expect(screen.getByText('crates')).toBeInTheDocument();
+  });
+
+  it('shows a value-rule hint under the primitive kind picker', () => {
+    renderField(field({ kind: 'short_text' }));
+
+    expect(screen.getByText('Up to 200 characters.')).toBeInTheDocument();
+  });
+
+  it('shows the decimal precision hint under the primitive kind picker', () => {
+    renderField(field({ kind: 'decimal' }));
+
+    expect(
+      screen.getByText('Up to 18 significant digits, up to 9 decimal places.')
+    ).toBeInTheDocument();
   });
 });

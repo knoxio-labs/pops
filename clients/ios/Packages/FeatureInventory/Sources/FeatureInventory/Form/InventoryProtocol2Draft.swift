@@ -59,6 +59,18 @@ internal struct InventoryProtocol2Draft: Hashable, Sendable {
         touched.insert(field.id)
     }
 
+    /// Fills `field` with `values`, as a change of the person's own: a
+    /// repaired change's values, carried into the form it reopens.
+    internal mutating func prefill(
+        _ values: [InventoryPrimitiveValue], for field: InventoryCatalogueField
+    ) {
+        guard field.storage == .stored else { return }
+        entries[field.id] = values.enumerated().map { index, value in
+            InventoryProtocol2DraftEntry(id: "\(field.id):queued:\(index)", value: value)
+        }
+        touched.insert(field.id)
+    }
+
     internal mutating func removeEntry(id: String, for field: InventoryCatalogueField) {
         entries[field.id]?.removeAll { $0.id == id }
         touched.insert(field.id)

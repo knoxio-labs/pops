@@ -1,3 +1,4 @@
+import { validateCatalogueReplacements } from './authoring-replacements.js';
 import { failIssues, issue } from './authoring-shared.js';
 import { ExpressionValidationError } from './expression-types.js';
 import { validateCatalogueExpressions } from './expression-validator.js';
@@ -71,6 +72,24 @@ function validateReferenceShape(
         'referenceKinds',
         'reference_forbidden',
         'Only reference fields may constrain targets'
+      )
+    );
+  }
+  // Whole-catalogue invariant, same as unit_required/boolean_many/etc. below:
+  // it re-checks every field on every publish/patch, not just the ones an
+  // operation touches. `authoring-put-field-shape.ts`'s `assertReferenceShape`
+  // now rejects this shape at the moment a `put_field` would create it, so no
+  // authoring path can produce it going forward; this stays as defense in
+  // depth for the same reason the other rules here do. No migration or seed
+  // ever created a reference field, so no already-published catalogue can
+  // carry the shape this checks for.
+  if (field.kind === 'reference' && field.referenceKinds.size === 0) {
+    issues.push(
+      issue(
+        field.id,
+        'referenceKinds',
+        'reference_kinds_required',
+        'Reference fields must allow at least one target kind (item or location)'
       )
     );
   }
@@ -159,9 +178,12 @@ function validateType(
   }
 }
 
-/** Validates uniqueness and cross-definition invariants before publication. */
-export function validateCatalogue(catalogue: PersistedCatalogue): void {
-  const issues: CatalogueIssue[] = [];
+/**
+ * Validates uniqueness and cross-definition invariants before publication,
+ * including the replacement lineage `catalogue` records against `base`.
+ */
+export function validateCatalogue(catalogue: PersistedCatalogue, base: PersistedCatalogue): void {
+  const issues: CatalogueIssue[] = validateCatalogueReplacements(base, catalogue);
   const typeKeys = new Map<string, string>();
   const typeIds = new Set(catalogue.types.map((type) => type.id));
   for (const type of catalogue.types) {

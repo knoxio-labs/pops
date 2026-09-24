@@ -125,6 +125,45 @@ describe('inventory MCP schema fidelity', () => {
       'MCP primitive kinds'
     );
     expect(mcpPrimitiveKinds).toEqual(producerPrimitiveKinds);
+
+    const producerVersions = property(
+      property(property(producerPutField, 'properties'), 'expressionVersion'),
+      'enum'
+    );
+    const mcpVersions = property(
+      property(property(mcpPutField, 'properties'), 'expressionVersion'),
+      'enum'
+    );
+    expect(producerVersions).toEqual([1, 2, null]);
+    expect(mcpVersions).toEqual(producerVersions);
+  });
+
+  it('offers the same archive operations as the producer, replacement included', () => {
+    const patchSchema = requestSchema(spec, '/type-catalogue/drafts/{revision}', 'patch');
+    const producerVariants = array(
+      property(
+        property(property(property(patchSchema, 'properties'), 'operations'), 'items'),
+        'oneOf'
+      ),
+      'operation oneOf'
+    );
+    const shape = (variants: readonly unknown[], kind: string) => {
+      const variant = variants.find((entry) => discriminants({ oneOf: [entry] }).includes(kind));
+      if (variant === undefined) throw new Error(`${kind} operation is missing`);
+      return {
+        properties: Object.keys(object(property(variant, 'properties'), kind)).toSorted(),
+        required: strings(property(variant, 'required'), `${kind} required`).toSorted(),
+      };
+    };
+
+    for (const kind of ['archive_type', 'archive_field', 'archive_enum_option']) {
+      expect(shape(catalogueOperationSchema.oneOf, kind), kind).toEqual(
+        shape(producerVariants, kind)
+      );
+    }
+    expect(shape(catalogueOperationSchema.oneOf, 'archive_field').properties).toContain(
+      'replacedBy'
+    );
   });
 
   it('matches the producer item-validation value vocabulary and required fields', () => {

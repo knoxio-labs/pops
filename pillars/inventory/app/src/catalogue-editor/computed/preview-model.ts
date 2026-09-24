@@ -1,7 +1,8 @@
-import { evaluationErrorSentence, unavailableSentence } from '../expression/preview-copy';
+import { evaluationErrorSentence } from '../expression/preview-copy';
 
 import type { TypesManagePreviewComputedFieldResponses } from '../../inventory-api/types.gen';
 import type { ExpressionContext, ExpressionField } from '../expression/model';
+import type { PreviewMissingInput } from '../expression/preview-copy';
 
 /** The preview route's answer. */
 export type ComputedPreviewResponse = TypesManagePreviewComputedFieldResponses[200];
@@ -41,7 +42,10 @@ export type PreviewState =
       readonly workings: string;
       readonly override?: string;
     })
-  | (PreviewEvaluated & { readonly state: 'unavailable'; readonly sentences: readonly string[] })
+  | (PreviewEvaluated & {
+      readonly state: 'unavailable';
+      readonly missingInputs: readonly PreviewMissingInput[];
+    })
   | (PreviewEvaluated & { readonly state: 'evaluation-error'; readonly sentence: string });
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -114,13 +118,11 @@ export function previewStateFrom(
     return {
       ...evaluated,
       state: 'unavailable',
-      sentences: result.missing.map((missing) =>
-        unavailableSentence(
-          missing.reason,
-          fieldLabel(context, missing.fieldId, field),
-          itemOf(missing.itemId).label
-        )
-      ),
+      missingInputs: result.missingInputs.map((missing) => ({
+        reason: missing.reason,
+        fieldLabel: fieldLabel(context, missing.fieldId, field),
+        itemLabel: itemOf(missing.itemId).label,
+      })),
     };
   return {
     ...evaluated,

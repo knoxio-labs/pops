@@ -55,6 +55,13 @@ import { boundAddress } from './server-address.mjs';
 /** Not a path any BFM route lives under, which is what keeps the two apart. */
 const CONTROL_PREFIX = '/__e2e/';
 
+/**
+ * Publishes the user-defined type the inventory-types acceptance flow syncs
+ * (`inventory-user-type.mjs`). Answered asynchronously, unlike every other
+ * switch here, because it is a sequence of real calls to the pillar.
+ */
+const USER_DEFINED_TYPE_PATH = '/__e2e/inventory/user-defined-type';
+
 /** The only prefix that carries a bearer token — `AuthenticatingMiddleware` agrees. */
 const AUTHENTICATED_PREFIX = '/mobile/';
 
@@ -197,6 +204,7 @@ function agedAuthorization(header, secret) {
  *     isReachable: () => boolean,
  *     setSyncOutage: (active: boolean) => void,
  *     isSyncOutage: () => boolean,
+ *     publishUserDefinedType: () => Promise<Record<string, unknown>>,
  *   },
  *   host?: string,
  * }} options
@@ -343,6 +351,7 @@ export async function startControlPlane({
           'POST /__e2e/inventory/down',
           'POST /__e2e/inventory/sync-down',
           'POST /__e2e/inventory/sync-up',
+          `POST ${USER_DEFINED_TYPE_PATH}`,
           'POST /__e2e/reset',
           'GET /__e2e/state',
         ],
@@ -399,6 +408,18 @@ export async function startControlPlane({
     }
 
     const target = new URL(request.url, bfmBaseUrl);
+
+    if (request.method === 'POST' && target.pathname === USER_DEFINED_TYPE_PATH) {
+      void inventory
+        .publishUserDefinedType()
+        .then((published) => json(200, { ...state(), userDefinedType: published }))
+        .catch((error) =>
+          json(502, {
+            message: `ios-e2e could not publish the user-defined type: ${String(error)}`,
+          })
+        );
+      return;
+    }
 
     if (target.pathname.startsWith(CONTROL_PREFIX)) {
       const answer = control(request.method ?? 'GET', target.pathname);

@@ -4852,6 +4852,50 @@
                           {
                             "additionalProperties": false,
                             "properties": {
+                              "catalogueChanges": {
+                                "items": {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "change": {
+                                      "type": "string"
+                                    },
+                                    "definition": {
+                                      "type": "string"
+                                    },
+                                    "fieldId": {
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
+                                    "id": {
+                                      "type": "string"
+                                    },
+                                    "replacementId": {
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
+                                    "revision": {
+                                      "maximum": 9007199254740991,
+                                      "minimum": -9007199254740991,
+                                      "type": "integer"
+                                    },
+                                    "typeId": {
+                                      "nullable": true,
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "definition",
+                                    "id",
+                                    "typeId",
+                                    "fieldId",
+                                    "change",
+                                    "replacementId",
+                                    "revision"
+                                  ],
+                                  "type": "object"
+                                },
+                                "type": "array"
+                              },
                               "message": {
                                 "type": "string"
                               },
@@ -7503,6 +7547,12 @@
                                   },
                                   "type": "array"
                                 },
+                                "replacedBy": {
+                                  "format": "uuid",
+                                  "nullable": true,
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                  "type": "string"
+                                },
                                 "required": {
                                   "type": "boolean"
                                 },
@@ -7566,6 +7616,12 @@
                           "presentation": {
                             "additionalProperties": {},
                             "type": "object"
+                          },
+                          "replacedBy": {
+                            "format": "uuid",
+                            "nullable": true,
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                            "type": "string"
                           },
                           "revision": {
                             "exclusiveMinimum": true,

@@ -19,7 +19,7 @@ import type { CatalogueAuthor, CatalogueDescriptor, DraftOperation } from './aut
 import type { CatalogueCompatibilityAssessment } from './compatibility-preview.js';
 
 export { readCatalogueAudit, toCatalogueDescriptor } from './authoring-wire.js';
-export { publishCatalogueDraft } from './authoring-publication.js';
+export { publishCatalogueDraft, publishCatalogueDraftWith } from './authoring-publication.js';
 export { previewCatalogueDraft } from './authoring-draft-operations.js';
 export type { DraftTarget } from './authoring-draft-operations.js';
 export { CatalogueApiError } from './authoring-types.js';

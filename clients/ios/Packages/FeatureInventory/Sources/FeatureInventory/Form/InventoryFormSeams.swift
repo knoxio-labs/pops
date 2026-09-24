@@ -65,11 +65,16 @@ internal enum InventoryItemFormRequest: Identifiable, Hashable, Sendable {
     /// the form was opened from. Nil opens it in hand.
     case create(placement: InventoryPlacement?)
     case edit(InventoryItem.ID)
+    /// Edit item on a `catalogueChanged` repair: the held change reopened
+    /// against the current fields, its values filled in where they still
+    /// fit. Saving settles the repair with the edited change.
+    case repair(InventoryRepair.ID)
 
     internal var id: String {
         switch self {
         case .create(let placement): "create-\(String(describing: placement))"
         case .edit(let itemId): "edit-\(itemId)"
+        case .repair(let repairId): "repair-\(repairId)"
         }
     }
 }

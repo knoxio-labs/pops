@@ -76,7 +76,9 @@ jobs:
     name: Upload Pops and PopsPlayground
     needs: [pick]
     if: always() && needs.pick.result == 'success' && needs.pick.outputs.sha != ''
-    runs-on: macos-latest
+    # The image carrying the Xcode `clients/ios/mise.toml` pins; the SDK
+    # ceiling note in `ios-quality.yml` says why it is not `macos-latest`.
+    runs-on: xcode-27
     # The environment named `main` — deployments restricted to the `main`
     # branch in the repository settings — is the only holder of the App Store
     # Connect key and the team id. The repo is public: a job that does not

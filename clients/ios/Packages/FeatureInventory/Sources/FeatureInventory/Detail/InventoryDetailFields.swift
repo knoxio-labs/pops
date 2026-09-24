@@ -38,10 +38,15 @@ internal struct InventoryDetailFields: Equatable {
         let entries = item.fieldValues
         let definitions = Dictionary(uniqueKeysWithValues: type.fields.map { ($0.id, $0) })
         let values = Dictionary(uniqueKeysWithValues: entries.map { ($0.fieldId, $0) })
+        let activeCatalogueRevision =
+            type.fields.contains { $0.storage == .computed }
+            ? source.inventoryProtocol2Catalogue()?.revision.revision : nil
         let line = { (field: InventoryCatalogueField) -> InventoryDetailField? in
             if field.storage == .computed {
-                return InventoryComputedDetailLine(item: item, type: type, source: source)
-                    .line(for: field)
+                return InventoryComputedDetailLine(
+                    item: item, type: type, source: source,
+                    activeCatalogueRevision: activeCatalogueRevision
+                ).line(for: field)
             }
             return values[field.id].map {
                 InventoryDetailField(

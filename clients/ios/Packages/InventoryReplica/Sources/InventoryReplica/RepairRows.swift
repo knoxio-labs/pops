@@ -10,6 +10,9 @@ internal struct RepairPayload: Codable, Equatable {
     let madeAt: Double
     /// The code the change tried to set, for a code collision.
     let attemptedCode: String?
+    /// The catalogue revision this phone held when the repair opened; absent
+    /// from a repair opened before it was kept.
+    var openedAtRevision: Int?
 }
 
 /// The `repair.kind` column: which outcome opened it.
@@ -33,7 +36,7 @@ internal enum StoredRepairKind: String {
         case .conflictField: self = .field
         case .conflictCodeCollision: self = .codeCollision
         case .conflictDeleted: self = .deleted
-        case .rejected(let reason, _):
+        case .rejected(let reason, _, _):
             if command.attachedPhoto != nil,
                 StagedUploadFailure.photoRejectionReasons.contains(reason)
             {
@@ -55,14 +58,18 @@ internal struct StoredRepair {
     let kind: StoredRepairKind
     let payload: RepairPayload
     let openedAt: Double
+    /// The change as it was logged, or nil when this build cannot read it.
+    let command: LoggedCommand?
 
     /// Whether keeping this phone's side is possible at all: a refusal the
     /// design has no repair for offers only Let go.
     var canKeepMine: Bool { kind != .rejected }
 
     /// The repair as the Sync screens read it, or nil when its row names
-    /// something this build cannot show.
-    var repair: InventoryRepair? {
+    /// something this build cannot show. `currentRevision` is the catalogue
+    /// revision the replica holds now, which a `catalogueChanged` repair
+    /// compares with the one it opened under.
+    func repair(currentRevision: Int?) -> InventoryRepair? {
         guard let entityKind = InventoryEntityKind(storageValue: entity.kind) else { return nil }
         let opened = Date(timeIntervalSinceReferenceDate: openedAt)
         let madeAt = Date(timeIntervalSinceReferenceDate: payload.madeAt)
@@ -93,10 +100,11 @@ internal struct StoredRepair {
                         value: "Deleted", source: source.syncSource,
                         at: Date(timeIntervalSinceReferenceDate: at)),
                 ], openedAt: opened)
-        case .rejected(let reason, _):
+        case .rejected(let reason, _, _):
             return InventoryRepair(
                 id: mutationId, entityKind: entityKind, entityId: entity.id,
-                kind: Self.rejectedKind(kind, reason: reason), openedAt: opened)
+                kind: Self.rejectedKind(kind, reason: reason),
+                catalogue: catalogueRepair(currentRevision: currentRevision), openedAt: opened)
         case .applied, .deferred:
             return nil
         }
@@ -104,6 +112,15 @@ internal struct StoredRepair {
 }
 
 extension StoredRepair {
+    fileprivate func catalogueRepair(currentRevision: Int?) -> InventoryCatalogueRepair? {
+        guard kind == .catalogueChanged else { return nil }
+        var queued: InventoryCommand?
+        if case .command(let command)? = command { queued = command }
+        return InventoryCatalogueRepair(
+            queued: queued, changes: payload.outcome.catalogueChanges,
+            openedAtRevision: payload.openedAtRevision, currentRevision: currentRevision)
+    }
+
     fileprivate static func rejectedKind(_ kind: StoredRepairKind, reason: String)
         -> InventoryRepairKind
     {
@@ -130,7 +147,8 @@ internal enum RepairRows {
         var attemptedCode: String?
         if case .command(.setItemCode(_, let code)) = entry.command { attemptedCode = code }
         let payload = RepairPayload(
-            outcome: outcome, madeAt: entry.createdAt, attemptedCode: attemptedCode)
+            outcome: outcome, madeAt: entry.createdAt, attemptedCode: attemptedCode,
+            openedAtRevision: try SyncMeta.read(db).catalogueRevision)
         try db.execute(
             sql: """
                 INSERT OR IGNORE INTO \(table)
@@ -220,7 +238,7 @@ internal enum RepairRows {
 
     private static func openSQL(extra: String) -> String {
         """
-        SELECT r.* FROM \(table) r
+        SELECT r.*, m.command AS log_command FROM \(table) r
         JOIN \(ReplicaSchema.mutationLogTableName) m ON m.mutation_id = r.mutation_id
         WHERE r.resolved_at IS NULL AND m.state IN ('conflicted', 'rejected') \(extra)
         """
@@ -239,7 +257,17 @@ internal enum RepairRows {
             kind: storedKind,
             payload: try StoredJSON.decode(
                 RepairPayload.self, from: try row.decode(forColumn: "payload")),
-            openedAt: try row.decode(forColumn: "opened_at"))
+            openedAt: try row.decode(forColumn: "opened_at"),
+            command: logCommand(row))
+    }
+
+    /// The repaired change, or nil when this build cannot read it back: the
+    /// repair still shows, and still offers Let go, without it.
+    private static func logCommand(_ row: Row) -> LoggedCommand? {
+        guard let json: String = row["log_command"],
+            let stored = try? StoredJSON.decode(StoredCommand.self, from: json)
+        else { return nil }
+        return try? stored.logged()
     }
 }
 

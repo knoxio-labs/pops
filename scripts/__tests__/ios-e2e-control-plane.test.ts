@@ -132,6 +132,7 @@ describe('the control plane', () => {
   let purchasesSearchOutage: boolean;
   let inventoryReachable: boolean;
   let inventorySyncOutage: boolean;
+  let publishUserDefinedType: () => Promise<Record<string, unknown>>;
   let control: Awaited<ReturnType<typeof startControlPlane>>;
 
   beforeEach(async () => {
@@ -143,6 +144,7 @@ describe('the control plane', () => {
     purchasesSearchOutage = false;
     inventoryReachable = false;
     inventorySyncOutage = false;
+    publishUserDefinedType = () => Promise.resolve({ typeId: 'type-1', revision: 2 });
 
     bfm = createServer((request: IncomingMessage, response) => {
       const chunks: Buffer[] = [];
@@ -199,6 +201,7 @@ describe('the control plane', () => {
           inventorySyncOutage = active;
         },
         isSyncOutage: () => inventorySyncOutage,
+        publishUserDefinedType: () => publishUserDefinedType(),
       },
     });
   });
@@ -475,6 +478,25 @@ describe('the control plane', () => {
       expect.objectContaining({ inventoryReachable: false })
     );
     expect(inventoryReachable).toBe(false);
+  });
+
+  it('publishes the user-defined type itself and answers what was published', async () => {
+    const answered = await call('/__e2e/inventory/user-defined-type', { method: 'POST' });
+    expect(answered.status).toBe(200);
+    expect(await answered.json()).toEqual(
+      expect.objectContaining({ userDefinedType: { typeId: 'type-1', revision: 2 } })
+    );
+    expect(seen).toEqual([]);
+  });
+
+  it('reports a publication that failed as its own failure, not a pillar answer', async () => {
+    publishUserDefinedType = () => Promise.reject(new Error('rollout refused'));
+    const answered = await call('/__e2e/inventory/user-defined-type', { method: 'POST' });
+    expect(answered.status).toBe(502);
+    expect((await answered.json()).message).toMatch(
+      /could not publish the user-defined type: Error: rollout refused/u
+    );
+    expect(seen).toEqual([]);
   });
 
   it('reports a BFM it cannot reach as its own failure', async () => {

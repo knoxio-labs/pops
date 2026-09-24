@@ -929,7 +929,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Validate draft operations and preview compatibility without mutating the draft */
+    /** Validate draft operations and preview compatibility without mutating the draft; an empty operations array re-checks the current draft as it stands */
     post: operations['types.manage.previewDraft'];
     delete?: never;
     options?: never;
@@ -5335,6 +5335,15 @@ export interface operations {
                     }
                 )
               | {
+                  catalogueChanges?: {
+                    change: string;
+                    definition: string;
+                    fieldId: string | null;
+                    id: string;
+                    replacementId: string | null;
+                    revision: number;
+                    typeId: string | null;
+                  }[];
                   message: string;
                   mutationId: string;
                   reason: string;
@@ -5704,6 +5713,8 @@ export interface operations {
                 };
                 referenceKinds: ('item' | 'location')[];
                 referenceTypeIds: string[];
+                /** Format: uuid */
+                replacedBy: string | null;
                 required: boolean;
                 sortOrder: number;
                 /** @enum {string} */
@@ -5719,6 +5730,8 @@ export interface operations {
               presentation: {
                 [key: string]: unknown;
               };
+              /** Format: uuid */
+              replacedBy: string | null;
               revision: number;
               sortOrder: number;
             }[];
@@ -5942,6 +5955,8 @@ export interface operations {
                 };
                 referenceKinds: ('item' | 'location')[];
                 referenceTypeIds: string[];
+                /** Format: uuid */
+                replacedBy: string | null;
                 required: boolean;
                 sortOrder: number;
                 /** @enum {string} */
@@ -5957,6 +5972,8 @@ export interface operations {
               presentation: {
                 [key: string]: unknown;
               };
+              /** Format: uuid */
+              replacedBy: string | null;
               revision: number;
               sortOrder: number;
             }[];
@@ -6120,6 +6137,8 @@ export interface operations {
                 };
                 referenceKinds: ('item' | 'location')[];
                 referenceTypeIds: string[];
+                /** Format: uuid */
+                replacedBy: string | null;
                 required: boolean;
                 sortOrder: number;
                 /** @enum {string} */
@@ -6135,6 +6154,8 @@ export interface operations {
               presentation: {
                 [key: string]: unknown;
               };
+              /** Format: uuid */
+              replacedBy: string | null;
               revision: number;
               sortOrder: number;
             }[];
@@ -6221,7 +6242,11 @@ export interface operations {
                 /** @enum {string} */
                 cardinality?: 'one' | 'many';
                 expression?: components['schemas']['ExpressionV1'] | null;
-                expressionVersion?: number | null;
+                /**
+                 * @description How a computed field's expression is evaluated. 1: measurements combine only in one fixed unit and decimals compare by spelling (3.0 ≠ 3). 2: measurements of one dimension convert (cm + mm), measurement × and ÷ measurement derive units (cm × cm is cm²), the result converts into the field's fixedUnit, and equal compares decimals by value (1.5 × 2 = 3). Required with an expression on a computed field; null on a stored field.
+                 * @enum {number|null}
+                 */
+                expressionVersion?: 1 | 2 | null;
                 /** @enum {string} */
                 fieldKind?:
                   | 'short_text'
@@ -6271,7 +6296,15 @@ export interface operations {
                 /** Format: uuid */
                 id: string;
                 /** @enum {string} */
-                kind: 'archive_type' | 'archive_field' | 'archive_enum_option';
+                kind: 'archive_type' | 'archive_field';
+                /** Format: uuid */
+                replacedBy?: string;
+              }
+            | {
+                /** Format: uuid */
+                id: string;
+                /** @enum {string} */
+                kind: 'archive_enum_option';
               }
             | {
                 /** @enum {string} */
@@ -6395,6 +6428,8 @@ export interface operations {
                   };
                   referenceKinds: ('item' | 'location')[];
                   referenceTypeIds: string[];
+                  /** Format: uuid */
+                  replacedBy: string | null;
                   required: boolean;
                   sortOrder: number;
                   /** @enum {string} */
@@ -6410,6 +6445,8 @@ export interface operations {
                 presentation: {
                   [key: string]: unknown;
                 };
+                /** Format: uuid */
+                replacedBy: string | null;
                 revision: number;
                 sortOrder: number;
               }[];
@@ -6662,6 +6699,8 @@ export interface operations {
                 };
                 referenceKinds: ('item' | 'location')[];
                 referenceTypeIds: string[];
+                /** Format: uuid */
+                replacedBy: string | null;
                 required: boolean;
                 sortOrder: number;
                 /** @enum {string} */
@@ -6677,6 +6716,8 @@ export interface operations {
               presentation: {
                 [key: string]: unknown;
               };
+              /** Format: uuid */
+              replacedBy: string | null;
               revision: number;
               sortOrder: number;
             }[];
@@ -6793,7 +6834,11 @@ export interface operations {
                 /** @enum {string} */
                 cardinality?: 'one' | 'many';
                 expression?: components['schemas']['ExpressionV1'] | null;
-                expressionVersion?: number | null;
+                /**
+                 * @description How a computed field's expression is evaluated. 1: measurements combine only in one fixed unit and decimals compare by spelling (3.0 ≠ 3). 2: measurements of one dimension convert (cm + mm), measurement × and ÷ measurement derive units (cm × cm is cm²), the result converts into the field's fixedUnit, and equal compares decimals by value (1.5 × 2 = 3). Required with an expression on a computed field; null on a stored field.
+                 * @enum {number|null}
+                 */
+                expressionVersion?: 1 | 2 | null;
                 /** @enum {string} */
                 fieldKind?:
                   | 'short_text'
@@ -6843,7 +6888,15 @@ export interface operations {
                 /** Format: uuid */
                 id: string;
                 /** @enum {string} */
-                kind: 'archive_type' | 'archive_field' | 'archive_enum_option';
+                kind: 'archive_type' | 'archive_field';
+                /** Format: uuid */
+                replacedBy?: string;
+              }
+            | {
+                /** Format: uuid */
+                id: string;
+                /** @enum {string} */
+                kind: 'archive_enum_option';
               }
             | {
                 /** @enum {string} */
@@ -6900,13 +6953,12 @@ export interface operations {
                     itemId: string;
                     revision: number;
                   }[];
-                  missing: {
+                  missingInputs: {
                     /** Format: uuid */
                     fieldId: string;
                     itemId: string;
                     reason: string;
                   }[];
-                  reason: string;
                   /** @enum {string} */
                   state: 'unavailable';
                   traversedItemIds: string[];
@@ -7106,7 +7158,11 @@ export interface operations {
                 /** @enum {string} */
                 cardinality?: 'one' | 'many';
                 expression?: components['schemas']['ExpressionV1'] | null;
-                expressionVersion?: number | null;
+                /**
+                 * @description How a computed field's expression is evaluated. 1: measurements combine only in one fixed unit and decimals compare by spelling (3.0 ≠ 3). 2: measurements of one dimension convert (cm + mm), measurement × and ÷ measurement derive units (cm × cm is cm²), the result converts into the field's fixedUnit, and equal compares decimals by value (1.5 × 2 = 3). Required with an expression on a computed field; null on a stored field.
+                 * @enum {number|null}
+                 */
+                expressionVersion?: 1 | 2 | null;
                 /** @enum {string} */
                 fieldKind?:
                   | 'short_text'
@@ -7156,7 +7212,15 @@ export interface operations {
                 /** Format: uuid */
                 id: string;
                 /** @enum {string} */
-                kind: 'archive_type' | 'archive_field' | 'archive_enum_option';
+                kind: 'archive_type' | 'archive_field';
+                /** Format: uuid */
+                replacedBy?: string;
+              }
+            | {
+                /** Format: uuid */
+                id: string;
+                /** @enum {string} */
+                kind: 'archive_enum_option';
               }
             | {
                 /** @enum {string} */
@@ -7513,6 +7577,8 @@ export interface operations {
                 };
                 referenceKinds: ('item' | 'location')[];
                 referenceTypeIds: string[];
+                /** Format: uuid */
+                replacedBy: string | null;
                 required: boolean;
                 sortOrder: number;
                 /** @enum {string} */
@@ -7528,6 +7594,8 @@ export interface operations {
               presentation: {
                 [key: string]: unknown;
               };
+              /** Format: uuid */
+              replacedBy: string | null;
               revision: number;
               sortOrder: number;
             }[];
@@ -8001,6 +8069,8 @@ export interface operations {
                 };
                 referenceKinds: ('item' | 'location')[];
                 referenceTypeIds: string[];
+                /** Format: uuid */
+                replacedBy: string | null;
                 required: boolean;
                 sortOrder: number;
                 /** @enum {string} */
@@ -8016,6 +8086,8 @@ export interface operations {
               presentation: {
                 [key: string]: unknown;
               };
+              /** Format: uuid */
+              replacedBy: string | null;
               revision: number;
               sortOrder: number;
             };

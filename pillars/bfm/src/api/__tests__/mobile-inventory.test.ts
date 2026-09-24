@@ -698,6 +698,84 @@ describe('mutations', () => {
     ]);
   });
 
+  it('relays the catalogue changes a catalogue refusal names, field for field', async () => {
+    const catalogueChanges = [
+      {
+        definition: 'field',
+        id: 'field-shielding',
+        typeId: 'type-cable',
+        fieldId: 'field-shielding',
+        change: 'replaced',
+        replacementId: 'field-braid',
+        revision: 7,
+      },
+      {
+        definition: 'revision',
+        id: '9',
+        typeId: null,
+        fieldId: null,
+        change: 'a_kind_this_relay_has_never_heard_of',
+        replacementId: null,
+        revision: 9,
+      },
+    ];
+    const rejected = {
+      mutationId: 'a',
+      status: 'rejected',
+      reason: 'catalogue_repair_required',
+      message: 'field field-shielding: cannot receive new values',
+      catalogueChanges,
+    };
+    const fake = createInventoryFake({
+      mutationsResult: () => ({ kind: 'ok', value: { outcomes: [rejected], highWaterSeq: 3 } }),
+    });
+    const { app, token } = openWith(fake.factory, ['inventory.write']);
+
+    const res = await post(app, token, '/mobile/inventory/mutations', {
+      mutations: [aMutation()],
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.outcomes).toEqual([rejected]);
+  });
+
+  it('refuses a catalogue change missing its revision as a contract mismatch', async () => {
+    const fake = createInventoryFake({
+      mutationsResult: () => ({
+        kind: 'ok',
+        value: {
+          outcomes: [
+            {
+              mutationId: 'a',
+              status: 'rejected',
+              reason: 'catalogue_update_required',
+              message: 'refresh',
+              catalogueChanges: [
+                {
+                  definition: 'field',
+                  id: 'f',
+                  typeId: 't',
+                  fieldId: 'f',
+                  change: 'now_required',
+                  replacementId: null,
+                },
+              ],
+            },
+          ],
+          highWaterSeq: 3,
+        },
+      }),
+    });
+    const { app, token } = openWith(fake.factory, ['inventory.write']);
+
+    const res = await post(app, token, '/mobile/inventory/mutations', {
+      mutations: [aMutation()],
+    });
+
+    expect(res.status).toBe(502);
+    expect(res.body.code).toBe('upstream_contract_mismatch');
+  });
+
   it('sends the paired device as Pops-Actor, never anything the phone could set', async () => {
     const fake = createInventoryFake();
     const { app, token } = openWith(fake.factory, ['inventory.write']);

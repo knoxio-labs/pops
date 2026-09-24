@@ -1,6 +1,7 @@
 import { negate } from './expression-arithmetic.js';
 import { binaryValue } from './expression-binary.js';
 import { evaluateCoalesce } from './expression-coalesce.js';
+import { comparesDecimals } from './expression-decimal-operands.js';
 import { convertToFixedUnit } from './expression-dimensional.js';
 import { errorEvaluation, uniqueEvaluatedDependencies } from './expression-evaluation-shared.js';
 import { evaluateRead } from './expression-reader.js';
@@ -14,12 +15,14 @@ import type {
   ExpressionV1,
   ValidatedExpression,
 } from './expression-types.js';
+import type { PrimitiveKind } from './value-types.js';
 
 /** What one evaluation reads and which version's semantics it applies. */
 interface EvaluationScope {
   readonly snapshot: ExpressionSnapshot;
-  /** Version 2 converts and derives measurement units (ADR-002 D5). */
+  /** Version 2 converts and derives measurement units and compares decimals by value (ADR-002 D5). */
   readonly dimensional: boolean;
+  readonly fieldKinds: ReadonlyMap<string, PrimitiveKind>;
 }
 
 function evaluateBinary(
@@ -35,6 +38,10 @@ function evaluateBinary(
   return binaryValue(expression.op, left.value, right.value, {
     dependencies: uniqueEvaluatedDependencies([...left.dependencies, ...right.dependencies]),
     dimensional: scope.dimensional,
+    decimalOperands:
+      scope.dimensional &&
+      expression.op === 'equal' &&
+      comparesDecimals(expression.left, scope.fieldKinds),
   });
 }
 
@@ -101,7 +108,11 @@ export function evaluateExpression(
   snapshot: ExpressionSnapshot
 ): ExpressionEvaluation {
   const dimensional = expression.version >= 2;
-  const evaluated = evaluateNode(expression.ast, { snapshot, dimensional });
+  const evaluated = evaluateNode(expression.ast, {
+    snapshot,
+    dimensional,
+    fieldKinds: expression.fieldKinds,
+  });
   if (evaluated.state !== 'value') return evaluated;
   const converted: ArithmeticResult = dimensional
     ? convertToFixedUnit(evaluated.value, expression.resultType.fixedUnit)

@@ -5,6 +5,8 @@ import {
   validateItemFieldValuesForType,
   ValueValidationError,
 } from '../../catalogue/index.js';
+import { revisionUnavailable, updateRequiredChanges } from './catalogue-change-reasons.js';
+import { repairRequiredChange, typeNotInRevision } from './catalogue-repair-reasons.js';
 import { CommandRejected } from './errors.js';
 
 import type {
@@ -51,7 +53,8 @@ export function resolveCommandCatalogue(
   if (!authored) {
     throw new CommandRejected(
       'catalogue_update_required',
-      `catalogue revision ${authoredRevision} is unavailable; refresh catalogue definitions`
+      `catalogue revision ${authoredRevision} is unavailable; refresh catalogue definitions`,
+      [revisionUnavailable(authoredRevision)]
     );
   }
   if (authoredRevision === active.revision.revision) {
@@ -60,12 +63,33 @@ export function resolveCommandCatalogue(
   const incompatible = incompatibleChanges(authored, active);
   if (authoredRevision > active.revision.revision || incompatible.length > 0) {
     const details = incompatible.length > 0 ? ` (${incompatible.join(', ')})` : '';
+    const changes =
+      authoredRevision > active.revision.revision
+        ? [revisionUnavailable(authoredRevision)]
+        : updateRequiredChanges(db, authored, active);
     throw new CommandRejected(
       'catalogue_update_required',
-      `catalogue revision ${authoredRevision} cannot be rebased to ${active.revision.revision}${details}; refresh catalogue definitions`
+      `catalogue revision ${authoredRevision} cannot be rebased to ${active.revision.revision}${details}; refresh catalogue definitions`,
+      changes
     );
   }
   return { authored, active, rebased: true };
+}
+
+/** The type `typeId` as the active snapshot defines it. */
+export function resolveActiveCommandType(
+  resolution: CommandCatalogueResolution,
+  typeId: string
+): PersistedItemType {
+  const active = resolution.active.types.find((entry) => entry.id === typeId);
+  if (!active) {
+    throw new CommandRejected(
+      'catalogue_repair_required',
+      `type ${typeId} is unavailable in the active catalogue; refresh and repair the mutation`,
+      [typeNotInRevision(resolution, typeId)]
+    );
+  }
+  return active;
 }
 
 /** Resolves the same stable type identity in both the authored and active snapshots. */
@@ -75,25 +99,26 @@ export function resolveCommandType(
 ): { readonly authored: PersistedItemType; readonly active: PersistedItemType } {
   const authored = resolution.authored.types.find((entry) => entry.id === typeId);
   if (!authored) throw new CommandRejected('type_unknown', `unknown type ${typeId}`);
-  const active = resolution.active.types.find((entry) => entry.id === typeId);
-  if (!active) {
-    throw new CommandRejected(
-      'catalogue_repair_required',
-      `type ${typeId} is unavailable in the active catalogue; refresh and repair the mutation`
-    );
-  }
-  return { authored, active };
+  return { authored, active: resolveActiveCommandType(resolution, typeId) };
 }
 
-/** Validates authored values first, then proves that the same values remain valid after rebase. */
+/** A command's type and values as validated against one snapshot. */
+export interface CommandFieldValues {
+  readonly typeId: string;
+  readonly values: readonly ItemFieldValueInput[];
+  readonly existingItemId?: string;
+}
+
+/**
+ * Validates authored values first, then proves that the values remain valid
+ * after rebase: `input` as it was authored, or `rebased`, the same command
+ * moved onto replacements (`moveOntoReplacements`), when it moved.
+ */
 export function assertCommandFieldValues(
   db: CommandDb,
   resolution: CommandCatalogueResolution,
-  input: {
-    readonly typeId: string;
-    readonly values: readonly ItemFieldValueInput[];
-    readonly existingItemId?: string;
-  }
+  input: CommandFieldValues,
+  rebased: CommandFieldValues = input
 ): void {
   const type = resolveCommandType(resolution, input.typeId);
   try {
@@ -105,13 +130,15 @@ export function assertCommandFieldValues(
     throw error;
   }
   if (!resolution.rebased) return;
+  const active = resolveActiveCommandType(resolution, rebased.typeId);
   try {
-    validateItemFieldValuesForType(db, type.active, input.values, input.existingItemId);
+    validateItemFieldValuesForType(db, active, rebased.values, rebased.existingItemId);
   } catch (error) {
     if (error instanceof ItemFieldSetError || error instanceof ValueValidationError) {
       throw new CommandRejected(
         'catalogue_repair_required',
-        `${error.message}; refresh catalogue definitions and repair the mutation`
+        `${error.message}; refresh catalogue definitions and repair the mutation`,
+        [repairRequiredChange({ db, ...resolution }, rebased, error)]
       );
     }
     throw error;

@@ -13,15 +13,21 @@ internal struct InventoryItemFormContext: Equatable, Sendable {
     /// has gone.
     internal let item: InventoryItem?
     /// Each computed field's evaluation reconciled with this phone's own
-    /// changes (``InventoryComputedValue/display(in:revisionOf:)``), by field
+    /// changes (``InventoryComputedValue/display(in:activeCatalogueRevision:revisionOf:)``), by field
     /// ID. Empty for a create: nothing has been evaluated for an item that
     /// does not exist on the server yet.
     internal let computedDisplays: [String: InventoryComputedDisplay]
+    /// What each unavailable computed field is waiting on, named, by field ID.
+    internal let computedMissingInputs: [String: [InventoryMissingInput]]
     /// The name of where the item is (edit) or where it was opened from
     /// (create).
     internal let placementName: String?
     /// How far each photo the store staged has got, by hash.
     internal let photoUploads: [String: InventoryPhotoUpload]
+    /// The repair a `.repair` request edits, and it read against the current
+    /// fields; nil for every other request, and once the repair has settled.
+    internal var repair: InventoryRepair?
+    internal var repairDetail: InventoryCatalogueRepairDetail?
 
     internal static func query(
         for request: InventoryItemFormRequest
@@ -29,13 +35,17 @@ internal struct InventoryItemFormContext: Equatable, Sendable {
         InventoryQuery { source in
             let item: InventoryItem?
             let placement: InventoryPlacement?
+            var repair: InventoryRepair?
             switch request {
             case .create(let origin):
                 item = nil
                 placement = origin
             case .edit(let id):
-                item = source.inventoryItem(id: id).flatMap { $0.isDeleted ? nil : $0 }
+                item = liveItem(id, in: source)
                 placement = item?.placement
+            case .repair(let id):
+                repair = source.inventorySyncLedger().repairs.first { $0.id == id }
+                (item, placement) = repaired(repair, in: source)
             }
             let isOffline: Bool
             if case .offline = source.inventoryReplicaStatus() {
@@ -43,27 +53,68 @@ internal struct InventoryItemFormContext: Equatable, Sendable {
             } else {
                 isOffline = false
             }
+            let displays = computedDisplays(of: item, in: source)
             return InventoryItemFormContext(
                 catalogue: source.inventoryCatalogue(),
                 protocol2Catalogue: source.inventoryProtocol2Catalogue(),
                 protocol2ReferenceTargets: referenceTargets(in: source), isOffline: isOffline,
-                item: item, computedDisplays: computedDisplays(of: item, in: source),
+                item: item, computedDisplays: displays,
+                computedMissingInputs: missingInputs(of: item, displays: displays, in: source),
                 placementName: placement.flatMap { name(of: $0, in: source) },
-                photoUploads: source.inventoryPhotoUploads())
+                photoUploads: source.inventoryPhotoUploads(), repair: repair,
+                repairDetail: repair.flatMap(InventorySyncPage.catalogueReading(source).detail))
         }
+    }
+
+    private static func liveItem(
+        _ id: InventoryItem.ID, in source: any InventoryQuerySource
+    ) -> InventoryItem? {
+        source.inventoryItem(id: id).flatMap { $0.isDeleted ? nil : $0 }
+    }
+
+    /// The item a repaired change is about, and where it is or would go: a
+    /// held new item exists only in the change itself.
+    private static func repaired(
+        _ repair: InventoryRepair?, in source: any InventoryQuerySource
+    ) -> (InventoryItem?, InventoryPlacement?) {
+        guard let repair else { return (nil, nil) }
+        if case .createProtocol2Item(let new)? = repair.catalogue?.queued {
+            return (nil, new.placement)
+        }
+        let item = liveItem(repair.entityId, in: source)
+        return (item, item?.placement)
     }
 
     private static func computedDisplays(
         of item: InventoryItem?, in source: any InventoryQuerySource
     ) -> [String: InventoryComputedDisplay] {
         guard let item else { return [:] }
+        let activeRevision = source.inventoryProtocol2Catalogue()?.revision.revision
         return Dictionary(
             uniqueKeysWithValues: item.computedValues.map { computed in
                 (
                     computed.fieldId,
-                    computed.display(in: item) { source.inventoryItem(id: $0)?.revision }
+                    computed.display(in: item, activeCatalogueRevision: activeRevision) {
+                        source.inventoryItem(id: $0)?.revision
+                    }
                 )
             })
+    }
+
+    private static func missingInputs(
+        of item: InventoryItem?, displays: [String: InventoryComputedDisplay],
+        in source: any InventoryQuerySource
+    ) -> [String: [InventoryMissingInput]] {
+        guard let item else { return [:] }
+        let fields = source.inventoryProtocol2Catalogue()?.types.flatMap(\.fields) ?? []
+        var named: [String: [InventoryMissingInput]] = [:]
+        for computed in item.computedValues {
+            guard case .unavailable? = displays[computed.fieldId] else { continue }
+            named[computed.fieldId] = InventoryMissingInputs.named(
+                computed, of: item, fields: fields
+            ) { source.inventoryItem(id: $0)?.name }
+        }
+        return named
     }
 
     private static func referenceTargets(

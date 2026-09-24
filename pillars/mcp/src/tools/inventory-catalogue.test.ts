@@ -101,8 +101,14 @@ describe('inventory catalogue draft management', () => {
               },
               {
                 properties: {
-                  kind: { enum: ['archive_type', 'archive_field', 'archive_enum_option'] },
+                  kind: { enum: ['archive_type', 'archive_field'] },
+                  replacedBy: { format: 'uuid' },
                 },
+                required: ['kind', 'id'],
+              },
+              {
+                properties: { kind: { const: 'archive_enum_option' } },
+                required: ['kind', 'id'],
               },
               {
                 properties: { kind: { const: 'reorder' } },
@@ -220,6 +226,31 @@ describe('inventory catalogue draft management', () => {
       expectedDraftVersion: 3,
       operations,
     });
+    expect(types.manage.patchDraft).not.toHaveBeenCalled();
+  });
+
+  it('re-checks the current draft with an empty operations array, unlike patchDraft', async () => {
+    const preview = await tool('inventory.catalogue.previewDraft').handler({
+      revision: 5,
+      baseRevision: 4,
+      expectedDraftVersion: 3,
+      operations: [],
+    });
+    const patch = await tool('inventory.catalogue.patchDraft').handler({
+      revision: 5,
+      baseRevision: 4,
+      expectedDraftVersion: 3,
+      operations: [],
+    });
+
+    expect(preview.isError).toBeFalsy();
+    expect(types.manage.previewDraft).toHaveBeenCalledWith({
+      revision: 5,
+      baseRevision: 4,
+      expectedDraftVersion: 3,
+      operations: [],
+    });
+    expect(patch.isError).toBe(true);
     expect(types.manage.patchDraft).not.toHaveBeenCalled();
   });
 

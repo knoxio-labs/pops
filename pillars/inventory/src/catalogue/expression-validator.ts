@@ -15,6 +15,7 @@ import type {
 } from './catalogue-types.js';
 import type { ExpressionV1, ValidatedExpression } from './expression-types.js';
 import type { ExpressionValidationContext } from './expression-validation-shared.js';
+import type { PrimitiveKind } from './value-types.js';
 
 const MAX_EXPRESSION_DEPENDENCIES = 32;
 
@@ -37,7 +38,8 @@ function parseFieldExpression(field: PersistedItemTypeField): ExpressionV1 {
 function validateFieldExpression(
   catalogue: PersistedCatalogue,
   ownerType: PersistedItemType,
-  field: PersistedItemTypeField
+  field: PersistedItemTypeField,
+  fieldKinds: ReadonlyMap<string, PrimitiveKind>
 ): ValidatedExpression {
   try {
     if (field.cardinality !== 'one')
@@ -69,6 +71,7 @@ function validateFieldExpression(
       dependencies,
       field: { typeId: ownerType.id, fieldId: field.id },
       resultType,
+      fieldKinds,
     };
   } catch (error) {
     if (!(error instanceof ExpressionValidationError) || error.definitionId !== null) throw error;
@@ -84,10 +87,15 @@ function validateFieldExpression(
 export function validateCatalogueExpressions(
   catalogue: PersistedCatalogue
 ): readonly ValidatedExpression[] {
+  const fieldKinds = new Map(
+    catalogue.types.flatMap((type) =>
+      type.fields.map((field): [string, PrimitiveKind] => [field.id, field.kind])
+    )
+  );
   const expressions = catalogue.types.flatMap((ownerType) =>
     ownerType.fields
       .filter((field) => field.storage === 'computed')
-      .map((field) => validateFieldExpression(catalogue, ownerType, field))
+      .map((field) => validateFieldExpression(catalogue, ownerType, field, fieldKinds))
   );
   assertAcyclicExpressionGraph(buildExpressionDependencyGraph(expressions));
   return expressions;

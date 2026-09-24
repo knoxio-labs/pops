@@ -16,7 +16,7 @@ internal enum MediaOutcomes {
         _ outcome: InventoryMutationOutcome, of entry: LogEntry, mint: () -> String,
         in db: Database
     ) throws -> Bool {
-        guard case .rejected(.mediaMissing, _) = outcome,
+        guard case .rejected(.mediaMissing, _, _) = outcome,
             let sha256 = entry.command.attachedPhoto,
             try MediaRows.restageAfterMissing(sha256, in: db)
         else { return false }

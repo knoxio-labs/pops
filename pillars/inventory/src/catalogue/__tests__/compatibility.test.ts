@@ -28,6 +28,7 @@ function field(overrides: Partial<PersistedItemTypeField> = {}): PersistedItemTy
     allowOverride: false,
     presentation: {},
     archivedAt: null,
+    replacedBy: null,
     enumOptionIds: new Set(),
     archivedEnumOptionIds: new Set(),
     enumOptions: [],
@@ -47,6 +48,7 @@ function type(fields: readonly PersistedItemTypeField[]): PersistedItemType {
     legacyLabels: [],
     presentation: {},
     archivedAt: null,
+    replacedBy: null,
     fields,
   };
 }

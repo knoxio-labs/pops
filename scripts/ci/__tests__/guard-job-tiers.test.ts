@@ -61,6 +61,40 @@ function workflowFiles(): string[] {
 }
 
 /**
+ * The trigger keys a workflow document declares under `on:`, in whatever of
+ * the three legal spellings it uses (a bare scalar, a sequence, or a
+ * mapping). Anything else — `on:` missing, or a shape none of those three —
+ * is an empty set: ADR-045's "a shape you cannot model is a violation, not a
+ * pass" means an unrecognised `on:` never gets read as opt-in verification
+ * by accident.
+ */
+function triggerKeys(doc: unknown): Set<string> {
+  if (!isMapping(doc)) return new Set();
+  const on = doc.on;
+  if (typeof on === 'string') return new Set([on]);
+  if (Array.isArray(on)) {
+    return new Set(
+      on.map((entry) => scalarText(entry)).filter((v): v is string => v !== undefined)
+    );
+  }
+  if (isMapping(on)) return new Set(Object.keys(on));
+  return new Set();
+}
+
+/**
+ * ADR-045's opt-in-verification amendment (POPS-4514): a workflow is opt-in
+ * verification if and only if its ONLY trigger is `workflow_dispatch` — no
+ * `pull_request`, `push`, or `merge_group` alongside it. That is read off the
+ * trigger keys themselves, never off the workflow's name, its comments, or
+ * any declared list, so a workflow cannot claim the category while keeping a
+ * trigger that would let it run on a PR or in the merge queue.
+ */
+function isOptInVerification(doc: unknown): boolean {
+  const keys = triggerKeys(doc);
+  return keys.size === 1 && keys.has('workflow_dispatch');
+}
+
+/**
  * Every job in every workflow that runs at least one `node scripts/….mjs`,
  * with whether an install precedes its steps.
  *
@@ -73,6 +107,9 @@ function guardJobs(): GuardJob[] {
   const jobs: GuardJob[] = [];
   for (const file of workflowFiles()) {
     const doc = parseYaml(readFileSync(join(workflowsDir, file), 'utf8'), file);
+    // Opt-in verification (ADR-045, 2026-09-24 amendment): a workflow whose
+    // only trigger is workflow_dispatch is not a guard, whatever it runs.
+    if (isOptInVerification(doc)) continue;
     if (!isMapping(doc) || !isMapping(doc.jobs)) continue;
     for (const [name, job] of Object.entries(doc.jobs)) {
       if (!isMapping(job) || !Array.isArray(job.steps)) continue;
@@ -168,6 +205,55 @@ describe('guard-job discovery', () => {
     expect(all).toContain('scripts/ci/check-node-pin.mjs');
     expect(all).toContain('scripts/ci/smoke-image.mjs');
     expect(all).toContain('scripts/check-pillar-ui-reachability.mjs');
+  });
+});
+
+describe('opt-in verification (ADR-045, POPS-4514) is read off the trigger, not the claim', () => {
+  it('is true for workflow_dispatch alone, in each legal spelling of on:', () => {
+    expect(isOptInVerification(parseYaml('on: workflow_dispatch\njobs: {}\n', 't'))).toBe(true);
+    expect(isOptInVerification(parseYaml('on: [workflow_dispatch]\njobs: {}\n', 't'))).toBe(true);
+    expect(
+      isOptInVerification(
+        parseYaml(
+          'on:\n  workflow_dispatch:\n    inputs:\n      foo:\n        required: false\n',
+          't'
+        )
+      )
+    ).toBe(true);
+  });
+
+  it('is false the moment a PR, push, or merge-group trigger rides alongside it', () => {
+    expect(
+      isOptInVerification(
+        parseYaml('on:\n  workflow_dispatch: {}\n  pull_request: {}\njobs: {}\n', 't')
+      )
+    ).toBe(false);
+    expect(
+      isOptInVerification(
+        parseYaml('on:\n  workflow_dispatch: {}\n  push:\n    branches: [main]\njobs: {}\n', 't')
+      )
+    ).toBe(false);
+    expect(
+      isOptInVerification(
+        parseYaml('on:\n  workflow_dispatch: {}\n  merge_group: {}\njobs: {}\n', 't')
+      )
+    ).toBe(false);
+  });
+
+  it('is false for an ordinary guard workflow, and false when on: is absent or unrecognised', () => {
+    expect(isOptInVerification(parseYaml('on: pull_request\njobs: {}\n', 't'))).toBe(false);
+    expect(isOptInVerification(parseYaml('jobs: {}\n', 't'))).toBe(false);
+    expect(isOptInVerification(parseYaml('on: 42\njobs: {}\n', 't'))).toBe(false);
+    expect(isOptInVerification(null)).toBe(false);
+  });
+
+  it('excludes the acceptance-suite runner from Tier A/B classification', () => {
+    // Dogfoods the real workflow this amendment exists to unblock, rather
+    // than only a synthetic fixture: if inventory-acceptance.yml ever grows a
+    // pull_request/push/merge_group trigger, it stops being excluded here —
+    // and the same exclusion, reused verbatim in "ADR-045 tables agree with
+    // the derived tiers" below, is what keeps it off the Tier A/B tables too.
+    expect(jobs.some((j) => j.workflow === 'inventory-acceptance.yml')).toBe(false);
   });
 });
 
@@ -291,6 +377,9 @@ describe('ADR-045 tables agree with the derived tiers', () => {
     const owned: GuardJob[] = [];
     for (const file of workflowFiles()) {
       const doc = parseYaml(readFileSync(join(workflowsDir, file), 'utf8'), file);
+      // Same exclusion as guardJobs(): an opt-in verification workflow is not
+      // a guard, so it never needs an ADR-045 Tier A/B table row.
+      if (isOptInVerification(doc)) continue;
       if (!isMapping(doc) || !isMapping(doc.jobs)) continue;
       for (const [name, job] of Object.entries(doc.jobs)) {
         if (!isMapping(job) || !Array.isArray(job.steps)) continue;

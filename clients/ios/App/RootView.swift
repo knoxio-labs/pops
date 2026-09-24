@@ -2,6 +2,7 @@ import AppCore
 import DesignSystem
 import FeaturePairing
 import SwiftUI
+import UIKit
 
 /// The app's only root. It switches on one value and draws; every decision
 /// behind that value is ``AppShellModel``'s.
@@ -55,7 +56,14 @@ internal struct RootView: View {
                     Task { await composition.shell.reloadBootstrap() }
                     Task { await composition.refreshInventory() }
                 case .background:
-                    composition.scheduleBackgroundRefresh()
+                    let application = UIApplication.shared
+                    BackgroundExecutionAssertion.hold(
+                        begin: {
+                            application.beginBackgroundTask(
+                                withName: "Schedule background refresh", expirationHandler: $0)
+                        },
+                        end: application.endBackgroundTask,
+                        while: composition.scheduleBackgroundRefresh)
                 default:
                     break
                 }

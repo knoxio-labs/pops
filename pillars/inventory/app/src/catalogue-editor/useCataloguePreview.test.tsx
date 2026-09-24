@@ -164,4 +164,74 @@ describe('useCataloguePreview', () => {
 
     expect(setCompatibility).not.toHaveBeenCalled();
   });
+
+  describe('recheck', () => {
+    it('previews the current draft with no operations, immediately and not as a live edit', async () => {
+      api.previewDraft.mockResolvedValue(response(forbidden));
+      const { result, setCompatibility } = setup();
+
+      await act(async () => result.current.recheck());
+
+      expect(api.previewDraft).toHaveBeenCalledWith({
+        path: { revision: 5 },
+        body: { baseRevision: 4, expectedDraftVersion: 3, operations: [] },
+      });
+      expect(setCompatibility).toHaveBeenCalledWith({
+        compatibility: forbidden,
+        draftVersion: 3,
+        isLivePreview: false,
+      });
+    });
+
+    it('reflects item data that changed since the last preview, without writing anything', async () => {
+      api.previewDraft.mockResolvedValueOnce(response(compatible));
+      const { result, setCompatibility } = setup();
+      await act(() => result.current.preview(firstOperation));
+      await act(() => vi.advanceTimersByTimeAsync(250));
+      expect(setCompatibility).toHaveBeenLastCalledWith(
+        expect.objectContaining({ compatibility: compatible })
+      );
+
+      api.previewDraft.mockResolvedValueOnce(response(forbidden));
+      await act(async () => result.current.recheck());
+
+      expect(api.previewDraft).toHaveBeenLastCalledWith({
+        path: { revision: 5 },
+        body: { baseRevision: 4, expectedDraftVersion: 3, operations: [] },
+      });
+      expect(setCompatibility).toHaveBeenLastCalledWith({
+        compatibility: forbidden,
+        draftVersion: 3,
+        isLivePreview: false,
+      });
+    });
+
+    it('supersedes an in-flight debounced edit rather than racing it', async () => {
+      const pending = deferred<ReturnType<typeof response>>();
+      api.previewDraft
+        .mockReturnValueOnce(pending.promise)
+        .mockResolvedValueOnce(response(forbidden));
+      const { result, setCompatibility } = setup();
+
+      act(() => result.current.preview(firstOperation));
+      await act(() => vi.advanceTimersByTimeAsync(250));
+      await act(async () => result.current.recheck());
+      await act(async () => pending.resolve(response(compatible)));
+
+      expect(setCompatibility).toHaveBeenCalledTimes(1);
+      expect(setCompatibility).toHaveBeenCalledWith({
+        compatibility: forbidden,
+        draftVersion: 3,
+        isLivePreview: false,
+      });
+    });
+
+    it('does nothing before the first persisted draft exists', async () => {
+      const { result } = setup(false);
+
+      await act(async () => result.current.recheck());
+
+      expect(api.previewDraft).not.toHaveBeenCalled();
+    });
+  });
 });

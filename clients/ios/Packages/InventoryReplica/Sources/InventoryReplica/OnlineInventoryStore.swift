@@ -80,7 +80,7 @@ public final class OnlineInventoryStore: InventoryStore, Sendable {
             baseRevision: try baseRevision(for: command), dependsOn: [], clientTime: now(),
             catalogueRevision: try catalogueRevision(for: command))
         var outcome = try await submit(mutation)
-        if case .rejected(.catalogueUpdateRequired, _) = outcome,
+        if case .rejected(.catalogueUpdateRequired, _, _) = outcome,
             let moved = try await movedToNewerCatalogue(mutation)
         {
             mutation = moved

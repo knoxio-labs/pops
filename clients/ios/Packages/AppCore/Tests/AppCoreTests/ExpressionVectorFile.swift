@@ -99,6 +99,7 @@ internal struct ExpressionVectorFile: Decodable, Sendable {
         let override: Override?
         let rootItemId: String
         let items: [Item]
+        let fieldKinds: [String: InventoryPrimitiveKind]
         let expected: Expected
     }
 

@@ -78,6 +78,26 @@ internal struct InventoryProtocol2ComputedOverrideTests {
         #expect(!row.canClearOverride)
     }
 
+    @Test("an override the catalogue no longer allows can still be cleared, never re-set")
+    func disallowedOverrideCanStillBeCleared() async {
+        let opened = await Self.opened(
+            Self.item(
+                computed: [Self.sealed: .ok(.boolean(true))],
+                fieldValues: [
+                    InventoryItemFieldEntry(
+                        fieldId: Self.sealed.id, state: .value([.boolean(true)]),
+                        source: .override, catalogueRevision: 4)
+                ]))
+        defer { opened.loading.cancel() }
+        let row = InventoryProtocol2ComputedFieldRow(
+            field: Self.sealed, display: opened.form.protocol2ComputedDisplays[Self.sealed.id],
+            overridesEnabled: opened.form.mode == .edit)
+
+        #expect(row.isOverridden)
+        #expect(row.canClearOverride)
+        #expect(!row.canStartOverride)
+    }
+
     @Test("setting then clearing an override dispatches item.setOverride, then item.clearOverride")
     func setThenClear() async throws {
         let opened = await Self.opened(Self.item(computed: [Self.volume: .ok(.string("6 l"))]))
@@ -131,11 +151,10 @@ internal struct InventoryProtocol2ComputedOverrideTests {
         defer { opened.loading.cancel() }
         let row = InventoryProtocol2ComputedFieldRow(
             field: Self.volume, display: opened.form.protocol2ComputedDisplays[Self.volume.id],
-            overridesEnabled: opened.form.mode == .edit)
+            overridesEnabled: opened.form.mode == .edit,
+            missingInputs: opened.form.protocol2ComputedMissingInputs[Self.volume.id] ?? [])
 
-        #expect(
-            row.text(referenceLabel: { _ in nil }, dependencyLabel: { _ in "Width" })
-                == "Unavailable until Width is set")
+        #expect(row.text(referenceLabel: { _ in nil }) == "Unavailable until Width is set")
         #expect(row.canStartOverride)
 
         await opened.form.setComputedOverride(.string("6 l"), for: Self.volume)
@@ -153,8 +172,9 @@ internal struct InventoryProtocol2ComputedOverrideTests {
         // the old `InventoryProtocol2Draft.computed` dictionary, built only
         // from `item.fieldValues` where `source != .stored`, would see
         // nothing here and read the field as unavailable. Reading
-        // `item.computedValues` through `display(in:revisionOf:)` must show
-        // the calculated value instead.
+        // `item.computedValues` through
+        // `display(in:activeCatalogueRevision:revisionOf:)` must show the
+        // calculated value instead.
         let opened = await Self.opened(
             Self.item(computed: [Self.volume: .ok(.string("6 l"))], fieldValues: []))
         defer { opened.loading.cancel() }

@@ -3527,6 +3527,15 @@ export type SyncMutationsResponses = {
           status: 'conflict';
         }
       | {
+          catalogueChanges?: Array<{
+            change: string;
+            definition: string;
+            fieldId: string | null;
+            id: string;
+            replacementId: string | null;
+            revision: number;
+            typeId: string | null;
+          }>;
           message: string;
           mutationId: string;
           reason: string;
@@ -3853,6 +3862,7 @@ export type TypesReadCatalogueResponses = {
         };
         referenceKinds: Array<'item' | 'location'>;
         referenceTypeIds: Array<string>;
+        replacedBy: string | null;
         required: boolean;
         sortOrder: number;
         storage: 'stored' | 'computed';
@@ -3865,6 +3875,7 @@ export type TypesReadCatalogueResponses = {
       presentation: {
         [key: string]: unknown;
       };
+      replacedBy: string | null;
       revision: number;
       sortOrder: number;
     }>;
@@ -4073,6 +4084,7 @@ export type TypesManageCreateDraftResponses = {
         };
         referenceKinds: Array<'item' | 'location'>;
         referenceTypeIds: Array<string>;
+        replacedBy: string | null;
         required: boolean;
         sortOrder: number;
         storage: 'stored' | 'computed';
@@ -4085,6 +4097,7 @@ export type TypesManageCreateDraftResponses = {
       presentation: {
         [key: string]: unknown;
       };
+      replacedBy: string | null;
       revision: number;
       sortOrder: number;
     }>;
@@ -4213,6 +4226,7 @@ export type TypesManageReadDraftResponses = {
         };
         referenceKinds: Array<'item' | 'location'>;
         referenceTypeIds: Array<string>;
+        replacedBy: string | null;
         required: boolean;
         sortOrder: number;
         storage: 'stored' | 'computed';
@@ -4225,6 +4239,7 @@ export type TypesManageReadDraftResponses = {
       presentation: {
         [key: string]: unknown;
       };
+      replacedBy: string | null;
       revision: number;
       sortOrder: number;
     }>;
@@ -4261,7 +4276,10 @@ export type TypesManagePatchDraftData = {
           archivedAt?: string | null;
           cardinality?: 'one' | 'many';
           expression?: ExpressionV1 | null;
-          expressionVersion?: number | null;
+          /**
+           * How a computed field's expression is evaluated. 1: measurements combine only in one fixed unit and decimals compare by spelling (3.0 ≠ 3). 2: measurements of one dimension convert (cm + mm), measurement × and ÷ measurement derive units (cm × cm is cm²), the result converts into the field's fixedUnit, and equal compares decimals by value (1.5 × 2 = 3). Required with an expression on a computed field; null on a stored field.
+           */
+          expressionVersion?: 1 | 2 | null;
           fieldKind?:
             | 'short_text'
             | 'long_text'
@@ -4301,7 +4319,12 @@ export type TypesManagePatchDraftData = {
         }
       | {
           id: string;
-          kind: 'archive_type' | 'archive_field' | 'archive_enum_option';
+          kind: 'archive_type' | 'archive_field';
+          replacedBy?: string;
+        }
+      | {
+          id: string;
+          kind: 'archive_enum_option';
         }
       | {
           definition: 'type' | 'field' | 'enum_option';
@@ -4511,6 +4534,7 @@ export type TypesManagePatchDraftResponses = {
           };
           referenceKinds: Array<'item' | 'location'>;
           referenceTypeIds: Array<string>;
+          replacedBy: string | null;
           required: boolean;
           sortOrder: number;
           storage: 'stored' | 'computed';
@@ -4523,6 +4547,7 @@ export type TypesManagePatchDraftResponses = {
         presentation: {
           [key: string]: unknown;
         };
+        replacedBy: string | null;
         revision: number;
         sortOrder: number;
       }>;
@@ -4675,6 +4700,7 @@ export type TypesManageAbandonDraftResponses = {
         };
         referenceKinds: Array<'item' | 'location'>;
         referenceTypeIds: Array<string>;
+        replacedBy: string | null;
         required: boolean;
         sortOrder: number;
         storage: 'stored' | 'computed';
@@ -4687,6 +4713,7 @@ export type TypesManageAbandonDraftResponses = {
       presentation: {
         [key: string]: unknown;
       };
+      replacedBy: string | null;
       revision: number;
       sortOrder: number;
     }>;
@@ -4731,7 +4758,10 @@ export type TypesManagePreviewComputedFieldData = {
           archivedAt?: string | null;
           cardinality?: 'one' | 'many';
           expression?: ExpressionV1 | null;
-          expressionVersion?: number | null;
+          /**
+           * How a computed field's expression is evaluated. 1: measurements combine only in one fixed unit and decimals compare by spelling (3.0 ≠ 3). 2: measurements of one dimension convert (cm + mm), measurement × and ÷ measurement derive units (cm × cm is cm²), the result converts into the field's fixedUnit, and equal compares decimals by value (1.5 × 2 = 3). Required with an expression on a computed field; null on a stored field.
+           */
+          expressionVersion?: 1 | 2 | null;
           fieldKind?:
             | 'short_text'
             | 'long_text'
@@ -4771,7 +4801,12 @@ export type TypesManagePreviewComputedFieldData = {
         }
       | {
           id: string;
-          kind: 'archive_type' | 'archive_field' | 'archive_enum_option';
+          kind: 'archive_type' | 'archive_field';
+          replacedBy?: string;
+        }
+      | {
+          id: string;
+          kind: 'archive_enum_option';
         }
       | {
           definition: 'type' | 'field' | 'enum_option';
@@ -4924,12 +4959,11 @@ export type TypesManagePreviewComputedFieldResponses = {
             itemId: string;
             revision: number;
           }>;
-          missing: Array<{
+          missingInputs: Array<{
             fieldId: string;
             itemId: string;
             reason: string;
           }>;
-          reason: string;
           state: 'unavailable';
           traversedItemIds: Array<string>;
         }
@@ -4977,7 +5011,10 @@ export type TypesManagePreviewDraftData = {
           archivedAt?: string | null;
           cardinality?: 'one' | 'many';
           expression?: ExpressionV1 | null;
-          expressionVersion?: number | null;
+          /**
+           * How a computed field's expression is evaluated. 1: measurements combine only in one fixed unit and decimals compare by spelling (3.0 ≠ 3). 2: measurements of one dimension convert (cm + mm), measurement × and ÷ measurement derive units (cm × cm is cm²), the result converts into the field's fixedUnit, and equal compares decimals by value (1.5 × 2 = 3). Required with an expression on a computed field; null on a stored field.
+           */
+          expressionVersion?: 1 | 2 | null;
           fieldKind?:
             | 'short_text'
             | 'long_text'
@@ -5017,7 +5054,12 @@ export type TypesManagePreviewDraftData = {
         }
       | {
           id: string;
-          kind: 'archive_type' | 'archive_field' | 'archive_enum_option';
+          kind: 'archive_type' | 'archive_field';
+          replacedBy?: string;
+        }
+      | {
+          id: string;
+          kind: 'archive_enum_option';
         }
       | {
           definition: 'type' | 'field' | 'enum_option';
@@ -5402,6 +5444,7 @@ export type TypesManagePublishDraftResponses = {
         };
         referenceKinds: Array<'item' | 'location'>;
         referenceTypeIds: Array<string>;
+        replacedBy: string | null;
         required: boolean;
         sortOrder: number;
         storage: 'stored' | 'computed';
@@ -5414,6 +5457,7 @@ export type TypesManagePublishDraftResponses = {
       presentation: {
         [key: string]: unknown;
       };
+      replacedBy: string | null;
       revision: number;
       sortOrder: number;
     }>;
@@ -5742,6 +5786,7 @@ export type TypesReadTypeResponses = {
         };
         referenceKinds: Array<'item' | 'location'>;
         referenceTypeIds: Array<string>;
+        replacedBy: string | null;
         required: boolean;
         sortOrder: number;
         storage: 'stored' | 'computed';
@@ -5754,6 +5799,7 @@ export type TypesReadTypeResponses = {
       presentation: {
         [key: string]: unknown;
       };
+      replacedBy: string | null;
       revision: number;
       sortOrder: number;
     };
