@@ -11,6 +11,12 @@ internal struct InventoryProtocol2ValueEditor: View {
     let field: InventoryCatalogueField
     let entry: InventoryProtocol2DraftEntry
     let label: String
+    /// The identifier a driver script addresses this entry's editor by.
+    /// `InventoryAccessibility.protocol2Field(id:)` for a single-valued
+    /// field's one entry, `protocol2FieldEntry(id:index:)` for one of a
+    /// many-valued field's several — the caller decides which, since only it
+    /// knows the entry's position, if any.
+    let identifier: String
     let referenceTargets: [InventoryProtocol2ReferenceTarget]
     let setText: (String) -> Void
     let setValue: (InventoryPrimitiveValue?) -> Void
@@ -25,6 +31,7 @@ internal struct InventoryProtocol2ValueEditor: View {
                 Text("No").tag("false")
             }
             .pickerStyle(.menu)
+            .accessibilityIdentifier(identifier)
         case .enumeration:
             Picker(label, selection: enumSelection) {
                 Text("Not recorded").tag("")
@@ -34,6 +41,7 @@ internal struct InventoryProtocol2ValueEditor: View {
                 }
             }
             .pickerStyle(.menu)
+            .accessibilityIdentifier(identifier)
         case .reference:
             referenceEditor
         case .longText:
@@ -43,7 +51,7 @@ internal struct InventoryProtocol2ValueEditor: View {
         default:
             InventoryFormTextRow(
                 label, placeholder: field.help ?? "Not recorded", text: textBinding,
-                identifier: InventoryAccessibility.protocol2Field(id: field.id))
+                identifier: identifier)
         }
         if let issue = entry.issue {
             Text(issue)
@@ -58,6 +66,7 @@ internal struct InventoryProtocol2ValueEditor: View {
             TextField(field.help ?? "Not recorded", text: textBinding, axis: .vertical)
                 .lineLimit(1...8)
                 .multilineTextAlignment(.trailing)
+                .accessibilityIdentifier(identifier)
         }
     }
 
@@ -67,6 +76,7 @@ internal struct InventoryProtocol2ValueEditor: View {
                 TextField("Not recorded", text: textBinding)
                     .multilineTextAlignment(.trailing)
                     .inventoryDecimalKeyboard()
+                    .accessibilityIdentifier(identifier)
                 if let unit = field.fixedUnit {
                     Text(unit).foregroundStyle(Color.popsMutedForeground)
                 }
@@ -108,6 +118,7 @@ internal struct InventoryProtocol2ValueEditor: View {
                     }
                 }
                 .pickerStyle(.menu)
+                .accessibilityIdentifier(identifier)
             }
         }
     }
