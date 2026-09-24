@@ -7,9 +7,25 @@ import { FieldForm } from '../catalogue-editor/FieldForm';
 import { TypeForm } from '../catalogue-editor/TypeForm';
 import { type useTypeCataloguePage } from './useTypeCataloguePage';
 
-import type { CatalogueOperation } from '../catalogue-editor/types';
+import type { ComputedFieldEnvironment } from '../catalogue-editor/computed/computed-environment';
+import type { CatalogueField, CatalogueOperation } from '../catalogue-editor/types';
 
 type Page = ReturnType<typeof useTypeCataloguePage>;
+
+function computedEnvironment(page: Page, field?: CatalogueField): ComputedFieldEnvironment {
+  const draft = page.catalogue?.revision.status === 'draft' ? page.catalogue : null;
+  const publishedField = page.published?.types
+    .flatMap((type) => type.fields)
+    .find((candidate) => candidate.id === field?.id);
+  return {
+    draft,
+    publishedField,
+    publishedRevision: page.published?.revision.revision,
+    saveIssues: page.issues.saved,
+    liveIssues: page.issues.live,
+    compatibility: 'compatibility' in page.readiness ? page.readiness.compatibility : null,
+  };
+}
 
 /** Renders the active type or field editor selected by the page model. */
 export function CatalogueEditorContent({
@@ -99,6 +115,7 @@ function FieldFormContent({
     return (
       <FieldForm
         key="new-field"
+        computed={computedEnvironment(page)}
         type={type}
         types={page.types}
         published={false}
@@ -117,6 +134,7 @@ function FieldFormContent({
   return (
     <FieldForm
       key={`${field.id}-${page.editorEpoch}`}
+      computed={computedEnvironment(page, field)}
       field={field}
       type={type}
       types={page.types}

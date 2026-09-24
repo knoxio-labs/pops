@@ -1,12 +1,9 @@
 import { ChevronRight, X } from 'lucide-react';
 
+import { OPERATIONS, operationBlockedReason, valueTypeLabel } from '@pops/app-inventory/design';
 import { Button, Collapsible, CollapsibleContent, CollapsibleTrigger } from '@pops/ui';
 
-import { valueTypeLabel } from './model';
-import { OPERATIONS, operationBlockedReason } from './operations';
-
-import type { ValueType } from './model';
-import type { OperationInfo } from './operations';
+import type { OperationInfo, SlotType } from '@pops/app-inventory/design';
 
 function OperationButton({ info }: { info: OperationInfo }) {
   return (
@@ -61,7 +58,7 @@ export function OperationPalette({
   target,
   onClose,
 }: {
-  expected: ValueType | undefined;
+  expected: SlotType | undefined;
   mode: 'insert' | 'wrap';
   target: string;
   onClose?: () => void;

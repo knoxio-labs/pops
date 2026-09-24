@@ -293,6 +293,57 @@ describe('inventory catalogue MCP tools — real HTTP boundary', () => {
     expect(published['types']).toBeInstanceOf(Array);
   });
 
+  it('evaluates an unsaved computed field by key and refuses an unknown item or stale draft', async () => {
+    const previewComputedField = tool('inventory.catalogue.previewComputedField');
+    const published = ok(await catalogueGet.handler({}));
+    const baseRevision = (published['revision'] as { revision: number }).revision;
+    const [first] = published['types'] as { id: string }[];
+    if (first === undefined) throw new Error('the published catalogue has no types');
+    const created = draftRevision(ok(await createDraft.handler({ baseRevision })));
+    const request = {
+      revision: created.revision,
+      baseRevision,
+      typeId: first.id,
+      fieldKey: 'seam_computed',
+      itemId: crypto.randomUUID(),
+      operations: [
+        {
+          kind: 'put_field',
+          typeId: first.id,
+          key: 'seam_computed',
+          label: 'Seam computed',
+          fieldKind: 'short_text',
+          cardinality: 'one',
+          storage: 'computed',
+          expressionVersion: 1,
+          expression: { op: 'literal', value: 'seam' },
+          allowOverride: false,
+        },
+      ],
+    };
+
+    const unknownItem = await previewComputedField.handler({
+      ...request,
+      expectedDraftVersion: created.draftVersion,
+    });
+    expect(unknownItem.isError).toBe(true);
+    expect(text(unknownItem)).toMatch(/preview_item_unknown/);
+    expect(draftRevision(ok(await readDraft.handler({})))).toEqual(created);
+
+    const stale = await previewComputedField.handler({
+      ...request,
+      expectedDraftVersion: created.draftVersion + 1,
+    });
+    expect(stale.isError).toBe(true);
+    expect(text(stale)).toContain('inventory.catalogue.readDraft');
+
+    await abandonDraft.handler({
+      revision: created.revision,
+      baseRevision,
+      expectedDraftVersion: created.draftVersion,
+    });
+  });
+
   describe('malformed operation payloads, per kind, through the real REST boundary', () => {
     function issuePaths(body: string): string[] {
       const jsonStart = body.indexOf('{');

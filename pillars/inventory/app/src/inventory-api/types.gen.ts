@@ -4696,6 +4696,251 @@ export type TypesManageAbandonDraftResponses = {
 export type TypesManageAbandonDraftResponse =
   TypesManageAbandonDraftResponses[keyof TypesManageAbandonDraftResponses];
 
+export type TypesManagePreviewComputedFieldData = {
+  /**
+   * Body
+   */
+  body?: {
+    baseRevision: number;
+    expectedDraftVersion: number;
+    field:
+      | {
+          id: string;
+        }
+      | {
+          key: string;
+        };
+    itemId: string;
+    operations: Array<
+      | {
+          archivedAt?: string | null;
+          capabilities?: Array<string>;
+          description?: string | null;
+          id?: string;
+          key?: string;
+          kind: 'put_type';
+          label?: string;
+          legacyLabels?: Array<string>;
+          presentation?: {
+            [key: string]: unknown;
+          };
+          sortOrder?: number;
+        }
+      | {
+          allowOverride?: boolean;
+          archivedAt?: string | null;
+          cardinality?: 'one' | 'many';
+          expression?: ExpressionV1 | null;
+          expressionVersion?: number | null;
+          fieldKind?:
+            | 'short_text'
+            | 'long_text'
+            | 'integer'
+            | 'decimal'
+            | 'boolean'
+            | 'enum'
+            | 'measurement'
+            | 'date'
+            | 'date_time'
+            | 'url'
+            | 'reference';
+          fixedUnit?: string | null;
+          help?: string | null;
+          id?: string;
+          key?: string;
+          kind: 'put_field';
+          label?: string;
+          presentation?: {
+            [key: string]: unknown;
+          };
+          referenceKinds?: Array<'item' | 'location'>;
+          referenceTypeIds?: Array<string>;
+          required?: boolean;
+          sortOrder?: number;
+          storage?: 'stored' | 'computed';
+          typeId: string;
+        }
+      | {
+          archivedAt?: string | null;
+          fieldId: string;
+          id?: string;
+          key?: string;
+          kind: 'put_enum_option';
+          label?: string;
+          sortOrder?: number;
+        }
+      | {
+          id: string;
+          kind: 'archive_type' | 'archive_field' | 'archive_enum_option';
+        }
+      | {
+          definition: 'type' | 'field' | 'enum_option';
+          ids: Array<string>;
+          kind: 'reorder';
+          parentId?: string | null;
+        }
+    >;
+    typeId: string;
+  };
+  path: {
+    revision: number;
+  };
+  query?: never;
+  url: '/type-catalogue/drafts/{revision}/computed-preview';
+};
+
+export type TypesManagePreviewComputedFieldErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code?: string;
+    currentDraftVersion?: number;
+    issues?: Array<{
+      code: string;
+      definitionId: string | null;
+      message: string;
+      path: string;
+    }>;
+    message: string;
+    messageKey?: string;
+    preview?: {
+      baseRevision: number;
+      compatibility: {
+        affectedIds: Array<string>;
+        affectedItems: number;
+        changes: Array<{
+          classification: 'compatible' | 'protocol_gated' | 'migration_required' | 'forbidden';
+          code: string;
+          definitionId: string;
+        }>;
+        classification: 'compatible' | 'protocol_gated' | 'migration_required' | 'forbidden';
+      };
+      draftRevision: number;
+    };
+  };
+  /**
+   * 401
+   */
+  401: {
+    code?: string;
+    currentDraftVersion?: number;
+    issues?: Array<{
+      code: string;
+      definitionId: string | null;
+      message: string;
+      path: string;
+    }>;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 404
+   */
+  404: {
+    code?: string;
+    currentDraftVersion?: number;
+    issues?: Array<{
+      code: string;
+      definitionId: string | null;
+      message: string;
+      path: string;
+    }>;
+    message: string;
+    messageKey?: string;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code?: string;
+    currentDraftVersion?: number;
+    issues?: Array<{
+      code: string;
+      definitionId: string | null;
+      message: string;
+      path: string;
+    }>;
+    message: string;
+    messageKey?: string;
+    preview?: {
+      baseRevision: number;
+      compatibility: {
+        affectedIds: Array<string>;
+        affectedItems: number;
+        changes: Array<{
+          classification: 'compatible' | 'protocol_gated' | 'migration_required' | 'forbidden';
+          code: string;
+          definitionId: string;
+        }>;
+        classification: 'compatible' | 'protocol_gated' | 'migration_required' | 'forbidden';
+      };
+      draftRevision: number;
+    };
+  };
+};
+
+export type TypesManagePreviewComputedFieldError =
+  TypesManagePreviewComputedFieldErrors[keyof TypesManagePreviewComputedFieldErrors];
+
+export type TypesManagePreviewComputedFieldResponses = {
+  /**
+   * 200
+   */
+  200: {
+    baseRevision: number;
+    draftRevision: number;
+    draftVersion: number;
+    fieldId: string;
+    itemId: string;
+    items: Array<{
+      id: string;
+      name: string;
+      typeId: string | null;
+    }>;
+    override: unknown;
+    result:
+      | {
+          dependencies: Array<{
+            fieldId: string;
+            itemId: string;
+            revision: number;
+          }>;
+          state: 'value';
+          traversedItemIds: Array<string>;
+          value: unknown;
+        }
+      | {
+          dependencies: Array<{
+            fieldId: string;
+            itemId: string;
+            revision: number;
+          }>;
+          missing: Array<{
+            fieldId: string;
+            itemId: string;
+          }>;
+          reason: string;
+          state: 'unavailable';
+          traversedItemIds: Array<string>;
+        }
+      | {
+          code: string;
+          dependencies: Array<{
+            fieldId: string;
+            itemId: string;
+            revision: number;
+          }>;
+          state: 'error';
+          traversedItemIds: Array<string>;
+        };
+    typeId: string;
+  };
+};
+
+export type TypesManagePreviewComputedFieldResponse =
+  TypesManagePreviewComputedFieldResponses[keyof TypesManagePreviewComputedFieldResponses];
+
 export type TypesManagePreviewDraftData = {
   /**
    * Body

@@ -1,3 +1,4 @@
+import { valueTypeLabel } from '@pops/app-inventory/design';
 import {
   Badge,
   Input,
@@ -11,9 +12,7 @@ import {
   SelectValue,
 } from '@pops/ui';
 
-import { valueTypeLabel } from './model';
-
-import type { DesignField, LiteralValue, ValueType } from './model';
+import type { ExpressionField, LiteralValue, SlotType } from '@pops/app-inventory/design';
 
 function textHint(value: string): string {
   if (value.trim() === '' && value.length > 0)
@@ -36,7 +35,13 @@ function BooleanLiteral({ value }: { value: boolean }) {
   );
 }
 
-function ChoiceLiteral({ optionId, field }: { optionId: string; field: DesignField | undefined }) {
+function ChoiceLiteral({
+  optionId,
+  field,
+}: {
+  optionId: string;
+  field: ExpressionField | undefined;
+}) {
   return (
     <SelectPrimitive defaultValue={optionId}>
       <SelectTrigger className="min-h-11 w-full">
@@ -58,12 +63,12 @@ function LiteralInput({
   choiceField,
 }: {
   value: LiteralValue;
-  choiceField: DesignField | undefined;
+  choiceField: ExpressionField | undefined;
 }) {
   if (typeof value === 'boolean') return <BooleanLiteral value={value} />;
   if (typeof value === 'object' && 'optionId' in value)
     return <ChoiceLiteral optionId={value.optionId} field={choiceField} />;
-  if (typeof value === 'object')
+  if (typeof value === 'object' && 'amount' in value)
     return (
       <div className="flex items-center gap-2">
         <Input
@@ -75,6 +80,7 @@ function LiteralInput({
         <Badge variant="outline">{value.unit}</Badge>
       </div>
     );
+  if (typeof value === 'object') return <p className="font-mono text-sm">{value.targetId}</p>;
   return (
     <div className="space-y-1">
       <Input
@@ -100,8 +106,8 @@ export function LiteralInspector({
   choiceField,
 }: {
   value: LiteralValue;
-  expected: ValueType | undefined;
-  choiceField: DesignField | undefined;
+  expected: SlotType | undefined;
+  choiceField: ExpressionField | undefined;
 }) {
   return (
     <div className="space-y-2">

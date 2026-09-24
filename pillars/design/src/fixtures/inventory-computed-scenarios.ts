@@ -82,10 +82,10 @@ export const computedScenarios = {
     selectedPath: 'expression.right.left',
     preview: ankerDisplayName,
   },
-  'wrap-node': replacement({ ...edited, selectedPath: 'expression.args.1.left', panel: 'wrap' }),
+  'wrap-node': replacement({ ...edited, selectedPath: 'expression.values.1.left', panel: 'wrap' }),
   'read-follow-reference': replacement({
     ...edited,
-    selectedPath: 'expression.args.1.left',
+    selectedPath: 'expression.values.1.left',
     followOpen: true,
   }),
   'read-two-references': {

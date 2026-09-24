@@ -16,6 +16,7 @@ import {
 import { readPublishedCatalogueType } from '../../catalogue/catalogue-type-read.js';
 import { loadCatalogue } from '../../catalogue/index.js';
 import { readInventoryPrincipal } from '../middleware/identity.js';
+import { makeComputedPreviewHandlers } from './type-catalogue-computed-preview-handlers.js';
 import { compatibilityBody, runCatalogue } from './type-catalogue-responses.js';
 import { makeProtocolRolloutHandlers } from './type-catalogue-rollout-handlers.js';
 import { validateCatalogueItemPayload } from './type-catalogue-validation.js';
@@ -112,6 +113,9 @@ function makeTypeCatalogueReadHandlers(db: CommandDb) {
 function makeTypeCatalogueManageHandlers(db: CommandDb) {
   return {
     ...makeProtocolRolloutHandlers(db, (response) => {
+      requireAuthor(response, 'manage');
+    }),
+    ...makeComputedPreviewHandlers(db, (response) => {
       requireAuthor(response, 'manage');
     }),
     readDraft: ({ res }: TypesRequest['manage']['readDraft'] & { res: Response }) =>
