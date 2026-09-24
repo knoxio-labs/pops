@@ -17,7 +17,9 @@ public struct PurchasesFlowView: View {
         _home = State(initialValue: PurchasesHomeModel(dependencies: dependencies))
     }
 
-    internal init(
+    /// Creates the Purchases tab and reports, each time the home appears, whether capture is
+    /// installed there. The app's tests use the report to check capture follows availability.
+    public init(
         dependencies: AppDependencies,
         captureAvailable: Bool,
         captureObserver: @escaping @MainActor (Bool) -> Void

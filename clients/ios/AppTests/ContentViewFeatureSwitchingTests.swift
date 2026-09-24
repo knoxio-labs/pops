@@ -199,22 +199,37 @@ internal struct ContentViewTabSwitcherTests {
         )
     }
 
-    /// POPS-4191: Inventory's search flow lives in the tab bar's search slot,
-    /// not inside the Inventory tab — so Inventory being the *only* available
-    /// feature must not fall into the single-feature, no-tab-bar path above:
-    /// there are two things to switch between even then.
-    @Test("Inventory alone still gets a tab bar, for its search sibling")
-    func inventoryAloneGetsATabBarForItsSearchSibling() throws {
+    /// POPS-4312: the app-wide search tab lives in the tab bar's search slot,
+    /// not inside a searchable pillar's own tab — so a searchable feature
+    /// being the *only* one available must not fall into the single-feature,
+    /// no-tab-bar path above: there are two things to switch between even
+    /// then. Purchases stands in for every searchable pillar here.
+    @Test("Purchases alone still gets a tab bar, for the search tab")
+    func purchasesAloneGetsATabBarForSearch() throws {
         let switcher = try #require(
-            try mountedTabBar(available: [FeatureInventory.feature]),
-            "Inventory is available alone but no tab bar was built for its search sibling"
+            try mountedTabBar(available: [FeaturePurchases.feature]),
+            "Purchases is available alone but no tab bar was built for the search tab"
         )
 
         #expect(
             switcher.tabBar.items?.count == 2,
             Comment(
-                rawValue: "expected Inventory's own tab plus its search sibling, found "
+                rawValue: "expected Purchases' own tab plus the search tab, found "
                     + "\(switcher.tabBar.items?.count ?? 0)"
+            )
+        )
+    }
+
+    /// Transactions searches nothing, so it is the negative case POPS-4312's
+    /// `hasSearch` must get right: alone, it stays on the single-feature,
+    /// no-tab-bar path, same as any other non-searchable feature.
+    @Test("Transactions alone gets no tab bar and no search tab")
+    func transactionsAloneGetsNoTabBar() throws {
+        #expect(
+            try mountedTabBar(available: [MobileFeature(rawValue: "transactions")]) == nil,
+            Comment(
+                rawValue: "a tab bar was built for Transactions alone — it searches nothing, so "
+                    + "it must not gain a search tab"
             )
         )
     }
