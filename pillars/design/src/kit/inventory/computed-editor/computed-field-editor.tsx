@@ -1,17 +1,20 @@
 import { Save, Undo2 } from 'lucide-react';
 import { useState } from 'react';
 
+import {
+  expressionStats,
+  ownerType,
+  issueBelongsTo,
+  slotTypes,
+  valueTypeLabel,
+} from '@pops/app-inventory/design';
 import { Badge, Button, cn } from '@pops/ui';
 
-import { findType } from './catalogue-lookup';
 import { McpPublishRoute, MigrationRequiredRefusal, SaveRefused } from './editor-notices';
 import { ExpressionPanel } from './expression-panel';
-import { valueTypeLabel } from './model';
 import { NodeInspector } from './node-inspector';
 import { OverridePolicyControl } from './override-policy';
 import { ResultPreview } from './result-preview';
-import { slotTypes } from './slot-types';
-import { expressionStats, issueBelongsTo } from './tree';
 
 import type { ComputedScenario, InspectorPanel } from './scenario';
 
@@ -31,7 +34,7 @@ function EditorHeader({ scenario }: { scenario: ComputedScenario }) {
     <div className="flex flex-col gap-3 border-b pb-4 sm:flex-row sm:items-start sm:justify-between">
       <div className="min-w-0">
         <p className="text-xs text-muted-foreground">
-          Item types › {findType(scenario.context, scenario.context.ownerTypeId).label}
+          Item types › {ownerType(scenario.context).label}
         </p>
         <div className="mt-1 flex flex-wrap items-center gap-2">
           <h2 className="text-xl font-semibold">{scenario.field.label}</h2>

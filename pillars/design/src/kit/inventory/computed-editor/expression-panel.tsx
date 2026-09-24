@@ -1,13 +1,17 @@
 import { Braces } from 'lucide-react';
 
+import {
+  EXPRESSION_LIMITS,
+  expressionStats,
+  formula,
+  staticDependencies,
+} from '@pops/app-inventory/design';
 import { cn } from '@pops/ui';
 
 import { ExpressionOutline } from './expression-outline';
-import { formula, staticDependencies } from './formula';
-import { EXPRESSION_LIMITS } from './model';
-import { expressionStats } from './tree';
 
-import type { ExpressionContext, ExpressionNode } from './model';
+import type { ExpressionContext, ExpressionNode } from '@pops/app-inventory/design';
+
 import type { ExpressionIssue } from './scenario';
 
 function Limits({

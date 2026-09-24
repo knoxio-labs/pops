@@ -13,6 +13,7 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
+import { cataloguePreviewComputedField } from './inventory-catalogue-computed-preview.js';
 import {
   catalogueOperationSchema,
   EXPRESSION_BINARY_OPS,
@@ -201,5 +202,27 @@ describe('inventory MCP schema fidelity', () => {
     );
     const mcpValues = property(property(findByOp(mcpVariants, 'coalesce'), 'properties'), 'values');
     expect(mcpValues).toMatchObject({ minItems: property(producerValues, 'minItems') });
+  });
+
+  it('maps every producer computed-preview request key onto an MCP input', () => {
+    const schema = requestSchema(
+      spec,
+      '/type-catalogue/drafts/{revision}/computed-preview',
+      'post'
+    );
+    const producerKeys = Object.keys(object(property(schema, 'properties'), 'preview properties'));
+    const producerFieldKeys = array(
+      property(property(property(schema, 'properties'), 'field'), 'anyOf'),
+      'field anyOf'
+    ).flatMap((variant) => Object.keys(object(property(variant, 'properties'), 'field variant')));
+    const mcpKeys = Object.keys(
+      object(property(cataloguePreviewComputedField.inputSchema, 'properties'), 'MCP properties')
+    );
+    const mcpFieldKeys = { id: 'fieldId', key: 'fieldKey' } as const;
+
+    for (const key of producerKeys.filter((candidate) => candidate !== 'field'))
+      expect(mcpKeys, `MCP input lacks ${key}`).toContain(key);
+    expect(producerFieldKeys.toSorted()).toEqual(Object.keys(mcpFieldKeys).toSorted());
+    for (const key of Object.values(mcpFieldKeys)) expect(mcpKeys).toContain(key);
   });
 });

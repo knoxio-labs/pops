@@ -1,6 +1,6 @@
 import { isNumericKind, isTextKind, valueTypeLabel } from './model';
 
-import type { NodeOp, ValueType } from './model';
+import type { NodeOp, SlotType } from './model';
 
 /** Palette groups, in the order the builder lists them. */
 export type OperationGroup = 'values' | 'numbers' | 'text' | 'compare' | 'logic' | 'choose';
@@ -161,10 +161,10 @@ export function operationInfo(op: Exclude<NodeOp, 'empty'>): OperationInfo {
 
 /**
  * Why an operation cannot fill a slot expecting `expected`, or null when it
- * can. Mirrors the server's type rules so the palette never offers a node the
- * draft would refuse.
+ * can. This is the palette's filter only, by what each operation returns;
+ * whether the finished tree types is the server's answer, placed on the node.
  */
-export function operationBlockedReason(info: OperationInfo, expected: ValueType): string | null {
+export function operationBlockedReason(info: OperationInfo, expected: SlotType): string | null {
   const needs = valueTypeLabel(expected);
   if (info.returns === 'same') return null;
   if (info.returns === 'number')

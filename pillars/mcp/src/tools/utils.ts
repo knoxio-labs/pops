@@ -14,10 +14,25 @@ export function toolError(message: string): CallToolResult {
  * Translate a `CallResult` from the pillar SDK into an MCP `CallToolResult`.
  * `ok` rounds-trips the value JSON. Every failure shape surfaces as MCP
  * `toolError` so the LLM can read the reason and self-correct or retry.
+ *
+ * @param scope The scope this tool declares (`ToolDef.scope`), when it has
+ *   one. A producer's `unauthorized` refusal already names the missing scope
+ *   in its message (see `requireAuthor` in inventory's
+ *   `type-catalogue-handlers.ts`), but MCP does not itself hold the caller's
+ *   grant to pre-empt the call — see `ToolDef.scope`'s docstring — so this
+ *   appends the recovery step an agent (or its operator) cannot infer from
+ *   the bare refusal: which credential to widen, and that MCP itself never
+ *   grants it.
  */
-export function mapCallResult<T>(result: CallResult<T>): CallToolResult {
+export function mapCallResult<T>(result: CallResult<T>, scope?: string): CallToolResult {
   if (result.kind === 'ok') return ok(result.value);
-  return toolError(formatFailureReason(result));
+  const mapped = toolError(formatFailureReason(result));
+  if (scope === undefined || result.kind !== 'unauthorized') return mapped;
+  return toolError(
+    `${formatFailureReason(result)}\nThis tool requires service-account scope '${scope}'. ` +
+      'Ask an operator to grant it to the credential this MCP server presents to inventory ' +
+      '(MCP does not mint or widen scopes itself).'
+  );
 }
 
 const MESSAGE_FALLBACK: Record<

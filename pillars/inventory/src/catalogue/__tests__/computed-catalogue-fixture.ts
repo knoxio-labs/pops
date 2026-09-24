@@ -1,4 +1,5 @@
 import { createCatalogueDraft, patchCatalogueDraft, publishCatalogueDraft } from '../authoring.js';
+import { activatePersistedCatalogueProtocol } from './protocol-rollout-fixture.js';
 
 import type { CommandDb } from '../../domain/commands/entities.js';
 import type { CatalogueDescriptor, DraftOperation } from '../authoring-types.js';
@@ -62,9 +63,11 @@ function fieldId(
 
 /**
  * Publishes a type with a required integer `input`, an overridable
- * `computed = input * 2` and a non-overridable `locked = input * 2`.
+ * `computed = input * 2` and a non-overridable `locked = input * 2`, after
+ * activating the protocol its integer fields need.
  */
 export function publishComputedType(db: CommandDb): ComputedCatalogue {
+  activatePersistedCatalogueProtocol(db);
   const created = createCatalogueDraft(db, 1, AUTHOR);
   const revision = created.revision.revision;
   const withType = patchCatalogueDraft(db, draftTarget(created), [

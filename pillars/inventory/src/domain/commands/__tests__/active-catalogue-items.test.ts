@@ -2,13 +2,13 @@ import { randomUUID } from 'node:crypto';
 
 import { describe, expect, it } from 'vitest';
 
+import { activatePersistedCatalogueProtocol } from '../../../catalogue/__tests__/protocol-rollout-fixture.js';
 import {
   createCatalogueDraft,
   patchCatalogueDraft,
   publishCatalogueDraft,
 } from '../../../catalogue/authoring.js';
 import { readItemFieldValues } from '../../../catalogue/index.js';
-import { activateMinimumProtocol } from '../../../protocol/rollout.js';
 import { mutation, openHarness, seedItem } from './test-utils.js';
 
 import type { Harness } from './test-utils.js';
@@ -26,6 +26,7 @@ function publishCustomType(harness: Harness): {
   readonly retiredOptionId: string;
   readonly cableTypeId: string;
 } {
+  activatePersistedCatalogueProtocol(harness.db);
   const created = createCatalogueDraft(harness.db, 1, AUTHOR);
   const revision = created.revision.revision;
   const withType = patchCatalogueDraft(
@@ -278,19 +279,29 @@ function archiveField(harness: Harness, fieldId: string, baseRevision: number): 
   return revision;
 }
 
-function increaseMinimumProtocol(harness: Harness, baseRevision: number): number {
-  activateMinimumProtocol(harness.db, 1, 2);
+function addNewPrimitiveKind(harness: Harness, typeId: string, baseRevision: number): number {
   const created = createCatalogueDraft(harness.db, baseRevision, AUTHOR);
   const revision = created.revision.revision;
+  const patched = patchCatalogueDraft(
+    harness.db,
+    { revision, baseRevision, expectedDraftVersion: created.revision.draftVersion },
+    [
+      {
+        kind: 'put_field',
+        typeId,
+        key: 'calibrated_at',
+        label: 'Calibrated at',
+        fieldKind: 'date_time',
+        cardinality: 'one',
+        required: false,
+        storage: 'stored',
+      },
+    ]
+  );
   publishCatalogueDraft(
     harness.db,
     revision,
-    {
-      baseRevision,
-      minimumProtocol: 2,
-      expectedDraftVersion: created.revision.draftVersion,
-      note: null,
-    },
+    { baseRevision, expectedDraftVersion: patched.draft.revision.draftVersion, note: null },
     AUTHOR
   );
   return revision;
@@ -688,7 +699,7 @@ describe('active catalogue item commands', () => {
       },
       { baseRevision: null, catalogueRevision: catalogue.revision }
     );
-    const activeRevision = increaseMinimumProtocol(harness, catalogue.revision);
+    const activeRevision = addNewPrimitiveKind(harness, catalogue.typeId, catalogue.revision);
 
     const outcome = harness.run(queued);
 

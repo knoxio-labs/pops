@@ -1,5 +1,6 @@
 import type {
   EvaluatedDependency,
+  ExpressionMissingInput,
   ExpressionUnavailableReason,
 } from '../../../catalogue/expression-types.js';
 import type { PrimitiveKind, PrimitiveWireValue } from '../../../catalogue/value-types.js';
@@ -36,6 +37,12 @@ export const FIELD = {
   ref: uuid(0x208),
   upstream: uuid(0x209),
   absent: uuid(0x20c),
+  width: uuid(0x20d),
+  height: uuid(0x20e),
+  depth: uuid(0x20f),
+  mass: uuid(0x210),
+  capacity: uuid(0x211),
+  speed: uuid(0x212),
 } as const;
 
 /** Enum option identities. */
@@ -58,6 +65,7 @@ export type VectorField =
       readonly traversedItemIds: readonly string[];
       readonly revision: number;
       readonly dependencies?: readonly EvaluatedDependency[];
+      readonly missingInputs?: readonly ExpressionMissingInput[];
     };
 
 /** How the snapshot answers for one item id; an unlisted id is `missing`. */

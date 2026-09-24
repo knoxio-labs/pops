@@ -28,6 +28,9 @@ extension InMemoryInventoryStore {
         /// clears itself — the same one-shot shape a real free-space check
         /// would have.
         var forcedStorageFull = false
+        /// What `setSendingStall(_:)` last set, for the Sync page's stuck
+        /// state.
+        var sendingStall: InventorySendingStall?
         /// Keys of types a catalogue change added that the type-arrived
         /// sheet has not asked about, oldest first; `settled` holds the ones
         /// it has, so a type removed and added again is not asked twice.
@@ -111,7 +114,8 @@ extension InMemoryInventoryStore {
         func inventoryCatalogue() -> InventoryCatalogue { catalogue }
 
         func inventorySyncLedger() -> InventoryReplicaSyncLedger {
-            InventoryReplicaSyncLedger(waiting: waiting, repairs: repairs, resolved: resolved)
+            InventoryReplicaSyncLedger(
+                waiting: waiting, repairs: repairs, resolved: resolved, sendingStall: sendingStall)
         }
 
         func inventoryReplicaStatus() -> InventoryReplicaStatus { replicaStatus }

@@ -67,6 +67,7 @@ internal final class LocalReducer {
     let db: Database
     let now: Double
     let catalogue: InventoryCatalogue?
+    let searchCatalogue: SearchCatalogue
     let primaryEntity: EntityRef
     private(set) var events: [LocalEvent] = []
     private(set) var touched: Set<EntityRef> = []
@@ -77,7 +78,8 @@ internal final class LocalReducer {
         self.db = db
         self.now = storedDate(now)
         primaryEntity = primary
-        catalogue = try SyncMeta.read(db).searchCatalogue(in: db)
+        searchCatalogue = try SearchCatalogue.read(in: db)
+        catalogue = searchCatalogue.types
     }
 
     /// Applies `command` to the optimistic layer inside the caller's
@@ -191,7 +193,7 @@ internal final class LocalReducer {
                 arguments: StatementArguments(try ItemRow.values(of: item.item)))
             try Protocol2FieldValueRows.replace(
                 itemId: item.id, entries: item.fieldValues, in: "item_field_value", db)
-            try ReplicaSearchIndex.index(SearchDocument(item.item), catalogue: catalogue, in: db)
+            try ReplicaSearchIndex.reindex([item.id], catalogue: searchCatalogue, in: db)
         case .location(let location):
             try db.execute(
                 sql: ReplicaApply.upsertSQL(LocationRow.columns, into: "location"),

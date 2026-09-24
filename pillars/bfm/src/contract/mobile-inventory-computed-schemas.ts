@@ -9,6 +9,16 @@ import { z } from 'zod';
 
 const AnyJson = z.unknown();
 
+/**
+ * One input an unavailable evaluation lacked: `fieldId` on `itemId`, and why.
+ * Optional on the relay so an inventory pillar that predates it still decodes.
+ */
+export const MobileInventoryComputedMissingInputSchema = z.object({
+  reason: z.string(),
+  fieldId: z.uuid(),
+  itemId: z.string(),
+});
+
 /** One item/field revision an evaluation read; a newer local revision means the value is stale. */
 export const MobileInventoryComputedDependencySchema = z.object({
   itemId: z.string(),
@@ -38,6 +48,8 @@ export const MobileInventoryComputedValueSchema = z.discriminatedUnion('state', 
     state: z.literal('unavailable'),
     reason: z.string(),
     failedFieldId: z.uuid(),
+    /** Every input without a value (a `coalesce` names each argument's); empty for `evaluation_error`. */
+    missingInputs: z.array(MobileInventoryComputedMissingInputSchema).optional(),
   }),
 ]);
 

@@ -4,20 +4,23 @@ import { requireCatalogue } from './authoring-shared.js';
 import { CatalogueApiError } from './authoring-types.js';
 import { validateCatalogue } from './authoring-validation.js';
 import { toCatalogueDescriptor } from './authoring-wire.js';
-import { countCompatibilityAffectedItems } from './compatibility-preview.js';
-import { classifyCatalogueCompatibility } from './compatibility.js';
+import {
+  assessCatalogueCompatibility,
+  countCompatibilityAffectedItems,
+} from './compatibility-preview.js';
 
 import type { CommandDb } from '../domain/commands/index.js';
 import type {
   CatalogueDescriptor,
+  CatalogueIssue,
   CataloguePreviewDiagnostics,
   DraftOperation,
 } from './authoring-types.js';
-import type { CatalogueCompatibilityResult } from './compatibility.js';
+import type { CatalogueCompatibilityAssessment } from './compatibility-preview.js';
 
 export interface DraftOperationResult {
   readonly draft: CatalogueDescriptor;
-  readonly compatibility: CatalogueCompatibilityResult & { readonly affectedItems: number };
+  readonly compatibility: CatalogueCompatibilityAssessment;
 }
 
 /** Identifies the draft an operation batch targets and the version the caller last read. */
@@ -38,11 +41,7 @@ export function applyDraftOperations(
   for (const operation of operations) applyOperation(db, revision, operation);
   const draft = requireCatalogue(db, revision, ['draft']);
   const base = requireCatalogue(db, baseRevision, ['published']);
-  const compatibility = classifyCatalogueCompatibility(base, draft);
-  const previewCompatibility = {
-    ...compatibility,
-    affectedItems: countCompatibilityAffectedItems(db, base, draft, compatibility.affectedIds),
-  };
+  const previewCompatibility = assessCatalogueCompatibility(db, base, draft);
   try {
     validateCatalogue(draft);
   } catch (error) {
@@ -70,6 +69,34 @@ class PreviewRollback extends Error {
   }
 }
 
+function rejectedOperationCompatibility(
+  db: CommandDb,
+  target: DraftTarget,
+  issues: readonly CatalogueIssue[]
+): CatalogueCompatibilityAssessment {
+  const base = requireCatalogue(db, target.baseRevision, ['published']);
+  const draft = requireCatalogue(db, target.revision, ['draft']);
+  const changes = issues.flatMap((catalogueIssue) =>
+    catalogueIssue.definitionId === null
+      ? []
+      : [
+          {
+            classification: 'forbidden' as const,
+            definitionId: catalogueIssue.definitionId,
+            code: catalogueIssue.code,
+          },
+        ]
+  );
+  const affectedIds = [...new Set(changes.map((change) => change.definitionId))];
+  return {
+    classification: 'forbidden',
+    affectedIds,
+    affectedItems: countCompatibilityAffectedItems(db, base, draft, affectedIds),
+    discardedOverrides: [],
+    changes,
+  };
+}
+
 /** Validates operations and computes compatibility while rolling back every draft write. */
 export function previewCatalogueDraft(
   db: CommandDb,
@@ -94,36 +121,12 @@ export function previewCatalogueDraft(
       error.preview === undefined &&
       error.issues.length > 0
     ) {
-      const base = requireCatalogue(db, baseRevision, ['published']);
-      const draft = requireCatalogue(db, revision, ['draft']);
-      const affectedIds = [
-        ...new Set(
-          error.issues.flatMap((catalogueIssue) =>
-            catalogueIssue.definitionId === null ? [] : [catalogueIssue.definitionId]
-          )
-        ),
-      ];
       throw new CatalogueApiError(error.status, error.code, error.message, {
         issues: error.issues,
         preview: {
           baseRevision,
           draftRevision: revision,
-          compatibility: {
-            classification: 'forbidden',
-            affectedIds,
-            affectedItems: countCompatibilityAffectedItems(db, base, draft, affectedIds),
-            changes: error.issues.flatMap((catalogueIssue) =>
-              catalogueIssue.definitionId === null
-                ? []
-                : [
-                    {
-                      classification: 'forbidden' as const,
-                      definitionId: catalogueIssue.definitionId,
-                      code: catalogueIssue.code,
-                    },
-                  ]
-            ),
-          },
+          compatibility: rejectedOperationCompatibility(db, target, error.issues),
         },
       });
     }

@@ -47,8 +47,15 @@ function validateFieldExpression(
         'computed fields must use one cardinality'
       );
     const ast = parseFieldExpression(field);
-    const context: ExpressionValidationContext = { catalogue, ownerType, dependencies: [] };
-    const resultType = inferExpressionType(ast, context, 'expression', expressionValueType(field));
+    const version = field.expressionVersion ?? 1;
+    const context: ExpressionValidationContext = {
+      catalogue,
+      ownerType,
+      dependencies: [],
+      dimensional: version >= 2,
+    };
+    const resultType = expressionValueType(field);
+    inferExpressionType(ast, context, 'expression', resultType);
     const dependencies = uniqueExpressionDependencies(context.dependencies);
     if (dependencies.length > MAX_EXPRESSION_DEPENDENCIES)
       expressionFail(
@@ -56,7 +63,13 @@ function validateFieldExpression(
         'expression_dependencies_exceeded',
         'may declare at most 32 dependencies'
       );
-    return { ast, dependencies, field: { typeId: ownerType.id, fieldId: field.id }, resultType };
+    return {
+      ast,
+      version,
+      dependencies,
+      field: { typeId: ownerType.id, fieldId: field.id },
+      resultType,
+    };
   } catch (error) {
     if (!(error instanceof ExpressionValidationError) || error.definitionId !== null) throw error;
     const prefix = `${error.path}: `;

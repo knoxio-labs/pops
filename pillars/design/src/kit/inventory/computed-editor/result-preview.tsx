@@ -1,5 +1,6 @@
 import { CircleSlash, FlaskConical, RefreshCw, TriangleAlert } from 'lucide-react';
 
+import { evaluationErrorSentence, unavailableSentence } from '@pops/app-inventory/design';
 import {
   Alert,
   AlertDescription,
@@ -13,7 +14,6 @@ import {
   Skeleton,
 } from '@pops/ui';
 
-import { evaluationErrorSentence, unavailableSentence } from './preview-copy';
 import { PreviewDetails, TraversedItems } from './preview-details';
 
 import type { PreviewItem, PreviewState } from './scenario';

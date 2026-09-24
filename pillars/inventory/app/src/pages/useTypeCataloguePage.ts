@@ -50,6 +50,7 @@ export function useTypeCataloguePage() {
     editorEpoch: model.editorEpoch,
     error: model.error,
     isPending: model.isPending,
+    issues: model.issues,
     loading: model.isLoading,
     openAudit: () => setAuditOpen(true),
     published: model.published,

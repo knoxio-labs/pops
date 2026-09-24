@@ -181,13 +181,22 @@ internal struct CatalogueRebaseTests {
         #expect(verdict == .incompatible(reason: "field \(Self.colour) is now required"))
     }
 
-    @Test("a command that names no catalogue record moves unchanged")
+    @Test("a command that names no catalogue record moves unchanged, still with no revision")
     func protocol1CommandMoves() throws {
         let quantity = InventoryCommand.setItemQuantity(id: Self.lampId, quantity: 3)
 
         let verdict = try Self.verdict(quantity, next: Self.baseFields)
 
-        #expect(verdict == .rebased(.command(quantity), revision: 2))
+        #expect(verdict == .rebased(.command(quantity), revision: nil))
+    }
+
+    @Test("a split, judged against the active catalogue, moves onto the newer revision")
+    func splitMovesOntoActiveRevision() throws {
+        let split = InventoryCommand.splitItem(id: Self.lampId, newItemId: "lamp-2", quantity: 1)
+
+        let verdict = try Self.verdict(split, next: Self.baseFields)
+
+        #expect(verdict == .rebased(.command(split), revision: 2))
     }
 }
 

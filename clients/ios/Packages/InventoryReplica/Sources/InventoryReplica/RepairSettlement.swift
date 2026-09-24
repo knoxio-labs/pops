@@ -197,7 +197,8 @@ internal enum RepairSettlement {
         // improve here, and reading one just to discard it invites the protocol-1-only bug this
         // call site once had (POPS-4433).
         try db.inSavepoint {
-            try MutationLogReplay.resetView(entry.entity, catalogue: nil, in: db)
+            try MutationLogReplay.resetView(
+                entry.entity, catalogue: SearchCatalogue(types: nil), in: db)
             do {
                 let application = try LocalReducer.apply(
                     entry.command, primary: entry.entity,

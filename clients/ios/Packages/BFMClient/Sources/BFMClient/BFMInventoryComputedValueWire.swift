@@ -11,7 +11,7 @@ import OpenAPIRuntime
 internal struct WireComputedValue: Decodable {
     private enum CodingKeys: String, CodingKey {
         case fieldId, catalogueRevision, state, values, override, reason, failedFieldId
-        case dependencies, traversedItemIds
+        case dependencies, traversedItemIds, missingInputs
     }
 
     private struct OverrideProvenance: Decodable {
@@ -29,6 +29,7 @@ internal struct WireComputedValue: Decodable {
     private let evaluation: Evaluation
     private let dependencies: [InventoryValueDependency]
     private let traversedItemIds: [String]
+    private let missingInputs: [InventoryExpressionMissingInput]
 
     internal init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -36,6 +37,9 @@ internal struct WireComputedValue: Decodable {
         catalogueRevision = try container.decode(Int.self, forKey: .catalogueRevision)
         dependencies = try container.decode([InventoryValueDependency].self, forKey: .dependencies)
         traversedItemIds = try container.decode([String].self, forKey: .traversedItemIds)
+        missingInputs =
+            try container.decodeIfPresent(
+                [InventoryExpressionMissingInput].self, forKey: .missingInputs) ?? []
         switch try container.decode(String.self, forKey: .state) {
         case "ok":
             evaluation = .ok(try Self.only(container))
@@ -82,6 +86,6 @@ internal struct WireComputedValue: Decodable {
         return InventoryComputedValue(
             fieldId: fieldId, catalogueRevision: catalogueRevision, evaluation: domainEvaluation,
             dependencies: dependencies, traversedItemIds: traversedItemIds,
-            evaluatedItemRevision: evaluatedItemRevision)
+            evaluatedItemRevision: evaluatedItemRevision, missingInputs: missingInputs)
     }
 }

@@ -85,7 +85,7 @@ internal enum ReplicaApply {
             InventoryTypeArrival.addedTypeKeys(from: try meta.storedCatalogue(), to: catalogue))
         meta.catalogue = try StoredJSON.encode(StoredCatalogue(catalogue))
         try meta.write(db)
-        try ReplicaSearchIndex.reindexAll(catalogue: catalogue, in: db)
+        try ReplicaSearchIndex.reindexAll(catalogue: SearchCatalogue.read(in: db), in: db)
     }
 
     /// Stores the page's rows in the base layer by revision, and names every

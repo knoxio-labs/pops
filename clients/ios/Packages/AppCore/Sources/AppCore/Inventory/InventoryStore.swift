@@ -39,15 +39,35 @@ public struct InventoryReplicaSyncLedger: Hashable, Sendable {
     public let waiting: [InventoryQueuedMutation]
     public let repairs: [InventoryRepair]
     public let resolved: [InventoryResolvedEntry]
+    /// Set while sending is stuck on something no network retry fixes; nil
+    /// otherwise, including while the phone is merely offline.
+    public let sendingStall: InventorySendingStall?
 
     public init(
         waiting: [InventoryQueuedMutation] = [],
         repairs: [InventoryRepair] = [],
-        resolved: [InventoryResolvedEntry] = []
+        resolved: [InventoryResolvedEntry] = [],
+        sendingStall: InventorySendingStall? = nil
     ) {
         self.waiting = waiting
         self.repairs = repairs
         self.resolved = resolved
+        self.sendingStall = sendingStall
+    }
+}
+
+/// Sending this phone's changes stopped on a failure that is not the
+/// network's, the server's refusal of the session, or a build too old: a
+/// change in the log that cannot be read back, say, or a write the phone's
+/// storage refused. The drain keeps retrying on its backoff, but until one
+/// pass gets through, what is waiting is not moving, and the Sync page says
+/// so instead of looking idle.
+public struct InventorySendingStall: Hashable, Sendable {
+    /// When the first pass that stopped this way ended.
+    public let since: Date
+
+    public init(since: Date) {
+        self.since = since
     }
 }
 
