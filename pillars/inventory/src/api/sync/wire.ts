@@ -38,7 +38,7 @@ export type SyncItem = z.infer<typeof SyncItemSchema>;
 /** A location on the wire. */
 export type SyncLocation = z.infer<typeof SyncLocationSchema>;
 type SyncPhoto = z.infer<typeof SyncPhotoSchema>;
-type SyncItemFieldValue = z.infer<typeof SyncItemFieldValueSchema>;
+export type SyncItemFieldValue = z.infer<typeof SyncItemFieldValueSchema>;
 
 const fieldsBlobSchema = z.record(z.string(), jsonValueSchema);
 

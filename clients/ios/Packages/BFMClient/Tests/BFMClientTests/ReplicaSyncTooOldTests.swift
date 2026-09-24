@@ -8,7 +8,8 @@ import Testing
 /// A server that moved past this build (POPS-4404): a page, or the pinned
 /// catalogue it names, that this build cannot read is refused before
 /// anything is applied, and the replica shows blocked as too old rather than
-/// offline.
+/// offline. The unknown kind and the protocol above this build's are the
+/// value vectors' own negative cases (POPS-4403).
 @Suite("Replica sync through the BFM transport: too old", .timeLimit(.minutes(1)))
 internal struct ReplicaSyncTooOldTests {
     @Test(
@@ -24,7 +25,8 @@ internal struct ReplicaSyncTooOldTests {
                     items: [Protocol2Wire.lamp(revision: 2, seq: 11, catalogueRevision: 3)],
                     catalogueRevision: 3, nextSince: 12)))
         let future = Protocol2Wire.field(
-            id: Protocol2Wire.brightness, key: "glow", label: "Glow", kind: "holographic")
+            id: Protocol2Wire.brightness, key: "glow", label: "Glow",
+            kind: try ValueVectorFile.load().unknownKind())
         await harness.server.set(
             "catalogue:3",
             .ok(
@@ -50,7 +52,9 @@ internal struct ReplicaSyncTooOldTests {
             .ok(
                 Protocol2Wire.changes(
                     items: [Protocol2Wire.lamp(revision: 2, seq: 11, catalogueRevision: 3)],
-                    catalogueRevision: 3, minimumProtocol: 3, nextSince: 12)))
+                    catalogueRevision: 3,
+                    minimumProtocol: try ValueVectorFile.load().aboveSupportedProtocol(),
+                    nextSince: 12)))
         await harness.server.set("catalogue:3", .ok(Protocol2Wire.catalogue(revision: 3)))
 
         await harness.store.refresh()
@@ -72,7 +76,11 @@ internal struct ReplicaSyncTooOldTests {
                     items: [Protocol2Wire.lamp(revision: 2, seq: 11, catalogueRevision: 3)],
                     catalogueRevision: 3, nextSince: 12)))
         await harness.server.set(
-            "catalogue:3", .ok(Protocol2Wire.catalogue(revision: 3, minimumProtocol: 3)))
+            "catalogue:3",
+            .ok(
+                Protocol2Wire.catalogue(
+                    revision: 3,
+                    minimumProtocol: try ValueVectorFile.load().aboveSupportedProtocol())))
 
         await harness.store.refresh()
 

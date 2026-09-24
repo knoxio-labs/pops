@@ -55,6 +55,8 @@ export interface InventoryFakeOptions {
   itemEventsResult?: Readonly<Record<string, CallResult<unknown>>>;
   /** What `types.catalogue` answers. */
   catalogueResult?: CallResult<unknown>;
+  /** What `types.read.catalogue` answers for each requested revision. */
+  catalogueRevisionResult?: (revision: number) => CallResult<unknown>;
   /** What `sync.mutations` answers. Defaults to one `applied` outcome per mutation sent. */
   mutationsResult?: (input: unknown) => CallResult<unknown>;
   /** What `codes.suggest` answers. */
@@ -140,6 +142,17 @@ export function createInventoryFake(options: InventoryFakeOptions = {}): Invento
     );
   };
 
+  const catalogueRevision = (rawInput: unknown): Promise<CallResult<unknown>> => {
+    const revision = readRevision(rawInput);
+    return Promise.resolve(
+      options.catalogueRevisionResult?.(revision) ?? {
+        kind: 'not-found',
+        pillar: 'inventory',
+        message: `Catalogue revision ${String(revision)} was not found`,
+      }
+    );
+  };
+
   const mutations = (rawInput: unknown): Promise<CallResult<unknown>> => {
     mutationsCalls.push(readMutationsCall(rawInput));
     return Promise.resolve((options.mutationsResult ?? defaultMutationsResult)(rawInput));
@@ -161,7 +174,7 @@ export function createInventoryFake(options: InventoryFakeOptions = {}): Invento
           itemEvents: makeItemEventsProcedure(options, itemEventsCalls),
           mutations,
         },
-        types: { catalogue },
+        types: { catalogue, read: { catalogue: catalogueRevision } },
         codes: { suggest },
       }),
     snapshotCalls,
@@ -173,6 +186,13 @@ export function createInventoryFake(options: InventoryFakeOptions = {}): Invento
       return catalogueCalls;
     },
   };
+}
+
+function readRevision(input: unknown): number {
+  if (input === null || typeof input !== 'object' || !('query' in input)) return Number.NaN;
+  const { query } = input;
+  if (query === null || typeof query !== 'object' || !('revision' in query)) return Number.NaN;
+  return typeof query.revision === 'number' ? query.revision : Number.NaN;
 }
 
 function readSyncCall(input: unknown): InventorySyncCall {

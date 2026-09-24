@@ -38,7 +38,8 @@
     "generate:openapi": "tsx scripts/generate-openapi.ts",
     "generate:api-types": "tsx scripts/generate-api-types.ts",
     "generate:command-vectors": "tsx scripts/generate-command-vectors.ts",
-    "generate:expression-vectors": "tsx scripts/generate-expression-vectors.ts"
+    "generate:expression-vectors": "tsx scripts/generate-expression-vectors.ts",
+    "generate:value-vectors": "tsx scripts/generate-value-vectors.ts"
   },
   "dependencies": {
     "@pops/pillar-express": "workspace:*",

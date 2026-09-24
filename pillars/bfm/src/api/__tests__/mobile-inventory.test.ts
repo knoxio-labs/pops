@@ -13,60 +13,17 @@
  */
 import { afterEach, describe, expect, it } from 'vitest';
 
-import {
-  DEFAULT_DEVICE_CAPABILITIES,
-  serialiseDeviceCapabilities,
-} from '../../contract/capabilities.js';
 import { MobileInventoryItemSchema } from '../../contract/mobile-inventory-schemas.js';
-import { deviceRow } from '../../db/__tests__/helpers.js';
-import { devices } from '../../db/index.js';
-import { mintAccessToken } from '../auth/access-token.js';
-import { createMobileInventoryClient } from '../inventory/client.js';
-import { createPillarGateway } from '../pillars/gateway.js';
-import { createTestApp, type TestApp } from './harness.js';
 import { createInventoryFake } from './inventory-fake.js';
 import { createInventoryMediaFake } from './inventory-media-fake.js';
+import { closeOpenedApps, get, openWith } from './mobile-inventory-app.js';
 import { requestOn } from './test-http.js';
 
 import type { Express } from 'express';
 
-import type { MobileCapability } from '../../contract/capabilities.js';
-import type { MobileInventoryMediaClient } from '../inventory/media-client.js';
 import type { PillarHandleFactory } from '../pillars/gateway.js';
 
-const apps: TestApp[] = [];
-
-afterEach(() => {
-  while (apps.length > 0) apps.pop()?.cleanup();
-});
-
-function openWith(
-  factory: PillarHandleFactory,
-  capabilities: readonly MobileCapability[] = DEFAULT_DEVICE_CAPABILITIES,
-  inventoryMedia?: MobileInventoryMediaClient
-): { app: Express; token: string } {
-  const created = createTestApp({
-    inventory: createMobileInventoryClient(createPillarGateway(factory)),
-    inventoryMedia,
-  });
-  apps.push(created);
-
-  const row = deviceRow({
-    capabilityMode: 'explicit',
-    capabilities: serialiseDeviceCapabilities(capabilities),
-  });
-  created.db.insert(devices).values(row).run();
-  const { token } = mintAccessToken(row.id, created.accessTokenSigningKey);
-
-  return { app: created.app, token };
-}
-
-function get(app: Express, token: string | null, path: string) {
-  return requestOn(app, (r) => {
-    const request = r.get(path);
-    return token === null ? request : request.set('Authorization', `Bearer ${token}`);
-  });
-}
+afterEach(closeOpenedApps);
 
 function post(app: Express, token: string | null, path: string, body: object) {
   return requestOn(app, (r) => {

@@ -683,7 +683,7 @@ pillars/bfm/
 ├── scripts/generate-openapi.ts  ts-rest contract → openapi/bfm.openapi.json
 ├── scripts/generate-refresh-message-fixture.ts  the signed-message vector — see below
 ├── openapi/bfm.openapi.json
-├── contracts/                    two vectors shared with clients/ios — see below
+├── contracts/                    vectors shared with clients/ios and inventory — see below
 ├── migrations/                   committed SQL journal, applied by openBfmDb
 ├── app/                         @pops/app-bfm — the shell's Devices surface
 └── src/
@@ -732,7 +732,7 @@ Every boot-time choice therefore lives in `boot-env.ts`, which is unit-tested;
 `server.ts` is excluded from coverage on exactly that basis. Adding logic back
 to it invalidates the exclusion.
 
-### `contracts/` — two vectors this pillar shares with the phone, pointing opposite ways
+### `contracts/` — vectors this pillar shares with the phone and inventory
 
 Both files pin something the iOS app and this pillar must agree on byte for
 byte, both exist twice, and both are guarded against drift. What differs is who
@@ -742,6 +742,7 @@ authors them, because that follows who can say what the right answer is.
 | -------------------------- | ----------------------------------------------- | ----------------------------------------------------------------------- | --------- |
 | `device-signature-v1.json` | the ECDSA P-256 encodings the phone signs under | `clients/ios/Contracts/` — only CryptoKit can make a real signature     | vendored  |
 | `refresh-message-v1.json`  | the exact bytes a refresh is signed over        | here — the format is this pillar's, and this pillar rejects a wrong one | canonical |
+| `value-vectors-v1.json`    | every protocol-2 value, relayed unchanged       | `pillars/inventory/contracts/` — its command engine writes the values   | vendored  |
 
 The vendoring in each direction is the shape ADR-033 established for a contract
 crossing a unit boundary, applied because ADR-043 forbids a unit depending on a
@@ -751,8 +752,10 @@ client. Nothing in this pillar reads a path under `clients/`, and nothing in
 Each pair must stay byte-identical, and its guard fails the build if it does not
 — in either direction, and whether the difference is a value or only whitespace.
 `scripts/ci/check-device-signature-fixture.mjs` owns the first,
-`scripts/ci/check-refresh-message-fixture.mjs` the second, and both share the
-copy-set machinery in `scripts/ci/fixture-copies.mjs`.
+`scripts/ci/check-refresh-message-fixture.mjs` the second,
+`scripts/ci/check-value-vectors-fixture.mjs` the third (`mise run
+fixture:value-vectors` regenerates it), and all share the copy-set machinery
+in `scripts/ci/fixture-copies.mjs`.
 
 Re-vendor or regenerate from the repo root, never from inside either unit —
 that is where the copy step lives, because neither unit may reach into the

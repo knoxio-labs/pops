@@ -2,164 +2,112 @@ import AppCore
 import Foundation
 import Testing
 
-/// One protocol-2 primitive kind as the server writes it
-/// (`pillars/inventory/src/catalogue/value-dispatch.ts`): the wire JSON of a
-/// single value and of a two-value collection, and the typed values each
-/// must read back as.
+/// One protocol-2 primitive kind as the inventory pillar wrote it: the wire
+/// JSON of its first single value and first collection in
+/// `Contracts/value-vectors-v1.json`, on a synthetic Bulb catalogue with a
+/// stored and a computed field of that kind.
 internal struct Protocol2KindCase: Sendable, CustomTestStringConvertible {
-    internal let kind: String
+    internal let kind: InventoryPrimitiveKind
     internal let index: Int
     internal let one: String
-    internal let many: [String]
-    internal let expectedOne: InventoryPrimitiveValue
-    internal let expectedMany: [InventoryPrimitiveValue]
+    /// `nil` where the catalogue forbids a collection (`boolean`).
+    internal let many: [String]?
     internal var fixedUnit: String?
     internal var referenceKinds: [String] = []
     internal var enumOptionIds: [String] = []
 
-    internal var testDescription: String { kind }
+    internal var testDescription: String { kind.rawValue }
 
     internal var storedOneId: String { Protocol2KindWire.fieldId(1, index) }
     internal var storedManyId: String { Protocol2KindWire.fieldId(2, index) }
     internal var computedId: String { Protocol2KindWire.fieldId(3, index) }
 
+    /// `one` read as the kind, by the same oracle the value-vector suite uses.
+    internal func expectedOne() throws -> InventoryPrimitiveValue {
+        try ValueVectorExpectations.primitive(
+            JSONSerialization.jsonObject(with: Data(one.utf8), options: [.fragmentsAllowed]),
+            kind: kind)
+    }
+
     /// Option ids are unique across a revision, so only the first field
     /// declares them; the replica never checks a value's option membership.
     internal func catalogueFields() -> [String] {
-        [
+        var fields = [
             field(
-                id: storedOneId, key: "\(kind)_one", cardinality: "one", storage: "stored",
-                options: enumOptionIds),
-            field(id: storedManyId, key: "\(kind)_many", cardinality: "many", storage: "stored"),
-            field(id: computedId, key: "\(kind)_computed", cardinality: "one", storage: "computed"),
+                id: storedOneId, key: "\(kind.rawValue)_one", cardinality: "one",
+                storage: "stored", options: enumOptionIds)
         ]
+        if many != nil {
+            fields.append(
+                field(
+                    id: storedManyId, key: "\(kind.rawValue)_many", cardinality: "many",
+                    storage: "stored"))
+        }
+        fields.append(
+            field(
+                id: computedId, key: "\(kind.rawValue)_computed", cardinality: "one",
+                storage: "computed"))
+        return fields
     }
 
     private func field(
         id: String, key: String, cardinality: String, storage: String, options: [String] = []
     ) -> String {
         Protocol2Wire.field(
-            id: id, key: key, label: key, kind: kind, storage: storage, sortOrder: index,
+            id: id, key: key, label: key, kind: kind.rawValue, storage: storage, sortOrder: index,
             cardinality: cardinality, fixedUnit: fixedUnit, referenceKinds: referenceKinds,
             enumOptionIds: options)
     }
 }
 
-/// Every protocol-2 primitive kind on one item of the Bulb type, stored
-/// (one and many) and computed.
+/// Every protocol-2 primitive kind on one item of the Bulb type, stored and
+/// computed, with the pillar's own wire values.
 internal enum Protocol2KindWire {
-    internal static let optionA = "a1b2c3d4-0000-4000-8000-00000000000a"
-    internal static let optionB = "a1b2c3d4-0000-4000-8000-00000000000b"
+    private typealias File = ValueVectorFile
 
     internal static func fieldId(_ group: Int, _ index: Int) -> String {
         String(format: "f0000000-0000-4000-8000-%06d%06d", group, index)
     }
 
     internal static func cases() throws -> [Protocol2KindCase] {
-        try scalarCases() + textualCases() + structuredCases()
+        let file = try File.load()
+        return try InventoryPrimitiveKind.allCases.enumerated().map { index, kind in
+            try kindCase(kind, index: index, vectors: file.vectors)
+        }
     }
 
-    private static func decimal(_ text: String) throws -> InventoryPrimitiveValue {
-        .decimal(try InventoryDecimal(text))
+    private static func firstValues(
+        _ vectors: [[String: Any]], kind: InventoryPrimitiveKind, cardinality: String
+    ) throws -> [Any]? {
+        let vector = vectors.first {
+            $0["kind"] as? String == kind.rawValue && $0["cardinality"] as? String == cardinality
+                && $0["fieldValue"] is [String: Any]
+        }
+        guard let vector else { return nil }
+        return try File.require(
+            (vector["fieldValue"] as? [String: Any])?["values"] as? [Any], "values")
     }
 
-    private static func scalarCases() throws -> [Protocol2KindCase] {
-        [
-            Protocol2KindCase(
-                kind: "short_text", index: 0, one: #""Brass""#, many: [#""a""#, #""b""#],
-                expectedOne: .string("Brass"), expectedMany: [.string("a"), .string("b")]),
-            Protocol2KindCase(
-                kind: "long_text", index: 1, one: #""Line one\nline two""#,
-                many: [#""first""#, #""second""#],
-                expectedOne: .string("Line one\nline two"),
-                expectedMany: [.string("first"), .string("second")]),
-            Protocol2KindCase(
-                kind: "integer", index: 2, one: "42", many: ["1", "-3"],
-                expectedOne: .integer(try InventoryInteger(42)),
-                expectedMany: [
-                    .integer(try InventoryInteger(1)), .integer(try InventoryInteger(-3)),
-                ]),
-            Protocol2KindCase(
-                kind: "decimal", index: 3, one: #""12.30""#, many: [#""1.50""#, #""0.000000001""#],
-                expectedOne: try Self.decimal("12.30"),
-                expectedMany: [try Self.decimal("1.50"), try Self.decimal("0.000000001")]),
-            Protocol2KindCase(
-                kind: "boolean", index: 4, one: "true", many: ["true", "false"],
-                expectedOne: .boolean(true), expectedMany: [.boolean(true), .boolean(false)]),
-        ]
-    }
-
-    private static func textualCases() throws -> [Protocol2KindCase] {
-        [
-            Protocol2KindCase(
-                kind: "date", index: 7, one: #""2024-02-29""#,
-                many: [#""2026-01-01""#, #""2026-12-31""#],
-                expectedOne: .date(try InventoryCanonicalDate("2024-02-29")),
-                expectedMany: [
-                    .date(try InventoryCanonicalDate("2026-01-01")),
-                    .date(try InventoryCanonicalDate("2026-12-31")),
-                ]),
-            Protocol2KindCase(
-                kind: "date_time", index: 8, one: #""2026-09-24T10:11:12.345Z""#,
-                many: [#""2026-01-01T00:00:00.000Z""#, #""2026-12-31T23:59:59.999Z""#],
-                expectedOne: .dateTime(try InventoryCanonicalDateTime("2026-09-24T10:11:12.345Z")),
-                expectedMany: [
-                    .dateTime(try InventoryCanonicalDateTime("2026-01-01T00:00:00.000Z")),
-                    .dateTime(try InventoryCanonicalDateTime("2026-12-31T23:59:59.999Z")),
-                ]),
-            Protocol2KindCase(
-                kind: "url", index: 9, one: #""https://example.com/manual.pdf""#,
-                many: [#""https://example.com/""#, #""https://example.org/a?b=c""#],
-                expectedOne: .url(try InventoryCanonicalURL("https://example.com/manual.pdf")),
-                expectedMany: [
-                    .url(try InventoryCanonicalURL("https://example.com/")),
-                    .url(try InventoryCanonicalURL("https://example.org/a?b=c")),
-                ]),
-        ]
-    }
-
-    private static func structuredCases() throws -> [Protocol2KindCase] {
-        let lamp = Protocol2Wire.lampId
-        let reference = #"{"targetKind":"item","targetId":"\#(lamp)"}"#
-        let resolved = InventoryPrimitiveValue.reference(
-            .init(targetKind: .item, targetId: lamp, targetState: .resolved))
-        return [
-            Protocol2KindCase(
-                kind: "enum", index: 5, one: #"{"optionId":"\#(optionA)"}"#,
-                many: [#"{"optionId":"\#(optionA)"}"#, #"{"optionId":"\#(optionB)"}"#],
-                expectedOne: .enumeration(optionId: optionA),
-                expectedMany: [.enumeration(optionId: optionA), .enumeration(optionId: optionB)],
-                enumOptionIds: [optionA, optionB]),
-            Protocol2KindCase(
-                kind: "measurement", index: 6, one: #"{"amount":"2.50","unit":"kg"}"#,
-                many: [#"{"amount":"1","unit":"kg"}"#, #"{"amount":"0.5","unit":"kg"}"#],
-                expectedOne: .measurement(amount: try InventoryDecimal("2.50"), unit: "kg"),
-                expectedMany: [
-                    .measurement(amount: try InventoryDecimal("1"), unit: "kg"),
-                    .measurement(amount: try InventoryDecimal("0.5"), unit: "kg"),
-                ], fixedUnit: "kg"),
-            Protocol2KindCase(
-                kind: "reference", index: 10, one: reference, many: [reference, reference],
-                expectedOne: resolved, expectedMany: [resolved, resolved],
-                referenceKinds: ["item"]),
-        ]
-    }
-
-    /// A computed value read back as it was delivered: the replica does not
-    /// resolve a reference inside a server evaluation.
-    internal static func expectedComputed(_ kindCase: Protocol2KindCase) -> InventoryPrimitiveValue
-    {
-        guard case .reference(let value) = kindCase.expectedOne else { return kindCase.expectedOne }
-        return .reference(.init(targetKind: value.targetKind, targetId: value.targetId))
+    private static func kindCase(
+        _ kind: InventoryPrimitiveKind, index: Int, vectors: [[String: Any]]
+    ) throws -> Protocol2KindCase {
+        let one = try File.require(
+            try firstValues(vectors, kind: kind, cardinality: "one")?.first,
+            "a single \(kind.rawValue) value")
+        let many = try firstValues(vectors, kind: kind, cardinality: "many")
+        let every = [one] + (many ?? [])
+        let objects = every.compactMap { $0 as? [String: Any] }
+        return Protocol2KindCase(
+            kind: kind, index: index, one: try File.json(one),
+            many: try many.map { try $0.map(File.json) },
+            fixedUnit: kind == .measurement ? objects.first?["unit"] as? String : nil,
+            referenceKinds: kind == .reference ? ["item", "location"] : [],
+            enumOptionIds: kind == .enumeration
+                ? Array(Set(objects.compactMap { $0["optionId"] as? String })).sorted() : [])
     }
 
     internal static func catalogue(_ cases: [Protocol2KindCase], revision: Int = 2) -> String {
         Protocol2Wire.catalogue(revision: revision, fields: cases.flatMap { $0.catalogueFields() })
-    }
-
-    /// The stored entries of `cases`, one then many, as the item carries them.
-    internal static func storedEntries(_ cases: [Protocol2KindCase]) -> [(String, [String])] {
-        cases.flatMap { [($0.storedOneId, [$0.one]), ($0.storedManyId, $0.many)] }
     }
 
     internal static func item(
@@ -194,20 +142,5 @@ internal enum Protocol2KindWire {
             {"fieldId":"\(fieldId)","source":"computed","catalogueRevision":\(revision),\
             \(state),"values":[\(value)],"dependencies":[],"traversedItemIds":[]}
             """
-    }
-
-    /// `values` re-serialised with sorted keys, as ``SentMutation/args`` is.
-    internal static func editArgs(_ stored: [(String, [String])]) throws -> String {
-        let patches = try stored.map { fieldId, values in
-            let parsed = try JSONSerialization.jsonObject(
-                with: Data("[\(values.joined(separator: ","))]".utf8), options: [.fragmentsAllowed])
-            return ["fieldId": fieldId, "values": parsed]
-        }
-        let data = try JSONSerialization.data(
-            withJSONObject: ["values": patches], options: [.sortedKeys])
-        guard let args = String(bytes: data, encoding: .utf8) else {
-            throw CocoaError(.fileReadInapplicableStringEncoding)
-        }
-        return args
     }
 }
