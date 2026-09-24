@@ -512,5 +512,75 @@ describe('computed-field publication policy over REST', () => {
         .get(deletedItemId);
       expect(restored).toMatchObject({ deletedAt: null });
     });
+
+    /**
+     * POPS-4527: `findDiscardedOverrides` filters live items only
+     * (`isNull(items.deletedAt)`), so the compatibility preview's
+     * `discardedOverrides` count never includes a deleted item's override.
+     * This test proves that undercount is informational only: `restoreDeleted`
+     * independently strips a since-disallowed override (POPS-4398), keyed off
+     * the CURRENT published catalogue rather than the preview's evidence, so a
+     * deleted holder can never resurface with a forbidden override after the
+     * field is disabled and the item is restored. It is a permanent regression
+     * test, not a fix — `findDiscardedOverrides` is unchanged.
+     */
+    it('excludes a deleted holder from the preview count, but still strips its override on restore', async () => {
+      const { gadget, draft, operation, overridden } = await prepare();
+      const deletedItemId = overridden[0];
+      if (deletedItemId === undefined) throw new Error('prepare() did not seed an overridden item');
+
+      await send(
+        api,
+        [wireMutation('item.delete', deletedItemId, {}, { baseRevision: 2 })],
+        PROTOCOL_2
+      );
+
+      const preview = await api.post(`/type-catalogue/drafts/${draft.revision}/preview`).send({
+        baseRevision: draft.baseRevision,
+        expectedDraftVersion: draft.draftVersion,
+        operations: [operation],
+      });
+      expect(preview.status, JSON.stringify(preview.body)).toBe(200);
+      // The deleted item still holds an override, but the preview only counts
+      // the one live holder left: the informational evidence undercounts by one.
+      expect(preview.body.compatibility).toMatchObject({
+        classification: 'migration_required',
+        discardedOverrides: [{ fieldId: gadget.readyFieldId, items: 1 }],
+      });
+      expect(overrideRows(gadget.readyFieldId)).toEqual({ count: 2 });
+
+      const patched = await patch(draft, [operation]);
+      const published = await publish(patched.draft, {
+        migration: {
+          name: 'discard-ready-overrides',
+          fromRevision: draft.baseRevision,
+          toRevision: draft.revision,
+          affectedTypeIds: [gadget.typeId],
+          affectedFieldIds: [gadget.readyFieldId],
+          steps: [{ kind: 'drop_value', fieldId: gadget.readyFieldId }],
+        },
+      });
+      expect(published.status, JSON.stringify(published.body)).toBe(200);
+      // The live holder's override was migrated away; the deleted holder's
+      // override survives publication because it is invisible to the migration.
+      expect(overrideRows(gadget.readyFieldId)).toEqual({ count: 1 });
+
+      const restore = await send(
+        api,
+        [wireMutation('item.restoreDeleted', deletedItemId, {}, { baseRevision: null })],
+        PROTOCOL_2
+      );
+      expect(restore.body.outcomes[0], JSON.stringify(restore.body)).toMatchObject({
+        status: 'applied',
+      });
+
+      // The invariant holds despite the preview's undercount: no override on
+      // a field the active catalogue disallows survives the restore.
+      expect(overrideRows(gadget.readyFieldId)).toEqual({ count: 0 });
+      const restoredValue = inventoryDb.raw
+        .prepare(`SELECT source FROM item_field_values WHERE item_id = ? AND field_id = ?`)
+        .all(deletedItemId, gadget.readyFieldId);
+      expect(restoredValue).toEqual([]);
+    });
   });
 });
