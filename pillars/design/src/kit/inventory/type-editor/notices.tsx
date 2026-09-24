@@ -53,7 +53,7 @@ function ReplacementNotice() {
         <p>
           Connectors is published as “many” and used by 118 items; published kind, cardinality and
           storage are immutable. Use <span className="font-medium">+ Field</span> above to create
-          the replacement in this editor, the same way as any other new field.
+          the replacement in this editor, exactly like every other new field.
         </p>
         <p className="mt-2">
           This editor does not publish migrations. Once the replacement validates, record it and
