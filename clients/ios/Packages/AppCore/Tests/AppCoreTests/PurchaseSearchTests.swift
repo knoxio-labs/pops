@@ -101,7 +101,7 @@ internal struct PurchaseSearchTests {
     @Test("the tags in use are read in the order the fake was seeded with")
     func fakePurchaseTags() async throws {
         let seeded = [
-            PurchaseTagCount(tag: "garden", count: 4), PurchaseTagCount(tag: "camping"),
+            PurchaseTagCount(tag: "garden", count: 4), PurchaseTagCount(tag: "camping", count: 1),
         ]
         let repository = InMemoryPurchasesRepository(tagsInUse: seeded)
 

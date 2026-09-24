@@ -104,7 +104,10 @@ internal struct AppSearchTab: View {
                     header(.inventory)
                 }
             case .purchases:
-                PurchasesSearchFilterFields(filter: $model.purchasesFilter) {
+                // No tag vocabulary is loaded here yet — POPS-4546 wires one
+                // in; until then the Tags row in this particular screen has
+                // nothing to offer but "Any".
+                PurchasesSearchFilterFields(filter: $model.purchasesFilter, tags: []) {
                     header(.purchases)
                 }
             }

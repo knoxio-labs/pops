@@ -162,19 +162,28 @@ internal struct PurchaseSearchMappingTests {
         #expect(sent.request.path == "/mobile/purchases/search?q=kmart")
     }
 
-    @Test("the tags in use keep the server's most-used-first order")
+    @Test("the tags in use keep the server's most-used-first order, carrying each count")
     func mapsTagsInUse() async throws {
         let repository = try BFMPurchasesRepository.stubbed(
-            StubTransport(status: .ok, json: #"{"tags":["garden","camping","kitchen"]}"#)
+            StubTransport(
+                status: .ok,
+                json: #"""
+                    {"tags":[
+                        {"tag":"garden","count":5},
+                        {"tag":"camping","count":2},
+                        {"tag":"kitchen","count":2}
+                    ]}
+                    """#
+            )
         )
 
         let tags = try await repository.purchaseTags()
 
         #expect(
             tags == [
-                PurchaseTagCount(tag: "garden"),
-                PurchaseTagCount(tag: "camping"),
-                PurchaseTagCount(tag: "kitchen"),
+                PurchaseTagCount(tag: "garden", count: 5),
+                PurchaseTagCount(tag: "camping", count: 2),
+                PurchaseTagCount(tag: "kitchen", count: 2),
             ])
     }
 

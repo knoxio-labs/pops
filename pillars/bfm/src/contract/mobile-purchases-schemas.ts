@@ -388,9 +388,19 @@ export const MobilePurchaseSearchResponseSchema = z.object({
 
 export type MobilePurchaseSearchResponse = z.infer<typeof MobilePurchaseSearchResponseSchema>;
 
-/** `GET /mobile/purchases/tags`'s response: the item tag vocabulary, most-used first. */
+/** One entry in `GET /mobile/purchases/tags`'s vocabulary: the tag plus its use count. */
+export const MobileTagCountSchema = z.object({
+  tag: z.string(),
+  count: z.number().int().nonnegative(),
+});
+
+/**
+ * `GET /mobile/purchases/tags`'s response: the item tag vocabulary with its
+ * use counts, most-used first (POPS-4544) — so the iOS tag picker can show
+ * "coffee (12)" rather than a bare name.
+ */
 export const MobilePurchaseTagsResponseSchema = z.object({
-  tags: z.array(z.string()),
+  tags: z.array(MobileTagCountSchema),
 });
 
 export type MobilePurchaseTagsResponse = z.infer<typeof MobilePurchaseTagsResponseSchema>;

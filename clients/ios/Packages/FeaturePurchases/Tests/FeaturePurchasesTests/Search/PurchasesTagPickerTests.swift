@@ -43,4 +43,11 @@ internal struct PurchasesTagPickerTests {
     internal func togglingRemoves() {
         #expect(PurchasesTagPicker.toggling("garden", in: ["garden", "camping"]) == ["camping"])
     }
+
+    @Test("a tag row's count label is the digits, and the Any row names none")
+    internal func countLabel() {
+        #expect(PurchasesTagPicker.countLabel(4) == "4")
+        #expect(PurchasesTagPicker.countLabel(0) == "0")
+        #expect(PurchasesTagPicker.countLabel(nil) == nil)
+    }
 }
