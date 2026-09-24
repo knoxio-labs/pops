@@ -84,12 +84,40 @@ internal struct InventoryStateBadge: View {
     private var tone: Color { mark.isHighlighted ? .popsInventory : .popsMutedForeground }
 }
 
-/// A key and its value on one line, or stacked when they do not fit.
+/// Where a value on Item detail is long enough that showing every character
+/// would lengthen the page rather than the list it belongs in — the whole
+/// page is one scroll view (`InventoryItemDetailGroup`'s own comment says
+/// so), so a 20,000-character long-text field or a many-valued field with
+/// many entries has nowhere else to grow into. A character count rather
+/// than a line count: SwiftUI has no cheap way to ask "did this wrap past N
+/// lines" without a rendered measurement, and a value long enough to matter
+/// here is long either way.
+internal enum InventoryValueTruncation {
+    /// Collapsed height, in lines, once a value is long enough to collapse.
+    internal static let previewLineLimit = 3
+    /// Above this many characters a value is truncated by default. Chosen
+    /// well under the shortest thing that should never truncate — the
+    /// longest fixed badge or path text in this file — and well over an
+    /// ordinary short-text or single-measurement value, which routinely
+    /// exceeds a screen's width but not three lines.
+    internal static let longValueThreshold = 240
+
+    internal static func isLong(_ value: String) -> Bool {
+        value.count > longValueThreshold
+    }
+}
+
+/// A key and its value on one line, or stacked when they do not fit. A value
+/// past ``InventoryValueTruncation/longValueThreshold`` collapses to
+/// ``InventoryValueTruncation/previewLineLimit`` lines behind a disclosure
+/// rather than lengthening the page.
 internal struct InventoryPropertyLine: View {
     internal let key: String
     internal let value: String
     internal var tone: Color = .popsForeground
     internal var caption: String?
+
+    @State private var isExpanded = false
 
     internal var body: some View {
         ViewThatFits(in: .horizontal) {
@@ -113,11 +141,21 @@ internal struct InventoryPropertyLine: View {
             .foregroundStyle(Color.popsMutedForeground)
     }
 
+    private var isLong: Bool { InventoryValueTruncation.isLong(value) }
+
     private var valueText: some View {
         VStack(alignment: .trailing, spacing: PopsSpacing.xs) {
             Text(value)
                 .font(.popsBody.weight(.medium))
                 .foregroundStyle(tone)
+                .lineLimit(isExpanded || !isLong ? nil : InventoryValueTruncation.previewLineLimit)
+            if isLong {
+                Button(isExpanded ? "Show less" : "Show more") {
+                    isExpanded.toggle()
+                }
+                .font(.popsCaption)
+                .buttonStyle(.borderless)
+            }
             if let caption {
                 Text(caption)
                     .font(.popsCaption)
