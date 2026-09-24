@@ -61,7 +61,19 @@ where
     /// filter sheet, it just has nothing to offer under Tags.
     public private(set) var tags: [PurchaseTagCount] = []
 
+    /// The distinct Inventory types currently on this phone, most-used first
+    /// as read. Empty until ``loadInventoryTypes()`` succeeds, and stays
+    /// whatever it last was if a later call fails — same degrade-quietly
+    /// contract as ``tags``.
+    public private(set) var inventoryTypes: [InventoryTypeName] = []
+
+    /// Set when the last ``downloadInventory()`` call failed. Cleared by the
+    /// next attempt, whether it succeeds or fails again.
+    public private(set) var inventoryDownloadFailed = false
+
     private let purchasesRepository: (any PurchasesRepository)?
+    private let downloadInventory: (() async throws -> Void)?
+    private let inventoryTypeNames: (() async -> [InventoryTypeName])?
 
     /// Creates a model with one pillar model per available provider.
     ///
@@ -75,15 +87,25 @@ where
     ///   - purchasesRepository: Where ``loadTags()`` reads the tag
     ///     vocabulary from. `nil` when there is nothing to read it from, in
     ///     which case ``loadTags()`` is a no-op.
+    ///   - downloadInventory: Downloads Inventory's on-device replica. `nil`
+    ///     when there is nothing to download, in which case
+    ///     ``downloadInventory()`` is a no-op.
+    ///   - inventoryTypeNames: Where ``loadInventoryTypes()`` reads the
+    ///     current Inventory type list from. `nil` when there is nothing to
+    ///     read it from, in which case ``loadInventoryTypes()`` is a no-op.
     public init(
         tabOrder: [SearchPillar],
         inventoryProvider: InventoryProvider?,
         purchasesProvider: PurchasesProvider?,
-        purchasesRepository: (any PurchasesRepository)? = nil
+        purchasesRepository: (any PurchasesRepository)? = nil,
+        downloadInventory: (() async throws -> Void)? = nil,
+        inventoryTypeNames: (() async -> [InventoryTypeName])? = nil
     ) {
         inventory = inventoryProvider.map(SearchPillarModel.init)
         purchases = purchasesProvider.map(SearchPillarModel.init)
         self.purchasesRepository = purchasesRepository
+        self.downloadInventory = downloadInventory
+        self.inventoryTypeNames = inventoryTypeNames
         available = tabOrder.filter { pillar in
             switch pillar {
             case .inventory: inventoryProvider != nil
@@ -101,6 +123,37 @@ where
         guard available.contains(.purchases), let purchasesRepository else { return }
         guard let loaded = try? await purchasesRepository.purchaseTags() else { return }
         tags = loaded
+    }
+
+    /// Loads the Inventory type list into ``inventoryTypes``, when Inventory
+    /// is available and a reader was supplied. Same degrade-quietly contract
+    /// as ``loadTags()``.
+    public func loadInventoryTypes() async {
+        guard available.contains(.inventory), let inventoryTypeNames else { return }
+        inventoryTypes = await inventoryTypeNames()
+    }
+
+    /// Downloads Inventory's on-device replica, then re-asks Inventory and
+    /// reloads its type list so the section and the filter's Type picker
+    /// both leave "Not on this phone yet" once the download lands. A
+    /// failure is recorded in ``inventoryDownloadFailed`` and nothing is
+    /// re-asked.
+    public func downloadInventory() async {
+        guard let downloadInventory else { return }
+        do {
+            try await downloadInventory()
+        } catch {
+            inventoryDownloadFailed = true
+            return
+        }
+        inventoryDownloadFailed = false
+        askInventory()
+        await loadInventoryTypes()
+    }
+
+    /// Dismisses a recorded download failure, e.g. once its alert is closed.
+    public func clearInventoryDownloadFailure() {
+        inventoryDownloadFailed = false
     }
 
     /// Updates which pillars are searchable, for when the app learns the BFM

@@ -173,11 +173,14 @@ internal struct AppSearchModelTests {
     private static func bothAvailable(
         inventory: InventoryFake = InventoryFake(pillar: .inventory),
         purchases: PurchasesFake = PurchasesFake(pillar: .purchases),
-        purchasesRepository: (any PurchasesRepository)? = nil
+        purchasesRepository: (any PurchasesRepository)? = nil,
+        downloadInventory: (() async throws -> Void)? = nil,
+        inventoryTypeNames: (() async -> [InventoryTypeName])? = nil
     ) -> Model {
         Model(
             tabOrder: [.purchases, .inventory], inventoryProvider: inventory,
-            purchasesProvider: purchases, purchasesRepository: purchasesRepository)
+            purchasesProvider: purchases, purchasesRepository: purchasesRepository,
+            downloadInventory: downloadInventory, inventoryTypeNames: inventoryTypeNames)
     }
 
     private static func step(
