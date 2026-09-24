@@ -251,6 +251,48 @@ describe('inventory catalogue MCP tools — real HTTP boundary', () => {
     });
   });
 
+  it('surfaces unauthorized (401) for a service account without the inventory scope', async () => {
+    const unscoped = await seam.mintKey('mcp-live-seam-unscoped', ['finance']);
+    seam.useKey(unscoped);
+    try {
+      const result = await catalogueGet.handler({});
+      expect(result.isError).toBe(true);
+      expect(text(result)).toMatch(/authoris/);
+    } finally {
+      seam.useDefaultKey();
+    }
+  });
+
+  it('surfaces unavailable for a connection refused', async () => {
+    seam.useDefaultKey();
+    const closedPort = 39; // never listened on; loopback refuses immediately.
+    process.env['POPS_INVENTORY_API_URL'] = `http://127.0.0.1:${String(closedPort)}`;
+    try {
+      const result = await catalogueGet.handler({});
+      expect(result.isError).toBe(true);
+      expect(text(result)).toMatch(/unavailable/);
+    } finally {
+      delete process.env['POPS_INVENTORY_API_URL'];
+      seam.useDefaultKey();
+    }
+  });
+
+  // Regression test (POPS-4495): the connection-refused test above sets a
+  // `POPS_INVENTORY_API_URL` override, then unsets it and calls
+  // `seam.useDefaultKey()`. That must fully restore real HTTP access —
+  // previously `pillar-client.ts` only forwarded `internalBaseUrls` to
+  // `configureServerSdk` when an override was present, so `configureServerSdk`'s
+  // shallow merge kept the bad override forever once one had been set, and
+  // every following real-HTTP call in this file (or a file sharing this
+  // worker) kept failing regardless of test order. This test's position,
+  // directly after the connection-refused case, is the point of the test:
+  // it must pass whether it runs here or after a reorder.
+  it('reaches inventory over real HTTP again right after a connection-refused failure', async () => {
+    seam.useDefaultKey();
+    const published = ok(await catalogueGet.handler({}));
+    expect(published['types']).toBeInstanceOf(Array);
+  });
+
   describe('malformed operation payloads, per kind, through the real REST boundary', () => {
     function issuePaths(body: string): string[] {
       const jsonStart = body.indexOf('{');
@@ -353,18 +395,6 @@ describe('inventory catalogue MCP tools — real HTTP boundary', () => {
     });
   });
 
-  it('surfaces unauthorized (401) for a service account without the inventory scope', async () => {
-    const unscoped = await seam.mintKey('mcp-live-seam-unscoped', ['finance']);
-    seam.useKey(unscoped);
-    try {
-      const result = await catalogueGet.handler({});
-      expect(result.isError).toBe(true);
-      expect(text(result)).toMatch(/authoris/);
-    } finally {
-      seam.useDefaultKey();
-    }
-  });
-
   describe('the manage scope is distinct from the read scope (POPS-4357, POPS-4362)', () => {
     it('lets a read-only key read the catalogue but refuses createDraft with an actionable, scope-naming error', async () => {
       const readOnly = await seam.mintKey('mcp-live-seam-read-only', ['inventory.types.read']);
@@ -427,19 +457,5 @@ describe('inventory catalogue MCP tools — real HTTP boundary', () => {
         seam.useDefaultKey();
       }
     });
-  });
-
-  it('surfaces unavailable for a connection refused', async () => {
-    seam.useDefaultKey();
-    const closedPort = 39; // never listened on; loopback refuses immediately.
-    process.env['POPS_INVENTORY_API_URL'] = `http://127.0.0.1:${String(closedPort)}`;
-    try {
-      const result = await catalogueGet.handler({});
-      expect(result.isError).toBe(true);
-      expect(text(result)).toMatch(/unavailable/);
-    } finally {
-      delete process.env['POPS_INVENTORY_API_URL'];
-      seam.useDefaultKey();
-    }
   });
 });
