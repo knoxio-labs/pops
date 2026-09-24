@@ -147,6 +147,9 @@ completion, and camera refusals offer Settings only when the system permission c
 `PurchasesFlowView` installs this presentation only when receipt capture is available and lands its
 ordered saved identifiers on the home model, which refreshes and highlights the saved rows.
 
+Review and hand entry map merchant and address choices from the bound merchant directory, returning
+an empty result when that optional catalogue request fails so capture itself remains usable.
+
 `ReceiptCaptureView`'s ready state offers two actions side by side: photograph a receipt, or "Add a purchase" with no camera involved. Both land on `ReceiptResultView` over a `ReceiptResultViewModel`, and both save through the same `save(_:)`, which reads `ReceiptResultState` to decide which BFM call to make:
 
 - **A corrected reading (`.draft(reading)`).** `extract()` already ran; `save(_:)` turns the edited `ReceiptDraft` into a `ReceiptDraftSavePayload` — via `ReceiptDraftSaveMapping`, in this module, since `ReceiptDraft`'s fields are `internal` to it — carrying `reading`'s receipt URIs and capture facts forward untouched, and calls `saveDraft(_:)`.

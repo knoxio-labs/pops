@@ -25,7 +25,11 @@ internal struct PurchaseCapturePresentationTests {
             dependencies: .fake(receiptCapture: InMemoryReceiptCaptureRepository()),
             camera: PresentationCamera(),
             onSaved: { _ in })
-        let modifier = PurchaseCapturePresentationModifier(flow: flow, isAvailable: true)
+        let modifier = PurchaseCapturePresentationModifier(
+            flow: flow,
+            isAvailable: true,
+            merchantDirectory: PurchaseCaptureMerchantDirectory(
+                repository: AppDependencies.unbound.merchants))
 
         modifier.presenter(.hand)
         await Self.untilSheetOpens(flow)
@@ -49,6 +53,31 @@ internal struct PurchaseCapturePresentationTests {
         }
     }
 
+    @Test("merchant closures preserve directory identities and scope address lookup")
+    func merchantDirectoryMapping() async {
+        let repository = InMemoryMerchantDirectoryRepository(
+            entries: [MerchantDirectoryEntry(id: "merchant-1", name: "Corner Shop")],
+            addressesByMerchantID: [
+                "merchant-1": [MerchantAddressEntry(id: "address-1", value: "1 Main Street")]
+            ])
+        let directory = PurchaseCaptureMerchantDirectory(repository: repository)
+
+        #expect(
+            await directory.search("corner")
+                == [ReceiptMerchantChoice(id: "merchant-1", name: "Corner Shop")])
+        #expect(
+            await directory.merchant("merchant-1")
+                == ReceiptMerchantChoice(id: "merchant-1", name: "Corner Shop"))
+        #expect(
+            await directory.addresses(for: "merchant-1")
+                == [ReceiptAddressChoice(id: "address-1", value: "1 Main Street")])
+        #expect(
+            await directory.address(merchantID: "merchant-1", addressID: "address-1")
+                == ReceiptAddressChoice(id: "address-1", value: "1 Main Street"))
+        #expect(
+            await directory.address(merchantID: "merchant-other", addressID: "address-1") == nil)
+    }
+
     private func render(isAvailable: Bool) -> Data? {
         let flow = PurchaseCaptureFlow(
             dependencies: .fake(receiptCapture: InMemoryReceiptCaptureRepository()),
@@ -60,7 +89,9 @@ internal struct PurchaseCapturePresentationTests {
                 .modifier(
                     PurchaseCapturePresentationModifier(
                         flow: flow,
-                        isAvailable: isAvailable)
+                        isAvailable: isAvailable,
+                        merchantDirectory: PurchaseCaptureMerchantDirectory(
+                            repository: AppDependencies.unbound.merchants))
                 )
                 .padding()
                 .environment(\._accessibilityReduceMotion, true)
