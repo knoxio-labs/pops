@@ -1,8 +1,12 @@
+import { existsSync, rmSync } from 'node:fs';
+import path from 'node:path';
+
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
 import { Suspense } from 'react';
 import { createMemoryRouter, Outlet, RouterProvider } from 'react-router';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { build } from 'vite';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { installApiMock, type MockHandler } from '@pops/pillar-sdk/testing/api-mock';
 import { TooltipProvider } from '@pops/ui';
@@ -175,4 +179,55 @@ describe('purchases standalone, on mocks alone', () => {
     // out to a blank frame.
     expect(await screen.findByRole('button', { name: /retry/i })).toBeVisible();
   });
+});
+
+/**
+ * The standalone build must not wipe the remote bundle, and vice versa
+ * (POPS-4632). Both `vite.remote.config.ts` and `vite.standalone.config.ts`
+ * run with `emptyOutDir`, so each output must live under its own directory —
+ * this fails against a standalone config left on the default `dist/`, which
+ * the remote build's `dist/remote/` sits inside of.
+ */
+describe('build and build:standalone coexist regardless of order (POPS-4632)', () => {
+  const APP_ROOT = path.resolve(import.meta.dirname, '..', '..');
+  const REMOTE_ENTRY = path.join(APP_ROOT, 'dist/remote/purchases.js');
+  const STANDALONE_ENTRY = path.join(APP_ROOT, 'dist/standalone/index.html');
+
+  beforeEach(() => {
+    rmSync(path.join(APP_ROOT, 'dist'), { recursive: true, force: true });
+  });
+
+  async function buildRemote(): Promise<void> {
+    await build({
+      configFile: path.join(APP_ROOT, 'vite.remote.config.ts'),
+      root: APP_ROOT,
+      mode: 'production',
+      logLevel: 'silent',
+    });
+  }
+
+  async function buildStandalone(): Promise<void> {
+    await build({
+      configFile: path.join(APP_ROOT, 'vite.standalone.config.ts'),
+      root: APP_ROOT,
+      mode: 'production',
+      logLevel: 'silent',
+    });
+  }
+
+  it('keeps the remote bundle when the standalone build runs after it', async () => {
+    await buildRemote();
+    await buildStandalone();
+
+    expect(existsSync(REMOTE_ENTRY)).toBe(true);
+    expect(existsSync(STANDALONE_ENTRY)).toBe(true);
+  }, 60_000);
+
+  it('keeps the standalone bundle when the remote build runs after it', async () => {
+    await buildStandalone();
+    await buildRemote();
+
+    expect(existsSync(REMOTE_ENTRY)).toBe(true);
+    expect(existsSync(STANDALONE_ENTRY)).toBe(true);
+  }, 60_000);
 });

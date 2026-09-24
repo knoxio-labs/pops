@@ -524,7 +524,7 @@ pnpm --filter @pops/app-purchases test:coverage             # vitest run --cover
 pnpm --filter @pops/app-purchases generate:purchases-client # regen src/purchases-api
 pnpm --filter @pops/app-purchases build                     # dist/remote/purchases.js
 pnpm --filter @pops/app-purchases dev:standalone            # the app alone, on mocks
-pnpm --filter @pops/app-purchases build:standalone          # the standalone bundle
+pnpm --filter @pops/app-purchases build:standalone          # dist/standalone/index.html
 ```
 
 ## Install gate
