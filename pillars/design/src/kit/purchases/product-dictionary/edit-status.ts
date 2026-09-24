@@ -2,7 +2,7 @@ import type { DictionaryEditKind, EditOutcome } from './types';
 
 /**
  * What each correction says once it lands, read off `products.status.*` in
- * `libs/locales/en-AU/purchases.json`.
+ * `pillars/purchases/app/src/locales/en-AU.json`.
  */
 const EDIT_STATUS_MESSAGE: Readonly<Record<DictionaryEditKind, string>> = {
   merge:

@@ -14,4 +14,4 @@ This is a cross-pillar generated client of the kind ADR-040 governs. It sits out
 
 ## Things that bite
 
-- **`ChatInput` translates against the `cerebrum` namespace, but this package does not depend on `@pops/locales`.** Its tests read `src/__fixtures__/cerebrum-en-AU.json`, a hand-copied duplicate of `libs/locales/en-AU/cerebrum.json`. Nothing keeps the two in sync: add a key consumed here and the fixture needs the identical edit, or the test asserts a raw key string.
+- **`ChatInput` translates against the `cerebrum` namespace, but this package does not depend on the cerebrum app that owns it.** Its tests read `src/__fixtures__/cerebrum-en-AU.json`, a hand-copied duplicate of `pillars/cerebrum/app/src/locales/en-AU.json`. Nothing keeps the two in sync: add a key consumed here and the fixture needs the identical edit, or the test asserts a raw key string.

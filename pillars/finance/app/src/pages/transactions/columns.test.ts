@@ -2,9 +2,8 @@ import { createInstance } from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import { describe, expect, it } from 'vitest';
 
-import enAUFinance from '@pops/locales/en-AU/finance.json';
-import ptBRFinance from '@pops/locales/pt-BR/finance.json';
-
+import enAUFinance from '../../locales/en-AU.json';
+import ptBRFinance from '../../locales/pt-BR.json';
 import { buildTransactionFilters } from './columns';
 
 import type { AccountOption } from '@pops/ui';

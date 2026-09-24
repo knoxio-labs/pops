@@ -8,7 +8,7 @@ import { MemoryRouter, Routes, Route, useLocation } from 'react-router';
 import { Toaster } from 'sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import enAUFood from '@pops/locales/en-AU/food.json';
+import enAUFood from '../../../locales/en-AU.json';
 
 const inboxListMock = vi.hoisted(() => vi.fn());
 const inboxListRejectedMock = vi.hoisted(() => vi.fn());

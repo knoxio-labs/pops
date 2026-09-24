@@ -4,8 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import enAUPurchases from '@pops/locales/en-AU/purchases.json';
-
+import enAUPurchases from '../../locales/en-AU.json';
 import { leakedAriaLabels, rawCatalogKeyPattern } from './aria-label-guard.js';
 
 const merchantSpendMock = vi.hoisted(() => vi.fn());
