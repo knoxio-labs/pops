@@ -7,6 +7,7 @@ import {
   MONTH_SUMMARY_OPERATION_ID,
   PURCHASES_PILLAR_ID,
   RECEIPT_THUMBNAIL_OPERATION_ID,
+  SEARCH_OPERATION_ID,
   SEEDED_RECEIPT_SHA256,
   UPLOAD_OPERATION_ID,
   detailRoute,
@@ -16,6 +17,7 @@ import {
   purchasesRegistryEntry,
   readPurchasesContract,
   receiptThumbnailRoute,
+  searchRoute,
   seededPurchases,
   startPurchasesStub,
   uploadRoute,
@@ -64,6 +66,16 @@ describe('the purchases contract this stub serves', () => {
       method: 'GET',
       path: '/analytics/month-summary',
     });
+  });
+
+  it('also declares the search operation the universal search screen reads through', () => {
+    expect(searchRoute(readPurchasesContract())).toEqual({ method: 'POST', path: '/search' });
+  });
+
+  it('names the missing operation when a rename takes the search route away', () => {
+    expect(() => searchRoute({ paths: { '/search': { post: { operationId: 'other' } } } })).toThrow(
+      new RegExp(`declares no ${SEARCH_OPERATION_ID}`, 'u')
+    );
   });
 
   it('also declares the receipt-thumbnail operation the detail screen reads through', () => {
@@ -457,6 +469,150 @@ describe('the purchases stub', () => {
       // merely satisfies the schema.
       const decoded = Buffer.from(body.dataBase64, 'base64');
       expect(decoded.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
+    } finally {
+      await stub.close();
+    }
+  });
+
+  it('ranks a merchant prefix above a merchant that merely contains the text', async () => {
+    const stub = await startPurchasesStub();
+    try {
+      const answered = await fetch(`${stub.url}/search`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ query: { text: 'store' } }),
+      });
+
+      expect(answered.status).toBe(200);
+      const body = await answered.json();
+      // "Corner Store" contains "store" but does not start with it; no seeded
+      // merchant is a prefix match here, so this also proves `matchType`
+      // reflects where the text actually sits rather than always saying
+      // "contains".
+      expect(body.hits).toEqual([
+        expect.objectContaining({
+          uri: 'pops:purchases/purchase/purchase-september-unsettled',
+          matchField: 'merchantEntityName',
+          matchType: 'contains',
+        }),
+      ]);
+    } finally {
+      await stub.close();
+    }
+  });
+
+  it('reports a prefix match ahead of a contains match, and echoes the order fields a hit needs', async () => {
+    const stub = await startPurchasesStub();
+    try {
+      const answered = await fetch(`${stub.url}/search`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ query: { text: 'hard' } }),
+      });
+
+      const body = await answered.json();
+      // "Hardware Shop" is a prefix match, "Corner Store" and "Market" are not
+      // matches at all — so this also proves the search is scoped to what was
+      // asked, not every seeded row.
+      expect(body.hits.map((hit: { uri: string; matchType: string }) => hit.uri)).toEqual([
+        'pops:purchases/purchase/purchase-august-linked',
+      ]);
+      expect(body.hits[0]).toMatchObject({
+        matchType: 'prefix',
+        data: {
+          merchantEntityName: 'Hardware Shop',
+          totalCents: 4599,
+          currency: 'AUD',
+          status: 'linked',
+        },
+      });
+    } finally {
+      await stub.close();
+    }
+  });
+
+  it("reads the gateway's own envelope, which wraps the call argument in a `body` key it does not strip", async () => {
+    // `search()` in `pillars/bfm/src/api/purchases/search-client.ts` calls
+    // `handle.search.search({ body: { query: {...} } })`, and the dynamic
+    // gateway proxy serialises that whole argument rather than stripping the
+    // `body` key the way a generated ts-rest client would — verified against
+    // the live harness, not assumed. A stub that only read the unwrapped
+    // shape would report every real search empty.
+    const stub = await startPurchasesStub();
+    try {
+      const answered = await fetch(`${stub.url}/search`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ body: { query: { text: 'Corner' } } }),
+      });
+      const body = await answered.json();
+      expect(body.hits).toHaveLength(1);
+      expect(body.hits[0].data.merchantEntityName).toBe('Corner Store');
+    } finally {
+      await stub.close();
+    }
+  });
+
+  it('answers no hits for an empty or all-whitespace query, and none for text nothing matches', async () => {
+    const stub = await startPurchasesStub();
+    try {
+      const empty = await fetch(`${stub.url}/search`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ query: { text: '   ' } }),
+      });
+      expect(await empty.json()).toEqual({ hits: [] });
+
+      const noMatch = await fetch(`${stub.url}/search`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ query: { text: 'no such merchant' } }),
+      });
+      expect(await noMatch.json()).toEqual({ hits: [] });
+    } finally {
+      await stub.close();
+    }
+  });
+
+  it('answers search whether or not the reachability switch is thrown', async () => {
+    // Unlike `/openapi`, the search route is not gated behind `setReachable` —
+    // this stub's header says why: the switch this stub starts withheld on is
+    // the contract probe, not every route underneath it.
+    const stub = await startPurchasesStub();
+    try {
+      expect(stub.isReachable()).toBe(false);
+      const answered = await fetch(`${stub.url}/search`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ query: { text: 'Market' } }),
+      });
+      expect(answered.status).toBe(200);
+    } finally {
+      await stub.close();
+    }
+  });
+
+  it('refuses the search connection once the search outage switch is thrown, and recovers', async () => {
+    const stub = await startPurchasesStub();
+    try {
+      expect(stub.isSearchOutage()).toBe(false);
+      stub.setSearchOutage(true);
+      expect(stub.isSearchOutage()).toBe(true);
+      await expect(
+        fetch(`${stub.url}/search`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ query: { text: 'Market' } }),
+        })
+      ).rejects.toThrow();
+
+      stub.setSearchOutage(false);
+      const recovered = await fetch(`${stub.url}/search`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ query: { text: 'Market' } }),
+      });
+      expect(recovered.status).toBe(200);
     } finally {
       await stub.close();
     }

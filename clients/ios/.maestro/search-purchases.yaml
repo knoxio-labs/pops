@@ -1,0 +1,68 @@
+appId: com.knoxiolabs.pops.local
+name: Search finds a seeded purchase, fails at the pillar and recovers, then opens its detail
+---
+# Offline cannot be forced on the Simulator, so this flow never arms it — the
+# same offline chip state `search-inventory-scope.yaml` cannot drive either.
+# It is covered by POPS-4309's unit tests and POPS-4315's device walk.
+- clearState
+- clearKeychain
+- launchApp
+
+- assertVisible:
+    id: 'pairing-code-field'
+
+# Purchases must be reachable before pairing, the same as
+# `purchases-home-archive-detail.yaml` — bootstrap starts the moment the
+# credentials land.
+- runScript: scripts/receipts-become-available.js
+- assertTrue: ${output.receipts.status == 200}
+- assertTrue: ${output.receipts.state.purchasesReachable == true}
+
+- runFlow:
+    file: subflows/enter-the-pairing-details.yaml
+    env:
+      SERVER_URL: ${CONTROL_BASE_URL}
+
+- assertVisible: 'Search'
+- tapOn: 'Search'
+
+- tapOn: 'Items, places, purchases'
+- inputText: Corner Store
+- assertVisible: 'Corner Store'
+
+- assertVisible: 'Purchases'
+- assertVisible: '1 result'
+
+- tapOn: '1 result'
+- assertVisible: 'Corner Store'
+- tapOn:
+    text: 'Corner Store'
+    index: 1
+- assertVisible:
+    id: 'purchase-detail'
+- tapOn:
+    id: 'BackButton'
+
+# The search route alone refuses, with the tab and the other purchases
+# screens untouched — `purchases-stub.mjs` says why this is independent of
+# `receipts-become-available.js`'s reachability switch.
+- runScript:
+    file: scripts/purchases-search-outage.js
+    env:
+      SEARCH: down
+- assertTrue: ${output.searchOutage.state.purchasesSearchOutage == true}
+
+- tapOn: 'Clear search'
+- tapOn: 'Merchants, products, tags'
+- inputText: Corner Store
+- assertVisible: "Purchases didn't answer"
+
+- runScript:
+    file: scripts/purchases-search-outage.js
+    env:
+      SEARCH: up
+- assertTrue: ${output.searchOutage.state.purchasesSearchOutage == false}
+- tapOn: 'Retry'
+- assertVisible:
+    text: 'Corner Store'
+    index: 1

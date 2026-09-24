@@ -103,6 +103,13 @@ export const DETAIL_OPERATION_ID = 'purchase.get';
 export const MONTH_SUMMARY_OPERATION_ID = 'analytics.monthSummary';
 
 /**
+ * The operation the universal search screen's Purchases section reads
+ * through — `pillars/bfm/src/api/purchases/search-client.ts`'s `search`
+ * calls `handle.search.search` by this name.
+ */
+export const SEARCH_OPERATION_ID = 'search.search';
+
+/**
  * The operation the purchase detail screen reads a receipt plate through —
  * `pillars/bfm/src/api/purchases/client.ts`'s `getReceiptThumbnail` calls it
  * by this name, and `BFMPurchasesRepository+Receipts.swift` is the only
@@ -199,6 +206,14 @@ export function monthSummaryRoute(document) {
  */
 export function receiptThumbnailRoute(document) {
   return routeFor(document, RECEIPT_THUMBNAIL_OPERATION_ID);
+}
+
+/**
+ * @param {Record<string, unknown>} document purchases' OpenAPI snapshot
+ * @returns {{ method: string, path: string }}
+ */
+export function searchRoute(document) {
+  return routeFor(document, SEARCH_OPERATION_ID);
 }
 
 /**
@@ -773,6 +788,72 @@ function handleReceiptThumbnail(sha256, response, store) {
 }
 
 /**
+ * Answers `POST /search` the way `search.search` does for the order adapter
+ * alone — this stub's seeded history carries no line items, so there is
+ * nothing for the item adapter to rank. Mirrors the envelope
+ * `pillars/purchases/src/contract/rest-search.ts`'s `SearchHitSchema`
+ * publishes and the fields `search-order-adapter.ts`'s `orderCandidate`
+ * puts under `data`, because `pillars/bfm/src/api/purchases/search-wire.ts`
+ * parses both against that exact shape and a stub that drifted from it would
+ * report a pillar the bfm cannot actually read.
+ *
+ * @param {import('node:http').IncomingMessage} request
+ * @param {import('node:http').ServerResponse} response
+ * @param {Array<Record<string, unknown>>} store
+ * @returns {Promise<void>}
+ */
+async function handleSearch(request, response, store) {
+  const body = await readJsonBody(request);
+  // The gateway's dynamic proxy serialises its whole call argument —
+  // `{ body: { query: {...} } }` — rather than stripping the `body` key the
+  // way a generated ts-rest client would; `search()` in
+  // `pillars/bfm/src/api/purchases/search-client.ts` calls
+  // `handle.search.search({ body: { query: {...} } })` and that outer `body`
+  // reaches this handler verbatim. Read from either shape so this keeps
+  // working if that proxy is ever changed to strip it.
+  const envelope = /** @type {{ query?: unknown }} */ (body['body']) ?? body;
+  const query = /** @type {{ text?: unknown }} */ (envelope['query']) ?? {};
+  const text = typeof query.text === 'string' ? query.text.trim() : '';
+  if (text.length === 0) {
+    json(response, 200, { hits: [] });
+    return;
+  }
+
+  const needle = text.toLowerCase();
+  const hits = store
+    .map((entry) => {
+      const purchase = /** @type {Record<string, unknown>} */ (entry['purchase']);
+      const merchant = purchase?.['merchantEntityName'];
+      if (typeof merchant !== 'string') return null;
+      const haystack = merchant.toLowerCase();
+      const at = haystack.indexOf(needle);
+      if (at === -1) return null;
+      const matchType = at === 0 ? 'prefix' : 'contains';
+      return {
+        uri: `pops:purchases/purchase/${String(purchase['id'])}`,
+        score: matchType === 'prefix' ? 1 : 0.5,
+        matchField: 'merchantEntityName',
+        matchType,
+        data: {
+          source: purchase['source'],
+          sourceOrderId: purchase['sourceOrderId'] ?? null,
+          merchantEntityId: purchase['merchantEntityId'] ?? null,
+          merchantEntityName: purchase['merchantEntityName'],
+          orderedAt: purchase['orderedAt'],
+          orderedAtOffsetMinutes: purchase['orderedAtOffsetMinutes'] ?? null,
+          currency: purchase['currency'],
+          totalCents: purchase['totalCents'],
+          status: purchase['status'],
+        },
+      };
+    })
+    .filter((hit) => hit !== null)
+    .toSorted((left, right) => right.score - left.score);
+
+  json(response, 200, { hits });
+}
+
+/**
  * Reads one path parameter from an OpenAPI template containing the given
  * `{marker}`.
  *
@@ -806,6 +887,8 @@ function pathParameter(template, pathname, marker = '{id}') {
  *   close: () => Promise<void>,
  *   setReachable: (active: boolean) => void,
  *   isReachable: () => boolean,
+ *   setSearchOutage: (active: boolean) => void,
+ *   isSearchOutage: () => boolean,
  * }>}
  */
 export async function startPurchasesStub({
@@ -820,9 +903,16 @@ export async function startPurchasesStub({
   const detail = detailRoute(contract);
   const monthSummary = monthSummaryRoute(contract);
   const receiptThumbnail = receiptThumbnailRoute(contract);
+  const search = searchRoute(contract);
   const store = seededPurchases();
 
   let reachable = false;
+  // Independent of `reachable`, the same way `manual`'s write route is: a
+  // flow arms this to fail the search request specifically while `/openapi`
+  // keeps answering and the Purchases tab stays, mirroring
+  // `finance-stops-answering.js`'s "reachable but its data route refuses"
+  // shape rather than taking the whole pillar down.
+  let searchOutage = false;
 
   // Serialised once rather than per probe, for the reason `upstream-stub.mjs`
   // gives about finance's much larger document: a stringify inside the handler
@@ -847,6 +937,18 @@ export async function startPurchasesStub({
         'content-length': String(contractBody.byteLength),
       });
       response.end(contractBody);
+      return;
+    }
+
+    if (request.method === search.method && url.pathname === search.path) {
+      if (searchOutage) {
+        // Same refusal `/openapi` gives while unreachable: a reset fails the
+        // bfm's fetch outright rather than answering something a 5xx handler
+        // would have to invent a body for.
+        request.socket.destroy();
+        return;
+      }
+      void handleSearch(request, response, store);
       return;
     }
 
@@ -920,5 +1022,9 @@ export async function startPurchasesStub({
       reachable = active;
     },
     isReachable: () => reachable,
+    setSearchOutage: (active) => {
+      searchOutage = active;
+    },
+    isSearchOutage: () => searchOutage,
   };
 }
