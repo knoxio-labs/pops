@@ -1,4 +1,6 @@
 import { existsSync, rmSync } from 'node:fs';
+import { mkdtemp } from 'node:fs/promises';
+import os from 'node:os';
 import path from 'node:path';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -187,14 +189,31 @@ describe('purchases standalone, on mocks alone', () => {
  * run with `emptyOutDir`, so each output must live under its own directory —
  * this fails against a standalone config left on the default `dist/`, which
  * the remote build's `dist/remote/` sits inside of.
+ *
+ * Both builds here write under a per-test temp directory rather than the
+ * real `dist/`. Building for real, in-process, inside `NODE_ENV=test`
+ * produces a development bundle (`react/jsx-dev-runtime`) — fine for
+ * asserting this suite's own claim, but wrong to leave sitting in `dist/`,
+ * where `remote-bundle.test.ts` builds and reads the same file for its own,
+ * unrelated assertion. Two tests racing to write and read one shared path
+ * is what made that suite flaky; giving every run its own directory removes
+ * the shared path rather than trying to order around it.
  */
 describe('build and build:standalone coexist regardless of order (POPS-4632)', () => {
   const APP_ROOT = path.resolve(import.meta.dirname, '..', '..');
-  const REMOTE_ENTRY = path.join(APP_ROOT, 'dist/remote/purchases.js');
-  const STANDALONE_ENTRY = path.join(APP_ROOT, 'dist/standalone/index.html');
 
-  beforeEach(() => {
-    rmSync(path.join(APP_ROOT, 'dist'), { recursive: true, force: true });
+  let tmpRoot: string;
+  let remoteOutDir: string;
+  let standaloneOutDir: string;
+
+  beforeEach(async () => {
+    tmpRoot = await mkdtemp(path.join(os.tmpdir(), 'pops-purchases-build-order-'));
+    remoteOutDir = path.join(tmpRoot, 'remote');
+    standaloneOutDir = path.join(tmpRoot, 'standalone');
+  });
+
+  afterEach(() => {
+    rmSync(tmpRoot, { recursive: true, force: true });
   });
 
   async function buildRemote(): Promise<void> {
@@ -203,6 +222,7 @@ describe('build and build:standalone coexist regardless of order (POPS-4632)', (
       root: APP_ROOT,
       mode: 'production',
       logLevel: 'silent',
+      build: { outDir: remoteOutDir, emptyOutDir: true },
     });
   }
 
@@ -212,22 +232,31 @@ describe('build and build:standalone coexist regardless of order (POPS-4632)', (
       root: APP_ROOT,
       mode: 'production',
       logLevel: 'silent',
+      build: { outDir: standaloneOutDir, emptyOutDir: true },
     });
   }
 
   it('keeps the remote bundle when the standalone build runs after it', async () => {
     await buildRemote();
+    expect(existsSync(path.join(remoteOutDir, 'purchases.js'))).toBe(true);
+
     await buildStandalone();
 
-    expect(existsSync(REMOTE_ENTRY)).toBe(true);
-    expect(existsSync(STANDALONE_ENTRY)).toBe(true);
+    // The standalone build, targeting its own directory, must not have
+    // touched the remote build's output — that's the bug (POPS-4632).
+    expect(existsSync(path.join(remoteOutDir, 'purchases.js'))).toBe(true);
+    expect(existsSync(path.join(standaloneOutDir, 'index.html'))).toBe(true);
   }, 60_000);
 
   it('keeps the standalone bundle when the remote build runs after it', async () => {
     await buildStandalone();
+    expect(existsSync(path.join(standaloneOutDir, 'index.html'))).toBe(true);
+
     await buildRemote();
 
-    expect(existsSync(REMOTE_ENTRY)).toBe(true);
-    expect(existsSync(STANDALONE_ENTRY)).toBe(true);
+    // The remote build, targeting its own directory, must not have touched
+    // the standalone build's output — that's the bug (POPS-4632).
+    expect(existsSync(path.join(standaloneOutDir, 'index.html'))).toBe(true);
+    expect(existsSync(path.join(remoteOutDir, 'purchases.js'))).toBe(true);
   }, 60_000);
 });
