@@ -14,7 +14,7 @@ let strictSwiftSettings: [SwiftSetting] = [
 // itself is iOS-only.
 let package = Package(
     name: "InventoryReplica",
-    platforms: [.iOS("26.0"), .macOS("15.0")],
+    platforms: [.iOS("27.0"), .macOS("15.0")],
     products: [.library(name: "InventoryReplica", targets: ["InventoryReplica"])],
     // `AppCore` for the seams this package implements. GRDB is the phone's
     // local database (Inventory ADR-002 D11): explicit transactions, a

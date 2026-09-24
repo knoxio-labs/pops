@@ -23,6 +23,28 @@ private final class RecordingScheduler: BackgroundRefreshScheduler {
     }
 }
 
+/// Holds every refresh request until `release()`, as the system may.
+private final class HeldScheduler: BackgroundRefreshScheduler {
+    private let released: AsyncStream<Void>
+    private let release: AsyncStream<Void>.Continuation
+    private let answered = Mutex(false)
+
+    init() {
+        (released, release) = AsyncStream.makeStream()
+    }
+
+    var wasAnswered: Bool { answered.withLock { $0 } }
+
+    func open() {
+        release.finish()
+    }
+
+    func submitRefresh(identifier: String, earliestBeginDate: Date) async throws {
+        for await _ in released {}
+        answered.withLock { $0 = true }
+    }
+}
+
 /// Whether a piece of work started, finished, or saw its cancellation.
 private final class WorkLog: Sendable {
     private let events = Mutex<[String]>([])
@@ -128,6 +150,23 @@ internal struct BackgroundRefreshTests {
         #expect(scheduler.requests.count == 1)
     }
 
+    @Test("the work runs while the next refresh's request is still unanswered")
+    func workDoesNotWaitForTheRequest() async {
+        let scheduler = HeldScheduler()
+        let log = WorkLog()
+        let refresh = BackgroundRefresh(
+            scheduler: scheduler, isUnlockedSinceBoot: { true }, sleep: Self.neverElapses)
+
+        let outcome = await refresh.run {
+            log.note(scheduler.wasAnswered ? "worked after the request" : "worked first")
+            scheduler.open()
+        }
+
+        #expect(outcome == .completed)
+        #expect(log.all == ["worked first"])
+        #expect(scheduler.wasAnswered)
+    }
+
     @Test("a refused schedule does not stop the refresh from running")
     func refusedScheduleStillRuns() async {
         let scheduler = RecordingScheduler()
@@ -135,7 +174,7 @@ internal struct BackgroundRefreshTests {
         let log = WorkLog()
         let refresh = Self.refresh(scheduler)
 
-        #expect(!refresh.schedule())
+        #expect(await !refresh.schedule())
         #expect(await refresh.run { log.note("worked") } == .completed)
         #expect(log.all == ["worked"])
     }
