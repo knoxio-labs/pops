@@ -120,6 +120,29 @@ export const ModuleCaptureOverlayConfigSchema = z
 export type ModuleCaptureOverlayConfig = z.infer<typeof ModuleCaptureOverlayConfigSchema>;
 
 /**
+ * Top-bar widget manifest contribution: a component the pillar's own remote
+ * bundle supplies for the shell's top bar. `@pops/pillar-sdk` re-exports this
+ * schema rather than restating it (ADR-049).
+ *
+ * Data only. `bundleSlot` names the component in the pillar's `bundles`
+ * record, and the component owns everything it does — what it fetches, where
+ * it links — so the shell never learns a pillar's endpoints or routes. The
+ * shell renders every resolved widget sorted by `order` ascending, ties broken
+ * alphabetically by pillar id, and renders nothing for a pillar absent from
+ * the registry snapshot.
+ */
+export const TopBarWidgetDescriptorSchema = z
+  .object({
+    /** Bundle-slot identifier the pillar's remote bundle resolves to a component. */
+    bundleSlot: KebabIdentifierSchema,
+    /** Ascending sort key; ties broken alphabetically by pillar id. */
+    order: z.number().int(),
+  })
+  .strict();
+
+export type TopBarWidgetDescriptor = z.infer<typeof TopBarWidgetDescriptorSchema>;
+
+/**
  * Frontend-side manifest fields. Generic over the route and nav config types
  * so this package does not have to depend on `react-router` or `@pops/navigation`.
  */

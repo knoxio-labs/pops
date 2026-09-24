@@ -33,6 +33,7 @@ import type {
   NavConfigDescriptor,
   PageDescriptor,
   PillarSnapshot,
+  TopBarWidgetDescriptor,
 } from '@pops/pillar-sdk';
 import type { ModuleManifest } from '@pops/types';
 
@@ -110,6 +111,8 @@ export interface RegistryEntry {
    * it.
    */
   readonly settingsWidgetSlots?: readonly string[];
+  /** The pillar's top-bar widget slots, carried through like `captureOverlay`. */
+  readonly topBarWidgets?: readonly TopBarWidgetDescriptor[];
 }
 
 /** Every `widget.bundleSlot` the pillar's settings groups name. */
@@ -164,7 +167,7 @@ export function bootEntries(snapshot: readonly PillarSnapshot[]): readonly Regis
   const out: RegistryEntry[] = [];
   for (const s of snapshot) {
     if (!s.registered) continue;
-    const { assetsBaseUrl, nav, pages, captureOverlay } = s.manifest;
+    const { assetsBaseUrl, nav, pages, captureOverlay, topBarWidgets } = s.manifest;
     const widgetSlots = settingsWidgetSlotsOf(s.manifest);
     out.push({
       pillarId: s.pillarId,
@@ -173,6 +176,7 @@ export function bootEntries(snapshot: readonly PillarSnapshot[]): readonly Regis
       ...(pages !== undefined ? { pages } : {}),
       ...(captureOverlay !== undefined ? { captureOverlay } : {}),
       ...(widgetSlots.length > 0 ? { settingsWidgetSlots: widgetSlots } : {}),
+      ...(topBarWidgets !== undefined ? { topBarWidgets } : {}),
     });
   }
   return out;
@@ -198,6 +202,7 @@ function resolveExternalManifest(
     pages: entry.pages,
     captureOverlay: entry.captureOverlay,
     settingsWidgetSlots: entry.settingsWidgetSlots,
+    topBarWidgets: entry.topBarWidgets,
   };
   try {
     const synthesized = synthesizeExternalBundleEntry(descriptor, importer);

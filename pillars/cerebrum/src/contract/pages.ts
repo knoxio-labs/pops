@@ -41,6 +41,14 @@ export const CEREBRUM_PAGES = [
  */
 export const CEREBRUM_CAPTURE_SLOT = 'ingest-form';
 
+/**
+ * The slot the top-bar nudge indicator is served from. Not a page either: the
+ * shell renders it in its top bar through `topBarWidgets` (POPS-4573), and the
+ * component itself knows the nudges endpoint and route, so the shell does not.
+ */
+export const CEREBRUM_NUDGE_INDICATOR_SLOT = 'nudge-indicator';
+
 /** Every bundle slot the cerebrum UI must supply a component for. */
 export type CerebrumPageSlot = (typeof CEREBRUM_PAGES)[number]['bundleSlot'];
 export type CerebrumCaptureSlot = typeof CEREBRUM_CAPTURE_SLOT;
+export type CerebrumNudgeIndicatorSlot = typeof CEREBRUM_NUDGE_INDICATOR_SLOT;

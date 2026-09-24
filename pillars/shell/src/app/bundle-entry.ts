@@ -36,6 +36,17 @@ export interface CaptureOverlayBundle {
 }
 
 /**
+ * One top-bar widget a pillar supplies: the component its bundle serves under
+ * `bundleSlot`, and the `order` its manifest ranks it by. The component takes
+ * no props and renders nothing while it loads or when it fails to.
+ */
+export interface TopBarWidgetBundle {
+  readonly bundleSlot: string;
+  readonly order: number;
+  readonly Component: ComponentType;
+}
+
+/**
  * A pillar's resolved UI surface: the manifest its routes come from, where it
  * sits on the rail, and the non-page surfaces it supplies, each keyed by the
  * bundle slot its wire manifest names.
@@ -45,5 +56,6 @@ export interface BundleEntry {
   readonly navOrder: number;
   readonly captureOverlayBundles?: Readonly<Record<string, CaptureOverlayBundle>>;
   readonly settingsWidgetBundles?: Readonly<Record<string, ComponentType>>;
+  readonly topBarWidgets?: readonly TopBarWidgetBundle[];
   readonly assetsBaseUrl?: string;
 }

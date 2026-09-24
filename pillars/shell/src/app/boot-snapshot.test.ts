@@ -532,6 +532,22 @@ describe('resolveBootRegistry — non-page surfaces off the wire', () => {
     expect(result.bundleMap.acme?.captureOverlayBundles).toBeUndefined();
   });
 
+  it('carries top-bar widgets from the wire manifest to the bundle map', () => {
+    const withWidget = snapshotEntry('acme', {
+      manifest: { ...loaderUi('acme'), topBarWidgets: [{ bundleSlot: 'status-chip', order: 5 }] },
+    });
+    const result = resolveBootRegistry([withWidget]);
+    expect(
+      result.bundleMap.acme?.topBarWidgets?.map(({ bundleSlot, order }) => ({ bundleSlot, order }))
+    ).toEqual([{ bundleSlot: 'status-chip', order: 5 }]);
+  });
+
+  it('carries no top-bar widgets for a pillar whose manifest declares none', () => {
+    const plain = snapshotEntry('acme', { manifest: loaderUi('acme') });
+    const result = resolveBootRegistry([plain]);
+    expect(result.bundleMap.acme?.topBarWidgets).toBeUndefined();
+  });
+
   /**
    * Widget slots are derived from the settings manifests the pillar publishes,
    * so this starts from those rather than from a slot list — the derivation is

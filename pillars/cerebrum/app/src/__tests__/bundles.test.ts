@@ -1,8 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { CEREBRUM_CAPTURE_SLOT, CEREBRUM_PAGES } from '@pops/cerebrum/manifest';
+import {
+  CEREBRUM_CAPTURE_SLOT,
+  CEREBRUM_NUDGE_INDICATOR_SLOT,
+  CEREBRUM_PAGES,
+} from '@pops/cerebrum/manifest';
 
 import { bundles } from '../bundles';
+import { NudgeIndicator } from '../components/NudgeIndicator';
 import { PAGE_COMPONENTS } from '../routes';
 
 /**
@@ -30,8 +35,19 @@ describe('cerebrum bundles record', () => {
     expect(CEREBRUM_PAGES.map((page) => page.bundleSlot)).not.toContain(CEREBRUM_CAPTURE_SLOT);
   });
 
-  it('carries nothing beyond the pages and the overlay', () => {
-    const expected = [...CEREBRUM_PAGES.map((p) => p.bundleSlot), CEREBRUM_CAPTURE_SLOT];
+  it('carries the top-bar nudge indicator slot, bound to the indicator', () => {
+    expect(bundles[CEREBRUM_NUDGE_INDICATOR_SLOT]).toBe(NudgeIndicator);
+    expect(CEREBRUM_PAGES.map((page) => page.bundleSlot)).not.toContain(
+      CEREBRUM_NUDGE_INDICATOR_SLOT
+    );
+  });
+
+  it('carries nothing beyond the pages, the overlay and the top-bar widget', () => {
+    const expected = [
+      ...CEREBRUM_PAGES.map((p) => p.bundleSlot),
+      CEREBRUM_CAPTURE_SLOT,
+      CEREBRUM_NUDGE_INDICATOR_SLOT,
+    ];
     expect(Object.keys(bundles).toSorted()).toEqual(expected.toSorted());
   });
 

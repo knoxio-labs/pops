@@ -153,3 +153,11 @@ export const CaptureOverlayDescriptorSchema = ModuleCaptureOverlayConfigSchema;
 export type NavConfigDescriptor = z.infer<typeof NavConfigDescriptorSchema>;
 export type NavItemDescriptor = z.infer<typeof NAV_ITEM_DESCRIPTOR>;
 export type CaptureOverlayDescriptor = ModuleCaptureOverlayConfig;
+
+/**
+ * Wire-shaped descriptor of a component a pillar contributes to the shell's
+ * top bar. Declared once in `@pops/types` and re-exported here (ADR-049); the
+ * shell resolves `bundleSlot` against the pillar's remote bundle, so the
+ * manifest stays data and the shell never names the pillar.
+ */
+export { TopBarWidgetDescriptorSchema, type TopBarWidgetDescriptor } from '@pops/types';

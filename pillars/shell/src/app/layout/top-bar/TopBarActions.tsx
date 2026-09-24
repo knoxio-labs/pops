@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@pops/ui';
 
 import { LocaleSwitcher } from './LocaleSwitcher';
-import { NudgeIndicator } from './NudgeIndicator';
+import { TopBarWidgets } from './TopBarWidgets';
 
 interface TopBarActionsProps {
   onOpenMobileSearch: () => void;
@@ -29,7 +29,7 @@ export function TopBarActions({ onOpenMobileSearch }: TopBarActionsProps) {
         <Search className="h-5 w-5" />
       </Button>
 
-      <NudgeIndicator />
+      <TopBarWidgets />
 
       <LocaleSwitcher />
 

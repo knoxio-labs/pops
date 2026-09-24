@@ -1,25 +1,27 @@
 /**
  * NudgeIndicator — notification bell showing pending nudge count.
  *
- * Polls the cerebrum pillar's `POST /nudges/search` REST endpoint through the
- * shell's `/cerebrum-api` proxy and displays a badge on the bell icon when
- * there are pending nudges. Clicking navigates to the cerebrum nudges page.
+ * Served to the shell's top bar from this pillar's bundle under the
+ * `topBarWidgets` slot the manifest declares, so the shell renders it only
+ * while cerebrum is registered and never learns the endpoint or route below.
  *
- * The proxy (vite in dev, nginx in prod) strips the `/cerebrum-api` prefix so
- * the pillar sees `/nudges/search`. Mirrors the federated-search surface
- * (`@pops/navigation` useSearchInputData → `/orchestrator-api/search`): a plain
- * `fetch` + React Query.
+ * Polls `POST /nudges/search` through the shell's `/cerebrum-api` proxy and
+ * displays a badge on the bell icon when there are pending nudges. Clicking
+ * navigates to the nudges page. The proxy (vite in dev, nginx in prod) strips
+ * the `/cerebrum-api` prefix so the pillar sees `/nudges/search`.
  */
 import { useQuery } from '@tanstack/react-query';
 import { Bell } from 'lucide-react';
 import { useNavigate } from 'react-router';
 
+import { CEREBRUM_NAV } from '@pops/cerebrum/manifest';
 import { Button } from '@pops/ui';
 
 const POLL_BASE_MS = 60_000;
 const MAX_FAILURES = 5;
 
 const NUDGES_SEARCH_URL = '/cerebrum-api/nudges/search';
+const NUDGES_PAGE_PATH = `${CEREBRUM_NAV.basePath}/nudges`;
 
 /** Failure carrying the HTTP status so the bell can hide on 404 / unavailable. */
 class NudgeFetchError extends Error {
@@ -61,6 +63,10 @@ async function fetchPendingCount(signal: AbortSignal): Promise<number> {
   return parsePendingTotal(await response.json());
 }
 
+/**
+ * The bell the shell mounts in its top bar. Takes no props; renders nothing
+ * once the nudges endpoint answers with an error or not at all.
+ */
 export function NudgeIndicator() {
   const navigate = useNavigate();
   const { data, isError } = useQuery({
@@ -83,7 +89,7 @@ export function NudgeIndicator() {
       size="icon"
       className="relative min-w-[44px] min-h-[44px]"
       aria-label={`Nudges: ${pendingCount} pending`}
-      onClick={() => navigate('/cerebrum/nudges')}
+      onClick={() => navigate(NUDGES_PAGE_PATH)}
     >
       <Bell className="h-5 w-5" />
       {pendingCount > 0 && (

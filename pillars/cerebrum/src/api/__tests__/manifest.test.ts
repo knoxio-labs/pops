@@ -8,7 +8,11 @@ import { describe, expect, it } from 'vitest';
 
 import { ManifestPayloadSchema, validateManifestPayload } from '@pops/pillar-sdk/manifest-schema';
 
-import { CEREBRUM_CAPTURE_SLOT, CEREBRUM_PAGES } from '../../contract/pages.js';
+import {
+  CEREBRUM_CAPTURE_SLOT,
+  CEREBRUM_NUDGE_INDICATOR_SLOT,
+  CEREBRUM_PAGES,
+} from '../../contract/pages.js';
 import { cerebrumManifest, egoManifest } from '../../contract/settings/index.js';
 import { buildCerebrumCapabilityReporter, buildCerebrumManifest } from '../manifest.js';
 
@@ -59,6 +63,21 @@ describe('buildCerebrumManifest', () => {
     expect(payload.captureOverlay?.bundleSlot).toBe(CEREBRUM_CAPTURE_SLOT);
     expect(payload.captureOverlay?.hotkey).toBe('mod+shift+k');
     expect(payload.pages?.map((page) => page.bundleSlot)).not.toContain(CEREBRUM_CAPTURE_SLOT);
+  });
+
+  /**
+   * The nudge badge is the shell's only top-bar surface that comes from a
+   * pillar. Dropped from the wire it disappears silently, so the slot is
+   * pinned here, and pinned as a slot alone: no URL or route may ride along.
+   */
+  it('declares the nudge indicator as its only top-bar widget, by slot alone', () => {
+    const payload = buildCerebrumManifest('1.2.3');
+    expect(payload.topBarWidgets).toEqual([
+      { bundleSlot: CEREBRUM_NUDGE_INDICATOR_SLOT, order: 10 },
+    ]);
+    expect(payload.pages?.map((page) => page.bundleSlot)).not.toContain(
+      CEREBRUM_NUDGE_INDICATOR_SLOT
+    );
   });
 
   /**

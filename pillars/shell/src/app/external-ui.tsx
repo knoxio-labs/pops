@@ -1,4 +1,4 @@
-import { lazy, Suspense, type ComponentType } from 'react';
+import { lazy, Suspense, type ComponentType, type ReactNode } from 'react';
 
 /**
  * Pillar UI loading (Option A).
@@ -50,9 +50,9 @@ import { lazy, Suspense, type ComponentType } from 'react';
  * import map is the shell's half of this and lands with the first
  * loader-mounted in-repo pillar (POPS-3217).
  */
-import { iconMap } from '@pops/navigation';
 import { ErrorBoundary } from '@pops/ui';
 
+import { navConfigFromDescriptor } from './nav/nav-from-descriptor';
 import { entryUrlForThisLoad, uncachedProbeUrl } from './remote-entry-url';
 
 import type { RouteObject } from 'react-router';
@@ -61,11 +61,11 @@ import type {
   CaptureOverlayDescriptor,
   NavConfigDescriptor,
   PageDescriptor,
+  TopBarWidgetDescriptor,
 } from '@pops/pillar-sdk';
 import type { ModuleManifest } from '@pops/types';
 
-import type { BundleEntry, CaptureOverlayMountProps } from './bundle-entry';
-import type { AppNavConfig, AppNavItem, IconName } from './nav/types';
+import type { BundleEntry, CaptureOverlayMountProps, TopBarWidgetBundle } from './bundle-entry';
 
 /**
  * The contract an external pillar's remote ESM bundle must satisfy.
@@ -106,6 +106,12 @@ export interface RemoteUiDescriptor {
    * the shell looks each one up in `bundles` when a group asks for it.
    */
   readonly settingsWidgetSlots?: readonly string[];
+  /**
+   * The top-bar widgets this pillar's bundle supplies. Same resolution again:
+   * the manifest names a slot and an order, the bundle supplies the component,
+   * and the shell renders it without knowing what it does (POPS-4573).
+   */
+  readonly topBarWidgets?: readonly TopBarWidgetDescriptor[];
 }
 
 /**
@@ -187,6 +193,21 @@ const RemoteSuspenseFallback = (
   <div className="flex items-center justify-center h-64 text-muted-foreground">Loading…</div>
 );
 
+interface SlotFallbacks {
+  readonly loading: ReactNode;
+  readonly error: ReactNode;
+}
+
+const PANEL_FALLBACKS: SlotFallbacks = {
+  loading: RemoteSuspenseFallback,
+  error: RemoteLoadFallback,
+};
+
+// A top-bar widget sits in a 44px row beside the shell's own controls: a
+// 16rem loading block or a sentence of error text there would break the bar,
+// and a widget that cannot load has nothing useful to say in it.
+const TOP_BAR_FALLBACKS: SlotFallbacks = { loading: null, error: null };
+
 /**
  * Build the lazy, guarded element the shell mounts for one external page.
  * The remote bundle is imported on first render of this element (so an
@@ -247,7 +268,8 @@ function remotePageElement(
 function remoteSlotComponent<P extends object>(
   descriptor: RemoteUiDescriptor,
   bundleSlot: string,
-  importer: RemoteModuleImporter
+  importer: RemoteModuleImporter,
+  fallbacks: SlotFallbacks = PANEL_FALLBACKS
 ): ComponentType<P> {
   const LazySlot = lazy(() =>
     loadRemoteComponent(descriptor, bundleSlot, importer)
@@ -255,65 +277,14 @@ function remoteSlotComponent<P extends object>(
   return function RemoteSlot(props: P) {
     return (
       <ErrorBoundary
-        fallback={() => RemoteLoadFallback}
+        fallback={() => fallbacks.error}
         staleChunkProbeUrl={() => uncachedProbeUrl(descriptor.assetsBaseUrl)}
       >
-        <Suspense fallback={RemoteSuspenseFallback}>
+        <Suspense fallback={fallbacks.loading}>
           <LazySlot {...props} />
         </Suspense>
       </ErrorBoundary>
     );
-  };
-}
-
-const FALLBACK_NAV_ICON: IconName = 'Compass';
-
-/**
- * Resolve a wire-format icon id to a shell `IconName`.
- *
- * The wire spells icons in kebab-case — `KebabIdentifierSchema` rejects the
- * PascalCase `iconMap` is keyed by — so a bare `icon in iconMap` lookup could
- * not resolve anything a pillar is allowed to send, and every loader-mounted
- * pillar rendered the fallback on its rail entry and every page-nav item. The
- * kebab id is converted to the map's key form; a PascalCase id is still
- * accepted ahead of that, since an in-repo descriptor may carry one.
- *
- * An id that is neither degrades to a neutral fallback rather than failing
- * the nav build: a pillar naming an icon this shell build does not ship must
- * still mount.
- */
-function resolveNavIcon(icon: string): IconName {
-  if (icon in iconMap) return icon as IconName;
-  const pascalCase = icon
-    .split('-')
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join('');
-  return pascalCase in iconMap ? (pascalCase as IconName) : FALLBACK_NAV_ICON;
-}
-
-function navItemFromDescriptor(item: NavConfigDescriptor['items'][number]): AppNavItem {
-  return {
-    path: item.path,
-    label: item.label,
-    labelKey: item.labelKey,
-    icon: resolveNavIcon(item.icon),
-  };
-}
-
-/**
- * Project a wire `NavConfigDescriptor` onto the runtime `AppNavConfig` the
- * app rail consumes. Icons resolve to `IconName` with a fallback; everything
- * else is a structural copy.
- */
-function navConfigFromDescriptor(nav: NavConfigDescriptor): AppNavConfig {
-  return {
-    id: nav.id,
-    label: nav.label,
-    labelKey: nav.labelKey,
-    icon: resolveNavIcon(nav.icon),
-    color: nav.color,
-    basePath: nav.basePath,
-    items: nav.items.map(navItemFromDescriptor),
   };
 }
 
@@ -351,6 +322,20 @@ function widgetBundlesFor(
   return Object.fromEntries(
     slots.map((slot) => [slot, remoteSlotComponent(descriptor, slot, importer)])
   );
+}
+
+/** The pillar's top-bar widgets, or `undefined` when it declares none. */
+function topBarWidgetsFor(
+  descriptor: RemoteUiDescriptor,
+  importer: RemoteModuleImporter
+): readonly TopBarWidgetBundle[] | undefined {
+  const widgets = descriptor.topBarWidgets ?? [];
+  if (widgets.length === 0) return undefined;
+  return widgets.map(({ bundleSlot, order }) => ({
+    bundleSlot,
+    order,
+    Component: remoteSlotComponent(descriptor, bundleSlot, importer, TOP_BAR_FALLBACKS),
+  }));
 }
 
 /**
@@ -413,5 +398,6 @@ export function synthesizeExternalBundleEntry(
     ...entry,
     captureOverlayBundles: overlayBundlesFor(descriptor, importer),
     settingsWidgetBundles: widgetBundlesFor(descriptor, importer),
+    topBarWidgets: topBarWidgetsFor(descriptor, importer),
   };
 }

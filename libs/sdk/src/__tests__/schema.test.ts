@@ -899,6 +899,54 @@ describe('ManifestPayloadSchema', () => {
     });
   });
 
+  describe('topBarWidgets dimension (POPS-4573)', () => {
+    const parse = (topBarWidgets: unknown) =>
+      ManifestPayloadSchema.safeParse({ ...validManifest(), topBarWidgets });
+
+    it('accepts a manifest with topBarWidgets omitted', () => {
+      const result = ManifestPayloadSchema.safeParse(validManifest());
+      expect(result.success).toBe(true);
+      if (result.success) expect(result.data.topBarWidgets).toBeUndefined();
+    });
+
+    it('accepts an empty list and a list of valid descriptors, preserving them', () => {
+      expect(parse([]).success).toBe(true);
+      const widgets = [
+        { bundleSlot: 'nudge-indicator', order: 10 },
+        { bundleSlot: 'sync-status', order: -1 },
+      ];
+      const result = parse(widgets);
+      expect(result.success).toBe(true);
+      if (result.success) expect(result.data.topBarWidgets).toEqual(widgets);
+    });
+
+    it('rejects a descriptor missing bundleSlot', () => {
+      expect(parse([{ order: 10 }]).success).toBe(false);
+    });
+
+    it('rejects a descriptor missing order, or with a non-integer order', () => {
+      expect(parse([{ bundleSlot: 'nudge-indicator' }]).success).toBe(false);
+      expect(parse([{ bundleSlot: 'nudge-indicator', order: 1.5 }]).success).toBe(false);
+    });
+
+    it.each(['NudgeIndicator', 'nudge_indicator', '-nudge', ''])(
+      'rejects a non-kebab-case bundleSlot (%j)',
+      (bundleSlot) => {
+        expect(parse([{ bundleSlot, order: 10 }]).success).toBe(false);
+      }
+    );
+
+    it('rejects a descriptor carrying behaviour rather than a slot (strict mode)', () => {
+      expect(
+        parse([{ bundleSlot: 'nudge-indicator', order: 10, url: '/cerebrum-api/nudges' }]).success
+      ).toBe(false);
+    });
+
+    it('rejects a bare descriptor where a list is required', () => {
+      expect(parse({ bundleSlot: 'nudge-indicator', order: 10 }).success).toBe(false);
+    });
+  });
+
   describe('features dimension (epic 05 / S0)', () => {
     const redisFeature = () => ({
       key: 'core.redis',

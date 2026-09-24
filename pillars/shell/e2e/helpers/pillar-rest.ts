@@ -185,8 +185,9 @@ const ShellManifestResponseSchema: z.ZodType<ShellManifestResponses[200]> = z
 /**
  * The `/cerebrum-api/nudges/search` 200 shape, mirrored from
  * `nudgeSearchContract` (`pillars/cerebrum/src/contract/rest-nudges.ts`):
- * `{ nudges: Nudge[], total: number }`. `NudgeIndicator`
- * (`src/app/layout/top-bar/NudgeIndicator.tsx`) only reads `total`, so
+ * `{ nudges: Nudge[], total: number }`. Cerebrum's `NudgeIndicator`
+ * (`pillars/cerebrum/app/src/components/NudgeIndicator.tsx`, mounted in the
+ * top bar through the manifest's `topBarWidgets`) only reads `total`, so
  * `nudges` is left an untyped array rather than mirroring the full nudge
  * shape for a field nothing here asserts on.
  */
@@ -319,6 +320,9 @@ const LOADER_MOUNTED_UI: Readonly<Record<string, Record<string, unknown>>> = {
       hotkey: 'mod+shift+k',
       labelKey: 'cerebrum.captureOverlay.label',
     },
+    // The nudge bell, served from the same bundle. Omitting it would leave
+    // the nudges stub below unexercised rather than failing anything.
+    topBarWidgets: [{ bundleSlot: 'nudge-indicator', order: 10 }],
   },
   lists: {
     assetsBaseUrl: '/lists-ui/lists.js',
