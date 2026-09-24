@@ -126,6 +126,14 @@ internal struct InventorySymbol: Hashable {
     internal static let manage = InventorySymbol(system: "ellipsis.circle", lucide: "Ellipsis")
     internal static let connect = InventorySymbol(system: "cable.connector", lucide: "Cable")
     internal static let disconnect = InventorySymbol(system: "powerplug", lucide: "Unplug")
+    internal static let retry = InventorySymbol(system: "arrow.clockwise", lucide: "RotateCw")
+    /// A field or type a newer catalogue swapped for another.
+    internal static let replaced = InventorySymbol(
+        system: "arrow.left.arrow.right", lucide: "ArrowLeftRight")
+    internal static let required = InventorySymbol(system: "asterisk", lucide: "Asterisk")
+    /// The phone fetching the catalogue's newer fields.
+    internal static let refreshFields = InventorySymbol(
+        system: "arrow.triangle.2.circlepath", lucide: "RefreshCw")
 
     /// Every entry, for the test that checks them and for the sheet that shows
     /// them side by side.
@@ -195,6 +203,10 @@ internal struct InventorySymbol: Hashable {
         ("Manage", manage),
         ("Connect", connect),
         ("Disconnect", disconnect),
+        ("Retry", retry),
+        ("Replaced", replaced),
+        ("Required", required),
+        ("Refresh fields", refreshFields),
     ]
 
     /// The glyph for a container in a given state.
