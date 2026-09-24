@@ -39,10 +39,32 @@ internal struct ReceiptDraftRecordSelect: View {
     internal let note: PopsFieldNote?
 
     @State private var choosing = false
+    /// The record a person just picked in the sheet, kept alongside the id it
+    /// answers for. The caller's `resolvedName` is only good once its own
+    /// async preview has caught up to `resolution`, which is not immediate —
+    /// so between closing the sheet and that arriving, this is what the label
+    /// reads from. It stops answering the moment the id it was pinned to
+    /// stops being the current one, which is what keeps a switch from
+    /// Woolworths to Bunnings from showing "Woolworths" against the new id.
+    @State private var pinned: ReceiptDraftRecord?
 
     private var chosen: String? {
+        Self.chosenName(resolution: resolution, pinned: pinned, resolvedName: resolvedName)
+    }
+
+    /// What the control's label should read, given what is pinned locally and
+    /// what the caller has resolved. A pinned record only answers for the id
+    /// it was chosen with; once `resolution` points elsewhere, it is silent
+    /// and `resolvedName` — the caller's own async preview — takes back over.
+    internal static func chosenName(
+        resolution: RecordResolution,
+        pinned: ReceiptDraftRecord?,
+        resolvedName: String?
+    ) -> String? {
         if let value = resolution.createdValue { return value }
-        return resolution.entityID == nil ? nil : resolvedName
+        guard let id = resolution.entityID else { return nil }
+        if let pinned, pinned.id == id { return pinned.name }
+        return resolvedName
     }
 
     private var selectedPreview: ReceiptDraftRecord? {
@@ -75,6 +97,7 @@ internal struct ReceiptDraftRecordSelect: View {
                 seed: printed,
                 createTitle: createTitle,
                 onChoose: { record in
+                    pinned = record
                     resolution = .chosen(id: record.id)
                     choosing = false
                 },

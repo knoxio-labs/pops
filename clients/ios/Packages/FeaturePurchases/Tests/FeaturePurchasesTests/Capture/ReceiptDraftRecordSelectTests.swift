@@ -89,6 +89,62 @@ internal struct ReceiptDraftRecordSelectTests {
         #expect(!model.isSearching)
     }
 
+    @Test("a freshly pinned record's own name shows against its id")
+    func pinnedNameAnswersForItsOwnID() {
+        let bunnings = ReceiptDraftRecord(id: "ent-bunnings", name: "Bunnings")
+
+        let name = ReceiptDraftRecordSelect.chosenName(
+            resolution: .chosen(id: "ent-bunnings"),
+            pinned: bunnings,
+            resolvedName: "Woolworths")
+
+        #expect(name == "Bunnings")
+    }
+
+    @Test("a pinned record never answers for a different id")
+    func pinnedNameNeverAnswersForAnotherID() {
+        let woolworths = ReceiptDraftRecord(id: "ent-woolworths", name: "Woolworths")
+
+        let name = ReceiptDraftRecordSelect.chosenName(
+            resolution: .chosen(id: "ent-bunnings"),
+            pinned: woolworths,
+            resolvedName: "Bunnings")
+
+        #expect(name == "Bunnings")
+    }
+
+    @Test("with nothing pinned the caller's resolved name is used")
+    func noPinFallsBackToResolvedName() {
+        let name = ReceiptDraftRecordSelect.chosenName(
+            resolution: .matched(id: "ent-kmart"),
+            pinned: nil,
+            resolvedName: "Kmart")
+
+        #expect(name == "Kmart")
+    }
+
+    @Test("a created value wins over any pin or resolved name")
+    func createdValueWins() {
+        let pinned = ReceiptDraftRecord(id: "ent-x", name: "Somewhere Else")
+
+        let name = ReceiptDraftRecordSelect.chosenName(
+            resolution: .created(value: "New Shop"),
+            pinned: pinned,
+            resolvedName: "Ignored")
+
+        #expect(name == "New Shop")
+    }
+
+    @Test("an unresolved field has no name, pin or not")
+    func unresolvedHasNoName() {
+        let name = ReceiptDraftRecordSelect.chosenName(
+            resolution: .unresolved,
+            pinned: ReceiptDraftRecord(id: "ent-x", name: "Somewhere"),
+            resolvedName: "Somewhere Else")
+
+        #expect(name == nil)
+    }
+
     @Test("address lookup reads the current merchant whenever it runs")
     func addressLookupUsesCurrentMerchant() async {
         let box = DraftBox(ReceiptDraft.blank().attributed(id: "merchant-old"))
@@ -107,6 +163,50 @@ internal struct ReceiptDraftRecordSelectTests {
 
         #expect(await calls.merchantIDs == ["merchant-old", "merchant-new"])
         #expect(records == [ReceiptDraftRecord(id: "address-merchant-new", name: "New Street")])
+    }
+
+    @Test("address lookup narrows to addresses matching the typed query")
+    func addressLookupNarrowsByQuery() async {
+        let box = DraftBox(ReceiptDraft.blank().attributed(id: "merchant-1"))
+        let binding = Binding(
+            get: { box.draft },
+            set: { box.draft = $0 })
+
+        let records = await ReceiptDraftForm.addressRecords(
+            draft: binding,
+            addressesForMerchant: { _ in
+                [
+                    ReceiptAddressChoice(id: "a1", value: "12 Bunnings Way"),
+                    ReceiptAddressChoice(id: "a2", value: "5 Kmart Lane"),
+                ]
+            },
+            query: "bunnings")
+
+        #expect(records == [ReceiptDraftRecord(id: "a1", name: "12 Bunnings Way")])
+    }
+
+    @Test("narrowing by query is case- and diacritic-insensitive and trims whitespace")
+    func narrowedIsCaseAndDiacriticInsensitive() {
+        let records = [
+            ReceiptDraftRecord(id: "a1", name: "Café Street"),
+            ReceiptDraftRecord(id: "a2", name: "Other Road"),
+        ]
+
+        let matches = ReceiptDraftForm.narrowed(records, byQuery: "  CAFE  ")
+
+        #expect(matches == [ReceiptDraftRecord(id: "a1", name: "Café Street")])
+    }
+
+    @Test("an empty query narrows to nothing typed, so it answers with every address")
+    func narrowedWithEmptyQueryReturnsAll() {
+        let records = [
+            ReceiptDraftRecord(id: "a1", name: "Bunnings"),
+            ReceiptDraftRecord(id: "a2", name: "Kmart"),
+        ]
+
+        let matches = ReceiptDraftForm.narrowed(records, byQuery: "   ")
+
+        #expect(matches == records)
     }
 }
 

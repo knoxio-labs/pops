@@ -123,10 +123,11 @@ extension ReceiptDraftForm {
             resolution: $draft.addressResolution,
             printed: draft.printedAddress.value,
             resolvedName: resolvedAddress?.value,
-            search: { _ in
+            search: { query in
                 await Self.addressRecords(
                     draft: liveDraft,
-                    addressesForMerchant: addressesForMerchant)
+                    addressesForMerchant: addressesForMerchant,
+                    query: query)
             },
             symbol: "mappin.and.ellipse",
             placeholder: ReceiptDraftCopy.addressPlaceholderSelect,
@@ -152,11 +153,31 @@ extension ReceiptDraftForm {
 
     internal static func addressRecords(
         draft: Binding<ReceiptDraft>,
-        addressesForMerchant: ReceiptAddressesForMerchant
+        addressesForMerchant: ReceiptAddressesForMerchant,
+        query: String = ""
     ) async -> [ReceiptDraftRecord] {
         guard let merchantID = draft.wrappedValue.merchantResolution.entityID else { return [] }
-        return await addressesForMerchant(merchantID).map {
+        let records = await addressesForMerchant(merchantID).map {
             ReceiptDraftRecord(id: $0.id, name: $0.value)
+        }
+        return Self.narrowed(records, byQuery: query)
+    }
+
+    /// A merchant's addresses narrowed to the typed query, case- and
+    /// diacritic-insensitive. An empty query narrows to nothing typed yet, so
+    /// it answers with every address rather than none — the sheet's own rule
+    /// already keeps an empty query from reaching this in practice, showing
+    /// its prompt instead of calling `search` at all.
+    internal static func narrowed(
+        _ records: [ReceiptDraftRecord],
+        byQuery query: String
+    ) -> [ReceiptDraftRecord] {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return records }
+        let foldingOptions: String.CompareOptions = [.diacriticInsensitive, .caseInsensitive]
+        let needle = trimmed.folding(options: foldingOptions, locale: nil)
+        return records.filter {
+            $0.name.folding(options: foldingOptions, locale: nil).contains(needle)
         }
     }
 
