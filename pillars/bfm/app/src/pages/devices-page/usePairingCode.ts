@@ -5,14 +5,20 @@ import { unwrap } from '../../bfm-api-helpers.js';
 import { operatorIssuePairingCode } from '../../bfm-api/index.js';
 import { classifyOperatorFailure, type OperatorFailure } from './operator-failures.js';
 
-import type { OperatorIssuePairingCodeResponses } from '../../bfm-api/types.gen.js';
+import type {
+  OperatorIssuePairingCodeResponses,
+  OperatorListDevicesResponses,
+} from '../../bfm-api/types.gen.js';
 
 export type IssuedPairingCode = OperatorIssuePairingCodeResponses['201'];
+
+/** The handset a code turned into, as the operator's device list reports it. */
+export type PairedHandset = OperatorListDevicesResponses['200']['devices'][number];
 
 /** How often the remaining-TTL readout is recomputed. */
 const TICK_MS = 1000;
 
-export type PairingState = 'idle' | 'minting' | 'issued' | 'expired' | 'failed';
+export type PairingState = 'idle' | 'minting' | 'issued' | 'paired' | 'expired' | 'failed';
 
 export interface PairingCodeModel {
   state: PairingState;
@@ -20,8 +26,17 @@ export interface PairingCodeModel {
   issued: IssuedPairingCode | null;
   remainingMs: number;
   failure: OperatorFailure | null;
+  /** The handset the showing code was redeemed by; `null` unless `paired`. */
+  paired: PairedHandset | null;
   mint: () => void;
   dismiss: () => void;
+  /**
+   * The showing code has been redeemed by `device`. Drops the plaintext — it
+   * is spent — and stops the countdown, so a code that did its job is never
+   * then reported as having expired. A no-op unless a code is showing or has
+   * just run out.
+   */
+  complete: (device: PairedHandset) => void;
 }
 
 /**
@@ -91,6 +106,62 @@ function useClearOnSpend(
 }
 
 /**
+ * The countdown and what it does when it hits zero, in one place.
+ *
+ * `visible` treats a spent code as gone in the very render it is spent;
+ * `useClearOnSpend` makes that stick from the next render on.
+ */
+function useCodeLifetime(
+  issued: IssuedPairingCode | null,
+  setIssued: (issued: null) => void,
+  setHasExpired: (hasExpired: true) => void
+): {
+  remainingMs: number;
+  resetCountdown: () => void;
+  isSpent: boolean;
+  visible: IssuedPairingCode | null;
+} {
+  const [remainingMs, resetCountdown] = useCountdownTo(issued?.expiresAt ?? null);
+  const isSpent = issued !== null && remainingMs <= 0;
+  useClearOnSpend(isSpent, setIssued, setHasExpired);
+  return { remainingMs, resetCountdown, isSpent, visible: isSpent ? null : issued };
+}
+
+/**
+ * The handset a code turned into, once the watcher has seen it arrive.
+ *
+ * `mayComplete` is true while a code is showing *and* once it has expired. bfm
+ * checks expiry when the phone redeems, and the operator's view of that lags
+ * by up to one poll — so a phone that got in during the code's last second
+ * would otherwise be paired while the dialog insists the code ran out.
+ * Completing drops the plaintext and the expired flag: the code is spent, and
+ * a spent code is not an expired one.
+ */
+function useRedemption(
+  mayComplete: boolean,
+  setIssued: (issued: null) => void,
+  setHasExpired: (hasExpired: false) => void
+): {
+  redeemed: Pick<PairingCodeModel, 'paired' | 'complete'>;
+  forget: () => void;
+} {
+  const [paired, setPaired] = useState<PairedHandset | null>(null);
+
+  const complete = useCallback(
+    (device: PairedHandset) => {
+      if (!mayComplete) return;
+      setIssued(null);
+      setHasExpired(false);
+      setPaired(device);
+    },
+    [mayComplete, setIssued, setHasExpired]
+  );
+  const forget = useCallback(() => setPaired(null), []);
+
+  return { redeemed: { paired, complete }, forget };
+}
+
+/**
  * Owns a minted pairing code for as long as it is valid, and not one tick
  * longer.
  *
@@ -105,9 +176,11 @@ export function usePairingCode(): PairingCodeModel {
   const [hasExpired, setHasExpired] = useState(false);
   const [failure, setFailure] = useState<OperatorFailure | null>(null);
 
-  const [remainingMs, resetCountdown] = useCountdownTo(issued?.expiresAt ?? null);
-  const isSpent = issued !== null && remainingMs <= 0;
-  useClearOnSpend(isSpent, setIssued, setHasExpired);
+  const lifetime = useCodeLifetime(issued, setIssued, setHasExpired);
+  const { remainingMs, resetCountdown, isSpent, visible } = lifetime;
+
+  const mayComplete = visible !== null || hasExpired || isSpent;
+  const { redeemed, forget } = useRedemption(mayComplete, setIssued, setHasExpired);
 
   const mutation = useMutation({
     mutationFn: async () => unwrap(await operatorIssuePairingCode({ body: {} })),
@@ -138,6 +211,7 @@ export function usePairingCode(): PairingCodeModel {
     setFailure(null);
     setHasExpired(false);
     setIssued(null);
+    forget();
     setPendingMint(id);
 
     // `reset` runs whether or not the result is still wanted: a stale
@@ -156,7 +230,7 @@ export function usePairingCode(): PairingCodeModel {
         setPendingMint(null);
       })
       .finally(() => reset());
-  }, [mutateAsync, reset, resetCountdown]);
+  }, [mutateAsync, reset, resetCountdown, forget]);
 
   const dismiss = useCallback(() => {
     currentMint.current += 1;
@@ -164,10 +238,9 @@ export function usePairingCode(): PairingCodeModel {
     setIssued(null);
     setHasExpired(false);
     setFailure(null);
+    forget();
     reset();
-  }, [reset]);
-
-  const visible = isSpent ? null : issued;
+  }, [reset, forget]);
 
   return {
     /**
@@ -182,6 +255,7 @@ export function usePairingCode(): PairingCodeModel {
       isMinting: pendingMint !== null,
       hasFailure: failure !== null,
       hasCode: visible !== null,
+      isPaired: redeemed.paired !== null,
       hasExpired: hasExpired || isSpent,
     }),
     issued: visible,
@@ -189,6 +263,7 @@ export function usePairingCode(): PairingCodeModel {
     failure,
     mint,
     dismiss,
+    ...redeemed,
   };
 }
 
@@ -196,11 +271,13 @@ function derivePairingState(flags: {
   isMinting: boolean;
   hasFailure: boolean;
   hasCode: boolean;
+  isPaired: boolean;
   hasExpired: boolean;
 }): PairingState {
   if (flags.isMinting) return 'minting';
   if (flags.hasFailure) return 'failed';
   if (flags.hasCode) return 'issued';
+  if (flags.isPaired) return 'paired';
   if (flags.hasExpired) return 'expired';
   return 'idle';
 }

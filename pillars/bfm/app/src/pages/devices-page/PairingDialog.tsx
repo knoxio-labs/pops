@@ -9,13 +9,14 @@ import {
   DialogHeader,
   DialogTitle,
   QrCode,
+  SuccessBurst,
 } from '@pops/ui';
 
 import { PAIRING_FAILURE_KEYS } from './failure-messages.js';
 
 import type { ReactElement } from 'react';
 
-import type { PairingCodeModel } from './usePairingCode.js';
+import type { PairedHandset, PairingCodeModel } from './usePairingCode.js';
 
 /**
  * Remaining TTL as `m:ss`.
@@ -47,13 +48,16 @@ export function PairingDialog({
   onOpenChange: (open: boolean) => void;
 }): ReactElement {
   const { t } = useTranslation('bfm');
+  const isPaired = pairing.state === 'paired';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{t('pairing.title')}</DialogTitle>
-          <DialogDescription>{t('pairing.description')}</DialogDescription>
+          <DialogTitle>{t(isPaired ? 'pairing.paired.title' : 'pairing.title')}</DialogTitle>
+          <DialogDescription>
+            {t(isPaired ? 'pairing.paired.description' : 'pairing.description')}
+          </DialogDescription>
         </DialogHeader>
 
         <PairingBody pairing={pairing} />
@@ -73,6 +77,10 @@ export function PairingDialog({
 
 function PairingBody({ pairing }: { pairing: PairingCodeModel }): ReactElement {
   const { t } = useTranslation('bfm');
+
+  if (pairing.state === 'paired' && pairing.paired !== null) {
+    return <PairedBody device={pairing.paired} />;
+  }
 
   if (pairing.state === 'minting') {
     return (
@@ -113,6 +121,34 @@ function PairingBody({ pairing }: { pairing: PairingCodeModel }): ReactElement {
       </p>
       <p role="timer" className="text-sm text-muted-foreground">
         {t('pairing.expiresIn', { remaining: formatRemaining(pairing.remainingMs) })}
+      </p>
+    </div>
+  );
+}
+
+/**
+ * The payoff: the phone redeemed the code and bfm trusts it now.
+ *
+ * The burst plays once, when this mounts — which is the moment the watcher
+ * sees the new device. The name and model follow it in, a beat behind the
+ * check, so the eye lands on the tick first and the "which phone" second.
+ * `role="status"` makes the confirmation reach a screen reader too, which a
+ * silent swap of the dialog's contents would not.
+ */
+function PairedBody({ device }: { device: PairedHandset }): ReactElement {
+  const { t } = useTranslation('bfm');
+
+  return (
+    <div role="status" className="flex flex-col items-center gap-1 pb-2 text-center">
+      <SuccessBurst label={t('pairing.paired.burst')} />
+      <p
+        data-testid="paired-device-name"
+        className="animate-in fade-in slide-in-from-bottom-2 fill-mode-both delay-500 duration-500 text-lg font-semibold motion-reduce:animate-none"
+      >
+        {device.name}
+      </p>
+      <p className="animate-in fade-in slide-in-from-bottom-2 fill-mode-both delay-700 duration-500 text-sm text-muted-foreground motion-reduce:animate-none">
+        {t('pairing.paired.detail', { model: device.model })}
       </p>
     </div>
   );
