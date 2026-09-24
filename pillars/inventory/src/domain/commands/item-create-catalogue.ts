@@ -4,8 +4,10 @@ import {
   resolveProtocol1Type,
 } from '../../catalogue/index.js';
 import { storedFieldValues } from './active-catalogue-values.js';
+import { moveOntoReplacements } from './catalogue-replacement-move.js';
 import {
   assertCommandFieldValues,
+  resolveActiveCommandType,
   resolveCommandCatalogue,
   resolveCommandType,
 } from './command-catalogue.js';
@@ -86,9 +88,26 @@ export function resolveCreateCatalogue(
       values,
     };
   }
-  const type = resolveCommandType(resolution, input.typeId).active;
-  assertCommandFieldValues(db, resolution, { typeId: input.typeId, values });
-  return { mode: 'active', type, revision: resolution.active.revision.revision, values };
+  const moved = moveOntoReplacements(resolution, {
+    typeId: input.typeId,
+    itemTypeId: null,
+    values,
+  });
+  resolveCommandType(resolution, input.typeId);
+  const typeId = moved.typeId ?? input.typeId;
+  const type = resolveActiveCommandType(resolution, typeId);
+  assertCommandFieldValues(
+    db,
+    resolution,
+    { typeId: input.typeId, values },
+    { typeId, values: moved.values }
+  );
+  return {
+    mode: 'active',
+    type,
+    revision: resolution.active.revision.revision,
+    values: moved.values,
+  };
 }
 
 /** Persists already-validated create values through the matching protocol path. */
