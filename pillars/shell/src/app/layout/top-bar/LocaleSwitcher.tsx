@@ -4,10 +4,11 @@
  * Renders a button that toggles between supported locales.
  * Persists the selection to localStorage and updates i18next.
  */
-import { LOCALE_STORAGE_KEY, SUPPORTED_LOCALES } from '@/i18n';
+import { LOCALE_STORAGE_KEY } from '@/i18n';
 import { Languages } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { SUPPORTED_LOCALES, type SupportedLocale } from '@pops/pillar-sdk';
 import {
   Button,
   DropdownMenuContent,
@@ -15,8 +16,6 @@ import {
   DropdownMenuRoot,
   DropdownMenuTrigger,
 } from '@pops/ui';
-
-import type { SupportedLocale } from '@/i18n';
 
 const LOCALE_LABEL_KEYS: Record<SupportedLocale, string> = {
   'en-AU': 'localeEnAU',

@@ -8667,6 +8667,7 @@ export interface operations {
         placementKind?: 'location' | 'container' | 'hand';
         locationId?: string;
         containingItemId?: string;
+        ids?: string;
         includeInactive?: boolean;
       };
       header?: never;

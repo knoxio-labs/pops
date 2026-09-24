@@ -19369,6 +19369,14 @@
           },
           {
             "in": "query",
+            "name": "ids",
+            "schema": {
+              "pattern": "^[^,\\s]+(,[^,\\s]+)*$",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
             "name": "includeInactive",
             "schema": {
               "type": "boolean"

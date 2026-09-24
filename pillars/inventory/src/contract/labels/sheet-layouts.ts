@@ -101,7 +101,7 @@ function paddingFor(labelHeightMm: number): number {
  */
 export function deriveScale(labelWidthMm: number, labelHeightMm: number): LabelScale {
   const paddingMm = paddingFor(labelHeightMm);
-  const qrBeside = (text: number) =>
+  const qrBeside = (text: number): number =>
     Math.max(
       0,
       floorToHalf(

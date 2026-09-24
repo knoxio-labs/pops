@@ -1,4 +1,4 @@
-import { Check, MoreHorizontal, Pencil, Trash2, X } from 'lucide-react';
+import { Check, X } from 'lucide-react';
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router';
 
@@ -13,13 +13,9 @@ import { useNavigate } from 'react-router';
  */
 import {
   AssetIdBadge,
-  Button,
   type Condition,
   ConditionBadge,
   DataTable,
-  DropdownMenu,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
   formatAUD,
   formatDate,
   LocationBreadcrumb,
@@ -28,21 +24,13 @@ import {
   TypeBadge,
 } from '@pops/ui';
 
+import { buildActionsColumn, buildSelectColumn } from './InventoryTable.columns';
+
 import type { ColumnDef } from '@tanstack/react-table';
 
-export interface InventoryTableItem {
-  id: string;
-  itemName: string;
-  brand: string | null;
-  type: string | null;
-  condition: string | null;
-  location: string | null;
-  locationId: string | null;
-  replacementValue: number | null;
-  purchaseDate: string | null;
-  inUse: boolean;
-  assetId: string | null;
-}
+import type { InventoryTableItem } from './InventoryTable.columns';
+
+export type { InventoryTableItem } from './InventoryTable.columns';
 
 /** Known condition values (lowercase canonical + legacy Title Case). */
 const VALID_CONDITIONS = new Set<string>([
@@ -84,38 +72,6 @@ function conditionCell(condition: string | null): React.ReactNode {
 function purchaseDateCell(date: string | null): React.ReactNode {
   if (!date) return <span className="text-muted-foreground">—</span>;
   return <span className="text-sm tabular-nums">{formatDate(date)}</span>;
-}
-
-function buildActionsColumn(args: {
-  onEdit: (id: string) => void;
-  onDeleteRequest: (id: string) => void;
-}): ColumnDef<InventoryTableItem> {
-  return {
-    id: 'actions',
-    cell: ({ row }) => (
-      <div className="text-right">
-        <DropdownMenu
-          trigger={
-            <Button variant="ghost" size="icon" aria-label="Actions">
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          }
-          align="end"
-        >
-          <DropdownMenuItem onClick={() => args.onEdit(row.original.id)}>
-            <Pencil className="mr-2 h-4 w-4" /> Edit
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            className="text-destructive focus:text-destructive"
-            onClick={() => args.onDeleteRequest(row.original.id)}
-          >
-            <Trash2 className="mr-2 h-4 w-4" /> Delete
-          </DropdownMenuItem>
-        </DropdownMenu>
-      </div>
-    ),
-  };
 }
 
 function createColumns(
@@ -190,6 +146,8 @@ export interface InventoryTableProps {
   searchable?: boolean;
   onEdit?: (id: string) => void;
   onDeleteRequest?: (id: string) => void;
+  /** Adds a checkbox column; called with the selected items' ids whenever the selection changes. */
+  onSelectionChange?: (ids: string[]) => void;
 }
 
 const EMPTY_LOCATION_MAP: ReadonlyMap<string, LocationSegment[]> = new Map();
@@ -201,15 +159,24 @@ export function InventoryTable({
   searchable = false,
   onEdit,
   onDeleteRequest,
+  onSelectionChange,
 }: InventoryTableProps) {
   const navigate = useNavigate();
   const columns = useMemo(() => {
     const cols = createColumns(locationPathMap);
+    if (onSelectionChange) cols.unshift(buildSelectColumn());
     if (onEdit && onDeleteRequest) {
       cols.push(buildActionsColumn({ onEdit, onDeleteRequest }));
     }
     return cols;
-  }, [locationPathMap, onEdit, onDeleteRequest]);
+  }, [locationPathMap, onEdit, onDeleteRequest, onSelectionChange]);
+  const handleSelection = useMemo(
+    () =>
+      onSelectionChange
+        ? (rows: InventoryTableItem[]) => onSelectionChange(rows.map((row) => row.id))
+        : undefined,
+    [onSelectionChange]
+  );
 
   return (
     <DataTable
@@ -222,6 +189,8 @@ export function InventoryTable({
       paginated
       defaultPageSize={20}
       onRowClick={(row) => navigate(`/inventory/items/${row.id}`)}
+      enableRowSelection={onSelectionChange !== undefined}
+      onSelectionChange={handleSelection}
       emptyState="No inventory items found."
     />
   );

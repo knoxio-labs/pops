@@ -55,6 +55,8 @@ import { ErrorBoundary } from '@pops/ui';
 import { navConfigFromDescriptor } from './nav/nav-from-descriptor';
 import { entryUrlForThisLoad, uncachedProbeUrl } from './remote-entry-url';
 import { installRemoteStylesheet } from './remote-stylesheet';
+import { installRemoteTranslations } from './remote-translations';
+import { assertRemoteUiModule } from './remote-ui-module';
 
 import type { RouteObject } from 'react-router';
 
@@ -67,21 +69,6 @@ import type {
 import type { ModuleManifest } from '@pops/types';
 
 import type { BundleEntry, CaptureOverlayMountProps, TopBarWidgetBundle } from './bundle-entry';
-
-/**
- * The contract an external pillar's remote ESM bundle must satisfy.
- *
- * The bundle is fetched via `import(assetsBaseUrl)`; its module namespace is
- * expected to expose a `bundles` record keyed by the kebab-case
- * `PageDescriptor.bundleSlot` ids the pillar declares in its manifest. Each
- * value is a zero-prop-required React component the shell mounts under the
- * matching route. Keeping the contract to "a record of components" avoids
- * leaking the shell's router/React types across the wire boundary while
- * still being fully typed on the shell side.
- */
-export interface RemotePillarUiModule {
-  readonly bundles: Readonly<Record<string, ComponentType>>;
-}
 
 /**
  * Wire-shaped description of an external pillar's UI surface, projected from
@@ -137,22 +124,6 @@ export const defaultRemoteModuleImporter: RemoteModuleImporter = (assetsBaseUrl)
   import(/* @vite-ignore */ entryUrlForThisLoad(assetsBaseUrl));
 
 /**
- * Narrow an unknown dynamic-import result to `RemotePillarUiModule`. Throws a
- * descriptive `Error` (never returns a partial) so the lazy-import promise
- * rejects and the surrounding `<ErrorBoundary>` renders the fallback.
- */
-function assertRemoteUiModule(value: unknown, pillarId: string): RemotePillarUiModule {
-  if (typeof value !== 'object' || value === null || !('bundles' in value)) {
-    throw new Error(`external pillar '${pillarId}' bundle does not export a 'bundles' record`);
-  }
-  const bundles = (value as { bundles: unknown }).bundles;
-  if (typeof bundles !== 'object' || bundles === null) {
-    throw new Error(`external pillar '${pillarId}' bundle 'bundles' export is not an object`);
-  }
-  return { bundles: bundles as Readonly<Record<string, ComponentType>> };
-}
-
-/**
  * Resolve a single `bundleSlot` from a freshly imported remote module to a
  * `{ default }` shape `React.lazy` expects. Rejects (so the boundary fires)
  * when the slot is absent — a manifest that names a slot the bundle does not
@@ -170,6 +141,7 @@ async function loadRemoteComponent(
       : installRemoteStylesheet(descriptor.stylesheetUrl),
   ]);
   const module = assertRemoteUiModule(imported, descriptor.pillarId);
+  installRemoteTranslations(descriptor.pillarId, module.i18n);
   const component = module.bundles[bundleSlot];
   if (component === undefined) {
     throw new Error(

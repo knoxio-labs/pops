@@ -3,8 +3,7 @@ import { useMemo } from 'react';
 import { I18nextProvider, initReactI18next } from 'react-i18next';
 import { MemoryRouter } from 'react-router';
 
-import enAUFood from '@pops/locales/en-AU/food.json';
-
+import enAUFood from '../../locales/en-AU.json';
 import { RecipeActionMenu, type RecipeActionMenuItem } from './RecipeActionMenu';
 
 import type { Meta, StoryObj } from '@storybook/react-vite';

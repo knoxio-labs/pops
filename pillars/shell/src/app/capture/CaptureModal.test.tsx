@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import { I18nextProvider } from 'react-i18next';
 import { describe, expect, it } from 'vitest';
 
@@ -80,17 +80,36 @@ describe('CaptureModal', () => {
   });
 
   it('titles the dialog from the descriptor labelKey', () => {
+    i18n.addResourceBundle('en-AU', 'titled', { captureOverlay: { label: 'Quick note' } });
     render(
       withI18n(
         <CaptureModal
           open
           onOpenChange={() => undefined}
-          activeOverlayOverride={syntheticOverlay({ labelKey: 'cerebrum.captureOverlay.label' })}
+          activeOverlayOverride={syntheticOverlay({ labelKey: 'titled.captureOverlay.label' })}
         />
       )
     );
-    const expected = i18n.t('captureOverlay.label', { ns: 'cerebrum' }) as string;
-    expect(screen.getByText(expected)).toBeDefined();
+    expect(screen.getByText('Quick note')).toBeDefined();
+  });
+
+  it('retitles the dialog when the contributing pillar translations arrive after it opened', () => {
+    render(
+      withI18n(
+        <CaptureModal
+          open
+          onOpenChange={() => undefined}
+          activeOverlayOverride={syntheticOverlay({ labelKey: 'late.captureOverlay.label' })}
+        />
+      )
+    );
+    expect(screen.getByText(i18n.t('captureModal.title', { ns: 'shell' }) as string)).toBeDefined();
+
+    act(() => {
+      i18n.addResourceBundle('en-AU', 'late', { captureOverlay: { label: 'Late note' } });
+    });
+
+    expect(screen.getByText('Late note')).toBeDefined();
   });
 
   it('falls back to the descriptor label when labelKey is absent', () => {

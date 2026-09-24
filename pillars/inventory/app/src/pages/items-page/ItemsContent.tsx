@@ -76,6 +76,7 @@ interface ItemsContentProps {
   onOpen: (id: string) => void;
   onEdit: (id: string) => void;
   onDeleteRequest: (id: string) => void;
+  onSelectionChange?: (ids: string[]) => void;
 }
 
 export function ItemsContent({
@@ -87,6 +88,7 @@ export function ItemsContent({
   onOpen,
   onEdit,
   onDeleteRequest,
+  onSelectionChange,
 }: ItemsContentProps) {
   if (isLoading) return <ItemsPageSkeleton />;
   if (items.length === 0) return <EmptyState hasSearchOrFilters={hasSearchOrFilters} />;
@@ -99,6 +101,7 @@ export function ItemsContent({
         locationPathMap={locationPathMap}
         onEdit={onEdit}
         onDeleteRequest={onDeleteRequest}
+        onSelectionChange={onSelectionChange}
       />
     );
   }

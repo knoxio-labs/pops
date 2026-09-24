@@ -1,4 +1,4 @@
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil, QrCode, Trash2 } from 'lucide-react';
 import { Link } from 'react-router';
 
 import {
@@ -13,6 +13,8 @@ import {
   AlertDialogTrigger,
   Button,
 } from '@pops/ui';
+
+import { labelsHref } from '../../labels-page/label-params';
 
 interface HeaderActionsProps {
   id: string;
@@ -35,6 +37,12 @@ export function HeaderActions({
 }: HeaderActionsProps) {
   return (
     <div className="flex items-center gap-2">
+      <Button asChild variant="outline" size="sm" className="font-bold">
+        <Link to={labelsHref([id])}>
+          <QrCode className="h-4 w-4 mr-2 text-app-accent" />
+          Print label
+        </Link>
+      </Button>
       <Button
         asChild
         variant="outline"

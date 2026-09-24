@@ -220,6 +220,16 @@ describe('ItemDetailPage', () => {
     });
   });
 
+  describe('Print label', () => {
+    it('links to the label page for this item', async () => {
+      renderAtRoute('/inventory/items/item-1');
+      expect(await screen.findByRole('link', { name: /print label/i })).toHaveAttribute(
+        'href',
+        '/inventory/labels?ids=item-1'
+      );
+    });
+  });
+
   describe('metadata rendering', () => {
     it('renders item name and brand/model', async () => {
       renderAtRoute('/inventory/items/item-1');

@@ -61,16 +61,21 @@ internal final class PurchasesHomeModel {
         let month = now()
         do {
             async let pageRequest = repository.purchases(after: nil, statusFilter: .all)
+            async let unmatchedRequest = repository.purchases(after: nil, statusFilter: .unsettled)
             async let summaryRequest = repository.monthSummary(for: month)
-            let (page, summary) = try await (pageRequest, summaryRequest)
+            let (page, unmatchedPage, summary) = try await (
+                pageRequest, unmatchedRequest, summaryRequest
+            )
             guard requestGeneration == generation else { return }
-            guard let totalCount = page.totalCount else {
+            guard let totalCount = page.totalCount, let unmatchedCount = unmatchedPage.totalCount
+            else {
                 throw RepositoryError.contractMismatch
             }
             let loaded = PurchasesHomeDigest(
                 recent: page.purchases,
                 allCount: totalCount,
-                unmatched: page.purchases,
+                unmatched: unmatchedPage.purchases,
+                unmatchedCount: unmatchedCount,
                 month: month,
                 summary: summary)
             lastSuccessfulRead = month

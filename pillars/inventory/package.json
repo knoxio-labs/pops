@@ -22,6 +22,10 @@
       "types": "./dist/contract/expression/index.d.ts",
       "default": "./dist/contract/expression/index.js"
     },
+    "./labels": {
+      "types": "./dist/contract/labels/index.d.ts",
+      "default": "./dist/contract/labels/index.js"
+    },
     "./api-types": {
       "types": "./dist/contract/api-types.generated.d.ts",
       "default": "./dist/contract/api-types.generated.js"

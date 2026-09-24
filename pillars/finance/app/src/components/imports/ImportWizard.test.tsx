@@ -19,8 +19,7 @@ import { useTranslation } from 'react-i18next';
 import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import ptBRFinance from '@pops/locales/pt-BR/finance.json';
-
+import ptBRFinance from '../../locales/pt-BR.json';
 import { initialState } from '../../store/import-store-types';
 import { useImportStore } from '../../store/importStore';
 import { ImportWizard } from './ImportWizard';

@@ -1,5 +1,7 @@
-import { Package, Plus } from 'lucide-react';
+import { Package, Plus, QrCode } from 'lucide-react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router';
 
 import {
   AlertDialog,
@@ -18,6 +20,7 @@ import { FiltersBar } from './items-page/FiltersBar';
 import { ItemsContent } from './items-page/ItemsContent';
 import { SummaryAndView } from './items-page/SummaryAndView';
 import { useItemsPageModel, VIEW_STORAGE } from './items-page/useItemsPageModel';
+import { labelsHref, MAX_LABEL_IDS } from './labels-page/label-params';
 
 function DeleteItemDialog({
   isOpen,
@@ -55,6 +58,20 @@ function DeleteItemDialog({
   );
 }
 
+/** Opens the label page on the items ticked in the table. */
+function PrintLabelsButton({ ids }: { ids: string[] }) {
+  if (ids.length === 0) return null;
+  const count = Math.min(ids.length, MAX_LABEL_IDS);
+  return (
+    <Button asChild variant="outline">
+      <Link to={labelsHref(ids)}>
+        <QrCode className="h-4 w-4 mr-2" aria-hidden />
+        Print {count === 1 ? '1 label' : `${count} labels`}
+      </Link>
+    </Button>
+  );
+}
+
 function AddItemButton({ onClick }: { onClick: () => void }) {
   return (
     <Button onClick={onClick} prefix={<Plus className="h-4 w-4" />}>
@@ -63,18 +80,42 @@ function AddItemButton({ onClick }: { onClick: () => void }) {
   );
 }
 
+function ItemsPageHeader({
+  title,
+  printIds,
+  onAdd,
+}: {
+  title: string;
+  printIds: string[];
+  onAdd: () => void;
+}) {
+  return (
+    <PageHeader
+      title={title}
+      icon={<Package className="h-6 w-6 text-muted-foreground" />}
+      actions={
+        <div className="flex items-center gap-2">
+          <PrintLabelsButton ids={printIds} />
+          <AddItemButton onClick={onAdd} />
+        </div>
+      }
+    />
+  );
+}
+
 export function ItemsPage() {
   const { t } = useTranslation('inventory');
   const model = useItemsPageModel();
   const { filters, navigate } = model;
   const hasSearchOrFilters = !!filters.search || model.hasActiveFilters;
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   return (
     <div className="space-y-6">
-      <PageHeader
+      <ItemsPageHeader
         title={t('title')}
-        icon={<Package className="h-6 w-6 text-muted-foreground" />}
-        actions={<AddItemButton onClick={() => navigate('/inventory/items/new')} />}
+        printIds={model.viewMode === 'table' ? selectedIds : []}
+        onAdd={() => navigate('/inventory/items/new')}
       />
       <FiltersBar
         search={filters.search}
@@ -108,6 +149,7 @@ export function ItemsPage() {
         onOpen={(id) => navigate(`/inventory/items/${id}`)}
         onEdit={(id) => navigate(`/inventory/items/${id}/edit`)}
         onDeleteRequest={model.setDeletingItemId}
+        onSelectionChange={setSelectedIds}
       />
       <DeleteItemDialog
         isOpen={model.deletingItemId !== null}

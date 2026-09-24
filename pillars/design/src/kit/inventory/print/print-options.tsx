@@ -1,3 +1,4 @@
+import { labelsPerSheet, MIN_QR_MM } from '@pops/inventory/labels';
 /**
  * The job's choices, side by side above the preview: template, sheet and
  * copies, and apart from them the label the first sheet starts on. Nothing
@@ -9,9 +10,9 @@ import { NumberInput, Tabs, TabsList, TabsTrigger } from '@pops/ui';
 
 import { OptionField } from './print-option-field';
 import { SheetChoice } from './print-sheet-choice';
-import { labelsPerSheet, MIN_QR_MM } from './sheet-layouts';
 
-import type { LabelTemplateChoice, PrintSubject } from './print-subject';
+import type { LabelTemplateChoice, PrintSubject } from '@pops/inventory/labels';
+
 import type { PrintJob } from './use-print-job';
 
 const COPY_CHOICES = ['1', '2', '3', '4'] as const;

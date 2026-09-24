@@ -8,8 +8,7 @@ import { createInstance } from 'i18next';
 import { useMemo } from 'react';
 import { I18nextProvider, initReactI18next } from 'react-i18next';
 
-import enAUFood from '@pops/locales/en-AU/food.json';
-
+import enAUFood from '../../locales/en-AU.json';
 import { type FailedRow } from './inbox-types';
 import { ViewSourceDialog } from './ViewSourceDialog';
 

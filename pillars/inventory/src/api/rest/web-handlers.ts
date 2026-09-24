@@ -40,6 +40,7 @@ export function makeWebHandlers({ db, documents }: WebHandlerDeps) {
               placementKind: query.placementKind,
               locationId: query.locationId,
               containingItemId: query.containingItemId,
+              ids: query.ids?.split(','),
               includeInactive: query.includeInactive,
             },
             query

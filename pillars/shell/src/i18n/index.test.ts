@@ -10,11 +10,16 @@
  *
  * The namespace set under test is discovered from `libs/locales/en-AU/*.json`
  * via `import.meta.glob` rather than hand-listed, so a namespace added to the
- * catalog is covered here with no edit to this file.
+ * catalog is covered here with no edit to this file. Those are the shared
+ * namespaces only: each pillar's catalogues live in its own app and are
+ * checked there (POPS-4582).
  */
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import i18n, { DEFAULT_LOCALE, LOCALE_STORAGE_KEY, NAMESPACES, SUPPORTED_LOCALES } from '.';
+import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from '@pops/pillar-sdk';
+import { localeCatalogueProblems } from '@pops/pillar-sdk/testing';
+
+import i18n, { LOCALE_STORAGE_KEY, NAMESPACES } from '.';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -71,32 +76,6 @@ const UNREGISTERED_NS = ['errors'];
 
 const REGISTERED_NS = [...NAMESPACES].toSorted();
 
-function requireBundle(bundles: Record<string, LocaleBundle>, ns: string): LocaleBundle {
-  const bundle = bundles[ns];
-  if (!bundle) {
-    throw new Error(`No locale bundle found for namespace "${ns}"`);
-  }
-  return bundle;
-}
-
-/** Flattens a (possibly nested) locale bundle into dotted-path -> string entries. */
-function flattenBundle(bundle: LocaleBundle, prefix = ''): Record<string, string> {
-  const flat: Record<string, string> = {};
-  for (const [key, value] of Object.entries(bundle)) {
-    const path = prefix ? `${prefix}.${key}` : key;
-    if (typeof value === 'string') {
-      flat[path] = value;
-    } else if (isLocaleBundle(value)) {
-      Object.assign(flat, flattenBundle(value, path));
-    } else {
-      throw new Error(
-        `Locale key "${path}" holds ${value === null ? 'null' : typeof value}; expected a string or a nested object`
-      );
-    }
-  }
-  return flat;
-}
-
 /** The namespaces i18next holds after init, normalised to a sorted array. */
 function namespacesFromInstance(): string[] {
   const ns = i18n.options.ns;
@@ -108,10 +87,6 @@ function namespacesFromInstance(): string[] {
 
 function resourceNamespaces(locale: string): string[] {
   return Object.keys(i18n.options.resources?.[locale] ?? {}).toSorted();
-}
-
-function sortedKeys(bundle: LocaleBundle): string[] {
-  return Object.keys(flattenBundle(bundle)).toSorted();
 }
 
 // ---------------------------------------------------------------------------
@@ -140,12 +115,19 @@ describe('i18n initialization', () => {
     expect(i18n.options.fallbackLng).toEqual(['en-AU']);
   });
 
-  it('exposes the correct supported locales', () => {
-    expect(SUPPORTED_LOCALES).toEqual(['en-AU', 'pt-BR']);
-  });
-
   it('registers all namespaces', () => {
     expect(namespacesFromInstance()).toEqual(REGISTERED_NS);
+  });
+
+  it('holds only the shared namespaces, none of any pillar', () => {
+    for (const locale of SUPPORTED_LOCALES) {
+      expect(Object.keys(i18n.store.data[locale] ?? {}).toSorted()).toEqual([
+        'common',
+        'navigation',
+        'shell',
+        'ui',
+      ]);
+    }
   });
 
   it('does not hand i18next the exported namespace array itself', () => {
@@ -215,20 +197,6 @@ describe('locale persistence', () => {
 // Translation completeness
 // ---------------------------------------------------------------------------
 
-describe('locale bundle flattening', () => {
-  it('flattens nested sections into dotted paths', () => {
-    expect(flattenBundle({ a: 'x', b: { c: 'y' } })).toEqual({ a: 'x', 'b.c': 'y' });
-  });
-
-  it('rejects a leaf that is neither a string nor a nested object', () => {
-    expect(() => flattenBundle({ a: { b: 5 } })).toThrow('"a.b" holds number');
-  });
-
-  it('rejects a null leaf', () => {
-    expect(() => flattenBundle({ a: null })).toThrow('"a" holds null');
-  });
-});
-
 describe('namespace registration', () => {
   it('registers every namespace catalog on disk', () => {
     expect(REGISTERED_NS).toEqual(ALL_NS.filter((ns) => !UNREGISTERED_NS.includes(ns)));
@@ -251,22 +219,10 @@ describe('translation completeness', () => {
   });
 
   for (const ns of ALL_NS) {
-    it(`${ns}: en-AU and pt-BR have identical key sets`, () => {
-      const enKeys = sortedKeys(requireBundle(EN_AU_BUNDLES, ns));
-      const ptKeys = sortedKeys(requireBundle(PT_BR_BUNDLES, ns));
-      expect(enKeys).toEqual(ptKeys);
-    });
-
-    it(`${ns}: no empty values in en-AU`, () => {
-      for (const [key, value] of Object.entries(flattenBundle(requireBundle(EN_AU_BUNDLES, ns)))) {
-        expect(value.trim().length, `en-AU ${ns}.${key} is empty`).toBeGreaterThan(0);
-      }
-    });
-
-    it(`${ns}: no empty values in pt-BR`, () => {
-      for (const [key, value] of Object.entries(flattenBundle(requireBundle(PT_BR_BUNDLES, ns)))) {
-        expect(value.trim().length, `pt-BR ${ns}.${key} is empty`).toBeGreaterThan(0);
-      }
+    it(`${ns}: every locale ships the same non-empty keys`, () => {
+      expect(
+        localeCatalogueProblems({ 'en-AU': EN_AU_BUNDLES[ns], 'pt-BR': PT_BR_BUNDLES[ns] })
+      ).toEqual([]);
     });
   }
 });
@@ -293,6 +249,8 @@ describe('translation lookups', () => {
     expect(i18n.t('navigation:media.library')).toBe('Library');
     expect(i18n.t('navigation:ai.usage')).toBe('AI Usage');
     expect(i18n.t('navigation:inventory.connections')).toBe('Connections');
+    expect(i18n.t('navigation:finance.rules')).toBe('Rules');
+    expect(i18n.t('navigation:finance.promptTemplates')).toBe('Prompt Templates');
   });
 
   // #2611: six cerebrum sub-nav labelKeys were missing from the catalog,
@@ -306,43 +264,6 @@ describe('translation lookups', () => {
     expect(i18n.t('navigation:cerebrum.glia.nav')).toBe('Glia');
     expect(i18n.t('navigation:cerebrum.reflex.nav')).toBe('Reflex');
     expect(i18n.t('navigation:cerebrum.plexus.nav')).toBe('Plexus');
-  });
-
-  it('resolves finance namespace keys', () => {
-    expect(i18n.t('finance:dashboard')).toBe('Dashboard');
-    expect(i18n.t('finance:budgets')).toBe('Budgets');
-    expect(i18n.t('finance:transactions')).toBe('Transactions');
-    // #2454: transactions filter labels were missing — covered here so they
-    // can never silently regress to raw keys again.
-    expect(i18n.t('finance:filter.account')).toBe('Account');
-    expect(i18n.t('finance:filter.type')).toBe('Type');
-    expect(i18n.t('finance:filter.tag')).toBe('Tag');
-    // #2611: `column.date` was missing — the transactions table rendered
-    // a raw `COLUMN.DATE` header. Pin every column header used by the
-    // transactions list.
-    expect(i18n.t('finance:column.date')).toBe('Date');
-    expect(i18n.t('finance:column.description')).toBe('Description');
-    expect(i18n.t('finance:column.account')).toBe('Account');
-    expect(i18n.t('finance:column.amount')).toBe('Amount');
-    expect(i18n.t('finance:column.type')).toBe('Type');
-    expect(i18n.t('finance:column.tags')).toBe('Tags');
-  });
-
-  it('resolves ai namespace keys', () => {
-    expect(i18n.t('ai:observability')).toBe('AI Observability');
-    expect(i18n.t('ai:kpi.cacheHitRate')).toBe('Cache Hit Rate');
-  });
-
-  it('resolves finance rules and prompt-template keys (moved out of ai)', () => {
-    expect(i18n.t('finance:rules.title')).toBe('Categorisation Rules');
-    expect(i18n.t('navigation:finance.rules')).toBe('Rules');
-    expect(i18n.t('navigation:finance.promptTemplates')).toBe('Prompt Templates');
-  });
-
-  it('resolves media namespace keys', () => {
-    expect(i18n.t('media:library')).toBe('Library');
-    expect(i18n.t('media:watchlist')).toBe('Watchlist');
-    expect(i18n.t('media:compare')).toBe('Compare Arena');
   });
 
   it('resolves ui namespace keys', () => {
@@ -371,10 +292,6 @@ describe('interpolation', () => {
   it('interpolates {{app}} in pt-BR shell.appPages', async () => {
     await i18n.changeLanguage('pt-BR');
     expect(i18n.t('shell:appPages', { app: 'Finanças' })).toBe('Páginas de Finanças');
-  });
-
-  it('interpolates finance namespace variables', () => {
-    expect(i18n.t('finance:transactions.totalCount', { count: 42 })).toBe('42 total transactions');
   });
 
   it('interpolates ui namespace variables', () => {

@@ -8,7 +8,7 @@ import { initReactI18next } from 'react-i18next';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
-import enAUFood from '@pops/locales/en-AU/food.json';
+import enAUFood from '../../../locales/en-AU.json';
 
 import type { RecipeListItemView } from '../useRecipeListQuery.js';
 

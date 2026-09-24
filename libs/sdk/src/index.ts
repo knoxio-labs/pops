@@ -13,3 +13,4 @@ export * from './capabilities/index.js';
 export * from './ranking/index.js';
 export * from './orchestrator/index.js';
 export * from './ai-tools/index.js';
+export * from './remote-entry/index.js';

@@ -2,9 +2,9 @@
  * Pagination for a print job: which label lands in which slot of which sheet,
  * given where the first sheet's free labels begin.
  */
-import { labelsPerSheet } from './sheet-layouts';
+import { labelsPerSheet } from './sheet-layouts.js';
 
-import type { SheetGeometry } from './sheet-layouts';
+import type { SheetGeometry } from './sheet-layouts.js';
 
 /** One label position on one sheet. */
 export type SheetSlot =

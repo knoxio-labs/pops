@@ -390,6 +390,7 @@ const LOADER_MOUNTED_UI: Readonly<Record<string, Record<string, unknown>>> = {
       { path: 'warranties', bundleSlot: 'inventory-warranties' },
       { path: 'locations', bundleSlot: 'inventory-location-tree' },
       { path: 'types', bundleSlot: 'inventory-type-catalogue' },
+      { path: 'labels', bundleSlot: 'inventory-labels' },
       {
         path: 'reports',
         bundleSlot: 'inventory-reports-group',

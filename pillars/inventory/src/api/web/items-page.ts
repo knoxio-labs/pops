@@ -5,7 +5,7 @@
  * already served — the property the delivery plan calls "cursor stable
  * under inserts".
  */
-import { and, asc, eq, gt, isNull, sql, type SQL } from 'drizzle-orm';
+import { and, asc, eq, gt, inArray, isNull, sql, type SQL } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { resolvePublishedType } from '../../catalogue/index.js';
@@ -28,6 +28,8 @@ export interface WebItemsFilter {
   readonly placementKind?: (typeof WEB_PLACEMENT_KINDS)[number];
   readonly locationId?: string;
   readonly containingItemId?: string;
+  /** Only these item ids; an empty list matches nothing. */
+  readonly ids?: readonly string[];
   /** Active items only when falsy (ADR-002: excluded from listings unless asked for). */
   readonly includeInactive?: boolean;
 }
@@ -51,6 +53,7 @@ function filterConditions(db: CommandDb, filter: WebItemsFilter): SQL[] {
   if (filter.containingItemId !== undefined) {
     conditions.push(eq(items.containingItemId, filter.containingItemId));
   }
+  if (filter.ids !== undefined) conditions.push(inArray(items.id, [...filter.ids]));
   if (!filter.includeInactive) conditions.push(eq(items.lifecycle, 'active'));
   return conditions;
 }

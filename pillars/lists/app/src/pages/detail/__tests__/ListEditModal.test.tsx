@@ -5,8 +5,7 @@ import { useMemo, type ReactElement } from 'react';
 import { I18nextProvider, initReactI18next } from 'react-i18next';
 import { describe, expect, it, vi } from 'vitest';
 
-import enAULists from '@pops/locales/en-AU/lists.json';
-
+import enAULists from '../../../locales/en-AU.json';
 import { ListEditModal } from '../ListEditModal';
 
 import type { ListRow } from '../types';

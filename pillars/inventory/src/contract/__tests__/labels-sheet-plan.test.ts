@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { codeFitsOneLine, fitCodePt } from './code-fit';
-import { parseCustomSheet } from './custom-sheet-storage';
-import { DEFAULT_COPIES, resolveTemplate } from './print-subject';
-import { geometryOf, sheetGeometryProblems } from './sheet-geometry';
 import {
+  codeFitsOneLine,
+  fitCodePt,
+  DEFAULT_COPIES,
+  resolveTemplate,
+  geometryOf,
+  parseSheetGeometry,
+  sheetGeometryProblems,
   A4_HEIGHT_MM,
   A4_WIDTH_MM,
   clampStartAt,
@@ -17,11 +20,17 @@ import {
   slotOrigin,
   templateFits,
   textWidthMm,
-} from './sheet-layouts';
-import { expandCopies, nextStartAt, pageCount, planSheets } from './sheet-plan';
-import { DEFAULT_SHEET_ID, findPreset, SHEET_PRESETS, sheetLayout } from './sheet-presets';
+  expandCopies,
+  nextStartAt,
+  pageCount,
+  planSheets,
+  DEFAULT_SHEET_ID,
+  findPreset,
+  SHEET_PRESETS,
+  sheetLayout,
+} from '../labels/index.js';
 
-import type { SheetGeometry, SheetLayout } from './sheet-layouts';
+import type { SheetGeometry, SheetLayout } from '../labels/index.js';
 
 const eight = sheetLayout('L7165');
 const fourteen = sheetLayout('L7163');
@@ -219,12 +228,12 @@ describe('custom sheet geometry', () => {
   });
 
   it('reads back a remembered sheet and forgets a broken one', () => {
-    expect(parseCustomSheet(JSON.stringify(custom27))).toEqual(custom27);
-    expect(parseCustomSheet(null)).toBeNull();
-    expect(parseCustomSheet('{not json')).toBeNull();
-    expect(parseCustomSheet(JSON.stringify({ ...custom27, rows: '9' }))).toBeNull();
-    expect(parseCustomSheet(JSON.stringify({ ...custom27, rows: 30 }))).toBeNull();
-    expect(parseCustomSheet('[]')).toBeNull();
+    expect(parseSheetGeometry(JSON.stringify(custom27))).toEqual(custom27);
+    expect(parseSheetGeometry(null)).toBeNull();
+    expect(parseSheetGeometry('{not json')).toBeNull();
+    expect(parseSheetGeometry(JSON.stringify({ ...custom27, rows: '9' }))).toBeNull();
+    expect(parseSheetGeometry(JSON.stringify({ ...custom27, rows: 30 }))).toBeNull();
+    expect(parseSheetGeometry('[]')).toBeNull();
   });
 });
 

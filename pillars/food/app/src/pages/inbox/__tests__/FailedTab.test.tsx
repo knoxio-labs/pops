@@ -8,7 +8,7 @@ import { MemoryRouter } from 'react-router';
 import { Toaster } from 'sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import enAUFood from '@pops/locales/en-AU/food.json';
+import enAUFood from '../../../locales/en-AU.json';
 
 import type { FailedRow } from '../inbox-types';
 
