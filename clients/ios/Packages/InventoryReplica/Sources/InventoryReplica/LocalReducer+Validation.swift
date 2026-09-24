@@ -67,9 +67,19 @@ extension LocalReducer {
         }
     }
 
+    /// A container must have quantity exactly 1 (ADR-002 D3): a physical
+    /// container is one thing, and a grouped item can never hold contents.
+    func assertContainerQuantity(isContainer: Bool, quantity: Int) throws {
+        guard isContainer, quantity > 1 else { return }
+        throw refusal(
+            .quantityContainerConflict, "a container must have quantity exactly 1 (ADR-002 D3)")
+    }
+
     /// Refuses a placement the item cannot take: a missing or deleted place
-    /// or container, an item that is not a container, or a containment
-    /// cycle or chain deeper than the cap. In hand is always allowed.
+    /// or container, an item that is not a container, a container whose own
+    /// quantity is greater than 1 (`quantityContainerConflict`, ADR-002 D3),
+    /// or a containment cycle or chain deeper than the cap. In hand is
+    /// always allowed.
     func assertPlacementAllowed(itemId: String, to placement: InventoryPlacement) throws {
         switch placement {
         case .hand:
@@ -83,6 +93,12 @@ extension LocalReducer {
             let container = try liveItem(containerId)
             guard container.isContainer else {
                 throw refusal(.notContainer, "item \(containerId) is not a container")
+            }
+            guard container.quantity <= 1 else {
+                throw refusal(
+                    .quantityContainerConflict,
+                    "item \(containerId) has quantity \(container.quantity); "
+                        + "a grouped item cannot hold contents (ADR-002 D3)")
             }
             let chain = try containerChain(from: containerId)
             guard !chain.contains(itemId) else {

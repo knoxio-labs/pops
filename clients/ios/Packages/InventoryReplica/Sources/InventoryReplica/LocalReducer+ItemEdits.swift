@@ -14,6 +14,7 @@ extension LocalReducer {
         }
         let type = try resolveType(new.typeKey)
         try assertFieldsFit(new.fields, type: type)
+        try assertContainerQuantity(isContainer: type?.isContainer == true, quantity: new.quantity)
         let externalIds = try storedExternalIds(new.externalIds)
         try assertPlacementAllowed(itemId: new.id, to: new.placement)
         noteReference(new.placement)
@@ -65,6 +66,7 @@ extension LocalReducer {
         if before.isContainer, !type.isContainer, try hasActiveContents(id) {
             throw refusal(.hasContents, "item \(id) still holds active contents")
         }
+        try assertContainerQuantity(isContainer: type.isContainer, quantity: before.quantity)
         var after = before
         after.typeKey = typeKey
         after.fields = fields.mapValues(StoredFieldValue.init)

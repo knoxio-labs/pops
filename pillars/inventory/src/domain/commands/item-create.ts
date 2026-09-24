@@ -101,6 +101,16 @@ function itemPlacementColumns(
   return { locationId: null, containingItemId: null };
 }
 
+/** A container must have quantity exactly 1 (ADR-002 D3). */
+function assertContainerQuantity(isContainer: boolean, quantity: number): void {
+  if (isContainer && quantity > 1) {
+    throw new CommandRejected(
+      'quantity_container_conflict',
+      'a container must have quantity exactly 1 (ADR-002 D3)'
+    );
+  }
+}
+
 /** Insert the new item's row at `id`, with the placement and containment its type already validated. */
 function insertItem({
   db,
@@ -146,7 +156,9 @@ function insertItem({
  * stable `typeId` and `values`. An absent type leaves the item untyped, in
  * which case its values must be empty. `is_container`, `access` and `is_full` are
  * never taken from the client; they follow from the type's `containment`
- * capability (ADR-002 D1).
+ * capability (ADR-002 D1). A container's quantity must be exactly 1:
+ * `quantity_container_conflict` when a containment-capable type is
+ * requested with `quantity > 1` (ADR-002 D3).
  *
  * `legacy`, `code` and `sourceRef` exist for the legacy `/items` routes
  * (POPS-4053): the provenance and value columns the new model has no field
@@ -171,6 +183,7 @@ export const itemCreate = defineOp({
     const { type } = catalogue;
     assertPlacementAllowed(ctx.db, ctx.mutation.entityId, item.placement);
     const isContainer = type?.capabilities.includes('containment') ?? false;
+    assertContainerQuantity(isContainer, item.quantity);
 
     return {
       eventKind: 'created',

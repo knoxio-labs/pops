@@ -137,6 +137,32 @@ describe('item.create', () => {
     expect(outcome).toMatchObject({ status: 'rejected', reason: 'invalid' });
   });
 
+  it('rejects a container created with quantity greater than 1 (ADR-002 D3)', () => {
+    const id = randomUUID();
+    const outcome = h.run(
+      mutation(
+        'item.create',
+        id,
+        createArgs({
+          typeKey: 'storage_box',
+          fields: { Width: { value: 40, unit: 'cm' } },
+          quantity: 2,
+        }),
+        { baseRevision: null }
+      )
+    );
+    expect(outcome).toMatchObject({ status: 'rejected', reason: 'quantity_container_conflict' });
+  });
+
+  it('allows a non-container type created with quantity greater than 1', () => {
+    const id = randomUUID();
+    const outcome = h.run(
+      mutation('item.create', id, createArgs({ quantity: 5 }), { baseRevision: null })
+    );
+    expect(outcome).toMatchObject({ status: 'applied' });
+    expect(h.item(id).quantity).toBe(5);
+  });
+
   it('rejects a create for an id that already exists', () => {
     const id = randomUUID();
     h.run(mutation('item.create', id, createArgs(), { baseRevision: null }));
