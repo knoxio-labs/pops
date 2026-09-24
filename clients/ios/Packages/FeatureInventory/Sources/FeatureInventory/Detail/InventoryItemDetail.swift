@@ -113,12 +113,15 @@ internal struct InventoryContainerSummary: Equatable {
 
 /// An open repair on this item: what happened, in one line, and the one
 /// choice that keeps this phone's change. `resolution` is nil for a repair
-/// kind this build does not know, which offers no inline fix.
+/// kind this build does not know, which offers no inline fix. When
+/// `opensRepair` is set, the button opens the repair screen instead of
+/// making `choice`.
 internal struct InventoryDetailConflict: Equatable {
     internal let repairId: InventoryRepair.ID
     internal let problem: String
     internal let resolution: String?
     internal let choice: InventoryRepairChoice
+    internal var opensRepair = false
 }
 
 /// Everything Item detail shows about one item, read from one state.

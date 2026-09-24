@@ -172,7 +172,7 @@ extension OnlineInventoryStore {
                 heldById: heldById, heldByName: heldByName, suggestedCode: suggestedCode)
         case .conflictDeleted(let source, let at):
             InventoryCommandError.deletedElsewhere(source: source, at: at)
-        case .rejected(let reason, let message):
+        case .rejected(let reason, let message, _):
             InventoryCommandError.rejected(reason: reason, message: message)
         // A mutation sent alone depends on nothing, so it has nothing to wait
         // for; and `applied` is not a failure at all.

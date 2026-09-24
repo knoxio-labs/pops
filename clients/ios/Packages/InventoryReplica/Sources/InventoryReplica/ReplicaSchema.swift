@@ -131,6 +131,7 @@ internal enum ReplicaSchema {
         ComputedValueRows.register(in: &migrator)
         registerCatalogueUpdateHold(in: &migrator)
         registerNullableCatalogueRevision(in: &migrator)
+        registerCatalogueHoldReason(in: &migrator)
         return migrator
     }
 

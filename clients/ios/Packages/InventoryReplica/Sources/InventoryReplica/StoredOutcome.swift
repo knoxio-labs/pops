@@ -10,7 +10,9 @@ internal enum StoredOutcome: Codable, Equatable {
         currentRevision: Int)
     case conflictCodeCollision(heldById: String, heldByName: String, suggestedCode: String)
     case conflictDeleted(source: StoredSyncSource, at: Double)
-    case rejected(reason: String, message: String)
+    /// `catalogueChanges` is absent from a row written before they were
+    /// kept, and for every refusal that names none.
+    case rejected(reason: String, message: String, catalogueChanges: [StoredCatalogueChange]?)
     case deferred(waitingOn: String)
 
     init(_ outcome: InventoryMutationOutcome) {
@@ -26,8 +28,10 @@ internal enum StoredOutcome: Codable, Equatable {
                 heldById: id, heldByName: name, suggestedCode: suggestedCode)
         case .conflictDeleted(let source, let at):
             self = .conflictDeleted(source: StoredSyncSource(source), at: storedDate(at))
-        case .rejected(let reason, let message):
-            self = .rejected(reason: reason.storageValue, message: message)
+        case .rejected(let reason, let message, let changes):
+            self = .rejected(
+                reason: reason.storageValue, message: message,
+                catalogueChanges: changes.isEmpty ? nil : changes.map(StoredCatalogueChange.init))
         case .deferred(let waitingOn):
             self = .deferred(waitingOn: waitingOn)
         }
@@ -51,6 +55,44 @@ internal enum StoredOutcome: Codable, Equatable {
     var appliedSeq: Int? {
         guard case .applied(_, let seq, _) = self else { return nil }
         return seq
+    }
+}
+
+extension StoredOutcome {
+    /// What a catalogue refusal named as standing in the way; empty for any
+    /// other outcome.
+    var catalogueChanges: [InventoryCatalogueChange] {
+        guard case .rejected(_, _, let changes?) = self else { return [] }
+        return changes.map(\.value)
+    }
+}
+
+/// ``AppCore/InventoryCatalogueChange``'s storage twin, spelled as the wire
+/// spells it so a kind this build does not know round-trips.
+internal struct StoredCatalogueChange: Codable, Equatable {
+    let definition: String
+    let id: String
+    let typeId: String?
+    let fieldId: String?
+    let change: String
+    let replacementId: String?
+    let revision: Int
+
+    init(_ change: InventoryCatalogueChange) {
+        definition = change.definition.wireValue
+        id = change.id
+        typeId = change.typeId
+        fieldId = change.fieldId
+        self.change = change.change.wireValue
+        replacementId = change.replacementId
+        revision = change.revision
+    }
+
+    var value: InventoryCatalogueChange {
+        InventoryCatalogueChange(
+            definition: InventoryCatalogueDefinition(wire: definition), id: id, typeId: typeId,
+            fieldId: fieldId, change: InventoryCatalogueChangeKind(wire: self.change),
+            replacementId: replacementId, revision: revision)
     }
 }
 

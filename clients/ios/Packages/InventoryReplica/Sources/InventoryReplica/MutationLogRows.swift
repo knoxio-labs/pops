@@ -39,6 +39,26 @@ internal struct LogEntry: Sendable {
     /// sent until the replica holds a newer revision and it has been moved
     /// onto it (``CatalogueRebase``).
     var awaitingCatalogueAfter: Int?
+    /// Why it waits on the catalogue, set exactly when
+    /// `awaitingCatalogueAfter` is.
+    var catalogueHold: CatalogueHold?
+    /// What the server named as standing in the way when it held the change.
+    var catalogueChanges: [StoredCatalogueChange] = []
+}
+
+/// One pending `mutation_log` row, as the Sync ledger reads it.
+internal enum LedgerRow {
+    case readable(LogEntry)
+    /// A row whose command, dependencies or outcome this build cannot decode.
+    case unreadable(mutationId: String, entity: EntityRef, createdAt: Double)
+}
+
+/// `mutation_log.catalogue_hold`: why a change waits on the catalogue.
+internal enum CatalogueHold: String, Sendable {
+    /// A newer catalogue this phone can fetch.
+    case newFields = "new_fields"
+    /// A newer catalogue only a newer app can read.
+    case appUpdate = "app_update"
 }
 
 /// Reads and writes `mutation_log` rows inside the caller's transaction.
@@ -50,8 +70,9 @@ internal enum MutationLogRows {
             sql: """
                 INSERT INTO \(table) (mutation_id, entity_kind, entity_id, command, depends_on,
                     base_revision, catalogue_revision, state, outcome, outcome_seq, settles_at_seq, touched, change,
-                    attempts, created_at, last_attempt_at, awaiting_catalogue_after)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    attempts, created_at, last_attempt_at, awaiting_catalogue_after, catalogue_hold,
+                    catalogue_changes)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
             arguments: StatementArguments(
                 [
@@ -61,7 +82,8 @@ internal enum MutationLogRows {
                     entry.catalogueRevision,
                 ]
                     + (try mutableStateColumns(entry))
-                    + [entry.createdAt, entry.lastAttemptAt, entry.awaitingCatalogueAfter]))
+                    + [entry.createdAt, entry.lastAttemptAt, entry.awaitingCatalogueAfter]
+                    + (try holdColumns(entry))))
     }
 
     static func update(_ entry: LogEntry, in db: Database) throws {
@@ -70,15 +92,13 @@ internal enum MutationLogRows {
                 UPDATE \(table) SET command = ?, depends_on = ?, base_revision = ?, state = ?,
                     outcome = ?, outcome_seq = ?, settles_at_seq = ?, touched = ?, change = ?,
                     attempts = ?, last_attempt_at = ?, catalogue_revision = ?,
-                    awaiting_catalogue_after = ?
+                    awaiting_catalogue_after = ?, catalogue_hold = ?, catalogue_changes = ?
                 WHERE mutation_id = ?
                 """,
             arguments: StatementArguments(
                 (try mutableColumns(entry))
-                    + [
-                        entry.lastAttemptAt, entry.catalogueRevision,
-                        entry.awaitingCatalogueAfter, entry.mutationId,
-                    ]))
+                    + [entry.lastAttemptAt, entry.catalogueRevision, entry.awaitingCatalogueAfter]
+                    + (try holdColumns(entry)) + [entry.mutationId]))
     }
 
     static func delete(_ mutationIds: [String], in db: Database) throws {
@@ -124,6 +144,35 @@ internal enum MutationLogRows {
         ).map(decode)
     }
 
+    /// Every row in `states`, in log order, as the Sync ledger reads them: a
+    /// row whose command this build cannot decode is still listed, by what
+    /// identifies it, rather than failing the whole read.
+    static func ledgerRows(in states: [MutationState], _ db: Database) throws -> [LedgerRow] {
+        let filter = states.map { "'\($0.rawValue)'" }.joined(separator: ", ")
+        return try Row.fetchAll(
+            db, sql: "SELECT * FROM \(table) WHERE state IN (\(filter)) ORDER BY local_seq"
+        ).map { row in
+            do {
+                return .readable(try decode(row))
+            } catch {
+                return .unreadable(
+                    mutationId: try row.decode(forColumn: "mutation_id"),
+                    entity: EntityRef(
+                        kind: try row.decode(forColumn: "entity_kind"),
+                        id: try row.decode(forColumn: "entity_id")),
+                    createdAt: try row.decode(forColumn: "created_at"))
+            }
+        }
+    }
+
+    /// The ids of every change waiting on a repair.
+    static func awaitingRepair(in db: Database) throws -> Set<String> {
+        Set(
+            try String.fetchAll(
+                db,
+                sql: "SELECT mutation_id FROM \(table) WHERE state IN ('conflicted', 'rejected')"))
+    }
+
     /// The rows whose last replay wrote something, which a rebase resets.
     static func entriesWithTouchedRows(in db: Database) throws -> [LogEntry] {
         try Row.fetchAll(
@@ -166,6 +215,15 @@ internal enum MutationLogRows {
         ]
     }
 
+    private static func holdColumns(_ entry: LogEntry) throws -> [(
+        any DatabaseValueConvertible
+    )?] {
+        [
+            entry.catalogueHold?.rawValue,
+            entry.catalogueChanges.isEmpty ? nil : try StoredJSON.encode(entry.catalogueChanges),
+        ]
+    }
+
     private static func decode(_ row: Row) throws -> LogEntry {
         let state: String = try row.decode(forColumn: "state")
         guard let mutationState = MutationState(rawValue: state) else {
@@ -195,6 +253,23 @@ internal enum MutationLogRows {
             attempts: try row.decode(forColumn: "attempts"),
             createdAt: try row.decode(forColumn: "created_at"),
             lastAttemptAt: try row.decode(forColumn: "last_attempt_at"),
-            awaitingCatalogueAfter: try row.decode(forColumn: "awaiting_catalogue_after"))
+            awaitingCatalogueAfter: try row.decode(forColumn: "awaiting_catalogue_after"),
+            catalogueHold: try decodeHold(row),
+            catalogueChanges: try decodeChanges(row))
+    }
+
+    private static func decodeHold(_ row: Row) throws -> CatalogueHold? {
+        let stored: String? = try row.decode(forColumn: "catalogue_hold")
+        guard let hold = stored else { return nil }
+        guard let decoded = CatalogueHold(rawValue: hold) else {
+            throw InventoryReplicaError.corruptValue("catalogue hold \(hold)")
+        }
+        return decoded
+    }
+
+    private static func decodeChanges(_ row: Row) throws -> [StoredCatalogueChange] {
+        let stored: String? = try row.decode(forColumn: "catalogue_changes")
+        guard let changes = stored else { return [] }
+        return try StoredJSON.decode([StoredCatalogueChange].self, from: changes)
     }
 }

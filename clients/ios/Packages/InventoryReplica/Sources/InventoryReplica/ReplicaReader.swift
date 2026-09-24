@@ -112,9 +112,12 @@ internal final class ReplicaReader: InventoryQuerySource {
     /// first; and what was resolved, newest first.
     func inventorySyncLedger() -> InventoryReplicaSyncLedger {
         attempt(InventoryReplicaSyncLedger()) { db in
-            InventoryReplicaSyncLedger(
+            let revision = try SyncMeta.read(db).catalogueRevision
+            return InventoryReplicaSyncLedger(
                 waiting: try MutationLogLedger.waiting(in: db),
-                repairs: try RepairRows.openRepairs(in: db).compactMap(\.repair),
+                repairs: try RepairRows.openRepairs(in: db).compactMap {
+                    $0.repair(currentRevision: revision)
+                },
                 resolved: try RepairRows.resolvedEntries(in: db),
                 sendingStall: activity.sendingStall)
         }

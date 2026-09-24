@@ -20,6 +20,13 @@ internal struct InventorySyncWaitingRow: Identifiable, Equatable, Sendable {
     internal let display: InventorySyncEntityDisplay
     internal let detail: String
     internal let progress: Double?
+    /// Why it waits, when that is not the network.
+    internal let hold: InventoryQueueHold?
+
+    /// What the change does, and why it is held when it is.
+    internal var caption: String {
+        [detail, hold?.caption].compactMap(\.self).joined(separator: " · ")
+    }
 }
 
 /// One repair, resolved for its row.
@@ -27,8 +34,30 @@ internal struct InventorySyncRepairRow: Identifiable, Equatable, Sendable {
     internal let repair: InventoryRepair
     internal let display: InventorySyncEntityDisplay
     internal let problem: String
+    /// A `catalogueChanged` repair read against the current fields.
+    internal let catalogue: InventoryCatalogueRepairDetail?
 
     internal var id: String { repair.id }
+}
+
+extension InventoryQueueHold {
+    internal var caption: String {
+        switch self {
+        case .waitingForFields: "Waiting for new fields"
+        case .needsAppUpdate: "Needs an app update"
+        case .behindRepair: "Waits on a repair"
+        case .stalled: "Can't be sent"
+        }
+    }
+
+    internal var symbol: InventorySymbol {
+        switch self {
+        case .waitingForFields: .refreshFields
+        case .needsAppUpdate: .appUpdate
+        case .behindRepair: .held
+        case .stalled: .attention
+        }
+    }
 }
 
 /// One settled repair, resolved for its row.
@@ -50,19 +79,30 @@ extension InventorySyncPage {
                 id: mutation.receipt.mutationId,
                 display: display(
                     for: mutation.receipt.entityKind, id: mutation.receipt.entityId, source: source),
-                detail: title(for: mutation.command),
-                progress: mutation.progress)
+                detail: mutation.command.map(title(for:)) ?? "Can't be read",
+                progress: mutation.progress, hold: mutation.hold)
         }
     }
 
     internal static func buildRepairRows(
         _ ledger: InventoryReplicaSyncLedger, reading source: any InventoryQuerySource
     ) -> [InventorySyncRepairRow] {
-        ledger.repairs.map { repair in
-            InventorySyncRepairRow(
+        let reading = catalogueReading(source)
+        return ledger.repairs.map { repair in
+            let catalogue = reading.detail(repair)
+            return InventorySyncRepairRow(
                 repair: repair,
                 display: display(for: repair.entityKind, id: repair.entityId, source: source),
-                problem: problem(for: repair))
+                problem: catalogue?.problem ?? problem(for: repair), catalogue: catalogue)
+        }
+    }
+
+    /// Reads catalogue repairs against the fields `source` holds now.
+    internal static func catalogueReading(
+        _ source: any InventoryQuerySource
+    ) -> InventoryCatalogueRepairReading {
+        InventoryCatalogueRepairReading(catalogue: source.inventoryProtocol2Catalogue()) {
+            InventoryDetailFields.referenceLabel($0, source: source)
         }
     }
 

@@ -150,7 +150,8 @@ internal final class InventoryItemDetailViewModel {
 
     /// Takes the conflict notice's one choice.
     internal func resolveConflict() async {
-        guard let conflict = detail?.conflict, conflict.resolution != nil else { return }
+        guard let conflict = detail?.conflict, conflict.resolution != nil, !conflict.opensRepair
+        else { return }
         do {
             try await store.resolve(conflict.repairId, with: conflict.choice)
         } catch {
