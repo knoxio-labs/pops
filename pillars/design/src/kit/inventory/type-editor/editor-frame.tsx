@@ -3,9 +3,11 @@ import { Archive, Check, Eye, Save, Settings2, Sparkles } from 'lucide-react';
 import { Badge, Button, Tabs, TabsContent, TabsList, TabsTrigger } from '@pops/ui';
 
 import { ComputedEditor } from './computed-editor';
-import { PrimitiveSettings } from './primitive-settings';
-import { EnumOptions, ReferenceTargets } from './special-settings';
+import { EnumOptions } from './enum-options';
+import { FieldSettings } from './field-settings';
 import { ValidationPreview } from './validation-preview';
+
+import type { CatalogueFieldSummary } from '@/fixtures/inventory-type-fields';
 
 import type { TypeEditorMode } from './types';
 
@@ -47,14 +49,18 @@ export function EditorHeader({ creating = false }: { creating?: boolean }) {
   );
 }
 
-function Inspector({ mode }: { mode: TypeEditorMode }) {
+interface InspectorProps {
+  mode: TypeEditorMode;
+  field: CatalogueFieldSummary;
+}
+
+function Inspector({ mode, field }: InspectorProps) {
   if (mode === 'enum') return <EnumOptions />;
-  if (mode === 'reference') return <ReferenceTargets />;
   if (mode === 'preview') return <ValidationPreview />;
   if (mode === 'computed') return <ComputedEditor />;
   if (mode === 'dependency-error') return <ComputedEditor error="dependency" />;
   if (mode === 'cycle') return <ComputedEditor error="cycle" />;
-  return <PrimitiveSettings />;
+  return <FieldSettings field={field} />;
 }
 
 function editorTab(mode: TypeEditorMode): 'field' | 'computed' | 'preview' {
@@ -64,7 +70,7 @@ function editorTab(mode: TypeEditorMode): 'field' | 'computed' | 'preview' {
 }
 
 /** Field settings, computed-expression and validation-preview panels. */
-export function EditorTabs({ mode }: { mode: TypeEditorMode }) {
+export function EditorTabs({ mode, field }: InspectorProps) {
   const tab = editorTab(mode);
   return (
     <Tabs value={tab} className="space-y-5">
@@ -83,13 +89,13 @@ export function EditorTabs({ mode }: { mode: TypeEditorMode }) {
         </TabsTrigger>
       </TabsList>
       <TabsContent value="field">
-        <Inspector mode={mode} />
+        <Inspector mode={mode} field={field} />
       </TabsContent>
       <TabsContent value="computed">
-        <Inspector mode={mode} />
+        <Inspector mode={mode} field={field} />
       </TabsContent>
       <TabsContent value="preview">
-        <Inspector mode={mode} />
+        <Inspector mode={mode} field={field} />
       </TabsContent>
     </Tabs>
   );

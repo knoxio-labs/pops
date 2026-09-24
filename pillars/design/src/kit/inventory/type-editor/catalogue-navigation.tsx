@@ -117,7 +117,7 @@ function FieldRow({ field, selected }: { field: CatalogueFieldSummary; selected?
 }
 
 /** Ordered field navigation shared by both type-editor layouts. */
-export function FieldOutline() {
+export function FieldOutline({ selectedKey }: { selectedKey: string }) {
   return (
     <section className="space-y-4">
       <div className="flex items-center justify-between gap-2">
@@ -132,7 +132,7 @@ export function FieldOutline() {
       </div>
       <div className="space-y-1">
         {electronicsFields.map((field) => (
-          <FieldRow key={field.id} field={field} selected={field.id === 'field-connectors'} />
+          <FieldRow key={field.id} field={field} selected={field.key === selectedKey} />
         ))}
       </div>
       <Button variant="ghost" className="w-full justify-start text-muted-foreground">

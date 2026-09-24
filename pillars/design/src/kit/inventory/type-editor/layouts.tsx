@@ -1,3 +1,5 @@
+import { electronicsField } from '@/fixtures/inventory-type-fields';
+
 import { Card, CardContent, CardHeader, cn } from '@pops/ui';
 
 import { CatalogueList, FieldOutline } from './catalogue-navigation';
@@ -6,6 +8,14 @@ import { EditorHeader, EditorTabs, PublishBar } from './editor-frame';
 import { BlockingNotice } from './notices';
 
 import type { TypeEditorMode } from './types';
+
+/** A layout rendering one editor mode with one Electronics field selected in the outline. */
+export interface EditorLayoutProps {
+  mode: TypeEditorMode;
+  fieldKey?: string;
+}
+
+const DEFAULT_FIELD_KEY = 'connectors';
 
 function isBlockingMode(
   mode: TypeEditorMode
@@ -28,8 +38,9 @@ function isCreatingMode(mode: TypeEditorMode): boolean {
 }
 
 /** Persistent type list, field outline and inspector workspace. */
-export function WorkspaceEditor({ mode }: { mode: TypeEditorMode }) {
+export function WorkspaceEditor({ mode, fieldKey = DEFAULT_FIELD_KEY }: EditorLayoutProps) {
   const creating = isCreatingMode(mode);
+  const field = electronicsField(fieldKey);
   return (
     <div className="grid gap-4 lg:grid-cols-12">
       <Card className="lg:col-span-3">
@@ -39,7 +50,7 @@ export function WorkspaceEditor({ mode }: { mode: TypeEditorMode }) {
       </Card>
       <Card className="lg:col-span-3">
         <CardContent className="p-4">
-          <FieldOutline />
+          <FieldOutline selectedKey={fieldKey} />
         </CardContent>
       </Card>
       <Card className="lg:col-span-6">
@@ -50,7 +61,7 @@ export function WorkspaceEditor({ mode }: { mode: TypeEditorMode }) {
           {creating ? (
             <CreateType keyCollision={mode === 'key-collision'} />
           ) : (
-            <EditorTabs mode={mode} />
+            <EditorTabs mode={mode} field={field} />
           )}
           {isBlockingMode(mode) && <BlockingNotice mode={mode} />}
           {canPublish(mode) && <PublishBar />}
@@ -63,8 +74,9 @@ export function WorkspaceEditor({ mode }: { mode: TypeEditorMode }) {
 const STEPS = ['Type details', 'Fields', 'Review & publish'] as const;
 
 /** Focused section editor with explicit type, fields and publish stages. */
-export function FocusedEditor({ mode }: { mode: TypeEditorMode }) {
+export function FocusedEditor({ mode, fieldKey = DEFAULT_FIELD_KEY }: EditorLayoutProps) {
   const creating = isCreatingMode(mode);
+  const field = electronicsField(fieldKey);
   const activeStep = creating ? 0 : 1;
   return (
     <div className="mx-auto max-w-5xl space-y-5">
@@ -96,10 +108,10 @@ export function FocusedEditor({ mode }: { mode: TypeEditorMode }) {
           ) : (
             <div className="grid gap-8 lg:grid-cols-4">
               <div className="lg:col-span-1">
-                <FieldOutline />
+                <FieldOutline selectedKey={fieldKey} />
               </div>
               <div className="space-y-6 lg:col-span-3">
-                <EditorTabs mode={mode} />
+                <EditorTabs mode={mode} field={field} />
                 {isBlockingMode(mode) && <BlockingNotice mode={mode} />}
               </div>
             </div>
