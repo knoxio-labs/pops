@@ -38,6 +38,13 @@ vi.mock('./tools/index.js', () => ({
       inputSchema: { type: 'object', properties: {} },
       handler: mockToolHandler,
     },
+    {
+      name: 'test.scoped',
+      description: 'Scoped tool for testing',
+      inputSchema: { type: 'object', properties: {} },
+      handler: mockToolHandler,
+      scope: 'inventory.types.manage',
+    },
   ],
 }));
 
@@ -81,12 +88,23 @@ describe('createMcpServer — ListTools handler', () => {
     const response = (await handler({ params: {} })) as {
       tools: { name: string; description: string; inputSchema: unknown }[];
     };
-    expect(response.tools).toHaveLength(1);
+    expect(response.tools).toHaveLength(2);
     expect(response.tools[0]).toMatchObject({
       name: 'test.echo',
       description: 'Echo tool for testing',
       inputSchema: { type: 'object' },
     });
+  });
+
+  it("advertises a scoped tool's required scope in its listed description", async () => {
+    const handler = capturedHandlers.get(ListToolsRequestSchema)!;
+    const response = (await handler({ params: {} })) as {
+      tools: { name: string; description: string }[];
+    };
+    const scoped = response.tools.find((t) => t.name === 'test.scoped');
+    expect(scoped?.description).toBe(
+      "Scoped tool for testing Requires service-account scope 'inventory.types.manage'."
+    );
   });
 });
 

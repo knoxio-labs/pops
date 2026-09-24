@@ -70,9 +70,11 @@ const DRAFT_CONFLICT_RECOVERY =
 /**
  * Maps a draft-mutation result like `mapCallResult`, adding the recovery steps
  * when inventory refused the call because `expectedDraftVersion` was stale.
+ *
+ * @param scope Forwarded to `mapCallResult` — the scope this tool declares.
  */
-export function mapDraftCallResult<T>(result: CallResult<T>): CallToolResult {
-  const mapped = mapCallResult(result);
+export function mapDraftCallResult<T>(result: CallResult<T>, scope?: string): CallToolResult {
+  const mapped = mapCallResult(result, scope);
   if (result.kind !== 'conflict' || result.code !== 'catalogue_draft_conflict') return mapped;
   const [first] = mapped.content;
   const reason = first?.type === 'text' ? first.text : 'Catalogue draft version conflict.';

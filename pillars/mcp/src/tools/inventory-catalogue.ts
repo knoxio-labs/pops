@@ -12,6 +12,7 @@ import {
 } from './inventory-catalogue-preview.js';
 import { catalogueReadTools } from './inventory-catalogue-read.js';
 import { catalogueMigrationSchema } from './inventory-catalogue-schema.js';
+import { INVENTORY_TYPES_MANAGE_SCOPE } from './inventory-catalogue-scopes.js';
 import { mapCallResult, nullStr, optStr, toolError } from './utils.js';
 
 import type { ToolDef } from './tool-def.js';
@@ -43,7 +44,9 @@ const catalogueReadDraft: ToolDef = {
   description:
     'Read the current editable catalogue draft so an interrupted edit can resume. Its revision.draftVersion is the expectedDraftVersion for the next patch, preview, publish or abandon.',
   inputSchema: { type: 'object', properties: {} },
-  handler: async () => mapCallResult(await catalogueClient().manage.readDraft()),
+  scope: INVENTORY_TYPES_MANAGE_SCOPE,
+  handler: async () =>
+    mapCallResult(await catalogueClient().manage.readDraft(), INVENTORY_TYPES_MANAGE_SCOPE),
 };
 
 const catalogueCreateDraft: ToolDef = {
@@ -57,11 +60,13 @@ const catalogueCreateDraft: ToolDef = {
     },
     required: ['baseRevision'],
   },
+  scope: INVENTORY_TYPES_MANAGE_SCOPE,
   handler: async (args) => {
     const baseRevision = requiredPositiveInteger(args, 'baseRevision');
     if (!baseRevision.ok) return toolError(baseRevision.error);
     return mapCallResult(
-      await catalogueClient().manage.createDraft({ baseRevision: baseRevision.value })
+      await catalogueClient().manage.createDraft({ baseRevision: baseRevision.value }),
+      INVENTORY_TYPES_MANAGE_SCOPE
     );
   },
 };
@@ -71,10 +76,14 @@ const cataloguePatchDraft: ToolDef = {
   description:
     'Read inventory.catalogue.readDraft first, then apply validated operations at its exact draft and base revisions, atomically, and preview publication compatibility. Refused with catalogue_draft_conflict when expectedDraftVersion is stale; the returned draft carries the next revision.draftVersion.',
   inputSchema: catalogueDraftOperationInputSchema,
+  scope: INVENTORY_TYPES_MANAGE_SCOPE,
   handler: async (args) => {
     const input = catalogueDraftOperationInput(args);
     if (!input.ok) return toolError(input.error);
-    return mapDraftCallResult(await catalogueClient().manage.patchDraft(input.value));
+    return mapDraftCallResult(
+      await catalogueClient().manage.patchDraft(input.value),
+      INVENTORY_TYPES_MANAGE_SCOPE
+    );
   },
 };
 
@@ -103,6 +112,7 @@ const cataloguePublishDraft: ToolDef = {
     },
     required: ['revision', 'baseRevision', 'expectedDraftVersion'],
   },
+  scope: INVENTORY_TYPES_MANAGE_SCOPE,
   handler: async (args) => {
     const target = draftTarget(args);
     if (!target.ok) return toolError(target.error);
@@ -119,7 +129,8 @@ const cataloguePublishDraft: ToolDef = {
         ...(minimumProtocol.value !== undefined ? { minimumProtocol: minimumProtocol.value } : {}),
         ...(migrationName !== undefined ? { migrationName } : {}),
         ...(migration.value !== undefined ? { migration: migration.value } : {}),
-      })
+      }),
+      INVENTORY_TYPES_MANAGE_SCOPE
     );
   },
 };
@@ -141,10 +152,14 @@ const catalogueAbandonDraft: ToolDef = {
     },
     required: ['revision', 'baseRevision', 'expectedDraftVersion'],
   },
+  scope: INVENTORY_TYPES_MANAGE_SCOPE,
   handler: async (args) => {
     const target = draftTarget(args);
     if (!target.ok) return toolError(target.error);
-    return mapDraftCallResult(await catalogueClient().manage.abandonDraft(target.value));
+    return mapDraftCallResult(
+      await catalogueClient().manage.abandonDraft(target.value),
+      INVENTORY_TYPES_MANAGE_SCOPE
+    );
   },
 };
 
