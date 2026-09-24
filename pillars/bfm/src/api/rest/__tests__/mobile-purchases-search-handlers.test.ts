@@ -89,7 +89,7 @@ describe('searchPurchases', () => {
 
 describe('purchaseTags', () => {
   it('answers the client’s vocabulary on success', async () => {
-    const value: MobilePurchaseTagsResponse = { tags: ['snack'] };
+    const value: MobilePurchaseTagsResponse = { tags: [{ tag: 'snack', count: 3 }] };
     const handlers = makeMobilePurchasesSearchHandlers(
       stubClient({ tagVocabulary: () => Promise.resolve({ kind: 'ok', value }) })
     );

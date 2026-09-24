@@ -50,7 +50,7 @@ extension BFMPurchasesRepository {
 
         switch output {
         case .ok(let ok):
-            return try ok.body.json.tags.map { PurchaseTagCount(tag: $0) }
+            return try ok.body.json.tags.map { PurchaseTagCount(tag: $0.tag, count: $0.count) }
         case .badRequest:
             throw RepositoryError.transport("\(PurchaseTags.id): invalid request")
         case .unauthorized, .forbidden:

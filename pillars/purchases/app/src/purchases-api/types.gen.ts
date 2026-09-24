@@ -378,7 +378,10 @@ export type PurchaseTagVocabularyResponses = {
    * 200
    */
   200: {
-    tags: Array<string>;
+    tags: Array<{
+      count: number;
+      tag: string;
+    }>;
   };
 };
 

@@ -4223,7 +4223,10 @@ export type MobilePurchasesPurchaseTagsResponses = {
    * 200
    */
   200: {
-    tags: Array<string>;
+    tags: Array<{
+      count: number;
+      tag: string;
+    }>;
   };
 };
 

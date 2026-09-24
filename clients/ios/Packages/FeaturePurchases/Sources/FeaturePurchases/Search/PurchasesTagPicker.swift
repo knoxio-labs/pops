@@ -75,6 +75,13 @@ public struct PurchasesTagPicker: View {
         return tags.filter { $0.tag.localizedCaseInsensitiveContains(trimmed) }
     }
 
+    /// The digits shown beside a row for its use count, or `nil` for the
+    /// "Any" row, which names no count. Pulled out of `row` purely so the
+    /// text it puts on screen has something a test can call directly.
+    nonisolated internal static func countLabel(_ count: Int?) -> String? {
+        count.map(String.init)
+    }
+
     /// Which empty message, if any, the list's overlay should draw.
     ///
     /// Distinguishes a genuinely empty tag vocabulary (``noTagsYet``, nothing
@@ -103,8 +110,8 @@ public struct PurchasesTagPicker: View {
                 Label(title, systemImage: isAny ? "tag.slash" : "tag")
                     .foregroundStyle(Color.popsForeground)
                 Spacer(minLength: PopsSpacing.sm)
-                if let count {
-                    Text("\(count)")
+                if let label = Self.countLabel(count) {
+                    Text(label)
                         .font(.popsCaption)
                         .monospacedDigit()
                         .foregroundStyle(Color.popsMutedForeground)
