@@ -139,13 +139,6 @@ changing the persisted draft. Blocked validation responses retain every
 definition-level issue and the same revision-bound compatibility and affected
 item evidence in the standard error envelope.
 
-`POST /type-catalogue/drafts/:revision/preview` applies the proposed operation
-batch inside a rolled-back transaction. It returns fresh compatibility and
-affected-item diagnostics bound to the exact base and draft revisions without
-changing the persisted draft. Blocked validation responses retain every
-definition-level issue and the same revision-bound compatibility and affected
-item evidence in the standard error envelope.
-
 `POST /type-catalogue/drafts/:revision/computed-preview` evaluates one computed
 field of the draft on one chosen item of its type, after applying any unsaved
 operations, inside the same kind of rolled-back transaction: the draft, its

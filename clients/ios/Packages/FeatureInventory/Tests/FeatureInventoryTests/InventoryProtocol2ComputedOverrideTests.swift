@@ -78,6 +78,26 @@ internal struct InventoryProtocol2ComputedOverrideTests {
         #expect(!row.canClearOverride)
     }
 
+    @Test("an override the catalogue no longer allows can still be cleared, never re-set")
+    func disallowedOverrideCanStillBeCleared() async {
+        let opened = await Self.opened(
+            Self.item(
+                computed: [Self.sealed: .ok(.boolean(true))],
+                fieldValues: [
+                    InventoryItemFieldEntry(
+                        fieldId: Self.sealed.id, state: .value([.boolean(true)]),
+                        source: .override, catalogueRevision: 4)
+                ]))
+        defer { opened.loading.cancel() }
+        let row = InventoryProtocol2ComputedFieldRow(
+            field: Self.sealed, display: opened.form.protocol2ComputedDisplays[Self.sealed.id],
+            overridesEnabled: opened.form.mode == .edit)
+
+        #expect(row.isOverridden)
+        #expect(row.canClearOverride)
+        #expect(!row.canStartOverride)
+    }
+
     @Test("setting then clearing an override dispatches item.setOverride, then item.clearOverride")
     func setThenClear() async throws {
         let opened = await Self.opened(Self.item(computed: [Self.volume: .ok(.string("6 l"))]))
