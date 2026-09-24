@@ -15,7 +15,10 @@ import type { Harness } from './test-utils.js';
 
 const AUTHOR = { kind: 'web', id: 'owner', label: 'Owner' } as const;
 
-function publishCustomType(harness: Harness): {
+function publishCustomType(
+  harness: Harness,
+  typeOptions: { readonly capabilities?: 'containment'[] } = {}
+): {
   readonly revision: number;
   readonly typeId: string;
   readonly fieldId: string;
@@ -37,7 +40,7 @@ function publishCustomType(harness: Harness): {
         kind: 'put_type',
         key: 'custom_device',
         label: 'Custom device',
-        capabilities: ['containment'],
+        capabilities: typeOptions.capabilities ?? ['containment'],
       },
     ]
   );
@@ -744,7 +747,9 @@ describe('active catalogue item commands', () => {
 
   it('splits an item while retaining a value from an archived field', () => {
     const harness = openHarness();
-    const catalogue = publishCustomType(harness);
+    // Non-containment: a grouped item (quantity > 1) can never be a
+    // container (ADR-002 D3), and this test's split needs quantity > 1.
+    const catalogue = publishCustomType(harness, { capabilities: [] });
     const itemId = randomUUID();
     const newItemId = randomUUID();
     harness.run(

@@ -25,14 +25,17 @@ internal enum StoredFieldPatch: Codable, Equatable {
 
 /// `LoggedCommand`'s storage twin, for the log's `command` column.
 internal enum StoredCommand: Codable, Equatable {
+    /// `code` is absent from rows logged before a create carried its code,
+    /// which decode as a create without one.
     case createItem(
         id: String, name: String, typeKey: String?, fields: [String: StoredFieldValue],
         note: String?, externalIds: [StoredExternalIdentifier], quantity: Int,
-        placement: StoredPlacement)
+        placement: StoredPlacement, code: String?)
     case createProtocol2Item(
         id: String, name: String, catalogueRevision: Int, typeId: String,
         values: [InventoryProtocol2FieldValue], note: String?,
-        externalIds: [StoredExternalIdentifier], quantity: Int, placement: StoredPlacement)
+        externalIds: [StoredExternalIdentifier], quantity: Int, placement: StoredPlacement,
+        code: String?)
     case editItem(
         id: String, name: String?, note: StoredNoteUpdate, fields: [String: StoredFieldPatch],
         externalIds: [StoredExternalIdentifier]?)

@@ -111,12 +111,25 @@ export function buildItemPayload(values: ItemFormValues, isInUseTouched: boolean
   };
 }
 
+/**
+ * Why the form must not be sent as it stands, or `null` when it may be: a
+ * missing name, or an asset ID another item already holds (POPS-4063). The
+ * server refuses a held code as well; this stops the round trip and says
+ * which item holds it.
+ */
+export function submitBlocker(values: ItemFormValues, assetIdError: string | null): string | null {
+  if (!values.itemName.trim()) return 'Item name is required';
+  return assetIdError;
+}
+
 interface UseItemMutationsArgs {
   id: string | undefined;
   isEditMode: boolean;
   pendingConnections: PendingConnection[];
   /** Whether the inUse checkbox has been touched this session. See {@link ItemPayload.inUse}. */
   isInUseTouched: () => boolean;
+  /** The asset ID's uniqueness error, when it is held by another item. */
+  assetIdError: string | null;
 }
 
 interface UpdateInput {
@@ -129,6 +142,7 @@ export function useItemMutations({
   isEditMode,
   pendingConnections,
   isInUseTouched,
+  assetIdError,
 }: UseItemMutationsArgs) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -171,8 +185,9 @@ export function useItemMutations({
 
   const onSubmit = useCallback(
     (values: ItemFormValues) => {
-      if (!values.itemName.trim()) {
-        toast.error('Item name is required');
+      const blocker = submitBlocker(values, assetIdError);
+      if (blocker) {
+        toast.error(blocker);
         return;
       }
       const payload = buildItemPayload(values, isInUseTouched());
@@ -182,7 +197,7 @@ export function useItemMutations({
         createMutation.mutate(payload);
       }
     },
-    [isEditMode, id, createMutation, updateMutation, isInUseTouched]
+    [isEditMode, id, createMutation, updateMutation, isInUseTouched, assetIdError]
   );
 
   return {

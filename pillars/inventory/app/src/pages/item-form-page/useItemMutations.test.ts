@@ -6,7 +6,12 @@ vi.mock('sonner', () => ({
 
 import { toast } from 'sonner';
 
-import { applyConnections, buildItemPayload, reportCreateSuccess } from './useItemMutations';
+import {
+  applyConnections,
+  buildItemPayload,
+  reportCreateSuccess,
+  submitBlocker,
+} from './useItemMutations';
 
 import type { ItemFormValues, PendingConnection } from './types';
 
@@ -107,5 +112,23 @@ describe('reportCreateSuccess', () => {
     reportCreateSuccess({ connected: 1, failed: 1 });
     expect(toast.success).not.toHaveBeenCalled();
     expect(toast.error).toHaveBeenCalledWith('Item created with 1 connected; 1 connection failed');
+  });
+});
+
+describe('submitBlocker (POPS-4063)', () => {
+  it('lets a named item with a free asset ID through', () => {
+    expect(submitBlocker({ ...baseValues, assetId: 'POPS-1' }, null)).toBeNull();
+  });
+
+  it('blocks while the asset ID is held by another item, saying which', () => {
+    expect(
+      submitBlocker({ ...baseValues, assetId: 'POPS-1' }, 'Asset ID already in use by Drill')
+    ).toBe('Asset ID already in use by Drill');
+  });
+
+  it('asks for a name first when both are wrong', () => {
+    expect(
+      submitBlocker({ ...baseValues, itemName: '  ' }, 'Asset ID already in use by Drill')
+    ).toBe('Item name is required');
   });
 });

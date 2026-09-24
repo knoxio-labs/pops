@@ -12,7 +12,7 @@ import OpenAPIRuntime
 /// (`BFMInventoryFailureMapping`). Wire values this build has never seen
 /// (an event kind, an actor kind, a lifecycle string) decode to their type's
 /// `.unrecognised` case rather than failing the page, per D10.
-public struct BFMInventoryTransport: InventorySyncTransport {
+public struct BFMInventoryTransport: InventorySyncTransport, InventoryCodeSuggestionService {
     internal let client: BFMHTTPClient
     internal let timeZone: @Sendable () -> TimeZone
 

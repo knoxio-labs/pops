@@ -20,7 +20,7 @@ export function NavRegion({ pageNavOpen, onClosePageNav }: NavRegionProps) {
 
       {/* Tablet overlay: PageNav as overlay (md to lg) */}
       {pageNavOpen && (
-        <div className="hidden md:block lg:hidden">
+        <div className="hidden md:max-lg:block">
           <div
             className="fixed inset-0 bg-overlay-scrim/50 z-40"
             onClick={onClosePageNav}

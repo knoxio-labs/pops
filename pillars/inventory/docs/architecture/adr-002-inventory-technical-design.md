@@ -66,6 +66,8 @@ Quantity is an integer on the row, `CHECK (quantity >= 1)`. `split` creates a ne
 
 **Consequences.** The playground's "None left" badge and "None left" quantity filter can never match a real row. That is a product-visible gap and is listed under open questions rather than silently settled.
 
+**Grouped quantity and containment are mutually exclusive (added 2026-09-24, POPS-4354).** A container is one physical thing (D1); "3 boxes" holding the same contents is incoherent. `is_container = 1` therefore implies `quantity = 1`, both ways: `item.create` and `item.changeType` reject a containment-capable type paired with `quantity > 1` (`quantity_container_conflict`), and `item.setQuantity` rejects raising a container's own quantity above 1 the same way. Because a container's quantity can never exceed 1, `item.move`'s `store`/`move` verbs also refuse a target whose quantity is greater than 1 (`quantity_container_conflict`, checked directly rather than relied on as a corollary of `not_container`, as a defence against a row that reached that state some other way). A published catalogue change that grants containment to a type is already `migration_required` (`type_capabilities_changed`); the migration is refused (`409 migration_containment_quantity_conflict`, with an affected count) rather than silently run when any live item of that type carries `quantity > 1`, because no migration step in D5's closed vocabulary can decide how to split an arbitrary group — that is an owner decision (`item.split`), not a mechanical rewrite.
+
 ### D4. History is an append-only event log, and its sequence is the sync sequence
 
 | Option                                                                             | Pros                                                                                                                                                                                                    | Cons                                                                         |
@@ -257,7 +259,7 @@ Clients mint ids (UUIDv4, validated) for items, locations and mutations. An offl
 
 ### D7. Codes are optional, unique when present, and never changed by the server
 
-**Decision.** `items.code` is nullable (ADR-001: most items carry none) with a unique index on `code COLLATE NOCASE`. The migration moves `home_inventory.asset_id` and `containers.code` into it. A code is set by its own mutation, `item.setCode`, never inside a create: a phone that created an item and gave it a code offline sends `item.create` and a dependent `item.setCode`, so a collision leaves the item created and raises only the code repair. On collision the outcome is `conflict` of kind `code_collision` carrying the holder's name and a suggestion (the next free code keeping the stem, `B412` to `B413`). The server never assigns or rewrites a code on its own, because the label may already be printed.
+**Decision.** `items.code` is nullable (ADR-001: most items carry none) with a unique index on `code COLLATE NOCASE`. The migration moves `home_inventory.asset_id` and `containers.code` into it. A new item's code travels inside `item.create { item, code }`, and a later change of code is `item.setCode`. Both check the code the same way, so a create naming a held code is refused whole rather than leaving an item without the code it was made for (POPS-4063); offline, the collision found at sync opens the code repair, whose new code re-sends the create. On collision the outcome is `conflict` of kind `code_collision` carrying the holder's name and a suggestion (the next free code keeping the stem, `B412` to `B413`). The server never assigns or rewrites a code on its own, because the label may already be printed.
 
 `POST /codes/suggest` returns suggestions online: deterministic stem plus next free number in Phase A, an AI ranking behind the same route in Phase C. Offline, the approved `.offline` assist state applies and a typed code is checked against the local replica only.
 
@@ -541,7 +543,7 @@ Outcome   { mutationId, status: 'applied', revision, seq, converged }
 
 `documentsStatus` is resolved when a snapshot or feed page is built; `unavailable` is the approved "Paperless unavailable" state and is recomputed on every refresh rather than cached as truth.
 
-Ops and their `args`: `item.create { item }`, `item.edit { name?, note?, values?: [{ fieldId, values: Primitive[] | null }], externalIds? }`, `item.changeType { typeId, values }`, `item.setOverride { fieldId, values }`, `item.clearOverride { fieldId }`, `item.setCode { code | null }`, `item.move { to: Placement, verb: 'move'|'pick_up'|'put_back'|'store' }`, `item.setAccess { access }`, `item.setFull { full }`, `item.setLifecycle { lifecycle, reason? }`, `item.setQuantity { quantity }`, `item.split { newItemId, quantity }`, `item.attachPhoto { sha256, position }`, `item.removePhoto { sha256 }`, `item.reorderPhotos { sha256s[] }`, `item.restoreDeleted {}`, `location.create { location }`, `location.rename { name }`, `location.move { parentId? }`, `location.delete {}`, `event.revert { seq }`. Omitting a field entry leaves it unchanged; `values: null` clears an optional stored value.
+Ops and their `args`: `item.create { item, code? }`, `item.edit { name?, note?, values?: [{ fieldId, values: Primitive[] | null }], externalIds? }`, `item.changeType { typeId, values }`, `item.setOverride { fieldId, values }`, `item.clearOverride { fieldId }`, `item.setCode { code | null }`, `item.move { to: Placement, verb: 'move'|'pick_up'|'put_back'|'store' }`, `item.setAccess { access }`, `item.setFull { full }`, `item.setLifecycle { lifecycle, reason? }`, `item.setQuantity { quantity }`, `item.split { newItemId, quantity }`, `item.attachPhoto { sha256, position }`, `item.removePhoto { sha256 }`, `item.reorderPhotos { sha256s[] }`, `item.restoreDeleted {}`, `location.create { location }`, `location.rename { name }`, `location.move { parentId? }`, `location.delete {}`, `event.revert { seq }`. Omitting a field entry leaves it unchanged; `values: null` clears an optional stored value.
 
 `rejected` reasons (closed on the server, open string on the wire): `invalid`, `type_unknown`, `catalogue_changed`, `catalogue_update_required`, `catalogue_repair_required`, `cycle`, `target_missing`, `reference_type_mismatch`, `not_container`, `has_contents`, `illegal_transition`, `media_missing`.
 
@@ -552,7 +554,7 @@ sequenceDiagram
     participant P as Phone (drain)
     participant B as bfm
     participant I as inventory
-    P->>B: POST /mobile/inventory/mutations [m1 create, m2 setCode dependsOn m1, m3 move]
+    P->>B: POST /mobile/inventory/mutations [m1 create, m2 setQuantity dependsOn m1, m3 move]
     B->>B: requireDevice, requireCapability(inventory.write), body cap
     B->>I: POST /sync/mutations, X-API-Key (inventory.sync), Pops-Actor device
     loop each mutation, one transaction each

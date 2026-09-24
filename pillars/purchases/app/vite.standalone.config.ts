@@ -20,9 +20,14 @@ import { defineConfig } from 'vite';
  * the default mocked mode nothing reaches it, because the mock intercepts at
  * `fetch` — so a proxy error in the console means the switch is set to `real`
  * and the pillar is not running.
+ *
+ * Output goes to `dist/standalone/`, not vite's default `dist/`: the remote
+ * build writes `dist/remote/`, and emptying `dist/` would delete the bundle the
+ * shell loads.
  */
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  build: { outDir: 'dist/standalone' },
   server: {
     port: 5570,
     strictPort: true,

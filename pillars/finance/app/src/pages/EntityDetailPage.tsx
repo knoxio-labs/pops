@@ -2,7 +2,9 @@ import { useParams } from 'react-router';
 
 import { Alert, Button, EmptyState, Skeleton } from '@pops/ui';
 
+import { isUnavailableError } from '../contacts-api-helpers.js';
 import { EntityFormDialog } from './entities/EntityFormDialog';
+import { ContactsUnavailableView } from './entity-detail/ContactsUnavailableView';
 import { EntityDetailHeader } from './entity-detail/EntityDetailHeader';
 import { EntityFieldList } from './entity-detail/EntityFieldList';
 import { RecentPurchasesCard } from './entity-detail/RecentPurchasesCard';
@@ -35,13 +37,17 @@ function LoadingSkeleton() {
  * `/entities/:id` — the entity dashboard (POPS-3076). Banner-forward
  * identity header (avatar/poster/colour, POPS-3061), the contacts-owned
  * fields, then a recent-transactions and a recent-purchases rollup, each
- * fetched from its own pillar for this one entity.
+ * fetched from its own pillar for this one entity. With contacts unreachable
+ * it falls back to the two rollups under the name finance stored.
  */
 export function EntityDetailPage() {
   const { id } = useParams<{ id: string }>();
   const entityId = id ?? '';
   const state = useEntityDetailPage(entityId);
 
+  if (isUnavailableError(state.query.error)) {
+    return <ContactsUnavailableView entityId={entityId} />;
+  }
   if (state.query.error) {
     return <ErrorPanel message={state.query.error.message} onRetry={() => state.query.refetch()} />;
   }

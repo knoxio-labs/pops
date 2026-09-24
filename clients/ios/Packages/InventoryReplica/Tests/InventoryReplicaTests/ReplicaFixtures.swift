@@ -9,21 +9,23 @@ internal enum Fixture {
 
     static func item(
         _ id: String, name: String? = nil, revision: Int = 1, placement: InventoryPlacement = .hand,
-        containment: InventoryContainment? = nil, code: String? = nil, deletedAt: Date? = nil
+        containment: InventoryContainment? = nil, code: String? = nil, deletedAt: Date? = nil,
+        quantity: Int = 1
     ) -> InventoryItem {
         InventoryItem(
             id: id, revision: revision, seq: revision, name: name ?? id, typeKey: nil,
-            code: code, placement: placement, containment: containment, createdAt: created,
+            code: code, quantity: InventoryQuantity(count: quantity), placement: placement,
+            containment: containment, createdAt: created,
             updatedAt: created.addingTimeInterval(Double(revision)), deletedAt: deletedAt)
     }
 
     static func box(
         _ id: String, revision: Int = 1, placement: InventoryPlacement,
-        access: InventoryAccess = .open
+        access: InventoryAccess = .open, quantity: Int = 1
     ) -> InventoryItem {
         item(
             id, revision: revision, placement: placement,
-            containment: InventoryContainment(access: access, isFull: false))
+            containment: InventoryContainment(access: access, isFull: false), quantity: quantity)
     }
 
     static func location(

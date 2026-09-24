@@ -106,6 +106,10 @@ public struct InventoryCatalogueType: Codable, Identifiable, Hashable, Sendable 
         self.archivedAt = archivedAt
         self.replacedBy = replacedBy
     }
+
+    /// Whether this type grants the containment capability (ADR-002 D1). A
+    /// container must have quantity exactly 1 (D3).
+    public var isContainer: Bool { capabilities.contains("containment") }
 }
 
 /// Lifecycle state recorded on an immutable catalogue revision.

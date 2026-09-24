@@ -124,6 +124,15 @@ describe('item.move', () => {
     expect(h.run(into('lamp', 'cable'))).toMatchObject({ reason: 'not_container' });
   });
 
+  it('refuses storing into a container whose own quantity is greater than 1 (ADR-002 D3)', () => {
+    seedItem(h, { id: 'drifted', locationId: 'garage', isContainer: true, quantity: 2 });
+    expect(h.run(into('lamp', 'drifted'))).toMatchObject({
+      status: 'rejected',
+      reason: 'quantity_container_conflict',
+    });
+    expect(h.item('lamp').locationId).toBe('shelf');
+  });
+
   it('refuses a move into itself or into anything it holds', () => {
     expect(h.run(into('crate', 'crate'))).toMatchObject({ status: 'rejected', reason: 'cycle' });
     expect(h.run(into('crate', 'bin'))).toMatchObject({ status: 'rejected', reason: 'cycle' });

@@ -167,3 +167,20 @@ public struct UnboundInventoryStore: InventoryStore {
         throw RepositoryError.dependencyNotBound
     }
 }
+
+/// Public for the same reason `UnboundInventoryStore` is: it is
+/// `AppDependencies.init(codeSuggestions:)`'s default value.
+///
+/// Throws `suggestionsUnavailable` rather than `RepositoryError
+/// .dependencyNotBound`: an unpaired or unbound phone answers a suggestion
+/// request exactly the way a paired one does when its server cannot suggest
+/// right now, which is the approved unavailable assist state, not a crash or
+/// a distinct error screen.
+public struct UnboundInventoryCodeSuggestionService: InventoryCodeSuggestionService {
+    public init() {}
+
+    public func suggestCodes(name: String, typeKey: String?, stem: String?) async throws -> [String]
+    {
+        throw InventorySyncTransportError.suggestionsUnavailable
+    }
+}

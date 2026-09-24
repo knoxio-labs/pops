@@ -305,6 +305,33 @@ describe('POST /sync/mutations', () => {
     expect(h.db.db.select().from(events).all()).toHaveLength(count);
   });
 
+  it('refuses a create whose code is already held as one code_collision, creating nothing (POPS-4063)', async () => {
+    const first = randomUUID();
+    const second = randomUUID();
+    const withCode = (id: string, name: string): ReturnType<typeof createItem> =>
+      wireMutation('item.create', id, {
+        item: { name, placement: { kind: 'hand' } },
+        code: 'B412',
+      });
+
+    const response = await send(h.api, [withCode(first, 'Lamp'), withCode(second, 'Kettle')]);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({
+      outcomes: [
+        { status: 'applied', revision: 1 },
+        {
+          status: 'conflict',
+          kind: 'code_collision',
+          heldBy: { id: first, name: 'Lamp' },
+          suggestedCode: 'B413',
+        },
+      ],
+    });
+    const snap = await snapshot(undefined, 50);
+    expect(snap.items.map((row) => row.id)).toEqual([first]);
+  });
+
   it('defers a mutation whose dependency has not applied, and stores nothing for it', async () => {
     const lamp = randomUUID();
     const missing = randomUUID();

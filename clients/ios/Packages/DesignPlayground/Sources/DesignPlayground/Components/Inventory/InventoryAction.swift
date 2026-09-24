@@ -128,12 +128,7 @@ internal struct InventoryAction: Identifiable, Equatable {
                     "split", "Split", symbol: .split, heading: .record,
                     note: "Move some of the \(item.quantity.count) into a separate group"))
         }
-        if let code = item.code {
-            actions.append(
-                InventoryAction(
-                    "print", "Print label", symbol: .printLabel, heading: .record,
-                    note: "Reprints \(code)"))
-        } else {
+        if item.code == nil {
             actions.append(InventoryAction("label", "Label", symbol: .label, heading: .record))
         }
         return actions

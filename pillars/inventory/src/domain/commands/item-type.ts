@@ -145,6 +145,12 @@ function assertTypeChangePermitted(
   ) {
     throw new CommandRejected('has_contents', `item ${row.id} still holds active contents`);
   }
+  if (type.capabilities.includes('containment') && row.quantity > 1) {
+    throw new CommandRejected(
+      'quantity_container_conflict',
+      `item ${row.id} has quantity ${row.quantity}; a container must have quantity exactly 1 (ADR-002 D3)`
+    );
+  }
 }
 
 /**
@@ -153,7 +159,10 @@ function assertTypeChangePermitted(
  * accepts `{ typeId, values }`. Unknown types are `type_unknown` and values
  * that do not fit the new type are `invalid`. `is_container`, `access` and `is_full` follow the
  * new type's capabilities (ADR-002 D1), never the client: losing containment
- * while the item still holds active contents is `has_contents`.
+ * while the item still holds active contents is `has_contents`, and gaining
+ * containment while the item's own quantity is greater than 1 is
+ * `quantity_container_conflict` (ADR-002 D3): a grouped item can never
+ * become a container.
  */
 export const itemChangeType = defineOp({
   op: 'item.changeType',

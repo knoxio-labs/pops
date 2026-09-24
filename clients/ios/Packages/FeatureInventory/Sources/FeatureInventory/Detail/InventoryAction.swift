@@ -83,11 +83,7 @@ internal struct InventoryAction: Identifiable, Equatable {
                     "split", "Split", symbol: .split,
                     note: "Move some of the \(record.quantity.count) into a separate group"))
         }
-        if let code = record.code {
-            actions.append(
-                InventoryAction(
-                    "print", "Print label", symbol: .printLabel, note: "Reprints \(code)"))
-        } else {
+        if record.code == nil {
             actions.append(InventoryAction("label", "Label", symbol: .label))
         }
         return actions
@@ -149,20 +145,19 @@ internal enum InventoryItemDetailPlacement {
     }
 }
 
-/// A screen an Item detail control opens that belongs to another part of
-/// Inventory and has not landed yet: label choice and label printing. Move
-/// and Store here open through the shared placement picker and
-/// `InventoryStoreHereSheet` directly, so they resolve to no pending screen.
+/// A screen an Item detail control opens that belongs to the item form: an
+/// edit, or labelling an item that has none yet. Move and Store here open
+/// through the shared placement picker and `InventoryStoreHereSheet`
+/// directly, so they resolve to no pending screen. Printing a label is a web
+/// job (POPS-3992): this phone has nothing to open for it.
 internal enum InventoryItemDetailPending: String, Identifiable {
     case edit
     case label
-    case printLabel
 
     internal init?(actionId: String) {
         switch actionId {
         case "edit": self = .edit
         case "label": self = .label
-        case "print": self = .printLabel
         default: return nil
         }
     }
@@ -170,9 +165,9 @@ internal enum InventoryItemDetailPending: String, Identifiable {
     internal var id: String { rawValue }
 }
 
-/// Where a pending screen from Item detail's action row or toolbar should go:
-/// the real item form when there is one, `InventoryItemDetailPendingSheet`'s
-/// placeholder otherwise.
+/// Where a pending screen from Item detail's action row or toolbar goes: the
+/// real item form, editing the item for `.edit`, or opened focused on the
+/// code field for `.label`.
 ///
 /// A free function rather than inline logic at each call site, because Item
 /// detail used to decide this twice — once in `act(_:)`, which reached the
@@ -183,13 +178,11 @@ internal enum InventoryItemDetailRouting {
     internal static func present(
         _ screen: InventoryItemDetailPending,
         itemId: InventoryItem.ID,
-        itemForm: InventoryItemFormPresenter?,
-        pending setPending: (InventoryItemDetailPending) -> Void
+        itemForm: InventoryItemFormPresenter?
     ) {
-        if screen == .edit {
-            itemForm?(.edit(itemId))
-        } else {
-            setPending(screen)
+        switch screen {
+        case .edit: itemForm?(.edit(itemId))
+        case .label: itemForm?(.labelling(itemId))
         }
     }
 }

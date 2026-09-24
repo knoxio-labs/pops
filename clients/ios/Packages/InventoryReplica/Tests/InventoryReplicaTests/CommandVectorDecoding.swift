@@ -135,7 +135,7 @@ internal enum CommandVectorDecoding {
                     id: id, name: try require(item?["name"]?.string), typeKey: typeKey,
                     fields: try fields(item?["fields"], typeKey: typeKey),
                     note: item?["note"]?.string, quantity: item?["quantity"]?.int ?? 1,
-                    placement: try placement(item?["placement"])))
+                    placement: try placement(item?["placement"]), code: args["code"]?.string))
         case "item.edit":
             return .editItem(id: id, name: args["name"]?.string, note: .unchanged, fields: [:])
         case "item.changeType":

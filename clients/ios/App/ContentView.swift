@@ -31,6 +31,10 @@ internal struct ContentView: View {
     /// this is held here rather than left to `TabView`.
     @State private var chosenFeature: MobileFeature?
 
+    /// Which bootstrap failure, if any, a person has already dismissed the
+    /// degraded banner for. See ``DegradedBannerVisibility``.
+    @State private var bannerVisibility = DegradedBannerVisibility()
+
     /// The one search model behind ``searchTab``, asking every pillar
     /// `surface.available` allows. Held rather than built where it is used —
     /// same reasoning as ``AppComposition/router(for:)`` — so a query and its
@@ -79,6 +83,9 @@ internal struct ContentView: View {
                 let available = surface.available
                 let pillars = SearchPillar.allCases.filter { available.contains($0.feature) }
                 searchModel.update(available: pillars)
+            }
+            .onChange(of: surface.bootstrap) { _, phase in
+                if !phase.isDegraded { bannerVisibility.reset() }
             }
     }
 
@@ -256,13 +263,31 @@ internal struct ContentView: View {
     /// inset instead reserves space inside `features`' own layout, the same
     /// reasoning `PopsActionBar`'s docstring gives for the equivalent bottom
     /// case.
+    ///
+    /// Dismissable, because a Watchtower blip that heals itself in a few
+    /// seconds (POPS-3731) used to leave this on screen, unshiftable, for the
+    /// rest of a foregrounded session — nothing re-polls on a timer, by
+    /// design, so a person who has seen the notice and wants their screen
+    /// back had no way to ask for it. Dismissing only silences *this* phase;
+    /// ``DegradedBannerVisibility`` shows it again for whatever comes next.
     @ViewBuilder private var degradedBanner: some View {
-        if surface.bootstrap.isDegraded {
+        if bannerVisibility.isVisible(for: surface.bootstrap) {
             PopsCard {
                 VStack(alignment: .leading, spacing: PopsSpacing.md) {
-                    Text(RootCopy.degraded)
-                        .font(.popsBody)
-                        .foregroundStyle(Color.popsMutedForeground)
+                    HStack(alignment: .top, spacing: PopsSpacing.md) {
+                        Text(RootCopy.degraded)
+                            .font(.popsBody)
+                            .foregroundStyle(Color.popsMutedForeground)
+                        Spacer(minLength: PopsSpacing.sm)
+                        Button {
+                            bannerVisibility.dismiss(surface.bootstrap)
+                        } label: {
+                            Image(systemName: "xmark")
+                                .font(.popsBody)
+                                .foregroundStyle(Color.popsMutedForeground)
+                        }
+                        .accessibilityLabel(RootCopy.dismissDegraded)
+                    }
                     if case .failed = surface.bootstrap {
                         PopsButton(RootCopy.retry) { Task { await shell.reloadBootstrap() } }
                     }

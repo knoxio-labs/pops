@@ -50,7 +50,11 @@ function assertLocationTarget(db: CommandDb, locationId: string): void {
 function assertContainerTarget(db: CommandDb, itemId: string, containerId: string): void {
   if (containerId === itemId) throw new CommandRejected('cycle', 'an item cannot contain itself');
   const container = db
-    .select({ isContainer: items.isContainer, deletedAt: items.deletedAt })
+    .select({
+      isContainer: items.isContainer,
+      deletedAt: items.deletedAt,
+      quantity: items.quantity,
+    })
     .from(items)
     .where(eq(items.id, containerId))
     .get();
@@ -59,6 +63,12 @@ function assertContainerTarget(db: CommandDb, itemId: string, containerId: strin
   }
   if (container.isContainer !== 1) {
     throw new CommandRejected('not_container', `item ${containerId} is not a container`);
+  }
+  if (container.quantity > 1) {
+    throw new CommandRejected(
+      'quantity_container_conflict',
+      `item ${containerId} has quantity ${container.quantity}; a grouped item cannot hold contents (ADR-002 D3)`
+    );
   }
   const chain = containerChain(db, containerId);
   if (chain.some((link) => link.id === itemId)) {
@@ -72,8 +82,10 @@ function assertContainerTarget(db: CommandDb, itemId: string, containerId: strin
 /**
  * Refuse a placement `itemId` cannot take: a place that does not exist or is
  * tombstoned (`target_missing`), an item that is not a container
- * (`not_container`), or a container that is the item itself, sits inside it,
- * or nests deeper than {@link MAX_CONTAINMENT_DEPTH} (`cycle`). In hand is
+ * (`not_container`), a container whose own quantity is greater than 1
+ * (`quantity_container_conflict`, ADR-002 D3 — a grouped item can never hold
+ * contents), or a container that is the item itself, sits inside it, or
+ * nests deeper than {@link MAX_CONTAINMENT_DEPTH} (`cycle`). In hand is
  * always allowed.
  */
 export function assertPlacementAllowed(db: CommandDb, itemId: string, to: Placement): void {

@@ -59,14 +59,14 @@ internal final class AppComposition {
     /// paired is a screen that should not exist.
     internal let pairingDependencies: AppDependencies
 
-    private let credentialStore: DeviceCredentialStore
-    private let authenticated: @Sendable (PairedDevice) -> BFMHTTPClient
-    private let openInventoryReplica: (PairedDevice) throws -> InventoryReplica
-    private let backgroundRefresh: BackgroundRefresh
-    private let firstUnlock: FirstUnlockProbe
+    internal let credentialStore: DeviceCredentialStore
+    internal let authenticated: @Sendable (PairedDevice) -> BFMHTTPClient
+    internal let openInventoryReplica: (PairedDevice) throws -> InventoryReplica
+    internal let backgroundRefresh: BackgroundRefresh
+    internal let firstUnlock: FirstUnlockProbe
     /// Refreshes the bound device's Inventory and waits for its log to be
     /// sent, for a background refresh; `nil` until a device is bound.
-    private var synchronizeInventory: (@Sendable () async -> Void)?
+    internal var synchronizeInventory: (@Sendable () async -> Void)?
 
     /// One navigation path per feature, since each draws its own
     /// `NavigationStack`.
@@ -95,12 +95,12 @@ internal final class AppComposition {
     /// The last device's dependencies, kept so a body evaluation is free.
     /// One entry, not a cache: the app is paired to one device at a time, and
     /// a re-pair replaces the entry rather than growing it.
-    private var bound: BoundDevice?
+    internal var bound: BoundDevice?
 
     /// What was bound for one paired device: its dependencies, and whether
     /// binding them fell back to `StorageFullInventoryStore` — see
     /// ``inventoryStorageFull``.
-    private struct BoundDevice {
+    internal struct BoundDevice {
         let device: PairedDevice
         let dependencies: AppDependencies
         let storageFull: Bool
@@ -181,6 +181,7 @@ internal final class AppComposition {
         if let bound, bound.device == device { return bound.dependencies }
 
         var storageFull = false
+        let inventoryTransport = BFMInventoryTransport(client: authenticated(device))
         let dependencies = AppDependencies(
             transactions: BFMTransactionsRepository(client: authenticated(device)),
             pairing: BFMDevicePairingService(credentialStore: credentialStore),
@@ -189,7 +190,9 @@ internal final class AppComposition {
             purchases: BFMPurchasesRepository(client: authenticated(device)),
             merchants: BFMMerchantDirectoryRepository(client: authenticated(device)),
             accounts: BFMAccountsRepository(client: authenticated(device)),
-            inventory: inventoryStore(for: device, storageFull: &storageFull)
+            inventory: inventoryStore(
+                for: device, transport: inventoryTransport, storageFull: &storageFull),
+            codeSuggestions: inventoryTransport
         )
         bound = BoundDevice(device: device, dependencies: dependencies, storageFull: storageFull)
         return dependencies
@@ -207,96 +210,4 @@ internal final class AppComposition {
             repository: dependencies.purchases, reachability: networkReachability)
         return (InventorySearchProvider(store: dependencies.inventory), purchases)
     }
-
-    /// The paired device's Inventory: a replica of its own on disk, where
-    /// every change lands first and is sent to the BFM's relay when the
-    /// network allows (`LocalFirstInventoryStore`).
-    ///
-    /// Opening the replica fails with `InventoryStorageError.full` when the
-    /// phone has no room for it. Reading is still possible then, so the
-    /// screens get `StorageFullInventoryStore`, whose every write raises
-    /// the Storage full interruption, rather than a store that says
-    /// Inventory is not available. Any other failure leaves nothing to read
-    /// from, and the screens get the unbound store.
-    ///
-    /// - Parameter storageFull: Set when this falls back to
-    ///   `StorageFullInventoryStore`, so ``inventoryStorageFull`` can
-    ///   announce it the moment Inventory is entered rather than waiting
-    ///   for a write nobody has made yet.
-    private func inventoryStore(
-        for device: PairedDevice, storageFull: inout Bool
-    ) -> any InventoryStore {
-        let transport = BFMInventoryTransport(client: authenticated(device))
-        synchronizeInventory = nil
-        do {
-            let store = LocalFirstInventoryStore(
-                replica: try openInventoryReplica(device), transport: transport,
-                reachability: networkReachability)
-            synchronizeInventory = { await store.synchronize() }
-            return store
-        } catch InventoryStorageError.full {
-            storageFull = true
-            return StorageFullInventoryStore(transport: transport)
-        } catch {
-            return UnboundInventoryStore()
-        }
-    }
-
-    /// Catches the paired device's Inventory up and sends what it holds,
-    /// for when the app comes back to the foreground. Nothing while unpaired.
-    internal func refreshInventory() async {
-        await bound?.dependencies.inventory.refresh()
-    }
-
-    /// Syncs the paired device's Inventory the moment it is (or already was,
-    /// at launch) paired, so a fresh replica does not sit empty until the
-    /// phone is backgrounded, its dashboard is opened, or someone finds the
-    /// Sync page's own Download action.
-    ///
-    /// Binds `device`'s dependencies first rather than reading ``bound``,
-    /// which a pairing this fresh has not necessarily done yet: `ContentView`
-    /// only binds them once the shell has a `FeatureSurface` to draw, and
-    /// this runs from the moment a device is paired, ahead of that.
-    internal func syncInventoryOnPairing(_ device: PairedDevice) async {
-        await dependencies(for: device).inventory.syncNow()
-    }
-
-    /// Records that the app is in the foreground, which means the phone has
-    /// been unlocked since it started (``FirstUnlockProbe``).
-    internal func noteForeground() {
-        try? firstUnlock.markUnlocked()
-    }
-
-    /// Asks for the next background refresh, for when the app leaves the
-    /// foreground.
-    internal func scheduleBackgroundRefresh() async {
-        await backgroundRefresh.schedule()
-    }
-
-    /// One background refresh (``AppCore/BackgroundRefresh``): schedules the
-    /// next, then, if the phone has been unlocked since it started, restores
-    /// the paired device, reads Inventory's change feed and sends its log,
-    /// within the refresh's budget. Nothing while unpaired.
-    @discardableResult
-    internal func refreshInventoryInBackground() async -> BackgroundRefreshOutcome {
-        await backgroundRefresh.run { [self] in await synchronizeBoundInventory() }
-    }
-
-    private func synchronizeBoundInventory() async {
-        await shell.restoreSession()
-        guard case .paired(let device) = session.state else { return }
-        let inventory = dependencies(for: device).inventory
-        if let synchronizeInventory {
-            await synchronizeInventory()
-        } else {
-            await inventory.refresh()
-        }
-    }
-
-    /// What to prefill the pairing form's server field with.
-    ///
-    /// `nil` in Release, which is the normal state and not a failure: the base
-    /// URL arrives with the pairing code. Debug bakes in a local default so
-    /// simulator work does not have to pair against a real deployment first.
-    internal var suggestedBaseURL: URL? { BuiltInBaseURL.current }
 }

@@ -126,6 +126,7 @@ extension InventoryRejectedReason {
         case .referenceTypeMismatch: "reference_type_mismatch"
         case .notContainer: "not_container"
         case .hasContents: "has_contents"
+        case .quantityContainerConflict: "quantity_container_conflict"
         case .illegalTransition: "illegal_transition"
         case .mediaMissing: "media_missing"
         case .catalogueUpdateRequired: "catalogue_update_required"

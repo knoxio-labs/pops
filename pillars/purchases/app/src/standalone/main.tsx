@@ -5,9 +5,10 @@ import '../../remote.css';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 
+import { installApiMock } from '@pops/pillar-sdk/testing/api-mock';
+
 import { createPurchasesI18n } from '../app-i18n';
 import { handlers } from './mock/handlers';
-import { installPurchasesApiMock } from './mock/install';
 import { StandaloneApp } from './StandaloneApp';
 
 /**
@@ -22,8 +23,9 @@ import { StandaloneApp } from './StandaloneApp';
 const useRealApi = import.meta.env['VITE_PURCHASES_API'] === 'real';
 
 if (!useRealApi) {
-  installPurchasesApiMock({
+  installApiMock({
     handlers,
+    baseUrl: '/purchases-api',
     // Loud rather than silent: an operation with no handler is a gap in the
     // harness, and the coverage test that normally catches it does not run
     // while someone is clicking around.

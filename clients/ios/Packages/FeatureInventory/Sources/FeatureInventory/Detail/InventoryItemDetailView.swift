@@ -20,7 +20,6 @@ internal struct InventoryItemDetailView<Capability: View>: View {
     private let capability: Capability
     @State private var destroying = false
     @State private var quantitySheet: InventoryLifecycleSheet?
-    @State private var pending: InventoryItemDetailPending?
     @State private var moving: InventoryPlacementRequest?
     @State private var storing = false
     @State private var retakingPhoto: (sha256: String, source: InventoryPhotoSource)?
@@ -84,7 +83,6 @@ internal struct InventoryItemDetailView<Capability: View>: View {
                 }
             }
         }
-        .sheet(item: $pending) { InventoryItemDetailPendingSheet(pending: $0) }
         .sheet(isPresented: $storing) {
             InventoryStoreHereSheet(
                 target: InventoryItemDetailPlacement.storeTarget(for: detail.record),
@@ -146,15 +144,12 @@ internal struct InventoryItemDetailView<Capability: View>: View {
         }
     }
 
-    /// Routes a pending screen to the real item form when there is one, and
-    /// to `InventoryItemDetailPendingSheet`'s placeholder otherwise. Shared
-    /// by the action row (`act`) and the toolbar's own Edit button, which
-    /// used to call `pending = $0` directly and so kept opening the
-    /// placeholder for Edit even after `act` started reaching the real form.
+    /// Routes a pending screen to the real item form: editing for `.edit`,
+    /// focused on the code field for `.label`. Shared by the action row
+    /// (`act`) and the toolbar's own Edit button, which used to open its own
+    /// placeholder and so disagreed with `act` about what Edit did.
     private func openPending(_ screen: InventoryItemDetailPending) {
-        InventoryItemDetailRouting.present(screen, itemId: detail.record.id, itemForm: itemForm) {
-            pending = $0
-        }
+        InventoryItemDetailRouting.present(screen, itemId: detail.record.id, itemForm: itemForm)
     }
 
     private func perform(_ command: InventoryLifecycleCommand) {

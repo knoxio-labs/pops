@@ -84,7 +84,7 @@ internal enum BFMInventoryCommandEncoding {
         for command: InventoryCommand
     ) throws -> [String: (any Sendable)?]? {
         switch command {
-        case .createItem(let item): try ["item": itemArgs(item)]
+        case .createItem(let item): try createArgs(itemArgs(item), code: item.code)
         case .editItem(_, let name, let note, let fields, let externalIds):
             try editArgs(name: name, note: note, fields: fields, externalIds: externalIds)
         case .changeItemType(_, let typeKey, let fields):
@@ -130,6 +130,16 @@ internal enum BFMInventoryCommandEncoding {
         default:
             preconditionFailure("every other case is covered by itemWriteArgs/itemAuxArgs")
         }
+    }
+
+    /// `item.create`'s args: the item, and its code beside it only when it
+    /// has one, so a create without a code encodes exactly as it always has.
+    internal static func createArgs(
+        _ item: [String: (any Sendable)?], code: String?
+    ) -> [String: (any Sendable)?] {
+        var args: [String: (any Sendable)?] = ["item": item]
+        if let code { args["code"] = code }
+        return args
     }
 
     private static func itemArgs(_ item: InventoryNewItem) throws -> [String: (any Sendable)?] {

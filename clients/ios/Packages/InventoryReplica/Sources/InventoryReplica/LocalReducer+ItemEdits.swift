@@ -16,12 +16,14 @@ extension LocalReducer {
         try assertFieldsFit(new.fields, type: type)
         let externalIds = try storedExternalIds(new.externalIds)
         try assertPlacementAllowed(itemId: new.id, to: new.placement)
+        try assertContainerQuantity(isContainer: type?.isContainer == true, quantity: new.quantity)
+        let code = try new.code.map { try freeCode($0, for: new.id) }
         noteReference(new.placement)
         let row = WorkingItem(
             id: new.id, revision: 1, seq: 0, catalogueRevision: nil, name: name, typeId: nil,
             typeKey: new.typeKey, fieldValues: [], legacyType: nil,
             fields: new.fields.mapValues(StoredFieldValue.init), note: normalizedNote(new.note),
-            code: nil, externalIds: externalIds, quantity: new.quantity, lifecycle: "active",
+            code: code, externalIds: externalIds, quantity: new.quantity, lifecycle: "active",
             lifecycleChangedAt: nil, placement: StoredPlacement(new.placement),
             previousPlacement: nil,
             containment: type?.isContainer == true
@@ -65,6 +67,7 @@ extension LocalReducer {
         if before.isContainer, !type.isContainer, try hasActiveContents(id) {
             throw refusal(.hasContents, "item \(id) still holds active contents")
         }
+        try assertContainerQuantity(isContainer: type.isContainer, quantity: before.quantity)
         var after = before
         after.typeKey = typeKey
         after.fields = fields.mapValues(StoredFieldValue.init)
@@ -77,21 +80,24 @@ extension LocalReducer {
     func setItemCode(id: String, code: String?) throws -> Written {
         let before = try liveItem(id)
         var after = before
-        if let code {
-            let trimmed = code.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !trimmed.isEmpty, trimmed.utf16.count <= 64 else {
-                throw refusal(.invalid, "a code is 1 to 64 characters")
-            }
-            if let holder = try codeHolder(trimmed, excluding: id) {
-                throw InventoryCommandError.codeCollision(
-                    heldById: holder.id, heldByName: holder.name,
-                    suggestedCode: try suggestedCode(after: trimmed, excluding: id) ?? "")
-            }
-            after.code = trimmed
-        } else {
-            after.code = nil
-        }
+        after.code = try code.map { try freeCode($0, for: id) }
         return try update(before, to: after, kind: "code_set") ?? unchanged(before)
+    }
+
+    /// `code` trimmed, once it is a valid code no other item holds: the
+    /// check `item.setCode` and `item.create` share, so a create carrying a
+    /// held code is refused whole, as the server refuses it.
+    func freeCode(_ code: String, for id: String) throws -> String {
+        let trimmed = code.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, trimmed.utf16.count <= 64 else {
+            throw refusal(.invalid, "a code is 1 to 64 characters")
+        }
+        if let holder = try codeHolder(trimmed, excluding: id) {
+            throw InventoryCommandError.codeCollision(
+                heldById: holder.id, heldByName: holder.name,
+                suggestedCode: try suggestedCode(after: trimmed, excluding: id) ?? "")
+        }
+        return trimmed
     }
 
     func moveItem(id: String, to placement: InventoryPlacement, verb: InventoryMoveVerb) throws

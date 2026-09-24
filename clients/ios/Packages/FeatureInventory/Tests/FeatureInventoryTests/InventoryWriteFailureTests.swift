@@ -152,8 +152,34 @@ internal struct InventoryWriteFailureTests {
         #expect(conflict != transport)
     }
 
-    @Test("cancellation is not a failure anybody is told about")
-    func cancellationIsSilent() {
-        #expect(InventoryWriteFailure.reporting(CancellationError()) == nil)
+    /// Judged by whether *this* task is cancelled, not by the error's shape:
+    /// a `CancellationError` an inner operation threw for its own reasons
+    /// (an upload superseded by a later one, say) is still a fact the caller
+    /// is waiting to hear, as long as the caller itself is still running.
+    /// The rehearsal bug this replaces: a create sheet with a photo whose
+    /// attach command happened to throw `CancellationError` sat open
+    /// forever, because this used to treat the error's type alone as "nobody
+    /// is left to tell" — it wasn't; the submit `Task` was still very much
+    /// alive and waiting for `reporting`'s answer.
+    @Test("a cancellation-shaped error is still reported while this task is running")
+    func cancellationErrorIsReportedWhenNotActuallyCancelled() {
+        #expect(!Task.isCancelled)
+
+        #expect(InventoryWriteFailure.reporting(CancellationError()) != nil)
+    }
+
+    /// The case the rule above still has to hold: a task that really is
+    /// cancelled has nobody left to tell, whatever the error looks like.
+    @Test("nothing is reported once this task is actually cancelled")
+    func nothingReportedOnceThisTaskIsCancelled() async {
+        let (gate, release) = AsyncStream<Void>.makeStream()
+        let task = Task { () -> InventoryWriteFailure? in
+            for await _ in gate {}
+            return InventoryWriteFailure.reporting(RepositoryError.unavailable)
+        }
+        task.cancel()
+        release.finish()
+
+        #expect(await task.value == nil)
     }
 }
