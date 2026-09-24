@@ -11,6 +11,10 @@ internal struct ReplicaActivity: Hashable, Sendable {
     var isRefreshing = false
     var isOffline = false
     var blocked: InventoryBlockReason?
+    /// Set by the drain when a pass stopped on a failure no network retry
+    /// fixes, cleared by the next pass that gets through; the Sync ledger
+    /// carries it.
+    var sendingStall: InventorySendingStall?
 
     /// Layers these facts over the stored status, following ADR-002's
     /// per-replica state machine: blocked wins over everything; a download in

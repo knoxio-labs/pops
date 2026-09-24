@@ -15,6 +15,16 @@ extension InMemoryInventoryStore {
         notify(snapshot)
     }
 
+    /// Sets or clears the sync ledger's sending stall, for a test driving
+    /// the Sync page's stuck state without a real drain.
+    public func setSendingStall(_ stall: InventorySendingStall?) {
+        let snapshot = state.withLock { current -> State in
+            current.sendingStall = stall
+            return current
+        }
+        notify(snapshot)
+    }
+
     /// Adds a repair directly, for a test exercising the sync ledger without
     /// driving a real conflict through `perform(_:)`.
     public func addRepair(_ repair: InventoryRepair) {
