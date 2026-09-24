@@ -78,7 +78,7 @@ internal struct InventoryFormCodeRow: View {
                 .foregroundStyle(Color.popsMutedForeground)
                 .accessibilityLabel("Offline, so no code can be suggested")
         case .unavailable:
-            InventorySymbol.offline.image
+            InventorySymbol.unavailable.image
                 .foregroundStyle(Color.popsMutedForeground)
                 .accessibilityLabel("No code can be suggested right now")
         case .idle, .offered, .accepted, .rejected, .edited:
