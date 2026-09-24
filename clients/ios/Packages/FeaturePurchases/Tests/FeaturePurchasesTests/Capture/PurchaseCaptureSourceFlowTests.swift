@@ -122,6 +122,38 @@ internal struct PurchaseCaptureSourceFlowTests {
         #expect(staging.everyPage.count == 2)
     }
 
+    @Test("a multi-page scan in place of one page keeps the page and stages every scanned page")
+    func replaceWithMultiPageScan() async throws {
+        let flow = makeFlow()
+        await openEmptyBatch(flow)
+        let staging = try #require(flow.staging)
+        staging.addScanned([.fake(data: Data([1]))], pageCount: 1)
+        let replacing = try #require(staging.everyPage.first?.id)
+
+        await flow.pick(.scan, replacing: replacing)
+        flow.didScan(parts: [.fake(data: Data([8])), .fake(data: Data([9]))], pageCount: 2)
+        flow.pickerDismissed()
+
+        let receipts = staging.receipts.map { $0.pages.map(\.part.data) }
+        #expect(receipts == [[Data([1])], [Data([8]), Data([9])]])
+    }
+
+    @Test("a replacement scan whose page has gone is staged instead of dropped")
+    func replaceVanishedPage() async throws {
+        let flow = makeFlow()
+        await openEmptyBatch(flow)
+        let staging = try #require(flow.staging)
+        staging.addScanned([.fake(data: Data([1]))], pageCount: 1)
+        let replacing = try #require(staging.everyPage.first?.id)
+
+        await flow.pick(.scan, replacing: replacing)
+        staging.delete(replacing)
+        flow.didScan(parts: [.fake(data: Data([9]))], pageCount: 1)
+        flow.pickerDismissed()
+
+        #expect(staging.everyPage.map(\.part.data) == [Data([9])])
+    }
+
     private func makeFlow(
         camera: SourceFlowCamera = SourceFlowCamera(.authorized),
         onSaved: @escaping ([Purchase.ID]) -> Void = { _ in }

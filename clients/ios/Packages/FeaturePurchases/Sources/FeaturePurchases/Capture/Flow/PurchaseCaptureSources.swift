@@ -46,16 +46,17 @@ extension PurchaseCaptureFlow {
             invalid("A scan result requires staging")
             return
         }
-        if replacing != nil, pageCount > 0, parts.count >= pageCount, let first = parts.first {
-            _ = staging.replaceIfPending(
-                with: StagedPage(
-                    id: UUID().uuidString,
-                    label: "Scan page 1",
-                    part: first))
-            replacing = nil
-        } else {
-            staging.addScanned(parts, pageCount: pageCount)
+        defer { replacing = nil }
+        // Only a one-page scan can stand in for one page. A longer scan, or one whose target page
+        // has gone, is staged as its own receipt rather than trimmed or dropped.
+        if replacing != nil, pageCount == 1, parts.count == 1,
+            staging.replaceIfPending(
+                with: StagedPage(id: UUID().uuidString, label: "Scan page 1", part: parts[0]))
+        {
+            return
         }
+        staging.beginReplacing("")
+        staging.addScanned(parts, pageCount: pageCount)
     }
 
     #if canImport(PhotosUI) && canImport(UIKit)
