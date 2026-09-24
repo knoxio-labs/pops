@@ -97,6 +97,9 @@ internal struct InventoryItemFormView: View {
                 .listRowBackground(Color.popsBackground)
             }
             identity
+            Section {
+                InventoryFormQuantityRow(count: $model.draft.quantity)
+            }
             labelling
             InventoryFormNotCarriedSection(values: model.notCarried)
         }
@@ -163,7 +166,6 @@ extension InventoryItemFormView {
                     types: model.catalogue.types, offersNone: model.offersNoType,
                     typeKey: $model.draft.typeKey)
             }
-            InventoryFormQuantityRow(count: $model.draft.quantity)
             if let type = model.protocol2Type, let draft = model.protocol2Draft {
                 protocol2FieldRows(type: type, draft: draft)
             } else {
