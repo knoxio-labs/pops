@@ -106,9 +106,16 @@ function ensureConfigured(): void {
   console.warn(`[pops-mcp] resolved service-account key from ${resolved.source}`);
   const registryUrl = readNonBlankEnv('POPS_REGISTRY_URL') ?? DEFAULT_REGISTRY_URL;
   const internalBaseUrls = resolveInternalBaseUrlOverrides();
+  // `configureServerSdk` shallow-merges into its module-level config, so a
+  // key this call omits keeps whatever the PREVIOUS `ensureConfigured()` set
+  // — including on the reconfigure path `__resetPillarClientForTests` exists
+  // for. Passing `internalBaseUrls: undefined` explicitly (rather than
+  // omitting the key once no `POPS_<PILLAR>_API_URL` override is set) clears
+  // a stale override from an earlier configuration instead of leaking it
+  // forever into every pillar handle built after that point.
   configureServerSdk({
     apiKey: resolved.key,
-    ...(internalBaseUrls !== undefined ? { internalBaseUrls } : {}),
+    internalBaseUrls,
     registry: { registryUrl },
   });
   configured = true;
