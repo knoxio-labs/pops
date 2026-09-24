@@ -22,7 +22,7 @@ let strictSwiftSettings: [SwiftSetting] = [
 // `@Entry` are unavailable and the package only builds through Xcode.
 let package = Package(
     name: "AppCore",
-    platforms: [.iOS("26.0"), .macOS("15.0")],
+    platforms: [.iOS("27.0"), .macOS("15.0")],
     products: [
         .library(name: "AppCore", targets: ["AppCore"]),
         .library(name: "AppCoreFakes", targets: ["AppCoreFakes"]),

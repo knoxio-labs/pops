@@ -16,7 +16,7 @@ let strictSwiftSettings: [SwiftSetting] = [
 // `InventoryPlatform.swift`.
 let package = Package(
     name: "FeatureInventory",
-    platforms: [.iOS("26.0"), .macOS("15.0")],
+    platforms: [.iOS("27.0"), .macOS("15.0")],
     products: [.library(name: "FeatureInventory", targets: ["FeatureInventory"])],
     dependencies: [
         .package(path: "../AppCore"),
