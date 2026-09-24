@@ -64,7 +64,8 @@ internal final class PurchasesHomeModel {
             async let unmatchedRequest = repository.purchases(after: nil, statusFilter: .unsettled)
             async let summaryRequest = repository.monthSummary(for: month)
             let (page, unmatchedPage, summary) = try await (
-                pageRequest, unmatchedRequest, summaryRequest)
+                pageRequest, unmatchedRequest, summaryRequest
+            )
             guard requestGeneration == generation else { return }
             guard let totalCount = page.totalCount, let unmatchedCount = unmatchedPage.totalCount
             else {
