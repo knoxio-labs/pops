@@ -55,6 +55,34 @@ caller, so driven on its own it would fail on the ones nobody passed it.
 secondary-feature route through More consistent across healthy and error-state
 flows that need the Transactions screen.
 
+## The acceptance flow, kept out of the glob
+
+`acceptance/inventory-user-defined-type.yaml` is scenario S8 of the
+inventory-types acceptance suite (POPS-4354): an owner publishes a
+user-defined type with a stored `Price` and a computed `Doubled price`
+(`scripts/ios-e2e/inventory-user-type.mjs`, reached through the control
+plane's `POST /__e2e/inventory/user-defined-type`), then the flow syncs it,
+creates an item of it through the form's generic fields, waits for the
+computed value, edits it with every relayed sync request failing, and waits
+for the edit to replay.
+
+It sits one directory down so the lane's glob never drives it. Run it with
+the rest of the suite, which records it as evidence:
+
+```bash
+mise run inventory:acceptance -- --ios
+```
+
+or on its own through the lane, which runs exactly the flows it is given:
+
+```bash
+POPS_E2E_FLOWS=.maestro/acceptance/inventory-user-defined-type.yaml mise run e2e:ios
+```
+
+It has not yet been driven on a simulator (POPS-4508). Its selectors were
+written against the SwiftUI source, not observed, and it stays out of the
+lane's glob until a run on a Mac has passed.
+
 ## Why Maestro and not XCUITest
 
 Decided 2026-08-10. Recorded here so it is not reopened every time someone

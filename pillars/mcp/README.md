@@ -67,6 +67,15 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 
 Point the URL at the gateway's published `host:3011`. Drop the `Authorization` header only when the server runs without `MCP_INBOUND_TOKEN`.
 
+## Acceptance suite
+
+`src/acceptance/` is the inventory-types acceptance suite (POPS-4354):
+one `*.acceptance.test.ts` per scenario, each booting its own real registry +
+inventory (and a paired bfm where the scenario reaches the phone) and driving
+the inventory MCP tools against them. The default and live-seam configs
+exclude it; `pnpm test:acceptance` runs it, and `mise run
+inventory:acceptance` at the repo root runs it with evidence records.
+
 ## Health & readiness
 
 ```bash

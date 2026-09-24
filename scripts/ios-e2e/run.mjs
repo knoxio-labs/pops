@@ -77,6 +77,7 @@ import { fileURLToPath } from 'node:url';
 import { seededAccounts } from './accounts-fixture.mjs';
 import { startControlPlane } from './control-plane.mjs';
 import { spawnInventoryPillar, startInventoryGate } from './inventory-pillar.mjs';
+import { publishUserDefinedType } from './inventory-user-type.mjs';
 import { startPurchasesStub } from './purchases-stub.mjs';
 import { boundAddress } from './server-address.mjs';
 import { seededTransactions } from './transactions-fixture.mjs';
@@ -538,7 +539,16 @@ async function main() {
       accessTokenSecret: ACCESS_TOKEN_SECRET,
       upstream,
       purchases,
-      inventory,
+      inventory: {
+        ...inventory,
+        // Straight at the pillar, not through the gate: seeding must not
+        // depend on whether a flow has armed the feature yet.
+        publishUserDefinedType: () =>
+          publishUserDefinedType({
+            inventoryBaseUrl: inventoryBaseURL.origin,
+            apiKey: SERVICE_ACCOUNT_KEY,
+          }),
+      },
     });
     teardown.unshift(control.close);
     // The same identity check, through the proxy this time. A control plane
