@@ -25,10 +25,10 @@ internal enum InventoryItemFormMode: Equatable, Sendable {
 
 /// The form's state and the writes it issues, over `InventoryStore`.
 ///
-/// Nothing is written until the final action. Create performs `item.create`
-/// and then, when there is a code, `item.setCode`; the store orders the
-/// second after the first. If the create lands and the code does not, a
-/// second press sends only the code, because the item already exists.
+/// Nothing is written until the final action. Create performs one
+/// `item.create` carrying the code, then attaches photos; if the create lands
+/// and a photo does not, a second press sends only what is left, because the
+/// item already exists.
 @MainActor @Observable
 internal final class InventoryItemFormModel {
     internal enum Phase: Equatable {
@@ -58,6 +58,8 @@ internal final class InventoryItemFormModel {
     /// field before anybody has typed opens accusing.
     internal private(set) var showsValidation = false
     internal private(set) var isSubmitting = false
+    /// A free code to wear instead, offered while the typed one is held.
+    internal var freeCode: String?
     internal var failure: InventoryWriteFailure?
     /// The runner for photo commands already on the item: removing an
     /// attached photo (`item.removePhoto`) and reordering them
@@ -66,7 +68,7 @@ internal final class InventoryItemFormModel {
     internal let photoRunner: InventoryCommandRunner
 
     internal let store: any InventoryStore
-    private let suggester: InventoryCodeSuggester
+    internal let suggester: InventoryCodeSuggester
     internal let mintProtocol2ValueId: () -> String
     /// The item as the store has it; nil for a create.
     internal var original: InventoryItem?
@@ -114,11 +116,11 @@ internal final class InventoryItemFormModel {
         InventoryItemFormSubmission.issues(for: draft, catalogue: catalogue)
     }
 
-    /// A code already worn by something else never blocks Create: the item
-    /// is finished without one, the same as it would be with no code typed
-    /// at all. Only a missing name does.
+    /// A missing name blocks the final action, and so does a code another
+    /// item already wears (POPS-4063): the create would be refused whole,
+    /// so the form offers a free code instead of sending it.
     internal var canSubmit: Bool {
-        phase == .ready && !isSubmitting && draft.isNamed
+        phase == .ready && !isSubmitting && draft.isNamed && draft.code.heldBy == nil
     }
 
     /// Whether Cancel has something to lose and so asks first.
@@ -155,24 +157,6 @@ extension InventoryItemFormModel {
         draft.code.value = value
     }
 
-    /// Looks the current code up in the replica. Works offline, which is the
-    /// only check an offline create gets.
-    internal func checkCode() async {
-        guard let code = draft.code.normalized else {
-            draft.code.heldBy = nil
-            return
-        }
-        var holder: InventoryItem?
-        for await found in store.observe(
-            InventoryItemFormContext.holder(of: code, excluding: draft.id))
-        {
-            holder = found
-            break
-        }
-        guard draft.code.normalized == code, !Task.isCancelled else { return }
-        draft.code.heldBy = holder?.name
-    }
-
     internal func suggestCode() async {
         guard draft.code.assist.canSuggest, !isOffline else { return }
         draft.code.assist = .suggesting
@@ -198,17 +182,13 @@ extension InventoryItemFormModel {
 
     /// Writes the draft. Returns true when every command landed and the form
     /// can close; there is no interstitial after a create. A code already
-    /// worn by something else never stops this: the store refuses only
-    /// `item.setCode`, per `InventoryItemFormSubmission`'s doc, and the rest
-    /// of the write still lands.
+    /// worn by something else stops it, whether this phone's replica knew
+    /// (checked first) or only the store found out: the create carries its
+    /// code, so it is refused whole and the form offers a free one.
     internal func submit() async -> Bool {
         showsValidation = true
         await checkCode()
-        let blocking = issues.filter {
-            if case .codeTaken = $0 { return false }
-            return true
-        }
-        guard blocking.isEmpty, protocol2Issues.isEmpty, phase == .ready, !isSubmitting else {
+        guard issues.isEmpty, protocol2Issues.isEmpty, phase == .ready, !isSubmitting else {
             return false
         }
         isSubmitting = true
@@ -220,6 +200,11 @@ extension InventoryItemFormModel {
             do {
                 _ = try await store.perform(command)
                 if case .createItem = command { created = true }
+                if case .createProtocol2Item = command { created = true }
+            } catch let InventoryCommandError.codeCollision(_, heldByName, suggestedCode) {
+                draft.code.heldBy = heldByName
+                freeCode = suggestedCode.isEmpty ? nil : suggestedCode
+                return false
             } catch {
                 record(error)
                 return false

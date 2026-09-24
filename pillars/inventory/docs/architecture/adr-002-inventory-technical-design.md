@@ -259,7 +259,7 @@ Clients mint ids (UUIDv4, validated) for items, locations and mutations. An offl
 
 ### D7. Codes are optional, unique when present, and never changed by the server
 
-**Decision.** `items.code` is nullable (ADR-001: most items carry none) with a unique index on `code COLLATE NOCASE`. The migration moves `home_inventory.asset_id` and `containers.code` into it. A code is set by its own mutation, `item.setCode`, never inside a create: a phone that created an item and gave it a code offline sends `item.create` and a dependent `item.setCode`, so a collision leaves the item created and raises only the code repair. On collision the outcome is `conflict` of kind `code_collision` carrying the holder's name and a suggestion (the next free code keeping the stem, `B412` to `B413`). The server never assigns or rewrites a code on its own, because the label may already be printed.
+**Decision.** `items.code` is nullable (ADR-001: most items carry none) with a unique index on `code COLLATE NOCASE`. The migration moves `home_inventory.asset_id` and `containers.code` into it. A new item's code travels inside `item.create { item, code }`, and a later change of code is `item.setCode`. Both check the code the same way, so a create naming a held code is refused whole rather than leaving an item without the code it was made for (POPS-4063); offline, the collision found at sync opens the code repair, whose new code re-sends the create. On collision the outcome is `conflict` of kind `code_collision` carrying the holder's name and a suggestion (the next free code keeping the stem, `B412` to `B413`). The server never assigns or rewrites a code on its own, because the label may already be printed.
 
 `POST /codes/suggest` returns suggestions online: deterministic stem plus next free number in Phase A, an AI ranking behind the same route in Phase C. Offline, the approved `.offline` assist state applies and a typed code is checked against the local replica only.
 
@@ -543,7 +543,7 @@ Outcome   { mutationId, status: 'applied', revision, seq, converged }
 
 `documentsStatus` is resolved when a snapshot or feed page is built; `unavailable` is the approved "Paperless unavailable" state and is recomputed on every refresh rather than cached as truth.
 
-Ops and their `args`: `item.create { item }`, `item.edit { name?, note?, values?: [{ fieldId, values: Primitive[] | null }], externalIds? }`, `item.changeType { typeId, values }`, `item.setOverride { fieldId, values }`, `item.clearOverride { fieldId }`, `item.setCode { code | null }`, `item.move { to: Placement, verb: 'move'|'pick_up'|'put_back'|'store' }`, `item.setAccess { access }`, `item.setFull { full }`, `item.setLifecycle { lifecycle, reason? }`, `item.setQuantity { quantity }`, `item.split { newItemId, quantity }`, `item.attachPhoto { sha256, position }`, `item.removePhoto { sha256 }`, `item.reorderPhotos { sha256s[] }`, `item.restoreDeleted {}`, `location.create { location }`, `location.rename { name }`, `location.move { parentId? }`, `location.delete {}`, `event.revert { seq }`. Omitting a field entry leaves it unchanged; `values: null` clears an optional stored value.
+Ops and their `args`: `item.create { item, code? }`, `item.edit { name?, note?, values?: [{ fieldId, values: Primitive[] | null }], externalIds? }`, `item.changeType { typeId, values }`, `item.setOverride { fieldId, values }`, `item.clearOverride { fieldId }`, `item.setCode { code | null }`, `item.move { to: Placement, verb: 'move'|'pick_up'|'put_back'|'store' }`, `item.setAccess { access }`, `item.setFull { full }`, `item.setLifecycle { lifecycle, reason? }`, `item.setQuantity { quantity }`, `item.split { newItemId, quantity }`, `item.attachPhoto { sha256, position }`, `item.removePhoto { sha256 }`, `item.reorderPhotos { sha256s[] }`, `item.restoreDeleted {}`, `location.create { location }`, `location.rename { name }`, `location.move { parentId? }`, `location.delete {}`, `event.revert { seq }`. Omitting a field entry leaves it unchanged; `values: null` clears an optional stored value.
 
 `rejected` reasons (closed on the server, open string on the wire): `invalid`, `type_unknown`, `catalogue_changed`, `catalogue_update_required`, `catalogue_repair_required`, `cycle`, `target_missing`, `reference_type_mismatch`, `not_container`, `has_contents`, `illegal_transition`, `media_missing`.
 
@@ -554,7 +554,7 @@ sequenceDiagram
     participant P as Phone (drain)
     participant B as bfm
     participant I as inventory
-    P->>B: POST /mobile/inventory/mutations [m1 create, m2 setCode dependsOn m1, m3 move]
+    P->>B: POST /mobile/inventory/mutations [m1 create, m2 setQuantity dependsOn m1, m3 move]
     B->>B: requireDevice, requireCapability(inventory.write), body cap
     B->>I: POST /sync/mutations, X-API-Key (inventory.sync), Pops-Actor device
     loop each mutation, one transaction each

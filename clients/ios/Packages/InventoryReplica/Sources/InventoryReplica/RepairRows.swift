@@ -145,7 +145,7 @@ internal enum RepairRows {
     {
         guard let kind = StoredRepairKind(outcome, command: entry.command) else { return }
         var attemptedCode: String?
-        if case .command(.setItemCode(_, let code)) = entry.command { attemptedCode = code }
+        if case .command(let command) = entry.command { attemptedCode = command.wornCode }
         let payload = RepairPayload(
             outcome: outcome, madeAt: entry.createdAt, attemptedCode: attemptedCode,
             openedAtRevision: try SyncMeta.read(db).catalogueRevision)

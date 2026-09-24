@@ -130,7 +130,13 @@ internal struct InventoryItemFormView: View {
             InventoryFormNoteRow(note: $model.draft.note)
             InventoryFormIdentifierRows(draft: $model.draft)
         } footer: {
-            footer(for: labellingIssues)
+            VStack(alignment: .leading) {
+                footer(for: labellingIssues)
+                if model.draft.code.heldBy != nil, let freeCode = model.freeCode {
+                    Button("Use \(freeCode)") { model.useFreeCode() }
+                        .accessibilityIdentifier(InventoryAccessibility.useFreeCode)
+                }
+            }
         }
     }
 

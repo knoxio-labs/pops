@@ -14,12 +14,13 @@ extension LocalReducer {
         let isContainer = type.capabilities.contains("containment")
         try assertPlacementAllowed(itemId: new.id, to: new.placement)
         try assertContainerQuantity(isContainer: isContainer, quantity: new.quantity)
+        let code = try new.code.map { try freeCode($0, for: new.id) }
         noteReference(new.placement)
         let row = WorkingItem(
             id: new.id, revision: 1, seq: 0, catalogueRevision: new.catalogueRevision,
             name: name, typeId: new.typeId, typeKey: nil, fieldValues: values, legacyType: nil,
             fields: [:], note: normalizedNote(new.note),
-            code: nil, externalIds: try storedExternalIds(new.externalIds), quantity: new.quantity,
+            code: code, externalIds: try storedExternalIds(new.externalIds), quantity: new.quantity,
             lifecycle: "active", lifecycleChangedAt: nil,
             placement: StoredPlacement(new.placement), previousPlacement: nil,
             containment: isContainer ? StoredContainment(access: "open", isFull: false) : nil,

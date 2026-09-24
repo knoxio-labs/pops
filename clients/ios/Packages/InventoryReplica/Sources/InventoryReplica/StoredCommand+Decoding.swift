@@ -15,20 +15,20 @@ extension StoredCommand {
         switch self {
         case .createItem(
             let id, let name, let typeKey, let fields, let note, let externalIds, let quantity,
-            let to):
+            let to, let code):
             .createItem(
                 InventoryNewItem(
                     id: id, name: name, typeKey: typeKey, fields: fields.mapValues(\.domainValue),
                     note: note, externalIds: externalIds.map(\.domainValue), quantity: quantity,
-                    placement: to.domainValue))
+                    placement: to.domainValue, code: code))
         case .createProtocol2Item(
             let id, let name, let catalogueRevision, let typeId, let values, let note,
-            let externalIds, let quantity, let placement):
+            let externalIds, let quantity, let placement, let code):
             .createProtocol2Item(
                 .init(
                     id: id, name: name, catalogueRevision: catalogueRevision, typeId: typeId,
                     values: values, note: note, externalIds: externalIds.map(\.domainValue),
-                    quantity: quantity, placement: placement.domainValue))
+                    quantity: quantity, placement: placement.domainValue, code: code))
         case .editItem(let id, let name, let note, let fields, let externalIds):
             .editItem(
                 id: id, name: name, note: note.domainValue,

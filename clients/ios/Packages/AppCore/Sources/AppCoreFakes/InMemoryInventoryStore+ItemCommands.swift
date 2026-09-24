@@ -83,12 +83,13 @@ extension InMemoryInventoryStore {
         _ new: InventoryNewItem, mutationId: String, into state: inout State
     ) throws {
         guard state.items[new.id] == nil else { throw RepositoryError.contractMismatch }
+        try assertCodeFree(new.code, for: new.id, in: state)
         let type = new.typeKey.flatMap { state.catalogue.type(forKey: $0) }
         let isContainer = type?.isContainer ?? false
         let now = Date()
         let item = InventoryItem(
             id: new.id, revision: 1, seq: state.nextSeq, name: new.name, typeKey: new.typeKey,
-            fields: new.fields, note: new.note, externalIds: new.externalIds,
+            fields: new.fields, note: new.note, code: new.code, externalIds: new.externalIds,
             quantity: InventoryQuantity(count: new.quantity), placement: new.placement,
             containment: isContainer ? InventoryContainment(access: .open, isFull: false) : nil,
             createdAt: now, updatedAt: now)
@@ -136,14 +137,17 @@ extension InMemoryInventoryStore {
         id: InventoryItem.ID, code: String?, mutationId: String, into state: inout State
     ) throws {
         let item = try require(state.items[id])
-        if let code {
-            let collision = state.items.values.contains {
-                $0.id != id && $0.code?.caseInsensitiveCompare(code) == .orderedSame
-            }
-            if collision { throw RepositoryError.contractMismatch }
-        }
+        try assertCodeFree(code, for: id, in: state)
         state.undoLog[mutationId] = .item(item)
         state.items[id] = bumped(item, seq: &state.nextSeq, code: .set(code))
+    }
+
+    static func assertCodeFree(_ code: String?, for id: InventoryItem.ID, in state: State) throws {
+        guard let code else { return }
+        let collision = state.items.values.contains {
+            $0.id != id && $0.code?.caseInsensitiveCompare(code) == .orderedSame
+        }
+        if collision { throw RepositoryError.contractMismatch }
     }
 
     private static func applyMoveItem(
