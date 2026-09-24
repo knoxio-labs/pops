@@ -19,7 +19,7 @@ name: Inventory Acceptance
 # Playwright (S7) layer on the same `ubuntu-latest` runner that already runs
 # the vitest layer (S1-S6) — cheap, so it is on by default. `run_ios`
 # defaults to FALSE: it drives a real iOS simulator through Maestro
-# (`clients/ios/.maestro/acceptance/`), which needs `macos-latest`, an Xcode
+# (`clients/ios/.maestro/acceptance/`), which needs the `xcode-27` image, an Xcode
 # compile, and a simulator boot — the same shape `ios-quality.yml`'s merge-
 # group lane pays, on the order of tens of minutes. It only runs when a
 # dispatch explicitly asks for it. The macOS job re-runs the vitest layer
@@ -41,7 +41,7 @@ on:
         type: boolean
         default: true
       run_ios:
-        description: "Also run the Maestro iOS layer (macos-latest, tens of minutes)"
+        description: "Also run the Maestro iOS layer (xcode-27, tens of minutes)"
         type: boolean
         default: false
       pull_request:
@@ -124,7 +124,8 @@ jobs:
   acceptance-ios:
     name: Acceptance suite (+ Maestro iOS)
     if: inputs.run_ios
-    runs-on: macos-latest
+    # The iOS image `ios-quality.yml` uses: `macos-latest` carries no Xcode 27.
+    runs-on: xcode-27
     # A wedged simulator hangs rather than failing — see ios-quality.yml's
     # identical ceiling and its own comment for why 100 minutes.
     timeout-minutes: 100
