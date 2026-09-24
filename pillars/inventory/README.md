@@ -305,7 +305,7 @@ minimumProtocol }`. The expected value makes concurrent operator actions a
   protocol-1 readers during the transition.
 - Sync and web item rows also carry `computedValues`: one entry per computed
   field, evaluated against the active catalogue at read time, with `state`
-  `ok`, `overridden` or `unavailable` (plus `reason` and `failedFieldId`), the
+  `ok`, `overridden` or `unavailable` (plus `reason`, `failedFieldId` and `missingInputs`), the
   item/field revisions it read and the items it traversed. `fieldValues` stays
   the persisted input (stored values and overrides); computed values never
   enter the protocol-1 `fields`. A client treats a value whose dependency

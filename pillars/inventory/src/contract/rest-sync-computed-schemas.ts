@@ -12,6 +12,17 @@ import { z } from 'zod';
 
 const AnyJson = z.unknown();
 
+/**
+ * One input an unavailable evaluation lacked: `fieldId` on `itemId` had no
+ * value, for `reason`. A `coalesce` whose every argument is unavailable
+ * names each argument's inputs, so a client can list them all.
+ */
+export const SyncComputedMissingInputSchema = z.object({
+  reason: z.string(),
+  fieldId: z.uuid(),
+  itemId: z.string(),
+});
+
 /** One item/field revision an evaluation read; a newer revision makes the value stale. */
 export const SyncComputedDependencySchema = z.object({
   itemId: z.string(),
@@ -50,6 +61,12 @@ export const SyncComputedValueSchema = z.discriminatedUnion('state', [
     reason: z.string(),
     /** The field whose value was missing or failed: a dependency, or this field itself. */
     failedFieldId: z.uuid(),
+    /**
+     * Every input without a value, in the order the expression read them,
+     * each item and field once; `failedFieldId` is one of them. Empty when
+     * the expression itself failed (`evaluation_error`).
+     */
+    missingInputs: z.array(SyncComputedMissingInputSchema),
   }),
 ]);
 

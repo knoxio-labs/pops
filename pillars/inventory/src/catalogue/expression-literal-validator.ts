@@ -46,18 +46,36 @@ function literalAccepts(value: PrimitiveWireValue, expected: ExpressionValueType
   }
 }
 
-/** Infers or verifies the primitive type of one expression literal. */
+function convertibleMeasurement(
+  value: PrimitiveWireValue,
+  expected: ExpressionValueType | undefined,
+  dimensional: boolean
+): boolean {
+  return (
+    dimensional &&
+    expected?.kind === 'measurement' &&
+    typeof value === 'object' &&
+    'amount' in value
+  );
+}
+
+/**
+ * Infers or verifies the primitive type of one expression literal. Under
+ * version 2 (`dimensional`) a measurement literal keeps its own unit, which
+ * the caller checks for the expected dimension.
+ */
 export function inferLiteralType(
   node: Extract<ExpressionV1, { op: 'literal' }>,
   expected: ExpressionValueType | undefined,
-  path: string
+  path: string,
+  dimensional: boolean
 ): ExpressionValueType {
-  if (expected !== undefined) {
-    if (!literalAccepts(node.value, expected))
+  const value = node.value;
+  if (expected !== undefined && !convertibleMeasurement(value, expected, dimensional)) {
+    if (!literalAccepts(value, expected))
       expressionFail(path, 'expression_literal_type_mismatch', `literal is not ${expected.kind}`);
     return expected;
   }
-  const value = node.value;
   let inferred: ExpressionValueType;
   if (typeof value === 'boolean') inferred = expressionType('boolean');
   else if (typeof value === 'number') inferred = expressionType('integer');

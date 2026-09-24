@@ -148,6 +148,24 @@ export function divide(left: PrimitiveWireValue, right: PrimitiveWireValue): Ari
     : divideDecimals(values[0], values[1]);
 }
 
+/**
+ * Moves the decimal point of a decimal amount by `places`
+ * (`amount × 10^places`), as a unit conversion does. A positive shift first
+ * consumes fractional digits, so `1.5` shifted by 3 is `1500`; the result is
+ * bounded like every other decimal (9 places, 18 significant digits).
+ */
+export function shiftDecimal(amount: string, places: number): ArithmeticResult {
+  const value = parts(amount);
+  if (value === null) return { state: 'error', code: 'invalid_value' };
+  if (places < 0)
+    return decimalValue({ coefficient: value.coefficient, scale: value.scale - places });
+  const consumed = Math.min(value.scale, places);
+  return decimalValue({
+    coefficient: value.coefficient * power(places - consumed),
+    scale: value.scale - consumed,
+  });
+}
+
 /** Negates one integer, decimal or fixed-unit measurement. */
 export function negate(value: PrimitiveWireValue): ArithmeticResult {
   if (typeof value === 'number') return integer(-value);

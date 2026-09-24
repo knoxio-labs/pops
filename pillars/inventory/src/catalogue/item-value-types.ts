@@ -1,6 +1,7 @@
 import type { ItemFieldValueSource } from '../db/schema.js';
 import type {
   EffectiveComputedValue,
+  ExpressionMissingInput,
   ExpressionUnavailableReason,
   EvaluatedDependency,
 } from './expression-types.js';
@@ -58,6 +59,8 @@ export type EffectiveItemFieldValue =
       /** The dependency whose value was missing, or this field when evaluation failed. */
       readonly failedFieldId: string;
       readonly traversedItemIds: readonly string[];
+      /** Every input without a value; empty when the expression itself failed. */
+      readonly missingInputs: readonly ExpressionMissingInput[];
       readonly provenance: Extract<
         EffectiveComputedValue,
         { readonly state: 'unavailable' }

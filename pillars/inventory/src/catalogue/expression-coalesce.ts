@@ -6,6 +6,7 @@ import {
 import type {
   EvaluatedDependency,
   ExpressionEvaluation,
+  ExpressionMissingInput,
   ExpressionSnapshot,
   ExpressionV1,
 } from './expression-types.js';
@@ -32,9 +33,10 @@ function absence(skipped: Unavailable, snapshot: ExpressionSnapshot): EvaluatedD
  * `coalesce`: the first argument that has a value. An unavailable argument is
  * skipped, the one node that tolerates missing inputs; an evaluation error is
  * not, and stops the node as it stops every other. When every argument is
- * unavailable the result carries the last one's reason and failing field.
- * Dependencies and traversed items gather every argument evaluated, each
- * skipped argument adding the input it lacked.
+ * unavailable the result carries the last one's reason and failing field, and
+ * `missingInputs` names every argument's missing inputs in argument order,
+ * each item and field once. Dependencies and traversed items gather every
+ * argument evaluated, each skipped argument adding the input it lacked.
  */
 export function evaluateCoalesce(
   values: readonly ExpressionV1[],
@@ -43,6 +45,7 @@ export function evaluateCoalesce(
 ): ExpressionEvaluation {
   const dependencies: EvaluatedDependency[] = [];
   const traversed = new Set<string>();
+  const missing = new Map<string, ExpressionMissingInput>();
   let last: Unavailable | undefined;
   for (const value of values) {
     const evaluated = evaluate(value);
@@ -51,8 +54,20 @@ export function evaluateCoalesce(
       return { ...evaluated, dependencies: uniqueEvaluatedDependencies(dependencies) };
     dependencies.push(absence(evaluated, snapshot));
     for (const itemId of evaluated.traversedItemIds) traversed.add(itemId);
+    for (const input of evaluated.missingInputs) {
+      const key = `${input.itemId}:${input.fieldId}`;
+      if (!missing.has(key)) missing.set(key, input);
+    }
     last = evaluated;
   }
   if (last === undefined) throw new Error('coalesce has no values');
-  return unavailableEvaluation(last.reason, last.fieldId, [...traversed], dependencies);
+  return unavailableEvaluation(
+    {
+      reason: last.reason,
+      fieldId: last.fieldId,
+      traversedItemIds: [...traversed],
+      missingInputs: [...missing.values()],
+    },
+    dependencies
+  );
 }

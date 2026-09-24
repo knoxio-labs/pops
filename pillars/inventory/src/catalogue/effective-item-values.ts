@@ -123,24 +123,14 @@ class EffectiveValueReader {
         : { state: 'value', value, revision: record.item.revision };
     }
     const effective = this.computed(itemId, record, field, this.values(itemId));
-    return effective.state === 'value'
-      ? {
-          state: 'value',
-          value: effective.values[0],
-          revision: record.item.revision,
-          dependencies:
-            effective.provenance.source === 'computed'
-              ? effective.provenance.dependencies
-              : undefined,
-        }
-      : {
-          state: 'unavailable',
-          reason: effective.reason,
-          fieldId: effective.fieldId,
-          traversedItemIds: effective.traversedItemIds,
-          revision: record.item.revision,
-          dependencies: effective.provenance.dependencies,
-        };
+    const revision = record.item.revision;
+    if (effective.state === 'unavailable') {
+      const { provenance, ...failure } = effective;
+      return { ...failure, revision, dependencies: provenance.dependencies };
+    }
+    const { provenance } = effective;
+    const dependencies = provenance.source === 'computed' ? provenance.dependencies : undefined;
+    return { state: 'value', value: effective.values[0], revision, dependencies };
   }
 
   private computed(

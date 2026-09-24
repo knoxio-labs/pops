@@ -3219,6 +3219,11 @@ export type SyncChangesResponses = {
             }>;
             failedFieldId: string;
             fieldId: string;
+            missingInputs: Array<{
+              fieldId: string;
+              itemId: string;
+              reason: string;
+            }>;
             reason: string;
             source: 'computed';
             state: 'unavailable';
@@ -3632,6 +3637,11 @@ export type SyncSnapshotResponses = {
             }>;
             failedFieldId: string;
             fieldId: string;
+            missingInputs: Array<{
+              fieldId: string;
+              itemId: string;
+              reason: string;
+            }>;
             reason: string;
             source: 'computed';
             state: 'unavailable';
@@ -5651,6 +5661,11 @@ export type WebListResponses = {
             }>;
             failedFieldId: string;
             fieldId: string;
+            missingInputs: Array<{
+              fieldId: string;
+              itemId: string;
+              reason: string;
+            }>;
             reason: string;
             source: 'computed';
             state: 'unavailable';
@@ -5878,6 +5893,11 @@ export type WebGetResponses = {
             }>;
             failedFieldId: string;
             fieldId: string;
+            missingInputs: Array<{
+              fieldId: string;
+              itemId: string;
+              reason: string;
+            }>;
             reason: string;
             source: 'computed';
             state: 'unavailable';
