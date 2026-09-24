@@ -121,8 +121,8 @@ const ErrorElement = (
 /**
  * Build the shell's browser router from the boot-resolved install set. Called
  * once from `App.tsx` after the boot snapshot resolves: the app routes derive
- * from `manifests`, the rest of the table (index redirect, legacy redirects,
- * settings/features, catch-all) is fixed.
+ * from `manifests`, the rest of the table (index redirect, settings/features,
+ * catch-all) is fixed.
  */
 export function buildRouter(
   manifests: readonly FrontendManifest[]
