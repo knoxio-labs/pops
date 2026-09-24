@@ -1,3 +1,4 @@
+import { combineUnits, formatUnitTerm, termDimension } from '../contract/measurement-units.js';
 import { inferLiteralType } from './expression-literal-validator.js';
 import { inferReadType } from './expression-read-validator.js';
 import {
@@ -6,7 +7,6 @@ import {
   requireExpressionType,
   requireNumericType,
 } from './expression-validation-shared.js';
-import { combineUnits, formatUnitTerm, termDimension } from './measurement-units.js';
 
 import type { ExpressionV1, ExpressionValueType } from './expression-types.js';
 import type { ExpressionValidationContext } from './expression-validation-shared.js';
