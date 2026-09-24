@@ -57,6 +57,19 @@ internal struct InventoryProtocol2FieldTests {
         #expect(draft.completeValues(for: type).map(\.fieldId) == ["required"])
     }
 
+    @Test("a required flag starts as the off its switch shows; an optional one stays unrecorded")
+    func flagStartingValues() {
+        let optional = Self.field(id: "optional", kind: .boolean)
+        let required = Self.field(id: "required", kind: .boolean, required: true)
+        let type = Self.type(fields: [optional, required])
+        let draft = InventoryProtocol2Draft(type: type, catalogueRevision: 1)
+
+        #expect(draft.values(for: optional).isEmpty)
+        #expect(draft.values(for: required) == [.boolean(false)])
+        #expect(draft.issues(for: type).isEmpty)
+        #expect(!draft.hasStagedWork)
+    }
+
     @Test("text, numbers, dates, times, URLs, and measurements reject malformed boundary input")
     func primitiveBoundaries() {
         Self.assertValue(String(repeating: "x", count: 200), field: Self.field(kind: .shortText))

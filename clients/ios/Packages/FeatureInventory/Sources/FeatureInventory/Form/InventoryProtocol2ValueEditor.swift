@@ -19,12 +19,8 @@ internal struct InventoryProtocol2ValueEditor: View {
     @ViewBuilder var body: some View {
         switch field.kind {
         case .boolean:
-            Picker(label, selection: scalarSelection) {
-                Text(InventoryFormBlank.placeholder).tag("")
-                Text("Yes").tag("true")
-                Text("No").tag("false")
-            }
-            .pickerStyle(.menu)
+            Toggle(label, isOn: flagBinding)
+                .accessibilityIdentifier(InventoryAccessibility.protocol2Field(id: field.id))
         case .enumeration:
             Picker(label, selection: enumSelection) {
                 Text(InventoryFormBlank.placeholder).tag("")
@@ -129,10 +125,12 @@ internal struct InventoryProtocol2ValueEditor: View {
         Binding(get: { entry.input }, set: { setText($0) })
     }
 
-    private var scalarSelection: Binding<String> {
+    /// A switch has no "not recorded" position, so an unrecorded flag reads
+    /// as off and is only written once the person flips it.
+    private var flagBinding: Binding<Bool> {
         Binding(
-            get: { entry.value.map(InventoryProtocol2ValueText.input) ?? "" },
-            set: { choice in setValue(choice.isEmpty ? nil : .boolean(choice == "true")) })
+            get: { entry.value == .boolean(true) },
+            set: { setValue(.boolean($0)) })
     }
 
     private var enumSelection: Binding<String> {
