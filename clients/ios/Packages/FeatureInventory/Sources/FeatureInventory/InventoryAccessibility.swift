@@ -9,4 +9,15 @@ internal enum InventoryAccessibility {
     /// The item form's name field, whose label and placeholder both read
     /// "Name".
     internal static let itemNameField = "inventory-item-name-field"
+
+    /// A protocol-2 field's scalar editor, by the catalogue field's own
+    /// stable id. A field's label is user-authored and, for a computed
+    /// field's `LabeledContent`, combined with its current value into one
+    /// accessibility element — neither is a label a driver can address a tap
+    /// to reliably; the row beside it can hold a keyboard focus a
+    /// mis-resolved tap leaves untouched, and the value then lands wherever
+    /// focus already was.
+    internal static func protocol2Field(id: String) -> String {
+        "inventory-field-\(id)"
+    }
 }

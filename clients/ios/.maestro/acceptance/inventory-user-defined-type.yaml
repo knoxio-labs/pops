@@ -41,10 +41,45 @@ name: S8.1 A user-defined type syncs to the phone, an item of it is created and 
 - tapOn:
     id: 'inventory-item-name-field'
 - inputText: Gadget ${output.inventory.run}
-- tapOn: 'Type.*'
-- tapOn: 'Phone gadget'
-- tapOn: 'Price'
+- assertVisible: Gadget ${output.inventory.run}
+
+# The keyboard is still up from Name, and a tap fired while it is mid-dismiss
+# lands on the field just typed into rather than the one the flow means next
+# — observed on a simulator run (POPS-4508): a tap resolved to the correct
+# element by id still typed into Name, producing an item named
+# "Gadget 123456 21". `InventoryItemFormView` now declares
+# `scrollDismissesKeyboard(.interactively)` for exactly this, matching
+# `ReceiptDraftView`'s own fix for the same class of tap; the drag is what
+# takes the keyboard with it, not a wait.
+- swipe:
+    start: 50%, 25%
+    end: 50%, 85%
+    duration: 600
+
+# A new item's Type defaults to the first non-archived type the catalogue
+# declares (`InventoryItemFormModel.seed`), and this run's temp inventory
+# pillar has exactly one non-legacy type to default to — `Phone gadget`,
+# published above with key `acc_phone_gadget` (`inventory-user-type.mjs`).
+# Asserted rather than assumed: if a future default ever resolves to a
+# different type, the item would still get created, just of the wrong type,
+# and every assertion after it would fail on an unrelated screen instead of
+# here, where it is obvious what went wrong.
+- assertVisible: 'Type, Phone gadget'
+
+# By id, not by the word "Price": `InventoryProtocol2ValueEditor`'s scalar
+# editor is a `LabeledContent` whose label and field are two elements.
+# `InventoryAccessibility.protocol2Field(id:)` names the field's own TextField
+# for exactly this, and the field's id is this run's own seeding response, not
+# a hardcoded guess.
+- tapOn:
+    id: inventory-field-${output.userDefinedType.state.userDefinedType.priceFieldId}
 - inputText: '21'
+# id and text on the same selector match the one element that carries both:
+# the TextField itself is what `protocol2Field(id:)` names (it has no
+# children an assertion could target `childOf`), and its value is its text.
+- assertVisible:
+    id: inventory-field-${output.userDefinedType.state.userDefinedType.priceFieldId}
+    text: '21'
 - tapOn: 'Create'
 - tapOn: Gadget ${output.inventory.run}
 
@@ -62,10 +97,59 @@ name: S8.1 A user-defined type syncs to the phone, an item of it is created and 
     env:
       SYNC: down
 - assertTrue: ${output.syncOutage.state.inventorySyncOutage == true}
-- tapOn: 'Edit'
-- tapOn: 'Price'
-- eraseText
-- inputText: '30'
+# The whole edit is retried as one unit, re-entering from Items rather than
+# just re-tapping the field: a tap on a loaded machine has landed on the
+# wrong control before in this exact form (POPS-4508's Type and Name races
+# above), and once that happens here there is no cheaper recovery than
+# starting the edit over — Edit's own sheet may no longer be the front
+# screen, so retrying only the tap inside it has nothing to retry against.
+- retry:
+    maxRetries: 2
+    commands:
+      # A stray "Edit item" sheet from a previous attempt blocks the tab bar
+      # underneath it, so `tapOn: 'Inventory'` alone has nothing to tap on a
+      # retry — Cancel first, optionally, so this recovers whichever screen
+      # the last attempt actually left.
+      - tapOn:
+          text: 'Cancel'
+          optional: true
+      - tapOn: 'Inventory'
+      - tapOn: 'Items, \d+'
+      - tapOn: Gadget ${output.inventory.run}
+      - tapOn: 'Edit'
+      # The sheet's presentation is still animating in when the next tap is
+      # aimed — Maestro's own log calls the hierarchy it aimed at "pre-wait" —
+      # and a tap fired mid-animation has landed on nothing at all (observed
+      # on a simulator run, POPS-4508: the Price field held its untouched
+      # "21" afterwards, meaning neither the tap, the erase, nor the retype
+      # reached it). `assertVisible` is the one command here that waits;
+      # settling on the sheet's own title is what the tap right after it can
+      # then actually trust.
+      - assertVisible: 'Edit item'
+      # Not a tap-then-erase: a plain tap on this field, by id, with or
+      # without a trailing-edge `point` offset, has placed the cursor before
+      # the existing "21" every time it was tried — deterministically, not
+      # occasionally — observed on a simulator run, POPS-4508: five straight
+      # retries of tap-erase-type each prepended another "30", compounding to
+      # "30303021" without the field ever once reading as cleared.
+      # `eraseText` backspaces from wherever the cursor already sits, so an
+      # erase after a tap that never reaches the far side of the text can
+      # never remove it. A long press does something a plain tap does not: it
+      # raises iOS's own text-selection UI, whose "Select All" surfaces
+      # exactly because the field already holds text, and typing over a
+      # selection replaces it regardless of where within the field that
+      # selection sits — sidestepping cursor position entirely rather than
+      # aiming for the one spot a tap here has never landed on.
+      - retry:
+          maxRetries: 3
+          commands:
+            - longPressOn:
+                id: inventory-field-${output.userDefinedType.state.userDefinedType.priceFieldId}
+            - tapOn: 'Select All'
+            - inputText: '30'
+            - assertVisible:
+                id: inventory-field-${output.userDefinedType.state.userDefinedType.priceFieldId}
+                text: '30'
 - tapOn: 'Save'
 - tapOn: 'Inventory'
 - tapOn: 'Sync status: .*'
