@@ -20,14 +20,14 @@ internal struct InventoryProtocol2ValueEditor: View {
         switch field.kind {
         case .boolean:
             Picker(label, selection: scalarSelection) {
-                Text("Not recorded").tag("")
+                Text("").tag("")
                 Text("Yes").tag("true")
                 Text("No").tag("false")
             }
             .pickerStyle(.menu)
         case .enumeration:
             Picker(label, selection: enumSelection) {
-                Text("Not recorded").tag("")
+                Text("").tag("")
                 ForEach(enumOptions) { option in
                     Text(option.archivedAt == nil ? option.label : "\(option.label) (Retired)")
                         .tag(option.id)
@@ -42,7 +42,7 @@ internal struct InventoryProtocol2ValueEditor: View {
             measurementEditor
         default:
             InventoryFormTextRow(
-                label, placeholder: field.help ?? "Not recorded", text: textBinding,
+                label, placeholder: field.help ?? "", text: textBinding,
                 identifier: InventoryAccessibility.protocol2Field(id: field.id))
         }
         if let issue = entry.issue {
@@ -55,7 +55,7 @@ internal struct InventoryProtocol2ValueEditor: View {
 
     private var longTextEditor: some View {
         LabeledContent(label) {
-            TextField(field.help ?? "Not recorded", text: textBinding, axis: .vertical)
+            TextField(field.help ?? "", text: textBinding, axis: .vertical)
                 .lineLimit(1...8)
                 .multilineTextAlignment(.trailing)
         }
@@ -64,7 +64,7 @@ internal struct InventoryProtocol2ValueEditor: View {
     private var measurementEditor: some View {
         LabeledContent(label) {
             HStack(spacing: PopsSpacing.sm) {
-                TextField("Not recorded", text: textBinding)
+                TextField("", text: textBinding)
                     .multilineTextAlignment(.trailing)
                     .inventoryDecimalKeyboard()
                 if let unit = field.fixedUnit {
@@ -95,7 +95,7 @@ internal struct InventoryProtocol2ValueEditor: View {
                     "Record",
                     selection: referenceSelection(allowed: allowed, selectedKind: selectedKind)
                 ) {
-                    Text("Not recorded").tag("")
+                    Text("").tag("")
                     if let current,
                         !allowed.contains(where: {
                             $0.kind == current.targetKind && $0.id == current.targetId

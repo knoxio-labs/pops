@@ -14,7 +14,7 @@ internal struct InventoryFormMeasureRow: View {
         LabeledContent(label) {
             HStack(spacing: PopsSpacing.sm) {
                 InventoryFormFigureField(
-                    placeholder: "Not recorded",
+                    placeholder: "",
                     text: Binding(get: { amount }, set: { set($0, unit) }))
                 InventoryFormUnitPicker(
                     options: units, unit: Binding(get: { unit }, set: { set(amount, $0) }))
