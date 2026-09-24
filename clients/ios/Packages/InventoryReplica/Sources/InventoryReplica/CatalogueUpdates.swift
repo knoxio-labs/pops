@@ -9,11 +9,16 @@ import GRDB
 /// server cannot judge it by. It is logged again under a new id (the server
 /// answers an id it has seen with the outcome it stored), stays queued and
 /// replayed, but is held back from the drain until the replica holds a
-/// newer catalogue. Then it is moved onto that revision
-/// (``CatalogueRebase``) and sent, or, when it names a field or type the
-/// newer revision archived or replaced, it opens the `catalogueChanged`
-/// repair. A change the server already moved and still could not apply
-/// (`catalogue_repair_required`) opens that repair directly.
+/// newer catalogue, with why it is held (``CatalogueHold``) and what the
+/// server named. Then it is moved onto that revision (``CatalogueRebase``)
+/// and sent, or, when it names a field or type the newer revision archived
+/// or replaced, it opens the `catalogueChanged` repair.
+///
+/// A change the server already moved and still could not apply
+/// (`catalogue_repair_required`) opens that repair directly, unless the
+/// server named a replacement for what is in the way: that change is held
+/// the same way, so the move can try the replacement once this phone has
+/// its definition.
 internal enum CatalogueUpdates {
     /// Holds `entry` for a newer catalogue when `outcome` asks for one.
     ///
@@ -22,11 +27,17 @@ internal enum CatalogueUpdates {
         _ outcome: InventoryMutationOutcome, of entry: LogEntry, mint: () -> String,
         in db: Database
     ) throws -> Bool {
-        guard case .rejected(.catalogueUpdateRequired, _) = outcome else { return false }
+        guard case .rejected(let reason, _, let changes) = outcome,
+            reason == .catalogueUpdateRequired
+                || (reason == .catalogueRepairRequired && changes.contains(where: \.isReplacement))
+        else { return false }
         let newId = mint()
         try MutationLogRows.rename(entry.mutationId, to: newId, in: db)
         var held = entry.requeued(as: newId, command: entry.command)
         held.awaitingCatalogueAfter = try heldAfter(entry, in: db)
+        held.catalogueHold =
+            changes.contains { $0.change == .needsNewerApp } ? .appUpdate : .newFields
+        held.catalogueChanges = changes.map(StoredCatalogueChange.init)
         try MutationLogRows.update(held, in: db)
         return true
     }
@@ -44,6 +55,15 @@ internal enum CatalogueUpdates {
         try !held(in: db).isEmpty
     }
 
+    /// Records that what is held needs a newer app: the refresh that would
+    /// bring its catalogue found this build too old for it.
+    static func markNeedingAppUpdate(in db: Database) throws {
+        for var entry in try held(in: db) where entry.catalogueHold != .appUpdate {
+            entry.catalogueHold = .appUpdate
+            try MutationLogRows.update(entry, in: db)
+        }
+    }
+
     /// Moves every held change onto the replica's catalogue revision, or
     /// opens its repair: when that revision is no newer than the one the
     /// server turned down, or the change no longer fits it. Call it after a
@@ -57,37 +77,47 @@ internal enum CatalogueUpdates {
         var touched: Set<EntityRef> = []
         for var entry in try held(in: db) {
             touched.formUnion(entry.touched.union([entry.entity]))
+            let named = entry.catalogueChanges.map(\.value)
             let refused = try entry.awaitingCatalogueAfter ?? heldAfter(entry, in: db)
             guard let active, active > refused else {
+                let unchanged = InventoryCatalogueChange(
+                    definition: .revision, id: String(refused), change: .notInRevision,
+                    revision: refused)
                 try openRepair(
-                    for: &entry,
-                    reason: "catalogue revision \(refused) has no newer revision to move to",
-                    at: time, in: db)
+                    for: &entry, changes: named.isEmpty ? [unchanged] : named, at: time, in: db)
                 continue
             }
-            switch try CatalogueRebase.rebase(entry, onto: active, in: db) {
+            switch try CatalogueRebase.rebase(entry, onto: active, known: named, in: db) {
             case .rebased(let command, let revision):
                 entry.command = command
                 entry.catalogueRevision = revision
-                entry.awaitingCatalogueAfter = nil
+                release(&entry)
                 try MutationLogRows.update(entry, in: db)
-            case .incompatible(let reason):
-                try openRepair(for: &entry, reason: reason, at: time, in: db)
+            case .incompatible(let changes):
+                try openRepair(for: &entry, changes: changes, at: time, in: db)
             }
         }
         return touched
     }
 
     private static func openRepair(
-        for entry: inout LogEntry, reason: String, at time: Double, in db: Database
+        for entry: inout LogEntry, changes: [InventoryCatalogueChange], at time: Double,
+        in db: Database
     ) throws {
         let outcome = StoredOutcome.rejected(
-            reason: InventoryRejectedReason.catalogueRepairRequired.storageValue, message: reason)
+            reason: InventoryRejectedReason.catalogueRepairRequired.storageValue,
+            message: changes.summary, catalogueChanges: changes.map(StoredCatalogueChange.init))
         entry.outcome = outcome
         entry.state = outcome.state
-        entry.awaitingCatalogueAfter = nil
+        release(&entry)
         try MutationLogRows.update(entry, in: db)
         try RepairSettlement.record(outcome, for: entry, at: time, in: db)
+    }
+
+    private static func release(_ entry: inout LogEntry) {
+        entry.awaitingCatalogueAfter = nil
+        entry.catalogueHold = nil
+        entry.catalogueChanges = []
     }
 
     private static func held(in db: Database) throws -> [LogEntry] {
@@ -95,10 +125,21 @@ internal enum CatalogueUpdates {
     }
 }
 
+extension InventoryCatalogueChange {
+    /// A definition the server named as replaced by another one.
+    var isReplacement: Bool { change == .replaced && replacementId != nil }
+}
+
 extension InventoryReplica {
     /// Whether any change waits for a newer catalogue before it can be sent.
     func hasChangesAwaitingCatalogue() throws -> Bool {
         try database.read { try CatalogueUpdates.hasHeld(in: $0) }
+    }
+
+    /// Records that the changes waiting for a newer catalogue need a newer
+    /// app to read it.
+    func markChangesAwaitingCatalogueNeedAppUpdate() throws {
+        try write { try CatalogueUpdates.markNeedingAppUpdate(in: $0) }
     }
 
     /// ``CatalogueUpdates/moveHeld(at:in:)`` and the rebase it causes, in

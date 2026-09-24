@@ -20,6 +20,12 @@ internal final class InventoryRepairViewModel {
     internal private(set) var phase: Phase = .loading
     internal var outcome: String?
     internal var failure: InventoryWriteFailure?
+    /// What a refused Retry of a catalogue repair says: the value still in
+    /// the way, in the design's words.
+    internal var refusal: String?
+    /// Set when Edit item opened the form: the repair settling after that is
+    /// the edited change being sent, not someone else's doing.
+    internal private(set) var isEditing = false
 
     private let repairId: InventoryRepair.ID
     private let store: any InventoryStore
@@ -39,6 +45,8 @@ internal final class InventoryRepairViewModel {
             guard outcome == nil else { continue }
             if let row = page.repairRows.first(where: { $0.repair.id == repairId }) {
                 phase = .open(row)
+            } else if isEditing, case .open(let row) = phase {
+                outcome = row.repair.kind.keepOutcome
             } else {
                 phase = .resolvedElsewhere
             }
@@ -54,9 +62,30 @@ internal final class InventoryRepairViewModel {
             outcome =
                 keepingMine ? outcomeKeeping(row.repair, code: code) : row.repair.kind.letGoOutcome
         } catch {
+            if keepingMine, let refused = Self.catalogueRefusal(error, row: row) {
+                refusal = refused
+                return
+            }
             guard let reported = InventoryWriteFailure.reporting(error) else { return }
             failure = reported
         }
+    }
+
+    /// Edit item: the form opens against the current fields; saving it
+    /// settles this repair with the edited change.
+    internal func beginEditing() {
+        isEditing = true
+    }
+
+    private static func catalogueRefusal(_ error: any Error, row: InventorySyncRepairRow)
+        -> String?
+    {
+        guard let detail = row.catalogue,
+            case InventoryCommandError.rejected(let reason, _) = error,
+            reason == .catalogueRepairRequired || reason == .catalogueUpdateRequired
+        else { return nil }
+        return detail.refusal
+            ?? InventoryCopy.message(for: .command(.rejected(reason: reason, message: "")))
     }
 
     private func outcomeKeeping(_ repair: InventoryRepair, code: String?) -> String {

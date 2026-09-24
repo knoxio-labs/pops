@@ -57,7 +57,7 @@ extension InMemoryInventoryStore {
             let existing = current.waiting[index]
             current.waiting[index] = InventoryQueuedMutation(
                 receipt: existing.receipt, command: existing.command,
-                enqueuedAt: existing.enqueuedAt, progress: progress)
+                enqueuedAt: existing.enqueuedAt, progress: progress, hold: existing.hold)
             return current
         }
         notify(snapshot)

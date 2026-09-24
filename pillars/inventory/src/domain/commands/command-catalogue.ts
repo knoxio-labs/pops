@@ -5,6 +5,8 @@ import {
   validateItemFieldValuesForType,
   ValueValidationError,
 } from '../../catalogue/index.js';
+import { revisionUnavailable, updateRequiredChanges } from './catalogue-change-reasons.js';
+import { repairRequiredChange, typeNotInRevision } from './catalogue-repair-reasons.js';
 import { CommandRejected } from './errors.js';
 
 import type {
@@ -51,7 +53,8 @@ export function resolveCommandCatalogue(
   if (!authored) {
     throw new CommandRejected(
       'catalogue_update_required',
-      `catalogue revision ${authoredRevision} is unavailable; refresh catalogue definitions`
+      `catalogue revision ${authoredRevision} is unavailable; refresh catalogue definitions`,
+      [revisionUnavailable(authoredRevision)]
     );
   }
   if (authoredRevision === active.revision.revision) {
@@ -60,9 +63,14 @@ export function resolveCommandCatalogue(
   const incompatible = incompatibleChanges(authored, active);
   if (authoredRevision > active.revision.revision || incompatible.length > 0) {
     const details = incompatible.length > 0 ? ` (${incompatible.join(', ')})` : '';
+    const changes =
+      authoredRevision > active.revision.revision
+        ? [revisionUnavailable(authoredRevision)]
+        : updateRequiredChanges(db, authored, active);
     throw new CommandRejected(
       'catalogue_update_required',
-      `catalogue revision ${authoredRevision} cannot be rebased to ${active.revision.revision}${details}; refresh catalogue definitions`
+      `catalogue revision ${authoredRevision} cannot be rebased to ${active.revision.revision}${details}; refresh catalogue definitions`,
+      changes
     );
   }
   return { authored, active, rebased: true };
@@ -79,7 +87,8 @@ export function resolveCommandType(
   if (!active) {
     throw new CommandRejected(
       'catalogue_repair_required',
-      `type ${typeId} is unavailable in the active catalogue; refresh and repair the mutation`
+      `type ${typeId} is unavailable in the active catalogue; refresh and repair the mutation`,
+      [typeNotInRevision(resolution, typeId)]
     );
   }
   return { authored, active };
@@ -111,7 +120,8 @@ export function assertCommandFieldValues(
     if (error instanceof ItemFieldSetError || error instanceof ValueValidationError) {
       throw new CommandRejected(
         'catalogue_repair_required',
-        `${error.message}; refresh catalogue definitions and repair the mutation`
+        `${error.message}; refresh catalogue definitions and repair the mutation`,
+        [repairRequiredChange({ db, ...resolution }, input, error)]
       );
     }
     throw error;

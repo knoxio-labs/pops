@@ -14,6 +14,7 @@ internal struct FormFixtureSource: InventoryQuerySource {
     var protocol2Catalogue: InventoryCatalogueSnapshot?
     var status: InventoryReplicaStatus = .current
     var photoUploads: [String: InventoryPhotoUpload] = [:]
+    var ledger = InventoryReplicaSyncLedger()
 
     func inventoryItem(id: String) -> InventoryItem? { items.first { $0.id == id } }
     func inventoryItem(withCode code: String) -> InventoryItem? {
@@ -48,7 +49,7 @@ internal struct FormFixtureSource: InventoryQuerySource {
     func inventoryLocationHistory(locationId: String) -> [InventoryEvent] { [] }
     func inventoryCatalogue() -> InventoryCatalogue { catalogue }
     func inventoryProtocol2Catalogue() -> InventoryCatalogueSnapshot? { protocol2Catalogue }
-    func inventorySyncLedger() -> InventoryReplicaSyncLedger { InventoryReplicaSyncLedger() }
+    func inventorySyncLedger() -> InventoryReplicaSyncLedger { ledger }
     func inventoryReplicaStatus() -> InventoryReplicaStatus { status }
     func inventoryPhotoUploads() -> [String: InventoryPhotoUpload] { photoUploads }
     func inventoryAwaitingTypeArrivals() -> [String] { [] }
@@ -60,6 +61,8 @@ internal final class RecordingFormStore: InventoryStore, Sendable {
     private struct State {
         var source: FormFixtureSource
         var performed: [InventoryCommand] = []
+        var resolutions: [InventoryRepairChoice] = []
+        var resolveFailure: (any Error & Sendable)?
         var failing: Set<String> = []
         var observers: [UUID: @Sendable (FormFixtureSource) -> Void] = [:]
         var uploaded: [(sha256: String, data: Data)] = []
@@ -74,12 +77,24 @@ internal final class RecordingFormStore: InventoryStore, Sendable {
     }
 
     internal var performed: [InventoryCommand] { state.withLock { $0.performed } }
+    internal var resolutions: [InventoryRepairChoice] { state.withLock { $0.resolutions } }
     internal var uploaded: [(sha256: String, data: Data)] { state.withLock { $0.uploaded } }
     internal var discarded: [String] { state.withLock { $0.discarded } }
 
     /// Makes every command of this kind throw `RepositoryError.unavailable`.
     internal func fail(_ kind: String) {
         state.withLock { _ = $0.failing.insert(kind) }
+    }
+
+    /// Replaces the sync ledger every query reads, as a store settling a
+    /// repair would.
+    internal func setLedger(_ ledger: InventoryReplicaSyncLedger) {
+        change { $0.ledger = ledger }
+    }
+
+    /// Makes every `resolve` throw this error after recording the choice.
+    internal func failResolves(with error: any Error & Sendable) {
+        state.withLock { $0.resolveFailure = error }
     }
 
     /// Makes every `uploadPhoto` call throw this error instead of succeeding.
@@ -131,7 +146,12 @@ internal final class RecordingFormStore: InventoryStore, Sendable {
     }
 
     func undo(_ receipt: InventoryReceipt) async throws {}
-    func resolve(_ repairId: InventoryRepair.ID, with choice: InventoryRepairChoice) async throws {}
+    func resolve(_ repairId: InventoryRepair.ID, with choice: InventoryRepairChoice) async throws {
+        try state.withLock { current in
+            current.resolutions.append(choice)
+            if let failure = current.resolveFailure { throw failure }
+        }
+    }
     func download() async throws {}
     func refresh() async {}
 

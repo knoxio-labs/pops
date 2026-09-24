@@ -100,7 +100,12 @@ internal struct InventoryItemDetailSyncBanner: View {
                     PopsNotice(
                         symbol: InventorySymbol.attention.system, tint: .popsDestructive,
                         text: conflict.problem)
-                    if let resolution = conflict.resolution {
+                    if let resolution = conflict.resolution, conflict.opensRepair {
+                        NavigationLink(resolution, value: InventoryRoute.repair(conflict.repairId))
+                            .font(.popsSubheadline.weight(.semibold))
+                            .inventoryGlassButton()
+                            .tint(.popsInventory)
+                    } else if let resolution = conflict.resolution {
                         Button(resolution, action: resolve)
                             .font(.popsSubheadline.weight(.semibold))
                             .inventoryGlassButton()

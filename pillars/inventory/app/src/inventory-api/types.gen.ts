@@ -3527,6 +3527,15 @@ export type SyncMutationsResponses = {
           status: 'conflict';
         }
       | {
+          catalogueChanges?: Array<{
+            change: string;
+            definition: string;
+            fieldId: string | null;
+            id: string;
+            replacementId: string | null;
+            revision: number;
+            typeId: string | null;
+          }>;
           message: string;
           mutationId: string;
           reason: string;

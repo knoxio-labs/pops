@@ -134,6 +134,10 @@ public final class InMemoryInventoryStore: InventoryStore, @unchecked Sendable {
             guard let index = current.repairs.firstIndex(where: { $0.id == repairId }) else {
                 throw RepositoryError.contractMismatch
             }
+            if case .replaceMine = choice, current.repairs[index].kind != .catalogueChanged {
+                throw InventoryCommandError.rejected(
+                    reason: .invalid, message: "only a catalogue repair takes an edited change")
+            }
             let repair = current.repairs.remove(at: index)
             current.resolved.insert(
                 InventoryResolvedEntry(

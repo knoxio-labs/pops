@@ -10,21 +10,33 @@ import GRDB
 /// relabel or a new optional field is compatible; a replaced or archived
 /// field is not). The values themselves are the server's to judge once the
 /// change arrives at the newer revision.
+///
+/// A definition the server named as replaced (``AppCore/InventoryCatalogueChange``
+/// with a `replacementId`) is first moved onto its replacement when that
+/// accepts the value (``CatalogueReplacement``); only what is still in the
+/// way after that refuses the move.
 internal enum CatalogueRebase {
     enum Verdict: Equatable {
         /// `revision` is what the moved change is sent with
         /// (`InventoryCommand.sentCatalogueRevision(active:)`).
         case rebased(LoggedCommand, revision: Int?)
         /// The change still names something the newer revision no longer
-        /// has as it was; `reason` says what, for the repair's message.
-        case incompatible(reason: String)
+        /// has as it was, first cause first.
+        case incompatible([InventoryCatalogueChange])
     }
 
     /// The change moved onto `revision`, or why it cannot move. A change
     /// that names no catalogue record (every protocol-1 command) always
     /// moves.
-    static func rebase(_ entry: LogEntry, onto revision: Int, in db: Database) throws -> Verdict {
-        guard case .command(let command) = entry.command else {
+    ///
+    /// - Parameter known: What the server named as standing in the way, whose
+    ///   replacements are tried first and which are reported as they were
+    ///   named when the move still fails on them.
+    static func rebase(
+        _ entry: LogEntry, onto revision: Int, known: [InventoryCatalogueChange] = [],
+        in db: Database
+    ) throws -> Verdict {
+        guard case .command(var command) = entry.command else {
             return .rebased(entry.command, revision: nil)
         }
         guard let authoredRevision = command.protocol2CatalogueRevision else {
@@ -32,88 +44,52 @@ internal enum CatalogueRebase {
                 entry.command, revision: command.sentCatalogueRevision(active: revision))
         }
         guard let target = try Protocol2CatalogueRows.read(revision: revision, in: db) else {
-            return .incompatible(reason: "catalogue revision \(revision) is not on this phone")
+            return .incompatible([
+                InventoryCatalogueChange(
+                    definition: .revision, id: String(revision), change: .notInRevision,
+                    revision: revision)
+            ])
         }
         let authored = try Protocol2CatalogueRows.read(revision: authoredRevision, in: db)
-        let check = Check(authored: authored, target: target)
-        if let reason = try check.incompatibility(of: command, in: db) {
-            return .incompatible(reason: reason)
+        let itemTypeId = try CatalogueCompatibility.typeId(ofItem: command.entityId, in: db)
+        let replacement = CatalogueReplacement(authored: authored, target: target)
+        let moved = replacement.move(command, along: known, itemTypeId: itemTypeId)
+        command = moved.command
+        let check = CatalogueCompatibility(authored: authored, target: target)
+        let found = check.incompatibility(of: command, itemTypeId: itemTypeId)
+        if let found {
+            let named = known.first { $0.id == found.id && $0.change == .replaced }
+            return .incompatible([named ?? found] + moved.refused.filter { $0.id != found.id })
+        }
+        if let refused = moved.refused.first {
+            return .incompatible([refused])
         }
         return .rebased(.command(command.movedTo(catalogueRevision: revision)), revision: revision)
     }
+}
 
-    private struct Check {
-        let authored: InventoryCatalogueSnapshot?
-        let target: InventoryCatalogueSnapshot
-
-        func incompatibility(of command: InventoryCommand, in db: Database) throws -> String? {
-            switch command {
-            case .createProtocol2Item(let new):
-                return incompatibility(
-                    typeId: new.typeId, fieldIds: new.values.map(\.fieldId),
-                    values: new.values.flatMap(\.values), requiresAll: true)
-            case .editProtocol2Item(let id, _, let patches):
-                guard let typeId = try Self.typeId(ofItem: id, in: db) else {
-                    return "item \(id) has no catalogue type"
-                }
-                return incompatibility(
-                    typeId: typeId, fieldIds: patches.map(\.fieldId),
-                    values: patches.flatMap { $0.values ?? [] }, requiresAll: false)
-            case .changeProtocol2ItemType(_, _, let typeId, let values):
-                return incompatibility(
-                    typeId: typeId, fieldIds: values.map(\.fieldId),
-                    values: values.flatMap(\.values), requiresAll: true)
-            default:
-                return nil
-            }
+extension InventoryCatalogueChange {
+    /// The change in words for a log line or an error message; the screens
+    /// word it themselves, with labels.
+    var summary: String {
+        let subject =
+            definition == .revision ? "catalogue revision \(id)" : "\(definition.wireValue) \(id)"
+        switch change {
+        case .archived: return "\(subject) was archived"
+        case .replaced: return "\(subject) was replaced"
+        case .retired: return "\(subject) was retired"
+        case .nowRequired: return "\(subject) is now required"
+        case .notInRevision: return "\(subject) is not in catalogue revision \(revision)"
+        case .redefined: return "\(subject) changed kind"
+        case .needsNewerApp: return "\(subject) needs a newer app"
+        case .unrecognised(let kind): return "\(subject): \(kind)"
         }
+    }
+}
 
-        private func incompatibility(
-            typeId: String, fieldIds: [String], values: [InventoryPrimitiveValue],
-            requiresAll: Bool
-        ) -> String? {
-            guard let type = target.types.first(where: { $0.id == typeId }),
-                type.archivedAt == nil
-            else { return "type \(typeId) was archived or replaced" }
-            let fields = Dictionary(uniqueKeysWithValues: type.fields.map { ($0.id, $0) })
-            let before = authored?.types.first { $0.id == typeId }.map { authoredType in
-                Dictionary(uniqueKeysWithValues: authoredType.fields.map { ($0.id, $0) })
-            }
-            for fieldId in fieldIds {
-                guard let field = fields[fieldId], field.archivedAt == nil,
-                    field.storage == .stored
-                else { return "field \(fieldId) was archived or replaced" }
-                if let old = before?[fieldId],
-                    old.kind != field.kind || old.cardinality != field.cardinality
-                {
-                    return "field \(fieldId) changed kind"
-                }
-            }
-            let liveOptions = Set(
-                type.fields.flatMap(\.enumOptions).filter { $0.archivedAt == nil }.map(\.id))
-            for case .enumeration(let optionId) in values where !liveOptions.contains(optionId) {
-                return "option \(optionId) was archived or replaced"
-            }
-            guard requiresAll else { return nil }
-            let supplied = Set(fieldIds)
-            for field in type.fields
-            where field.required && field.storage == .stored && field.archivedAt == nil
-                && !supplied.contains(field.id)
-            {
-                return "field \(field.id) is now required"
-            }
-            return nil
-        }
-
-        private static func typeId(ofItem id: String, in db: Database) throws -> String? {
-            try String.fetchOne(
-                db,
-                sql: """
-                    SELECT COALESCE(
-                        (SELECT type_id FROM item_base WHERE id = ?),
-                        (SELECT type_id FROM item WHERE id = ?))
-                    """, arguments: [id, id])
-        }
+extension [InventoryCatalogueChange] {
+    var summary: String {
+        map(\.summary).joined(separator: "; ")
     }
 }
 

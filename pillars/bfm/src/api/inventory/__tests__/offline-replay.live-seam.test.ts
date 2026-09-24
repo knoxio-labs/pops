@@ -432,6 +432,17 @@ describe('phone -> BFM -> Inventory offline catalogue replay', () => {
         mutationId: mutation.mutationId,
         status: 'rejected',
         reason: 'catalogue_repair_required',
+        catalogueChanges: [
+          {
+            definition: 'field',
+            id: fixture.archivedFieldId,
+            typeId: fixture.typeId,
+            fieldId: fixture.archivedFieldId,
+            change: 'archived',
+            replacementId: null,
+            revision: fixture.activeRevision,
+          },
+        ],
       }),
     ]);
     expect(retry).toEqual(first);

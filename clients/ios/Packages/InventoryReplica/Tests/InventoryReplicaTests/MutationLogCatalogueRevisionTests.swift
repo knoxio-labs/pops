@@ -276,11 +276,15 @@ private enum Upgrade {
         return revisions
     }
 
-    /// Every column but `catalogue_revision`, row by row in log order.
+    /// Every column v10 had except the `catalogue_revision` v11 rewrites,
+    /// row by row in log order; the columns later migrations add are theirs
+    /// to test.
     static func rowsExceptRevision(_ db: Database) throws -> [[String: String]] {
-        try Row.fetchAll(db, sql: "SELECT * FROM mutation_log ORDER BY local_seq").map { row in
+        let later: Set<String> = ["catalogue_revision", "catalogue_hold", "catalogue_changes"]
+        let rows = try Row.fetchAll(db, sql: "SELECT * FROM mutation_log ORDER BY local_seq")
+        return rows.map { row in
             var copy: [String: String] = [:]
-            for column in row.columnNames where column != "catalogue_revision" {
+            for column in row.columnNames where !later.contains(column) {
                 copy[column] = row[column].map { String(describing: $0) } ?? "NULL"
             }
             return copy

@@ -34,6 +34,8 @@ internal struct InventoryQueuedOperation: Identifiable, Equatable {
     internal let dependsOn: String?
     /// How far through sending it is, while it is being sent.
     internal var progress: Double?
+    /// Why it is waiting rather than being sent, when that is not the network.
+    internal var hold: InventoryQueueHold?
 
     internal init(
         id: String,
@@ -43,7 +45,8 @@ internal struct InventoryQueuedOperation: Identifiable, Equatable {
         detail: String,
         enqueued: Int,
         dependsOn: String? = nil,
-        progress: Double? = nil
+        progress: Double? = nil,
+        hold: InventoryQueueHold? = nil
     ) {
         self.id = id
         self.recordID = recordID
@@ -53,6 +56,7 @@ internal struct InventoryQueuedOperation: Identifiable, Equatable {
         self.enqueued = enqueued
         self.dependsOn = dependsOn
         self.progress = progress
+        self.hold = hold
     }
 }
 
@@ -100,6 +104,8 @@ internal enum InventoryRepairKind: Equatable {
     case deletedElsewhere
     /// A photo taken here could not be uploaded.
     case photoFailed
+    /// A field or type the change used was archived or replaced since.
+    case catalogueChanged
 
     /// The one fix a row offers inline, as an icon.
     internal var fix: (title: String, symbol: InventorySymbol) {
@@ -107,9 +113,16 @@ internal enum InventoryRepairKind: Equatable {
         case .conflict: ("Keep mine", InventorySymbol(system: "iphone", lucide: "Smartphone"))
         case .codeCollision: ("New code", .suggest)
         case .deletedElsewhere: ("Restore", .restore)
-        case .photoFailed: ("Retry", InventorySymbol(system: "arrow.clockwise", lucide: "RotateCw"))
+        case .photoFailed: ("Retry", .retry)
+        case .catalogueChanged: ("Review", .edit)
         }
     }
+
+    /// Whether the one-tap entry points (the row's icon, the item's notice)
+    /// open the repair rather than committing its fix: a catalogue repair's
+    /// right move depends on what is still in the way, which only the repair
+    /// shows (POPS-4494, owner decision 2026-09-24).
+    internal var opensRepair: Bool { self == .catalogueChanged }
 
     /// The repair page's two commits: the one that keeps this phone's work,
     /// and the one that lets it go.
@@ -118,14 +131,14 @@ internal enum InventoryRepairKind: Equatable {
         case .conflict: "Keep"
         case .codeCollision: "Save"
         case .deletedElsewhere: "Restore"
-        case .photoFailed: "Retry"
+        case .photoFailed, .catalogueChanged: "Retry"
         }
     }
 
     internal var letGo: String {
         switch self {
         case .conflict, .codeCollision: "Discard mine"
-        case .deletedElsewhere: "Let go"
+        case .deletedElsewhere, .catalogueChanged: "Let go"
         case .photoFailed: "Remove"
         }
     }
@@ -153,6 +166,8 @@ internal struct InventoryRepair: Identifiable, Hashable {
     internal var options: [InventoryRepairOption] = []
     /// The code a collision proposes instead.
     internal var suggestedCode: String?
+    /// What a `catalogueChanged` repair's change carried.
+    internal var catalogue: InventoryCatalogueChange?
 
     /// What resolving it says, in the Resolved row and the undo capsule.
     internal func outcome(keepingMine: Bool, code: String? = nil) -> String {
@@ -166,6 +181,8 @@ internal struct InventoryRepair: Identifiable, Hashable {
             return keepingMine ? "Restored" : "Let go"
         case .photoFailed:
             return keepingMine ? "Photo sent" : "Photo removed"
+        case .catalogueChanged:
+            return keepingMine ? "Sent with current fields" : "Let go"
         }
     }
 }

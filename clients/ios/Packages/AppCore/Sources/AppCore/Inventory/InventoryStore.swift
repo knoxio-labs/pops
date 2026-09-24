@@ -76,22 +76,40 @@ public struct InventorySendingStall: Hashable, Sendable {
 /// corrected so nothing precedes its dependency).
 public struct InventoryQueuedMutation: Identifiable, Hashable, Sendable {
     public let receipt: InventoryReceipt
-    public let command: InventoryCommand
+    /// The change; nil when this build cannot read its log row back, which
+    /// holds it (``InventoryQueueHold/stalled``).
+    public let command: InventoryCommand?
     public let enqueuedAt: Date
     /// How far through sending it is, while the drain has it in flight.
     public let progress: Double?
+    /// Why it is not being sent, when that is not the network.
+    public let hold: InventoryQueueHold?
 
     public init(
-        receipt: InventoryReceipt, command: InventoryCommand, enqueuedAt: Date,
-        progress: Double? = nil
+        receipt: InventoryReceipt, command: InventoryCommand?, enqueuedAt: Date,
+        progress: Double? = nil, hold: InventoryQueueHold? = nil
     ) {
         self.receipt = receipt
         self.command = command
         self.enqueuedAt = enqueuedAt
         self.progress = progress
+        self.hold = hold
     }
 
     public var id: String { receipt.mutationId }
+}
+
+/// Why a queued change is waiting rather than being sent.
+public enum InventoryQueueHold: Hashable, Sendable {
+    /// The server wants it authored against newer fields; the phone fetches
+    /// them and moves it across on its own.
+    case waitingForFields
+    /// The newer fields need a newer app.
+    case needsAppUpdate
+    /// A change it depends on waits on a repair.
+    case behindRepair
+    /// Its log row cannot be read back, so nothing moves it.
+    case stalled
 }
 
 /// A repair settled, by a person or on its own (an `applied` outcome with

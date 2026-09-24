@@ -11,14 +11,27 @@ internal struct InventoryRepairView: View {
     @State private var code: String
     @State private var outcome: String?
     @State private var offer: InventoryUndoOffer?
+    @State private var failure: String?
+    /// Whether the commit kept this phone's change, which is then queued.
+    @State private var keptMine: Bool
+    /// Edit item's form, up over the repair.
+    @State private var editing: Bool
 
-    /// `resolved` stages the page just after Keep, with the capsule held up.
-    internal init(repair: InventoryRepair, resolved: Bool = false) {
+    /// `resolved` stages the page just after a commit, with the capsule held
+    /// up: Keep's by default, Let go's when `keepingMine` is false. `failure`
+    /// stages it with the write-failure alert up.
+    internal init(
+        repair: InventoryRepair, resolved: Bool = false, keepingMine: Bool = true,
+        failure: String? = nil, editing: Bool = false
+    ) {
         self.repair = repair
         lingers = resolved
+        _editing = State(initialValue: editing)
         _chosen = State(initialValue: repair.options.first?.id)
         _code = State(initialValue: repair.suggestedCode ?? "")
-        let outcome = resolved ? repair.outcome(keepingMine: true) : nil
+        _failure = State(initialValue: failure)
+        _keptMine = State(initialValue: resolved && keepingMine)
+        let outcome = resolved ? repair.outcome(keepingMine: keepingMine) : nil
         _outcome = State(initialValue: outcome)
         _offer = State(
             initialValue: outcome.map {
@@ -28,7 +41,7 @@ internal struct InventoryRepairView: View {
 
     private var record: InventorySearchRecord? {
         guard let record = InventorySearchFixtures.record(id: repair.recordID) else { return nil }
-        guard outcome != nil else { return record }
+        guard outcome != nil, keptMine else { return record }
         var item = record.item
         item.sync = .queued
         return InventorySearchRecord(
@@ -63,9 +76,37 @@ internal struct InventoryRepairView: View {
         .playgroundTitleDisplay(large: false)
         .tint(.popsInventory)
         .safeAreaInset(edge: .bottom) {
-            if outcome == nil { commits }
+            if outcome == nil {
+                if let change = repair.catalogue {
+                    InventoryCatalogueCommits(
+                        change: change, letGo: repair.kind.letGo,
+                        commit: { commit(keepingMine: $0) }, editItem: { editing = true })
+                } else {
+                    commits
+                }
+            }
+        }
+        .sheet(isPresented: $editing) {
+            if let change = repair.catalogue,
+                let draft = InventoryCatalogueFixtures.editDraft(for: repair)
+            {
+                NavigationStack {
+                    InventoryItemFormView(
+                        draft: draft, mode: .edit,
+                        notCarried: change.values.filter(\.fit.blocks))
+                }
+            }
         }
         .inventoryUndoCapsule($offer, lingers: lingers) { _ in outcome = nil }
+        .alert(
+            "That change did not save",
+            isPresented: Binding(get: { failure != nil }, set: { if !$0 { failure = nil } }),
+            presenting: failure
+        ) { _ in
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text($0)
+        }
     }
 
     @ViewBuilder private var notice: some View {
@@ -111,6 +152,8 @@ internal struct InventoryRepairView: View {
             if let photo = record?.photo {
                 InventoryRepairPhoto(photo: photo, symbol: record?.item.symbol.system ?? "")
             }
+        case .catalogueChanged:
+            if let change = repair.catalogue { InventoryCatalogueRepairDetails(change: change) }
         case .deletedElsewhere:
             EmptyView()
         }
@@ -144,11 +187,16 @@ internal struct InventoryRepairView: View {
     }
 
     private func commit(keepingMine: Bool) {
+        if keepingMine, let refusal = repair.catalogue?.retry.refusal {
+            failure = refusal
+            return
+        }
         let keepsMine =
             repair.kind == .conflict
             ? chosen == repair.options.first?.id && keepingMine : keepingMine
         if repair.kind == .conflict, !keepingMine { chosen = repair.options.last?.id }
         let next = repair.outcome(keepingMine: keepsMine, code: code)
+        keptMine = keepsMine
         outcome = next
         offer = InventoryUndoOffer(message: next, symbol: .resolved, id: repair.id)
     }

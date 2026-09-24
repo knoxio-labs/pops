@@ -51,8 +51,7 @@ internal enum RepairSettlement {
             let entry = try MutationLogRows.entry(mutationId: id, in: db)
         else { throw InventoryCommandError.repairNotFound(id) }
         let line: String
-        if case .keepMine(let code) = choice, repair.canKeepMine {
-            let reissue = try plan(repair, entry, code: code, in: db)
+        if let reissue = try reissue(for: choice, repair, entry, in: db) {
             let newId = try send(reissue, of: entry, as: mint, at: time, in: db)
             if repair.kind == .photoFailed, let sha256 = entry.command.attachedPhoto {
                 try MediaRows.restage(sha256, in: db)
@@ -76,22 +75,26 @@ internal enum RepairSettlement {
         try MutationLogReplay.rebase(resetting: [entry.entity], in: db)
     }
 
-    /// Closes every open repair whose change the server's state already
-    /// carries, as the change feed now shows it: applying the change to the
-    /// server's row would alter nothing. Its log row goes, releasing what
-    /// depended on it.
-    static func settleResolvedElsewhere(at time: Date, in db: Database) throws {
-        for repair in try RepairRows.openRepairs(in: db) {
-            guard let entry = try MutationLogRows.entry(mutationId: repair.mutationId, in: db),
-                try isAlreadyOnServer(entry, in: db)
-            else { continue }
-            try MutationLogWrites.remove([entry], in: db)
-            try RepairRows.close(
-                repair.mutationId, resolution: .resolvedElsewhere, at: storedDate(time), in: db)
-            try RepairRows.recordResolved(
-                InventoryResolvedEntry(
-                    id: repair.mutationId, entityId: entry.entity.id,
-                    outcome: RepairResolution.resolvedElsewhere.line(), resolvedAt: time), in: db)
+    /// What `choice` sends in place of the change, or nil when it lets the
+    /// change go.
+    private static func reissue(
+        for choice: InventoryRepairChoice, _ repair: StoredRepair, _ entry: LogEntry,
+        in db: Database
+    ) throws -> Reissue? {
+        switch choice {
+        case .keepMine(let code) where repair.canKeepMine:
+            return try plan(repair, entry, code: code, in: db)
+        case .replaceMine(let command):
+            guard repair.kind == .catalogueChanged else {
+                throw InventoryCommandError.rejected(
+                    reason: .invalid, message: "only a catalogue repair takes an edited change")
+            }
+            var edited = entry
+            edited.command = .command(command)
+            edited.catalogueRevision = command.protocol2CatalogueRevision
+            return try rebased(edited, in: db)
+        case .keepMine, .discardMine:
+            return nil
         }
     }
 
@@ -130,9 +133,13 @@ internal enum RepairSettlement {
                 reason: .catalogueUpdateRequired,
                 message: "no catalogue is on this phone yet; refresh and try again")
         }
-        switch try CatalogueRebase.rebase(entry, onto: active, in: db) {
-        case .incompatible(let reason):
-            throw InventoryCommandError.rejected(reason: .catalogueRepairRequired, message: reason)
+        let known =
+            try RepairRows.openRepair(id: entry.mutationId, in: db)?.payload.outcome
+            .catalogueChanges ?? []
+        switch try CatalogueRebase.rebase(entry, onto: active, known: known, in: db) {
+        case .incompatible(let changes):
+            throw InventoryCommandError.rejected(
+                reason: .catalogueRepairRequired, message: changes.summary)
         case .rebased(let command, let revision):
             return Reissue(
                 command: command, baseRevision: entry.baseRevision, baseRevisionFloor: nil,
@@ -187,29 +194,6 @@ internal enum RepairSettlement {
             }
             return .rollback
         }
-    }
-
-    private static func isAlreadyOnServer(_ entry: LogEntry, in db: Database) throws -> Bool {
-        guard case .command = entry.command else { return false }
-        var unchanged = false
-        // This savepoint always rolls back, so the reindex `resetView` performs as part of
-        // materializing the view row never reaches disk: there is nothing for a catalogue to
-        // improve here, and reading one just to discard it invites the protocol-1-only bug this
-        // call site once had (POPS-4433).
-        try db.inSavepoint {
-            try MutationLogReplay.resetView(
-                entry.entity, catalogue: SearchCatalogue(types: nil), in: db)
-            do {
-                let application = try LocalReducer.apply(
-                    entry.command, primary: entry.entity,
-                    at: Date(timeIntervalSinceReferenceDate: entry.createdAt), in: db)
-                unchanged = application.events.isEmpty
-            } catch is InventoryCommandError {
-                unchanged = false
-            }
-            return .rollback
-        }
-        return unchanged
     }
 
     private static func restoreEntry(for entry: LogEntry, id: String, at time: Date) -> LogEntry {

@@ -81,7 +81,9 @@ internal enum InventorySyncSurfaces {
                 + offlineStates.filter { $0.id != state })
     }
 
-    internal static let surfaces: [DesignSurface] = [sync, repair, interruptions, offline]
+    internal static let surfaces: [DesignSurface] = [
+        sync, repair, InventoryCatalogueRepairSurface.surface, interruptions, offline,
+    ]
 
     private static var offlineStates: [DesignState] {
         [

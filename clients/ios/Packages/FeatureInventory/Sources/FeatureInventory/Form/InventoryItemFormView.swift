@@ -21,7 +21,7 @@ internal struct InventoryItemFormView: View {
     internal var body: some View {
         NavigationStack {
             content
-                .navigationTitle(model.mode.title)
+                .navigationTitle(model.title)
                 .popsTitleDisplay(large: false)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
@@ -30,7 +30,7 @@ internal struct InventoryItemFormView: View {
                         ) { dismiss() }
                     }
                     ToolbarItem(placement: .confirmationAction) {
-                        Button(model.mode.actionTitle) {
+                        Button(model.actionTitle) {
                             Task { if await model.submit() { dismiss() } }
                         }
                         .popsProminentGlassButton()
@@ -98,6 +98,7 @@ internal struct InventoryItemFormView: View {
             }
             identity
             labelling
+            InventoryFormNotCarriedSection(values: model.notCarried)
         }
         .popsMotion(value: model.draft.typeKey)
         .inventoryInsetGroupedList()

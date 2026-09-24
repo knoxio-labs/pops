@@ -39,13 +39,26 @@ internal enum BFMInventoryMutationsWire {
                 rejected.mutationId,
                 .rejected(
                     reason: InventoryRejectedReason(wire: rejected.reason),
-                    message: rejected.message)
+                    message: rejected.message,
+                    catalogueChanges: (rejected.catalogueChanges ?? []).map(catalogueChange))
             )
         }
         if let deferred = wire.value4 {
             return (deferred.mutationId, .deferred(waitingOn: deferred.waitingOn))
         }
         return nil
+    }
+
+    /// Kinds this build does not know are kept as `unrecognised`, never
+    /// dropped: the repair still says something is in the way.
+    private static func catalogueChange(
+        _ wire: Outcome.Value3Payload.CatalogueChangesPayloadPayload
+    ) -> InventoryCatalogueChange {
+        InventoryCatalogueChange(
+            definition: InventoryCatalogueDefinition(wire: wire.definition), id: wire.id,
+            typeId: wire.typeId, fieldId: wire.fieldId,
+            change: InventoryCatalogueChangeKind(wire: wire.change),
+            replacementId: wire.replacementId, revision: wire.revision)
     }
 
     private static func conflictId(_ conflict: Outcome.Value2Payload) -> String {

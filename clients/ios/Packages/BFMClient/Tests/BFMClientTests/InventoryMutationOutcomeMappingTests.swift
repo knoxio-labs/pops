@@ -110,6 +110,46 @@ internal struct InventoryMutationOutcomeMappingTests {
         )
     }
 
+    @Test("a catalogue refusal carries what stands in the way, keeping kinds this build lacks")
+    func catalogueChanges() async throws {
+        let outcome = """
+            {"mutationId":"m-1","status":"rejected","reason":"catalogue_repair_required",\
+            "message":"field f-1 was archived","catalogueChanges":[\
+            {"definition":"field","id":"f-1","typeId":"t-1","fieldId":"f-1","change":"replaced",\
+            "replacementId":"f-2","revision":7},\
+            {"definition":"a_future_definition","id":"9","typeId":null,"fieldId":null,\
+            "change":"a_future_change","replacementId":null,"revision":9}]}
+            """
+
+        let result = try await submit(InventoryWire.mutationsResponse(outcome))
+
+        #expect(
+            result.outcomes["m-1"]
+                == .rejected(
+                    reason: .catalogueRepairRequired, message: "field f-1 was archived",
+                    catalogueChanges: [
+                        InventoryCatalogueChange(
+                            definition: .field, id: "f-1", typeId: "t-1", fieldId: "f-1",
+                            change: .replaced, replacementId: "f-2", revision: 7),
+                        InventoryCatalogueChange(
+                            definition: .unrecognised("a_future_definition"), id: "9",
+                            change: .unrecognised("a_future_change"), revision: 9),
+                    ]))
+    }
+
+    @Test("a catalogue change missing its revision is a contract mismatch, not a guess")
+    func catalogueChangeWithoutRevision() async throws {
+        let outcome = """
+            {"mutationId":"m-1","status":"rejected","reason":"catalogue_update_required",\
+            "message":"x","catalogueChanges":[{"definition":"field","id":"f-1","typeId":null,\
+            "fieldId":"f-1","change":"now_required","replacementId":null}]}
+            """
+
+        await #expect(throws: (any Error).self) {
+            try await submit(InventoryWire.mutationsResponse(outcome))
+        }
+    }
+
     @Test("a deferred outcome names what it is waiting on")
     func deferred() async throws {
         let result = try await submit(

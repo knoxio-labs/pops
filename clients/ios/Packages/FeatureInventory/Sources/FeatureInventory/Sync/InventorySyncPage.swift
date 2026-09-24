@@ -51,11 +51,17 @@ internal enum InventorySyncHeaderStatus: Equatable {
     /// (`InventorySendingStall`): louder than offline, since what is waiting
     /// is not moving whatever the network does.
     case stuck(waiting: Int)
+    /// A change waits for fields newer than this phone's, which the next
+    /// refresh fetches.
+    case updatingFields
 
     internal static func derive(page: InventorySyncPage) -> Self {
         let sendingCount = page.sending.count
+        let holds = page.ledger.waiting.compactMap(\.hold)
         if case .blocked = page.status { return .offline(lastRefreshAt: nil) }
-        if page.ledger.sendingStall != nil { return .stuck(waiting: page.ledger.waiting.count) }
+        if page.ledger.sendingStall != nil || holds.contains(.stalled) {
+            return .stuck(waiting: page.ledger.waiting.count)
+        }
         switch page.status {
         case .offline(let since), .stale(let since):
             return .offline(lastRefreshAt: since)
@@ -65,6 +71,7 @@ internal enum InventorySyncHeaderStatus: Equatable {
             break
         }
         if sendingCount > 0 { return .syncing(count: sendingCount) }
+        if holds.contains(.waitingForFields) { return .updatingFields }
         return .online(lastRefreshAt: nil)
     }
 }
