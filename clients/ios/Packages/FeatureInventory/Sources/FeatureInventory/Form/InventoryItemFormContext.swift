@@ -17,6 +17,8 @@ internal struct InventoryItemFormContext: Equatable, Sendable {
     /// ID. Empty for a create: nothing has been evaluated for an item that
     /// does not exist on the server yet.
     internal let computedDisplays: [String: InventoryComputedDisplay]
+    /// What each unavailable computed field is waiting on, named, by field ID.
+    internal let computedMissingInputs: [String: [InventoryMissingInput]]
     /// The name of where the item is (edit) or where it was opened from
     /// (create).
     internal let placementName: String?
@@ -43,11 +45,13 @@ internal struct InventoryItemFormContext: Equatable, Sendable {
             } else {
                 isOffline = false
             }
+            let displays = computedDisplays(of: item, in: source)
             return InventoryItemFormContext(
                 catalogue: source.inventoryCatalogue(),
                 protocol2Catalogue: source.inventoryProtocol2Catalogue(),
                 protocol2ReferenceTargets: referenceTargets(in: source), isOffline: isOffline,
-                item: item, computedDisplays: computedDisplays(of: item, in: source),
+                item: item, computedDisplays: displays,
+                computedMissingInputs: missingInputs(of: item, displays: displays, in: source),
                 placementName: placement.flatMap { name(of: $0, in: source) },
                 photoUploads: source.inventoryPhotoUploads())
         }
@@ -64,6 +68,22 @@ internal struct InventoryItemFormContext: Equatable, Sendable {
                     computed.display(in: item) { source.inventoryItem(id: $0)?.revision }
                 )
             })
+    }
+
+    private static func missingInputs(
+        of item: InventoryItem?, displays: [String: InventoryComputedDisplay],
+        in source: any InventoryQuerySource
+    ) -> [String: [InventoryMissingInput]] {
+        guard let item else { return [:] }
+        let fields = source.inventoryProtocol2Catalogue()?.types.flatMap(\.fields) ?? []
+        var named: [String: [InventoryMissingInput]] = [:]
+        for computed in item.computedValues {
+            guard case .unavailable? = displays[computed.fieldId] else { continue }
+            named[computed.fieldId] = InventoryMissingInputs.named(
+                computed, of: item, fields: fields
+            ) { source.inventoryItem(id: $0)?.name }
+        }
+        return named
     }
 
     private static func referenceTargets(

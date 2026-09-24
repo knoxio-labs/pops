@@ -145,19 +145,25 @@ internal struct InventoryItemDetailFacts: View {
 
     private func cell(_ field: InventoryDetailField) -> some View {
         VStack(alignment: .leading, spacing: PopsSpacing.xs) {
-            Text(field.label)
-                .font(.popsCaption)
-                .foregroundStyle(Color.popsMutedForeground)
-            Text(field.value)
-                .font(.popsBody)
-                .foregroundStyle(field.source.isMuted ? Color.popsMutedForeground : .popsForeground)
-            if let caption = field.source.caption {
-                Text(caption)
+            VStack(alignment: .leading, spacing: PopsSpacing.xs) {
+                Text(field.label)
                     .font(.popsCaption)
                     .foregroundStyle(Color.popsMutedForeground)
+                Text(field.value)
+                    .font(.popsBody)
+                    .foregroundStyle(
+                        field.source.isMuted ? Color.popsMutedForeground : .popsForeground)
+                if let caption = field.source.caption {
+                    Text(caption)
+                        .font(.popsCaption)
+                        .foregroundStyle(Color.popsMutedForeground)
+                }
+            }
+            .accessibilityElement(children: .combine)
+            if !field.missingInputs.isEmpty {
+                InventoryMissingInputsList(inputs: field.missingInputs)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .accessibilityElement(children: .combine)
     }
 }

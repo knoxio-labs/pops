@@ -199,7 +199,7 @@ extension InventoryItemFormView {
                 computedDisplay: model.protocol2ComputedDisplays[field.id],
                 overridesEnabled: model.mode == .edit,
                 referenceTargets: model.protocol2ReferenceTargets,
-                dependencyLabel: { id in type.fields.first { $0.id == id }?.label },
+                missingInputs: model.protocol2ComputedMissingInputs[field.id] ?? [],
                 setText: { value, id in
                     model.protocol2Draft?.setText(value, entryId: id, for: field)
                 },

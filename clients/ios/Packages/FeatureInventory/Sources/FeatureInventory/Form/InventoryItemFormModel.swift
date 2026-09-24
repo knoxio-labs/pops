@@ -50,6 +50,9 @@ internal final class InventoryItemFormModel {
     /// Each computed field's current display state, by field ID. See
     /// ``InventoryItemFormContext/computedDisplays``.
     internal private(set) var protocol2ComputedDisplays: [String: InventoryComputedDisplay] = [:]
+    /// See ``InventoryItemFormContext/computedMissingInputs``.
+    internal private(set) var protocol2ComputedMissingInputs: [String: [InventoryMissingInput]] =
+        [:]
     internal private(set) var isOffline = false
     /// False until the final action is pressed once: a form that reddens a
     /// field before anybody has typed opens accusing.
@@ -246,6 +249,7 @@ extension InventoryItemFormModel {
         protocol2Catalogue = context.protocol2Catalogue
         protocol2ReferenceTargets = context.protocol2ReferenceTargets
         protocol2ComputedDisplays = context.computedDisplays
+        protocol2ComputedMissingInputs = context.computedMissingInputs
         original = context.item
         photoUploads = context.photoUploads
         followStoreUploads()

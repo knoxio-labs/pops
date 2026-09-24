@@ -11,9 +11,24 @@ internal struct InventoryComputedDetailLine {
     internal let source: any InventoryQuerySource
 
     internal func line(for field: InventoryCatalogueField) -> InventoryDetailField {
-        let (value, lineSource) = text(for: field, display: display(of: field))
+        let display = display(of: field)
+        let missing = missingInputs(of: field, display: display)
+        let (value, lineSource) = text(for: field, display: display, missing: missing)
         return InventoryDetailField(
-            key: field.id, label: field.label, value: value, source: lineSource)
+            key: field.id, label: field.label, value: value, source: lineSource,
+            missingInputs: InventoryMissingInputs.listed(missing))
+    }
+
+    private func missingInputs(
+        of field: InventoryCatalogueField, display: InventoryComputedDisplay
+    ) -> [InventoryMissingInput] {
+        guard case .unavailable = display,
+            let computed = item.computedValues.first(where: { $0.fieldId == field.id })
+        else { return [] }
+        let catalogueFields = source.inventoryProtocol2Catalogue()?.types.flatMap(\.fields) ?? []
+        return InventoryMissingInputs.named(
+            computed, of: item, fields: type.fields + catalogueFields
+        ) { source.inventoryItem(id: $0)?.name }
     }
 
     private func display(of field: InventoryCatalogueField) -> InventoryComputedDisplay {
@@ -29,16 +44,20 @@ internal struct InventoryComputedDetailLine {
         return .outOfDate
     }
 
-    private func text(for field: InventoryCatalogueField, display: InventoryComputedDisplay)
-        -> (String, InventoryDetailFieldSource)
-    {
+    private func text(
+        for field: InventoryCatalogueField, display: InventoryComputedDisplay,
+        missing: [InventoryMissingInput]
+    ) -> (String, InventoryDetailFieldSource) {
         switch display {
         case .value(let value):
             return (valueText(value, field: field), .calculated)
         case .overridden(let value):
             return (valueText(value, field: field), .overridden)
-        case .unavailable(let reason, let failedFieldId):
-            return (unavailableText(reason: reason, failedFieldId: failedFieldId), .unavailable)
+        case .unavailable(let reason, _):
+            return (
+                InventoryProtocol2Display.unavailable(reason: reason, missing: missing),
+                .unavailable
+            )
         case .outOfDate:
             return ("Out of date", .outOfDate)
         }
@@ -49,12 +68,6 @@ internal struct InventoryComputedDetailLine {
     {
         InventoryProtocol2Display.text(for: [value], field: field) {
             InventoryDetailFields.referenceLabel($0, source: source)
-        }
-    }
-
-    private func unavailableText(reason: String, failedFieldId: String) -> String {
-        InventoryProtocol2Display.unavailable(reason: reason, failedFieldId: failedFieldId) { id in
-            type.fields.first { $0.id == id }?.label
         }
     }
 }

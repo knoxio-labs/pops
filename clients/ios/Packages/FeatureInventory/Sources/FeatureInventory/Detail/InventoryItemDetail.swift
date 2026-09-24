@@ -46,6 +46,8 @@ internal struct InventoryDetailField: Identifiable, Equatable {
     internal let label: String
     internal let value: String
     internal var source: InventoryDetailFieldSource = .recorded
+    /// What an unavailable computed value is waiting on, listed under it.
+    internal var missingInputs: [InventoryMissingInput] = []
 
     internal var id: String { key }
 }
