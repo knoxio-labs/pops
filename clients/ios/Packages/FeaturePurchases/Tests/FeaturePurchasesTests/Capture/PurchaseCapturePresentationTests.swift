@@ -2,6 +2,7 @@ import AppCore
 import AppCoreFakes
 import DesignSystemTestSupport
 import Foundation
+import Observation
 import SwiftUI
 import Testing
 
@@ -10,7 +11,7 @@ import Testing
 @MainActor
 @Suite("Purchase capture presentation")
 internal struct PurchaseCapturePresentationTests {
-    @Test("capture availability controls the descendant presenter")
+    @Test("capture availability controls the descendant presenter", .requiresCompiledColorCatalog)
     func availability() throws {
         let unavailable = try #require(render(isAvailable: false))
         let available = try #require(render(isAvailable: true))
@@ -27,12 +28,25 @@ internal struct PurchaseCapturePresentationTests {
         let modifier = PurchaseCapturePresentationModifier(flow: flow, isAvailable: true)
 
         modifier.presenter(.hand)
-        for _ in 0..<10 where flow.sheet == nil {
-            await Task.yield()
-        }
+        await Self.untilSheetOpens(flow)
 
         #expect(flow.sheet == .handEntry)
         #expect(flow.handEntry != nil)
+    }
+
+    /// Resumes when `flow.sheet` is set, signalled by observation rather than by polling. The flow
+    /// and this test share the main actor, so no change can land between the check and the
+    /// registration.
+    private static func untilSheetOpens(_ flow: PurchaseCaptureFlow) async {
+        while flow.sheet == nil {
+            await withCheckedContinuation { continuation in
+                withObservationTracking {
+                    _ = flow.sheet
+                } onChange: {
+                    continuation.resume()
+                }
+            }
+        }
     }
 
     private func render(isAvailable: Bool) -> Data? {
