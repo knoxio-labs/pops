@@ -68,7 +68,11 @@ function renderPanel(
 describe('PublishPanel', () => {
   it('shows a complete protocol-gated preview without blocking publication review', () => {
     renderPanel({
-      readiness: { status: 'ready', compatibility: compatibility('protocol_gated') },
+      readiness: {
+        status: 'ready',
+        compatibility: compatibility('protocol_gated'),
+        operations: [],
+      },
     });
 
     expect(
@@ -80,7 +84,9 @@ describe('PublishPanel', () => {
   });
 
   it('shows a compatible preview and allows publication review', () => {
-    renderPanel({ readiness: { status: 'ready', compatibility: compatibility('compatible') } });
+    renderPanel({
+      readiness: { status: 'ready', compatibility: compatibility('compatible'), operations: [] },
+    });
 
     expect(screen.getByRole('button', { name: 'Review and publish' })).toBeEnabled();
     expect(screen.getAllByText('Compatible').length).toBeGreaterThan(0);
@@ -89,7 +95,13 @@ describe('PublishPanel', () => {
   it.each(['migration_required', 'forbidden'] as const)(
     'blocks publication for %s compatibility',
     (classification) => {
-      renderPanel({ readiness: { status: 'ready', compatibility: compatibility(classification) } });
+      renderPanel({
+        readiness: {
+          status: 'ready',
+          compatibility: compatibility(classification),
+          operations: [],
+        },
+      });
 
       expect(screen.getByRole('button', { name: 'Review and publish' })).toBeDisabled();
       expect(
@@ -99,6 +111,17 @@ describe('PublishPanel', () => {
       ).toBeInTheDocument();
     }
   );
+
+  it('refuses to publish a forbidden result even when the disabled button is clicked', () => {
+    const { onPublish } = renderPanel({
+      readiness: { status: 'ready', compatibility: compatibility('forbidden'), operations: [] },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Review and publish' }));
+
+    expect(screen.queryByLabelText('Publication note')).not.toBeInTheDocument();
+    expect(onPublish).not.toHaveBeenCalled();
+  });
 
   it('blocks publication for a resumed draft that has never been previewed', () => {
     renderPanel({ readiness: { status: 'not_previewed' } });
@@ -127,7 +150,11 @@ describe('PublishPanel', () => {
 
   it('blocks publication for a live preview of an unsaved edit, even when compatible', () => {
     renderPanel({
-      readiness: { status: 'live_preview', compatibility: compatibility('compatible') },
+      readiness: {
+        status: 'live_preview',
+        compatibility: compatibility('compatible'),
+        operations: [],
+      },
     });
 
     expect(screen.getByRole('button', { name: 'Review and publish' })).toBeDisabled();
@@ -142,7 +169,11 @@ describe('PublishPanel', () => {
 
   it('never labels a migration-required or forbidden result Passed', () => {
     renderPanel({
-      readiness: { status: 'ready', compatibility: compatibility('migration_required') },
+      readiness: {
+        status: 'ready',
+        compatibility: compatibility('migration_required'),
+        operations: [],
+      },
     });
 
     expect(screen.queryByText('Passed')).not.toBeInTheDocument();
@@ -175,7 +206,11 @@ describe('PublishPanel', () => {
 
   it('validates publication protocol and trims the submitted note', () => {
     const { onPublish } = renderPanel({
-      readiness: { status: 'ready', compatibility: compatibility('protocol_gated') },
+      readiness: {
+        status: 'ready',
+        compatibility: compatibility('protocol_gated'),
+        operations: [],
+      },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Review and publish' }));
     fireEvent.change(screen.getByLabelText('Publication note'), {
