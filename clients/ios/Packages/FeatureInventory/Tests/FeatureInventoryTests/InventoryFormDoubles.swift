@@ -63,7 +63,7 @@ internal final class RecordingFormStore: InventoryStore, Sendable {
         var performed: [InventoryCommand] = []
         var resolutions: [InventoryRepairChoice] = []
         var resolveFailure: (any Error & Sendable)?
-        var failing: Set<String> = []
+        var failing: [String: any Error & Sendable] = [:]
         var observers: [UUID: @Sendable (FormFixtureSource) -> Void] = [:]
         var uploaded: [(sha256: String, data: Data)] = []
         var uploadFailure: Error?
@@ -81,9 +81,14 @@ internal final class RecordingFormStore: InventoryStore, Sendable {
     internal var uploaded: [(sha256: String, data: Data)] { state.withLock { $0.uploaded } }
     internal var discarded: [String] { state.withLock { $0.discarded } }
 
-    /// Makes every command of this kind throw `RepositoryError.unavailable`.
-    internal func fail(_ kind: String) {
-        state.withLock { _ = $0.failing.insert(kind) }
+    /// Makes every command of this kind throw `error` (`RepositoryError.unavailable`
+    /// unless a different one is given — e.g. a bare `CancellationError`, to
+    /// script the case where an inner operation is cancelled without the
+    /// submitting task itself being cancelled).
+    internal func fail(
+        _ kind: String, with error: any Error & Sendable = RepositoryError.unavailable
+    ) {
+        state.withLock { $0.failing[kind] = error }
     }
 
     /// Replaces the sync ledger every query reads, as a store settling a
@@ -138,7 +143,7 @@ internal final class RecordingFormStore: InventoryStore, Sendable {
         let kind = Self.kind(of: command)
         try state.withLock { current in
             current.performed.append(command)
-            if current.failing.contains(kind) { throw RepositoryError.unavailable }
+            if let error = current.failing[kind] { throw error }
         }
         return InventoryReceipt(
             mutationId: UUID().uuidString, entityKind: command.entityKind,
@@ -181,6 +186,7 @@ internal final class RecordingFormStore: InventoryStore, Sendable {
         switch command {
         case .createItem: "create"
         case .setItemCode: "setCode"
+        case .attachPhoto: "attachPhoto"
         default: "other"
         }
     }
@@ -208,8 +214,11 @@ internal enum FormFixture {
         key: "cable", name: "Cable", capabilities: [], fields: [connector, length])
     static let charger = InventoryType(
         key: "charger", name: "Charger", capabilities: [], fields: [wattage])
+    static let box = InventoryType(
+        key: "storage_box", name: "Storage box", capabilities: [.containment], fields: [])
 
-    static let catalogue = InventoryCatalogue(version: "v1", units: units, types: [cable, charger])
+    static let catalogue = InventoryCatalogue(
+        version: "v1", units: units, types: [cable, charger, box])
 
     static func item(
         _ id: String, _ name: String, code: String? = nil, typeKey: String? = nil,

@@ -19,7 +19,7 @@ internal struct CommandVectorTests {
     func everyVectorIsCovered() throws {
         let file = try CommandVectorFile.load()
         #expect(file.version == 1)
-        #expect(file.vectors.count == 23)
+        #expect(file.vectors.count == 24)
         let names = Set(file.vectors.map(\.name))
         #expect(names == Set(CommandVectorStates.checks.keys))
     }

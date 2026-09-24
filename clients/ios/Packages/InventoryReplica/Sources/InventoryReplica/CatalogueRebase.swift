@@ -124,7 +124,7 @@ extension InventoryCommand {
                 InventoryNewProtocol2Item(
                     id: new.id, name: new.name, catalogueRevision: revision, typeId: new.typeId,
                     values: new.values, note: new.note, externalIds: new.externalIds,
-                    quantity: new.quantity, placement: new.placement))
+                    quantity: new.quantity, placement: new.placement, code: new.code))
         case .editProtocol2Item(let id, _, let values):
             .editProtocol2Item(id: id, catalogueRevision: revision, values: values)
         case .changeProtocol2ItemType(let id, _, let typeId, let values):

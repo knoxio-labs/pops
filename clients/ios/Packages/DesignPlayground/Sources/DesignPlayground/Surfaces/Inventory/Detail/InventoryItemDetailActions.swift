@@ -93,7 +93,8 @@ internal struct InventoryItemDetailToolbar: ToolbarContent {
     }
 }
 
-/// Label and print, share, and the lifecycle verbs.
+/// Label, share, and the lifecycle verbs. Printing a label is done on the
+/// web (POPS-3992); this menu has nothing to reprint.
 internal struct InventoryItemDetailMenu: View {
     internal let detail: InventoryItemDetail
     internal let perform: (InventoryLifecycleCommand) -> Void
@@ -107,14 +108,6 @@ internal struct InventoryItemDetailMenu: View {
                         Text("Copy \(code)")
                     } icon: {
                         InventorySymbol.code.image
-                    }
-                }
-                Button {
-                } label: {
-                    Label {
-                        Text("Print label")
-                    } icon: {
-                        InventorySymbol.printLabel.image
                     }
                 }
             } else {

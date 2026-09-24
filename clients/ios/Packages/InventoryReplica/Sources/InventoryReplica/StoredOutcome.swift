@@ -125,6 +125,7 @@ extension InventoryRejectedReason {
         case .targetMissing: "target_missing"
         case .notContainer: "not_container"
         case .hasContents: "has_contents"
+        case .quantityContainerConflict: "quantity_container_conflict"
         case .illegalTransition: "illegal_transition"
         case .mediaMissing: "media_missing"
         case .catalogueUpdateRequired: "catalogue_update_required"

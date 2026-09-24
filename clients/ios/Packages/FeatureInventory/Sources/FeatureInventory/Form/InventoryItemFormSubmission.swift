@@ -4,28 +4,23 @@ import AppCore
 ///
 /// Pure, so the rules the form enforces can be tested without a view: only
 /// the chosen type's fields are stored, a choice is only ever one the type
-/// declares, a measurement keeps its unit, and the code travels in its own
-/// command after the create rather than inside it, so a code
-/// the server refuses leaves the item created.
+/// declares, a measurement keeps its unit, and a new item's code travels
+/// inside its create, so a code someone else holds refuses the whole create
+/// rather than leaving the item made without it (POPS-4063).
 internal enum InventoryItemFormSubmission {
     internal static func protocol2Create(
         _ draft: InventoryItemDraft, protocol2: InventoryProtocol2Draft,
         type: InventoryCatalogueType
     ) -> [InventoryCommand] {
         let note = draft.note.trimmingCharacters(in: .whitespacesAndNewlines)
-        var commands: [InventoryCommand] = [
-            .createProtocol2Item(
-                .init(
-                    id: draft.id, name: draft.trimmedName,
-                    catalogueRevision: protocol2.catalogueRevision, typeId: protocol2.typeId,
-                    values: protocol2.completeValues(for: type), note: note.isEmpty ? nil : note,
-                    externalIds: draft.externalIds, quantity: draft.quantity,
-                    placement: draft.placement))
-        ]
-        if let code = draft.code.normalized {
-            commands.append(.setItemCode(id: draft.id, code: code))
-        }
-        return commands + photoAttachCommands(for: draft.id, in: draft)
+        let create = InventoryCommand.createProtocol2Item(
+            .init(
+                id: draft.id, name: draft.trimmedName,
+                catalogueRevision: protocol2.catalogueRevision, typeId: protocol2.typeId,
+                values: protocol2.completeValues(for: type), note: note.isEmpty ? nil : note,
+                externalIds: draft.externalIds, quantity: draft.quantity,
+                placement: draft.placement, code: draft.code.normalized))
+        return [create] + photoAttachCommands(for: draft.id, in: draft)
     }
 
     internal static func protocol2Edit(
@@ -83,8 +78,8 @@ internal enum InventoryItemFormSubmission {
         return issues
     }
 
-    /// `item.create`, then `item.setCode` when the draft carries a code, then
-    /// `item.attachPhoto` for every photo the store took this session and has
+    /// `item.create` carrying the draft's code, then `item.attachPhoto` for
+    /// every photo the store took this session and has
     /// not yet attached (A22) — never for a photo already `attached`, and
     /// never for one that failed, whose bytes will not reach the server.
     internal static func create(
@@ -94,13 +89,9 @@ internal enum InventoryItemFormSubmission {
         let item = InventoryNewItem(
             id: draft.id, name: draft.trimmedName, typeKey: draft.typeKey,
             fields: values(of: draft, in: catalogue), note: note.isEmpty ? nil : note,
-            externalIds: draft.externalIds, quantity: draft.quantity, placement: draft.placement)
-        var commands: [InventoryCommand] = [.createItem(item)]
-        if let code = draft.code.normalized {
-            commands.append(.setItemCode(id: draft.id, code: code))
-        }
-        commands += photoAttachCommands(for: draft.id, in: draft)
-        return commands
+            externalIds: draft.externalIds, quantity: draft.quantity, placement: draft.placement,
+            code: draft.code.normalized)
+        return [.createItem(item)] + photoAttachCommands(for: draft.id, in: draft)
     }
 
     /// Only what changed against `original`, one command per kind of change.

@@ -41,6 +41,10 @@ public enum InventoryRejectedReason: Hashable, Sendable {
     case targetMissing
     case notContainer
     case hasContents
+    /// A container's quantity is always 1, and a grouped item (quantity
+    /// greater than 1) can never be a container or hold contents (ADR-002
+    /// D3): "3 boxes" holding the same contents is incoherent.
+    case quantityContainerConflict
     case illegalTransition
     case mediaMissing
     /// The catalogue revision the change was authored against is not one
@@ -61,6 +65,7 @@ public enum InventoryRejectedReason: Hashable, Sendable {
         case "target_missing": self = .targetMissing
         case "not_container": self = .notContainer
         case "has_contents": self = .hasContents
+        case "quantity_container_conflict": self = .quantityContainerConflict
         case "illegal_transition": self = .illegalTransition
         case "media_missing": self = .mediaMissing
         case "catalogue_update_required": self = .catalogueUpdateRequired

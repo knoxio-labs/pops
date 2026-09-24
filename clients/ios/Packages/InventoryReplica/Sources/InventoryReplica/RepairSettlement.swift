@@ -148,14 +148,18 @@ internal enum RepairSettlement {
         }
     }
 
+    /// The collided change sent again wearing `code`: a `setItemCode`, or a
+    /// create that carried its code and so was refused whole (POPS-4063).
     private static func relabel(_ entry: LogEntry, code: String) throws -> Reissue {
         let trimmed = code.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty, case .command(.setItemCode(let id, _)) = entry.command else {
+        guard !trimmed.isEmpty, case .command(let command) = entry.command,
+            let relabelled = command.wearing(trimmed)
+        else {
             throw InventoryCommandError.rejected(
                 reason: .invalid, message: "a new code is required")
         }
         return Reissue(
-            command: .command(.setItemCode(id: id, code: trimmed)),
+            command: .command(relabelled),
             baseRevision: entry.baseRevision, baseRevisionFloor: nil, restoreFirst: false,
             resolution: .relabelled, code: trimmed)
     }
@@ -216,5 +220,27 @@ extension LogEntry {
             catalogueRevision: catalogueRevision, state: .queued, outcome: nil,
             settlesAtSeq: nil, touched: [], change: nil, attempts: 0, createdAt: createdAt,
             lastAttemptAt: nil)
+    }
+}
+
+extension InventoryCommand {
+    /// The code this change asks its item to wear, when it asks for one.
+    var wornCode: String? {
+        switch self {
+        case .setItemCode(_, let code): code
+        case .createItem(let new): new.code
+        case .createProtocol2Item(let new): new.code
+        default: nil
+        }
+    }
+
+    /// This change asking for `code` instead, or nil when it names no code.
+    func wearing(_ code: String) -> InventoryCommand? {
+        switch self {
+        case .setItemCode(let id, _): .setItemCode(id: id, code: code)
+        case .createItem(let new): .createItem(new.wearing(code))
+        case .createProtocol2Item(let new): .createProtocol2Item(new.wearing(code))
+        default: nil
+        }
     }
 }

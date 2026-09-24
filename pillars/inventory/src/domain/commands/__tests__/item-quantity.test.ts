@@ -7,6 +7,7 @@ let h: Harness;
 beforeEach(() => {
   h = openHarness();
   seedItem(h, { id: 'screws' });
+  seedItem(h, { id: 'crate', isContainer: true });
 });
 
 describe('item.setQuantity', () => {
@@ -36,5 +37,16 @@ describe('item.setQuantity', () => {
       mutation('item.setQuantity', 'screws', { quantity: 30 }, { baseRevision: 1 })
     );
     expect(outcome).toMatchObject({ status: 'conflict', kind: 'field', field: 'quantity' });
+  });
+
+  it('rejects raising a container above quantity 1 (ADR-002 D3)', () => {
+    const outcome = h.run(mutation('item.setQuantity', 'crate', { quantity: 2 }));
+    expect(outcome).toMatchObject({ status: 'rejected', reason: 'quantity_container_conflict' });
+    expect(h.item('crate').quantity).toBe(1);
+  });
+
+  it('leaves a container at quantity 1 unchanged', () => {
+    const outcome = h.run(mutation('item.setQuantity', 'crate', { quantity: 1 }));
+    expect(outcome).toMatchObject({ status: 'applied' });
   });
 });

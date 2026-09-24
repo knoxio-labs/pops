@@ -110,7 +110,7 @@ internal struct CatalogueReplacement {
                     id: item.id, name: item.name, catalogueRevision: item.catalogueRevision,
                     typeId: new, values: item.values, note: item.note,
                     externalIds: item.externalIds, quantity: item.quantity,
-                    placement: item.placement))
+                    placement: item.placement, code: item.code))
         case .changeProtocol2ItemType(let id, let revision, _, let values):
             return .changeProtocol2ItemType(
                 id: id, catalogueRevision: revision, typeId: new, values: values)
@@ -180,7 +180,7 @@ extension InventoryCommand {
                         .init(fieldId: rename($0.fieldId), values: $0.values)
                     },
                     note: item.note, externalIds: item.externalIds, quantity: item.quantity,
-                    placement: item.placement))
+                    placement: item.placement, code: item.code))
         case .editProtocol2Item(let id, let revision, let patches):
             return .editProtocol2Item(
                 id: id, catalogueRevision: revision,

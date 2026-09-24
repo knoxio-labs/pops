@@ -65,6 +65,10 @@ internal enum InventoryItemFormRequest: Identifiable, Hashable, Sendable {
     /// the form was opened from. Nil opens it in hand.
     case create(placement: InventoryPlacement?)
     case edit(InventoryItem.ID)
+    /// The edit form, opened for an item with no code yet, focused on the
+    /// field that assigns one: what "Label it" means now that there is no
+    /// separate label screen to send it to.
+    case labelling(InventoryItem.ID)
     /// Edit item on a `catalogueChanged` repair: the held change reopened
     /// against the current fields, its values filled in where they still
     /// fit. Saving settles the repair with the edited change.
@@ -74,6 +78,7 @@ internal enum InventoryItemFormRequest: Identifiable, Hashable, Sendable {
         switch self {
         case .create(let placement): "create-\(String(describing: placement))"
         case .edit(let itemId): "edit-\(itemId)"
+        case .labelling(let itemId): "labelling-\(itemId)"
         case .repair(let repairId): "repair-\(repairId)"
         }
     }

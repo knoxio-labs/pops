@@ -155,6 +155,7 @@ export function useItemFormPageModel() {
     // is a live Proxy, and a value captured at this render could be stale
     // by the time the user actually submits.
     isInUseTouched: () => !!form.formState.dirtyFields.inUse,
+    assetIdError: assetId.assetIdError,
   });
 
   const { searchResults, searchLoading } = useConnectionSearch(local.connectionSearch, isEditMode);

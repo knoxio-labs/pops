@@ -116,6 +116,18 @@ export const ITEM_COMMAND_VECTOR_CASES: readonly CommandVectorCase[] = [
     },
   },
   {
+    name: 'item.create-with-code',
+    op: 'item.create',
+    mutation: {
+      mutationId: '30000000-0000-4000-8000-000000000017',
+      op: 'item.create',
+      entityId: ITEM_LAMP,
+      baseRevision: null,
+      dependsOn: [],
+      args: { item: { name: 'Lamp', placement: { kind: 'hand' } }, code: 'B412' },
+    },
+  },
+  {
     name: 'item.edit-name',
     op: 'item.edit',
     seedItems: [{ id: ITEM_LAMP, name: 'Lamp', placement: { kind: 'hand' } }],

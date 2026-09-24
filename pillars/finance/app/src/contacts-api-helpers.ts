@@ -36,3 +36,16 @@ export function unwrap<T>(result: { data?: T; error?: unknown; response?: Respon
   }
   return result.data;
 }
+
+/**
+ * True when contacts itself could not answer: no response at all, or a 5xx —
+ * including the registry's `pillar-unavailable` for a contacts that is
+ * registered but not serving. The same test `finance-api-helpers` and
+ * `purchases-api-helpers` apply to their own legs.
+ *
+ * A caller uses it to fall back on what finance stored about an entity rather
+ * than failing the page: a 4xx is contacts answering, and stays an error.
+ */
+export function isUnavailableError(err: unknown): boolean {
+  return err instanceof ContactsApiError && (err.status === undefined || err.status >= 500);
+}

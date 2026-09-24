@@ -409,6 +409,27 @@ jobs:
       - name: Every pillar app is reachable through the runtime loader
         run: node scripts/check-pillar-ui-reachability.mjs
 
+  pillar-locales:
+    name: Pillar-locales parity (POPS-4630)
+    # Asserts every in-repo `pillars/*/app` package with an `src/locales/`
+    # directory ships both `en-AU.json` and `pt-BR.json`, an `index.ts`, and a
+    # `locales.test.ts` that calls `localeCatalogueProblems`
+    # (@pops/pillar-sdk/testing) to prove the two catalogues stay in parity.
+    # Since #5148 each pillar owns its own translations and nothing enumerates
+    # the apps, so a new pillar app missing `pt-BR.json` or its parity test
+    # passes CI silently. The guard reads the source tree directly and pulls
+    # in no third-party deps, so it skips `pnpm install`.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Gate self-test (proves the guard catches an incomplete src/locales/)
+        run: node scripts/check-pillar-locales.mjs --self-test
+      - name: Every pillar app's src/locales/ is complete
+        run: node scripts/check-pillar-locales.mjs
+
   tailwind-source-coverage:
     name: Tailwind @source coverage
     # Asserts the shell's stylesheet (pillars/shell/src/styles.css, through
@@ -431,6 +452,27 @@ jobs:
         run: node scripts/check-tailwind-source-coverage.mjs --self-test
       - name: Shell and pillar stylesheets scan what they own, and every UI file is covered
         run: node scripts/check-tailwind-source-coverage.mjs
+
+  tailwind-cascade-conflicts:
+    name: Tailwind cross-sheet cascade conflicts
+    # Each pillar's utilities sheet is linked after the shell's in one document
+    # (POPS-4581), so two utilities competing on one element no longer resolve
+    # in Tailwind's single-sheet order. This guard keeps out the two shapes the
+    # pillar-base sublayer does not fix (POPS-4619): a shell/lib element with two
+    # variants of one property at equal specificity (`md:flex lg:hidden`), and a
+    # pillar element with two plain utilities of one property outside cn(). It
+    # reads the source tree directly and pulls in no third-party deps, so it
+    # skips `pnpm install`.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Gate self-test (proves the guard reports each planted shape)
+        run: node scripts/check-tailwind-cascade-conflicts.mjs --self-test
+      - name: No element depends on utility order across stylesheets
+        run: node scripts/check-tailwind-cascade-conflicts.mjs
 
   design-tokens:
     name: Design tokens in frontend source

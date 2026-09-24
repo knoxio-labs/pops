@@ -70,7 +70,8 @@ internal struct InventoryItemDetailToolbar: ToolbarContent {
     }
 }
 
-/// Label and print, share, and the lifecycle verbs.
+/// Label, share, and the lifecycle verbs. Printing a label is done on the
+/// web (POPS-3992); this menu has nothing to reprint.
 internal struct InventoryItemDetailMenu: View {
     internal let record: InventoryDetailRecord
     internal let open: (InventoryItemDetailPending) -> Void
@@ -86,15 +87,6 @@ internal struct InventoryItemDetailMenu: View {
                         Text("Copy \(code)")
                     } icon: {
                         InventorySymbol.code.image
-                    }
-                }
-                Button {
-                    open(.printLabel)
-                } label: {
-                    Label {
-                        Text("Print label")
-                    } icon: {
-                        InventorySymbol.printLabel.image
                     }
                 }
             } else {
@@ -124,48 +116,5 @@ internal struct InventoryItemDetailMenu: View {
         return [record.name, record.code, place.isEmpty ? nil : place]
             .compactMap { $0 }
             .joined(separator: "\n")
-    }
-}
-
-/// The page a screen from another part of Inventory will fill, drawn the way
-/// the flow draws any screen that has not moved into this package yet.
-internal struct InventoryItemDetailPendingSheet: View {
-    internal let pending: InventoryItemDetailPending
-    @Environment(\.dismiss) private var dismiss
-
-    internal var body: some View {
-        NavigationStack {
-            InventoryPendingScreen(title: title, detail: detail, symbol: symbol.system)
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("Close") { dismiss() }
-                    }
-                }
-        }
-        .tint(.popsInventory)
-    }
-
-    private var title: String {
-        switch pending {
-        case .edit: "Edit"
-        case .label: "Label it"
-        case .printLabel: "Print label"
-        }
-    }
-
-    private var detail: String {
-        switch pending {
-        case .edit: "The edit form opens here."
-        case .label: "Choosing a code for this item opens here."
-        case .printLabel: "Label printing opens here."
-        }
-    }
-
-    private var symbol: InventorySymbol {
-        switch pending {
-        case .edit: .edit
-        case .label: .label
-        case .printLabel: .printLabel
-        }
     }
 }

@@ -17,6 +17,7 @@ internal struct InventoryItemFormView: View {
     @State private var generation = 0
     @State private var pickingPhoto: InventoryPhotoSource?
     @State private var retakingSha256: String?
+    @FocusState private var codeFieldFocused: Bool
 
     internal var body: some View {
         NavigationStack {
@@ -53,6 +54,9 @@ internal struct InventoryItemFormView: View {
             Task { await model.undoPhotoRemoval(offer) }
         }
         .inventoryWriteFailureAlerts($model.failure)
+        .onChange(of: model.phase) { _, phase in
+            if phase == .ready, model.focusesCode { codeFieldFocused = true }
+        }
     }
 
     /// A hand-built binding rather than `$model.photoRunner.undoOffer`:
@@ -98,8 +102,10 @@ internal struct InventoryItemFormView: View {
             }
             identity
             // Every item has a quantity whatever its type, so it stands apart
-            // from the type's fields rather than reading as one of them.
-            Section { InventoryFormQuantityRow(count: $model.draft.quantity) }
+            // from the type's fields rather than reading as one of them. A
+            // container's quantity is always 1 (ADR-002 D3), so the control
+            // locks instead of offering a value that would be refused.
+            Section { quantityRow }
             labelling
             InventoryFormNotCarriedSection(values: model.notCarried)
         }
@@ -119,11 +125,18 @@ internal struct InventoryItemFormView: View {
         Section {
             InventoryFormCodeRow(
                 entry: model.draft.code, onChange: { model.codeChanged(to: $0) },
-                onSuggest: { Task { await model.suggestCode() } })
+                onSuggest: { Task { await model.suggestCode() } },
+                focus: $codeFieldFocused)
             InventoryFormNoteRow(note: $model.draft.note)
             InventoryFormIdentifierRows(draft: $model.draft)
         } footer: {
-            footer(for: labellingIssues)
+            VStack(alignment: .leading) {
+                footer(for: labellingIssues)
+                if model.draft.code.heldBy != nil, let freeCode = model.freeCode {
+                    Button("Use \(freeCode)") { model.useFreeCode() }
+                        .accessibilityIdentifier(InventoryAccessibility.useFreeCode)
+                }
+            }
         }
     }
 
@@ -164,7 +177,8 @@ extension InventoryItemFormView {
             } else {
                 InventoryFormTypeRow(
                     types: model.catalogue.types, offersNone: model.offersNoType,
-                    typeKey: $model.draft.typeKey)
+                    typeKey: Binding(
+                        get: { model.draft.typeKey }, set: { model.selectLegacyType($0) }))
             }
             if let type = model.protocol2Type, let draft = model.protocol2Draft {
                 protocol2FieldRows(type: type, draft: draft)
@@ -255,40 +269,5 @@ extension InventoryItemFormView {
     private var protocol2IssueMessages: [String] {
         guard model.showsValidation else { return [] }
         return model.protocol2Issues.map(\.message)
-    }
-}
-
-/// Leaving asks only when there is something to lose, and says nothing when
-/// there is not.
-private struct InventoryFormCancelButton: View {
-    let mode: InventoryItemFormMode
-    let hasStagedWork: Bool
-    let leave: () -> Void
-    @State private var confirming = false
-
-    var body: some View {
-        Button("Cancel") {
-            if hasStagedWork { confirming = true } else { leave() }
-        }
-        .confirmationDialog(title, isPresented: $confirming, titleVisibility: .visible) {
-            Button(keepTitle, role: .cancel) {}
-            Button("Discard", role: .destructive, action: leave)
-        } message: {
-            Text(message)
-        }
-    }
-
-    private var title: String {
-        mode == .create ? "Discard this item?" : "Discard your changes?"
-    }
-
-    private var keepTitle: String {
-        mode == .create ? "Keep the draft" : "Keep editing"
-    }
-
-    private var message: String {
-        mode == .create
-            ? "Nothing has been created yet. What you typed is kept until you discard it."
-            : "The item stays as it was."
     }
 }

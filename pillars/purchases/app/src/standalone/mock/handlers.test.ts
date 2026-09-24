@@ -3,17 +3,16 @@ import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { contractCoverage, contractResponseConformance } from '@pops/pillar-sdk/testing/api-mock';
+
+import { ORDER_ID } from '../fixtures/order';
 import { handlers } from './handlers';
 
 /**
  * The mock layer against the contract it stands in for.
  *
- * Both directions matter and they fail differently. An operation with no
- * handler is a page that will hit a 501 the first time someone opens the
- * standalone harness — after the endpoint shipped, in whatever demo it was
- * being shown in. A handler with no operation is dead weight that reads as
- * coverage: it makes the count look right while answering something the pillar
- * no longer serves.
+ * Both directions, via `contractCoverage`: an operation with no handler is a
+ * page that 501s, a handler with no operation is coverage that is not there.
  *
  * Read from the committed OpenAPI document rather than from the generated
  * client, because the document is the contract. The client is one projection
@@ -25,44 +24,58 @@ import { handlers } from './handlers';
 // `import.meta.url` is an http URL and `fileURLToPath` refuses it.
 const SPEC_PATH = resolve(import.meta.dirname, '../../../../openapi/purchases.openapi.json');
 
-const HTTP_METHODS = new Set(['get', 'post', 'put', 'patch', 'delete']);
-
-interface OpenApiDocument {
-  readonly paths: Readonly<Record<string, Readonly<Record<string, unknown>>>>;
-}
-
-function contractOperations(): string[] {
-  const parsed: unknown = JSON.parse(readFileSync(SPEC_PATH, 'utf8'));
-  const { paths } = parsed as OpenApiDocument;
-  const out: string[] = [];
-  for (const [path, item] of Object.entries(paths)) {
-    for (const method of Object.keys(item)) {
-      if (HTTP_METHODS.has(method)) out.push(`${method.toUpperCase()} ${path}`);
-    }
-  }
-  return out.toSorted();
-}
-
 describe('the mock layer covers the purchases contract', () => {
-  const operations = contractOperations();
-  const handled = Object.keys(handlers).toSorted();
+  const coverage = contractCoverage(
+    JSON.parse(readFileSync(SPEC_PATH, 'utf8')),
+    Object.keys(handlers)
+  );
 
   // The floor. A spec this test could not read would make every assertion
   // below vacuously true, and the suite would go green having checked nothing.
   it('reads a contract with operations in it', () => {
-    expect(operations.length).toBeGreaterThan(20);
+    expect(coverage.operations.length).toBeGreaterThan(20);
   });
 
-  it.each(operations)('%s has a handler', (operation) => {
-    expect(handled).toContain(operation);
+  it.each(coverage.operations)('%s has a handler', (operation) => {
+    expect(coverage.missing).not.toContain(operation);
   });
 
   it('has no handler for an operation the contract does not declare', () => {
-    expect(handled.filter((key) => !operations.includes(key))).toEqual([]);
+    expect(coverage.unexpected).toEqual([]);
   });
 
-  it('covers the contract exactly', () => {
-    expect(handled).toEqual(operations);
+  describe('answers every operation with a contract-shaped body', async () => {
+    const conformance = await contractResponseConformance(
+      JSON.parse(readFileSync(SPEC_PATH, 'utf8')),
+      handlers,
+      {
+        'GET /purchases/{id}': { params: { id: ORDER_ID } },
+        'PATCH /purchases/{id}/items/{itemId}': { params: { id: ORDER_ID, itemId: 'itm_drill' } },
+        'POST /purchases/{id}/documents': { params: { id: ORDER_ID } },
+        'POST /purchases/{id}/items/{itemId}/inventory-item': {
+          params: { id: ORDER_ID, itemId: 'itm_drill' },
+        },
+        'POST /purchases/{id}/items/{itemId}/inventory-proposal': {
+          params: { id: ORDER_ID, itemId: 'itm_drill' },
+        },
+        'PATCH /products/{productId}': { params: { productId: 'prd_drill' } },
+        'PATCH /products/aliases/{aliasId}': { params: { aliasId: 'als_1' } },
+        'GET /reconcile/links': {
+          query: new URLSearchParams({ transactionUri: 'pops://finance/transaction/txn_5512' }),
+        },
+      }
+    );
+
+    it('checks every declared operation', () => {
+      expect(conformance.map((result) => result.operation)).toEqual(coverage.operations);
+    });
+
+    it.each(conformance.map((result) => [result.operation, result] as const))(
+      '%s',
+      (_operation, { operationId, schemaPath, issues }) => {
+        expect(issues, `${operationId ?? 'no operationId'} against ${schemaPath}`).toEqual([]);
+      }
+    );
   });
 
   it('returns a contract-shaped receipt extraction draft', async () => {

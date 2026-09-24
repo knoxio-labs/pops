@@ -14,6 +14,8 @@ internal enum ShellCopy {
     static let degraded =
         "Some of Pops could not be reached, so this may be out of date."
 
+    static let dismissDegraded = "Dismiss"
+
     static let nothingOffered =
         "Your Pops server is not offering anything this app can show yet."
 

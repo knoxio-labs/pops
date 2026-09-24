@@ -21,13 +21,14 @@ extension InMemoryInventoryStore {
         guard state.items[new.id] == nil, new.quantity >= 1 else {
             throw RepositoryError.contractMismatch
         }
+        try assertCodeFree(new.code, for: new.id, in: state)
         let now = Date()
         let item = InventoryItem(
             id: new.id, revision: 1, seq: state.nextSeq,
             catalogueRevision: new.catalogueRevision, name: new.name, typeId: new.typeId,
             typeKey: nil,
             fieldValues: protocol2Entries(new.values, revision: new.catalogueRevision),
-            note: new.note, externalIds: new.externalIds,
+            note: new.note, code: new.code, externalIds: new.externalIds,
             quantity: InventoryQuantity(count: new.quantity), placement: new.placement,
             createdAt: now, updatedAt: now)
         state.nextSeq += 1

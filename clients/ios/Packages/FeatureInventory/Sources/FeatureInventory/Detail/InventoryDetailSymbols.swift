@@ -4,7 +4,6 @@
 extension InventorySymbol {
     internal static let code = InventorySymbol(system: "qrcode")
     internal static let label = InventorySymbol(system: "tag")
-    internal static let printLabel = InventorySymbol(system: "printer")
     internal static let photo = InventorySymbol(system: "photo")
     internal static let inHand = InventorySymbol(system: "hand.raised")
     internal static let edit = InventorySymbol(system: "pencil")

@@ -216,6 +216,14 @@ internal enum InventoryWire {
         {"code":"payload_too_large","maxBytes":\(maxBytes),"message":"too big"}
         """
     }
+
+    /// A 503: the upstream pillar behind bfm is not answering.
+    internal static func upstreamUnavailable(pillar: String, retryable: Bool = true) -> String {
+        """
+        {"code":"upstream_unavailable","message":"down","pillar":"\(pillar)",\
+        "retryable":\(retryable)}
+        """
+    }
 }
 
 extension BFMInventoryTransport {
