@@ -74,6 +74,16 @@ function validateReferenceShape(
       )
     );
   }
+  if (field.kind === 'reference' && field.referenceKinds.size === 0) {
+    issues.push(
+      issue(
+        field.id,
+        'referenceKinds',
+        'reference_kinds_required',
+        'Reference fields must allow at least one target kind (item or location)'
+      )
+    );
+  }
   if ([...field.referenceTypeIds].some((id) => !typeIds.has(id))) {
     issues.push(
       issue(field.id, 'referenceTypeIds', 'type_unknown', 'Reference target type does not exist')
