@@ -1,20 +1,8 @@
 /** One spec per kind/cardinality vector: the item to create and the one field value it carries. */
-import { buildRemainingKindVectorSpecs, type ReferenceSpecTargets } from './kind-vector-specs-2.js';
+import { buildRemainingKindVectorSpecs } from './kind-vector-specs-2.js';
 
-import type { PrimitiveKind } from '../../../catalogue/value-types.js';
-import type { EnumOptionIds, FieldKeyName } from './catalogue-fields.js';
-
-export interface VectorSpec {
-  readonly name: string;
-  readonly kind: PrimitiveKind;
-  readonly cardinality: 'one' | 'many';
-  readonly storage: 'stored' | 'computed';
-  readonly fieldKey: FieldKeyName;
-  readonly itemName: string;
-  readonly values: readonly unknown[];
-}
-
-export type { ReferenceSpecTargets } from './kind-vector-specs-2.js';
+import type { EnumOptionIds } from './catalogue-fields.js';
+import type { ReferenceSpecTargets, VectorSpec } from './vector-spec.js';
 
 function textSpecs(): readonly VectorSpec[] {
   return [

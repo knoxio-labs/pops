@@ -18,3 +18,6 @@ export function createDeterministicIds(): () => string {
     return `00000000-0000-4000-8000-${counter.toString(16).padStart(12, '0')}`;
   };
 }
+
+/** The clock every vector write and catalogue stamp is pinned to. */
+export const VALUE_VECTOR_CLOCK = '2026-09-24T00:00:00.000Z';

@@ -1,15 +1,12 @@
 /** Turns each {@link VectorSpec} into a real item and a real {@link ValueVector}. */
-import {
-  buildKindVectorSpecs,
-  type ReferenceSpecTargets,
-  type VectorSpec,
-} from './kind-vector-specs.js';
+import { buildKindVectorSpecs } from './kind-vector-specs.js';
 import { computedValueOf, fieldValueOf, projectItem } from './projection.js';
 
 import type { CommandDb } from '../../../domain/commands/entities.js';
 import type { ValueVectorCatalogue } from './catalogue.js';
 import type { FixtureEngine } from './fixture-engine.js';
 import type { ValueVector } from './types.js';
+import type { ReferenceSpecTargets, VectorSpec } from './vector-spec.js';
 
 function toVector(
   db: CommandDb,

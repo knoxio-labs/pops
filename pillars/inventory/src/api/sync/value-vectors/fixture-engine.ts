@@ -7,14 +7,12 @@ import { eq } from 'drizzle-orm';
 
 import { items, locations } from '../../../db/index.js';
 import { runMutation } from '../../../domain/commands/engine.js';
+import { VALUE_VECTOR_CLOCK } from './deterministic-ids.js';
 
 import type { CommandDb } from '../../../domain/commands/entities.js';
 import type { CommandActor, Mutation } from '../../../domain/commands/envelope.js';
 import type { Outcome } from '../../../domain/commands/outcome.js';
 import type { ValueVectorCatalogue } from './catalogue.js';
-
-/** The clock every vector is generated at. */
-export const VALUE_VECTOR_CLOCK = '2026-09-24T00:00:00.000Z';
 
 const VECTOR_ACTOR: CommandActor = { kind: 'device', id: 'value-vector-fixture', label: 'Fixture' };
 

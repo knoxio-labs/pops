@@ -32,7 +32,7 @@ import {
   insertType,
   TYPE_ID,
 } from './catalogue-fields.js';
-import { VALUE_VECTOR_CLOCK } from './fixture-engine.js';
+import { VALUE_VECTOR_CLOCK } from './deterministic-ids.js';
 
 import type { CatalogueDescriptor } from '../../../catalogue/authoring-types.js';
 import type { CommandDb } from '../../../domain/commands/entities.js';

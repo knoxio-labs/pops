@@ -15,7 +15,6 @@ import { createTestApp, type TestApp } from './harness.js';
 import { requestOn } from './test-http.js';
 
 import type { Express } from 'express';
-import type supertest from 'supertest';
 
 import type { MobileCapability } from '../../contract/capabilities.js';
 import type { MobileInventoryMediaClient } from '../inventory/media-client.js';
@@ -49,7 +48,11 @@ export function openWith(
   return { app: created.app, token };
 }
 
-export function get(app: Express, token: string | null, path: string): Promise<supertest.Response> {
+export function get(
+  app: Express,
+  token: string | null,
+  path: string
+): ReturnType<typeof requestOn> {
   return requestOn(app, (r) => {
     const request = r.get(path);
     return token === null ? request : request.set('Authorization', `Bearer ${token}`);

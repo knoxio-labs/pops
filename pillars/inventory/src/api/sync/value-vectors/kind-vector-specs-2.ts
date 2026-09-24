@@ -2,7 +2,7 @@
 import { DERIVED_MEASUREMENT_UNIT, MEASUREMENT_UNIT } from './catalogue-fields.js';
 import { ref } from './reference-values.js';
 
-import type { VectorSpec } from './kind-vector-specs.js';
+import type { ReferenceSpecTargets, VectorSpec } from './vector-spec.js';
 
 function measurementSpecs(): readonly VectorSpec[] {
   return [
@@ -101,12 +101,6 @@ function urlSpecs(): readonly VectorSpec[] {
       values: ['https://pops.example/a', 'https://pops.example/b'],
     },
   ];
-}
-
-/** `liveTargetItemId`/`liveLocationId`: existing rows a `reference` spec below points at. */
-export interface ReferenceSpecTargets {
-  readonly liveTargetItemId: string;
-  readonly liveLocationId: string;
 }
 
 function referenceSpecs(targets: ReferenceSpecTargets): readonly VectorSpec[] {
