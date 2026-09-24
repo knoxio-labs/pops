@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 
 import { useSetPageContext } from '@pops/navigation';
@@ -9,10 +9,10 @@ import { unwrap } from '../../inventory-api-helpers.js';
 import {
   itemsDelete,
   itemsDistinctTypes,
-  itemsList,
   itemsSearchByAssetId,
   locationsTree,
 } from '../../inventory-api/index.js';
+import { fetchAllItemPages } from './fetchAllItemPages';
 import {
   buildQueryInput,
   hasAnyActiveFilter,
@@ -135,9 +135,22 @@ export function useItemsPageModel() {
   const handleSearchKeyDown = useAssetIdSearchHandler(filters);
 
   const queryInput = useMemo(() => buildQueryInput(filters), [filters]);
+  // Own cancellation rather than relying on TanStack Query's implicit
+  // per-observer abort: a filter change starts a brand new queryFn call for
+  // the new key immediately, so aborting the previous unit's controller here
+  // reliably stops an in-flight multi-page walk instead of letting it keep
+  // fetching pages nobody will read.
+  const activeFetchRef = useRef<AbortController | null>(null);
+  useEffect(() => () => activeFetchRef.current?.abort(), []);
+
   const { data, isLoading } = useQuery({
     queryKey: ['inventory', 'items', 'list', queryInput],
-    queryFn: async () => unwrap(await itemsList({ query: queryInput })),
+    queryFn: async () => {
+      activeFetchRef.current?.abort();
+      const controller = new AbortController();
+      activeFetchRef.current = controller;
+      return fetchAllItemPages(queryInput, controller.signal);
+    },
   });
   const summary = summarize(data);
 

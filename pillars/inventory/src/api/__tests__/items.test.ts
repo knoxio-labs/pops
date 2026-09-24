@@ -457,6 +457,46 @@ describe('items REST — filters + projections', () => {
   });
 });
 
+describe('items REST — pagination past 200 rows (POPS-3586/POPS-43)', () => {
+  function seedManyItems(count: number): void {
+    for (let i = 1; i <= count; i++) {
+      seedInventoryItem(inventoryDb.db, { name: `Item ${String(i).padStart(4, '0')}` });
+    }
+  }
+
+  it('a 200-row first page reports hasMore; the 50-row remainder does not', async () => {
+    seedManyItems(250);
+    const api = client();
+
+    const first = await api.items.list({ limit: 200, offset: 0 });
+    expect(first.data).toHaveLength(200);
+    expect(first.pagination).toEqual({ total: 250, limit: 200, offset: 0, hasMore: true });
+
+    const second = await api.items.list({ limit: 200, offset: 200 });
+    expect(second.data).toHaveLength(50);
+    expect(second.pagination).toEqual({ total: 250, limit: 200, offset: 200, hasMore: false });
+
+    const seenAcrossBothPages = new Set([
+      ...first.data.map((row) => row.id),
+      ...second.data.map((row) => row.id),
+    ]);
+    expect(seenAcrossBothPages.size).toBe(250);
+  });
+
+  it('keeps a stable name-ascending order across pages and across repeated reads', async () => {
+    seedManyItems(250);
+    const api = client();
+
+    const first = await api.items.list({ limit: 200, offset: 0 });
+    const second = await api.items.list({ limit: 200, offset: 200 });
+    const names = [...first.data, ...second.data].map((row) => row.itemName);
+    expect(names).toEqual([...names].sort());
+
+    const firstAgain = await api.items.list({ limit: 200, offset: 0 });
+    expect(firstAgain.data.map((row) => row.id)).toEqual(first.data.map((row) => row.id));
+  });
+});
+
 describe('items REST — error mapping', () => {
   it('returns 404 when getting an unknown item', async () => {
     await expect(client().items.get('missing')).rejects.toMatchObject({
