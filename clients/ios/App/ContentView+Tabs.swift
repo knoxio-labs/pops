@@ -1,6 +1,5 @@
 import AppCore
 import FeatureAccounts
-import FeatureInventory
 import FeatureTransactions
 
 extension ContentView {
@@ -21,7 +20,9 @@ extension ContentView {
     nonisolated internal static func tabs(for available: [MobileFeature]) -> [MobileFeature] {
         var tabs = primaryFeatures(for: available)
         if !moreFeatures(for: available).isEmpty { tabs.append(moreTab) }
-        if available.contains(FeatureInventory.feature) { tabs.append(inventorySearchTab) }
+        if SearchPillar.allCases.contains(where: { available.contains($0.feature) }) {
+            tabs.append(searchTab)
+        }
         return tabs
     }
 }

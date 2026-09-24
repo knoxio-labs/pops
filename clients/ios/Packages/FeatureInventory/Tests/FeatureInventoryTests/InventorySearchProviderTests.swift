@@ -90,6 +90,51 @@ internal struct InventorySearchProviderTests {
         #expect(!second.map(\.hit.name).contains("Garden hose"))
     }
 
+    @Test("download rethrows the store's failure")
+    internal func downloadFailurePropagates() async {
+        await #expect(throws: RepositoryError.self) {
+            try await InventorySearchProvider(store: EndedInventoryStore()).download()
+        }
+    }
+
+    @Test("download resolves, and the replica answers again once it does")
+    internal func downloadSucceeds() async throws {
+        let store = Self.store()
+        store.setReplicaStatus(.empty)
+        var events = InventorySearchProvider(store: store).answers(
+            to: "gar", filter: InventorySearchFilter()
+        ).makeAsyncIterator()
+        #expect(Self.isNotOnPhone(await events.next()))
+
+        try await InventorySearchProvider(store: store).download()
+
+        #expect(Self.results(await events.next()) != nil)
+    }
+
+    @Test("current type names are empty when the catalogue has none")
+    internal func currentTypeNamesEmptyWithoutCatalogue() async {
+        let emptyCatalogue = InventoryCatalogue(version: "v1", units: [], types: [])
+        let store = InMemoryInventoryStore(items: [], locations: [], catalogue: emptyCatalogue)
+
+        let types = await InventorySearchProvider(store: store).currentTypeNames()
+
+        #expect(types.isEmpty)
+    }
+
+    @Test("current type names reflect the replica's catalogue")
+    internal func currentTypeNamesReflectReplica() async {
+        let store = Self.store()
+
+        let types = await InventorySearchProvider(store: store).currentTypeNames()
+
+        var direct = store.observe(
+            InventorySearchResults.query(text: "", includeInactive: false, scannedIDs: [])
+        ).makeAsyncIterator()
+        let expected = await direct.next()?.types
+
+        #expect(types == (expected ?? []))
+    }
+
     private static func store() -> InMemoryInventoryStore {
         InMemoryInventoryStore(
             items: [
