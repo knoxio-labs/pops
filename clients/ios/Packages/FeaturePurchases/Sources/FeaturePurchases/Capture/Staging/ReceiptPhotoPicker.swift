@@ -6,7 +6,7 @@
     internal struct ReceiptPhotoPickerModifier: ViewModifier {
         @Binding private var isPresented: Bool
         @State private var selection: [PhotosPickerItem] = []
-        @State private var pickedSelection = false
+        @State private var dismissal = PhotoPickerDismissal()
 
         private let selectionLimit: Int
         private let onPicked: @MainActor ([PhotosPickerItem]) -> Void
@@ -34,16 +34,17 @@
                 )
                 .onChange(of: selection) { _, items in
                     guard !items.isEmpty else { return }
-                    pickedSelection = true
+                    dismissal.selectionArrived()
                     onPicked(items)
                     selection = []
                 }
                 .onChange(of: isPresented) { _, presented in
                     guard !presented else { return }
-                    if pickedSelection {
-                        pickedSelection = false
-                    } else {
-                        onCancel()
+                    // PhotosPicker does not document whether a pick publishes its selection
+                    // before or after it clears isPresented, so settle on the next main-actor
+                    // turn, once a selection from the same update has arrived.
+                    Task { @MainActor in
+                        if dismissal.settle() { onCancel() }
                     }
                 }
         }
