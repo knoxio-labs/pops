@@ -48,8 +48,8 @@ internal struct PurchaseSearchTests {
                 lineTotal: Self.money(450), order: order, tagMatch: "Dairy"),
         ])
 
-        let printed = try await repository.search(text: "till", status: .any)
-        let tagged = try await repository.search(text: "dairy", status: .any)
+        let printed = try await repository.search(text: "till", status: .any, tags: [])
+        let tagged = try await repository.search(text: "dairy", status: .any, tags: [])
 
         #expect(printed.map(\.id) == ["purchase:order-1", "line:line-1"])
         #expect(tagged.map(\.id) == ["line:line-1"])
@@ -71,7 +71,7 @@ internal struct PurchaseSearchTests {
             .purchase(partial, printedMatch: nil),
         ])
 
-        let results = try await repository.search(text: "fake", status: .unmatched)
+        let results = try await repository.search(text: "fake", status: .unmatched, tags: [])
 
         #expect(results.map(\.id) == ["purchase:waiting", "line:waiting-line"])
     }
@@ -82,10 +82,32 @@ internal struct PurchaseSearchTests {
             .purchase(Self.order(id: "waiting", status: .awaitingSettlement), printedMatch: nil)
         ])
 
-        let results = try await repository.search(text: text, status: .unmatched)
+        let results = try await repository.search(text: text, status: .unmatched, tags: [])
 
         #expect(results.isEmpty)
         #expect(await repository.searchCalls.isEmpty)
+    }
+
+    @Test("chosen tags are recorded on the call the fake receives")
+    func fakeRecordsTags() async throws {
+        let repository = InMemoryPurchasesRepository(hits: [])
+
+        _ = try await repository.search(text: "fake", status: .any, tags: ["garden", "camping"])
+
+        let calls = await repository.searchCalls
+        #expect(calls.first?.tags == ["garden", "camping"])
+    }
+
+    @Test("the tags in use are read in the order the fake was seeded with")
+    func fakePurchaseTags() async throws {
+        let seeded = [
+            PurchaseTagCount(tag: "garden", count: 4), PurchaseTagCount(tag: "camping"),
+        ]
+        let repository = InMemoryPurchasesRepository(tagsInUse: seeded)
+
+        let tags = try await repository.purchaseTags()
+
+        #expect(tags == seeded)
     }
 
     private static func order(

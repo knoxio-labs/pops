@@ -132,13 +132,55 @@ internal struct AppSearchModelTests {
         #expect(!model.hasNoResults)
     }
 
+    @Test("loading tags reads the tag vocabulary from the Purchases repository")
+    func loadTagsReadsVocabulary() async {
+        let repository = InMemoryPurchasesRepository(
+            tagsInUse: [PurchaseTagCount(tag: "garden", count: 4)])
+        let model = Self.bothAvailable(purchasesRepository: repository)
+
+        await model.loadTags()
+
+        #expect(model.tags == [PurchaseTagCount(tag: "garden", count: 4)])
+    }
+
+    @Test("loading tags is a no-op while Purchases is not available")
+    func loadTagsSkipsWhenPurchasesUnavailable() async {
+        let repository = InMemoryPurchasesRepository(
+            tagsInUse: [PurchaseTagCount(tag: "garden", count: 4)])
+        let model = Model(
+            tabOrder: [.purchases, .inventory],
+            inventoryProvider: InventoryFake(pillar: .inventory),
+            purchasesProvider: nil,
+            purchasesRepository: repository)
+
+        await model.loadTags()
+
+        #expect(model.tags.isEmpty)
+    }
+
+    @Test("a failed load leaves the tag list empty")
+    func loadTagsLeavesEmptyOnFailure() async {
+        let repository = InMemoryPurchasesRepository(
+            tagsInUse: [PurchaseTagCount(tag: "garden", count: 4)])
+        await repository.fail(onCall: 1, with: .transport("boom"))
+        let model = Self.bothAvailable(purchasesRepository: repository)
+
+        await model.loadTags()
+
+        #expect(model.tags.isEmpty)
+    }
+
     private static func bothAvailable(
         inventory: InventoryFake = InventoryFake(pillar: .inventory),
-        purchases: PurchasesFake = PurchasesFake(pillar: .purchases)
+        purchases: PurchasesFake = PurchasesFake(pillar: .purchases),
+        purchasesRepository: (any PurchasesRepository)? = nil,
+        downloadInventory: (() async throws -> Void)? = nil,
+        inventoryTypeNames: (() async -> [InventoryTypeName])? = nil
     ) -> Model {
         Model(
             tabOrder: [.purchases, .inventory], inventoryProvider: inventory,
-            purchasesProvider: purchases)
+            purchasesProvider: purchases, purchasesRepository: purchasesRepository,
+            downloadInventory: downloadInventory, inventoryTypeNames: inventoryTypeNames)
     }
 
     private static func step(

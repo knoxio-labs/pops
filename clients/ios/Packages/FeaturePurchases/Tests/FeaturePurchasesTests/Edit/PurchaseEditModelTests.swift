@@ -225,8 +225,10 @@ private actor EditRepositoryDouble: PurchasesRepository {
     }
 
     func search(
-        text: String, status: PurchaseSearchStatus
+        text: String, status: PurchaseSearchStatus, tags: Set<String>
     ) async throws -> [PurchaseSearchHit] { [] }
+
+    func purchaseTags() async throws -> [PurchaseTagCount] { [] }
 
     func monthSummary(for month: Date) async throws -> PurchasesMonthSummary { .empty }
 

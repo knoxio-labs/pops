@@ -3,8 +3,15 @@ import Foundation
 
 /// A ``PurchasesRepository`` backed by an array, with server-shaped paging and failures.
 public actor InMemoryPurchasesRepository: PurchasesRepository {
+    /// One call recorded by ``InMemoryPurchasesRepository/search(text:status:tags:)``.
+    public struct SearchCall: Equatable, Sendable {
+        public let text: String
+        public let status: PurchaseSearchStatus
+        public let tags: Set<String>
+    }
+
     public private(set) var callCount = 0
-    public private(set) var searchCalls: [(text: String, status: PurchaseSearchStatus)] = []
+    public private(set) var searchCalls: [SearchCall] = []
 
     private var rows: [Purchase]
     private let hits: [PurchaseSearchHit]
@@ -16,6 +23,7 @@ public actor InMemoryPurchasesRepository: PurchasesRepository {
     private let summary: PurchasesMonthSummary
     private var details: [Purchase.ID: PurchaseDetail]
     private let receipts: [String: ReceiptImage]
+    private let tagsInUse: [PurchaseTagCount]
 
     private struct CursorRecord {
         let offset: Int
@@ -30,7 +38,8 @@ public actor InMemoryPurchasesRepository: PurchasesRepository {
         pageSize: Int = 5,
         summary: PurchasesMonthSummary = .empty,
         details: [PurchaseDetail] = [],
-        receipts: [String: ReceiptImage] = [:]
+        receipts: [String: ReceiptImage] = [:],
+        tagsInUse: [PurchaseTagCount] = []
     ) {
         self.rows = rows
         self.hits = hits
@@ -39,18 +48,24 @@ public actor InMemoryPurchasesRepository: PurchasesRepository {
         self.summary = summary
         self.details = Dictionary(uniqueKeysWithValues: details.map { ($0.id, $0) })
         self.receipts = receipts
+        self.tagsInUse = tagsInUse
     }
 
     public func search(
-        text: String, status: PurchaseSearchStatus
+        text: String, status: PurchaseSearchStatus, tags: Set<String>
     ) async throws -> [PurchaseSearchHit] {
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return [] }
-        searchCalls.append((text, status))
+        searchCalls.append(SearchCall(text: text, status: status, tags: tags))
         try beginCall()
         try await Task.sleep(for: searchDelay)
         return hits.filter { hit in
             searchHit(hit, matches: status) && searchHit(hit, matches: text)
         }
+    }
+
+    public func purchaseTags() async throws -> [PurchaseTagCount] {
+        try beginCall()
+        return tagsInUse
     }
 
     /// Replaces the rows and invalidates cursors minted for the previous list.
