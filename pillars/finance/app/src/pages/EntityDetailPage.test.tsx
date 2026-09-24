@@ -75,6 +75,59 @@ describe('EntityDetailPage', () => {
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
   });
 
+  it('falls back to the stored name and both rollups when contacts is unavailable', async () => {
+    entitiesGetMock.mockResolvedValue({
+      error: { kind: 'pillar-unavailable', moduleId: 'contacts', reason: 'down' },
+      response: { status: 503 },
+    });
+    transactionsListMock.mockResolvedValue({
+      data: {
+        data: [
+          {
+            id: 'txn-1',
+            date: '2026-09-04',
+            description: 'BUNNINGS 123',
+            amount: -12.5,
+            entityId: 'ent-1',
+            entityName: 'Bunnings Warehouse',
+          },
+        ],
+        pagination: { total: 1, limit: 6, offset: 0, hasMore: false },
+      },
+      error: undefined,
+    });
+
+    renderDetail('ent-1');
+
+    expect(await screen.findByRole('heading', { name: 'Bunnings Warehouse' })).toBeInTheDocument();
+    expect(screen.getByText(/contact details are unavailable/i)).toBeInTheDocument();
+    expect(await screen.findByText('BUNNINGS 123')).toBeInTheDocument();
+    expect(await screen.findByText('No purchases linked to this entity.')).toBeInTheDocument();
+    expect(screen.queryByText('Failed to load this entity')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Edit/ })).not.toBeInTheDocument();
+  });
+
+  it('names no one when contacts is unavailable and finance stored no name', async () => {
+    entitiesGetMock.mockResolvedValue({ error: {}, response: undefined });
+
+    renderDetail('ent-1');
+
+    expect(await screen.findByRole('heading', { name: 'Entity' })).toBeInTheDocument();
+    expect(await screen.findByText('No transactions yet')).toBeInTheDocument();
+  });
+
+  it('keeps the error panel for a contacts answer that is not an outage', async () => {
+    entitiesGetMock.mockResolvedValue({
+      error: { message: 'id is malformed' },
+      response: { status: 400 },
+    });
+
+    renderDetail('ent-1');
+
+    expect(await screen.findByText('Failed to load this entity')).toBeInTheDocument();
+    expect(screen.getByText('id is malformed')).toBeInTheDocument();
+  });
+
   it('shows "No such entity" when the fetch resolves with nothing', async () => {
     entitiesGetMock.mockResolvedValue({ data: { data: undefined }, error: undefined });
 

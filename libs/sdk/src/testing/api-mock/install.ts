@@ -1,17 +1,4 @@
-import { matchOperation, type OperationKey } from './router';
-
-/**
- * The purchases REST contract, answered from fixtures instead of a pillar.
- *
- * Interception at `fetch` rather than a second client: the generated Hey API
- * client, its serialisers and the app's own error handling all run exactly as
- * they do against the real pillar, so what the standalone harness exercises is
- * the shipping code path and not a parallel one that can drift from it.
- *
- * Requests to anything other than the purchases API pass straight through. The
- * harness has no business intercepting the page's own module loads, and a
- * pillar this app does not call is not this layer's to answer.
- */
+import { matchOperation, type OperationKey } from './router.js';
 
 /** What a handler is told about the request it is answering. */
 export interface MockRequest {
@@ -31,28 +18,27 @@ export interface MockResponse {
   readonly body?: unknown;
 }
 
+/** Answers one contract operation from fixtures. */
 export type MockHandler = (request: MockRequest) => MockResponse | Promise<MockResponse>;
 
-/** The one thing this layer replaces, named so the target can be typed. */
+/** Operation key → handler. Keys are OpenAPI operations, not app call sites. */
+export type MockHandlers = Readonly<Record<OperationKey, MockHandler>>;
+
 type FetchLike = typeof globalThis.fetch;
 
-export interface InstallOptions {
-  /** Operation key → handler. Keys are OpenAPI operations, not app call sites. */
-  readonly handlers: Readonly<Record<OperationKey, MockHandler>>;
-  /** Base path the generated client posts to. */
-  readonly baseUrl?: string;
+/** Where and how {@link installApiMock} intercepts. */
+export interface InstallApiMockOptions {
+  readonly handlers: MockHandlers;
+  /** Base path the generated client posts to, e.g. `/purchases-api`. */
+  readonly baseUrl: string;
   /** Where to install; injectable so a test can drive its own object. */
   readonly target?: { fetch: FetchLike };
-  /** Called for a request the contract declares no operation for. */
+  /** Called for a request under `baseUrl` that no handler key accepts. */
   readonly onUnhandled?: (method: string, path: string) => void;
 }
 
-const DEFAULT_BASE_URL = '/purchases-api';
-
 /**
- * The body an unhandled operation answers with.
- *
- * Shaped like the contract's own error (`{ message, code }`) and returned as a
+ * Shaped like the contracts' own error (`{ message, code }`) and returned as a
  * 501 rather than thrown: the app's error paths are what should render, the
  * same way they would against a pillar that had lost a route. A thrown mock
  * would instead surface as a crash in whichever component happened to call
@@ -64,9 +50,8 @@ function unhandled(method: string, path: string): MockResponse {
     body: {
       code: 'MOCK_NOT_IMPLEMENTED',
       message:
-        `No mock handler for '${method} ${path}'. Add one in ` +
-        `src/standalone/mock/handlers.ts — the contract declares it, so the ` +
-        `standalone harness owes it an answer.`,
+        `No mock handler for '${method} ${path}'. The contract declares it, so ` +
+        `the standalone harness owes it an answer.`,
     },
   };
 }
@@ -92,15 +77,33 @@ async function readBody(init: RequestInit | undefined, input: RequestInfo | URL)
   }
 }
 
+function jsonResponse(answer: MockResponse): Response {
+  const status = answer.status ?? 200;
+  const body = answer.body === undefined ? null : JSON.stringify(answer.body);
+  return new Response(body, { status, headers: { 'Content-Type': 'application/json' } });
+}
+
 /**
- * Install the mock over `target.fetch`.
+ * Answer one pillar's REST contract from fixtures instead of the pillar, by
+ * replacing `target.fetch` (default `globalThis`).
+ *
+ * Interception at `fetch` rather than a second client: the generated Hey API
+ * client, its serialisers and the app's own error handling all run exactly as
+ * they do against the real pillar, so what a standalone harness exercises is
+ * the shipping code path and not a parallel one that can drift from it.
+ *
+ * Requests outside `baseUrl` pass through to whatever `fetch` was installed
+ * before, so one call per contract composes: an app that talks to three
+ * pillars installs three mocks, each answering only its own prefix. Restore
+ * them in reverse order.
  *
  * @returns A function restoring the previous `fetch`. Calling it twice is safe.
  */
-export function installPurchasesApiMock(options: InstallOptions): () => void {
-  const { handlers, baseUrl = DEFAULT_BASE_URL, onUnhandled } = options;
+export function installApiMock(options: InstallApiMockOptions): () => void {
+  const { handlers, baseUrl, onUnhandled } = options;
   const target: { fetch: FetchLike } = options.target ?? globalThis;
-  const passThrough: FetchLike = target.fetch.bind(target);
+  const previous = target.fetch;
+  const passThrough: FetchLike = (input, init) => previous.call(target, input, init);
   const keys = Object.keys(handlers);
 
   const mockedFetch: FetchLike = async (input, init) => {
@@ -135,15 +138,6 @@ export function installPurchasesApiMock(options: InstallOptions): () => void {
   return () => {
     if (restored) return;
     restored = true;
-    target.fetch = passThrough;
+    target.fetch = previous;
   };
-}
-
-function jsonResponse(answer: MockResponse): Response {
-  const status = answer.status ?? 200;
-  const body = answer.body === undefined ? null : JSON.stringify(answer.body);
-  return new Response(body, {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
 }
