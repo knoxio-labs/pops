@@ -64,6 +64,7 @@ function snapshotField(entry: VectorField): SnapshotFieldValue {
     traversedItemIds: entry.traversedItemIds,
     revision: entry.revision,
     ...(entry.dependencies === undefined ? {} : { dependencies: entry.dependencies }),
+    ...(entry.missingInputs === undefined ? {} : { missingInputs: entry.missingInputs }),
   };
 }
 
@@ -136,6 +137,7 @@ function expect(
       catalogueRevision: VECTOR_CATALOGUE_REVISION,
       expression: {
         ast,
+        version: vectorCase.expressionVersion ?? 1,
         dependencies: [],
         field: { typeId: 'vector', fieldId: field.fieldId },
         resultType: { kind: field.kind, fixedUnit: field.fixedUnit },

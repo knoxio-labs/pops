@@ -189,6 +189,9 @@ import type {
   TypesManagePatchDraftData,
   TypesManagePatchDraftErrors,
   TypesManagePatchDraftResponses,
+  TypesManagePreviewComputedFieldData,
+  TypesManagePreviewComputedFieldErrors,
+  TypesManagePreviewComputedFieldResponses,
   TypesManagePreviewDraftData,
   TypesManagePreviewDraftErrors,
   TypesManagePreviewDraftResponses,
@@ -1143,6 +1146,29 @@ export const typesManageAbandonDraft = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     url: '/type-catalogue/drafts/{revision}/abandon',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Evaluate a draft computed field on one item, with unsaved operations applied, without writing anything
+ */
+export const typesManagePreviewComputedField = <ThrowOnError extends boolean = false>(
+  options: Options<TypesManagePreviewComputedFieldData, ThrowOnError>
+): RequestResult<
+  TypesManagePreviewComputedFieldResponses,
+  TypesManagePreviewComputedFieldErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).post<
+    TypesManagePreviewComputedFieldResponses,
+    TypesManagePreviewComputedFieldErrors,
+    ThrowOnError
+  >({
+    url: '/type-catalogue/drafts/{revision}/computed-preview',
     ...options,
     headers: {
       'Content-Type': 'application/json',

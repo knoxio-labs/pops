@@ -24,7 +24,7 @@ describe('parseExpression', () => {
   });
 
   it('rejects unknown versions, excess keys, invalid literals and a third reference hop', () => {
-    expect(() => parseExpression(2, { op: 'literal', value: true })).toThrowError(
+    expect(() => parseExpression(3, { op: 'literal', value: true })).toThrowError(
       expect.objectContaining({ code: 'expression_version_unknown' })
     );
     expect(() => parseExpression(1, { op: 'literal', value: true, sql: 'select 1' })).toThrowError(

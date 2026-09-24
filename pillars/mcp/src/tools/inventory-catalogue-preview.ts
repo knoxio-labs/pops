@@ -5,6 +5,7 @@ import {
   requiredPositiveInteger,
 } from './inventory-catalogue-input.js';
 import { catalogueOperationSchema, expressionSchemaDefs } from './inventory-catalogue-schema.js';
+import { INVENTORY_TYPES_MANAGE_SCOPE } from './inventory-catalogue-scopes.js';
 import { toolError } from './utils.js';
 
 import type { ToolDef } from './tool-def.js';
@@ -69,9 +70,13 @@ export const cataloguePreviewDraft: ToolDef = {
   description:
     'Read inventory.catalogue.readDraft first, then validate operations at its exact revisions and return compatibility diagnostics without changing the draft or its revision.draftVersion. Refused with catalogue_draft_conflict when expectedDraftVersion is stale.',
   inputSchema: catalogueDraftOperationInputSchema,
+  scope: INVENTORY_TYPES_MANAGE_SCOPE,
   handler: async (args) => {
     const input = catalogueDraftOperationInput(args);
     if (!input.ok) return toolError(input.error);
-    return mapDraftCallResult(await catalogueClient().manage.previewDraft(input.value));
+    return mapDraftCallResult(
+      await catalogueClient().manage.previewDraft(input.value),
+      INVENTORY_TYPES_MANAGE_SCOPE
+    );
   },
 };

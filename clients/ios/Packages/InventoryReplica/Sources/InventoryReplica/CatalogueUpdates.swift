@@ -26,9 +26,18 @@ internal enum CatalogueUpdates {
         let newId = mint()
         try MutationLogRows.rename(entry.mutationId, to: newId, in: db)
         var held = entry.requeued(as: newId, command: entry.command)
-        held.awaitingCatalogueAfter = entry.catalogueRevision
+        held.awaitingCatalogueAfter = try heldAfter(entry, in: db)
         try MutationLogRows.update(held, in: db)
         return true
+    }
+
+    /// The revision a refused change waits to be moved past: the one it was
+    /// sent with, or, for a change sent with none, the one the replica held
+    /// when the server refused it (0 before any), so only a catalogue this
+    /// phone has not seen yet releases it.
+    private static func heldAfter(_ entry: LogEntry, in db: Database) throws -> Int {
+        if let sent = entry.catalogueRevision { return sent }
+        return try SyncMeta.read(db).catalogueRevision ?? 0
     }
 
     static func hasHeld(in db: Database) throws -> Bool {
@@ -48,7 +57,7 @@ internal enum CatalogueUpdates {
         var touched: Set<EntityRef> = []
         for var entry in try held(in: db) {
             touched.formUnion(entry.touched.union([entry.entity]))
-            let refused = entry.awaitingCatalogueAfter ?? entry.catalogueRevision
+            let refused = try entry.awaitingCatalogueAfter ?? heldAfter(entry, in: db)
             guard let active, active > refused else {
                 try openRepair(
                     for: &entry,

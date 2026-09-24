@@ -1,5 +1,6 @@
 import { catalogueClient } from './inventory-catalogue-client.js';
 import { optionalPositiveInteger } from './inventory-catalogue-input.js';
+import { INVENTORY_TYPES_READ_SCOPE } from './inventory-catalogue-scopes.js';
 import { mapCallResult, reqStr, toolError } from './utils.js';
 
 import type { ToolDef } from './tool-def.js';
@@ -17,10 +18,14 @@ const catalogueGet: ToolDef = {
       },
     },
   },
+  scope: INVENTORY_TYPES_READ_SCOPE,
   handler: async (args) => {
     const revision = optionalPositiveInteger(args, 'revision');
     if (!revision.ok) return toolError(revision.error);
-    return mapCallResult(await catalogueClient().read.catalogue({ revision: revision.value }));
+    return mapCallResult(
+      await catalogueClient().read.catalogue({ revision: revision.value }),
+      INVENTORY_TYPES_READ_SCOPE
+    );
   },
 };
 
@@ -42,6 +47,7 @@ const catalogueGetType: ToolDef = {
     },
     required: ['typeId'],
   },
+  scope: INVENTORY_TYPES_READ_SCOPE,
   handler: async (args) => {
     const typeId = reqStr(args, 'typeId');
     if (typeId === null || !UUID_PATTERN.test(typeId)) {
@@ -53,7 +59,8 @@ const catalogueGetType: ToolDef = {
       await catalogueClient().read.type({
         typeId,
         ...(revision.value !== undefined ? { revision: revision.value } : {}),
-      })
+      }),
+      INVENTORY_TYPES_READ_SCOPE
     );
   },
 };
@@ -73,13 +80,15 @@ const catalogueAudit: ToolDef = {
       },
     },
   },
+  scope: INVENTORY_TYPES_READ_SCOPE,
   handler: async (args) => {
     const before = optionalPositiveInteger(args, 'before');
     if (!before.ok) return toolError(before.error);
     const limit = optionalPositiveInteger(args, 'limit', 500);
     if (!limit.ok) return toolError(limit.error);
     return mapCallResult(
-      await catalogueClient().read.audit({ before: before.value, limit: limit.value })
+      await catalogueClient().read.audit({ before: before.value, limit: limit.value }),
+      INVENTORY_TYPES_READ_SCOPE
     );
   },
 };

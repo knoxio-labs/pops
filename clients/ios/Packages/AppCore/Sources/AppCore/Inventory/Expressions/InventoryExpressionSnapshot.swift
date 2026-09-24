@@ -11,19 +11,37 @@ public enum InventoryExpressionItemState: Hashable, Sendable {
     case deleted
 }
 
-/// Why a read produced no value: the reason, the field that failed, and the
-/// items the read had reached.
+/// One input an unavailable evaluation lacked: `fieldId` on `itemId`, and
+/// why. `reason` is kept verbatim, as the server may add causes (ADR-002 D10).
+public struct InventoryExpressionMissingInput: Codable, Hashable, Sendable {
+    public let reason: String
+    public let fieldId: String
+    public let itemId: String
+
+    public init(reason: String, fieldId: String, itemId: String) {
+        self.reason = reason
+        self.fieldId = fieldId
+        self.itemId = itemId
+    }
+}
+
+/// Why a read produced no value: the reason, the field that failed, the
+/// items the read had reached, and every input it lacked (a `coalesce` names
+/// each argument's; empty when not recorded, which means `failedFieldId`).
 public struct InventoryExpressionUnavailable: Hashable, Sendable {
     public let reason: InventoryValueUnavailableReason
     public let failedFieldId: String
     public let traversedItemIds: [String]
+    public let missingInputs: [InventoryExpressionMissingInput]
 
     public init(
-        reason: InventoryValueUnavailableReason, failedFieldId: String, traversedItemIds: [String]
+        reason: InventoryValueUnavailableReason, failedFieldId: String, traversedItemIds: [String],
+        missingInputs: [InventoryExpressionMissingInput] = []
     ) {
         self.reason = reason
         self.failedFieldId = failedFieldId
         self.traversedItemIds = traversedItemIds
+        self.missingInputs = missingInputs
     }
 }
 

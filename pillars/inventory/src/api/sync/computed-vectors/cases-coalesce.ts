@@ -38,6 +38,61 @@ export const COALESCE_CASES: readonly ExpressionVectorCase[] = [
     items: priced,
   },
   {
+    name: 'coalesce with no value names every missing input and its item',
+    expression: coalesce(read(FIELD.absent), read(FIELD.price, [FIELD.ref]), read(FIELD.count)),
+    kind: 'decimal',
+    items: priced,
+  },
+  {
+    name: 'coalesce names each missing input once',
+    expression: coalesce(read(FIELD.absent), read(FIELD.count), read(FIELD.absent)),
+    kind: 'decimal',
+    items: priced,
+  },
+  {
+    name: 'nested coalesce flattens its missing inputs',
+    expression: coalesce(coalesce(read(FIELD.absent), read(FIELD.count)), read(FIELD.name)),
+    kind: 'decimal',
+    items: priced,
+  },
+  {
+    name: 'coalesce passes on a computed input’s own missing inputs',
+    expression: coalesce(read(FIELD.upstream), read(FIELD.absent)),
+    kind: 'decimal',
+    items: [
+      root(
+        {
+          fieldId: FIELD.upstream,
+          state: 'unavailable',
+          reason: 'reference_missing',
+          failedFieldId: FIELD.price,
+          traversedItemIds: [ITEM.root, ITEM.missing],
+          revision: 3,
+          missingInputs: [
+            { reason: 'missing_dependency', fieldId: FIELD.count, itemId: ITEM.root },
+            { reason: 'reference_missing', fieldId: FIELD.price, itemId: ITEM.missing },
+          ],
+        },
+        field(FIELD.ref, refTo(ITEM.missing))
+      ),
+    ],
+  },
+  {
+    name: 'a computed input without recorded missing inputs names itself',
+    expression: coalesce(read(FIELD.upstream), read(FIELD.absent)),
+    kind: 'decimal',
+    items: [
+      root({
+        fieldId: FIELD.upstream,
+        state: 'unavailable',
+        reason: 'evaluation_error',
+        failedFieldId: FIELD.upstream,
+        traversedItemIds: [ITEM.root],
+        revision: 3,
+      }),
+    ],
+  },
+  {
     name: 'coalesce does not skip an evaluation error',
     expression: coalesce(bin('divide', read(FIELD.price), lit('0')), lit('1')),
     kind: 'decimal',

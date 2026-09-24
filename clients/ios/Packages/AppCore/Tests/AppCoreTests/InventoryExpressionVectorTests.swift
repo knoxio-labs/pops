@@ -61,11 +61,12 @@ internal struct InventoryExpressionVectorTests {
         #expect(actual.catalogueRevision == expected.catalogueRevision, "\(vector.name)")
         #expect(actual.dependencies == expected.dependencies, "\(vector.name)")
         #expect(actual.traversedItemIds == expected.traversedItemIds, "\(vector.name)")
+        #expect(actual.missingInputs == (expected.missingInputs ?? []), "\(vector.name)")
         expectEvaluation(actual.evaluation, expected, vector.name)
         if vector.override == nil {
             let raw = InventoryExpressionEvaluator.evaluate(
-                definition.expression, kind: definition.kind, fixedUnit: definition.fixedUnit,
-                in: snapshot)
+                definition.expression, expressionVersion: definition.expressionVersion,
+                kind: definition.kind, fixedUnit: definition.fixedUnit, in: snapshot)
             var code: String?
             if case .error(let failure, _) = raw { code = failure.rawValue }
             #expect(code == vector.expected.evaluationErrorCode, "\(vector.name)")
@@ -105,7 +106,8 @@ internal struct InventoryExpressionVectorTests {
             fixedUnit: vector.field.fixedUnit,
             allowOverride: vector.field.allowOverride,
             expression: try InventoryExpression.parse(
-                version: vector.expressionVersion, json: vector.expression.json))
+                version: vector.expressionVersion, json: vector.expression.json),
+            expressionVersion: vector.expressionVersion)
     }
 
     private func override(_ vector: ExpressionVectorFile.Vector)

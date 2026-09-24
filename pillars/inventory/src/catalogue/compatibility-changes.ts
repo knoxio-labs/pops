@@ -29,7 +29,10 @@ function addChange(
 function compareType(
   base: PersistedItemType,
   candidate: PersistedItemType,
-  baseKinds: ReadonlySet<string>,
+  context: {
+    readonly baseKinds: ReadonlySet<string>;
+    readonly fieldsHoldingOverrides: ReadonlySet<string>;
+  },
   changes: CatalogueCompatibilityChange[]
 ): void {
   if (base.key.toLowerCase() !== candidate.key.toLowerCase()) {
@@ -51,15 +54,20 @@ function compareType(
       addChange(changes, 'forbidden', field.id, 'published_field_removed');
       continue;
     }
-    changes.push(...comparePersistedFields(field, next));
+    changes.push(...comparePersistedFields(field, next, context.fieldsHoldingOverrides));
   }
-  changes.push(...compareAddedFields(base, candidate, baseKinds));
+  changes.push(...compareAddedFields(base, candidate, context.baseKinds));
 }
 
-/** Collects every compatibility change between two complete catalogue snapshots. */
+/**
+ * Collects every compatibility change between two complete catalogue snapshots.
+ * `fieldsHoldingOverrides` names computed fields on which a live item holds an
+ * override; disabling overrides on one of them needs a migration.
+ */
 export function collectCatalogueChanges(
   base: PersistedCatalogue,
-  candidate: PersistedCatalogue
+  candidate: PersistedCatalogue,
+  fieldsHoldingOverrides: ReadonlySet<string>
 ): CatalogueCompatibilityChange[] {
   const changes: CatalogueCompatibilityChange[] = [];
   if (candidate.revision.baseRevision !== base.revision.revision) {
@@ -88,7 +96,7 @@ export function collectCatalogueChanges(
       addChange(changes, 'forbidden', type.id, 'published_type_removed');
       continue;
     }
-    compareType(type, next, baseKinds, changes);
+    compareType(type, next, { baseKinds, fieldsHoldingOverrides }, changes);
   }
   for (const type of candidate.types) {
     const sameKey = base.types.find((entry) => entry.key.toLowerCase() === type.key.toLowerCase());

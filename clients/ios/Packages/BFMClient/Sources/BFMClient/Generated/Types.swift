@@ -21041,6 +21041,59 @@ internal enum Operations {
                                     internal var failedFieldId: Swift.String
                                     /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case3/fieldId`.
                                     internal var fieldId: Swift.String
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case3/MissingInputsPayload`.
+                                    internal struct MissingInputsPayloadPayload: Codable, Hashable, Sendable {
+                                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case3/MissingInputsPayload/fieldId`.
+                                        internal var fieldId: Swift.String
+                                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case3/MissingInputsPayload/itemId`.
+                                        internal var itemId: Swift.String
+                                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case3/MissingInputsPayload/reason`.
+                                        internal var reason: Swift.String
+                                        /// Creates a new `MissingInputsPayloadPayload`.
+                                        ///
+                                        /// - Parameters:
+                                        ///   - fieldId:
+                                        ///   - itemId:
+                                        ///   - reason:
+                                        internal init(
+                                            fieldId: Swift.String,
+                                            itemId: Swift.String,
+                                            reason: Swift.String
+                                        ) {
+                                            self.fieldId = fieldId
+                                            self.itemId = itemId
+                                            self.reason = reason
+                                        }
+                                        internal enum CodingKeys: String, CodingKey {
+                                            case fieldId
+                                            case itemId
+                                            case reason
+                                        }
+                                        internal init(from decoder: any Swift.Decoder) throws {
+                                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                                            self.fieldId = try container.decode(
+                                                Swift.String.self,
+                                                forKey: .fieldId
+                                            )
+                                            self.itemId = try container.decode(
+                                                Swift.String.self,
+                                                forKey: .itemId
+                                            )
+                                            self.reason = try container.decode(
+                                                Swift.String.self,
+                                                forKey: .reason
+                                            )
+                                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                                "fieldId",
+                                                "itemId",
+                                                "reason"
+                                            ])
+                                        }
+                                    }
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case3/missingInputs`.
+                                    internal typealias MissingInputsPayload = [Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case3Payload.MissingInputsPayloadPayload]
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case3/missingInputs`.
+                                    internal var missingInputs: Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case3Payload.MissingInputsPayload?
                                     /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case3/reason`.
                                     internal var reason: Swift.String
                                     /// - Remark: Generated from `#/paths/mobile/inventory/sync/changes/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case3/source`.
@@ -21064,6 +21117,7 @@ internal enum Operations {
                                     ///   - dependencies:
                                     ///   - failedFieldId:
                                     ///   - fieldId:
+                                    ///   - missingInputs:
                                     ///   - reason:
                                     ///   - source:
                                     ///   - state:
@@ -21073,6 +21127,7 @@ internal enum Operations {
                                         dependencies: Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case3Payload.DependenciesPayload,
                                         failedFieldId: Swift.String,
                                         fieldId: Swift.String,
+                                        missingInputs: Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case3Payload.MissingInputsPayload? = nil,
                                         reason: Swift.String,
                                         source: Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case3Payload.SourcePayload,
                                         state: Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case3Payload.StatePayload,
@@ -21082,6 +21137,7 @@ internal enum Operations {
                                         self.dependencies = dependencies
                                         self.failedFieldId = failedFieldId
                                         self.fieldId = fieldId
+                                        self.missingInputs = missingInputs
                                         self.reason = reason
                                         self.source = source
                                         self.state = state
@@ -21092,6 +21148,7 @@ internal enum Operations {
                                         case dependencies
                                         case failedFieldId
                                         case fieldId
+                                        case missingInputs
                                         case reason
                                         case source
                                         case state
@@ -21115,6 +21172,10 @@ internal enum Operations {
                                             Swift.String.self,
                                             forKey: .fieldId
                                         )
+                                        self.missingInputs = try container.decodeIfPresent(
+                                            Operations.MobileInventory_changes.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case3Payload.MissingInputsPayload.self,
+                                            forKey: .missingInputs
+                                        )
                                         self.reason = try container.decode(
                                             Swift.String.self,
                                             forKey: .reason
@@ -21136,6 +21197,7 @@ internal enum Operations {
                                             "dependencies",
                                             "failedFieldId",
                                             "fieldId",
+                                            "missingInputs",
                                             "reason",
                                             "source",
                                             "state",
@@ -23702,6 +23764,59 @@ internal enum Operations {
                                     internal var failedFieldId: Swift.String
                                     /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case3/fieldId`.
                                     internal var fieldId: Swift.String
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case3/MissingInputsPayload`.
+                                    internal struct MissingInputsPayloadPayload: Codable, Hashable, Sendable {
+                                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case3/MissingInputsPayload/fieldId`.
+                                        internal var fieldId: Swift.String
+                                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case3/MissingInputsPayload/itemId`.
+                                        internal var itemId: Swift.String
+                                        /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case3/MissingInputsPayload/reason`.
+                                        internal var reason: Swift.String
+                                        /// Creates a new `MissingInputsPayloadPayload`.
+                                        ///
+                                        /// - Parameters:
+                                        ///   - fieldId:
+                                        ///   - itemId:
+                                        ///   - reason:
+                                        internal init(
+                                            fieldId: Swift.String,
+                                            itemId: Swift.String,
+                                            reason: Swift.String
+                                        ) {
+                                            self.fieldId = fieldId
+                                            self.itemId = itemId
+                                            self.reason = reason
+                                        }
+                                        internal enum CodingKeys: String, CodingKey {
+                                            case fieldId
+                                            case itemId
+                                            case reason
+                                        }
+                                        internal init(from decoder: any Swift.Decoder) throws {
+                                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                                            self.fieldId = try container.decode(
+                                                Swift.String.self,
+                                                forKey: .fieldId
+                                            )
+                                            self.itemId = try container.decode(
+                                                Swift.String.self,
+                                                forKey: .itemId
+                                            )
+                                            self.reason = try container.decode(
+                                                Swift.String.self,
+                                                forKey: .reason
+                                            )
+                                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                                "fieldId",
+                                                "itemId",
+                                                "reason"
+                                            ])
+                                        }
+                                    }
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case3/missingInputs`.
+                                    internal typealias MissingInputsPayload = [Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case3Payload.MissingInputsPayloadPayload]
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case3/missingInputs`.
+                                    internal var missingInputs: Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case3Payload.MissingInputsPayload?
                                     /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case3/reason`.
                                     internal var reason: Swift.String
                                     /// - Remark: Generated from `#/paths/mobile/inventory/sync/snapshot/GET/responses/200/content/json/ItemsPayload/ComputedValuesPayload/case3/source`.
@@ -23725,6 +23840,7 @@ internal enum Operations {
                                     ///   - dependencies:
                                     ///   - failedFieldId:
                                     ///   - fieldId:
+                                    ///   - missingInputs:
                                     ///   - reason:
                                     ///   - source:
                                     ///   - state:
@@ -23734,6 +23850,7 @@ internal enum Operations {
                                         dependencies: Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case3Payload.DependenciesPayload,
                                         failedFieldId: Swift.String,
                                         fieldId: Swift.String,
+                                        missingInputs: Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case3Payload.MissingInputsPayload? = nil,
                                         reason: Swift.String,
                                         source: Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case3Payload.SourcePayload,
                                         state: Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case3Payload.StatePayload,
@@ -23743,6 +23860,7 @@ internal enum Operations {
                                         self.dependencies = dependencies
                                         self.failedFieldId = failedFieldId
                                         self.fieldId = fieldId
+                                        self.missingInputs = missingInputs
                                         self.reason = reason
                                         self.source = source
                                         self.state = state
@@ -23753,6 +23871,7 @@ internal enum Operations {
                                         case dependencies
                                         case failedFieldId
                                         case fieldId
+                                        case missingInputs
                                         case reason
                                         case source
                                         case state
@@ -23776,6 +23895,10 @@ internal enum Operations {
                                             Swift.String.self,
                                             forKey: .fieldId
                                         )
+                                        self.missingInputs = try container.decodeIfPresent(
+                                            Operations.MobileInventory_snapshot.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.ComputedValuesPayloadPayload.Case3Payload.MissingInputsPayload.self,
+                                            forKey: .missingInputs
+                                        )
                                         self.reason = try container.decode(
                                             Swift.String.self,
                                             forKey: .reason
@@ -23797,6 +23920,7 @@ internal enum Operations {
                                             "dependencies",
                                             "failedFieldId",
                                             "fieldId",
+                                            "missingInputs",
                                             "reason",
                                             "source",
                                             "state",

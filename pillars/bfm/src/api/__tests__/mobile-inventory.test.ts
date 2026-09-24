@@ -213,6 +213,20 @@ describe('computed values', () => {
       dependencies: [],
       traversedItemIds: [itemId, 'item-2'],
     },
+    {
+      fieldId: computedFieldId,
+      source: 'computed',
+      catalogueRevision: 3,
+      state: 'unavailable',
+      reason: 'missing_dependency',
+      failedFieldId: inputFieldId,
+      missingInputs: [
+        { reason: 'missing_dependency', fieldId: computedFieldId, itemId },
+        { reason: 'reference_deleted', fieldId: inputFieldId, itemId: 'item-2' },
+      ],
+      dependencies: [],
+      traversedItemIds: [itemId, 'item-2'],
+    },
   ];
 
   function snapshotWith(item: Record<string, unknown>) {

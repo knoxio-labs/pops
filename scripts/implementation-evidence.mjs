@@ -9,12 +9,13 @@
  * separately names its synced `prIssue`; it must not be mistaken for the
  * implementation ticket. Several PRs may point at the same implementation
  * ticket. Every declared criterion receives exactly one evidence record with
- * its implementation, test, revision, environment, result, and limitations.
+ * its implementation, test, revision, environment, status (an enumerated
+ * `passed` / `failed` / `skipped`), free-text detail, and limitations.
  *
  * `partial` and `deferred` records require a different Huly ticket and a
- * limitation. A `complete` record whose result reads as failed or skipped is
- * rejected outright: the declared state can never override what the result
- * actually says happened. Duplicate evidence is ambiguous and never becomes
+ * limitation. A `complete` record whose `status` is `failed` or `skipped` is
+ * rejected outright: the declared state can never override what the
+ * evidence's own `status` says happened. Duplicate evidence is ambiguous and never becomes
  * automatic completion. A human may record an override with both an approver
  * and a rationale, but the resulting verdict still says that automation is
  * blocked: only a person may perform the state change.
@@ -31,7 +32,7 @@ import { readFlag } from './cli-flags.mjs';
 
 const TICKET_RE = /^[A-Z][A-Z0-9_]*-\d+$/u;
 const REVISION_RE = /^[0-9a-f]{7,64}$/iu;
-const FAILING_RESULT_RE = /^(failed|failure|fail|skipped|skip)\b/iu;
+const EVIDENCE_STATUSES = /** @type {const} */ (['passed', 'failed', 'skipped']);
 
 export const HELP = `Usage: node scripts/implementation-evidence.mjs --evidence <packet.json> [--json]
        node scripts/implementation-evidence.mjs --self-test
@@ -39,16 +40,17 @@ export const HELP = `Usage: node scripts/implementation-evidence.mjs --evidence 
 Validates a read-only packet for one canonical implementation ticket. Every PR
 must name that ticket and a different PR-sync issue. Each criterion needs one
 evidence record containing implementation, test, revision, environment,
-result, limitations, and state. Partial or deferred work must name a different
-follow-up ticket. A complete record needs a passing result: a failed or
-skipped result is rejected even when state says complete. Ambiguous or
-incomplete evidence never authorizes automation; an override records a named
-human rationale but remains human-only.`;
+status (passed, failed, or skipped), detail, limitations, and state. Partial
+or deferred work must name a different follow-up ticket. A complete record
+needs status "passed": "failed" or "skipped" is rejected even when state says
+complete. Ambiguous or incomplete evidence never authorizes automation; an
+override records a named human rationale but remains human-only.`;
 
 /**
  * @typedef {'complete' | 'partial' | 'deferred'} EvidenceState
+ * @typedef {'passed' | 'failed' | 'skipped'} EvidenceStatus
  * @typedef {{ id: string, description: string }} Criterion
- * @typedef {{ criterion: string, implementation: string, test: string, revision: string, environment: string, result: string, limitations: string, state: EvidenceState, deferredTicket?: string }} CriterionEvidence
+ * @typedef {{ criterion: string, implementation: string, test: string, revision: string, environment: string, status: EvidenceStatus, detail: string, limitations: string, state: EvidenceState, deferredTicket?: string }} CriterionEvidence
  * @typedef {{ number: number, implementationTicket: string, prIssue: string, evidence: CriterionEvidence[] }} PullRequestEvidence
  * @typedef {{ criterion: string, approvedBy: string, rationale: string }} HumanOverride
  * @typedef {{ implementationTicket: string, criteria: Criterion[], pullRequests: PullRequestEvidence[], overrides?: HumanOverride[] }} EvidencePacket
@@ -126,18 +128,33 @@ function evidenceState(value, where) {
 }
 
 /**
- * A record marked `complete` asserts the criterion passed. A failed or
- * skipped result is never completion evidence, regardless of the declared
- * state: the state alone cannot promise an outcome the result contradicts.
+ * @param {unknown} value
+ * @param {string} where
+ * @returns {EvidenceStatus}
+ */
+function evidenceStatus(value, where) {
+  if (
+    typeof value !== 'string' ||
+    !EVIDENCE_STATUSES.includes(/** @type {EvidenceStatus} */ (value))
+  ) {
+    throw new Error(`${where}.status must be one of ${EVIDENCE_STATUSES.join(', ')}`);
+  }
+  return /** @type {EvidenceStatus} */ (value);
+}
+
+/**
+ * A record marked `complete` asserts the criterion passed. A `failed` or
+ * `skipped` status is never completion evidence, regardless of the declared
+ * state: the state alone cannot promise an outcome the status contradicts.
  *
- * @param {string} value
+ * @param {EvidenceStatus} value
  * @param {EvidenceState} state
  * @param {string} where
- * @returns {string}
+ * @returns {EvidenceStatus}
  */
-function completionResult(value, state, where) {
-  if (state === 'complete' && FAILING_RESULT_RE.test(value)) {
-    throw new Error(`${where}.result is complete but reports "${value}", not a passing result`);
+function completionStatus(value, state, where) {
+  if (state === 'complete' && value !== 'passed') {
+    throw new Error(`${where}.status is complete but reports "${value}", not "passed"`);
   }
   return value;
 }
@@ -244,11 +261,12 @@ export function readEvidencePacket(parsed) {
             'environment',
             `PR #${number}.evidence[${evidenceIndex}]`
           ),
-          result: completionResult(
-            requiredText(item, 'result', `PR #${number}.evidence[${evidenceIndex}]`),
+          status: completionStatus(
+            evidenceStatus(item['status'], `PR #${number}.evidence[${evidenceIndex}]`),
             state,
             `PR #${number}.evidence[${evidenceIndex}]`
           ),
+          detail: requiredText(item, 'detail', `PR #${number}.evidence[${evidenceIndex}]`),
           limitations: requiredText(
             item,
             'limitations',
@@ -395,7 +413,8 @@ function main() {
               test: 'test',
               revision: 'abcdef1',
               environment: 'local',
-              result: 'passed',
+              status: 'passed',
+              detail: 'self-test',
               limitations: 'none',
               state: 'complete',
             },

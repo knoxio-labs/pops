@@ -36,11 +36,11 @@ internal struct InventoryExpressionReader {
         _ dependencies: inout [InventoryValueDependency]
     ) -> Result<InventoryExpressionValue, Stopped> {
         if let reason = Self.reason(for: snapshot.item(itemId)) {
-            return .failure(Stopped(unavailable(reason, fieldId, traversed, dependencies)))
+            return .failure(Stopped(unavailable(reason, fieldId, itemId, traversed, dependencies)))
         }
         guard let field = snapshot.field(itemId: itemId, fieldId: fieldId) else {
             return .failure(
-                Stopped(unavailable(.missingDependency, fieldId, traversed, dependencies)))
+                Stopped(unavailable(.missingDependency, fieldId, itemId, traversed, dependencies)))
         }
         switch field {
         case .value(let value, let revision, let inherited):
@@ -52,21 +52,37 @@ internal struct InventoryExpressionReader {
             dependencies.append(
                 InventoryValueDependency(itemId: itemId, fieldId: fieldId, revision: revision))
             dependencies.append(contentsOf: inherited)
+            let missingInputs =
+                failure.missingInputs.isEmpty
+                ? [
+                    InventoryExpressionMissingInput(
+                        reason: failure.reason.rawValue, fieldId: failure.failedFieldId,
+                        itemId: failure.traversedItemIds.last ?? itemId)
+                ]
+                : failure.missingInputs
             return .failure(
                 Stopped(
-                    unavailable(
-                        failure.reason, failure.failedFieldId, failure.traversedItemIds,
-                        dependencies)))
+                    .unavailable(
+                        InventoryExpressionUnavailable(
+                            reason: failure.reason, failedFieldId: failure.failedFieldId,
+                            traversedItemIds: failure.traversedItemIds,
+                            missingInputs: missingInputs),
+                        dependencies: InventoryValueDependency.unique(dependencies))))
         }
     }
 
+    /// A read that stopped on `itemId`, whose `fieldId` it could not read.
     private func unavailable(
-        _ reason: InventoryValueUnavailableReason, _ fieldId: String, _ traversed: [String],
-        _ dependencies: [InventoryValueDependency]
+        _ reason: InventoryValueUnavailableReason, _ fieldId: String, _ itemId: String,
+        _ traversed: [String], _ dependencies: [InventoryValueDependency]
     ) -> Raw {
         .unavailable(
             InventoryExpressionUnavailable(
-                reason: reason, failedFieldId: fieldId, traversedItemIds: traversed),
+                reason: reason, failedFieldId: fieldId, traversedItemIds: traversed,
+                missingInputs: [
+                    InventoryExpressionMissingInput(
+                        reason: reason.rawValue, fieldId: fieldId, itemId: itemId)
+                ]),
             dependencies: InventoryValueDependency.unique(dependencies))
     }
 

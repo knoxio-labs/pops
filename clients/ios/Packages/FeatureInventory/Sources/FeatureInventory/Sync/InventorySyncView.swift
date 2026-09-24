@@ -85,34 +85,49 @@ internal struct InventorySyncView: View {
     }
 
     private func header(_ page: InventorySyncPage) -> some View {
-        Label {
-            Text(statusLine(page))
-                .foregroundStyle(Color.popsMutedForeground)
-                .contentTransition(.numericText())
-        } icon: {
-            statusSymbol(page).image
-                .foregroundStyle(Color.popsMutedForeground)
+        let status = InventorySyncHeaderStatus.derive(page: page)
+        let isStuck = if case .stuck = status { true } else { false }
+        return HStack(spacing: PopsSpacing.sm) {
+            Label {
+                Text(Self.statusLine(status))
+                    .foregroundStyle(Color.popsMutedForeground)
+                    .contentTransition(.numericText())
+            } icon: {
+                Self.statusSymbol(status).image
+                    .foregroundStyle(isStuck ? Color.popsDestructive : Color.popsMutedForeground)
+            }
+            .accessibilityElement(children: .combine)
+            if isStuck {
+                Spacer(minLength: PopsSpacing.sm)
+                Button("Try again") { Task { await model.refresh() } }
+                    .buttonStyle(.borderless)
+                    .frame(minHeight: PopsSize.touchTarget)
+            }
         }
         .font(.popsSubheadline)
-        .accessibilityElement(children: .combine)
     }
 
-    private func statusLine(_ page: InventorySyncPage) -> String {
-        switch InventorySyncHeaderStatus.derive(page: page) {
+    internal static func statusLine(_ status: InventorySyncHeaderStatus) -> String {
+        switch status {
         case .online(let since):
             since.map { "Synced \(InventoryRelativeTime.text($0))" } ?? "Synced"
         case .offline(let since):
             since.map { "Offline · synced \(InventoryRelativeTime.text($0))" } ?? "Offline"
         case .syncing(let count):
             "Syncing \(count) \(count == 1 ? "change" : "changes")"
+        case .stuck(let waiting) where waiting > 0:
+            "Can't send \(waiting) \(waiting == 1 ? "change" : "changes")"
+        case .stuck:
+            "Changes can't be sent"
         }
     }
 
-    private func statusSymbol(_ page: InventorySyncPage) -> InventorySymbol {
-        switch InventorySyncHeaderStatus.derive(page: page) {
+    private static func statusSymbol(_ status: InventorySyncHeaderStatus) -> InventorySymbol {
+        switch status {
         case .online: .synced
         case .offline: .stale
         case .syncing: .queued
+        case .stuck: .attention
         }
     }
 

@@ -15,7 +15,7 @@ import { SyncItemSchema } from '../../contract/rest-sync-schemas.js';
 import { runMutation } from '../../domain/commands/index.js';
 import {
   openSyncHarness,
-  PROTOCOL,
+  PROTOCOL_2,
   send,
   wireMutation,
   type SyncHarness,
@@ -44,7 +44,7 @@ interface Fixture {
 }
 
 async function apply(target: SyncHarness, mutation: WireMutation): Promise<void> {
-  const response = await send(target.api, [mutation]);
+  const response = await send(target.api, [mutation], PROTOCOL_2);
   expect(response.status).toBe(200);
   expect(response.body.outcomes[0]).toMatchObject({ status: 'applied' });
 }
@@ -121,20 +121,20 @@ interface Feed {
 }
 
 async function epochOf(target: SyncHarness): Promise<string> {
-  const response = await target.api.get('/sync/snapshot').set(PROTOCOL).query({ limit: 1 });
+  const response = await target.api.get('/sync/snapshot').set(PROTOCOL_2).query({ limit: 1 });
   expect(response.status).toBe(200);
   return String(response.body.epoch);
 }
 
 async function highWater(target: SyncHarness): Promise<number> {
-  const response = await target.api.get('/sync/snapshot').set(PROTOCOL).query({ limit: 1 });
+  const response = await target.api.get('/sync/snapshot').set(PROTOCOL_2).query({ limit: 1 });
   return Number(response.body.highWaterSeq);
 }
 
 async function changesSince(target: SyncHarness, since: number): Promise<Feed> {
   const response = await target.api
     .get('/sync/changes')
-    .set(PROTOCOL)
+    .set(PROTOCOL_2)
     .query({ since, epoch: await epochOf(target), limit: 500 });
   expect(response.status).toBe(200);
   return {
@@ -308,7 +308,7 @@ describe('re-sending computed dependents', () => {
     const afterFirst = await highWater(f.target);
     const kitSeq = f.target.db.raw.prepare('SELECT seq FROM items WHERE id = ?').get(f.kitId);
 
-    const retried = await send(f.target.api, [mutation]);
+    const retried = await send(f.target.api, [mutation], PROTOCOL_2);
 
     expect(retried.status).toBe(200);
     expect(retried.body.outcomes[0]).toMatchObject({ status: 'applied', revision: 2 });
@@ -345,9 +345,11 @@ describe('re-sending computed dependents', () => {
     const f = await setup();
     f.target.db.raw.exec('DROP TABLE item_computed_dependencies');
 
-    const response = await send(f.target.api, [
-      edit(f, f.partId, 1, [{ fieldId: f.catalogue.weightFieldId, values: [7] }]),
-    ]);
+    const response = await send(
+      f.target.api,
+      [edit(f, f.partId, 1, [{ fieldId: f.catalogue.weightFieldId, values: [7] }])],
+      PROTOCOL_2
+    );
 
     expect(response.status).toBe(500);
     expect(

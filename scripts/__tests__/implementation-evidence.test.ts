@@ -13,7 +13,8 @@ type EvidenceInput = {
   test: string;
   revision: string;
   environment: string;
-  result: string;
+  status: 'passed' | 'failed' | 'skipped';
+  detail: string;
   limitations: string;
   state: 'complete' | 'partial' | 'deferred';
   deferredTicket?: string;
@@ -51,7 +52,8 @@ const packet = (
           test: 'scripts/__tests__/implementation-evidence.test.ts',
           revision: 'abcdef1234567',
           environment: 'local Node 24',
-          result: 'passed',
+          status: 'passed',
+          detail: 'vitest run scripts/__tests__/implementation-evidence.test.ts',
           limitations: 'none',
           state: 'complete',
         },
@@ -68,7 +70,8 @@ const packet = (
           test: 'scripts/__tests__/implementation-evidence.test.ts',
           revision: '0123456789abc',
           environment: 'local Node 24',
-          result: 'passed',
+          status: 'passed',
+          detail: 'vitest run scripts/__tests__/implementation-evidence.test.ts',
           limitations: 'none',
           state: 'complete',
         },
@@ -94,7 +97,8 @@ describe('implementation evidence', () => {
       test: 'scripts/__tests__/implementation-evidence.test.ts',
       revision: 'abcdef1234567',
       environment: 'local Node 24',
-      result: 'passed',
+      status: 'passed',
+      detail: 'vitest run scripts/__tests__/implementation-evidence.test.ts',
       limitations: 'none',
     });
     expect(assessImplementationEvidence(parsed)).toEqual({
@@ -116,7 +120,7 @@ describe('implementation evidence', () => {
     expect(() => readEvidencePacket(input)).toThrow(/canonical implementation ticket/u);
   });
 
-  it.each(['implementation', 'test', 'revision', 'environment', 'result', 'limitations'])(
+  it.each(['implementation', 'test', 'revision', 'environment', 'detail', 'limitations'])(
     'refuses evidence without %s',
     (field) => {
       const input = packet();
@@ -125,11 +129,18 @@ describe('implementation evidence', () => {
       if (field === 'test') evidence.test = '';
       if (field === 'revision') evidence.revision = '';
       if (field === 'environment') evidence.environment = '';
-      if (field === 'result') evidence.result = '';
+      if (field === 'detail') evidence.detail = '';
       if (field === 'limitations') evidence.limitations = '';
       expect(() => readEvidencePacket(input)).toThrow(new RegExp(`\\.${field} must be`, 'u'));
     }
   );
+
+  it.each(['', 'passing'])('refuses evidence with an invalid status %s', (invalidStatus) => {
+    const input = packet();
+    const evidence: Record<string, unknown> = input.pullRequests[0]!.evidence[0]!;
+    evidence['status'] = invalidStatus;
+    expect(() => readEvidencePacket(input)).toThrow(/\.status must be one of/u);
+  });
 
   it('refuses a non-git revision rather than reporting an untraceable result', () => {
     const input = packet();
@@ -166,40 +177,28 @@ describe('implementation evidence', () => {
     }
   );
 
-  it.each(['failed', 'failure', 'skipped', 'fail', 'skip'])(
-    'refuses a complete record whose result reads as %s',
-    (result) => {
+  it.each(['failed', 'skipped'] as const)(
+    'refuses a complete record whose status is %s, whatever its free-text detail says',
+    (status) => {
       const input = packet();
-      input.pullRequests[0]!.evidence[0]!.result = result;
-      expect(() => readEvidencePacket(input)).toThrow(/not a passing result/u);
+      input.pullRequests[0]!.evidence[0]!.status = status;
+      input.pullRequests[0]!.evidence[0]!.detail = 'passed: all green';
+      expect(() => readEvidencePacket(input)).toThrow(/\.status is complete but reports/u);
     }
   );
 
-  it('refuses a complete record whose result starts with a failing word regardless of case or detail', () => {
+  it('accepts a complete record whose free-text detail merely mentions a prior failure that was since fixed', () => {
     const input = packet();
-    input.pullRequests[0]!.evidence[0]!.result = 'FAILED: assertion mismatch on line 42';
-    expect(() => readEvidencePacket(input)).toThrow(/not a passing result/u);
-  });
-
-  it('accepts a complete record whose result merely mentions a prior failure that was since fixed', () => {
-    const input = packet();
-    input.pullRequests[0]!.evidence[0]!.result = 'passed after fixing the earlier failed run';
+    input.pullRequests[0]!.evidence[0]!.status = 'passed';
+    input.pullRequests[0]!.evidence[0]!.detail = 'passed after fixing the earlier failed run';
     expect(() => readEvidencePacket(input)).not.toThrow();
   });
 
-  it.each(['error: none found, all green', 'blocked column renders correctly, verified'])(
-    'accepts a passing result that happens to start with an ambiguous word like %s',
-    (result) => {
-      const input = packet();
-      input.pullRequests[0]!.evidence[0]!.result = result;
-      expect(() => readEvidencePacket(input)).not.toThrow();
-    }
-  );
-
-  it('allows a failed or skipped result for non-complete evidence states', () => {
+  it('allows a failed or skipped status for non-complete evidence states', () => {
     const input = packet();
     input.pullRequests[0]!.evidence[0]!.state = 'partial';
-    input.pullRequests[0]!.evidence[0]!.result = 'failed on the concurrent-write case';
+    input.pullRequests[0]!.evidence[0]!.status = 'failed';
+    input.pullRequests[0]!.evidence[0]!.detail = 'failed on the concurrent-write case';
     input.pullRequests[0]!.evidence[0]!.deferredTicket = 'POPS-6000';
     const assessment = assessImplementationEvidence(readEvidencePacket(input));
     expect(assessment).toMatchObject({ status: 'blocked', canAutomate: false });

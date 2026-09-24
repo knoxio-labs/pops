@@ -1,5 +1,6 @@
-import type { BinaryOp, ExpressionNode, LiteralValue } from '@/kit/inventory/computed-editor/model';
 import type { ExpressionIssue } from '@/kit/inventory/computed-editor/scenario';
+
+import type { BinaryOp, ExpressionNode, LiteralValue } from '@pops/app-inventory/design';
 
 const EMPTY: ExpressionNode = { op: 'empty' };
 
@@ -18,7 +19,7 @@ function binary(op: BinaryOp, left: ExpressionNode, right: ExpressionNode): Expr
 /** Replacement value as published: the bundle's quote when there is one, else price × count. */
 export const replacementValue: ExpressionNode = {
   op: 'coalesce',
-  args: [
+  values: [
     read('replacement_quote', 'part_of'),
     binary('multiply', read('unit_price'), read('package_count')),
   ],
@@ -27,7 +28,7 @@ export const replacementValue: ExpressionNode = {
 /** Replacement value edited to read the bundle's computed per-item price, closing a cycle. */
 export const replacementValueCycle: ExpressionNode = {
   op: 'coalesce',
-  args: [
+  values: [
     read('per_item_price', 'part_of'),
     binary('multiply', read('unit_price'), read('package_count')),
   ],

@@ -1,6 +1,7 @@
 import type {
   EvaluatedDependency,
   ExpressionEvaluation,
+  ExpressionMissingInput,
   ExpressionUnavailableReason,
 } from './expression-types.js';
 
@@ -18,18 +19,22 @@ export function uniqueEvaluatedDependencies(
   });
 }
 
+/** Why an evaluation is unavailable, before its dependency provenance. */
+export interface UnavailableFailure {
+  readonly reason: ExpressionUnavailableReason;
+  readonly fieldId: string;
+  readonly traversedItemIds: readonly string[];
+  readonly missingInputs: readonly ExpressionMissingInput[];
+}
+
 /** Constructs an unavailable evaluation with stable dependency provenance. */
 export function unavailableEvaluation(
-  reason: ExpressionUnavailableReason,
-  fieldId: string,
-  traversedItemIds: readonly string[],
+  failure: UnavailableFailure,
   dependencies: readonly EvaluatedDependency[]
 ): ExpressionEvaluation {
   return {
     state: 'unavailable',
-    reason,
-    fieldId,
-    traversedItemIds,
+    ...failure,
     dependencies: uniqueEvaluatedDependencies(dependencies),
   };
 }

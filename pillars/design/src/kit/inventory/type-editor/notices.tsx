@@ -1,5 +1,5 @@
 import { catalogueRevision } from '@/fixtures/inventory-type-catalogue';
-import { Archive, ArrowRight, Copy, Database, RefreshCw, TriangleAlert } from 'lucide-react';
+import { Archive, Copy, RefreshCw, TriangleAlert } from 'lucide-react';
 
 import { Alert, AlertDescription, AlertTitle, Button } from '@pops/ui';
 
@@ -43,26 +43,6 @@ function DestructiveNotice() {
   );
 }
 
-function MigrationNotice() {
-  return (
-    <Alert>
-      <ArrowRight />
-      <AlertTitle>Replacement ready; migration required</AlertTitle>
-      <AlertDescription>
-        Map Connectors to Connection standard with the named migration{' '}
-        <span className="font-mono">electronics-connectors-v2</span>. The dry run changes 118 items
-        and preserves 73 archived values.
-      </AlertDescription>
-      <div className="col-start-2 mt-2">
-        <Button variant="outline" size="sm">
-          <Database className="h-4 w-4" />
-          Review migration
-        </Button>
-      </div>
-    </Alert>
-  );
-}
-
 function ArchiveNotice() {
   return (
     <Alert variant="destructive">
@@ -85,14 +65,16 @@ function ArchiveNotice() {
   );
 }
 
-/** Blocking or migration guidance for catalogue changes that cannot save normally. */
+/**
+ * Blocking guidance for catalogue changes that cannot save normally. There is
+ * no migration notice: the web editor never publishes migrations.
+ */
 export function BlockingNotice({
   mode,
 }: {
-  mode: Extract<TypeEditorMode, 'stale' | 'destructive' | 'migration' | 'archive'>;
+  mode: Extract<TypeEditorMode, 'stale' | 'destructive' | 'archive'>;
 }) {
   if (mode === 'stale') return <StaleNotice />;
   if (mode === 'destructive') return <DestructiveNotice />;
-  if (mode === 'migration') return <MigrationNotice />;
   return <ArchiveNotice />;
 }
