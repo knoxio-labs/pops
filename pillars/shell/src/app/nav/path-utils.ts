@@ -3,8 +3,8 @@
  *
  * All nav components (AppRail, PageNav, Sidebar) must use these helpers
  * to avoid prefix-collision bugs (e.g. /fin matching /finance) and the
- * sibling-prefix double-highlight bug (e.g. /cerebrum/admin/prompts
- * matching both `/admin` and `/admin/prompts`).
+ * sibling-prefix double-highlight bug (e.g. /example/settings/prompts
+ * matching both `/settings` and `/settings/prompts`).
  */
 import type { AppNavConfig, AppNavItem } from './types.js';
 

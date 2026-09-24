@@ -41,7 +41,7 @@ interface CaptureModalProps {
 
 /**
  * The descriptor's `labelKey` is wire-shaped (e.g.
- * `'cerebrum.captureOverlay.label'`) — the first segment is the i18n
+ * `'example.captureOverlay.label'`) — the first segment is the i18n
  * namespace, the rest is the key. Splitting here keeps each contributing
  * pillar's catalog ownership intact without coupling the shell to any
  * one namespace.
