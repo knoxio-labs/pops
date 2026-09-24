@@ -30,9 +30,9 @@
  */
 const GENERATED_CLIENT = '(^|/)[a-z0-9-]+-api(/|-runtime-config\\.ts$)';
 
-const { discoverPillarPackageIds } = require('./scripts/ci/discover-pillar-package-ids.cjs');
+const { discoverPillarPackageIdsOrThrow } = require('./scripts/ci/discover-pillar-package-ids.cjs');
 
-const PILLAR_PACKAGE_IDS = discoverPillarPackageIds(__dirname);
+const PILLAR_PACKAGE_IDS = discoverPillarPackageIdsOrThrow(__dirname);
 
 module.exports = {
   forbidden: [

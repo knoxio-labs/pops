@@ -34,4 +34,28 @@ function discoverPillarPackageIds(repoRoot) {
   return ids.toSorted();
 }
 
-module.exports = { discoverPillarPackageIds };
+/**
+ * `discoverPillarPackageIds`, but fails loudly on an empty result instead of
+ * handing the caller a list that silently turns ISO-R1's alternation into
+ * `^@pops/()(/|$)` — a pattern that matches nothing, so the rule would stop
+ * catching any lib→pillar import without anything going red. A repo with a
+ * `pillars/` tree finding zero ids is discovery drift, not a valid empty
+ * state, and the failure should point at the discovery, not the depcruise
+ * run it silently neutered.
+ *
+ * @param {string} repoRoot Absolute path to the repo root.
+ * @returns {string[]} Pillar ids, sorted, guaranteed non-empty.
+ */
+function discoverPillarPackageIdsOrThrow(repoRoot) {
+  const ids = discoverPillarPackageIds(repoRoot);
+  if (ids.length === 0) {
+    throw new Error(
+      `discoverPillarPackageIds() found no pillar packages under ${path.join(repoRoot, 'pillars')} — ` +
+        'ISO-R1 (lib-no-pillar-import) would silently stop matching any pillar. ' +
+        'Check that pillars/*/package.json still exists and names its package `@pops/<dirname>`.'
+    );
+  }
+  return ids;
+}
+
+module.exports = { discoverPillarPackageIds, discoverPillarPackageIdsOrThrow };

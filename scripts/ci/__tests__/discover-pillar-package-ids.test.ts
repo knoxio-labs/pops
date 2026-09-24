@@ -5,7 +5,10 @@ import { fileURLToPath } from 'node:url';
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { discoverPillarPackageIds } from '../discover-pillar-package-ids.cjs';
+import {
+  discoverPillarPackageIds,
+  discoverPillarPackageIdsOrThrow,
+} from '../discover-pillar-package-ids.cjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..', '..');
@@ -86,6 +89,32 @@ describe('discoverPillarPackageIds — fixture tree', () => {
       expect(discoverPillarPackageIds(empty)).toEqual([]);
     } finally {
       rmSync(empty, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('discoverPillarPackageIdsOrThrow', () => {
+  it('returns the same ids as discoverPillarPackageIds when non-empty', () => {
+    expect(discoverPillarPackageIdsOrThrow(repoRoot)).toEqual(discoverPillarPackageIds(repoRoot));
+  });
+
+  it('throws instead of silently returning an empty list (a no-op ISO-R1)', () => {
+    const empty = mkdtempSync(join(tmpdir(), 'pillar-package-ids-orthrow-empty-'));
+    try {
+      expect(() => discoverPillarPackageIdsOrThrow(empty)).toThrow(/found no pillar packages/);
+    } finally {
+      rmSync(empty, { recursive: true, force: true });
+    }
+  });
+
+  it('throws for a pillars dir with entries but zero resolvable packages', () => {
+    const root = mkdtempSync(join(tmpdir(), 'pillar-package-ids-orthrow-norespkg-'));
+    try {
+      mkdirSync(join(root, 'pillars', 'contacts'), { recursive: true });
+      writeFileSync(join(root, 'pillars', 'contacts', 'Cargo.toml'), '');
+      expect(() => discoverPillarPackageIdsOrThrow(root)).toThrow(/found no pillar packages/);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
     }
   });
 });
