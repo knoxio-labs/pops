@@ -75,6 +75,7 @@ describe('inventory catalogue draft management', () => {
       'inventory.catalogue.createDraft',
       'inventory.catalogue.patchDraft',
       'inventory.catalogue.previewDraft',
+      'inventory.catalogue.previewComputedField',
       'inventory.catalogue.publishDraft',
       'inventory.catalogue.abandonDraft',
     ]) {
@@ -317,6 +318,7 @@ describe('inventory catalogue draft management', () => {
       'inventory.catalogue.createDraft',
       'inventory.catalogue.patchDraft',
       'inventory.catalogue.previewDraft',
+      'inventory.catalogue.previewComputedField',
       'inventory.catalogue.publishDraft',
       'inventory.catalogue.abandonDraft',
     ]) {

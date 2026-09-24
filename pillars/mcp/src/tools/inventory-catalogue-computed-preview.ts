@@ -4,6 +4,7 @@ import {
   requiredPositiveInteger,
 } from './inventory-catalogue-input.js';
 import { catalogueOperationSchema, expressionSchemaDefs } from './inventory-catalogue-schema.js';
+import { INVENTORY_TYPES_MANAGE_SCOPE } from './inventory-catalogue-scopes.js';
 import { optStr, toolError } from './utils.js';
 
 import type { ToolDef } from './tool-def.js';
@@ -62,6 +63,7 @@ export const cataloguePreviewComputedField: ToolDef = {
     },
     required: ['revision', 'baseRevision', 'expectedDraftVersion', 'typeId', 'itemId'],
   },
+  scope: INVENTORY_TYPES_MANAGE_SCOPE,
   handler: async (args) => {
     const revision = requiredPositiveInteger(args, 'revision');
     if (!revision.ok) return toolError(revision.error);
@@ -86,7 +88,8 @@ export const cataloguePreviewComputedField: ToolDef = {
         typeId,
         field,
         itemId,
-      })
+      }),
+      INVENTORY_TYPES_MANAGE_SCOPE
     );
   },
 };

@@ -100,4 +100,25 @@ describe('inventory.catalogue.previewComputedField', () => {
     const [content] = result.content;
     expect(content?.type === 'text' ? content.text : '').toContain('inventory.catalogue.readDraft');
   });
+
+  it('names the manage scope when the service account cannot preview drafts', async () => {
+    types.manage.previewComputedField.mockResolvedValueOnce({
+      kind: 'unauthorized',
+      pillar: 'inventory',
+      message: "Service account is not authorised for 'inventory.types.manage'",
+    });
+
+    const result = await previewTool().handler({
+      ...target,
+      typeId: TYPE_ID,
+      fieldId: FIELD_ID,
+      itemId: 'item-1',
+    });
+
+    expect(result.isError).toBe(true);
+    const [content] = result.content;
+    expect(content?.type === 'text' ? content.text : '').toContain(
+      "requires service-account scope 'inventory.types.manage'"
+    );
+  });
 });
