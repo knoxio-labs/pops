@@ -51,7 +51,12 @@ internal struct PurchaseHandEntryView: View {
     internal var body: some View {
         ZStack {
             ReceiptDraftView(
-                draft: $draft, complaints: .hintsOnly, merchants: PurchaseMerchantFixtures.all
+                draft: $draft,
+                complaints: .hintsOnly,
+                searchMerchants: { await PurchaseMerchantFixtures.search($0) },
+                merchantPreview: { await PurchaseMerchantFixtures.merchant($0) },
+                addressesForMerchant: { await PurchaseMerchantFixtures.addresses($0) },
+                addressPreview: { await PurchaseMerchantFixtures.address($0, $1) }
             )
             .id(formID)
             .disabled(isSaving)

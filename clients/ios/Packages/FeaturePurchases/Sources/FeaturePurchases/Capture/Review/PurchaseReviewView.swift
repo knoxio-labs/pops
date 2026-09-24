@@ -4,7 +4,10 @@ import SwiftUI
 
 internal struct PurchaseReviewView: View {
     private let model: PurchaseReviewViewModel
-    private let merchants: [ReceiptMerchantChoice]
+    private let searchMerchants: ReceiptMerchantSearch
+    private let merchantPreview: ReceiptMerchantPreview
+    private let addressesForMerchant: ReceiptAddressesForMerchant
+    private let addressPreview: ReceiptAddressPreview
     private let onCancel: () -> Void
     private let onFinished: ([Purchase.ID]) -> Void
 
@@ -16,12 +19,18 @@ internal struct PurchaseReviewView: View {
 
     internal init(
         model: PurchaseReviewViewModel,
-        merchants: [ReceiptMerchantChoice],
+        searchMerchants: @escaping ReceiptMerchantSearch,
+        merchantPreview: @escaping ReceiptMerchantPreview,
+        addressesForMerchant: @escaping ReceiptAddressesForMerchant,
+        addressPreview: @escaping ReceiptAddressPreview,
         onCancel: @escaping () -> Void,
         onFinished: @escaping ([Purchase.ID]) -> Void
     ) {
         self.model = model
-        self.merchants = merchants
+        self.searchMerchants = searchMerchants
+        self.merchantPreview = merchantPreview
+        self.addressesForMerchant = addressesForMerchant
+        self.addressPreview = addressPreview
         self.onCancel = onCancel
         self.onFinished = onFinished
     }
@@ -87,7 +96,10 @@ internal struct PurchaseReviewView: View {
             subtitle: entry.origin == .unreadable ? PurchaseReviewCopy.unreadableSubtitle : nil,
             status: entry.status,
             complaints: .hintsOnly,
-            merchants: merchants,
+            searchMerchants: searchMerchants,
+            merchantPreview: merchantPreview,
+            addressesForMerchant: addressesForMerchant,
+            addressPreview: addressPreview,
             parts: entry.parts
         )
         .id(entry.id)

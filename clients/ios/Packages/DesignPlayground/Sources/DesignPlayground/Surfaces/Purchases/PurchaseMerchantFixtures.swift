@@ -1,10 +1,10 @@
 import FeaturePurchases
+import Foundation
 
-/// Merchants the review form's picker can offer, and the addresses each is
-/// known at.
+/// Merchants the review form can search and the addresses it can load on demand.
 ///
 /// A stand-in for a contacts lookup the phone cannot make: bfm proxies no
-/// contacts routes, so no device has ever received this list. POPS-3650 is the
+/// contacts routes, so no device has ever received this list. POPS-3753 is the
 /// route; this is what the picker looks like once it exists.
 ///
 /// The names are the entity's, not the till's — `Bunnings`, not
@@ -18,7 +18,12 @@ import FeaturePurchases
 /// address on file is ordinary, and the select has to offer creating one
 /// rather than an empty list.
 internal enum PurchaseMerchantFixtures {
-    internal static let all: [ReceiptMerchantChoice] = [
+    private struct Fixture {
+        let merchant: ReceiptMerchantChoice
+        let addresses: [ReceiptAddressChoice]
+    }
+
+    private static let fixtures: [Fixture] = [
         merchant(
             "bunnings", "Bunnings",
             ["8 Bourke Road, Alexandria NSW", "9 Parramatta Road, Ashfield NSW"]),
@@ -41,12 +46,34 @@ internal enum PurchaseMerchantFixtures {
         merchant("eveleigh", "Eveleigh Farmers Market", ["243 Wilson Street, Eveleigh NSW"]),
     ]
 
+    internal static let all = fixtures.map(\.merchant)
+
+    internal static func search(_ query: String) async -> [ReceiptMerchantChoice] {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return [] }
+        return all.filter { $0.name.localizedCaseInsensitiveContains(trimmed) }
+    }
+
+    internal static func merchant(_ id: String) async -> ReceiptMerchantChoice? {
+        all.first { $0.id == id }
+    }
+
+    internal static func addresses(_ merchantID: String) async -> [ReceiptAddressChoice] {
+        fixtures.first { $0.merchant.id == merchantID }?.addresses ?? []
+    }
+
+    internal static func address(
+        _ merchantID: String,
+        _ addressID: String
+    ) async -> ReceiptAddressChoice? {
+        await addresses(merchantID).first { $0.id == addressID }
+    }
+
     private static func merchant(
         _ slug: String, _ name: String, _ addresses: [String]
-    ) -> ReceiptMerchantChoice {
-        ReceiptMerchantChoice(
-            id: "ent-\(slug)",
-            name: name,
+    ) -> Fixture {
+        Fixture(
+            merchant: ReceiptMerchantChoice(id: "ent-\(slug)", name: name),
             addresses: addresses.enumerated().map { index, value in
                 ReceiptAddressChoice(id: "adr-\(slug)-\(index)", value: value)
             })

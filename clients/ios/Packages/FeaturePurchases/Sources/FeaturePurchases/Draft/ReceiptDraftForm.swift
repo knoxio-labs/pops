@@ -28,10 +28,12 @@ internal struct ReceiptDraftForm: View {
     }
 
     @Binding internal var draft: ReceiptDraft
-    /// Merchants that can be picked. Empty falls back to free text, which is
-    /// what this form did before pickers and what it must still do on a
-    /// device that cannot reach contacts.
-    internal var merchants: [ReceiptMerchantChoice] = []
+    internal var searchMerchants: ReceiptMerchantSearch = { _ in [] }
+    internal var merchantPreview: ReceiptMerchantPreview = { _ in nil }
+    internal var addressesForMerchant: ReceiptAddressesForMerchant = { _ in [] }
+    internal var addressPreview: ReceiptAddressPreview = { _, _ in nil }
+    @State internal var resolvedMerchant: ReceiptMerchantChoice?
+    @State internal var resolvedAddress: ReceiptAddressChoice?
     /// Fields a saved purchase holds read-only. `nil` for a reading, which is
     /// editable everywhere.
     internal var lock: ReceiptDraftLock?
