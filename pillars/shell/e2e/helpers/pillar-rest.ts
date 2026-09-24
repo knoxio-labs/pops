@@ -240,6 +240,7 @@ function minimalManifest(pillarId: string): Record<string, unknown> {
 const LOADER_MOUNTED_UI: Readonly<Record<string, Record<string, unknown>>> = {
   media: {
     assetsBaseUrl: '/media-ui/media.js',
+    stylesheetUrl: '/media-ui/media.css',
     nav: {
       id: 'media',
       label: 'Media',
@@ -282,6 +283,7 @@ const LOADER_MOUNTED_UI: Readonly<Record<string, Record<string, unknown>>> = {
   },
   cerebrum: {
     assetsBaseUrl: '/cerebrum-ui/cerebrum.js',
+    stylesheetUrl: '/cerebrum-ui/cerebrum.css',
     nav: {
       id: 'cerebrum',
       label: 'Cerebrum',
@@ -326,6 +328,7 @@ const LOADER_MOUNTED_UI: Readonly<Record<string, Record<string, unknown>>> = {
   },
   lists: {
     assetsBaseUrl: '/lists-ui/lists.js',
+    stylesheetUrl: '/lists-ui/lists.css',
     nav: {
       id: 'lists',
       label: 'Lists',
@@ -345,6 +348,7 @@ const LOADER_MOUNTED_UI: Readonly<Record<string, Record<string, unknown>>> = {
   },
   inventory: {
     assetsBaseUrl: '/inventory-ui/inventory.js',
+    stylesheetUrl: '/inventory-ui/inventory.css',
     nav: {
       id: 'inventory',
       label: 'Inventory',
@@ -402,6 +406,7 @@ const LOADER_MOUNTED_UI: Readonly<Record<string, Record<string, unknown>>> = {
   },
   food: {
     assetsBaseUrl: '/food-ui/food.js',
+    stylesheetUrl: '/food-ui/food.css',
     nav: {
       id: 'food',
       label: 'Food',
@@ -464,6 +469,7 @@ const LOADER_MOUNTED_UI: Readonly<Record<string, Record<string, unknown>>> = {
   },
   ai: {
     assetsBaseUrl: '/ai-ui/ai.js',
+    stylesheetUrl: '/ai-ui/ai.css',
     nav: {
       id: 'ai',
       label: 'AI',
@@ -486,6 +492,7 @@ const LOADER_MOUNTED_UI: Readonly<Record<string, Record<string, unknown>>> = {
   },
   bfm: {
     assetsBaseUrl: '/bfm-ui/bfm.js',
+    stylesheetUrl: '/bfm-ui/bfm.css',
     nav: {
       id: 'bfm',
       label: 'Devices',
@@ -500,6 +507,7 @@ const LOADER_MOUNTED_UI: Readonly<Record<string, Record<string, unknown>>> = {
   },
   finance: {
     assetsBaseUrl: '/finance-ui/finance.js',
+    stylesheetUrl: '/finance-ui/finance.css',
     nav: {
       id: 'finance',
       label: 'Finance',
@@ -548,6 +556,7 @@ const LOADER_MOUNTED_UI: Readonly<Record<string, Record<string, unknown>>> = {
   },
   purchases: {
     assetsBaseUrl: '/purchases-ui/purchases.js',
+    stylesheetUrl: '/purchases-ui/purchases.css',
     nav: {
       id: 'purchases',
       label: 'Purchases',

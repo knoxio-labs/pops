@@ -38,6 +38,13 @@ const BFM_WIRE_PAGES = [...BFM_PAGES] as const satisfies readonly PageDescriptor
  */
 const BFM_ASSETS_BASE_URL = '/bfm-ui/bfm.js';
 
+/**
+ * The stylesheet the runtime loader links before mounting this pillar: the
+ * Tailwind utilities its app source uses, which the shell's own sheet does
+ * not carry. Served beside the bundle, under an equally stable name.
+ */
+const BFM_STYLESHEET_URL = '/bfm-ui/bfm.css';
+
 export function buildBfmManifest(version: string): ManifestPayload {
   return {
     pillar: BFM_PILLAR_ID,
@@ -56,5 +63,6 @@ export function buildBfmManifest(version: string): ManifestPayload {
     nav: BFM_WIRE_NAV,
     pages: [...BFM_WIRE_PAGES],
     assetsBaseUrl: BFM_ASSETS_BASE_URL,
+    stylesheetUrl: BFM_STYLESHEET_URL,
   };
 }

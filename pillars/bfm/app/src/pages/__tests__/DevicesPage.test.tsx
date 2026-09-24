@@ -321,6 +321,122 @@ describe('DevicesPage — minting a pairing code', () => {
   });
 });
 
+/**
+ * The phone talks to bfm, never to this page, so the only way the operator's
+ * screen learns a code was redeemed is the device list growing while the code
+ * is showing. These drive that through the real poll: the list mock changes
+ * its answer mid-test and the fake clock carries the page to its next read.
+ */
+describe('DevicesPage — when the phone finishes pairing', () => {
+  const NEW_PHONE = device({ id: 'dev-new', name: 'Kitchen iPhone', model: 'iPhone 17' });
+
+  async function mintAndShowCode(user: ReturnType<typeof userEvent.setup>): Promise<void> {
+    await user.click(screen.getByRole('button', { name: 'Pair a new device' }));
+    await screen.findByTestId('pairing-code');
+  }
+
+  it('swaps the code for a confirmation naming the phone', async () => {
+    const user = renderPage();
+    await mintAndShowCode(user);
+
+    listDevicesMock.mockResolvedValue(devicesResponse(NEW_PHONE));
+    await act(() => vi.advanceTimersByTimeAsync(2_500));
+
+    const dialog = screen.getByRole('dialog');
+    expect(
+      await within(dialog).findByRole('heading', { name: 'Device paired' })
+    ).toBeInTheDocument();
+    expect(within(dialog).getByRole('img', { name: 'Pairing complete' })).toBeInTheDocument();
+    expect(within(dialog).getByTestId('paired-device-name')).toHaveTextContent('Kitchen iPhone');
+    expect(within(dialog).getByText('iPhone 17 · ready to use')).toBeInTheDocument();
+    expect(within(dialog).queryByTestId('pairing-code')).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole('button', { name: 'Mint another' })).not.toBeInTheDocument();
+  });
+
+  it('never then reports the spent code as expired', async () => {
+    issuePairingCodeMock.mockResolvedValue(issuedCode(30_000));
+    const user = renderPage();
+    await mintAndShowCode(user);
+
+    listDevicesMock.mockResolvedValue(devicesResponse(NEW_PHONE));
+    await act(() => vi.advanceTimersByTimeAsync(2_500));
+    await screen.findByRole('heading', { name: 'Device paired' });
+
+    await act(() => vi.advanceTimersByTimeAsync(60_000));
+
+    expect(screen.getByRole('heading', { name: 'Device paired' })).toBeInTheDocument();
+    expect(screen.queryByText(/That code has expired/)).not.toBeInTheDocument();
+  });
+
+  it('still celebrates a phone that got in during the last second', async () => {
+    issuePairingCodeMock.mockResolvedValue(issuedCode(30_000));
+    const user = renderPage();
+    await mintAndShowCode(user);
+
+    await act(() => vi.advanceTimersByTimeAsync(31_000));
+    await screen.findByText(/That code has expired/);
+
+    listDevicesMock.mockResolvedValue(devicesResponse(NEW_PHONE));
+    await act(() => vi.advanceTimersByTimeAsync(2_500));
+
+    expect(await screen.findByRole('heading', { name: 'Device paired' })).toBeInTheDocument();
+  });
+
+  it('does not mistake a phone that was already paired for the new one', async () => {
+    listDevicesMock.mockResolvedValue(devicesResponse(device()));
+    const user = renderPage();
+    await screen.findByRole('row', { name: /Joao's iPhone/ });
+    await mintAndShowCode(user);
+
+    await act(() => vi.advanceTimersByTimeAsync(6_000));
+
+    expect(listDevicesMock.mock.calls.length).toBeGreaterThan(1);
+    expect(screen.getByTestId('pairing-code')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Device paired' })).not.toBeInTheDocument();
+  });
+
+  /**
+   * The page's cached list is whatever it last read. A handset paired from
+   * elsewhere since then must not be credited to the code minted now, which is
+   * why every mint refetches the list before the watcher takes its baseline.
+   */
+  it('does not credit a phone paired elsewhere since the page last read the list', async () => {
+    const user = renderPage();
+    await screen.findByText('No devices paired');
+
+    listDevicesMock.mockResolvedValue(devicesResponse(device({ id: 'dev-elsewhere' })));
+    await mintAndShowCode(user);
+    await act(() => vi.advanceTimersByTimeAsync(6_000));
+
+    expect(screen.getByTestId('pairing-code')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Device paired' })).not.toBeInTheDocument();
+  });
+
+  it('adds the new phone to the table behind the dialog', async () => {
+    const user = renderPage();
+    await mintAndShowCode(user);
+
+    listDevicesMock.mockResolvedValue(devicesResponse(NEW_PHONE));
+    await act(() => vi.advanceTimersByTimeAsync(2_500));
+    await screen.findByRole('heading', { name: 'Device paired' });
+
+    await user.click(screen.getByRole('button', { name: 'Done' }));
+    expect(await screen.findByRole('row', { name: /Kitchen iPhone/ })).toBeInTheDocument();
+  });
+
+  it('stops polling once the dialog is closed', async () => {
+    const user = renderPage();
+    await mintAndShowCode(user);
+    await user.click(screen.getByRole('button', { name: 'Done' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+
+    const callsAtClose = listDevicesMock.mock.calls.length;
+    await act(() => vi.advanceTimersByTimeAsync(10_000));
+
+    expect(listDevicesMock.mock.calls.length).toBe(callsAtClose);
+  });
+});
+
 describe('DevicesPage — the code never leaves the screen', () => {
   it('writes nothing to localStorage or sessionStorage', async () => {
     const user = renderPage();

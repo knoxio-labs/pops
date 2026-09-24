@@ -24,7 +24,8 @@ function row(overrides: Partial<WireRow> = {}): WireRow {
     accountId: 'everyday',
     foreignAmountMinor: null,
     foreignCurrency: null,
-    amount: 41.28,
+    // Finance signs spend negative; this row settles a card charge.
+    amount: -41.28,
     date: '2026-03-04',
     type: 'purchase',
     entityId: null,
@@ -67,7 +68,7 @@ const WINDOW = { startDate: '2026-03-01', endDate: '2026-03-22' };
 
 describe('fetchCandidates', () => {
   it('returns candidates in integer cents', async () => {
-    const { handle } = stubHandle([page([row({ amount: 19.99 })])]);
+    const { handle } = stubHandle([page([row({ amount: -19.99 })])]);
     const result = await createFinanceClient(() => handle).fetchCandidates(WINDOW);
 
     expect(result.kind).toBe('ok');

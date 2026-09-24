@@ -49,7 +49,8 @@ describe('FinanceListResponseSchema', () => {
     accountId: 'everyday',
     foreignAmountMinor: null,
     foreignCurrency: null,
-    amount: 41.28,
+    // Finance signs spend negative; this row settles a card charge.
+    amount: -41.28,
     date: '2026-03-04',
     type: 'purchase',
     entityId: null,
@@ -110,15 +111,23 @@ describe('toCandidateTransaction', () => {
     accountId: 'everyday',
     foreignAmountMinor: null,
     foreignCurrency: null,
-    amount: 19.99,
+    // Finance signs spend negative; the boundary flips it to the positive
+    // capture amount purchases matches against.
+    amount: -19.99,
     date: '2026-03-04',
     type: 'purchase',
     entityId: 'ent-1',
     entityName: 'Amazon',
   };
 
-  it('converts to integer cents at the boundary', () => {
+  it("flips finance spend to purchases' positive capture sign at the boundary", () => {
     expect(toCandidateTransaction(wire).amountCents).toBe(1999);
+  });
+
+  it('flips a finance credit (a refund) to a negative purchases amount', () => {
+    expect(toCandidateTransaction({ ...wire, amount: 24.95, type: 'refund' }).amountCents).toBe(
+      -2495
+    );
   });
 
   it('exposes no dollar amount at all, so one cannot reach the solver', () => {
@@ -138,7 +147,7 @@ describe('toCandidateTransaction', () => {
     // minor units, and scaling it again would be a hundredfold error.
     const foreign = toCandidateTransaction({
       ...wire,
-      amount: 34.71,
+      amount: -34.71,
       foreignAmountMinor: 12_890,
       foreignCurrency: 'BRL',
     });

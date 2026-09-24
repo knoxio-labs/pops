@@ -1,5 +1,7 @@
 import '@pops/ui/theme';
 
+import '../../remote.css';
+
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 

@@ -32,6 +32,13 @@ const PURCHASES_WIRE_NAV = {
 const PURCHASES_ASSETS_BASE_URL = '/purchases-ui/purchases.js';
 
 /**
+ * The stylesheet the runtime loader links before mounting this pillar: the
+ * Tailwind utilities its app source uses, which the shell's own sheet does
+ * not carry. Served beside the bundle, under an equally stable name.
+ */
+const PURCHASES_STYLESHEET_URL = '/purchases-ui/purchases.css';
+
+/**
  * Wire-format pages contribution for the purchases pillar.
  *
  * Projected from the contract's `PURCHASES_PAGES` rather than restated here:
@@ -160,6 +167,7 @@ export function buildPurchasesManifest(version: string): ManifestPayload {
     nav: PURCHASES_WIRE_NAV,
     pages: [...PURCHASES_PAGES],
     assetsBaseUrl: PURCHASES_ASSETS_BASE_URL,
+    stylesheetUrl: PURCHASES_STYLESHEET_URL,
     healthcheck: { path: '/health' },
   };
 }

@@ -7,10 +7,12 @@
  * empty surface when there is no cache either. Both branches are exercised
  * with injected fixtures (no live fetch).
  */
+import { render, waitFor } from '@testing-library/react';
+import { createElement } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { fetchBootRegistry, resolveBootRegistry } from './boot-snapshot';
-import { filterAppManifests } from './installed-modules';
+import { filterAppManifests, hasRoutes } from './installed-modules';
 
 import type { ManifestPayload, PillarSnapshot } from '@pops/pillar-sdk';
 
@@ -582,5 +584,65 @@ describe('resolveBootRegistry — non-page surfaces off the wire', () => {
     expect(Object.keys(result.bundleMap.acme?.settingsWidgetBundles ?? {})).toEqual([
       'plex-connect',
     ]);
+  });
+});
+
+/**
+ * The pillar's stylesheet reaches the loader from the wire on both boot paths
+ * — the router manifests and the rail bundle map build their descriptors
+ * separately, so each is exercised from a `PillarSnapshot` (POPS-4581).
+ */
+describe('resolveBootRegistry — the pillar stylesheet off the wire', () => {
+  const STYLESHEET = '/acme-ui/acme.css';
+  const bundle = { bundles: { 'acme-home': () => null, 'status-chip': () => null } };
+
+  function styledPillar(): PillarSnapshot {
+    return snapshotEntry('acme', {
+      manifest: {
+        assetsBaseUrl: '/acme-ui/acme.js',
+        stylesheetUrl: STYLESHEET,
+        nav: {
+          id: 'acme',
+          label: 'Acme',
+          labelKey: 'acme',
+          icon: 'compass',
+          basePath: '/acme',
+          order: 50,
+          items: [{ path: '', label: 'Acme', labelKey: 'acme.home', icon: 'compass' }],
+        },
+        pages: [{ path: '', index: true, bundleSlot: 'acme-home' }],
+        topBarWidgets: [{ bundleSlot: 'status-chip', order: 5 }],
+      },
+    });
+  }
+
+  async function linkedStylesheetHref(): Promise<string | null> {
+    return waitFor(() => {
+      const link = document.head.querySelector('link[rel="stylesheet"]');
+      if (link === null) throw new Error('no stylesheet linked');
+      const href = link.getAttribute('href');
+      link.remove();
+      return href;
+    });
+  }
+
+  it('links it when a page from the router manifests loads', async () => {
+    const result = resolveBootRegistry([styledPillar()], () => Promise.resolve(bundle));
+    const manifest = result.manifests.find((m) => m.id === 'acme');
+    if (manifest === undefined || !hasRoutes(manifest)) throw new Error('expected acme routes');
+
+    render(createElement('div', null, manifest.frontend.routes[0]?.element));
+
+    expect(await linkedStylesheetHref()).toMatch(/^\/acme-ui\/acme\.css\?v=/);
+  });
+
+  it('links it when a surface from the rail bundle map loads', async () => {
+    const result = resolveBootRegistry([styledPillar()], () => Promise.resolve(bundle));
+    const widget = result.bundleMap.acme?.topBarWidgets?.[0];
+    if (widget === undefined) throw new Error('expected the acme top-bar widget');
+
+    render(createElement(widget.Component));
+
+    expect(await linkedStylesheetHref()).toMatch(/^\/acme-ui\/acme\.css\?v=/);
   });
 });

@@ -11,11 +11,10 @@ import { defineConfig } from 'vite';
  * share a runtime with. Same source either way — the difference is only what
  * is around it.
  *
- * Tailwind is included here and deliberately not there. Mounted in the shell
- * this app renders under the stylesheet the shell emits, whose `@source` globs
- * already cover `pillars/**` (`libs/ui/src/theme/globals.css`); standalone
- * there is no shell, so the theme entry has to be compiled here — which is
- * what `@pops/ui/theme` in `src/standalone/main.tsx` asks for.
+ * Mounted in the shell this app gets preflight, the tokens and the kit's
+ * utilities from the shell's stylesheet and only its own utilities from
+ * `remote.css`. Standalone there is no shell, so `src/standalone/main.tsx`
+ * imports the whole theme (`@pops/ui/theme`) as well as `remote.css`.
  *
  * `/purchases-api` is proxied for the `VITE_PURCHASES_API=real` mode only. In
  * the default mocked mode nothing reaches it, because the mock intercepts at

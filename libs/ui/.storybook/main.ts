@@ -27,7 +27,7 @@ const config: StorybookConfig = {
           },
           {
             find: '@pops/ui/theme',
-            replacement: path.resolve(__dirname, '../src/theme/globals.css'),
+            replacement: path.resolve(__dirname, '../src/theme/index.css'),
           },
           { find: '@pops/ui', replacement: path.resolve(__dirname, '../src') },
           {

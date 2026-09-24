@@ -146,6 +146,7 @@ describe('buildFoodManifest', () => {
     it('declares a root-relative assetsBaseUrl', () => {
       const manifest = buildFoodManifest('0.1.0');
       expect(manifest.assetsBaseUrl).toBe('/food-ui/food.js');
+      expect(manifest.stylesheetUrl).toBe('/food-ui/food.css');
     });
 
     it('round-trips the nav + pages dimensions through JSON', () => {

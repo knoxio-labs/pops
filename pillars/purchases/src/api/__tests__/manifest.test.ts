@@ -68,6 +68,7 @@ describe('buildPurchasesManifest', () => {
   it('advertises where the shell fetches its bundle from', () => {
     const manifest = buildPurchasesManifest('0.1.0');
     expect(manifest.assetsBaseUrl).toBe('/purchases-ui/purchases.js');
+    expect(manifest.stylesheetUrl).toBe('/purchases-ui/purchases.css');
   });
 
   // The wire nav has drifted from the app before: one entry declared against
