@@ -171,13 +171,13 @@ internal struct InventoryWriteFailureTests {
     /// cancelled has nobody left to tell, whatever the error looks like.
     @Test("nothing is reported once this task is actually cancelled")
     func nothingReportedOnceThisTaskIsCancelled() async {
+        let (gate, release) = AsyncStream<Void>.makeStream()
         let task = Task { () -> InventoryWriteFailure? in
-            while !Task.isCancelled {
-                await Task.yield()
-            }
+            for await _ in gate {}
             return InventoryWriteFailure.reporting(RepositoryError.unavailable)
         }
         task.cancel()
+        release.finish()
 
         #expect(await task.value == nil)
     }
