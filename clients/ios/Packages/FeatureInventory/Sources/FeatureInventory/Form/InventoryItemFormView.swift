@@ -97,6 +97,8 @@ internal struct InventoryItemFormView: View {
                 .listRowBackground(Color.popsBackground)
             }
             identity
+            // Every item has a quantity whatever its type, so it stands apart
+            // from the type's fields rather than reading as one of them.
             Section {
                 InventoryFormQuantityRow(count: $model.draft.quantity)
             }
