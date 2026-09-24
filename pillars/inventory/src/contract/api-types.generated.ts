@@ -6204,7 +6204,11 @@ export interface operations {
                 /** @enum {string} */
                 cardinality?: 'one' | 'many';
                 expression?: components['schemas']['ExpressionV1'] | null;
-                expressionVersion?: number | null;
+                /**
+                 * @description How a computed field's expression is evaluated. 1: measurements combine only in one fixed unit and decimals compare by spelling (3.0 ≠ 3). 2: measurements of one dimension convert (cm + mm), measurement × and ÷ measurement derive units (cm × cm is cm²), the result converts into the field's fixedUnit, and equal compares decimals by value (1.5 × 2 = 3). Required with an expression on a computed field; null on a stored field.
+                 * @enum {number|null}
+                 */
+                expressionVersion?: 1 | 2 | null;
                 /** @enum {string} */
                 fieldKind?:
                   | 'short_text'
@@ -6751,7 +6755,11 @@ export interface operations {
                 /** @enum {string} */
                 cardinality?: 'one' | 'many';
                 expression?: components['schemas']['ExpressionV1'] | null;
-                expressionVersion?: number | null;
+                /**
+                 * @description How a computed field's expression is evaluated. 1: measurements combine only in one fixed unit and decimals compare by spelling (3.0 ≠ 3). 2: measurements of one dimension convert (cm + mm), measurement × and ÷ measurement derive units (cm × cm is cm²), the result converts into the field's fixedUnit, and equal compares decimals by value (1.5 × 2 = 3). Required with an expression on a computed field; null on a stored field.
+                 * @enum {number|null}
+                 */
+                expressionVersion?: 1 | 2 | null;
                 /** @enum {string} */
                 fieldKind?:
                   | 'short_text'

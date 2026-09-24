@@ -68,13 +68,14 @@ const putField = {
     referenceTypeIds: { type: 'array', maxItems: 100, items: uuid },
     expressionVersion: {
       type: ['integer', 'null'],
-      minimum: 1,
+      enum: [1, 2, null],
       description:
         '1, or 2 for measurement arithmetic across units: measurements of one dimension add, ' +
         'subtract and compare after conversion (cm + mm), measurement × measurement and ÷ derive ' +
         'units (cm × cm is cm²; cm ÷ mm a plain decimal), and the result converts into the ' +
         "field's fixedUnit, which must measure the same dimension (a volume from cm × cm × mm " +
-        'may declare L, cm³ or mm³). Derived units are written with · and superscript powers.',
+        'may declare L, cm³ or mm³). Derived units are written with · and superscript powers. ' +
+        'Version 2 also compares decimals by value (1.5 × 2 equals 3); version 1 by spelling.',
     },
     expression: nullableExpression,
     allowOverride: { type: 'boolean' },

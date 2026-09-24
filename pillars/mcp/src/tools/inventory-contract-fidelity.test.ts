@@ -124,6 +124,17 @@ describe('inventory MCP schema fidelity', () => {
       'MCP primitive kinds'
     );
     expect(mcpPrimitiveKinds).toEqual(producerPrimitiveKinds);
+
+    const producerVersions = property(
+      property(property(producerPutField, 'properties'), 'expressionVersion'),
+      'enum'
+    );
+    const mcpVersions = property(
+      property(property(mcpPutField, 'properties'), 'expressionVersion'),
+      'enum'
+    );
+    expect(producerVersions).toEqual([1, 2, null]);
+    expect(mcpVersions).toEqual(producerVersions);
   });
 
   it('matches the producer item-validation value vocabulary and required fields', () => {
