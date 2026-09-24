@@ -99,9 +99,7 @@ internal struct InventoryItemFormView: View {
             identity
             // Every item has a quantity whatever its type, so it stands apart
             // from the type's fields rather than reading as one of them.
-            Section {
-                InventoryFormQuantityRow(count: $model.draft.quantity)
-            }
+            Section { InventoryFormQuantityRow(count: $model.draft.quantity) }
             labelling
             InventoryFormNotCarriedSection(values: model.notCarried)
         }
