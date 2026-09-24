@@ -141,6 +141,18 @@ function fieldText(itemId: string): string {
   return row.text;
 }
 
+function hasSearchEntry(itemId: string): boolean {
+  return inventoryDb.raw.prepare('SELECT id FROM items_fts WHERE id = ?').get(itemId) !== undefined;
+}
+
+function dependencyRows(dependentItemId: string): { dependencyItemId: string }[] {
+  return inventoryDb.raw
+    .prepare(
+      'SELECT dependency_item_id AS dependencyItemId FROM item_computed_dependencies WHERE dependent_item_id = ?'
+    )
+    .all(dependentItemId) as { dependencyItemId: string }[];
+}
+
 describe('search over computed field values', () => {
   it('finds an item by its evaluated computed value', async () => {
     const f = setup();
@@ -220,6 +232,45 @@ describe('search over computed field values', () => {
     apply(mutation(f.catalogue, 'item.restoreDeleted', f.partId, {}, null));
 
     expect(await found('222')).toEqual([f.kitId]);
+  });
+
+  it('re-adds a deleted item to search on restore, by name and by its own computed value', async () => {
+    const f = setup();
+
+    apply(mutation(f.catalogue, 'item.delete', f.kitId, {}, 1));
+
+    expect(hasSearchEntry(f.kitId)).toBe(false);
+    expect(await found('Kit')).toEqual([]);
+    expect(await found('222')).toEqual([]);
+
+    apply(mutation(f.catalogue, 'item.restoreDeleted', f.kitId, {}, null));
+
+    expect(hasSearchEntry(f.kitId)).toBe(true);
+    expect(await found('Kit')).toEqual([f.kitId]);
+    expect(await found('222')).toEqual([f.kitId]);
+  });
+
+  it("rebuilds a restored item's own dependency-index rows lost to a republish while it was deleted", () => {
+    const f = setup();
+
+    apply(mutation(f.catalogue, 'item.delete', f.kitId, {}, 1));
+
+    const draft = createCatalogueDraft(inventoryDb.db, f.catalogue.revision, AUTHOR);
+    publishCatalogueDraft(
+      inventoryDb.db,
+      draft.revision.revision,
+      {
+        baseRevision: f.catalogue.revision,
+        expectedDraftVersion: draft.revision.draftVersion,
+        note: null,
+      },
+      AUTHOR
+    );
+    expect(dependencyRows(f.kitId)).toEqual([]);
+
+    apply(mutation(f.catalogue, 'item.restoreDeleted', f.kitId, {}, null));
+
+    expect(dependencyRows(f.kitId)).toEqual([{ dependencyItemId: f.partId }]);
   });
 
   it('reindexes only the dependents the per-mutation limit re-sends, lowest ids first', () => {

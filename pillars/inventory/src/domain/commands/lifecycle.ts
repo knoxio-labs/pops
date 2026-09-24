@@ -1,12 +1,17 @@
 import { and, eq, inArray, isNull, ne } from 'drizzle-orm';
 import { z } from 'zod';
 
+import {
+  hasComputedFields,
+  refreshComputedDependencies,
+} from '../../catalogue/computed-dependency-index.js';
 import { loadPublishedCatalogue } from '../../catalogue/index.js';
 import { items, LIFECYCLES } from '../../db/index.js';
 import { itemFieldValues } from '../../db/schema.js';
 import { requireItem, type CommandDb, type FieldValues } from './entities.js';
 import { CommandRejected } from './errors.js';
 import { defineOp } from './op.js';
+import { upsertSearchIndex } from './search-index.js';
 
 import type { ItemRow } from '../../db/row-types.js';
 
@@ -125,6 +130,13 @@ function droppedOverrideChanges(db: CommandDb, row: ItemRow): FieldValues {
  * rather than the restore reviving a value the catalogue has since
  * forbidden. There is no REST surface for `item.restoreDeleted` today; a
  * caller sees this only through the item's event history.
+ *
+ * `item.delete`'s own effect drops the item from `items_fts` and leaves it
+ * out of `item_computed_dependencies`' bulk rebuilds; restoring undoes both,
+ * the same way `item.create`/`item.edit` keep them current: the item is
+ * re-indexed and, when the published catalogue has computed fields, its
+ * dependency rows are rebuilt so a later change to something it reads
+ * re-evaluates it again.
  */
 export const itemRestoreDeleted = defineOp({
   op: 'item.restoreDeleted',
@@ -139,6 +151,23 @@ export const itemRestoreDeleted = defineOp({
     if (row.sourceRef !== null && liveSourceRefHeldElsewhere(ctx.db, row.sourceRef, row.id)) {
       changes['sourceRef'] = null;
     }
-    return { eventKind: 'restored', changes };
+    return {
+      eventKind: 'restored',
+      changes,
+      effects(effectCtx) {
+        upsertSearchIndex(effectCtx.db, {
+          id: row.id,
+          name: row.name,
+          code: row.code,
+          note: row.note,
+          typeId: row.typeId,
+          externalIds: row.externalIds,
+        });
+        const catalogue = loadPublishedCatalogue(effectCtx.db);
+        if (catalogue !== null && hasComputedFields(catalogue)) {
+          refreshComputedDependencies(effectCtx.db, catalogue, [row.id]);
+        }
+      },
+    };
   },
 });
