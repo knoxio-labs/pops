@@ -20,7 +20,6 @@ import {
   typeByKey,
   type DescriptorType,
 } from './test-helpers-acceptance-mcp.js';
-import { skipCriterion } from './test-helpers-acceptance-skip.js';
 import { startAcceptanceStack, type AcceptanceStack } from './test-helpers-acceptance-stack.js';
 
 const read = (fieldId: string, path: readonly string[] = []) => ({ op: 'read', path, fieldId });
@@ -58,7 +57,7 @@ function volumeField(typeId: string, width: string, height: string, depth: strin
     required: false,
     storage: 'computed',
     allowOverride: false,
-    expressionVersion: 1,
+    expressionVersion: 2,
     expression: {
       op: 'multiply',
       left: { op: 'multiply', left: read(width), right: read(height) },
@@ -291,7 +290,7 @@ describe('S3 computed fields end to end', () => {
     expect(uris.some((uri) => uri.endsWith(siteId) || uri.endsWith(rackId))).toBe(false);
   });
 
-  it('S3.5 derives a volume from width × height × depth in dimensional units', async (context) => {
+  it('S3.5 derives a volume from width × height × depth in dimensional units', async () => {
     stack.seam.useDefaultKey();
     const draft = await DraftSession.open();
     try {
@@ -316,17 +315,6 @@ describe('S3 computed fields end to end', () => {
           fieldByKey(draftDevice, 'depth').id
         ),
       ]);
-      // A build without dimensional units types `cm × cm` as a mismatch at
-      // exactly this node; any other refusal is a real failure.
-      if (
-        !probe.ok &&
-        probe.message.includes('"path":"expression.left.right","code":"expression_type_mismatch"')
-      ) {
-        skipCriterion(
-          context,
-          'dimensional units are not on this build: multiplying two cm measurements is an expression_type_mismatch (lands with inventory-types/b3-dimensional-units)'
-        );
-      }
       expect(probe.ok, probe.ok ? '' : probe.message).toBe(true);
       await draft.patch([
         volumeField(

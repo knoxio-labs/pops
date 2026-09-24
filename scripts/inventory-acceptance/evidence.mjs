@@ -46,6 +46,8 @@ const vitestReportSchema = z.object({
   testResults: z.array(
     z.object({
       name: z.string(),
+      status: z.string().optional(),
+      message: z.string().optional(),
       assertionResults: z.array(
         z.object({
           title: z.string(),
@@ -142,6 +144,10 @@ export function vitestResults(report, repoRoot) {
       if (test.status === 'failed') {
         const message = test.failureMessages?.[0] ?? 'failed without a message';
         return { ...base, status: 'failed', detail: firstLine(message) };
+      }
+      if (file.status === 'failed' && test.meta?.skipReason === undefined) {
+        const message = file.message ?? 'the suite failed before its tests ran';
+        return { ...base, status: 'failed', detail: `suite failed: ${firstLine(message)}` };
       }
       return {
         ...base,

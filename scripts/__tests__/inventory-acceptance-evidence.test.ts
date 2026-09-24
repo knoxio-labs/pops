@@ -95,6 +95,25 @@ describe('vitestResults', () => {
     ]);
   });
 
+  it('fails the criteria of a suite whose setup failed, keeping recorded skips', () => {
+    const report = vitestReport([
+      { title: 'SX.1 never ran', status: 'skipped', meta: {} },
+      { title: 'SX.2 skips', status: 'skipped', meta: { skipReason: 'not on this build' } },
+    ]);
+    const [file] = report.testResults;
+    if (file === undefined) throw new Error('no file in the report');
+    const failed = {
+      testResults: [
+        { ...file, status: 'failed', message: 'Error: [registry] timed out after 20000ms\nmore' },
+      ],
+    };
+
+    expect(vitestResults(failed, ROOT).map(({ status, detail }) => ({ status, detail }))).toEqual([
+      { status: 'failed', detail: 'suite failed: Error: [registry] timed out after 20000ms' },
+      { status: 'skipped', detail: 'not on this build' },
+    ]);
+  });
+
   it('refuses a report that is not vitest JSON rather than reading it as empty', () => {
     expect(() => vitestResults({ numTotalTests: 3 }, ROOT)).toThrow();
   });

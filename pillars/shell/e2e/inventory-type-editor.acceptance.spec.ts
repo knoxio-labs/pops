@@ -31,7 +31,15 @@ const descriptorSchema = z.object({
       id: z.string(),
       key: z.string(),
       label: z.string(),
-      fields: z.array(z.object({ id: z.string(), key: z.string(), kind: z.string() })),
+      fields: z.array(
+        z.object({
+          id: z.string(),
+          key: z.string(),
+          kind: z.string(),
+          required: z.boolean(),
+          expressionVersion: z.number().nullable(),
+        })
+      ),
     })
   ),
 });
@@ -55,53 +63,81 @@ test.describe('S7 web type editor against a real Inventory', () => {
     return descriptorSchema.parse(read.body);
   }
 
-  /** Publishes a type with one optional short-text field through the owner API. */
-  async function publishTypeOutOfBand(key: string, label: string): Promise<void> {
+  async function patchDraft(
+    revision: number,
+    base: number,
+    draftVersion: number,
+    operations: readonly Record<string, unknown>[]
+  ): Promise<z.infer<typeof descriptorSchema>> {
+    return draftSchema.parse(
+      (
+        await stack.call(`/type-catalogue/drafts/${String(revision)}`, {
+          method: 'PATCH',
+          body: { baseRevision: base, expectedDraftVersion: draftVersion, operations },
+        })
+      ).body
+    );
+  }
+
+  /**
+   * Publishes a type with one optional short-text `finish` field through the
+   * owner API, plus, when `computed`, an integer `count` and a version-1
+   * computed `Double` reading it.
+   */
+  async function publishTypeOutOfBand(
+    key: string,
+    label: string,
+    { computed = false } = {}
+  ): Promise<void> {
     const base = (await published()).revision.revision;
     const created = descriptorSchema.parse(
       (await stack.call('/type-catalogue/drafts', { body: { baseRevision: base } })).body
     );
-    const withType = draftSchema.parse(
-      (
-        await stack.call(`/type-catalogue/drafts/${String(created.revision.revision)}`, {
-          method: 'PATCH',
-          body: {
-            baseRevision: base,
-            expectedDraftVersion: created.revision.draftVersion,
-            operations: [{ kind: 'put_type', key, label }],
-          },
-        })
-      ).body
-    );
-    const typeId = withType.types.find((type) => type.key === key)?.id;
-    if (typeId === undefined) throw new Error(`type ${key} was not created`);
-    const withField = draftSchema.parse(
-      (
-        await stack.call(`/type-catalogue/drafts/${String(created.revision.revision)}`, {
-          method: 'PATCH',
-          body: {
-            baseRevision: base,
-            expectedDraftVersion: withType.revision.draftVersion,
-            operations: [
-              {
-                kind: 'put_field',
-                typeId,
-                key: 'finish',
-                label: 'Finish',
-                fieldKind: 'short_text',
-                cardinality: 'one',
-                required: false,
-                storage: 'stored',
-              },
-            ],
-          },
-        })
-      ).body
-    );
-    const publication = await stack.call(
-      `/type-catalogue/drafts/${String(created.revision.revision)}/publish`,
-      { body: { baseRevision: base, expectedDraftVersion: withField.revision.draftVersion } }
-    );
+    const revision = created.revision.revision;
+    const withType = await patchDraft(revision, base, created.revision.draftVersion, [
+      { kind: 'put_type', key, label },
+    ]);
+    const type = withType.types.find((candidate) => candidate.key === key);
+    if (type === undefined) throw new Error(`type ${key} was not created`);
+    const stored = (fieldKey: string, fieldLabel: string, fieldKind: string) => ({
+      kind: 'put_field',
+      typeId: type.id,
+      key: fieldKey,
+      label: fieldLabel,
+      fieldKind,
+      cardinality: 'one',
+      required: false,
+      storage: 'stored',
+    });
+    let draft = await patchDraft(revision, base, withType.revision.draftVersion, [
+      stored('finish', 'Finish', 'short_text'),
+      ...(computed ? [stored('count', 'Count', 'integer')] : []),
+    ]);
+    if (computed) {
+      const count = draft.types
+        .find((candidate) => candidate.id === type.id)
+        ?.fields.find((field) => field.key === 'count');
+      if (count === undefined) throw new Error(`type ${key} has no count field`);
+      const read = { op: 'read', path: [], fieldId: count.id };
+      draft = await patchDraft(revision, base, draft.revision.draftVersion, [
+        {
+          kind: 'put_field',
+          typeId: type.id,
+          key: 'double',
+          label: 'Double',
+          fieldKind: 'integer',
+          cardinality: 'one',
+          required: false,
+          storage: 'computed',
+          allowOverride: false,
+          expressionVersion: 1,
+          expression: { op: 'add', left: read, right: read },
+        },
+      ]);
+    }
+    const publication = await stack.call(`/type-catalogue/drafts/${String(revision)}/publish`, {
+      body: { baseRevision: base, expectedDraftVersion: draft.revision.draftVersion },
+    });
     expect(publication.status).toBe(200);
   }
 
@@ -247,17 +283,23 @@ test.describe('S7 web type editor against a real Inventory', () => {
   test('S7.5 the computed expression builder edits a computed field and names the MCP publish route', async ({
     page,
   }) => {
-    await publishTypeOutOfBand('acc_web_shelf', 'Acceptance web shelf');
+    await publishTypeOutOfBand('acc_web_crate', 'Acceptance web crate', { computed: true });
     await openEditor(page);
-    await openFieldsOf(page, 'Acceptance web shelf');
-    await page.getByRole('button', { name: 'Field', exact: true }).click();
-    await page.getByLabel('Computed field').click();
-    const builder = page.getByRole('region', { name: 'Selected node' });
-    test.skip(
-      (await builder.count()) === 0,
-      'the computed expression builder is not on this build (inventory-types/design-computed-editor is design-only so far)'
-    );
-    await expect(builder).toBeVisible();
+    await openFieldsOf(page, 'Acceptance web crate');
+    await page.getByText('Double', { exact: true }).first().click();
+    await expect(page.getByRole('region', { name: 'Selected node' })).toBeVisible();
+    await expect(page.getByTestId('expression-readback')).toContainText('Count + Count');
+
+    await page.getByLabel('Required').click();
+    await page.getByRole('button', { name: 'Save field' }).click();
+
     await expect(page.getByText('Publishes through MCP, not here.')).toBeVisible();
+    await expect(page.getByText('inventory.catalogue.publishDraft')).toBeVisible();
+    const current = await stack.call('/type-catalogue/drafts/current');
+    const saved = draftSchema
+      .parse(current.body)
+      .types.find((type) => type.key === 'acc_web_crate')
+      ?.fields.find((field) => field.key === 'double');
+    expect(saved).toMatchObject({ required: true, expressionVersion: 1 });
   });
 });
