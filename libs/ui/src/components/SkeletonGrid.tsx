@@ -6,7 +6,7 @@ export interface SkeletonGridProps {
   count: number;
   /** Height of each skeleton card (Tailwind class, e.g. "h-32") */
   itemHeight?: string;
-  /** Grid column class (e.g. "sm:grid-cols-2 lg:grid-cols-4") */
+  /** Grid column class (e.g. "sm:max-lg:grid-cols-2 lg:grid-cols-4") */
   cols?: string;
   /** Gap class (e.g. "gap-4") */
   gap?: string;
@@ -19,7 +19,7 @@ export interface SkeletonGridProps {
 export function SkeletonGrid({
   count,
   itemHeight = 'h-32',
-  cols = 'sm:grid-cols-2 lg:grid-cols-4',
+  cols = 'sm:max-lg:grid-cols-2 lg:grid-cols-4',
   gap = 'gap-4',
   className,
 }: SkeletonGridProps) {

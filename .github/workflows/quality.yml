@@ -453,6 +453,27 @@ jobs:
       - name: Shell and pillar stylesheets scan what they own, and every UI file is covered
         run: node scripts/check-tailwind-source-coverage.mjs
 
+  tailwind-cascade-conflicts:
+    name: Tailwind cross-sheet cascade conflicts
+    # Each pillar's utilities sheet is linked after the shell's in one document
+    # (POPS-4581), so two utilities competing on one element no longer resolve
+    # in Tailwind's single-sheet order. This guard keeps out the two shapes the
+    # pillar-base sublayer does not fix (POPS-4619): a shell/lib element with two
+    # variants of one property at equal specificity (`md:flex lg:hidden`), and a
+    # pillar element with two plain utilities of one property outside cn(). It
+    # reads the source tree directly and pulls in no third-party deps, so it
+    # skips `pnpm install`.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Gate self-test (proves the guard reports each planted shape)
+        run: node scripts/check-tailwind-cascade-conflicts.mjs --self-test
+      - name: No element depends on utility order across stylesheets
+        run: node scripts/check-tailwind-cascade-conflicts.mjs
+
   design-tokens:
     name: Design tokens in frontend source
     # AGENTS.md "Styling" says colours come from design tokens and nothing

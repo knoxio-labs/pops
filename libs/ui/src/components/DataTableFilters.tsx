@@ -50,7 +50,7 @@ interface FilterBarProps<TData> {
 
 function FilterGrid<TData>({ filters, table }: { filters: ColumnFilter[]; table: Table<TData> }) {
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid gap-4 sm:max-lg:grid-cols-2 lg:grid-cols-3">
       {filters.map((filter) => {
         const column = table.getColumn(filter.id);
         if (!column) return null;
@@ -178,7 +178,7 @@ export function FilterBar<TData>({ filters, table, onClearAll }: FilterBarProps<
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <div className="hidden md:grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="hidden md:grid gap-4 sm:max-lg:grid-cols-2 lg:grid-cols-3">
         <FilterGrid filters={filters} table={table} />
       </div>
       {activeFiltersCount > 0 && (
