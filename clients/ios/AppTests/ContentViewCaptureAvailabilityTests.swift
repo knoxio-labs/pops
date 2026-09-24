@@ -21,19 +21,28 @@ internal struct ContentViewCaptureAvailabilityTests {
         let scene = try #require(
             UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
         let window = UIWindow(windowScene: scene)
-        var observations: [Bool] = []
         window.frame = CGRect(x: 0, y: 0, width: 390, height: 844)
-        window.rootViewController = UIHostingController(
-            rootView: ContentViewFixture.view(
-                available: available,
-                purchasesCaptureObserver: { observations.append($0) }))
-        window.makeKeyAndVisible()
-        window.layoutIfNeeded()
         defer { window.isHidden = true }
-
-        for _ in 0..<10 where observations.isEmpty {
-            await Task.yield()
+        let first = FirstObservation()
+        return await withCheckedContinuation { continuation in
+            first.continuation = continuation
+            window.rootViewController = UIHostingController(
+                rootView: ContentViewFixture.view(
+                    available: available,
+                    purchasesCaptureObserver: { first.resume(returning: $0) }))
+            window.makeKeyAndVisible()
+            window.layoutIfNeeded()
         }
-        return try #require(observations.first)
+    }
+}
+
+/// Resumes its continuation with the first observed value only; later appearances are ignored.
+@MainActor
+private final class FirstObservation {
+    var continuation: CheckedContinuation<Bool, Never>?
+
+    func resume(returning value: Bool) {
+        continuation?.resume(returning: value)
+        continuation = nil
     }
 }

@@ -31,13 +31,9 @@ public struct PurchasesFlowView: View {
     public var body: some View {
         NavigationStack(path: $path) {
             PurchasesHomeScreen(model: home)
+                .modifier(PurchasesCaptureAvailabilityObserver(observe: captureObserver))
                 .navigationDestination(for: PurchasesScreenRoute.self) { route in
                     PurchasesDestinationView(route: route, dependencies: dependencies)
-                }
-                .background {
-                    if let captureObserver {
-                        PurchasesCaptureAvailabilityProbe(observe: captureObserver)
-                    }
                 }
         }
         .purchaseCapturePresentation(
@@ -47,13 +43,11 @@ public struct PurchasesFlowView: View {
     }
 }
 
-private struct PurchasesCaptureAvailabilityProbe: View {
+private struct PurchasesCaptureAvailabilityObserver: ViewModifier {
     @Environment(\.purchaseCapture) private var purchaseCapture
-    let observe: @MainActor (Bool) -> Void
+    let observe: (@MainActor (Bool) -> Void)?
 
-    var body: some View {
-        Color.clear
-            .frame(width: 0, height: 0)
-            .onAppear { observe(purchaseCapture != nil) }
+    func body(content: Content) -> some View {
+        content.onAppear { observe?(purchaseCapture != nil) }
     }
 }
