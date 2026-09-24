@@ -164,8 +164,10 @@ describe('commitViolations', () => {
 });
 
 describe('committedMessage', () => {
-  it('drops comment lines, which git never commits', () => {
-    expect(committedMessage(`fix: one\n# ${TRAILER}\nBody.`)).toBe('fix: one\nBody.');
+  it('keeps # lines, which -m and -F commit verbatim', () => {
+    const raw = `fix: one\n# ${TRAILER}\nBody.`;
+    expect(committedMessage(raw)).toBe(raw);
+    expect(attributionLines(committedMessage(raw))).toHaveLength(1);
   });
 
   it('cuts everything under a verbose scissors line', () => {

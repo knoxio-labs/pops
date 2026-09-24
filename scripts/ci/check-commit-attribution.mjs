@@ -113,17 +113,17 @@ export function commitViolations(commit) {
 }
 
 /**
- * The message git will actually record from a `commit-msg` file: comment
- * lines dropped and everything under a `--verbose` scissors line cut, as
- * git's default cleanup does. A template comment is never committed, so it
- * cannot be what fails the commit.
+ * The message git will record from a `commit-msg` file: everything under a
+ * `--verbose` scissors line cut, since that is the staged diff, never the
+ * message. Lines starting with `#` are kept on purpose. git-commit(1) strips
+ * them only when "the message is to be edited" in an editor. `-m` and `-F`,
+ * which scripted and agent commits use, keep them verbatim, so a credit on
+ * a `#` line would land.
  */
 export function committedMessage(/** @type {string} */ raw) {
   const lines = raw.split('\n');
   const scissors = lines.findIndex((line) => /^# -+ >8 -+$/u.test(line));
-  return (scissors >= 0 ? lines.slice(0, scissors) : lines)
-    .filter((line) => !line.startsWith('#'))
-    .join('\n');
+  return (scissors >= 0 ? lines.slice(0, scissors) : lines).join('\n');
 }
 
 const FIELD = '\u001f';
@@ -307,7 +307,7 @@ function selfTest() {
   const messageCases = [
     ['a clean message file passes', 'fix: one\n\nPlain body.\n', 0],
     ['a trailer in a message file is caught', `fix: one\n\n${trailer}\n`, 1],
-    ['a template comment is not committed, so not caught', `fix: one\n# ${footer}\n`, 0],
+    ['a # line is caught — -m and -F commit it verbatim', `fix: one\n# ${footer}\n`, 1],
     [
       'the diff under a scissors line is not committed, so not caught',
       `fix: one\n# ------------------------ >8 ------------------------\n+${footer}\n`,
