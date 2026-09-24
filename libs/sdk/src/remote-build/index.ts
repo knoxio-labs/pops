@@ -31,8 +31,9 @@ import { dirname, isAbsolute, join } from 'node:path';
 
 /**
  * Package names a loader-mounted pillar bundle must import rather than
- * contain. Subpaths are covered — `react/jsx-runtime` and `@pops/ui/theme`
- * both resolve to the same instance as their package root.
+ * contain. A bundle may import only the specifiers of these packages that
+ * {@link SHARED_RUNTIME_ENTRY_POINTS} lists; any other subpath is bundled, and
+ * `scripts/build-remote.ts` then fails the build naming the package.
  *
  * Most of these are here because a second instance is a correctness bug: two
  * React dispatchers, a second query cache, a second i18n, a second toast
@@ -71,7 +72,10 @@ export const SHARED_RUNTIME_SPECIFIERS: readonly string[] = [
  * map keyed only on `react` leaves `react/jsx-runtime` unresolvable, and every
  * bundle compiled with the automatic JSX runtime imports it. Both JSX runtimes
  * are here because a bundle built in either mode must load against the same
- * host.
+ * host. The `@pops/ui` subpaths are here for the same reason: a pillar
+ * importing `@pops/ui/theme/graph-colors` needs the import map to answer that
+ * exact specifier, and `pillars/shell` fails its tests when a runtime subpath
+ * `@pops/ui` publishes has no row (POPS-4034).
  *
  * `hasDefault` records whether the specifier exports a default binding. The
  * host's re-export facade needs it and cannot infer it —
@@ -101,20 +105,33 @@ export const SHARED_RUNTIME_ENTRY_POINTS: readonly {
   { specifier: 'i18next', hasDefault: true },
   { specifier: 'react-i18next', hasDefault: false },
   { specifier: '@pops/ui', hasDefault: false },
+  { specifier: '@pops/ui/theme/graph-colors', hasDefault: false },
+  { specifier: '@pops/ui/theme/chart-colors', hasDefault: false },
   { specifier: 'recharts', hasDefault: false },
   { specifier: 'sonner', hasDefault: false },
 ];
 
+const IMPORT_MAP_SPECIFIERS: ReadonlySet<string> = new Set(
+  SHARED_RUNTIME_ENTRY_POINTS.map((entry) => entry.specifier)
+);
+
 /**
- * True when an import specifier names a shared-runtime package or one of its
- * subpaths. Suitable as a Rollup `external` predicate.
+ * True when an import specifier is one the shell's import map answers.
+ * Suitable as a Rollup `external` predicate.
  *
- * Matches on package-name boundaries so a package whose name merely starts
- * with a shared one (`react-router-dom`, `@pops/ui-kit`) is not swept in by
- * accident — that would externalise a specifier the shell's import map has no
- * entry for, and the pillar would fail to load rather than merely ship a
- * duplicate.
+ * Exact match against {@link SHARED_RUNTIME_ENTRY_POINTS}, not a prefix match
+ * on {@link SHARED_RUNTIME_SPECIFIERS}. Externalising a specifier the import
+ * map has no entry for leaves a bare specifier the browser refuses, and the
+ * page importing it renders its error boundary instead of mounting — which is
+ * what a package-boundary match did to `@pops/ui/theme/graph-colors`
+ * (POPS-4034). An unlisted subpath of a shared package is bundled instead,
+ * where `findBundledSharedRuntime` sees it and fails the build, so the gap
+ * surfaces at build time rather than in a browser.
  */
+export function isSharedRuntimeSpecifier(specifier: string): boolean {
+  return IMPORT_MAP_SPECIFIERS.has(specifier);
+}
+
 /**
  * `define` entries every remote bundle needs.
  *
@@ -186,12 +203,6 @@ export function findProcessGlobalUsage(
   return chunks
     .filter((chunk) => globalProcess.test(chunk.code) && !featureDetected.test(chunk.code))
     .map((chunk) => chunk.fileName);
-}
-
-export function isSharedRuntimeSpecifier(specifier: string): boolean {
-  return SHARED_RUNTIME_SPECIFIERS.some(
-    (shared) => specifier === shared || specifier.startsWith(`${shared}/`)
-  );
 }
 
 /**

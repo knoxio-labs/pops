@@ -29,10 +29,23 @@ describe('isSharedRuntimeSpecifier', () => {
     }
   });
 
-  it('matches subpaths of a shared package', () => {
-    expect(isSharedRuntimeSpecifier('react/jsx-runtime')).toBe(true);
-    expect(isSharedRuntimeSpecifier('react-dom/client')).toBe(true);
-    expect(isSharedRuntimeSpecifier('@pops/ui/theme')).toBe(true);
+  it('matches exactly the specifiers the import map carries', () => {
+    const mapped = SHARED_RUNTIME_ENTRY_POINTS.map((entry) => entry.specifier);
+    for (const specifier of mapped) {
+      expect(isSharedRuntimeSpecifier(specifier)).toBe(true);
+    }
+    expect(mapped).toContain('react/jsx-runtime');
+    expect(mapped).toContain('@pops/ui/theme/graph-colors');
+  });
+
+  // POPS-4034: a package-boundary match externalised these, and the import
+  // map had no entry for them, so the browser refused the bare specifier.
+  // Bundled instead, `findBundledSharedRuntime` fails the build.
+  it('does not match a subpath of a shared package the import map lacks', () => {
+    expect(isSharedRuntimeSpecifier('@pops/ui/theme')).toBe(false);
+    expect(isSharedRuntimeSpecifier('@pops/ui/testing/decode-qr')).toBe(false);
+    expect(isSharedRuntimeSpecifier('react-dom/server')).toBe(false);
+    expect(isSharedRuntimeSpecifier('recharts/types/util/types')).toBe(false);
   });
 
   // A prefix match without the boundary would externalise these, and the

@@ -7,14 +7,95 @@
  * that can show it survived the round trip — a flattened tree still renders a
  * tab, it just rebuilds the chrome underneath it every time.
  */
+import { z } from 'zod';
+
 import { expect, test } from './fixtures/pillar-rest-guard';
-import { stubShellBoot } from './helpers/pillar-rest';
+import { fulfilWith, stubShellBoot } from './helpers/pillar-rest';
+
+/**
+ * `GET /substitutions/graph-view` 200 — mirrors `GraphViewSchema`
+ * (`pillars/food/src/contract/rest-substitutions.ts`). Hand-mirrored rather
+ * than imported for the reason `media-library-search-add-movie.spec.ts`
+ * gives: `shell-no-cross-internal` keeps another pillar's contract package
+ * out of reach from here.
+ */
+const GraphViewSchema = z
+  .object({
+    nodes: z.array(
+      z
+        .object({
+          id: z.string(),
+          kind: z.enum(['ingredient', 'variant']),
+          ingredientId: z.number().int(),
+          variantId: z.number().int().nullable(),
+          ingredientSlug: z.string(),
+          ingredientName: z.string(),
+          variantSlug: z.string().nullable(),
+          variantName: z.string().nullable(),
+        })
+        .strict()
+    ),
+    edges: z.array(
+      z
+        .object({
+          id: z.number().int(),
+          fromNodeId: z.string(),
+          toNodeId: z.string(),
+          ratio: z.number(),
+          contextTags: z.array(z.string()),
+          scope: z.enum(['global', 'recipe']),
+          recipeId: z.number().int().nullable(),
+          recipeSlug: z.string().nullable(),
+          notes: z.string().nullable(),
+        })
+        .strict()
+    ),
+  })
+  .strict();
+
+const GRAPH_VIEW = {
+  nodes: [
+    {
+      id: 'i:1',
+      kind: 'ingredient',
+      ingredientId: 1,
+      variantId: null,
+      ingredientSlug: 'butter',
+      ingredientName: 'Butter',
+      variantSlug: null,
+      variantName: null,
+    },
+    {
+      id: 'i:2',
+      kind: 'ingredient',
+      ingredientId: 2,
+      variantId: null,
+      ingredientSlug: 'margarine',
+      ingredientName: 'Margarine',
+      variantSlug: null,
+      variantName: null,
+    },
+  ],
+  edges: [
+    {
+      id: 1,
+      fromNodeId: 'i:1',
+      toNodeId: 'i:2',
+      ratio: 1,
+      contextTags: [],
+      scope: 'global',
+      recipeId: null,
+      recipeSlug: null,
+      notes: null,
+    },
+  ],
+};
 
 test.describe('food — mounted by the runtime loader', () => {
   test.use({
     allowUnroutedPillarRest:
       'every assertion here is about the route table surviving the wire — a ' +
-      'URL, a tab nav, the absence of a load error — and none reads a body. ' +
+      'URL, a tab nav, a mounted page — and only the graph reads a body. ' +
       'The tabs that do mount a data page fire food-api reads (ingredients, ' +
       'conversions/units, conversions/weights); stubbing them would assert ' +
       "the food app's own data flow, which is that pillar's tests' job",
@@ -68,11 +149,23 @@ test.describe('food — mounted by the runtime loader', () => {
    * A route two levels deep and reachable from nothing on the rail — the kind
    * most easily dropped from the page list, and the kind whose absence shows
    * up as a 404 rather than as anything visibly broken.
+   *
+   * The canvas is the assertion, not the absence of the load-error testid.
+   * The bundle loading is not the page mounting: when the page's chunk
+   * imported a `@pops/ui` subpath the import map could not resolve, the
+   * loader succeeded, the page's error boundary rendered, and a load-error
+   * check passed over it (POPS-4034).
    */
-  test('the substitutions graph subroute mounts', async ({ page }) => {
+  test('the substitutions graph subroute mounts and draws the graph', async ({ page }) => {
+    await page.route(
+      /\/food-api\/substitutions\/graph-view(\?|$)/,
+      fulfilWith(200, GraphViewSchema, GRAPH_VIEW, 'substitutions.graphView')
+    );
+
     await page.goto('/food/data/substitutions/graph');
 
     await expect(page).toHaveURL(/\/food\/data\/substitutions\/graph/);
-    await expect(page.getByTestId('external-pillar-load-error')).toHaveCount(0);
+    const graph = page.getByRole('img', { name: 'Substitution graph canvas' });
+    await expect(graph.locator('canvas')).toBeVisible();
   });
 });
