@@ -35,7 +35,8 @@ public struct ReceiptDraftLock: Hashable, Sendable {
 
 /// Where the form's Save lives.
 public enum ReceiptDraftCommit: Hashable, Sendable {
-    /// A bar pinned under the form, which is what the capture flow uses.
+    /// A bar pinned under the form, which is what hand entry and review use:
+    /// a screen pushed onto its host's own stack, not a sheet.
     case actionBar
     /// The navigation bar's confirmation slot, for a form presented in a sheet
     /// that the host titles and cancels. Save there stays disabled until the
