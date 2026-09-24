@@ -211,8 +211,10 @@ extension InventoryReplica {
         try write { db in
             try Protocol2CatalogueRows.store(catalogue, in: db)
             var meta = try SyncMeta.read(db)
+            let moved = meta.catalogueRevision != catalogue.revision.revision
             meta.catalogueRevision = catalogue.revision.revision
             try meta.write(db)
+            if moved { try LocalComputedValues.refreshForCatalogueChange(in: db) }
             try Protocol2SearchIndex.reindex(catalogue, in: db)
         }
     }

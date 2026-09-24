@@ -11,8 +11,19 @@ import {
   publishReferenceComputedTypes,
   type ReferenceComputedCatalogue,
 } from '../../catalogue/__tests__/computed-reference-fixture.js';
-import { SyncItemSchema } from '../../contract/rest-sync-schemas.js';
 import { runMutation } from '../../domain/commands/index.js';
+import {
+  apply,
+  changesSince,
+  computed,
+  create,
+  createKit,
+  createPart,
+  highWater,
+  ref,
+  row,
+  type SyncItem,
+} from './computed-feed-fixture.js';
 import {
   openSyncHarness,
   PROTOCOL_2,
@@ -22,10 +33,6 @@ import {
   type WireMutation,
 } from './sync-harness.js';
 import { createTestTransport } from './test-http.js';
-
-import type { z } from 'zod';
-
-type SyncItem = z.infer<typeof SyncItemSchema>;
 
 const transport = createTestTransport();
 let h: SyncHarness | undefined;
@@ -43,31 +50,6 @@ interface Fixture {
   readonly bundleId: string;
 }
 
-async function apply(target: SyncHarness, mutation: WireMutation): Promise<void> {
-  const response = await send(target.api, [mutation], PROTOCOL_2);
-  expect(response.status).toBe(200);
-  expect(response.body.outcomes[0]).toMatchObject({ status: 'applied' });
-}
-
-function ref(targetId: string) {
-  return { targetKind: 'item', targetId };
-}
-
-function create(
-  catalogue: ReferenceComputedCatalogue,
-  id: string,
-  name: string,
-  typeId: string,
-  values: { fieldId: string; values: unknown[] }[]
-): WireMutation {
-  return wireMutation(
-    'item.create',
-    id,
-    { item: { name, typeId, values } },
-    { catalogueRevision: catalogue.revision }
-  );
-}
-
 function edit(
   fixture: Pick<Fixture, 'catalogue'>,
   id: string,
@@ -82,24 +64,6 @@ function edit(
   );
 }
 
-async function createPart(target: SyncHarness, c: ReferenceComputedCatalogue, weight: number) {
-  const id = randomUUID();
-  await apply(
-    target,
-    create(c, id, `Part ${weight}`, c.partTypeId, [{ fieldId: c.weightFieldId, values: [weight] }])
-  );
-  return id;
-}
-
-async function createKit(target: SyncHarness, c: ReferenceComputedCatalogue, partId: string) {
-  const id = randomUUID();
-  await apply(
-    target,
-    create(c, id, 'Kit', c.kitTypeId, [{ fieldId: c.kitPartFieldId, values: [ref(partId)] }])
-  );
-  return id;
-}
-
 async function setup(): Promise<Fixture> {
   h = openSyncHarness(transport);
   const catalogue = publishReferenceComputedTypes(h.db.db);
@@ -108,51 +72,13 @@ async function setup(): Promise<Fixture> {
   const bundleId = randomUUID();
   await apply(
     h,
-    create(catalogue, bundleId, 'Bundle', catalogue.bundleTypeId, [
-      { fieldId: catalogue.bundleKitFieldId, values: [ref(kitId)] },
-    ])
+    create(catalogue, bundleId, {
+      name: 'Bundle',
+      typeId: catalogue.bundleTypeId,
+      values: [{ fieldId: catalogue.bundleKitFieldId, values: [ref(kitId)] }],
+    })
   );
   return { target: h, catalogue, partId, kitId, bundleId };
-}
-
-interface Feed {
-  readonly items: SyncItem[];
-  readonly events: { seq: number; entityId: string }[];
-}
-
-async function epochOf(target: SyncHarness): Promise<string> {
-  const response = await target.api.get('/sync/snapshot').set(PROTOCOL_2).query({ limit: 1 });
-  expect(response.status).toBe(200);
-  return String(response.body.epoch);
-}
-
-async function highWater(target: SyncHarness): Promise<number> {
-  const response = await target.api.get('/sync/snapshot').set(PROTOCOL_2).query({ limit: 1 });
-  return Number(response.body.highWaterSeq);
-}
-
-async function changesSince(target: SyncHarness, since: number): Promise<Feed> {
-  const response = await target.api
-    .get('/sync/changes')
-    .set(PROTOCOL_2)
-    .query({ since, epoch: await epochOf(target), limit: 500 });
-  expect(response.status).toBe(200);
-  return {
-    items: SyncItemSchema.array().parse(response.body.items),
-    events: response.body.events as Feed['events'],
-  };
-}
-
-function row(feed: Feed, id: string): SyncItem {
-  const found = feed.items.find((item) => item.id === id);
-  if (found === undefined) throw new Error(`feed lacks ${id}`);
-  return found;
-}
-
-function computed(item: SyncItem, fieldId: string) {
-  const value = item.computedValues.find((entry) => entry.fieldId === fieldId);
-  if (value === undefined) throw new Error(`${item.id} has no computed ${fieldId}`);
-  return value;
 }
 
 function dependencyRevision(item: SyncItem, fieldId: string, itemId: string): number | undefined {

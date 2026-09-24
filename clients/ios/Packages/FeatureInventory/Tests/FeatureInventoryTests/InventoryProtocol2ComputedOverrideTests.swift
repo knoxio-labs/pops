@@ -153,8 +153,9 @@ internal struct InventoryProtocol2ComputedOverrideTests {
         // the old `InventoryProtocol2Draft.computed` dictionary, built only
         // from `item.fieldValues` where `source != .stored`, would see
         // nothing here and read the field as unavailable. Reading
-        // `item.computedValues` through `display(in:revisionOf:)` must show
-        // the calculated value instead.
+        // `item.computedValues` through
+        // `display(in:activeCatalogueRevision:revisionOf:)` must show the
+        // calculated value instead.
         let opened = await Self.opened(
             Self.item(computed: [Self.volume: .ok(.string("6 l"))], fieldValues: []))
         defer { opened.loading.cancel() }
