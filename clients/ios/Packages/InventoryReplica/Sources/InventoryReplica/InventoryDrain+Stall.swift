@@ -11,9 +11,10 @@ extension InventoryDrain {
     func report(_ error: any Error) {
         online.noteFailure(error)
         guard Self.stallsSending(error) else { return }
+        let kind = String(describing: type(of: error))
+        let detail = String(reflecting: error)
         Self.log.error(
-            "sending stopped on \(String(describing: type(of: error)), privacy: .public): \(String(reflecting: error), privacy: .private)"
-        )
+            "sending stopped on \(kind, privacy: .public): \(detail, privacy: .private)")
         let at = now()
         replica.updateActivity { activity in
             if activity.sendingStall == nil {

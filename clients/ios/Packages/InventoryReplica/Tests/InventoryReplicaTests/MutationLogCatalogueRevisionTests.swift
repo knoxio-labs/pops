@@ -54,8 +54,8 @@ internal struct MutationLogCatalogueRevisionTests {
             .setItemQuantity(id: Setup.rack, quantity: 2), mutationId: "quantity",
             clientTime: Setup.time)
         _ = try replica.perform(
-            .splitItem(id: Setup.rack, newItemId: Setup.elsewhere, quantity: 1), mutationId: "split",
-            clientTime: Setup.time)
+            .splitItem(id: Setup.rack, newItemId: Setup.elsewhere, quantity: 1),
+            mutationId: "split", clientTime: Setup.time)
         try LocalComputedValueTests.edit(
             replica, Setup.box, Setup.width, [try Setup.decimal("4.0")], mutationId: "edit")
         _ = try replica.perform(
@@ -104,34 +104,7 @@ internal struct MutationLogCatalogueRevisionTests {
     @Test("upgrading keeps every queued row and its state, and clears only invented revisions")
     func upgradeKeepsRowsAndClearsInventedRevisions() throws {
         let queue = try Upgrade.queueAtV10()
-        try queue.write { db in
-            try Upgrade.insert(
-                "p1", .editItem(id: "lamp", name: "Lamp", note: .unchanged, fields: [:]),
-                revision: 1, in: db)
-            try Upgrade.insert(
-                "p2",
-                .editProtocol2Item(
-                    id: "lamp", catalogueRevision: 7,
-                    values: [InventoryProtocol2FieldPatch(fieldId: "f", values: nil)]),
-                revision: 7, state: "deferred", dependsOn: ["p1"], attempts: 2, heldAfter: 6,
-                in: db)
-            try Upgrade.insert(
-                "p2-at-1",
-                .editProtocol2Item(
-                    id: "lamp", catalogueRevision: 1,
-                    values: [InventoryProtocol2FieldPatch(fieldId: "f", values: nil)]),
-                revision: 1, in: db)
-            try Upgrade.insert(
-                "split", .splitItem(id: "lamp", newItemId: "lamp-2", quantity: 1), revision: 1,
-                in: db)
-            try Upgrade.insert(
-                "override", .clearComputedOverride(id: "lamp", fieldId: "f"), revision: 5,
-                state: "rejected", in: db)
-            try Upgrade.insertUndo("undo", of: "p1", in: db)
-            try Upgrade.insert(
-                "cancelled", .setItemQuantity(id: "lamp", quantity: 1), revision: 1, in: db)
-            try db.execute(sql: "DELETE FROM mutation_log WHERE mutation_id = 'cancelled'")
-        }
+        try queue.write { db in try Upgrade.seedMixedLog(in: db) }
         let before = try queue.read { db in try Upgrade.rowsExceptRevision(db) }
 
         try ReplicaSchema.migrator().migrate(queue)
@@ -143,7 +116,10 @@ internal struct MutationLogCatalogueRevisionTests {
                     "p1": nil, "p2": 7, "p2-at-1": 1, "split": nil, "override": 5, "undo": nil,
                 ])
             let entries = try MutationLogRows.entries(db)
-            #expect(entries.map(\.mutationId) == ["p1", "p2", "p2-at-1", "split", "override", "undo"])
+            #expect(
+                entries.map(\.mutationId) == [
+                    "p1", "p2", "p2-at-1", "split", "override", "undo",
+                ])
             #expect(entries.first { $0.mutationId == "p2" }?.awaitingCatalogueAfter == 6)
             let sent = try MutationLogWrites.outbound(excluding: [], in: db)
             #expect(
@@ -203,34 +179,79 @@ private enum Upgrade {
         return queue
     }
 
+    /// One `mutation_log` row as the v10 build wrote it.
+    struct LogRow {
+        let id: String
+        let command: String
+        let revision: Int?
+        var state = "queued"
+        var dependsOn: [String] = []
+        var attempts = 0
+        var heldAfter: Int?
+
+        init(_ id: String, _ command: InventoryCommand, revision: Int?) throws {
+            self.id = id
+            self.command = try StoredJSON.encode(StoredCommand(.command(command)))
+            self.revision = revision
+        }
+
+        init(undo id: String, of target: String) throws {
+            self.id = id
+            command = try StoredJSON.encode(StoredCommand(.undo(of: target)))
+            revision = 1
+            dependsOn = [target]
+        }
+    }
+
+    /// A protocol-1 edit, protocol-2 edits at 7 (deferred, held after 6) and
+    /// at 1, a split, an override at 5 (rejected), an Undo, and a cancelled
+    /// row whose `local_seq` (7) the counter must not hand out again.
+    static func seedMixedLog(in db: Database) throws {
+        let patch = [InventoryProtocol2FieldPatch(fieldId: "f", values: nil)]
+        var deferred = try LogRow(
+            "p2", .editProtocol2Item(id: "lamp", catalogueRevision: 7, values: patch),
+            revision: 7)
+        deferred.state = "deferred"
+        deferred.dependsOn = ["p1"]
+        deferred.attempts = 2
+        deferred.heldAfter = 6
+        var rejected = try LogRow(
+            "override", .clearComputedOverride(id: "lamp", fieldId: "f"), revision: 5)
+        rejected.state = "rejected"
+        for row in [
+            try LogRow(
+                "p1", .editItem(id: "lamp", name: "Lamp", note: .unchanged, fields: [:]),
+                revision: 1),
+            deferred,
+            try LogRow(
+                "p2-at-1", .editProtocol2Item(id: "lamp", catalogueRevision: 1, values: patch),
+                revision: 1),
+            try LogRow(
+                "split", .splitItem(id: "lamp", newItemId: "lamp-2", quantity: 1), revision: 1),
+            rejected,
+            try LogRow(undo: "undo", of: "p1"),
+            try LogRow("cancelled", .setItemQuantity(id: "lamp", quantity: 1), revision: 1),
+        ] {
+            try insert(row, in: db)
+        }
+        try db.execute(sql: "DELETE FROM mutation_log WHERE mutation_id = 'cancelled'")
+    }
+
     static func insert(
-        _ id: String, _ command: InventoryCommand, revision: Int?, state: String = "queued",
-        dependsOn: [String] = [], attempts: Int = 0, heldAfter: Int? = nil, in db: Database
+        _ id: String, _ command: InventoryCommand, revision: Int?, in db: Database
     ) throws {
-        try insert(
-            id, command: try StoredJSON.encode(StoredCommand(.command(command))),
-            revision: revision, state: state, dependsOn: dependsOn, attempts: attempts,
-            heldAfter: heldAfter, in: db)
+        try insert(try LogRow(id, command, revision: revision), in: db)
     }
 
-    static func insertUndo(_ id: String, of target: String, in db: Database) throws {
-        try insert(
-            id, command: try StoredJSON.encode(StoredCommand(.undo(of: target))), revision: 1,
-            state: "queued", dependsOn: [target], attempts: 0, heldAfter: nil, in: db)
-    }
-
-    private static func insert(
-        _ id: String, command: String, revision: Int?, state: String, dependsOn: [String],
-        attempts: Int, heldAfter: Int?, in db: Database
-    ) throws {
+    static func insert(_ row: LogRow, in db: Database) throws {
         let columns =
             "mutation_id, entity_kind, entity_id, command, depends_on, state, touched, attempts, "
             + "created_at, awaiting_catalogue_after"
         let values: StatementArguments = [
-            id, "item", "lamp", command, try StoredJSON.encode(dependsOn), state, "[]", attempts, 0,
-            heldAfter,
+            row.id, "item", "lamp", row.command, try StoredJSON.encode(row.dependsOn), row.state,
+            "[]", row.attempts, 0, row.heldAfter,
         ]
-        guard let revision else {
+        guard let revision = row.revision else {
             try db.execute(
                 sql: "INSERT INTO mutation_log (\(columns)) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 arguments: values)

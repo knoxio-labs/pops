@@ -138,13 +138,6 @@ internal final class InventoryDrain: Sendable {
         trigger.yield()
     }
 
-    private func takeWaiters() -> [CheckedContinuation<Void, Never>] {
-        waiters.withLock { waiters in
-            defer { waiters.removeAll() }
-            return Array(waiters.values)
-        }
-    }
-
     /// Asks for a pass and returns once a pass that started after this call
     /// has ended, however it ended, or at once when the calling task is
     /// cancelled. The pass itself is not cancelled: rows it leaves in flight
@@ -286,5 +279,14 @@ internal final class InventoryDrain: Sendable {
         if OnlineInventoryStore.needsResync(error) { return .resyncRequired }
         report(error)
         return OnlineInventoryStore.blockReason(for: error) == nil ? .failed : .blocked
+    }
+}
+
+extension InventoryDrain {
+    fileprivate func takeWaiters() -> [CheckedContinuation<Void, Never>] {
+        waiters.withLock { waiters in
+            defer { waiters.removeAll() }
+            return Array(waiters.values)
+        }
     }
 }

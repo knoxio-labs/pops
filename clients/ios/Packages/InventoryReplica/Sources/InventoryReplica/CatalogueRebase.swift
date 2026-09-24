@@ -28,7 +28,8 @@ internal enum CatalogueRebase {
             return .rebased(entry.command, revision: nil)
         }
         guard let authoredRevision = command.protocol2CatalogueRevision else {
-            return .rebased(entry.command, revision: command.sentCatalogueRevision(active: revision))
+            return .rebased(
+                entry.command, revision: command.sentCatalogueRevision(active: revision))
         }
         guard let target = try Protocol2CatalogueRows.read(revision: revision, in: db) else {
             return .incompatible(reason: "catalogue revision \(revision) is not on this phone")
