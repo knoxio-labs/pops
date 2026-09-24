@@ -663,6 +663,20 @@ describe('POPS-4612: status tracks what the links say, not what created the orde
     expect(status(id)).toBe('awaiting_settlement');
   });
 
+  it('keeps the link when the status recompute after an unlink fails', async () => {
+    const id = anOrder({ checksum: 'a' });
+    await runSweep(deps(financeReturning({ id: 't1' })));
+    const link = onlyLink();
+    opened.raw.exec(
+      "CREATE TRIGGER refuse_status BEFORE UPDATE OF status ON purchases BEGIN SELECT RAISE(ABORT, 'refused'); END"
+    );
+
+    expect(() => unlinkCharge(db, link.chargeId, link.uri)).toThrow('refused');
+
+    expect(linkRows()).toHaveLength(1);
+    expect(status(id)).toBe('linked');
+  });
+
   it('rejecting behaves the same as unlinking, for status', async () => {
     const id = anOrder({ checksum: 'a' });
     await runSweep(deps(financeReturning({ id: 't1' })));

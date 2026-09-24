@@ -176,18 +176,20 @@ export function persistProposedLinks(db: PurchasesDb, links: readonly ProposedLi
  * {@link rejectLink} gets this for free, since it calls through here.
  */
 export function unlinkCharge(db: PurchasesDb, chargeId: string, transactionUri: string): boolean {
-  const removed =
-    db
-      .delete(purchaseChargeLinks)
-      .where(
-        and(
-          eq(purchaseChargeLinks.chargeId, chargeId),
-          eq(purchaseChargeLinks.transactionUri, transactionUri)
+  return db.transaction((tx) => {
+    const removed =
+      tx
+        .delete(purchaseChargeLinks)
+        .where(
+          and(
+            eq(purchaseChargeLinks.chargeId, chargeId),
+            eq(purchaseChargeLinks.transactionUri, transactionUri)
+          )
         )
-      )
-      .run().changes > 0;
-  if (removed) recomputeStatusForCharges(db, [chargeId]);
-  return removed;
+        .run().changes > 0;
+    if (removed) recomputeStatusForCharges(tx, [chargeId]);
+    return removed;
+  });
 }
 
 /**
