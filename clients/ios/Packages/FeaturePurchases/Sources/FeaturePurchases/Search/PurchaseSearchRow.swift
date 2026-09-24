@@ -136,10 +136,10 @@ internal enum PurchaseSearchRowContent {
     internal static func detailText(for hit: PurchaseSearchHit) -> String {
         switch hit {
         case .purchase(let order, _):
-            day(order.orderedOn)
+            PurchasesPresentation.day(of: order.orderedOn)
         case .line(_, _, let quantity, _, let order, _):
             "×\(quantity) · \(order.merchant.displayName ?? "Merchant not recognised") · "
-                + day(order.orderedOn)
+                + PurchasesPresentation.day(of: order.orderedOn)
         }
     }
 
@@ -184,9 +184,5 @@ internal enum PurchaseSearchRowContent {
             start = found.upperBound
         }
         return ranges
-    }
-
-    private static func day(_ date: Date) -> String {
-        date.formatted(.dateTime.day().month(.abbreviated))
     }
 }

@@ -14,7 +14,11 @@ internal enum PurchasesPresentation {
     }
 
     internal static func day(_ purchase: Purchase) -> String {
-        purchase.orderedOn.formatted(.dateTime.day().month(.abbreviated))
+        day(of: purchase.orderedOn)
+    }
+
+    nonisolated internal static func day(of date: Date) -> String {
+        date.formatted(.dateTime.day().month(.abbreviated))
     }
 
     internal static func month(_ date: Date) -> String {

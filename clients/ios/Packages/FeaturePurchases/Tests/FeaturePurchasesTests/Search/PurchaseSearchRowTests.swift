@@ -32,7 +32,9 @@ internal struct PurchaseSearchRowTests {
         let order = PurchaseSearchOrder.fake(orderedOn: Date(timeIntervalSince1970: 0))
         let hit = PurchaseSearchHit.purchase(order, printedMatch: nil)
 
-        #expect(PurchaseSearchRowContent.detailText(for: hit) == "1 Jan")
+        #expect(
+            PurchaseSearchRowContent.detailText(for: hit)
+                == PurchasesPresentation.day(of: order.orderedOn))
     }
 
     @Test("a line hit's detail line carries its quantity and its order's merchant and day")
@@ -47,7 +49,9 @@ internal struct PurchaseSearchRowTests {
             order: order,
             tagMatch: nil)
 
-        #expect(PurchaseSearchRowContent.detailText(for: hit) == "×3 · Fake Store · 1 Jan")
+        #expect(
+            PurchaseSearchRowContent.detailText(for: hit)
+                == "×3 · Fake Store · \(PurchasesPresentation.day(of: order.orderedOn))")
     }
 
     @Test("a purchase and a line hit render different detail line text")
