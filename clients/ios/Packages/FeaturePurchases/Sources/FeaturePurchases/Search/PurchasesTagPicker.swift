@@ -51,8 +51,10 @@ public struct PurchasesTagPicker: View {
         .navigationTitle("Tags")
         .popsTitleDisplay(large: false)
         .overlay {
-            if shown.isEmpty {
-                ContentUnavailableView("No tags match", systemImage: "tag.slash")
+            switch Self.emptyState(shown: shown, tagsInUse: tags, isSearching: isSearching) {
+            case .none: EmptyView()
+            case .noTagsYet: ContentUnavailableView("No tags yet", systemImage: "tag")
+            case .noMatches: ContentUnavailableView("No tags match", systemImage: "tag.slash")
             }
         }
         .purchasesPinnedSearchable(text: $query, prompt: "Tags")
@@ -71,6 +73,26 @@ public struct PurchasesTagPicker: View {
         let trimmed = query.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return tags }
         return tags.filter { $0.tag.localizedCaseInsensitiveContains(trimmed) }
+    }
+
+    /// Which empty message, if any, the list's overlay should draw.
+    ///
+    /// Distinguishes a genuinely empty tag vocabulary (``noTagsYet``, nothing
+    /// to search yet) from a query that filtered every tag out
+    /// (``noMatches``) — the two read very differently to someone who just
+    /// hasn't tagged anything.
+    internal enum EmptyState: Equatable {
+        case none
+        case noTagsYet
+        case noMatches
+    }
+
+    /// `nonisolated` for the same reason ``matching(_:_:)`` is.
+    nonisolated internal static func emptyState(
+        shown: [PurchaseTagCount], tagsInUse: [PurchaseTagCount], isSearching: Bool
+    ) -> EmptyState {
+        guard shown.isEmpty else { return .none }
+        return tagsInUse.isEmpty && !isSearching ? .noTagsYet : .noMatches
     }
 
     private func row(
