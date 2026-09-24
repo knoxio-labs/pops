@@ -223,7 +223,7 @@ export function reindexItems(db: CommandDb, ids: readonly string[]): void {
   indexAgainst(db, searchableRows(db, ids), loadPublishedCatalogue(db));
 }
 
-/** Drop `id`'s entry from `items_fts`. No op in this slice removes an item, so nothing calls this yet. */
+/** Drop `id`'s entry from `items_fts`. Called by `item.delete`'s own effect when an item is tombstoned. */
 export function removeFromSearchIndex(db: CommandDb, id: string): void {
   db.run(sql`delete from items_fts where id = ${id}`);
 }
