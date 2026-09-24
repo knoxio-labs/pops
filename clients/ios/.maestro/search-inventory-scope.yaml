@@ -1,0 +1,211 @@
+appId: com.knoxiolabs.pops.local
+name: Inventory's search behaviour under the Inventory scope matches the shipped Inventory search
+---
+# Approved differences from the shipped Inventory search screen, so the gate
+# does not treat them as regressions: the universal search screen is usable
+# before Inventory's first download (its section reads "Not on this phone
+# yet" with a Download action rather than the dedicated screen's own "Set up
+# inventory" empty state); the first-launch copy inside that section is
+# "Not on this phone yet", not the dedicated screen's "Set up inventory on
+# this phone"; and recents are scoped — a query searched while scoped to
+# Inventory shows in the recents list under All too, but a query searched
+# under Purchases does not show while scoped to Inventory
+# (`SearchRecent.shows(in:)`).
+- clearState
+- clearKeychain
+- launchApp
+
+- assertVisible:
+    id: 'pairing-code-field'
+
+# Armed before pairing, for the reason every switch here is: the bootstrap
+# fires the moment pairing lands. `inventory-smoke.yaml` says why this is the
+# real inventory pillar rather than a stub.
+- runScript: scripts/inventory-becomes-available.js
+- assertTrue: ${output.inventory.status == 200}
+- assertTrue: ${output.inventory.state.inventoryReachable == true}
+
+- runFlow:
+    file: subflows/enter-the-pairing-details.yaml
+    env:
+      SERVER_URL: ${CONTROL_BASE_URL}
+
+# Download, from the Inventory tab itself — the universal search screen never
+# offers its own download step ahead of this, only the Download action inside
+# its Inventory section once a query is asked. `inventory-smoke.yaml` covers
+# that empty-replica screen; this flow does not repeat it.
+- tapOn: 'Inventory'
+- assertVisible: 'Set up inventory on this phone'
+- tapOn: 'Start synchronization'
+- tapOn: 'Download'
+- assertVisible: 'Synced'
+
+# Two items and a place, all named from this run's own suffix. One item's
+# name STARTS with the suffix, so typing it later is a name-prefix match; the
+# other's name only CONTAINS it, so it ranks behind the first.
+- tapOn: 'Inventory'
+- tapOn: 'Items, \d+'
+- tapOn: 'Add an item|New item'
+- tapOn:
+    id: 'inventory-item-name-field'
+- inputText: ${output.inventory.run} Drill
+- assertVisible: ${output.inventory.run} Drill
+- tapOn: 'Create'
+- assertVisible: ${output.inventory.run} Drill
+
+- tapOn: 'Inventory'
+- tapOn: 'Items, \d+'
+- tapOn: 'Add an item|New item'
+- tapOn:
+    id: 'inventory-item-name-field'
+- inputText: Drill ${output.inventory.run}
+- assertVisible: Drill ${output.inventory.run}
+- tapOn: 'Create'
+- assertVisible: Drill ${output.inventory.run}
+
+- tapOn: 'Inventory'
+- tapOn: 'Locations, \d+'
+- tapOn: 'Add a place|New place'
+- tapOn: 'Name'
+- inputText: ${output.inventory.run} Garage
+- assertVisible: ${output.inventory.run} Garage
+- tapOn: 'Create'
+- assertVisible: ${output.inventory.run} Garage, Place
+
+# Open Search, scope to Inventory, and ask for the suffix. Submitting is what
+# records a recent, which the later restore step depends on — `pressKey:
+# Enter` rather than tapping the keyboard's own return key, whose label is
+# the Simulator's system locale and not this app's English copy.
+#
+# "Inventory" names both the scope chip and the tab bar's own Inventory tab;
+# the chip is the first match once the screen has settled, which the prompt
+# assertion below waits for before the tap disambiguates by index.
+- tapOn: 'Search'
+- assertVisible: 'Items, places, purchases'
+- tapOn:
+    text: 'Inventory'
+    index: 0
+- tapOn: 'Items, containers, places'
+- inputText: ${output.inventory.run}
+- pressKey: Enter
+
+# Ranking: the prefix match's row sits above the contains match's, both above
+# the place. `InventorySearchRanking`'s own tiers — name prefix, name
+# contains, then everything else, records before places — are unit-tested
+# already; this proves the same ordering reaches the shared search screen.
+- assertVisible: 'Results'
+- assertVisible: ${output.inventory.run} Drill
+- assertVisible: Drill ${output.inventory.run}
+- assertVisible: ${output.inventory.run} Garage
+
+# A result opens the item page, and Back returns to the same scoped results.
+- tapOn: '${output.inventory.run} Drill'
+- assertVisible: 'In hand'
+- tapOn:
+    id: 'BackButton'
+- assertVisible: 'Results'
+
+# Clearing the query returns to recents, scoped to Inventory — the glyph next
+# to the recent row is Inventory's own tab symbol, `shippingbox`, from
+# `SearchRecentsList`'s pillar glyph. Tapping it restores both the scope and
+# the text it was searched under.
+- tapOn: 'Clear search'
+- assertVisible: 'Recent'
+- assertVisible: 'In Inventory'
+- tapOn: ${output.inventory.run}
+- assertVisible: 'Results'
+- assertVisible: ${output.inventory.run} Drill
+
+# Filters: scoped to Inventory, only Inventory's own fields show — no
+# Purchases section header, because Purchases is not among `model.available`
+# when it was never armed reachable this run.
+- tapOn: 'Filter'
+- assertVisible: 'Placement'
+- assertNotVisible: 'Purchases'
+# The row's own current-value text is the menu's real tap target — its
+# combined "Placement, <value>" reading and its "Placement" label are both
+# exposed too, but neither opens the menu.
+- tapOn: 'Anywhere'
+- assertVisible: 'In hand'
+- tapOn: 'In hand'
+- tapOn: 'Done'
+- assertVisible: ${output.inventory.run} Drill
+- assertVisible: Drill ${output.inventory.run}
+- assertNotVisible: ${output.inventory.run} Garage, Place
+- tapOn: 'Filter'
+- tapOn: 'Reset'
+- tapOn: 'Done'
+- assertVisible: ${output.inventory.run} Garage
+
+# Move one of the two into the place created above, then reopen it and read
+# its placement line. Ahead of the bulk Pick up below on purpose: Pick up
+# needs a row that is not already in hand for the write, and its Undo, to be
+# more than a no-op with nothing to show.
+- tapOn: '${output.inventory.run} Drill'
+- tapOn: 'Move'
+- tapOn: ${output.inventory.run} Garage
+- tapOn:
+    text: 'Move'
+    index: 0
+- assertVisible: 'Moved, Today'
+- tapOn:
+    id: 'BackButton'
+- assertVisible: 'Results'
+- assertVisible: ${output.inventory.run} Garage
+
+# Each row's own "Select" accessibility action enters selection and marks it,
+# the same custom action VoiceOver's rotor would offer — more reliable here
+# than a long-press gesture through Maestro's XCUITest driver. Both rows
+# join, Pick up returns the one in the place to hand, and Undo returns it.
+- tapOn:
+    text: 'Select'
+    index: 0
+- tapOn:
+    text: 'Select'
+    index: 0
+- assertVisible: '2 selected'
+- tapOn: 'Pick up'
+- assertVisible: 'Undo'
+- tapOn: 'Undo'
+- assertVisible: ${output.inventory.run} Garage
+- assertVisible: Drill ${output.inventory.run}
+
+# With every relayed sync request failing, a new item still lands on the
+# phone at once and reads as waiting to sync, found by the same search.
+- runScript:
+    file: scripts/inventory-sync-outage.js
+    env:
+      SYNC: down
+- assertTrue: ${output.syncOutage.state.inventorySyncOutage == true}
+# Still on Search, scoped to Inventory — "Inventory" now names the scope chip
+# ahead of the tab bar's own tab, so the tab needs the second match. Landing
+# there resumes Inventory's own stack where the Locations visit above left
+# it, not its dashboard, so the tab is tapped again — the standard "tap the
+# active tab to pop to root" — before Items is reachable.
+- tapOn:
+    text: 'Inventory'
+    index: 1
+- tapOn: 'Inventory'
+- tapOn: 'Items, \d+'
+- tapOn: 'Add an item|New item'
+- tapOn:
+    id: 'inventory-item-name-field'
+- inputText: ${output.inventory.run} Waiting
+- assertVisible: ${output.inventory.run} Waiting
+- tapOn: 'Create'
+- tapOn: 'Search'
+- tapOn: 'Clear search'
+- tapOn: 'Items, containers, places'
+- inputText: ${output.inventory.run} Waiting
+- assertVisible: 'Waiting to sync'
+- runScript:
+    file: scripts/inventory-sync-outage.js
+    env:
+      SYNC: up
+- assertTrue: ${output.syncOutage.state.inventorySyncOutage == false}
+
+# The scan glyph replaces the field's trailing control once the query is
+# empty — clearing it first is what brings it back.
+- tapOn: 'Clear search'
+- tapOn: 'Scan'
+- assertVisible: 'Close'

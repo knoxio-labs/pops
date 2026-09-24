@@ -45,6 +45,9 @@ internal struct AppSearchTab: View {
                 filterFields: { filterFields }
             )
             .inventorySearchDestinations(store: dependencies.inventory, entityRouter: entityRouter)
+            .inventorySearchChrome(
+                session, records: inventoryResults, store: dependencies.inventory
+            )
             .purchasesDestinations(dependencies: dependencies)
         }
         .task {
@@ -67,6 +70,16 @@ internal struct AppSearchTab: View {
     private var scan: (() -> Void)? {
         guard model.available.contains(.inventory) else { return nil }
         return { path.append(InventoryScanLink()) }
+    }
+
+    /// Inventory's currently shown rows, for the selection bar
+    /// `inventorySearchChrome` installs — empty while Inventory is
+    /// unavailable or answering with anything but results.
+    private var inventoryResults: [InventorySearchResult] {
+        guard let state = model.inventory?.section(scope: model.scope, cap: Model.allCap) else {
+            return []
+        }
+        return Self.rows(state)
     }
 
     @ViewBuilder private var sections: some View {
