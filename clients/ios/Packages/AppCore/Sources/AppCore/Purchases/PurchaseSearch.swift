@@ -61,3 +61,18 @@ public enum PurchaseSearchStatus: String, Hashable, Sendable {
     case cash
     case ignored
 }
+
+/// A tag in use across purchase line items, as read from
+/// ``PurchasesRepository/purchaseTags()``, ordered most-used first by the server.
+public struct PurchaseTagCount: Hashable, Sendable {
+    public let tag: String
+    /// How many lines carry the tag. The BFM route (POPS-4544) puts the
+    /// count on the wire alongside the tag, so every producer supplies it.
+    public let count: Int
+
+    /// Creates a tag-in-use entry.
+    public init(tag: String, count: Int) {
+        self.tag = tag
+        self.count = count
+    }
+}

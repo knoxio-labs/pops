@@ -597,10 +597,10 @@ describe('GET /items/tags', () => {
     const res = await requestOn(app).get('/items/tags');
 
     expect(res.status).toBe(200);
-    expect(res.body.tags[0]).toBe('coffee');
+    expect(res.body.tags[0]).toEqual({ tag: 'coffee', count: 3 });
     // `fullOrder` also tags a line `coffee` — three lines against that tag,
     // one against whatever else `fullOrder` carries.
-    expect(res.body.tags).toContain('coffee');
+    expect(res.body.tags.map((t: { tag: string }) => t.tag)).toContain('coffee');
   });
 
   // This route is a literal sibling of `/items` — declared adjacent in the

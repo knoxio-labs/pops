@@ -58,19 +58,25 @@ describe('listTagVocabulary', () => {
     expect(listTagVocabulary(opened.db)).toEqual([]);
   });
 
-  it('orders by item count descending', () => {
+  it('orders by item count descending, and reports each count', () => {
     seedTaggedLine('a', ['snack']);
     seedTaggedLine('b', ['snack']);
     seedTaggedLine('c', ['drink']);
 
-    expect(listTagVocabulary(opened.db)).toEqual(['snack', 'drink']);
+    expect(listTagVocabulary(opened.db)).toEqual([
+      { tag: 'snack', count: 2 },
+      { tag: 'drink', count: 1 },
+    ]);
   });
 
   it('breaks a tie between equally-used tags alphabetically, so the answer is stable', () => {
     seedTaggedLine('a', ['zeta']);
     seedTaggedLine('b', ['alpha']);
 
-    expect(listTagVocabulary(opened.db)).toEqual(['alpha', 'zeta']);
+    expect(listTagVocabulary(opened.db)).toEqual([
+      { tag: 'alpha', count: 1 },
+      { tag: 'zeta', count: 1 },
+    ]);
   });
 
   it('caps the vocabulary rather than returning every tag ever used', () => {
@@ -85,6 +91,6 @@ describe('listTagVocabulary', () => {
     seedTaggedLine('a', ['snack']);
     seedTaggedLine('b', ['drink']);
 
-    expect(listTagVocabulary(opened.db, 1)).toEqual(['drink']);
+    expect(listTagVocabulary(opened.db, 1)).toEqual([{ tag: 'drink', count: 1 }]);
   });
 });

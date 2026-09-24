@@ -33,6 +33,24 @@ public struct InventorySearchProvider: SearchProvider {
     public var pillar: SearchPillar { .inventory }
     public var debounce: Duration { .zero }
 
+    /// Downloads Inventory's on-device replica to current; rethrows any
+    /// failure so the caller can surface it and decide whether to re-ask.
+    public func download() async throws {
+        try await store.download()
+    }
+
+    /// The distinct Inventory types currently on this phone, read once from
+    /// the replica's latest snapshot. Empty before the first successful
+    /// download.
+    public func currentTypeNames() async -> [InventoryTypeName] {
+        for await results in store.observe(
+            InventorySearchResults.query(text: "", includeInactive: false, scannedIDs: []))
+        {
+            return results.types
+        }
+        return []
+    }
+
     public func answers(
         to query: String,
         filter: InventorySearchFilter

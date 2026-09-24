@@ -61,7 +61,9 @@ internal struct ContentView: View {
             wrappedValue: AppSearchModel(
                 tabOrder: SearchPillar.allCases.filter { surface.available.contains($0.feature) },
                 inventoryProvider: providers.inventory,
-                purchasesProvider: providers.purchases))
+                purchasesProvider: providers.purchases,
+                downloadInventory: providers.inventory.download,
+                inventoryTypeNames: providers.inventory.currentTypeNames))
     }
 
     internal var body: some View {
