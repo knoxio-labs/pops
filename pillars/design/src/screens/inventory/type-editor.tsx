@@ -102,6 +102,9 @@ export function createTypeEditorStates(layout: TypeEditorLayout): ScreenStates {
     'destructive-refusal': () => (
       <TypeEditor fieldKey="connectors" mode="destructive" layout={layout} />
     ),
+    'destructive-replacement': () => (
+      <TypeEditor fieldKey="connectors" mode="replacement" layout={layout} />
+    ),
     'computed-expression': () => (
       <TypeEditor fieldKey="replacement_value" mode="computed" layout={layout} />
     ),

@@ -27,8 +27,8 @@ const CARD_HEIGHT = 'lg:h-[calc(100vh-13.25rem)]';
 
 function isBlockingMode(
   mode: TypeEditorMode
-): mode is Extract<TypeEditorMode, 'archive' | 'stale' | 'destructive'> {
-  return mode === 'archive' || mode === 'stale' || mode === 'destructive';
+): mode is Extract<TypeEditorMode, 'archive' | 'stale' | 'destructive' | 'replacement'> {
+  return mode === 'archive' || mode === 'stale' || mode === 'destructive' || mode === 'replacement';
 }
 
 function canPublish(mode: TypeEditorMode): boolean {
@@ -37,7 +37,8 @@ function canPublish(mode: TypeEditorMode): boolean {
     mode !== 'key-collision' &&
     mode !== 'archive' &&
     mode !== 'stale' &&
-    mode !== 'destructive'
+    mode !== 'destructive' &&
+    mode !== 'replacement'
   );
 }
 
