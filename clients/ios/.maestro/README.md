@@ -79,9 +79,15 @@ or on its own through the lane, which runs exactly the flows it is given:
 POPS_E2E_FLOWS=.maestro/acceptance/inventory-user-defined-type.yaml mise run e2e:ios
 ```
 
-It has not yet been driven on a simulator (POPS-4508). Its selectors were
-written against the SwiftUI source, not observed, and it stays out of the
-lane's glob until a run on a Mac has passed.
+It has been driven on a simulator and passed (POPS-4508). It stays out of
+the lane's glob on purpose, not only until a run passed: it boots the real
+inventory pillar on top of everything `mise run e2e:ios` already starts, and
+runs a couple of minutes longer than any flow in the glob, for a scenario
+`inventory-smoke.yaml` already covers the happy path of. Folding it in would
+add that cost to every one of the ten flows above, on every change, whether
+or not it touches inventory types. It belongs to POPS-4354's acceptance
+suite, not the general UI smoke lane, which is exactly what
+`mise run inventory:acceptance -- --ios` already treats it as.
 
 ## Why Maestro and not XCUITest
 
