@@ -243,8 +243,8 @@ internal final class AppComposition {
 
     /// Asks for the next background refresh, for when the app leaves the
     /// foreground.
-    internal func scheduleBackgroundRefresh() {
-        backgroundRefresh.schedule()
+    internal func scheduleBackgroundRefresh() async {
+        await backgroundRefresh.schedule()
     }
 
     /// One background refresh (``AppCore/BackgroundRefresh``): schedules the

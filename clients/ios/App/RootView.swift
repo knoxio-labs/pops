@@ -55,7 +55,7 @@ internal struct RootView: View {
                     Task { await composition.shell.reloadBootstrap() }
                     Task { await composition.refreshInventory() }
                 case .background:
-                    composition.scheduleBackgroundRefresh()
+                    Task { await composition.scheduleBackgroundRefresh() }
                 default:
                     break
                 }

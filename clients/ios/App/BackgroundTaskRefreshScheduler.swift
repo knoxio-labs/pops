@@ -6,11 +6,12 @@ import Foundation
 /// `BGAppRefreshTaskRequest`, which replaces any pending one with the same
 /// identifier. The identifier must be listed under
 /// `BGTaskSchedulerPermittedIdentifiers` in `Info.plist`, or the submit
-/// throws.
+/// throws. `BGTaskScheduler` asks for this off the main thread, which a
+/// nonisolated `async` function is.
 internal struct BackgroundTaskRefreshScheduler: BackgroundRefreshScheduler {
-    internal func submitRefresh(identifier: String, earliestBeginDate: Date) throws {
+    internal func submitRefresh(identifier: String, earliestBeginDate: Date) async throws {
         let request = BGAppRefreshTaskRequest(identifier: identifier)
         request.earliestBeginDate = earliestBeginDate
-        try BGTaskScheduler.shared.submit(request)
+        try await BGTaskScheduler.shared.submitTaskRequest(request)
     }
 }

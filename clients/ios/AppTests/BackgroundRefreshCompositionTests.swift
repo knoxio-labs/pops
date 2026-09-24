@@ -46,12 +46,13 @@ internal struct BackgroundRefreshCompositionTests {
     }
 
     @Test("leaving the foreground asks for the Inventory refresh")
-    func backgroundSchedules() {
+    func backgroundSchedules() async {
         let scheduler = RecordingRefreshScheduler()
         let directory = temporaryDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
 
-        composition(scheduler: scheduler, probeDirectory: directory).scheduleBackgroundRefresh()
+        let root = composition(scheduler: scheduler, probeDirectory: directory)
+        await root.scheduleBackgroundRefresh()
 
         #expect(scheduler.requested == [BackgroundRefresh.inventoryIdentifier])
     }
