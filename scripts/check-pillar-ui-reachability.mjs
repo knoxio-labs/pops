@@ -5,21 +5,23 @@
  *
  * There is now exactly one way an in-repo pillar's UI reaches the shell, and
  * this guard asserts every pillar app uses it: the pillar's wire manifest
- * advertises an `assetsBaseUrl` and its `pages`, and the shell `import()`s the
- * built bundle at that URL (`pillars/shell/src/app/external-ui.tsx`). The
- * shell's build knows nothing about the package.
+ * advertises an `assetsBaseUrl`, its `pages`, and a `nav` with non-empty
+ * `items`, and the shell `import()`s the built bundle at that URL
+ * (`pillars/shell/src/app/external-ui.tsx`). The shell's build knows nothing
+ * about the package.
  *
  * Until POPS-3227 there was a second route — a static import of the published
  * `@pops/app-<pillar>` package in the shell's `bundle-map.tsx` (ADR-002) —
  * and this guard accepted either. That map is gone, so the guard is inverted:
  * being on the wire is no longer an alternative, it is the requirement.
  *
- * The `pages` half is load-bearing rather than belt-and-braces: the loader
- * builds a pillar's routes from `pages` ALONE, so a manifest with an
- * `assetsBaseUrl` and no pages advertises a bundle nothing will ever mount a
- * route from. Either omission fails the same silent way — the pillar's UI does
- * not appear, with no error anywhere — which is why this is a guard and not a
- * runtime check.
+ * All three fields are load-bearing rather than belt-and-braces: the loader
+ * builds a pillar's routes from `pages` ALONE, and the shell builds the app
+ * rail from `nav` ALONE (`navConfigFromDescriptor`), so a manifest missing
+ * either advertises a bundle nothing will ever mount a route from, or a route
+ * nothing links to. Any omission fails the same silent way — the pillar's UI
+ * does not appear, or is unreachable from the rail, with no error anywhere —
+ * which is why this is a guard and not a runtime check.
  *
  * What it does:
  *   1. Discover every in-repo pillar app by walking `pillars/<x>/app/package.json`
@@ -27,8 +29,9 @@
  *      disk — never a hardcoded pillar list, which is the exact static-rot this
  *      whole phase kills.
  *   2. Read each pillar's wire manifest (`pillars/<x>/src/api/manifest.ts`) and
- *      check it declares both `assetsBaseUrl` and a non-empty `pages`.
- *      Comments are stripped first, so a mention in prose does not count.
+ *      check it declares `assetsBaseUrl`, a non-empty `pages`, and a `nav`
+ *      with non-empty `items`. Comments are stripped first, so a mention in
+ *      prose does not count.
  *   3. Exit non-zero listing any pillar the shell cannot reach; exit 0 when
  *      every one is reachable.
  *
@@ -97,8 +100,8 @@ function discoverPillarApps() {
 }
 
 /**
- * Does a pillar's wire-manifest source advertise a loader-mounted UI — both an
- * `assetsBaseUrl` and a non-empty `pages`?
+ * Does a pillar's wire-manifest source advertise a loader-mounted UI — an
+ * `assetsBaseUrl`, a non-empty `pages`, and a `nav` with non-empty `items`?
  *
  * Read as text because this guard installs nothing (ADR-045 Tier A) and the
  * manifest is TypeScript. Comments are stripped first and each key is anchored
@@ -107,23 +110,38 @@ function discoverPillarApps() {
  * be mistaken for a declaration.
  *
  * `pages: []` reads as absent: an empty page list is a pillar with no routes
- * for the loader to mount, which is the same nothing as declaring none.
+ * for the loader to mount, which is the same nothing as declaring none. Same
+ * for `items: []` on `nav`: the shell builds the app rail from `nav.items`
+ * ALONE, so a `nav` with no items is a rail entry with nothing to click.
  *
  * @param {string} src Manifest source.
- * @returns {{ assetsBaseUrl: boolean, pages: boolean }}
+ * @returns {{ assetsBaseUrl: boolean, pages: boolean, nav: boolean }}
  */
 export function advertisesLoaderMountedUi(src) {
   const code = stripComments(src);
   // Anchored to the start of a line, not merely to a word boundary. These
-  // files discuss `pages` and `assetsBaseUrl` at length in prose and in string
-  // literals, and `stripComments` removes the prose but not the strings; an
-  // object property, which is what this is looking for, is what oxfmt puts at
-  // the start of a line.
+  // files discuss `pages`, `assetsBaseUrl` and `nav` at length in prose and in
+  // string literals, and `stripComments` removes the prose but not the
+  // strings; an object property, which is what this is looking for, is what
+  // oxfmt puts at the start of a line.
   const declares = (/** @type {string} */ key) => new RegExp(`^\\s*${key}\\s*:`, 'm').test(code);
   const emptyPages = /^\s*pages\s*:\s*\[\s*\]/m.test(code);
+  // `items` is also matched right after a `{ ...FOO_NAV,` spread, not only at
+  // the start of a line: the pillar's own `NavConfigDescriptor` projection is
+  // `{ ...FOO_NAV, items: [...FOO_NAV.items] }`, which oxfmt keeps on one line
+  // when it fits under the print width, putting `items` mid-line rather than
+  // at its start. That spread prefix is specific enough not to false-positive
+  // on the word appearing in prose or in a string literal, unlike a bare
+  // "after any comma" match would.
+  const itemsAfterSpread = /\{\s*\.\.\.[\w$]+\s*,\s*items\s*:/;
+  const declaresItems = /^\s*items\s*:/m.test(code) || itemsAfterSpread.test(code);
+  const emptyItems =
+    /^\s*items\s*:\s*\[\s*\]/m.test(code) ||
+    /\{\s*\.\.\.[\w$]+\s*,\s*items\s*:\s*\[\s*\]/.test(code);
   return {
     assetsBaseUrl: declares('assetsBaseUrl'),
     pages: declares('pages') && !emptyPages,
+    nav: declares('nav') && declaresItems && !emptyItems,
   };
 }
 
@@ -140,7 +158,7 @@ export function advertisesLoaderMountedUi(src) {
  * fixtures.
  *
  * @param {PillarApp[]} apps  Discovered pillar apps.
- * @param {(app: PillarApp) => { assetsBaseUrl: boolean, pages: boolean, found?: boolean }} loaderUiOf
+ * @param {(app: PillarApp) => { assetsBaseUrl: boolean, pages: boolean, nav: boolean, found?: boolean }} loaderUiOf
  *   What the pillar's wire manifest advertises. `found: false` means no wire
  *   manifest could be located at all, which is reported as its own failure
  *   rather than as a manifest that declares nothing — the two need different
@@ -158,7 +176,7 @@ export function evaluateReachability(apps, loaderUiOf) {
 
   for (const app of apps) {
     const wire = loaderUiOf(app);
-    if (wire.assetsBaseUrl && wire.pages) {
+    if (wire.assetsBaseUrl && wire.pages && wire.nav) {
       covered.push(app.pkgName);
       continue;
     }
@@ -172,8 +190,8 @@ export function evaluateReachability(apps, loaderUiOf) {
       );
       continue;
     }
-    // Every fragment reads after a bare `no`, so one cause and two produce the
-    // same sentence shape. The article-carrying form this replaced said
+    // Every fragment reads after a bare `no`, so one cause and several produce
+    // the same sentence shape. The article-carrying form this replaced said
     // "declares no an assetsBaseUrl" for a single cause — and the form before
     // THAT said "declares no a non-empty pages", so the pages-only case has
     // been ungrammatical the whole time and only the assetsBaseUrl-only case
@@ -181,6 +199,7 @@ export function evaluateReachability(apps, loaderUiOf) {
     const lacks = [];
     if (!wire.assetsBaseUrl) lacks.push('assetsBaseUrl');
     if (!wire.pages) lacks.push('non-empty pages');
+    if (!wire.nav) lacks.push('nav with non-empty items');
     reasons.push(`${app.pkgName} — its wire manifest declares no ${lacks.join(' and no ')}`);
   }
 
@@ -249,7 +268,7 @@ function run() {
   const { missing, covered, reasons } = evaluateReachability(apps, (app) => {
     const manifestPath = locatePillarManifest(app.pillarId);
     if (manifestPath === undefined) {
-      return { assetsBaseUrl: false, pages: false, found: false };
+      return { assetsBaseUrl: false, pages: false, nav: false, found: false };
     }
     return { ...advertisesLoaderMountedUi(readFileSync(manifestPath, 'utf8')), found: true };
   });
@@ -265,9 +284,9 @@ function run() {
   console.error(`FAIL — ${missing.length} pillar app(s) the shell cannot reach:`);
   for (const reason of reasons) console.error(`  XX  ${reason}`);
   console.error(
-    `  A pillar's UI arrives one way: an \`assetsBaseUrl\` + \`pages\` in its wire ` +
-      `manifest, which the shell loads at runtime. Without both, the UI silently ` +
-      `fails to mount.`
+    `  A pillar's UI arrives one way: an \`assetsBaseUrl\` + \`pages\` + \`nav\` in ` +
+      `its wire manifest, which the shell loads at runtime. Without all three, the ` +
+      `UI silently fails to mount or is unreachable from the app rail.`
   );
   return false;
 }
@@ -287,8 +306,8 @@ function selfTest() {
     { pkgName: '@pops/app-beta', pkgPath: 'pillars/beta/app/package.json', pillarId: 'beta' },
   ];
 
-  const noWireUi = () => ({ assetsBaseUrl: false, pages: false });
-  const loaderMounted = () => ({ assetsBaseUrl: true, pages: true });
+  const noWireUi = () => ({ assetsBaseUrl: false, pages: false, nav: false });
+  const loaderMounted = () => ({ assetsBaseUrl: true, pages: true, nav: true });
 
   const complete = evaluateReachability(apps, loaderMounted);
   const bothMissing = evaluateReachability(apps, noWireUi);
@@ -298,32 +317,60 @@ function selfTest() {
   const halfDeclared = evaluateReachability(apps, () => ({
     assetsBaseUrl: true,
     pages: false,
+    nav: true,
+  }));
+  // Pages and assetsBaseUrl present, nav absent: routes mount but nothing on
+  // the rail links to them.
+  const navMissing = evaluateReachability(apps, () => ({
+    assetsBaseUrl: true,
+    pages: true,
+    nav: false,
   }));
 
+  // The `{ ...BETA_NAV, items: [...BETA_NAV.items] }` shape is the real one:
+  // oxfmt keeps this particular projection on one line, so `items` lands
+  // mid-line rather than at the start of its own line.
   const manifestWithBoth = [
+    'const BETA_WIRE_NAV = { ...BETA_NAV, items: [...BETA_NAV.items] };',
     'export function build() {',
     '  return {',
     "    assetsBaseUrl: '/beta-ui/beta.js',",
     '    pages: [...BETA_PAGES],',
+    '    nav: BETA_WIRE_NAV,',
     '  };',
     '}',
   ].join('\n');
 
   const manifestWithEmptyPages = [
+    'const BETA_WIRE_NAV = { ...BETA_NAV, items: [...BETA_NAV.items] };',
     'export function build() {',
     '  return {',
     "    assetsBaseUrl: '/beta-ui/beta.js',",
     '    pages: [],',
+    '    nav: BETA_WIRE_NAV,',
     '  };',
     '}',
   ].join('\n');
 
-  // Both words appear, in a comment and in a string, and neither is a
+  // `nav` is declared but its `items` list is empty: an app-rail entry with
+  // nothing to click.
+  const manifestWithEmptyNavItems = [
+    'const BETA_WIRE_NAV = { ...BETA_NAV, items: [] };',
+    'export function build() {',
+    '  return {',
+    "    assetsBaseUrl: '/beta-ui/beta.js',",
+    '    pages: [...BETA_PAGES],',
+    '    nav: BETA_WIRE_NAV,',
+    '  };',
+    '}',
+  ].join('\n');
+
+  // All three words appear, in a comment and in a string, and none is a
   // declaration. This is the shape these manifests actually have.
   const manifestMentioningOnly = [
-    '/** Set assetsBaseUrl: when the pillar serves its own pages: list. */',
+    '/** Set assetsBaseUrl: when the pillar serves its own pages: and nav: list. */',
     'export function build() {',
-    "  return { docs: 'assetsBaseUrl: none, pages: none' };",
+    "  return { docs: 'assetsBaseUrl: none, pages: none, nav: none, items: none' };",
     '}',
   ].join('\n');
 
@@ -334,6 +381,7 @@ function selfTest() {
   const noManifestFound = evaluateReachability(apps, () => ({
     assetsBaseUrl: false,
     pages: false,
+    nav: false,
     found: false,
   }));
 
@@ -374,6 +422,7 @@ function selfTest() {
 
   const both = advertisesLoaderMountedUi(manifestWithBoth);
   const emptyPages = advertisesLoaderMountedUi(manifestWithEmptyPages);
+  const emptyNavItems = advertisesLoaderMountedUi(manifestWithEmptyNavItems);
   const mentioned = advertisesLoaderMountedUi(manifestMentioningOnly);
 
   const checks = {
@@ -385,11 +434,16 @@ function selfTest() {
     'assetsBaseUrl without pages is not enough': halfDeclared.missing.length === 2,
     'the failure says what the wire lacks':
       halfDeclared.reasons[0]?.includes('declares no non-empty pages') === true,
+    'pages and assetsBaseUrl without nav is not enough': navMissing.missing.length === 2,
+    'the failure says nav is what the wire lacks':
+      navMissing.reasons[0]?.includes('declares no nav with non-empty items') === true,
     // Both shapes the message can take, because each has been ungrammatical at
     // some point and nothing asserted the wording. `halfDeclared` above drives
-    // the one-field sentence; this drives the two-field one.
-    'both missing fields read as one sentence':
-      bothMissing.reasons[0]?.includes('declares no assetsBaseUrl and no non-empty pages') === true,
+    // the one-field sentence; this drives the multi-field one.
+    'every missing field reads as one sentence':
+      bothMissing.reasons[0]?.includes(
+        'declares no assetsBaseUrl and no non-empty pages and no nav with non-empty items'
+      ) === true,
     'a missing manifest is reported as missing, not as undeclared':
       noManifestFound.reasons[0]?.includes('no wire manifest could be found') === true &&
       noManifestFound.reasons[0]?.includes('assetsBaseUrl') === false,
@@ -400,10 +454,13 @@ function selfTest() {
     'any src/api file building a ManifestPayload is found':
       locatePillarManifest('beta', scannedFs)?.endsWith('/oddly-named.ts') === true,
     'no manifest anywhere returns undefined': locatePillarManifest('beta', emptyFs) === undefined,
-    'a manifest declaring both reads as loader-mounted': both.assetsBaseUrl && both.pages,
-    'pages: [] reads as no pages': emptyPages.assetsBaseUrl && !emptyPages.pages,
+    'a manifest declaring all three reads as loader-mounted':
+      both.assetsBaseUrl && both.pages && both.nav,
+    'pages: [] reads as no pages': emptyPages.assetsBaseUrl && !emptyPages.pages && emptyPages.nav,
+    'nav with items: [] reads as no nav':
+      emptyNavItems.assetsBaseUrl && emptyNavItems.pages && !emptyNavItems.nav,
     'a mention in prose or a string is not a declaration':
-      !mentioned.assetsBaseUrl && !mentioned.pages,
+      !mentioned.assetsBaseUrl && !mentioned.pages && !mentioned.nav,
   };
 
   const ok = Object.values(checks).every(Boolean);
