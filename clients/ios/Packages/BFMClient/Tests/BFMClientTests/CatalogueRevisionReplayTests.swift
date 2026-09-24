@@ -233,7 +233,7 @@ internal struct CatalogueRevisionReplayTests {
     /// the phone opens the generic repair, which only lets the change go
     /// (ADR-002 open question 1) and never applies the stale value.
     @Test(
-        "a queued edit whose reference target was deleted opens a repair that only lets it go, across a catalogue change",
+        "a queued edit whose reference target went stale opens a repair that only lets it go",
         arguments: ["target_missing", "reference_type_mismatch"]
     )
     func staleReferenceTargetOpensLetGoOnlyRepair(reason: String) async throws {
@@ -249,20 +249,19 @@ internal struct CatalogueRevisionReplayTests {
         #expect(repair.kind == .unrecognised(reason))
         #expect(try harness.ledger.waiting.isEmpty)
 
-        let beforeLetGo = try harness.replica.read(.item(id: Protocol2Wire.lampId))
-        let lumensBefore = beforeLetGo?.fieldValues.first {
-            $0.fieldId == Protocol2Wire.lumens && $0.source == .stored
+        let unchanged = InventoryFieldValueState.value(
+            [.measurement(amount: try InventoryDecimal("800"), unit: "lm")])
+        func lumens(_ item: InventoryItem?) -> InventoryItemFieldEntry? {
+            item?.fieldValues.first { $0.fieldId == Protocol2Wire.lumens && $0.source == .stored }
         }
-        #expect(lumensBefore?.state == .value([.measurement(amount: try InventoryDecimal("800"), unit: "lm")]))
+        let beforeLetGo = try harness.replica.read(.item(id: Protocol2Wire.lampId))
+        #expect(lumens(beforeLetGo)?.state == unchanged)
 
         try await harness.store.resolve(repair.id, with: .discardMine)
 
         #expect(try harness.ledger.repairs.isEmpty)
         #expect(try harness.ledger.resolved.first?.outcome == "Let go")
         let afterLetGo = try harness.replica.read(.item(id: Protocol2Wire.lampId))
-        let lumensAfter = afterLetGo?.fieldValues.first {
-            $0.fieldId == Protocol2Wire.lumens && $0.source == .stored
-        }
-        #expect(lumensAfter?.state == .value([.measurement(amount: try InventoryDecimal("800"), unit: "lm")]))
+        #expect(lumens(afterLetGo)?.state == unchanged)
     }
 }
