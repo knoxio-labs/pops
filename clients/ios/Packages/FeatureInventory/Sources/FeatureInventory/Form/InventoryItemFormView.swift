@@ -98,8 +98,10 @@ internal struct InventoryItemFormView: View {
             }
             identity
             // Every item has a quantity whatever its type, so it stands apart
-            // from the type's fields rather than reading as one of them.
-            Section { InventoryFormQuantityRow(count: $model.draft.quantity) }
+            // from the type's fields rather than reading as one of them. A
+            // container's quantity is always 1 (ADR-002 D3), so the control
+            // locks instead of offering a value that would be refused.
+            Section { quantityRow }
             labelling
             InventoryFormNotCarriedSection(values: model.notCarried)
         }
@@ -164,7 +166,8 @@ extension InventoryItemFormView {
             } else {
                 InventoryFormTypeRow(
                     types: model.catalogue.types, offersNone: model.offersNoType,
-                    typeKey: $model.draft.typeKey)
+                    typeKey: Binding(
+                        get: { model.draft.typeKey }, set: { model.selectLegacyType($0) }))
             }
             if let type = model.protocol2Type, let draft = model.protocol2Draft {
                 protocol2FieldRows(type: type, draft: draft)

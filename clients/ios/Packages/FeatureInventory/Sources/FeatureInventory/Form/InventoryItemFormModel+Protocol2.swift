@@ -26,6 +26,7 @@ extension InventoryItemFormModel {
         protocol2Draft = InventoryProtocol2Draft(
             type: type, catalogueRevision: draft.catalogueRevision)
         protocol2Draft?.typeSelectionChanged = true
+        if type.isContainer { self.draft.quantity = 1 }
     }
 
     internal func addProtocol2Value(for field: InventoryCatalogueField) {

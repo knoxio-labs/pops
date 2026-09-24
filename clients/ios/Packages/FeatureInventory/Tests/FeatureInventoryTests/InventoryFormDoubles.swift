@@ -208,8 +208,11 @@ internal enum FormFixture {
         key: "cable", name: "Cable", capabilities: [], fields: [connector, length])
     static let charger = InventoryType(
         key: "charger", name: "Charger", capabilities: [], fields: [wattage])
+    static let box = InventoryType(
+        key: "storage_box", name: "Storage box", capabilities: [.containment], fields: [])
 
-    static let catalogue = InventoryCatalogue(version: "v1", units: units, types: [cable, charger])
+    static let catalogue = InventoryCatalogue(
+        version: "v1", units: units, types: [cable, charger, box])
 
     static func item(
         _ id: String, _ name: String, code: String? = nil, typeKey: String? = nil,

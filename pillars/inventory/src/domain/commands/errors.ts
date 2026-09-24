@@ -16,6 +16,7 @@ export const REJECTION_REASONS = [
   'reference_type_mismatch',
   'not_container',
   'has_contents',
+  'quantity_container_conflict',
   'illegal_transition',
   'media_missing',
 ] as const;
