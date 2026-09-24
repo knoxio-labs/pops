@@ -85,6 +85,21 @@ jobs:
             --label "playwright install chromium" \
             -- npx playwright install --with-deps chromium
 
+      - name: Install Playwright system dependencies
+        # The cache above only holds the downloaded browser binary, never the
+        # OS-level packages `--with-deps` installs (libnss3, libgbm1, …), and
+        # a fresh `ubuntu-latest` VM remembers neither. Same split as
+        # fe-test-e2e.yml, for the same reason: without this, a cache hit on
+        # the second (and every later) run_web dispatch skips the step above
+        # entirely and Chromium fails to launch.
+        if: inputs.run_web && steps.playwright-cache.outputs.cache-hit == 'true'
+        timeout-minutes: 10
+        run: |
+          cd pillars/shell
+          node ../../scripts/ci/playwright-install-retry.mjs \
+            --label "playwright install-deps" \
+            -- npx playwright install-deps
+
       - name: Run the acceptance suite
         run: |
           set -euo pipefail
