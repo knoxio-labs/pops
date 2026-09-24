@@ -4,7 +4,7 @@
  * and field values live in the persisted catalogue/value store rather than
  * columns a trigger can read (migration `0013_items_fts`).
  */
-import { eq, inArray, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 
 import { loadPublishedCatalogue } from '../../catalogue/catalogue.js';
 import { readEffectiveItemFieldValuesForItems } from '../../catalogue/effective-item-values.js';
@@ -159,6 +159,15 @@ function indexAgainst(
   }
 }
 
+/**
+ * Live rows eligible for `items_fts`: a soft-deleted item has no search
+ * entry (`item.delete`'s own effect removes it), so a bulk rebuild must skip
+ * it too, rather than reinserting it and evaluating its computed fields —
+ * which, unlike a computed read elsewhere, has nothing to fall back to when
+ * a stale override the active catalogue no longer permits throws
+ * `override_forbidden` (a soft-deleted item is invisible to the publication
+ * migration that would otherwise have discarded it).
+ */
 function searchableRows(db: CommandDb, ids?: readonly string[]): SearchableItem[] {
   const query = db
     .select({
@@ -169,8 +178,13 @@ function searchableRows(db: CommandDb, ids?: readonly string[]): SearchableItem[
       typeId: items.typeId,
       externalIds: items.externalIds,
     })
-    .from(items);
-  return ids === undefined ? query.all() : query.where(inArray(items.id, [...ids])).all();
+    .from(items)
+    .where(
+      ids === undefined
+        ? isNull(items.deletedAt)
+        : and(isNull(items.deletedAt), inArray(items.id, [...ids]))
+    );
+  return query.all();
 }
 
 /**
