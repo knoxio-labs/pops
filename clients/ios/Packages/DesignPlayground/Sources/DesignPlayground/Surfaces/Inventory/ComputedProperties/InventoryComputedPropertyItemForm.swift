@@ -3,14 +3,19 @@ import SwiftUI
 
 internal struct InventoryComputedPropertyItemForm: View {
     internal let openingState: InventoryComputedValueState
+    internal var missingInputs: InventoryMissingInputsScenario?
     @State private var width: String
     @State private var height = "30"
     @State private var depth = "25"
     @State private var capacity: String
     @State private var isOverridden: Bool
 
-    internal init(openingState: InventoryComputedValueState) {
+    internal init(
+        openingState: InventoryComputedValueState,
+        missingInputs: InventoryMissingInputsScenario? = nil
+    ) {
         self.openingState = openingState
+        self.missingInputs = missingInputs
         _width = State(initialValue: openingState == .unavailable ? "" : "40")
         _capacity = State(
             initialValue: openingState == .unavailable
@@ -55,10 +60,19 @@ internal struct InventoryComputedPropertyItemForm: View {
             } label: {
                 VStack(alignment: .leading, spacing: PopsSpacing.xs) {
                     Text("Capacity")
-                    Label(valueState.rawValue, systemImage: valueStateSymbol)
-                        .font(.popsCaption)
-                        .foregroundStyle(valueStateTone)
+                    if let missingInputs {
+                        Text(missingInputs.summary)
+                            .font(.popsCaption)
+                            .foregroundStyle(Color.popsWarning)
+                    } else {
+                        Label(valueState.rawValue, systemImage: valueStateSymbol)
+                            .font(.popsCaption)
+                            .foregroundStyle(valueStateTone)
+                    }
                 }
+            }
+            if let missingInputs, !missingInputs.rows.isEmpty {
+                InventoryMissingInputRows(rows: missingInputs.rows)
             }
             Button(isOverridden ? "Use calculation" : "Calculate") {
                 calculate()

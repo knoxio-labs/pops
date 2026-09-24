@@ -16,10 +16,15 @@ internal struct InventoryMissingInput: Hashable, Identifiable, Sendable {
         return "\(field) · \(item) (\(detail))"
     }
 
+    /// The word or two a reason adds beside its input, matching the terms the
+    /// catalogue repair surface already settled on for the same states: "not
+    /// here yet" for something a newer catalogue named that has not reached
+    /// this phone (`InventoryFieldFit.notOnPhone`), and the plain word for
+    /// what stops it for good.
     private static func detail(_ reason: InventoryValueUnavailableReason) -> String? {
         switch reason {
         case .missingDependency, .evaluationError: nil
-        case .referenceUnresolved: "not downloaded yet"
+        case .referenceUnresolved: "not here yet"
         case .referenceMissing: "missing"
         case .referenceDeleted: "deleted"
         }

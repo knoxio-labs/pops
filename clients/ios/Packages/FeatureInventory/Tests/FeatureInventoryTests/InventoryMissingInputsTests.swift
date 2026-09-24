@@ -104,6 +104,22 @@ internal struct InventoryMissingInputsTests {
             line.missingInputs.map(\.text) == ["Depth · Unknown item (deleted)", "Width · Box"])
     }
 
+    @Test("a reference not yet on this phone and one that no longer exists say so")
+    func namesReferenceReasonsNotYetHereOrGone() throws {
+        let line = try Self.volumeLine(
+            Self.box(
+                reason: "reference_unresolved", failedFieldId: "depth",
+                missingInputs: [
+                    Self.input("reference_unresolved", "depth", "rack"),
+                    Self.input("reference_missing", "width", "box"),
+                ]))
+
+        #expect(line.value == "Unavailable: 2 values are missing")
+        #expect(
+            line.missingInputs.map(\.text)
+                == ["Depth · Rack (not here yet)", "Width · Box (missing)"])
+    }
+
     @Test("a failed calculation lacks no input")
     func evaluationErrorListsNothing() throws {
         let line = try Self.volumeLine(
