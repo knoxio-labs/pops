@@ -113,7 +113,13 @@ compatible and the same stable IDs and values validate against the active
 snapshot. Renames therefore replay without rewriting the payload, while an
 archived/replaced definition returns `catalogue_repair_required` and a
 protocol-gated or migration-required publication returns
-`catalogue_update_required`. Successful rebases persist the active revision;
+`catalogue_update_required`. Both carry `catalogueChanges`: for each
+definition in the way, which one (`type`, `field`, `option`, or a `revision`
+the server cannot judge by), what happened (`archived`, `retired`,
+`now_required`, `not_in_revision`, `redefined`, `needs_newer_app`), and the
+first published revision that did it. `replacementId` is always null, because
+the catalogue does not record which definition replaced which (a replacement is
+an archive plus a new field). Successful rebases persist the active revision;
 rejections and applications remain idempotent. A stable-ID mutation never
 falls back to the revision-1 projection. Mutations that omit
 `catalogueRevision` retain the named `typeKey`/`fields` protocol-1 contract for

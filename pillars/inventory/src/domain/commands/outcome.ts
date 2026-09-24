@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { catalogueChangeWireSchema } from './catalogue-change.js';
+
 /** Any JSON value: what an event's `before`/`after` and a conflict's `mine`/`theirs` hold. */
 export const jsonValueSchema = z.json();
 /** A value of {@link jsonValueSchema}. */
@@ -66,6 +68,7 @@ const rejectedSchema = z.object({
   status: z.literal('rejected'),
   reason: z.string(),
   message: z.string(),
+  catalogueChanges: z.array(catalogueChangeWireSchema).optional(),
 });
 
 const deferredSchema = z.object({

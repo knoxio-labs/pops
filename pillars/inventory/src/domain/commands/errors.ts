@@ -1,3 +1,4 @@
+import type { CatalogueChange } from './catalogue-change.js';
 import type { ConflictBody } from './outcome.js';
 
 /**
@@ -24,14 +25,23 @@ export type RejectionReason = (typeof REJECTION_REASONS)[number];
 /**
  * Thrown by an op (or the engine) to refuse a mutation. The engine rolls back
  * everything the op wrote, stores a `rejected` outcome, and never retries it.
+ * `catalogueChanges` says which definitions a `catalogue_update_required` or
+ * `catalogue_repair_required` refusal is about; the outcome carries it only
+ * when it is non-empty.
  */
 export class CommandRejected extends Error {
   override readonly name = 'CommandRejected' as const;
   readonly reason: RejectionReason;
+  readonly catalogueChanges: readonly CatalogueChange[];
 
-  constructor(reason: RejectionReason, message: string) {
+  constructor(
+    reason: RejectionReason,
+    message: string,
+    catalogueChanges: readonly CatalogueChange[] = []
+  ) {
     super(message);
     this.reason = reason;
+    this.catalogueChanges = catalogueChanges;
   }
 }
 
