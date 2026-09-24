@@ -4,9 +4,11 @@ The token contract every `@pops/ui` component styles against, and the only style
 
 ## It is imported once per bundle
 
-`pillars/shell/src/main.tsx` does `import '@pops/ui/theme'`; Storybook's `.storybook/preview.tsx` and the design playground's `pillars/design/src/main.tsx` do the same for their own bundles. Pillar apps must not import it again — they compile into the shell's single Vite/Tailwind build and inherit it.
+`@pops/ui/theme` is `index.css`: the tokens, preflight and kit styles in `globals.css`, plus a scan of every lib's source. The shell (`pillars/shell/src/styles.css`), Storybook (`.storybook/preview.css`) and the design playground (`pillars/design/src/styles.css`) each import it once from a stylesheet that adds a scan of their own source.
 
-Which files Tailwind scans is governed by the `@source` globs at the top of `globals.css` and guarded by `scripts/check-tailwind-source-coverage.mjs`; read that script's header before touching either.
+A loader-mounted pillar app does not import it. Its `remote.css` `@reference`s `@pops/ui/theme/globals.css` — tokens only, emitting nothing — and emits the utilities its own source uses into a stylesheet the shell installs beside its bundle (`@pops/pillar-sdk/remote-build`). That is why `globals.css` carries no `@source`: Tailwind follows `@source` into a referenced file, and every pillar sheet would re-emit the kit's utilities.
+
+Which files Tailwind scans is guarded by `scripts/check-tailwind-source-coverage.mjs`; read that script's header before touching any of these entries.
 
 ## What the token layer covers
 

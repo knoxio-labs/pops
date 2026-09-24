@@ -48,6 +48,13 @@ const INVENTORY_WIRE_PAGES = [...INVENTORY_PAGES] as const satisfies readonly Pa
  */
 const INVENTORY_ASSETS_BASE_URL = '/inventory-ui/inventory.js';
 
+/**
+ * The stylesheet the runtime loader links before mounting this pillar: the
+ * Tailwind utilities its app source uses, which the shell's own sheet does
+ * not carry. Served beside the bundle, under an equally stable name.
+ */
+const INVENTORY_STYLESHEET_URL = '/inventory-ui/inventory.css';
+
 export function buildInventoryManifest(version: string): ManifestPayload {
   return {
     pillar: 'inventory',
@@ -81,6 +88,7 @@ export function buildInventoryManifest(version: string): ManifestPayload {
     nav: INVENTORY_WIRE_NAV,
     pages: [...INVENTORY_WIRE_PAGES],
     assetsBaseUrl: INVENTORY_ASSETS_BASE_URL,
+    stylesheetUrl: INVENTORY_STYLESHEET_URL,
     healthcheck: { path: '/health' },
   };
 }

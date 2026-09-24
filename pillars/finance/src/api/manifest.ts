@@ -52,6 +52,13 @@ const FINANCE_WIRE_NAV = {
 const FINANCE_ASSETS_BASE_URL = '/finance-ui/finance.js';
 
 /**
+ * The stylesheet the runtime loader links before mounting this pillar: the
+ * Tailwind utilities its app source uses, which the shell's own sheet does
+ * not carry. Served beside the bundle, under an equally stable name.
+ */
+const FINANCE_STYLESHEET_URL = '/finance-ui/finance.css';
+
+/**
  * Wire-format pages contribution for the finance pillar.
  *
  * Projected from the contract's `FINANCE_PAGES` rather than restated here:
@@ -102,6 +109,7 @@ export function buildFinanceManifest(version: string): ManifestPayload {
     nav: FINANCE_WIRE_NAV,
     pages: [...FINANCE_PAGES],
     assetsBaseUrl: FINANCE_ASSETS_BASE_URL,
+    stylesheetUrl: FINANCE_STYLESHEET_URL,
     healthcheck: { path: '/health' },
   };
 }

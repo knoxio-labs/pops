@@ -90,6 +90,7 @@ describe('buildCerebrumManifest', () => {
   it('declares a root-relative assetsBaseUrl', () => {
     const payload = buildCerebrumManifest('1.2.3');
     expect(payload.assetsBaseUrl).toBe('/cerebrum-ui/cerebrum.js');
+    expect(payload.stylesheetUrl).toBe('/cerebrum-ui/cerebrum.css');
   });
 
   it('declares cerebrum.vectorSearch as a capability feature (epic 05 / S0)', () => {

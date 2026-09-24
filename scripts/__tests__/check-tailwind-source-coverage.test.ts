@@ -1,11 +1,17 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  absoluteSourceGlob,
+  collectEntrySources,
   evaluateCoverage,
+  evaluateRemoteStylesheet,
+  evaluateShellSheet,
   globBaseDir,
   globToRegExp,
   parseSourceStatements,
   partitionStatements,
+  stripComments,
+  tokensDetectAutomatically,
 } from '../check-tailwind-source-coverage.mjs';
 
 describe('parseSourceStatements', () => {
@@ -292,5 +298,202 @@ describe('evaluateCoverage', () => {
     const { emptyGlobs, uncovered } = evaluateCoverage(['/r/pillars/**/src/**/*.{ts,tsx}'], files);
     expect(emptyGlobs).toEqual([]);
     expect(uncovered).toEqual([]);
+  });
+});
+
+describe('stripComments', () => {
+  it('removes a comment that mentions @source, so it is not read as a statement', () => {
+    const css = '/* No `@source` here: see index.css. */\n@import "tailwindcss";\n';
+    expect(parseSourceStatements(css)).toEqual([]);
+  });
+
+  it('leaves comment-shaped text inside a quoted glob alone', () => {
+    const css = '@source "../../../../libs/**/src/**/*.{ts,tsx}";';
+    expect(stripComments(css)).toBe(css);
+    expect(parseSourceStatements(css)[0]?.arg).toBe('../../../../libs/**/src/**/*.{ts,tsx}');
+  });
+
+  it('drops an unterminated comment to the end rather than keeping it', () => {
+    expect(stripComments('a /* never closed @source "x";')).toBe('a ');
+  });
+});
+
+describe('absoluteSourceGlob', () => {
+  it('reads a path with no metacharacter as a directory scanned recursively', () => {
+    const glob = absoluteSourceGlob('/r/pillars/x/app', './src');
+    expect(glob).toBe('/r/pillars/x/app/src/**/*');
+    expect(globToRegExp(glob).test('/r/pillars/x/app/src/pages/deep/Page.tsx')).toBe(true);
+    expect(globToRegExp(glob).test('/r/pillars/x/app/Outside.tsx')).toBe(false);
+  });
+
+  it('keeps a glob as a glob, resolved against the declaring file', () => {
+    expect(absoluteSourceGlob('/r/pillars/design/src', '../../*/app/src/**/*.tsx')).toBe(
+      '/r/pillars/*/app/src/**/*.tsx'
+    );
+  });
+});
+
+describe('collectEntrySources', () => {
+  const tree = new Map([
+    ['/r/pillars/shell/src/styles.css', "@import '@pops/ui/theme';\n@source '.';\n"],
+    ['/r/libs/ui/src/theme/index.css', "@import './globals.css';\n@source '../../../../libs';\n"],
+    ['/r/libs/ui/src/theme/globals.css', "@import 'tailwindcss';\n"],
+  ]);
+  const edges = (specifier: string, fromDir: string): string | undefined => {
+    if (specifier === '@pops/ui/theme') return '/r/libs/ui/src/theme/index.css';
+    if (specifier.startsWith('.')) return `${fromDir}/${specifier.slice(2)}`;
+    return undefined;
+  };
+
+  it('follows @import through the package theme and collects every scan, with its glob', () => {
+    const { sources, missing } = collectEntrySources(
+      '/r/pillars/shell/src/styles.css',
+      (path: string) => tree.get(path),
+      edges
+    );
+    expect(missing).toEqual([]);
+    expect(sources.map((s: { glob?: string }) => s.glob)).toEqual([
+      '/r/pillars/shell/src/**/*',
+      '/r/libs/**/*',
+    ]);
+  });
+
+  it('follows @reference too — Tailwind honours @source in a referenced file', () => {
+    const leaky = new Map([
+      ['/r/pillars/x/app/remote.css', "@reference '../../../libs/ui/src/theme/globals.css';\n"],
+      ['/r/libs/ui/src/theme/globals.css', "@source '../../../../libs';\n"],
+    ]);
+    const resolveRelative = (specifier: string, fromDir: string) =>
+      specifier.startsWith('.') ? `${fromDir}/${specifier}` : undefined;
+    const { sources } = collectEntrySources(
+      '/r/pillars/x/app/remote.css',
+      (path: string) => leaky.get(path.replace('/r/pillars/x/app/../../../', '/r/')),
+      resolveRelative
+    );
+    expect(sources).toHaveLength(1);
+  });
+
+  it('reports an entry that does not exist rather than returning no sources silently', () => {
+    const { sources, missing } = collectEntrySources('/r/nowhere.css', () => undefined, edges);
+    expect(sources).toEqual([]);
+    expect(missing).toEqual(['/r/nowhere.css']);
+  });
+
+  it('does not loop on a cycle', () => {
+    const cyclic = new Map([
+      ['/r/a.css', "@import './b.css';\n@source './src';\n"],
+      ['/r/b.css', "@import './a.css';\n"],
+    ]);
+    const { sources } = collectEntrySources('/r/a.css', (p: string) => cyclic.get(p), edges);
+    expect(sources).toHaveLength(1);
+  });
+});
+
+describe('evaluateShellSheet', () => {
+  const files = [
+    { path: '/r/libs/ui/src/Button.tsx', ext: '.tsx', hasClassName: true },
+    { path: '/r/pillars/shell/src/App.tsx', ext: '.tsx', hasClassName: true },
+    { path: '/r/pillars/finance/app/src/Page.tsx', ext: '.tsx', hasClassName: true },
+  ];
+  const libsAndShell = ['/r/libs/**/src/**/*.{ts,tsx}', '/r/pillars/shell/src/**/*'];
+
+  it('passes a sheet over libs and the shell alone', () => {
+    expect(evaluateShellSheet(libsAndShell, files, '/r')).toEqual({
+      reachesPillars: [],
+      uncovered: [],
+    });
+  });
+
+  it('flags a sheet that still scans pillars/** — the coupling POPS-4581 removed', () => {
+    const result = evaluateShellSheet(
+      [...libsAndShell, '/r/pillars/**/src/**/*.{ts,tsx}'],
+      files,
+      '/r'
+    );
+    expect(result.reachesPillars).toEqual(['/r/pillars/finance/app/src/Page.tsx']);
+  });
+
+  it('flags a sheet that stopped scanning the shell', () => {
+    const result = evaluateShellSheet(['/r/libs/**/src/**/*.{ts,tsx}'], files, '/r');
+    expect(result.uncovered).toEqual(['/r/pillars/shell/src/App.tsx']);
+  });
+
+  it('flags a sheet that stopped scanning the libs', () => {
+    const result = evaluateShellSheet(['/r/pillars/shell/src/**/*'], files, '/r');
+    expect(result.uncovered).toEqual(['/r/libs/ui/src/Button.tsx']);
+  });
+});
+
+describe('evaluateRemoteStylesheet', () => {
+  const appDir = '/r/pillars/x/app';
+  const files = [{ path: `${appDir}/src/Page.tsx`, ext: '.tsx', hasClassName: true }];
+  const css = [
+    "@reference '@pops/ui/theme/globals.css';",
+    "@import 'tailwindcss/utilities' layer(utilities) source(none);",
+    "@source './src';",
+  ].join('\n');
+  const absGlobs = [`${appDir}/src/**/*`];
+  const evaluate = (overrides: Record<string, unknown> = {}) =>
+    evaluateRemoteStylesheet({ appDir, css, absGlobs, files, ...overrides });
+
+  it('passes the recipe every pillar app uses', () => {
+    expect(evaluate()).toEqual([]);
+  });
+
+  it('flags a remote build with no stylesheet entry at all', () => {
+    expect(evaluate({ css: undefined })).toEqual([
+      'no remote.css — the remote build emits no stylesheet of its own',
+    ]);
+  });
+
+  it('flags a sheet that leaves automatic detection on', () => {
+    const problems = evaluate({ css: css.replace(' source(none)', '') });
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toContain('source(none)');
+  });
+
+  it('flags a sheet whose utilities are unlayered', () => {
+    const problems = evaluate({ css: css.replace(' layer(utilities)', '') });
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toContain('layer(utilities)');
+  });
+
+  it('flags a sheet that imports the tokens instead of referencing them', () => {
+    const problems = evaluate({ css: css.replace('@reference', '@import') });
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toContain('@reference');
+  });
+
+  it('flags a sheet that does not import the utilities at all', () => {
+    const problems = evaluate({ css: css.replace(/@import[^\n]*\n/, '') });
+    expect(problems).toEqual(["remote.css does not import 'tailwindcss/utilities'"]);
+  });
+
+  it('flags a scan reaching outside the app, such as into the libs', () => {
+    const problems = evaluate({ absGlobs: [...absGlobs, '/r/libs/**/*'] });
+    expect(problems).toEqual(['remote.css scans outside the app: /r/libs/**/*']);
+  });
+
+  it('flags a sheet that scans nothing, and the app source it then misses', () => {
+    expect(evaluate({ absGlobs: [] })).toEqual([
+      'remote.css scans nothing',
+      `remote.css does not scan ${appDir}/src/Page.tsx`,
+    ]);
+  });
+});
+
+describe('tokensDetectAutomatically', () => {
+  it('flags a tailwindcss import that leaves automatic detection on', () => {
+    expect(tokensDetectAutomatically("@import 'tailwindcss';")).toBe(true);
+  });
+
+  it('passes one with source(none), and ignores other imports', () => {
+    expect(
+      tokensDetectAutomatically("@import 'tailwindcss' source(none);\n@import 'tw-animate-css';")
+    ).toBe(false);
+  });
+
+  it('does not read an import in a comment', () => {
+    expect(tokensDetectAutomatically("/* @import 'tailwindcss'; */")).toBe(false);
   });
 });

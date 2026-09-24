@@ -52,6 +52,13 @@ const MEDIA_WIRE_PAGES = [...MEDIA_PAGES] as const satisfies readonly PageDescri
  */
 const MEDIA_ASSETS_BASE_URL = '/media-ui/media.js';
 
+/**
+ * The stylesheet the runtime loader links before mounting this pillar: the
+ * Tailwind utilities its app source uses, which the shell's own sheet does
+ * not carry. Served beside the bundle, under an equally stable name.
+ */
+const MEDIA_STYLESHEET_URL = '/media-ui/media.css';
+
 export function buildMediaManifest(version: string): ManifestPayload {
   return {
     pillar: MEDIA_PILLAR_ID,
@@ -72,6 +79,7 @@ export function buildMediaManifest(version: string): ManifestPayload {
     nav: MEDIA_WIRE_NAV,
     pages: [...MEDIA_WIRE_PAGES],
     assetsBaseUrl: MEDIA_ASSETS_BASE_URL,
+    stylesheetUrl: MEDIA_STYLESHEET_URL,
     healthcheck: { path: '/health' },
   };
 }

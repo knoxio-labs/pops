@@ -29,6 +29,7 @@ import {
 import { ManifestPayloadSchema } from '../manifest-schema/schema.js';
 import { SettingsManifestDescriptorSchema } from '../manifest-schema/settings.js';
 import {
+  AssetsBaseUrlSchema,
   CaptureOverlayDescriptorSchema,
   TopBarWidgetDescriptorSchema as WireTopBarWidgetDescriptorSchema,
 } from '../manifest-schema/ui.js';
@@ -63,6 +64,12 @@ describe('the wire schema has no second declaration', () => {
     expect(shape.captureOverlay.unwrap()).toBe(ModuleCaptureOverlayConfigSchema);
     expect(shape.topBarWidgets.unwrap().element).toBe(TopBarWidgetDescriptorSchema);
     expect(shape.features.unwrap().element).toBe(FeatureDescriptorSchema);
+  });
+
+  it('validates stylesheetUrl with the one URL rule assetsBaseUrl uses, not a copy of it', () => {
+    const shape = ManifestPayloadSchema.shape;
+    expect(shape.stylesheetUrl.unwrap()).toBe(AssetsBaseUrlSchema);
+    expect(shape.assetsBaseUrl.unwrap()).toBe(AssetsBaseUrlSchema);
   });
 });
 

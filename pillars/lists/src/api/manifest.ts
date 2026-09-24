@@ -30,6 +30,13 @@ const LISTS_WIRE_PAGES = [...LISTS_PAGES] as const satisfies readonly PageDescri
 const LISTS_ASSETS_BASE_URL = '/lists-ui/lists.js';
 
 /**
+ * The stylesheet the runtime loader links before mounting this pillar: the
+ * Tailwind utilities its app source uses, which the shell's own sheet does
+ * not carry. Served beside the bundle, under an equally stable name.
+ */
+const LISTS_STYLESHEET_URL = '/lists-ui/lists.css';
+
+/**
  * Lists pillar manifest payload.
  */
 export function buildListsManifest(version: string): ManifestPayload {
@@ -49,6 +56,7 @@ export function buildListsManifest(version: string): ManifestPayload {
     nav: LISTS_WIRE_NAV,
     pages: [...LISTS_WIRE_PAGES],
     assetsBaseUrl: LISTS_ASSETS_BASE_URL,
+    stylesheetUrl: LISTS_STYLESHEET_URL,
     healthcheck: { path: '/health' },
   };
 }

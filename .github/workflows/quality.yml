@@ -411,13 +411,16 @@ jobs:
 
   tailwind-source-coverage:
     name: Tailwind @source coverage
-    # Asserts every `@source` glob in the single Tailwind theme entry
-    # (libs/ui/src/theme/globals.css) matches real files, and that
-    # no className-bearing UI file falls outside those globs. Tailwind v4 never
-    # errors on an empty `@source` glob, so the pillars/libs rename silently
-    # voided the old `apps/*`/`packages/*` globs and collapsed the UI with no
-    # build error. This guard makes that class of rot loud. It reads the source
-    # tree directly and pulls in no third-party deps, so it skips `pnpm install`.
+    # Asserts the shell's stylesheet (pillars/shell/src/styles.css, through
+    # @pops/ui/theme) scans libs/ and the shell and no other pillar, that every
+    # pillar remote build has a stylesheet entry of its own (remote.css) scanning
+    # only its app, that the shared tokens declare no `@source`, and that every
+    # `@source` glob matches real files and no className-bearing UI file falls
+    # outside all of them (POPS-4581). Tailwind v4 never errors on an empty
+    # `@source` glob, so the pillars/libs rename silently voided the old
+    # `apps/*`/`packages/*` globs and collapsed the UI with no build error. This
+    # guard makes that class of rot loud. It reads the source tree directly and
+    # pulls in no third-party deps, so it skips `pnpm install`.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -426,7 +429,7 @@ jobs:
           node-version: "24"
       - name: Gate self-test (proves the guard catches a stale/empty glob)
         run: node scripts/check-tailwind-source-coverage.mjs --self-test
-      - name: Every @source glob matches files and every UI file is covered
+      - name: Shell and pillar stylesheets scan what they own, and every UI file is covered
         run: node scripts/check-tailwind-source-coverage.mjs
 
   design-tokens:

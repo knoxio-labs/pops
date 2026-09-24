@@ -93,6 +93,8 @@ export class ExternalUiLoadError extends Error {
 export interface RegistryEntry {
   readonly pillarId: string;
   readonly assetsBaseUrl?: string;
+  /** The pillar's own utilities stylesheet, linked before its bundle mounts. */
+  readonly stylesheetUrl?: string;
   readonly nav?: NavConfigDescriptor;
   readonly pages?: readonly PageDescriptor[];
   /**
@@ -167,11 +169,12 @@ export function bootEntries(snapshot: readonly PillarSnapshot[]): readonly Regis
   const out: RegistryEntry[] = [];
   for (const s of snapshot) {
     if (!s.registered) continue;
-    const { assetsBaseUrl, nav, pages, captureOverlay, topBarWidgets } = s.manifest;
+    const { assetsBaseUrl, stylesheetUrl, nav, pages, captureOverlay, topBarWidgets } = s.manifest;
     const widgetSlots = settingsWidgetSlotsOf(s.manifest);
     out.push({
       pillarId: s.pillarId,
       ...(assetsBaseUrl !== undefined ? { assetsBaseUrl } : {}),
+      ...(stylesheetUrl !== undefined ? { stylesheetUrl } : {}),
       ...(nav !== undefined ? { nav } : {}),
       ...(pages !== undefined ? { pages } : {}),
       ...(captureOverlay !== undefined ? { captureOverlay } : {}),
@@ -198,6 +201,7 @@ function resolveExternalManifest(
   const descriptor: RemoteUiDescriptor = {
     pillarId: entry.pillarId,
     assetsBaseUrl: entry.assetsBaseUrl,
+    stylesheetUrl: entry.stylesheetUrl,
     nav: entry.nav,
     pages: entry.pages,
     captureOverlay: entry.captureOverlay,

@@ -1,0 +1,7 @@
+/*
+ * Storybook indexes stories from pillar apps as well as the libs
+ * (`story-globs.ts`), so its sheet scans those apps on top of the theme.
+ */
+@import '../src/theme/index.css';
+
+@source '../../../pillars/*/app/src/**/*.{ts,tsx}';

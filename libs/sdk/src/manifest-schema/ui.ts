@@ -141,6 +141,19 @@ export const AssetsBaseUrlSchema = z
   );
 
 /**
+ * Where a loader-mounted pillar's stylesheet is served from — the sheet the
+ * runtime loader links before mounting the pillar (POPS-4581). It holds only
+ * the Tailwind utilities the pillar's own source uses; preflight, the tokens
+ * and the kit's utilities come from the shell's sheet. A manifest that
+ * declares `assetsBaseUrl` must declare this too, which `validateManifestPayload`
+ * enforces.
+ *
+ * Same URL rule as {@link AssetsBaseUrlSchema}, for the same reasons: the two
+ * are served side by side, and a root-relative sheet stays same-origin.
+ */
+export const StylesheetUrlSchema = AssetsBaseUrlSchema;
+
+/**
  * Wire-shaped descriptor of a pillar's capture overlay contribution. Declared
  * once in `@pops/types` as `ModuleCaptureOverlayConfigSchema` and re-exported
  * here under the manifest payload's name for it (ADR-049) — the shell

@@ -114,6 +114,7 @@ function railBundleMap(
         {
           pillarId: entry.pillarId,
           assetsBaseUrl: entry.assetsBaseUrl,
+          stylesheetUrl: entry.stylesheetUrl,
           nav: entry.nav,
           pages: entry.pages,
           captureOverlay: entry.captureOverlay,

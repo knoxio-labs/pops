@@ -3,16 +3,17 @@
  * No tailwind.config.ts file needed
  */
 @import '@fontsource-variable/plus-jakarta-sans';
-@import 'tailwindcss';
+@import 'tailwindcss' source(none);
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
 
-/* Explicitly source all pillars and libs so Tailwind scans for utility classes.
-   globals.css lives in libs/ui, so Tailwind's automatic detection only covers
-   libs/ui; these globs add every other package. src dirs sit at mixed depths
-   (pillars/shell/src, pillars/finance/app/src), hence the recursive glob. */
-@source "../../../../pillars/**/src/**/*.{ts,tsx}";
-@source "../../../../libs/**/src/**/*.{ts,tsx}";
+/* No `@source` here. Tailwind honours `@source` inside a file pulled in with
+   `@reference`, so a scan declared in this file would follow every
+   loader-mounted pillar that references the tokens and re-emit the kit's
+   utilities into its remote stylesheet. The scan lives in `index.css`.
+   `source(none)` turns automatic detection off for the same reason it is off
+   everywhere: every entry names what it scans, and detection would add
+   whatever sits under the building app's root — its e2e specs included. */
 
 /*---break---
  */

@@ -1,0 +1,9 @@
+/*
+ * The playground's stylesheet. Unlike the shell it compiles pillar app source
+ * into its own bundle — frames render real pillar screens — so it scans every
+ * pillar app as well as itself.
+ */
+@import '@pops/ui/theme';
+
+@source '.';
+@source '../../*/app/src/**/*.{ts,tsx}';

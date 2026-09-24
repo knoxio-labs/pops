@@ -1,4 +1,4 @@
-import '@pops/ui/theme';
+import './preview.css';
 
 import type { Preview } from '@storybook/react-vite';
 

@@ -44,6 +44,13 @@ const AI_WIRE_PAGES = [...AI_PAGES] as const satisfies readonly PageDescriptor[]
 const AI_ASSETS_BASE_URL = '/ai-ui/ai.js';
 
 /**
+ * The stylesheet the runtime loader links before mounting this pillar: the
+ * Tailwind utilities its app source uses, which the shell's own sheet does
+ * not carry. Served beside the bundle, under an equally stable name.
+ */
+const AI_STYLESHEET_URL = '/ai-ui/ai.css';
+
+/**
  * Runtime capability heartbeat for ai. Advertises `settings: true` so the
  * shell's live-registry settings discovery routes ai's settings reads and
  * writes to ai's own federated `/settings/*` surface (capability-gated) rather
@@ -103,5 +110,6 @@ export function buildAiManifest(version: string): ManifestPayload {
     nav: AI_WIRE_NAV,
     pages: [...AI_WIRE_PAGES],
     assetsBaseUrl: AI_ASSETS_BASE_URL,
+    stylesheetUrl: AI_STYLESHEET_URL,
   };
 }
