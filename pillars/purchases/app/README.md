@@ -56,10 +56,13 @@ module graph and fails the build, deleting the output, if any of them ended up
 inside. The shell's half of the contract — an import map resolving those bare
 specifiers to its own chunks — is POPS-3217.
 
-No Tailwind here either: a loader-mounted pillar renders inside the shell's
-document under the stylesheet the shell already emits, whose `@source` globs
-cover this app. Running this app standalone needs its own theme entry, which
-is a different build target.
+The build also emits `purchases.css`, from `remote.css`: only the Tailwind
+utilities this app's source uses, referencing the theme's tokens without
+re-emitting them. The manifest advertises it as `stylesheetUrl` and the shell's
+loader installs it before mounting, so a new class here ships without a shell
+rebuild. Preflight, the tokens and the kit's utilities stay in the shell's
+stylesheet. Running this app standalone needs the whole theme as well, which is
+a different build target.
 
 ## Running it on its own
 

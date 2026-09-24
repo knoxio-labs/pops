@@ -68,6 +68,13 @@ const CEREBRUM_TOP_BAR_WIDGETS = [
 const CEREBRUM_ASSETS_BASE_URL = '/cerebrum-ui/cerebrum.js';
 
 /**
+ * The stylesheet the runtime loader links before mounting this pillar: the
+ * Tailwind utilities its app source uses, which the shell's own sheet does
+ * not carry. Served beside the bundle, under an equally stable name.
+ */
+const CEREBRUM_STYLESHEET_URL = '/cerebrum-ui/cerebrum.css';
+
+/**
  * Runtime capability heartbeat for cerebrum. Reports the live
  * `cerebrum.vectorSearch` status (whether sqlite-vec loaded on this
  * connection) alongside `settings: true`, which advertises cerebrum's own
@@ -110,5 +117,6 @@ export function buildCerebrumManifest(version: string): ManifestPayload {
     captureOverlay: CEREBRUM_CAPTURE_OVERLAY,
     topBarWidgets: [...CEREBRUM_TOP_BAR_WIDGETS],
     assetsBaseUrl: CEREBRUM_ASSETS_BASE_URL,
+    stylesheetUrl: CEREBRUM_STYLESHEET_URL,
   };
 }

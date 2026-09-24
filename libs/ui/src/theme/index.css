@@ -1,0 +1,14 @@
+/**
+ * The stylesheet an app imports as `@pops/ui/theme`: the tokens, preflight and
+ * kit styles in `globals.css`, plus the utilities every lib's source uses.
+ *
+ * globals.css lives in libs/ui, so Tailwind's automatic detection alone would
+ * cover libs/ui and nothing else; the glob below adds every other lib.
+ * Pillars are deliberately absent. An app scans its own source from its own
+ * entry, and a loader-mounted pillar emits its utilities into its own remote
+ * stylesheet (`@pops/pillar-sdk/remote-build`), so it can ship a new class
+ * without the shell being rebuilt.
+ */
+@import './globals.css';
+
+@source "../../../../libs/**/src/**/*.{ts,tsx}";

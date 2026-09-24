@@ -102,6 +102,7 @@ describe('buildInventoryManifest', () => {
     it('declares a root-relative assetsBaseUrl', () => {
       const payload = buildInventoryManifest('1.2.3');
       expect(payload.assetsBaseUrl).toBe('/inventory-ui/inventory.js');
+      expect(payload.stylesheetUrl).toBe('/inventory-ui/inventory.css');
     });
 
     it('passes wire-shaped validation with the new UI dimensions populated', () => {

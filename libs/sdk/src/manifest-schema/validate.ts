@@ -28,6 +28,7 @@ export function validateManifestPayload(input: unknown): ValidationResult {
     ...checkContractTagMatchesVersion(parsed.data),
     ...checkAiToolAllowedUriTypesAreDeclared(parsed.data),
     ...checkSearchAdapterProceduresAreDeclared(parsed.data),
+    ...checkUiPillarDeclaresStylesheet(parsed.data),
   ];
 
   if (crossFieldIssues.length > 0) {
@@ -170,4 +171,32 @@ export function checkAiToolAllowedUriTypesAreDeclared(payload: ManifestPayload):
     });
   });
   return issues;
+}
+
+/**
+ * A pillar that advertises `assetsBaseUrl` must advertise `stylesheetUrl`
+ * beside it, and a pillar with no `assetsBaseUrl` must not advertise one
+ * (POPS-4581).
+ *
+ * The shell's stylesheet carries no pillar's utilities, so a UI pillar with no
+ * sheet of its own mounts with every class the shell does not happen to use
+ * unstyled — a page that renders, reads as a CSS regression, and names no
+ * cause. A sheet with no bundle to style is a manifest describing something
+ * that does not exist. Both are refused at registration rather than degraded
+ * at mount.
+ */
+export function checkUiPillarDeclaresStylesheet(payload: ManifestPayload): ValidationIssue[] {
+  const hasBundle = payload.assetsBaseUrl !== undefined;
+  const hasStylesheet = payload.stylesheetUrl !== undefined;
+  if (hasBundle === hasStylesheet) return [];
+  return [
+    {
+      field: 'stylesheetUrl',
+      reason: hasBundle
+        ? 'required when assetsBaseUrl is set: a loader-mounted pillar ships its own utilities'
+        : 'must not be set without assetsBaseUrl: there is no bundle for it to style',
+      got: payload.stylesheetUrl,
+      schemaPath: ['stylesheetUrl'],
+    },
+  ];
 }

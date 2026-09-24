@@ -24,6 +24,13 @@ const FOOD_WIRE_PAGES = [...FOOD_PAGES] as const satisfies readonly PageDescript
 const FOOD_ASSETS_BASE_URL = '/food-ui/food.js';
 
 /**
+ * The stylesheet the runtime loader links before mounting this pillar: the
+ * Tailwind utilities its app source uses, which the shell's own sheet does
+ * not carry. Served beside the bundle, under an equally stable name.
+ */
+const FOOD_STYLESHEET_URL = '/food-ui/food.css';
+
+/**
  * Builds the food pillar manifest payload sent to the registry on boot.
  */
 export function buildFoodManifest(version: string): ManifestPayload {
@@ -43,6 +50,7 @@ export function buildFoodManifest(version: string): ManifestPayload {
     nav: FOOD_WIRE_NAV,
     pages: [...FOOD_WIRE_PAGES],
     assetsBaseUrl: FOOD_ASSETS_BASE_URL,
+    stylesheetUrl: FOOD_STYLESHEET_URL,
     healthcheck: { path: '/health' },
   };
 }

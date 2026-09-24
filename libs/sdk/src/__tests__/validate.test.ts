@@ -5,6 +5,7 @@ import {
   checkContractPackageMatchesPillar,
   checkContractTagMatchesVersion,
   checkSearchAdapterProceduresAreDeclared,
+  checkUiPillarDeclaresStylesheet,
   pathToDotted,
   validateManifestPayload,
 } from '../manifest-schema/validate.js';
@@ -326,5 +327,60 @@ describe('validateManifestPayload — ai tool cross-field rules', () => {
     m.ai.tools[0]!.requiredScopes = ['finance.write'];
     const result = validateManifestPayload(m);
     expect(result.ok).toBe(true);
+  });
+});
+
+describe('validateManifestPayload — UI pillar stylesheet (POPS-4581)', () => {
+  const uiPillar = () => ({
+    ...validManifest(),
+    assetsBaseUrl: '/finance-ui/finance.js',
+    stylesheetUrl: '/finance-ui/finance.css',
+  });
+
+  it('accepts a UI pillar that advertises its stylesheet beside its bundle', () => {
+    expect(validateManifestPayload(uiPillar()).ok).toBe(true);
+  });
+
+  it('accepts a backend-only pillar that advertises neither', () => {
+    expect(validateManifestPayload(validManifest()).ok).toBe(true);
+  });
+
+  it('rejects a UI pillar with no stylesheetUrl, naming the field', () => {
+    const { stylesheetUrl: _omitted, ...withoutStylesheet } = uiPillar();
+    const result = validateManifestPayload(withoutStylesheet);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.issues).toHaveLength(1);
+      expect(result.issues[0]!.field).toBe('stylesheetUrl');
+      expect(result.issues[0]!.reason).toContain('required when assetsBaseUrl is set');
+      expect(result.issues[0]!.got).toBeUndefined();
+    }
+  });
+
+  it('rejects a stylesheetUrl with no bundle for it to style', () => {
+    const result = validateManifestPayload({
+      ...validManifest(),
+      stylesheetUrl: '/finance-ui/finance.css',
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.issues).toHaveLength(1);
+      expect(result.issues[0]!.field).toBe('stylesheetUrl');
+      expect(result.issues[0]!.got).toBe('/finance-ui/finance.css');
+    }
+  });
+
+  it('refuses a malformed stylesheetUrl at parse time, before the cross-field rule', () => {
+    const result = validateManifestPayload({
+      ...uiPillar(),
+      stylesheetUrl: '//evil.example/x.css',
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.issues[0]!.field).toBe('stylesheetUrl');
+  });
+
+  it('checkUiPillarDeclaresStylesheet returns [] when both or neither are set', () => {
+    expect(checkUiPillarDeclaresStylesheet(uiPillar())).toEqual([]);
+    expect(checkUiPillarDeclaresStylesheet(validManifest())).toEqual([]);
   });
 });

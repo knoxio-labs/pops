@@ -1,7 +1,10 @@
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { describe, expect, it } from 'vitest';
+import { build } from 'vite';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import {
   createPackageNameResolver,
@@ -10,7 +13,12 @@ import {
   findBundledSharedRuntime,
   findProcessGlobalUsage,
   isSharedRuntimeSpecifier,
+  layerPillarBaseUtilities,
+  PILLAR_BASE_LAYER,
   REMOTE_BUILD_DEFINE,
+  REMOTE_ENTRY_PATH,
+  REMOTE_STYLESHEET_PATH,
+  remoteBuildConfig,
   SHARED_RUNTIME_SPECIFIERS,
   type PackageNameResolver,
 } from './index.js';
@@ -438,5 +446,171 @@ describe('REMOTE_BUILD_DEFINE', () => {
     // Every key must be a `process.*` expression, or the guard below would
     // report a chunk the define was supposed to have cleaned.
     for (const key of defined) expect(key.startsWith('process.')).toBe(true);
+  });
+});
+
+describe('remoteBuildConfig', () => {
+  const config = remoteBuildConfig({ pillar: 'acme', appRoot: '/repo/pillars/acme/app' });
+
+  it('builds the remote entry into a library named after the pillar', () => {
+    const lib = config.build?.lib;
+    if (lib === undefined || lib === false) throw new Error('expected a library build');
+    expect(lib.entry).toBe(join('/repo/pillars/acme/app', REMOTE_ENTRY_PATH));
+    expect(lib.formats).toEqual(['es']);
+    expect(
+      typeof lib.fileName === 'function' ? lib.fileName('es', 'remote-entry') : undefined
+    ).toBe('acme.js');
+    expect(lib.cssFileName).toBe('acme');
+    expect(config.build?.outDir).toBe('dist/remote');
+  });
+
+  it('keeps the shared-runtime externals and the process define', () => {
+    expect(config.build?.rollupOptions?.external).toBe(isSharedRuntimeSpecifier);
+    expect(config.define).toEqual(REMOTE_BUILD_DEFINE);
+  });
+});
+
+/**
+ * A real `vite build` over a throwaway app, because what the stylesheet guard
+ * depends on — the CSS asset being in the bundle by the time its hook runs —
+ * is an ordering property of Vite's own plugins that nothing short of a build
+ * exercises.
+ */
+describe('remoteBuildConfig — the emitted stylesheet', () => {
+  const dirs: string[] = [];
+  const ENTRY = 'export const bundles = { home: () => null };\n';
+
+  afterEach(async () => {
+    await Promise.all(dirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
+  });
+
+  /** A throwaway app: the remote entry, and `stylesheet` as its `remote.css` when given. */
+  async function app(stylesheet: string | undefined): Promise<string> {
+    const appRoot = await mkdtemp(join(tmpdir(), 'pops-remote-build-'));
+    dirs.push(appRoot);
+    await mkdir(join(appRoot, 'src'));
+    await writeFile(join(appRoot, REMOTE_ENTRY_PATH), ENTRY);
+    if (stylesheet !== undefined) {
+      await writeFile(join(appRoot, REMOTE_STYLESHEET_PATH), stylesheet);
+    }
+    return appRoot;
+  }
+
+  async function buildApp(appRoot: string): Promise<void> {
+    await build({
+      ...remoteBuildConfig({ pillar: 'acme', appRoot }),
+      root: appRoot,
+      configFile: false,
+      logLevel: 'silent',
+    });
+  }
+
+  it('compiles remote.css to <pillar>.css beside <pillar>.js, though the entry never imports it', async () => {
+    const appRoot = await app('.acme-only { color: red; }\n');
+    await buildApp(appRoot);
+
+    const css = await readFile(join(appRoot, 'dist/remote/acme.css'), 'utf8');
+    expect(css).toContain('.acme-only');
+    const js = await readFile(join(appRoot, 'dist/remote/acme.js'), 'utf8');
+    expect(js).toContain('bundles');
+    // Extracted, not injected: the loader links the sheet, the module does not.
+    expect(js).not.toContain('acme-only');
+    expect(js).not.toContain(REMOTE_STYLESHEET_PATH);
+  });
+
+  it("moves the emitted sheet's base utilities into their sublayer", async () => {
+    const appRoot = await app(
+      '@layer utilities { .hidden { display: none } @media (width >= 48rem) { .md\\:flex { display: flex } } }\n'
+    );
+    await buildApp(appRoot);
+
+    const css = await readFile(join(appRoot, 'dist/remote/acme.css'), 'utf8');
+    expect(css).toMatch(
+      new RegExp(`@layer utilities\\{@layer ${PILLAR_BASE_LAYER}\\{\\.hidden\\{`)
+    );
+    expect(css).toMatch(/\}\}@media[^{]*\{\.md\\:flex\{display:flex\}\}\}/);
+  });
+
+  it('fails the build, naming the file, when the app has no remote.css', async () => {
+    const appRoot = await app(undefined);
+    const failure = await buildApp(appRoot).then(
+      () => 'built',
+      (error: unknown) => String(error)
+    );
+    expect(failure).toContain(join(appRoot, REMOTE_STYLESHEET_PATH));
+    expect(failure).not.toContain('emitted no');
+  });
+
+  it('fails the build, naming the missing file, when remote.css compiles to nothing', async () => {
+    const appRoot = await app('');
+    await expect(buildApp(appRoot)).rejects.toThrow(/emitted no acme\.css/);
+  });
+});
+
+/**
+ * Why the sublayer exists: a pillar sheet is linked after the shell's, and a
+ * later copy of a base utility beats an earlier variant of the same property.
+ * On 2026-09-24 the purchases sheet's `.hidden` hid the shell's own app rail,
+ * whose `hidden md:flex` needs `md:flex` to win.
+ */
+describe('layerPillarBaseUtilities', () => {
+  const wrap = (rules: string) => `@layer utilities{${rules}}`;
+  const based = (base: string, rest = '') =>
+    `@layer utilities{@layer ${PILLAR_BASE_LAYER}{${base}}${rest}}`;
+
+  it('moves a base utility into the sublayer and leaves a responsive variant in place', () => {
+    const css = wrap('.hidden{display:none}@media (width>=768px){.md\\:flex{display:flex}}');
+    expect(layerPillarBaseUtilities(css)).toBe(
+      based('.hidden{display:none}', '@media (width>=768px){.md\\:flex{display:flex}}')
+    );
+  });
+
+  it('leaves a state variant, a nested rule and a compound selector in place', () => {
+    const variants = [
+      '.hover\\:bg-muted:hover{background:red}',
+      '.group-hover\\:flex:is(:where(.group):hover *){display:flex}',
+      ':where(.space-y-2>:not(:last-child)){margin-block-start:0}',
+      '.focus\\:ring{&:focus{outline:none}}',
+    ].join('');
+    expect(layerPillarBaseUtilities(wrap(`.p-4{padding:1rem}${variants}`))).toBe(
+      based('.p-4{padding:1rem}', variants)
+    );
+  });
+
+  it('treats other escapes as part of a base utility, and an escaped colon as a variant', () => {
+    const css = wrap('.w-1\\/2{width:50%}.bg-x\\/10{color:red}.dark\\:bg-card{color:blue}');
+    expect(layerPillarBaseUtilities(css)).toBe(
+      based('.w-1\\/2{width:50%}.bg-x\\/10{color:red}', '.dark\\:bg-card{color:blue}')
+    );
+  });
+
+  it("moves an opacity fallback's @supports block with its utility, but not one holding a variant", () => {
+    const baseSupports = '@supports (color:color-mix(in lab,red,red)){.bg-x\\/10{color:blue}}';
+    const variantSupports =
+      '@supports (color:color-mix(in lab,red,red)){.hover\\:bg-x\\/10:hover{color:blue}}';
+    expect(layerPillarBaseUtilities(wrap(`${baseSupports}${variantSupports}`))).toBe(
+      based(baseSupports, variantSupports)
+    );
+  });
+
+  it('leaves everything outside the utilities layer alone', () => {
+    const outside =
+      '@layer properties{@supports (x:y){*,:before{--tw-a:0}}}@property --tw-a{syntax:"*";inherits:false}';
+    const css = `${outside}${wrap('.flex{display:flex}')}/*$vite$:1*/`;
+    expect(layerPillarBaseUtilities(css)).toBe(
+      `${outside}${based('.flex{display:flex}')}/*$vite$:1*/`
+    );
+  });
+
+  it('returns a utilities layer with no base utility unchanged', () => {
+    const css = wrap('.md\\:flex:hover{display:flex}');
+    expect(layerPillarBaseUtilities(css)).toBe(css);
+  });
+
+  it('is not fooled by braces inside a string', () => {
+    const css = wrap('.content-x{content:"{"}.hover\\:a:hover{color:red}');
+    expect(layerPillarBaseUtilities(css)).toBe(
+      based('.content-x{content:"{"}', '.hover\\:a:hover{color:red}')
+    );
   });
 });

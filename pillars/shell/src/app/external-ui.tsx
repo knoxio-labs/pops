@@ -38,9 +38,9 @@ import { lazy, Suspense, type ComponentType, type ReactNode } from 'react';
  * So: **the shell owns one instance of every specifier in
  * `SHARED_RUNTIME_SPECIFIERS` (`@pops/pillar-sdk/remote-build`), and a remote
  * bundle imports them rather than containing them.** The pillar build marks
- * them external — `pillars/purchases/app/vite.remote.config.ts` is the
- * reference, and its `scripts/build-remote.ts` fails the build if one slips
- * inside — and the shell resolves the resulting bare specifiers to its own
+ * them external — `remoteBuildConfig` in the same module is the recipe every
+ * `vite.remote.config.ts` uses, and each app's `scripts/build-remote.ts` fails
+ * the build if one slips inside — and the shell resolves the resulting bare specifiers to its own
  * chunks through an import map it emits.
  *
  * Externalising without that import map is the point rather than a gap: the
@@ -54,6 +54,7 @@ import { ErrorBoundary } from '@pops/ui';
 
 import { navConfigFromDescriptor } from './nav/nav-from-descriptor';
 import { entryUrlForThisLoad, uncachedProbeUrl } from './remote-entry-url';
+import { installRemoteStylesheet } from './remote-stylesheet';
 
 import type { RouteObject } from 'react-router';
 
@@ -91,6 +92,12 @@ export interface RemotePillarUiModule {
 export interface RemoteUiDescriptor {
   readonly pillarId: string;
   readonly assetsBaseUrl: string;
+  /**
+   * The pillar's own utilities stylesheet. Linked the first time its bundle is
+   * loaded, and waited on alongside the import, so a page never paints
+   * without the classes the shell's sheet does not carry (POPS-4581).
+   */
+  readonly stylesheetUrl?: string;
   readonly nav?: NavConfigDescriptor;
   readonly pages?: readonly PageDescriptor[];
   /**
@@ -156,7 +163,12 @@ async function loadRemoteComponent(
   bundleSlot: string,
   importer: RemoteModuleImporter
 ): Promise<{ default: ComponentType<Record<string, unknown>> }> {
-  const imported = await importer(descriptor.assetsBaseUrl);
+  const [imported] = await Promise.all([
+    importer(descriptor.assetsBaseUrl),
+    descriptor.stylesheetUrl === undefined
+      ? undefined
+      : installRemoteStylesheet(descriptor.stylesheetUrl),
+  ]);
   const module = assertRemoteUiModule(imported, descriptor.pillarId);
   const component = module.bundles[bundleSlot];
   if (component === undefined) {

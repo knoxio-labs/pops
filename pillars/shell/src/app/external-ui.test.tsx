@@ -254,6 +254,109 @@ describe('external pillar UI — runtime mount (Option A)', () => {
 });
 
 /**
+ * A pillar's utilities live in its own stylesheet, not the shell's (POPS-4581),
+ * so the loader links it on first load and waits for it: mounting first would
+ * paint the page without the classes only that sheet carries. jsdom fetches no
+ * stylesheet, so each test settles the `<link>` itself by dispatching the event
+ * a browser would.
+ */
+describe('external pillar UI — its stylesheet', () => {
+  const STYLESHEET = '/acme-ui/acme.css';
+
+  function stylesheetLinks(): HTMLLinkElement[] {
+    return [...document.head.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]')];
+  }
+
+  async function linkedSheet(): Promise<HTMLLinkElement> {
+    return waitFor(() => {
+      const [link] = stylesheetLinks();
+      if (link === undefined) throw new Error('no stylesheet linked yet');
+      return link;
+    });
+  }
+
+  afterEach(() => {
+    for (const link of stylesheetLinks()) link.remove();
+    vi.restoreAllMocks();
+  });
+
+  it('links the stylesheet and mounts the page only once it has loaded', async () => {
+    const importer = vi.fn<RemoteModuleImporter>(() => Promise.resolve(VALID_BUNDLE));
+    const entry = synthesizeExternalBundleEntry(
+      descriptor({ stylesheetUrl: STYLESHEET }),
+      importer
+    );
+    if (entry === null) throw new Error('expected a synthesized entry');
+
+    mountSynthesizedRoutes(routesOf(entry), '/acme');
+
+    const link = await linkedSheet();
+    expect(link.getAttribute('href')).toMatch(/^\/acme-ui\/acme\.css\?v=/);
+    await waitFor(() => expect(importer).toHaveBeenCalled());
+    expect(screen.queryByTestId('remote-home')).not.toBeInTheDocument();
+
+    link.dispatchEvent(new Event('load'));
+
+    await waitFor(() => expect(screen.getByTestId('remote-home')).toBeInTheDocument());
+  });
+
+  it('still mounts the pillar, unstyled, when its stylesheet 404s', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const importer = vi.fn<RemoteModuleImporter>(() => Promise.resolve(VALID_BUNDLE));
+    const entry = synthesizeExternalBundleEntry(
+      descriptor({ stylesheetUrl: STYLESHEET }),
+      importer
+    );
+    if (entry === null) throw new Error('expected a synthesized entry');
+
+    mountSynthesizedRoutes(routesOf(entry), '/acme');
+    (await linkedSheet()).dispatchEvent(new Event('error'));
+
+    await waitFor(() => expect(screen.getByTestId('remote-home')).toBeInTheDocument());
+    expect(screen.queryByTestId('external-pillar-load-error')).not.toBeInTheDocument();
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining(STYLESHEET));
+  });
+
+  it("links one stylesheet however many of the pillar's surfaces load", async () => {
+    const importer = vi.fn<RemoteModuleImporter>(() =>
+      Promise.resolve({
+        bundles: { home: RemoteHome, 'widget-a': RemoteHome, 'widget-b': RemoteHome },
+      })
+    );
+    const entry = synthesizeExternalBundleEntry(
+      descriptor({ stylesheetUrl: STYLESHEET, settingsWidgetSlots: ['widget-a', 'widget-b'] }),
+      importer
+    );
+    const widgets = entry?.settingsWidgetBundles;
+    const WidgetA = widgets?.['widget-a'];
+    const WidgetB = widgets?.['widget-b'];
+    if (WidgetA === undefined || WidgetB === undefined) throw new Error('expected both widgets');
+
+    render(
+      <>
+        <WidgetA />
+        <WidgetB />
+      </>
+    );
+    await waitFor(() => expect(importer).toHaveBeenCalledTimes(2));
+    (await linkedSheet()).dispatchEvent(new Event('load'));
+
+    await waitFor(() => expect(screen.getAllByTestId('remote-home')).toHaveLength(2));
+    expect(stylesheetLinks()).toHaveLength(1);
+  });
+
+  it('links nothing for a pillar that advertises no stylesheet', async () => {
+    const entry = synthesizeExternalBundleEntry(descriptor(), () => Promise.resolve(VALID_BUNDLE));
+    if (entry === null) throw new Error('expected a synthesized entry');
+
+    mountSynthesizedRoutes(routesOf(entry), '/acme');
+
+    await waitFor(() => expect(screen.getByTestId('remote-home')).toBeInTheDocument());
+    expect(stylesheetLinks()).toHaveLength(0);
+  });
+});
+
+/**
  * A failed import in WebKit names no URL, and the same `TypeError` comes back
  * whether the deploy removed the file or the pillar's UI container is down.
  * The boundary probes the pillar's entry to tell the two apart: on 2026-09-13

@@ -899,6 +899,33 @@ describe('ManifestPayloadSchema', () => {
     });
   });
 
+  describe('stylesheetUrl dimension (POPS-4581)', () => {
+    const parse = (stylesheetUrl: unknown) =>
+      ManifestPayloadSchema.safeParse({ ...validManifest(), stylesheetUrl });
+
+    it('accepts a manifest with stylesheetUrl omitted', () => {
+      const result = ManifestPayloadSchema.safeParse(validManifest());
+      expect(result.success).toBe(true);
+      if (result.success) expect(result.data.stylesheetUrl).toBeUndefined();
+    });
+
+    it.each(['/purchases-ui/purchases.css', 'https://cdn.example.com/acme/acme.css'])(
+      'accepts and preserves a root-relative or absolute http(s) URL (%s)',
+      (stylesheetUrl) => {
+        const result = parse(stylesheetUrl);
+        expect(result.success).toBe(true);
+        if (result.success) expect(result.data.stylesheetUrl).toBe(stylesheetUrl);
+      }
+    );
+
+    it.each(['purchases.css', '', '//evil.example.com/x.css', 'ftp://example.com/x.css', 42])(
+      'rejects anything else (%j)',
+      (stylesheetUrl) => {
+        expect(parse(stylesheetUrl).success).toBe(false);
+      }
+    );
+  });
+
   describe('topBarWidgets dimension (POPS-4573)', () => {
     const parse = (topBarWidgets: unknown) =>
       ManifestPayloadSchema.safeParse({ ...validManifest(), topBarWidgets });

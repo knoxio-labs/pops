@@ -1,6 +1,13 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, isAbsolute, join } from 'node:path';
 
+import tailwindcss from '@tailwindcss/vite';
+import react from '@vitejs/plugin-react';
+
+import { REMOTE_STYLESHEET_PATH, remoteStylesheet } from './stylesheet.js';
+
+import type { UserConfig } from 'vite';
+
 /**
  * The shared-runtime contract for a pillar UI the shell mounts through its
  * runtime loader (`pillars/shell/src/app/external-ui.tsx`).
@@ -326,3 +333,73 @@ export function createPackageNameResolver(files: ManifestFiles = nodeFiles): Pac
     return nameForDirectory(dirname(path));
   };
 }
+
+/**
+ * Where a pillar app keeps the module the shell's runtime loader imports,
+ * relative to the app root.
+ */
+export const REMOTE_ENTRY_PATH = 'src/remote-entry.ts';
+
+/** Which pillar a remote build is for, and where its app lives. */
+export interface RemoteBuildOptions {
+  /**
+   * The pillar id. Names both emitted entries — `<pillar>.js` and
+   * `<pillar>.css` — which are what the manifest's `assetsBaseUrl` and
+   * `stylesheetUrl` point at, so they have to survive a rebuild unchanged.
+   */
+  readonly pillar: string;
+  /** Absolute path of the pillar's app package (`pillars/<pillar>/app`). */
+  readonly appRoot: string;
+}
+
+/**
+ * The Vite config every loader-mounted pillar's remote build uses.
+ *
+ * Emits a single ES module entry, `<pillar>.js`, with one lazy chunk per page
+ * (the `React.lazy` boundaries in the app's routes survive the build), and a
+ * single stylesheet, `<pillar>.css`, compiled from the app's
+ * {@link REMOTE_STYLESHEET_PATH} and holding only the Tailwind utilities the
+ * app's own source uses. Both entry names are stable because each is half of
+ * a URL the manifest advertises; cache correctness comes from the entries
+ * being served `no-cache` while the hashed chunks beside them stay immutable.
+ *
+ * Everything on the shared-runtime list is external, for the reasons this
+ * module's header gives, and `scripts/build-remote.ts` fails the build if any
+ * of it slips in.
+ *
+ * @param options The pillar id and its app root.
+ * @returns A config for `vite build`; pass it to `defineConfig`.
+ */
+export function remoteBuildConfig({ pillar, appRoot }: RemoteBuildOptions): UserConfig {
+  const entry = join(appRoot, REMOTE_ENTRY_PATH);
+  return {
+    plugins: [
+      react(),
+      tailwindcss(),
+      remoteStylesheet(entry, join(appRoot, REMOTE_STYLESHEET_PATH), `${pillar}.css`),
+    ],
+    build: {
+      outDir: 'dist/remote',
+      emptyOutDir: true,
+      sourcemap: true,
+      lib: {
+        entry,
+        formats: ['es'],
+        fileName: () => `${pillar}.js`,
+        cssFileName: pillar,
+      },
+      rollupOptions: {
+        external: isSharedRuntimeSpecifier,
+      },
+    },
+    define: {
+      ...REMOTE_BUILD_DEFINE,
+    },
+  };
+}
+
+export {
+  layerPillarBaseUtilities,
+  PILLAR_BASE_LAYER,
+  REMOTE_STYLESHEET_PATH,
+} from './stylesheet.js';

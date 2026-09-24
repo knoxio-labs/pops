@@ -90,6 +90,7 @@ describe('buildListsManifest', () => {
     it('declares a root-relative assetsBaseUrl', () => {
       const manifest = buildListsManifest('0.1.0');
       expect(manifest.assetsBaseUrl).toBe('/lists-ui/lists.js');
+      expect(manifest.stylesheetUrl).toBe('/lists-ui/lists.css');
     });
 
     /**

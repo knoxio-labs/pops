@@ -1,0 +1,11 @@
+/*
+ * The shell's stylesheet: the theme — tokens, preflight, kit styles and every
+ * lib's utilities — plus the utilities the shell's own source uses.
+ *
+ * No pillar is scanned. Each loader-mounted pillar ships a stylesheet of its
+ * own utilities beside its bundle and the runtime loader installs it, so a
+ * pillar can use a class this sheet has never seen without a shell rebuild.
+ */
+@import '@pops/ui/theme';
+
+@source '.';

@@ -158,7 +158,7 @@ describe('bootEntries (P7-T03 snapshot → registry entries)', () => {
     expect(entries.map((e) => e.pillarId)).toEqual(['finance']);
   });
 
-  it('threads an external pillar surface (assetsBaseUrl / nav / pages) off the manifest', () => {
+  it('threads an external pillar surface (assetsBaseUrl / stylesheetUrl / nav / pages) off the manifest', () => {
     const nav = {
       id: 'weather',
       label: 'Weather',
@@ -173,12 +173,14 @@ describe('bootEntries (P7-T03 snapshot → registry entries)', () => {
       snapshotEntry('weather', {
         manifest: {
           assetsBaseUrl: 'https://cdn.example.com/weather/index.js',
+          stylesheetUrl: 'https://cdn.example.com/weather/weather.css',
           nav,
           pages,
         },
       }),
     ]);
     expect(entry?.assetsBaseUrl).toBe('https://cdn.example.com/weather/index.js');
+    expect(entry?.stylesheetUrl).toBe('https://cdn.example.com/weather/weather.css');
     expect(entry?.nav).toEqual(nav);
     expect(entry?.pages).toEqual(pages);
   });
@@ -187,6 +189,7 @@ describe('bootEntries (P7-T03 snapshot → registry entries)', () => {
     const [entry] = bootEntries([snapshotEntry('finance')]);
     expect(entry?.pillarId).toBe('finance');
     expect(entry?.assetsBaseUrl).toBeUndefined();
+    expect(entry?.stylesheetUrl).toBeUndefined();
     expect(entry?.nav).toBeUndefined();
     expect(entry?.pages).toBeUndefined();
   });
