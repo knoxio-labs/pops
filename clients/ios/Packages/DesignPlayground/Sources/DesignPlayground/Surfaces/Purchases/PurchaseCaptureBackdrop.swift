@@ -7,6 +7,7 @@ import SwiftUI
 internal struct PurchaseCaptureBackdrop: View {
     internal var body: some View {
         PurchasesFlowView(
-            dependencies: playgroundPurchasesDependencies(rows: PurchasesFixtures.all))
+            dependencies: playgroundPurchasesDependencies(rows: PurchasesFixtures.all),
+            captureAvailable: false)
     }
 }

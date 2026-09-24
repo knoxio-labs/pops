@@ -6,6 +6,9 @@ import {
   MANUAL_OPERATION_ID,
   MONTH_SUMMARY_OPERATION_ID,
   PURCHASES_PILLAR_ID,
+  RECEIPT_THUMBNAIL_OPERATION_ID,
+  SEARCH_OPERATION_ID,
+  SEEDED_RECEIPT_SHA256,
   UPLOAD_OPERATION_ID,
   detailRoute,
   listRoute,
@@ -13,6 +16,8 @@ import {
   monthSummaryRoute,
   purchasesRegistryEntry,
   readPurchasesContract,
+  receiptThumbnailRoute,
+  searchRoute,
   seededPurchases,
   startPurchasesStub,
   uploadRoute,
@@ -62,6 +67,29 @@ describe('the purchases contract this stub serves', () => {
       path: '/analytics/month-summary',
     });
   });
+
+  it('also declares the search operation the universal search screen reads through', () => {
+    expect(searchRoute(readPurchasesContract())).toEqual({ method: 'POST', path: '/search' });
+  });
+
+  it('names the missing operation when a rename takes the search route away', () => {
+    expect(() => searchRoute({ paths: { '/search': { post: { operationId: 'other' } } } })).toThrow(
+      new RegExp(`declares no ${SEARCH_OPERATION_ID}`, 'u')
+    );
+  });
+
+  it('also declares the receipt-thumbnail operation the detail screen reads through', () => {
+    expect(receiptThumbnailRoute(readPurchasesContract())).toEqual({
+      method: 'GET',
+      path: '/receipts/{sha256}/thumbnail',
+    });
+  });
+
+  it('names the missing operation when a rename takes the thumbnail route away', () => {
+    expect(() =>
+      receiptThumbnailRoute({ paths: { '/receipts/{sha256}/thumbnail': { get: {} } } })
+    ).toThrow(new RegExp(`declares no ${RECEIPT_THUMBNAIL_OPERATION_ID}`, 'u'));
+  });
 });
 
 describe('the purchases registry entry', () => {
@@ -97,11 +125,12 @@ describe('the purchases registry entry', () => {
     ]);
   });
 
-  it('names the list, detail and summary queries it now answers', () => {
+  it('names the list, detail, summary and receipt-thumbnail queries it now answers', () => {
     expect(entry.manifest.routes.queries).toEqual([
       `purchases.${LIST_OPERATION_ID}`,
       `purchases.${DETAIL_OPERATION_ID}`,
       `purchases.${MONTH_SUMMARY_OPERATION_ID}`,
+      `purchases.${RECEIPT_THUMBNAIL_OPERATION_ID}`,
     ]);
   });
 });
@@ -397,6 +426,240 @@ describe('the purchases stub', () => {
       expect(await unknown.json()).toEqual({
         code: 'NOT_FOUND',
         message: 'Purchase not-here not found',
+      });
+    } finally {
+      await stub.close();
+    }
+  });
+
+  it('carries the seeded receipt document on the Corner Store detail', async () => {
+    const stub = await startPurchasesStub();
+    try {
+      const detail = await fetch(`${stub.url}/purchases/purchase-september-unsettled`);
+      expect(detail.status).toBe(200);
+      const body: { documents: Array<{ documentUri: string; kind: string }> } = await detail.json();
+      expect(body.documents).toEqual([
+        {
+          documentUri: `pops://purchases/receipt/${SEEDED_RECEIPT_SHA256}`,
+          kind: 'receipt',
+          createdAt: '2026-09-18T08:30:00.000Z',
+        },
+      ]);
+    } finally {
+      await stub.close();
+    }
+  });
+
+  it('serves the seeded receipt thumbnail as the shape receipt.thumbnail publishes', async () => {
+    const stub = await startPurchasesStub();
+    try {
+      const answered = await fetch(`${stub.url}/receipts/${SEEDED_RECEIPT_SHA256}/thumbnail`);
+      expect(answered.status).toBe(200);
+      expect(answered.headers.get('content-type')).toBe('application/json');
+      const body = await answered.json();
+      expect(body).toMatchObject({
+        sha256: SEEDED_RECEIPT_SHA256,
+        mediaType: 'image/png',
+      });
+      expect(typeof body.dataBase64).toBe('string');
+      expect(body.dataBase64.length).toBeGreaterThan(0);
+      expect(body.byteLength).toBe(Buffer.from(body.dataBase64, 'base64').byteLength);
+      // Round-trips to a well-formed PNG, so a real decoder (the receipt
+      // plate, via `PopsPhoto`) has something to render rather than junk that
+      // merely satisfies the schema.
+      const decoded = Buffer.from(body.dataBase64, 'base64');
+      expect(decoded.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
+    } finally {
+      await stub.close();
+    }
+  });
+
+  it('classifies a merchant that merely contains the text as a contains match', async () => {
+    const stub = await startPurchasesStub();
+    try {
+      const answered = await fetch(`${stub.url}/search`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ query: { text: 'store' } }),
+      });
+
+      expect(answered.status).toBe(200);
+      const body = await answered.json();
+      // "Corner Store" contains "store" but does not start with it; no seeded
+      // merchant is a prefix match here, so this also proves `matchType`
+      // reflects where the text actually sits rather than always saying
+      // "contains".
+      expect(body.hits).toEqual([
+        expect.objectContaining({
+          uri: 'pops:purchases/purchase/purchase-september-unsettled',
+          matchField: 'merchantEntityName',
+          matchType: 'contains',
+        }),
+      ]);
+    } finally {
+      await stub.close();
+    }
+  });
+
+  it('classifies a merchant prefix as a prefix match, and echoes the order fields a hit needs', async () => {
+    const stub = await startPurchasesStub();
+    try {
+      const answered = await fetch(`${stub.url}/search`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ query: { text: 'hard' } }),
+      });
+
+      const body = await answered.json();
+      // "Hardware Shop" is a prefix match, "Corner Store" and "Market" are not
+      // matches at all — so this also proves the search is scoped to what was
+      // asked, not every seeded row.
+      expect(body.hits.map((hit: { uri: string; matchType: string }) => hit.uri)).toEqual([
+        'pops:purchases/purchase/purchase-august-linked',
+      ]);
+      expect(body.hits[0]).toMatchObject({
+        matchType: 'prefix',
+        data: {
+          merchantEntityName: 'Hardware Shop',
+          totalCents: 4599,
+          currency: 'AUD',
+          status: 'linked',
+        },
+      });
+    } finally {
+      await stub.close();
+    }
+  });
+
+  it('ranks a merchant prefix above a merchant that merely contains the text', async () => {
+    const stub = await startPurchasesStub();
+    try {
+      const created = await fetch(`${stub.url}/purchases/manual`, {
+        method: 'POST',
+        body: JSON.stringify({
+          merchantEntityName: 'Old Hardware Barn',
+          totalCents: 100,
+          items: [{ name: 'Shelf', quantity: 1, lineTotalCents: 100 }],
+        }),
+      });
+      const { purchase } = await created.json();
+
+      const answered = await fetch(`${stub.url}/search`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ query: { text: 'hard' } }),
+      });
+
+      // The newer purchase lists first, so only a real ranking puts the older prefix
+      // match "Hardware Shop" above it.
+      const body = await answered.json();
+      expect(
+        body.hits.map((hit: { uri: string; matchType: string }) => [hit.uri, hit.matchType])
+      ).toEqual([
+        ['pops:purchases/purchase/purchase-august-linked', 'prefix'],
+        [`pops:purchases/purchase/${String(purchase.id)}`, 'contains'],
+      ]);
+    } finally {
+      await stub.close();
+    }
+  });
+
+  it("reads the gateway's own envelope, which wraps the call argument in a `body` key it does not strip", async () => {
+    // `search()` in `pillars/bfm/src/api/purchases/search-client.ts` calls
+    // `handle.search.search({ body: { query: {...} } })`, and the dynamic
+    // gateway proxy serialises that whole argument rather than stripping the
+    // `body` key the way a generated ts-rest client would — verified against
+    // the live harness, not assumed. A stub that only read the unwrapped
+    // shape would report every real search empty.
+    const stub = await startPurchasesStub();
+    try {
+      const answered = await fetch(`${stub.url}/search`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ body: { query: { text: 'Corner' } } }),
+      });
+      const body = await answered.json();
+      expect(body.hits).toHaveLength(1);
+      expect(body.hits[0].data.merchantEntityName).toBe('Corner Store');
+    } finally {
+      await stub.close();
+    }
+  });
+
+  it('answers no hits for an empty or all-whitespace query, and none for text nothing matches', async () => {
+    const stub = await startPurchasesStub();
+    try {
+      const empty = await fetch(`${stub.url}/search`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ query: { text: '   ' } }),
+      });
+      expect(await empty.json()).toEqual({ hits: [] });
+
+      const noMatch = await fetch(`${stub.url}/search`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ query: { text: 'no such merchant' } }),
+      });
+      expect(await noMatch.json()).toEqual({ hits: [] });
+    } finally {
+      await stub.close();
+    }
+  });
+
+  it('answers search whether or not the reachability switch is thrown', async () => {
+    // Unlike `/openapi`, the search route is not gated behind `setReachable` —
+    // this stub's header says why: the switch this stub starts withheld on is
+    // the contract probe, not every route underneath it.
+    const stub = await startPurchasesStub();
+    try {
+      expect(stub.isReachable()).toBe(false);
+      const answered = await fetch(`${stub.url}/search`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ query: { text: 'Market' } }),
+      });
+      expect(answered.status).toBe(200);
+    } finally {
+      await stub.close();
+    }
+  });
+
+  it('refuses the search connection once the search outage switch is thrown, and recovers', async () => {
+    const stub = await startPurchasesStub();
+    try {
+      expect(stub.isSearchOutage()).toBe(false);
+      stub.setSearchOutage(true);
+      expect(stub.isSearchOutage()).toBe(true);
+      await expect(
+        fetch(`${stub.url}/search`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ query: { text: 'Market' } }),
+        })
+      ).rejects.toThrow();
+
+      stub.setSearchOutage(false);
+      const recovered = await fetch(`${stub.url}/search`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ query: { text: 'Market' } }),
+      });
+      expect(recovered.status).toBe(200);
+    } finally {
+      await stub.close();
+    }
+  });
+
+  it('404s a thumbnail for a sha256 no seeded purchase carries', async () => {
+    const stub = await startPurchasesStub();
+    try {
+      const unknownSha256 = 'f'.repeat(64);
+      const answered = await fetch(`${stub.url}/receipts/${unknownSha256}/thumbnail`);
+      expect(answered.status).toBe(404);
+      expect(await answered.json()).toEqual({
+        code: 'NOT_FOUND',
+        message: `Receipt ${unknownSha256} not found`,
       });
     } finally {
       await stub.close();

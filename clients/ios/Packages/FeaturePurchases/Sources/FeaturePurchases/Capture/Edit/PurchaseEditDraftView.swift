@@ -10,8 +10,13 @@ extension ReceiptDraftView {
     ) {
         self.init(
             owned: draft, host: nil, title: nil, subtitle: nil, status: nil,
-            complaints: .hintsOnly, merchants: [], parts: [], secondaryAction: nil,
-            addAnother: nil, lock: lock, commit: .navigationBar, onChange: onChange,
+            complaints: .hintsOnly,
+            searchMerchants: { _ in [] },
+            merchantPreview: { _ in nil },
+            addressesForMerchant: { _ in [] },
+            addressPreview: { _, _ in nil },
+            parts: [],
+            lock: lock, commit: .navigationBar, onChange: onChange,
             lineRemovalNotice: lineRemovalNotice, formPresentation: .savedPurchase,
             saveEligibility: saveEligibility, isSaving: isSaving, save: save)
     }

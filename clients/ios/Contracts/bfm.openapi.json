@@ -11617,7 +11617,19 @@
                   "properties": {
                     "tags": {
                       "items": {
-                        "type": "string"
+                        "additionalProperties": false,
+                        "properties": {
+                          "count": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "tag": {
+                            "type": "string"
+                          }
+                        },
+                        "required": ["tag", "count"],
+                        "type": "object"
                       },
                       "type": "array"
                     }

@@ -24,12 +24,20 @@ import FeatureTransactions
 /// Listing a feature here is inert on its own — the BFM has to name it in
 /// `GET /mobile/bootstrap` before anybody sees it — which is why a screen can
 /// be registered here before the server is ready to offer it.
+///
+/// `.receiptCapture` is deliberately absent, even though `FeatureSurface`
+/// still carries an answer about it (`captureAvailable`, read straight off
+/// the BFM's snapshot by `AppShellModel`, independently of this list). POPS-
+/// 4294 retired its tab; adding it back here would put it through the same
+/// path as every other entry — a tab, a `RootFeature.presentation` name and
+/// icon (`RootCopyPresentationTests` enforces that every entry has one) — and
+/// it is not a screen. Purchases reads `captureAvailable` to decide whether to
+/// offer capture inline instead.
 internal enum RootFeature {
     internal static let renderable: [MobileFeature] = [
         FeatureTransactions.feature,
         FeatureAccounts.feature,
         FeaturePurchases.feature,
-        ReceiptCaptureTab.feature,
         FeatureInventory.feature,
     ]
 
@@ -51,9 +59,6 @@ internal enum RootFeature {
         FeaturePurchases.feature: FeaturePresentation(
             displayName: FeaturePurchases.displayName,
             symbolName: FeaturePurchases.symbolName),
-        ReceiptCaptureTab.feature: FeaturePresentation(
-            displayName: ReceiptCaptureTab.displayName,
-            symbolName: ReceiptCaptureTab.symbolName),
         FeatureInventory.feature: FeaturePresentation(
             displayName: FeatureInventory.displayName,
             symbolName: FeatureInventory.symbolName),

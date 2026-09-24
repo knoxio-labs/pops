@@ -187,7 +187,7 @@ export const purchaseItemsByTag = <ThrowOnError extends boolean = false>(
   });
 
 /**
- * List the distinct item tags in use, most-used first
+ * List the distinct item tags in use with their counts, most-used first
  */
 export const purchaseTagVocabulary = <ThrowOnError extends boolean = false>(
   options?: Options<PurchaseTagVocabularyData, ThrowOnError>

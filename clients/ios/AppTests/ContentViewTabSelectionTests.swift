@@ -8,10 +8,10 @@ import Testing
 /// The rule `ContentView` hands its `TabView` for which tab shows.
 ///
 /// The bug that made the selection explicit — the tab dropping back to the
-/// first whenever a tab's root view changed — lives in `TabView` itself and
-/// is caught end to end by `receipt-manual-entry.yaml`. What these pin is the
-/// rule that replaced the implicit selection, including the case it now has to
-/// get right on its own: a reload that removes the chosen feature.
+/// first whenever a tab's root view changed — lives in `TabView` itself. What
+/// these pin is the rule that replaced the implicit selection, including the
+/// case it now has to get right on its own: a reload that removes the chosen
+/// feature.
 @Suite("ContentView tab selection")
 internal struct ContentViewTabSelectionTests {
     private static let transactions = MobileFeature(rawValue: "transactions")
@@ -40,20 +40,18 @@ internal struct ContentViewTabSelectionTests {
         #expect(shown == Self.accounts)
     }
 
-    @Test("choosing Inventory's search tab keeps it shown")
-    func theInventorySearchTabStaysChosen() {
+    @Test("choosing the search tab keeps it shown")
+    func theSearchTabStaysChosen() {
         let tabs = ContentView.tabs(for: [Self.transactions, FeatureInventory.feature])
-        let shown = ContentView.shownFeature(
-            chosen: ContentView.inventorySearchTab, available: tabs)
-        #expect(shown == ContentView.inventorySearchTab)
+        let shown = ContentView.shownFeature(chosen: ContentView.searchTab, available: tabs)
+        #expect(shown == ContentView.searchTab)
     }
 
-    @Test("the search tab goes when Inventory does, and the selection falls back")
-    func theSearchTabLeavesWithInventory() {
+    @Test("the search tab goes once every searchable pillar does, and the selection falls back")
+    func theSearchTabLeavesWithEverySearchablePillar() {
         let tabs = ContentView.tabs(for: [Self.transactions, Self.accounts])
         #expect(tabs == [ContentView.moreTab])
-        let shown = ContentView.shownFeature(
-            chosen: ContentView.inventorySearchTab, available: tabs)
+        let shown = ContentView.shownFeature(chosen: ContentView.searchTab, available: tabs)
         #expect(shown == ContentView.moreTab)
     }
     @Test("the full fleet keeps Inventory visible and leaves room for the search bubble")
@@ -65,9 +63,15 @@ internal struct ContentViewTabSelectionTests {
         #expect(
             ContentView.tabs(for: available) == [
                 purchases, Self.receipts, FeatureInventory.feature,
-                ContentView.moreTab, ContentView.inventorySearchTab,
+                ContentView.moreTab, ContentView.searchTab,
             ])
         #expect(ContentView.moreFeatures(for: available) == [Self.transactions, Self.accounts])
+    }
+
+    @Test("Purchases alone still gets a tab bar, for the search tab")
+    func purchasesAloneGetsATabBarForSearch() {
+        let purchases = MobileFeature(rawValue: "purchases")
+        #expect(ContentView.tabs(for: [purchases]) == [purchases, ContentView.searchTab])
     }
 
     @Test("More disappears when neither secondary feature is available")

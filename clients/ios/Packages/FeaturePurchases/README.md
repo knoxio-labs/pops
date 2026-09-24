@@ -2,29 +2,30 @@
 
 Purchase browsing, receipt capture and the shared draft form.
 
-`PurchasesFlowView` is the Purchases tab. It owns one navigation stack rooted at the purchases home and resolves feature-local archive and detail routes. Cross-feature links use the public `PurchasesRoute` and install `purchasesDestinations(dependencies:)` on their own stack. The existing Receipts tab continues to own capture while the home asks the app host to present that flow through `purchaseCapture`.
+`PurchasesFlowView` is the Purchases tab. It owns one navigation stack rooted at the purchases home and resolves feature-local archive and detail routes. Cross-feature links use the public `PurchasesRoute` and install `purchasesDestinations(dependencies:)` on their own stack. Purchases owns capture itself — there is no separate Receipts tab (POPS-4294) — and the home reaches it through the `purchaseCapture` environment presenter `purchaseCapturePresentation(dependencies:isAvailable:onSaved:)` installs.
 
 ## Capture and the draft form
 
-Photograph or paste a receipt and let the purchases pillar's model turn it into a purchase.
+Photograph, pick, or hand-type a purchase and let the purchases pillar's model turn it into one.
 
 ### What is here and what is not
 
-Both ends of the flow. `ReceiptCaptureView` photographs a receipt through VisionKit's document camera and hands what it produced to `ReceiptResultView`, which calls `AppCore`'s `ReceiptCaptureRepository`. Extraction and persistence are two calls (POPS-2454): every usable reading — reconciled or not — becomes a `.draft` and reaches `ReceiptDraftView`, pre-filled; only `unreadable` has nothing to edit. Saving, from either a corrected reading or a blank manual entry, goes through the same `ReceiptDraftView`, the same `ReceiptDraft`, and the same `ReceiptResultViewModel.save(_:)` — which branches on `ReceiptResultState` to call `saveDraft(_:)` or `createManualPurchase(_:)`, never on anything the view or the form decides. Neither view names `Auth` nor `BFMClient`; both read the repository seam and have no idea a device token or HTTP call sits behind it.
+Staging, reading and review own the camera; the shared draft form owns everything after. A scan or a picked photo is staged through `PurchaseStagingModel`, read through `PurchaseReadingViewModel` against `AppCore`'s `ReceiptCaptureRepository`, and reviewed through `PurchaseReviewView` — one `ReceiptDraftView` per receipt, over the same `ReceiptDraft` a hand entry or a saved-purchase edit uses. Saving a corrected reading, a hand-entered purchase or an edit each ends at `ReceiptDraftSaveMapping` and the same `saveDraft(_:)`/`createManualPurchase(_:)` calls, never decided by the view or the form. None of this module names `Auth` nor `BFMClient`; it reads the repository seam and has no idea a device token or HTTP call sits behind it.
 
 That boundary is asserted, not merely intended: `ModuleBoundaryTests` in `AppCore` fails if any package outside `Auth` and `BFMClient` imports either.
 
-| Concern                                                                                     | Lives in                                                                                                               |
-| ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| The capture screen, the camera-refusal states, and the manual-entry action                  | here — `ReceiptCaptureView`, `ReceiptCaptureViewModel`                                                                 |
-| The document camera itself, and pages becoming bytes                                        | here — `ReceiptDocumentScanner`, `ReceiptPageEncoder`                                                                  |
-| The result screen (`draft` / `manualEntry` / `unreadable` / `saved`, plus gateway failures) | here — `ReceiptResultView`, `ReceiptResultViewModel`                                                                   |
-| The editable form a reading — or a blank entry — becomes                                    | here — `ReceiptDraft`, `ReceiptDraftForm`, `ReceiptDraftView`                                                          |
-| Turning an edited `ReceiptDraft` into the BFM's cents-based save payload                    | here — `ReceiptDraftSaveMapping`, `AppCore`'s `ReceiptMoneyText`                                                       |
-| Camera permission, and the Settings deep link                                               | `AppCore` — `CameraAuthorizing`, `SystemSettings`                                                                      |
-| The extraction and save/manual contract types                                               | `AppCore` — `ReceiptCaptureRepository`, `ReceiptExtraction`, `ReceiptDraftSavePayload`, `ReceiptManualPurchasePayload` |
-| `POST /mobile/purchases/receipts/extract`, `/receipts` and `/manual`                        | `BFMClient` — `BFMReceiptCaptureRepository`                                                                            |
-| An end-to-end Maestro flow                                                                  | `.maestro/receipt-manual-entry.yaml` — the manual path, which needs no camera                                          |
+| Concern                                                                  | Lives in                                                                                                               |
+| ------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| Staging photographed or picked pages into receipts                       | here — `PurchaseStagingModel`, `StagedReceipts`                                                                        |
+| Reading staged receipts and reviewing the drafts they became             | here — `PurchaseReadingViewModel`, `PurchaseReviewView`                                                                |
+| The document camera itself, and pages becoming bytes                     | here — `ReceiptDocumentScanner`, `ReceiptPageEncoder`                                                                  |
+| The hand-entry action, with no camera involved                           | here — `PurchaseHandEntryView`, `PurchaseHandEntryViewModel`                                                           |
+| The editable form a reading — or a blank entry — becomes                 | here — `ReceiptDraft`, `ReceiptDraftForm`, `ReceiptDraftView`                                                          |
+| Turning an edited `ReceiptDraft` into the BFM's cents-based save payload | here — `ReceiptDraftSaveMapping`, `AppCore`'s `ReceiptMoneyText`                                                       |
+| Camera permission, and the Settings deep link                            | `AppCore` — `CameraAuthorizing`, `SystemSettings`                                                                      |
+| The extraction and save/manual contract types                            | `AppCore` — `ReceiptCaptureRepository`, `ReceiptExtraction`, `ReceiptDraftSavePayload`, `ReceiptManualPurchasePayload` |
+| `POST /mobile/purchases/receipts/extract`, `/receipts` and `/manual`     | `BFMClient` — `BFMReceiptCaptureRepository`                                                                            |
+| End-to-end Maestro flows                                                 | `.maestro/purchases-hand-entry.yaml`, `.maestro/purchases-scan-says-there-is-no-camera.yaml`                           |
 
 ### The surface, and why it is shaped this way
 
@@ -34,7 +35,7 @@ Four decisions carry the rest of it, and each is a rule the screens landing next
 
 **The receipt is the anchor; everything else is commentary.** `ReceiptPagesView` draws the captured pages above every state of the result screen — while the call is in flight, on the confirmation, on a refusal, and on a gateway failure. What changes underneath is what was made of the paper; the paper is the same paper, and moving it per outcome would make four screens out of one. A reader told a photo could not be read wants to see the photo.
 
-**An outcome is announced by a glyph and a colour before it is announced by a sentence.** `saved` and `unreadable` open with a `PopsStatusHeader` whose tone comes from `ReceiptResultContent.tone` — success and failure respectively. `draft` carries the same warning-toned header only when the reading did not reconcile; a reconciled draft opens with no status header at all, because there is nothing to announce beyond "here is what was read". Somebody who has just pressed a button is scanning, not reading, and grey cards distinguished only by their copy are screens that have to be read.
+**An outcome is announced by a glyph and a colour before it is announced by a sentence.** `ReceiptDraftView.Status` opens with a `PopsStatusHeader` whose tone it carries directly — a corrected reading takes the warning tone only when the reading did not reconcile, and a reconciled draft opens with no status at all, because there is nothing to announce beyond "here is what was read". Somebody who has just pressed a button is scanning, not reading, and grey cards distinguished only by their copy are screens that have to be read.
 
 **A reading is laid out like the paper it was read off, not like the record it came from.** `ReceiptDraftForm` puts merchant, address and date at three different weights at the top, then the line items in a column with their amounts aligned, then what adjusts them, then the stated total emphasised at the foot. The flat label-over-value list this replaced is the shape of a database row; a discrepancy shows up when the two things being compared are laid out alike.
 
@@ -57,6 +58,8 @@ The edit sheet commits from the navigation bar and asks before losing a changed 
 Saved-purchase screens share `PurchasesPresentation` for merchant names, settlement labels and tones, calendar grouping, and per-currency totals. Unknown settlement labels remain visible verbatim, and totals in different currencies never become one invented amount. `PurchaseMark`, `PurchaseStatusBadge`, and `PurchaseHeroWash` carry the approved visual vocabulary into the feature without depending on the design playground.
 
 `PurchaseRowContent` turns a saved purchase into the value every list row draws, including whether the merchant is unattributed and whether that context asks for a settlement badge. `PurchaseRowLabel`, `PurchaseRowsPanel`, and `PurchaseMarkStack` compose that value from the shared DesignSystem panel and divided-row primitives.
+
+`PurchaseSearchRow` draws a `PurchaseSearchHit` from `AppCore` in the same row idiom: a line always pushes the order it is on, never its own line identifier — `PurchaseSearchRowContent.route(for:)` is the one place that decides that, so a test can assert it without rendering anything. Highlighted query matches use `popsPurchases`, the same colour every screen in this package tints with `.tint(.popsPurchases)`.
 
 `PurchasesHomeDigest` bounds Recent and merchant leaders while keeping the server's All and Unmatched counts independent from the number of loaded rows. Its summary initializer reads monthly totals, comparisons, and aggregate merchant leaders from `PurchasesMonthSummary`; leaders remain aggregate facts and never require an invented purchase or purchase identifier.
 
@@ -119,11 +122,19 @@ row's pulse collapses to a static skeleton when Reduce Motion is enabled.
 
 `ReceiptDraftView` is a reading — or a blank purchase — as something the reader may change: the pages above (empty for a manual entry), the outcome's status header, then the same groups in the same order — who and when, the items in a column, what adjusts them, the total in `popsAmount` — with every value in a `PopsTextField` instead of a `Text`. The bar's prominent action is Save; whichever the entry point's own "start again" action is sits beside it at the standard weight, which is what `PopsButtonProminence` exists for. A host that commits from its own navigation bar passes no `save`, so there is no bar, and hands the form a `Binding` to its draft so it can gate its Save on `ReceiptDraftView.canSave` as the reader types.
 
+Merchant and address record sheets debounce searches and ask their caller for matches, rather than
+filtering a preloaded catalogue. An already resolved record remains visible before the first query;
+an empty unresolved sheet prompts for a query without making a request. Cancelling an older search
+prevents its late result from replacing the latest answer. The form receives separate merchant
+search, merchant preview, address list, and address preview closures. Address work reads the draft's
+current merchant identifier when it starts, so changing merchant cannot send a later lookup to the
+branch list from the previous merchant.
+
 Three rules hold the form together, and each is a value a test asserts rather than a thing the view happens to do:
 
 **There is no locked state, no confirmed state and no edit mode.** Nothing in `ReceiptDraft` can express "this field may not be changed". That absence is the design: most edits are not corrections. `ZCHEETOS C&B BALLS` is exactly what the till printed and exactly what nobody calls it, and a form that gated editing on the extractor's confidence would refuse the commonest reason to open it. What the gate complained about is carried as a hint against the field it names — `ReceiptDraftField` — and a hint is a prompt to look, never a lock.
 
-**Every field exists whether or not anything was read into it.** This is where the form and `ReceiptResultContent` part company: the read-only reading drops what the receipt never stated, because an empty label reads as a record that failed to load. Dropping it here would remove exactly the field the reader came to fill in — a Salvos receipt whose items have no names would offer nowhere to name them. A blank manual entry is the limit of this: every field present, none of them read into.
+**Every field exists whether or not anything was read into it.** A read-only reading would drop what the receipt never stated, because an empty label reads as a record that failed to load — the form does the opposite. Dropping it here would remove exactly the field the reader came to fill in — a Salvos receipt whose items have no names would offer nowhere to name them. A blank manual entry is the limit of this: every field present, none of them read into.
 
 **The arithmetic is reported, never recomputed.** `ReceiptDraft`'s fields hold what a model transcribed, printed-looking, whichever arm of `receipt.extract` produced them — `BFMReceiptCaptureRepository` turns the BFM's cents-based draft back into that shape once, at the repository boundary, so this module's own presentation code is unaware the wire is cents at all. The form repeats what the gate found — and withdraws it the moment a figure changes, because from then on the check is about numbers no longer on screen. `ReceiptDraftReconciliation` is those three states, and saying "as read, the items and the total agree" is what tells a reader who came to rename three items which figures to leave alone.
 
@@ -131,18 +142,29 @@ Three rules hold the form together, and each is a value a test asserts rather th
 
 Feature-owned controls request capture through the optional `purchaseCapture` environment presenter. The presenter receives only a `PurchaseCaptureSource`; the app host owns the navigation and whatever follows the run. A host without capture support leaves the environment value `nil`, so a feature can omit the control instead of opening a dead destination.
 
-`ReceiptCaptureView`'s ready state offers two actions side by side: photograph a receipt, or "Add a purchase" with no camera involved. Both land on `ReceiptResultView` over a `ReceiptResultViewModel`, and both save through the same `save(_:)`, which reads `ReceiptResultState` to decide which BFM call to make:
+`purchaseCapturePresentation(dependencies:isAvailable:onSaved:)` installs that presenter and owns the
+capture overlays. Staging, reading, and review share one large sheet and navigation stack; hand entry
+uses its own non-dismissible sheet. The document scanner remains a full-screen system controller,
+while photo and file selections return through the staging intake. Empty cancellation reports no
+completion, and camera refusals offer Settings only when the system permission can be changed there.
+`PurchasesFlowView` installs this presentation only when receipt capture is available and lands its
+ordered saved identifiers on the home model, which refreshes and highlights the saved rows.
 
-- **A corrected reading (`.draft(reading)`).** `extract()` already ran; `save(_:)` turns the edited `ReceiptDraft` into a `ReceiptDraftSavePayload` — via `ReceiptDraftSaveMapping`, in this module, since `ReceiptDraft`'s fields are `internal` to it — carrying `reading`'s receipt URIs and capture facts forward untouched, and calls `saveDraft(_:)`.
-- **A manual entry (`.manualEntry`).** No `extract()` call at all: `ReceiptCaptureViewModel.startManualEntry()` opens `ReceiptResultViewModel(enteringManuallyWith:)` straight on `.manualEntry`, `ReceiptDraftPresentation.blankDraft(currency:)` fills the form with nothing, and `save(_:)` calls `createManualPurchase(_:)` instead — no receipt URIs, because there is no receipt.
+Review and hand entry map merchant and address choices from the bound merchant directory, returning
+an empty result when that optional catalogue request fails so capture itself remains usable.
+
+Purchases Add offers photos, files, and hand entry — Scan is its own direct action on Home. Every route reaches the same `ReceiptDraftView`, and each ends at one of two BFM calls, on the same `ReceiptDraft` fields, never decided by the view or the form:
+
+- **A corrected reading.** `PurchaseReadingViewModel` already called `extract()`; `PurchaseReviewViewModel.save()` turns the edited `ReceiptDraft` into a `ReceiptDraftSavePayload` — via `ReceiptDraftSaveMapping`, in this module, since `ReceiptDraft`'s fields are `internal` to it — carrying the reading's receipt URIs and capture facts forward untouched, and calls `saveDraft(_:)`.
+- **A manual entry.** No `extract()` call at all: `ReceiptDraftPresentation.blankDraft(currency:)` fills the form with nothing, and `PurchaseHandEntryViewModel.save(_:)` calls `createManualPurchase(_:)` instead — no receipt URIs, because there is no receipt.
 
 Money is parsed once, in `ReceiptDraftSaveMapping`, using `AppCore`'s `ReceiptMoneyText` — the same parser regardless of which of the two calls the result feeds. A field that will not parse (a stray letter, a date not in `YYYY-MM-DD[ HH:MM]`) is refused locally, before either call, as a `ReceiptDraftSaveError` the form's own alert names — never sent as an invented number.
 
 ### Showing the receipt
 
-The pages on the result screen are the bytes the phone is holding — what the camera produced and what was uploaded, kept by `ReceiptResultViewModel.parts` after the call precisely so the reading can be checked against them. Stored purchase details instead resolve their ordered `receiptURIs` through `PurchasesRepository`: thumbnails fill the header and opening one requests the full image for that URI.
+The pages on the draft form are the bytes the phone is holding — what the camera produced and what was uploaded, held by `ReceiptDraftView.parts` precisely so the reading can be checked against them. Stored purchase details instead resolve their ordered `receiptURIs` through `PurchasesRepository`: thumbnails fill the header and opening one requests the full image for that URI.
 
-The `unreadable` capture outcome carries `receiptCount`, not stored-part URIs. `ReceiptDraftReading.receiptUris` identifies the stored parts a save attaches; those references become drawable only after the resulting saved purchase is read through the detail repository.
+An unreadable reading carries a page count, not stored-part URIs. `ReceiptDraftReading.receiptUris` identifies the stored parts a save attaches; those references become drawable only after the resulting saved purchase is read through the detail repository.
 
 A page that is not a drawable image — the contract admits PDF and plain text — draws a plate with a glyph saying which it is, decided by `ReceiptPageMedia`.
 
@@ -165,9 +187,15 @@ There is an open UIKit defect — reproduced by others on iOS 26, not fixed as o
 
 `FeaturePairing`'s QR scanner is presented from a `.sheet`, and this screen deliberately differs. A page sheet on iPhone is interactively dismissible by a downward swipe, and `VNDocumentCameraViewControllerDelegate` is never told about that dismissal — `documentCameraViewControllerDidCancel(_:)` fires for the Cancel button only, not for a swipe. Pairing can afford that: there is a manual-entry form underneath the scanner, so an accidental dismissal costs nothing. Here it would silently discard however many pages had already been photographed, with no delegate callback and no confirmation — the worse failure mode, since a person mid-scan has already put in the effort a swipe would erase. `.fullScreenCover` has no swipe-to-dismiss gesture, so the only way out of the scanner is its own Cancel button or a finished scan, both of which already report through the delegate. It also matches how the system document camera is meant to appear: undecorated and full-screen, not inset with a sheet's grabber and rounded corners.
 
+### Universal search
+
+`PurchasesSearchProvider` answers universal search from the BFM rather than an on-device replica, so it never claims a result the phone cannot currently reach. Asking it while the phone is offline yields `.offline` immediately and sends no request; it then waits on `NetworkReachability.updates()` and searches only once the path is satisfied again, rather than polling or guessing when the network might be back. `PurchasesSearchFilter` narrows by settlement `status`, sent to the server, and by `kind` (purchases, products, or either), applied on the phone because the server contract has no such filter — a caller that wants both narrowings named in one line reads `filter.summary`.
+
+`PurchasesSearchFilterFields` is `PurchasesSearchFilter`'s Show and Status pickers as `Section` content, following `FeatureInventory`'s `InventorySearchFilterFields` idiom so a shared filter sheet can place a pillar's fields with its own header. The picker option lists live in plain functions (`purchasesSearchKindOptions()`, `purchasesSearchStatusOptions()`) rather than inline in the view, because `PurchaseSearchStatus` is not `CaseIterable` and the presentation order is worth a test independent of rendering.
+
 ### Reachable, end to end
 
-`ReceiptCaptureTab.feature` is registered in `RootFeature.renderable`, the BFM's bootstrap advertises it, and `ContentView` maps it to `ReceiptCaptureView`. A paired device's `AppDependencies.receiptCapture` is a `BFMReceiptCaptureRepository` pointed at that device's own BFM, so a capture submitted from the screen reaches the purchases pillar.
+`FeaturePurchases.feature` is registered in `RootFeature.renderable`, the BFM's bootstrap advertises it, and `ContentView` maps it to `PurchasesFlowView`, whose capture presenter is gated on `MobileFeature.receiptCapture`'s own reachability. A paired device's `AppDependencies.receiptCapture` is a `BFMReceiptCaptureRepository` pointed at that device's own BFM, so a capture submitted from the presenter reaches the purchases pillar.
 
 `AppComposition`'s other construction site — the pairing screen's dependencies — leaves the seam unbound on purpose, alongside `transactions`: the base URL arrives with the pairing code, so before pairing there is no BFM to point a client at, and a capture attempted from there would fail with `dependencyNotBound`. Nothing can reach this screen from there; `CompositionRootTests` asserts both halves.
 
@@ -181,9 +209,9 @@ swift test --package-path Packages/FeaturePurchases
 
 ### How the look is checked, and what nothing checks
 
-No Maestro flow reaches the result screens through the camera: the Simulator has no camera, so `receipt-capture-says-there-is-no-camera.yaml` proves the refusal and stops there (POPS-2398, POPS-2407). `receipt-manual-entry.yaml` reaches them the other way in — manual entry needs no camera, so it drives the tab, the form, a real `saveDraft`/`createManualPurchase` round trip through the harness's own `purchases` stub, and the saved result screen, end to end. Everything past the shutter that only a capture can produce is still answered by unit tests, and the design work is deliberately arranged so most of it can be.
+No Maestro flow reaches the draft form through the camera: the Simulator has no camera, so `purchases-scan-says-there-is-no-camera.yaml` proves the refusal and stops there (POPS-2398, POPS-2407). `purchases-hand-entry.yaml` reaches the form the other way in — manual entry needs no camera, so it drives Add, the form, a real `createManualPurchase` round trip through the harness's own `purchases` stub, and Home's highlighted saved row, end to end. Everything past the shutter that only a capture can produce is still answered by unit tests, and the design work is deliberately arranged so most of it can be.
 
-**Values and copy, not pixels, wherever a value will do.** `ReceiptSurfaceTests` asserts that the three outcomes carry three different tones, that `needsReview` is not toned as a failure, that each camera refusal has a heading of its own and that none of them draws in the failure tone, that a non-image page is never handed to an image decoder, and that a line item stacks at exactly the accessibility text sizes. Every one of those is a claim a render comparison could only make where the colour catalogue compiled — and on the `test:packages` host lane it may not have, in which case two screens that differ by a glyph and a colour rasterise to the same blank canvas. `ReceiptResultPresentationTests` pins the reading's whole ordered shape, so a group being internally right while the order between groups went wrong is still a failure.
+**Values and copy, not pixels, wherever a value will do.** `ReceiptSurfaceTests` asserts that each camera refusal has a heading of its own and that none of them draws in the failure tone, that a non-image page is never handed to an image decoder, that the capture screen's problem copy never repeats itself, and that a line item stacks at exactly the accessibility text sizes. Every one of those is a claim a render comparison could only make where the colour catalogue compiled — and on the `test:packages` host lane it may not have, in which case two screens that differ by a glyph and a colour rasterise to the same blank canvas. `ReceiptDraftTests` pins the form's whole ordered shape, so a group being internally right while the order between groups went wrong is still a failure.
 
 `ReceiptDraftTests` answers the form the same way and adds nothing rasterised at all. It drives the model the way a reader does — pre-fill, retype a name, empty a total, add a row, remove one — and asserts what came back: that the extractor's own reading survived the edit, that a cleared field is reported against that field while every other field still takes input, that a hint attaches to the field its kind names and blocks nothing, and that changing a figure withdraws the arithmetic claim while renaming an item does not. The one layout decision in the row is a value (`ReceiptDraftLineRow.amountWidth(at:column:)`), asserted to break at the same Dynamic Type size the read-only row does, so the reading and the form reflow together rather than at two different sizes.
 
@@ -191,6 +219,6 @@ No Maestro flow reaches the result screens through the camera: the Simulator has
 
 Three gaps, and they are the honest ones:
 
-- **`ImageRenderer` cannot see inside a `ScrollView`.** That is why `ReceiptCapturePrompt`, `ReceiptResultCard` and `ReceiptPageView` are separable views: each is the part of a screen a test can rasterise. What the strip and the screen _compose_ — which state selected the card, whether the action bar is where it should be, whether the pages sit above the reading — is not covered by anything here. A gate for that needs a real host, not `ImageRenderer` (POPS-1583 tracks the app-wide version).
-- **Dynamic Type is reasoned about rather than measured**, except where a decision was pulled out into a value (`ReceiptLineLayout`) or shows up as a height (`ReceiptCaptureLayoutTests`). There are `#Preview`s at `.accessibility5`, and a preview is something a person looks at.
+- **`ImageRenderer` cannot see inside a `ScrollView`.** That is why `ReceiptPageView` is its own separable view: it is the part of a screen a test can rasterise. What the strip and the screen it sits in _compose_ — whether the action bar is where it should be, whether the pages sit above the reading — is not covered by anything here. A gate for that needs a real host, not `ImageRenderer` (POPS-1583 tracks the app-wide version).
+- **Dynamic Type is reasoned about rather than measured**, except where a decision was pulled out into a value (`ReceiptLineLayout`, `ReceiptDraftLineRow.amountWidth(at:column:)`). There are `#Preview`s at `.accessibility5`, and a preview is something a person looks at.
 - **Nothing exercises these screens under VoiceOver.** The accessibility identifiers are proved by source shape only (POPS-2387).

@@ -1,6 +1,7 @@
 import AppCore
 import DesignSystem
 import FeaturePurchases
+import Foundation
 import SwiftUI
 
 /// Where one purchase in the batch came from.
@@ -158,11 +159,27 @@ internal struct PurchaseReviewSurface: View {
             subtitle: entry.origin == .unreadable ? "Nothing could be read off this one." : nil,
             status: entry.status,
             complaints: .hintsOnly,
-            merchants: merchants,
+            searchMerchants: searchMerchants,
+            merchantPreview: { id in merchants.first { $0.id == id } },
+            addressesForMerchant: addresses,
+            addressPreview: { merchantID, addressID in
+                await addresses(merchantID).first { $0.id == addressID }
+            },
             parts: entry.parts
         )
         .id(entry.id)
         .disabled(saving.isInFlight)
+    }
+
+    private func searchMerchants(_ query: String) async -> [ReceiptMerchantChoice] {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return [] }
+        return merchants.filter { $0.name.localizedCaseInsensitiveContains(trimmed) }
+    }
+
+    private func addresses(_ merchantID: String) async -> [ReceiptAddressChoice] {
+        guard merchants.contains(where: { $0.id == merchantID }) else { return [] }
+        return await PurchaseMerchantFixtures.addresses(merchantID)
     }
 
     @ViewBuilder private var banner: some View {

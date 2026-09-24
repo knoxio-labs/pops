@@ -1,16 +1,14 @@
 /// The handles the correction form offers to something driving it from
 /// outside the process.
 ///
-/// Same split ``ReceiptResultAccessibility`` draws, and the same reason for
-/// it: these are stable names that survive a copy edit, not what VoiceOver
-/// reads. It matters here because the fields differ from each other only by
-/// their labels, and a flow keying on label text cannot tell a merchant from
-/// an address once either is renamed.
+/// Stable names that survive a copy edit, not what VoiceOver reads. It
+/// matters here because the fields differ from each other only by their
+/// labels, and a flow keying on label text cannot tell a merchant from an
+/// address once either is renamed.
 ///
 /// Hyphens rather than dots, matching the sets next door.
 internal enum ReceiptDraftAccessibility {
-    /// The screen itself, so a flow can tell the form from the read-only
-    /// reading it replaced.
+    /// The screen itself.
     internal static let form = "receipt-draft-form"
     internal static let merchant = "receipt-draft-merchant"
     internal static let address = "receipt-draft-address"
@@ -27,7 +25,6 @@ internal enum ReceiptDraftAccessibility {
     /// What the screen says about whether the figures agree.
     internal static let reconciliation = "receipt-draft-reconciliation"
     internal static let saveButton = "receipt-draft-save"
-    internal static let saveAndAddAnotherButton = "receipt-draft-save-add-another"
     /// Inside the sheet a merchant or address field opens: the name to create
     /// a new record under, and the button that creates it. Shared by both
     /// fields, which is safe because only one sheet is ever presented.

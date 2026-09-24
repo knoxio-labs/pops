@@ -26,7 +26,7 @@ import {
   PatchItemBodySchema,
   UpdatePurchaseBodySchema,
 } from './rest-schemas.js';
-import { ItemTagSchema } from './schemas/item.js';
+import { TagVocabularyEntrySchema } from './schemas/item.js';
 import { PurchaseDetailSchema, PurchaseItemDetailSchema } from './schemas/purchase-detail.js';
 import {
   IsoTimestampSchema,
@@ -294,13 +294,16 @@ export const purchasesPurchaseContract = c.router({
     },
     summary: 'Page through lines carrying an item tag, newest first',
   },
-  /** The tag vocabulary in use, most-used first — feeds a "browse by tag" chooser. */
+  /**
+   * The tag vocabulary in use, most-used first, each with its use count —
+   * feeds a "browse by tag" chooser that shows counts (POPS-4544).
+   */
   tagVocabulary: {
     method: 'GET',
     path: '/items/tags',
     responses: {
-      200: z.object({ tags: z.array(ItemTagSchema) }),
+      200: z.object({ tags: z.array(TagVocabularyEntrySchema) }),
     },
-    summary: 'List the distinct item tags in use, most-used first',
+    summary: 'List the distinct item tags in use with their counts, most-used first',
   },
 });

@@ -29,7 +29,8 @@ internal struct ShellContentView: View {
 
     var body: some View {
         PurchasesFlowView(
-            dependencies: playgroundPurchasesDependencies(rows: PurchasesFixtures.all)
+            dependencies: playgroundPurchasesDependencies(rows: PurchasesFixtures.all),
+            captureAvailable: false
         )
         .safeAreaInset(edge: .top) { banner }
     }

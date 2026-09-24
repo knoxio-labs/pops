@@ -28,10 +28,12 @@ internal struct ReceiptDraftForm: View {
     }
 
     @Binding internal var draft: ReceiptDraft
-    /// Merchants that can be picked. Empty falls back to free text, which is
-    /// what this form did before pickers and what it must still do on a
-    /// device that cannot reach contacts.
-    internal var merchants: [ReceiptMerchantChoice] = []
+    internal var searchMerchants: ReceiptMerchantSearch = { _ in [] }
+    internal var merchantPreview: ReceiptMerchantPreview = { _ in nil }
+    internal var addressesForMerchant: ReceiptAddressesForMerchant = { _ in [] }
+    internal var addressPreview: ReceiptAddressPreview = { _, _ in nil }
+    @State internal var resolvedMerchant: ReceiptMerchantChoice?
+    @State internal var resolvedAddress: ReceiptAddressChoice?
     /// Fields a saved purchase holds read-only. `nil` for a reading, which is
     /// editable everywhere.
     internal var lock: ReceiptDraftLock?
@@ -273,9 +275,7 @@ extension ReceiptDraftForm {
         return .hint(hints.joined(separator: " "))
     }
 
-    /// A named group of fields in one card, with the label outside it — the
-    /// same shape ``ReceiptResultCard`` uses, so the form and the reading it
-    /// replaces are recognisably one screen in two states.
+    /// A named group of fields in one card, with the label outside it.
     internal func section(
         _ title: String, caption: String? = nil, @ViewBuilder rows: () -> some View
     ) -> some View {

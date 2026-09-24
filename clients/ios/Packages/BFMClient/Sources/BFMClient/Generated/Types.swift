@@ -40399,13 +40399,53 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/purchases/tags/GET/responses/200/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/purchases/tags/GET/responses/200/content/json/TagsPayload`.
+                        internal struct TagsPayloadPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/purchases/tags/GET/responses/200/content/json/TagsPayload/count`.
+                            internal var count: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/purchases/tags/GET/responses/200/content/json/TagsPayload/tag`.
+                            internal var tag: Swift.String
+                            /// Creates a new `TagsPayloadPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - count:
+                            ///   - tag:
+                            internal init(
+                                count: Swift.Int,
+                                tag: Swift.String
+                            ) {
+                                self.count = count
+                                self.tag = tag
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case count
+                                case tag
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.count = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .count
+                                )
+                                self.tag = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .tag
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "count",
+                                    "tag"
+                                ])
+                            }
+                        }
                         /// - Remark: Generated from `#/paths/mobile/purchases/tags/GET/responses/200/content/json/tags`.
-                        internal var tags: [Swift.String]
+                        internal typealias TagsPayload = [Operations.MobilePurchases_purchaseTags.Output.Ok.Body.JsonPayload.TagsPayloadPayload]
+                        /// - Remark: Generated from `#/paths/mobile/purchases/tags/GET/responses/200/content/json/tags`.
+                        internal var tags: Operations.MobilePurchases_purchaseTags.Output.Ok.Body.JsonPayload.TagsPayload
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
                         ///   - tags:
-                        internal init(tags: [Swift.String]) {
+                        internal init(tags: Operations.MobilePurchases_purchaseTags.Output.Ok.Body.JsonPayload.TagsPayload) {
                             self.tags = tags
                         }
                         internal enum CodingKeys: String, CodingKey {
@@ -40414,7 +40454,7 @@ internal enum Operations {
                         internal init(from decoder: any Swift.Decoder) throws {
                             let container = try decoder.container(keyedBy: CodingKeys.self)
                             self.tags = try container.decode(
-                                [Swift.String].self,
+                                Operations.MobilePurchases_purchaseTags.Output.Ok.Body.JsonPayload.TagsPayload.self,
                                 forKey: .tags
                             )
                             try decoder.ensureNoAdditionalProperties(knownKeys: [

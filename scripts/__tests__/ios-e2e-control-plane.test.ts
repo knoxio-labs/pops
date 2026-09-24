@@ -129,6 +129,7 @@ describe('the control plane', () => {
   let openApiUnreachable: boolean;
   let contractMismatch: boolean;
   let purchasesReachable: boolean;
+  let purchasesSearchOutage: boolean;
   let inventoryReachable: boolean;
   let inventorySyncOutage: boolean;
   let publishUserDefinedType: () => Promise<Record<string, unknown>>;
@@ -140,6 +141,7 @@ describe('the control plane', () => {
     openApiUnreachable = false;
     contractMismatch = false;
     purchasesReachable = false;
+    purchasesSearchOutage = false;
     inventoryReachable = false;
     inventorySyncOutage = false;
     publishUserDefinedType = () => Promise.resolve({ typeId: 'type-1', revision: 2 });
@@ -185,6 +187,10 @@ describe('the control plane', () => {
           purchasesReachable = active;
         },
         isReachable: () => purchasesReachable,
+        setSearchOutage: (active: boolean) => {
+          purchasesSearchOutage = active;
+        },
+        isSearchOutage: () => purchasesSearchOutage,
       },
       inventory: {
         setReachable: (active: boolean) => {
@@ -239,6 +245,7 @@ describe('the control plane', () => {
       financeOpenApiUnreachable: false,
       financeContractMismatch: false,
       purchasesReachable: false,
+      purchasesSearchOutage: false,
       inventoryReachable: false,
       inventorySyncOutage: false,
     });
@@ -269,6 +276,7 @@ describe('the control plane', () => {
     await call('/__e2e/finance/openapi-unreachable', { method: 'POST' });
     await call('/__e2e/finance/contract-mismatch', { method: 'POST' });
     await call('/__e2e/purchases/up', { method: 'POST' });
+    await call('/__e2e/purchases/search-down', { method: 'POST' });
     await call('/__e2e/inventory/up', { method: 'POST' });
     await call('/__e2e/inventory/sync-down', { method: 'POST' });
     await arm();
@@ -284,6 +292,7 @@ describe('the control plane', () => {
       financeOpenApiUnreachable: false,
       financeContractMismatch: false,
       purchasesReachable: false,
+      purchasesSearchOutage: false,
       inventoryReachable: false,
       inventorySyncOutage: false,
     });
@@ -293,6 +302,7 @@ describe('the control plane', () => {
     // Withheld again, so the next flow meets the single-feature root every
     // flow written before `receipt-capture` existed was written against.
     expect(purchasesReachable).toBe(false);
+    expect(purchasesSearchOutage).toBe(false);
     expect(inventoryReachable).toBe(false);
     expect(inventorySyncOutage).toBe(false);
   });
@@ -430,6 +440,18 @@ describe('the control plane', () => {
       expect.objectContaining({ purchasesReachable: false })
     );
     expect(purchasesReachable).toBe(false);
+  });
+
+  it('throws the purchases search outage both ways, independent of reachability', async () => {
+    expect(await (await call('/__e2e/purchases/search-down', { method: 'POST' })).json()).toEqual(
+      expect.objectContaining({ purchasesSearchOutage: true, purchasesReachable: false })
+    );
+    expect(purchasesSearchOutage).toBe(true);
+
+    expect(await (await call('/__e2e/purchases/search-up', { method: 'POST' })).json()).toEqual(
+      expect.objectContaining({ purchasesSearchOutage: false })
+    );
+    expect(purchasesSearchOutage).toBe(false);
   });
 
   it('throws the inventory sync outage both ways', async () => {

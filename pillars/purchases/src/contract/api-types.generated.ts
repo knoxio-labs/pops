@@ -78,7 +78,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** List the distinct item tags in use, most-used first */
+    /** List the distinct item tags in use with their counts, most-used first */
     get: operations['purchase.tagVocabulary'];
     put?: never;
     post?: never;
@@ -1002,7 +1002,10 @@ export interface operations {
         };
         content: {
           'application/json': {
-            tags: string[];
+            tags: {
+              count: number;
+              tag: string;
+            }[];
           };
         };
       };

@@ -13,7 +13,7 @@ internal struct ShellTab: Identifiable, Sendable {
 
 /// The tab bar's real composition, in the app's own order.
 ///
-/// The first three are `RootFeature.renderable`. Their labels and glyphs are
+/// The first two are `RootFeature.renderable`. Their labels and glyphs are
 /// read from the feature modules that declare them — the same constants
 /// `RootFeature.presentation` hands to `RootCopy.name(of:)`/`symbol(for:)`
 /// (POPS-2893) — rather than restated as literals here. A restatement is a
@@ -33,11 +33,6 @@ internal let shellTabs: [ShellTab] = [
         id: FeaturePurchases.feature.rawValue,
         label: FeaturePurchases.displayName,
         symbol: FeaturePurchases.symbolName
-    ),
-    ShellTab(
-        id: ReceiptCaptureTab.feature.rawValue,
-        label: ReceiptCaptureTab.displayName,
-        symbol: ReceiptCaptureTab.symbolName
     ),
     ShellTab(
         id: FeatureAccounts.feature.rawValue,

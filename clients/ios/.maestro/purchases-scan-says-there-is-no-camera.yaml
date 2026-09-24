@@ -1,0 +1,24 @@
+appId: com.knoxiolabs.pops.local
+name: Purchases scan explains that the Simulator has no camera
+---
+- clearState
+- clearKeychain
+- launchApp
+
+- assertVisible:
+    id: 'pairing-code-field'
+- runScript: scripts/receipts-become-available.js
+- assertTrue: ${output.receipts.status == 200}
+- assertTrue: ${output.receipts.state.purchasesReachable == true}
+- runFlow:
+    file: subflows/enter-the-pairing-details.yaml
+    env:
+      SERVER_URL: ${CONTROL_BASE_URL}
+
+- assertVisible:
+    id: 'transactions-list'
+- tapOn: 'Purchases'
+- assertVisible: 'A\$12\.50'
+- tapOn:
+    id: 'purchases-capture-scan'
+- assertVisible: 'No camera on this device'

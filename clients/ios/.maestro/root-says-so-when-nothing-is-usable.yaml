@@ -28,14 +28,13 @@ name: The root screen says why nothing is usable, and Try again leaves it
 
 # `RootCopy.nothingAvailable(surface.unavailable)` in full — Maestro matches a
 # text selector as a regex against the WHOLE label, so a prefix of this
-# sentence matches nothing and passes whatever is on screen. All five declared
+# sentence matches nothing and passes whatever is on screen. All four declared
 # features (`App/RootFeature.swift`'s `renderable`, in that order) are
 # `unavailable` here: transactions and accounts because finance's `/openapi`
-# stopped answering, purchases, receipt-capture and inventory because the
-# harness withholds `purchases` and `inventory` unless a flow arms them and
-# this one does not — `scripts/ios-e2e/purchases-stub.mjs`,
-# `scripts/ios-e2e/inventory-pillar.mjs`.
-- assertVisible: 'Transactions is not available right now. Accounts is not available right now. Purchases is not available right now. Receipts is not available right now. Inventory is not available right now.'
+# stopped answering, purchases and inventory because the harness withholds
+# them unless a flow arms them and this one does not —
+# `scripts/ios-e2e/purchases-stub.mjs`, `scripts/ios-e2e/inventory-pillar.mjs`.
+- assertVisible: 'Transactions is not available right now. Accounts is not available right now. Purchases is not available right now. Inventory is not available right now.'
 
 # AFTER the assertion above, and that order is load-bearing: a relaunch — or
 # here, a first launch racing its own bootstrap answer — is a blank-then-guess

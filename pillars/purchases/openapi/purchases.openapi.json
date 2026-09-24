@@ -1412,8 +1412,20 @@
                   "properties": {
                     "tags": {
                       "items": {
-                        "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
-                        "type": "string"
+                        "additionalProperties": false,
+                        "properties": {
+                          "count": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "tag": {
+                            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                            "type": "string"
+                          }
+                        },
+                        "required": ["tag", "count"],
+                        "type": "object"
                       },
                       "type": "array"
                     }
@@ -1426,7 +1438,7 @@
             "description": "200"
           }
         },
-        "summary": "List the distinct item tags in use, most-used first",
+        "summary": "List the distinct item tags in use with their counts, most-used first",
         "tags": ["purchase"]
       }
     },

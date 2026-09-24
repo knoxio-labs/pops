@@ -196,6 +196,8 @@ function agedAuthorization(header, secret) {
  *   purchases: {
  *     setReachable: (active: boolean) => void,
  *     isReachable: () => boolean,
+ *     setSearchOutage: (active: boolean) => void,
+ *     isSearchOutage: () => boolean,
  *   },
  *   inventory: {
  *     setReachable: (active: boolean) => void,
@@ -226,6 +228,7 @@ export async function startControlPlane({
     financeOpenApiUnreachable: upstream.isFinanceOpenApiUnreachable(),
     financeContractMismatch: upstream.isFinanceContractMismatch(),
     purchasesReachable: purchases.isReachable(),
+    purchasesSearchOutage: purchases.isSearchOutage(),
     inventoryReachable: inventory.isReachable(),
     inventorySyncOutage: inventory.isSyncOutage(),
   });
@@ -252,6 +255,7 @@ export async function startControlPlane({
       // `receipt-capture` existed was written against. A flow that wants the
       // second tab arms it for itself.
       purchases.setReachable(false);
+      purchases.setSearchOutage(false);
       inventory.setReachable(false);
       inventory.setSyncOutage(false);
       return { status: 200, body: state() };
@@ -292,6 +296,17 @@ export async function startControlPlane({
       purchases.setReachable(false);
       return { status: 200, body: state() };
     }
+    // The search route alone refusing while `/openapi` keeps answering and
+    // the tab stays — `search-purchases.yaml`'s failed-then-recovered step.
+    // `purchases-stub.mjs` says why this is independent of `reachable`.
+    if (method === 'POST' && pathname === '/__e2e/purchases/search-down') {
+      purchases.setSearchOutage(true);
+      return { status: 200, body: state() };
+    }
+    if (method === 'POST' && pathname === '/__e2e/purchases/search-up') {
+      purchases.setSearchOutage(false);
+      return { status: 200, body: state() };
+    }
     // The `inventory` feature, on and off, the same way and for the same
     // reason; `inventory-pillar.mjs` says why it is a gate in front of the
     // real pillar rather than a stub.
@@ -330,6 +345,8 @@ export async function startControlPlane({
           'POST /__e2e/finance/contract-ok',
           'POST /__e2e/purchases/up',
           'POST /__e2e/purchases/down',
+          'POST /__e2e/purchases/search-down',
+          'POST /__e2e/purchases/search-up',
           'POST /__e2e/inventory/up',
           'POST /__e2e/inventory/down',
           'POST /__e2e/inventory/sync-down',

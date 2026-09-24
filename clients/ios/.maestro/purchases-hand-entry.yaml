@@ -1,0 +1,36 @@
+appId: com.knoxiolabs.pops.local
+name: A purchase entered from Purchases is saved and highlighted at home
+---
+- clearState
+- clearKeychain
+- launchApp
+
+- assertVisible:
+    id: 'pairing-code-field'
+- runScript: scripts/receipts-become-available.js
+- assertTrue: ${output.receipts.status == 200}
+- assertTrue: ${output.receipts.state.purchasesReachable == true}
+- runFlow:
+    file: subflows/enter-the-pairing-details.yaml
+    env:
+      SERVER_URL: ${CONTROL_BASE_URL}
+
+- assertVisible:
+    id: 'transactions-list'
+- tapOn: 'Purchases'
+- assertVisible: 'A\$12\.50'
+
+- tapOn:
+    id: 'purchases-home-add'
+- tapOn:
+    id: 'purchases-capture-hand'
+- assertVisible:
+    id: 'purchases-hand-entry'
+
+- runFlow: subflows/enter-a-manual-purchase.yaml
+- tapOn:
+    id: 'purchases-hand-entry-save'
+
+- assertVisible:
+    id: 'purchases-home-highlighted-row-.*'
+    text: 'Corner Store.*'

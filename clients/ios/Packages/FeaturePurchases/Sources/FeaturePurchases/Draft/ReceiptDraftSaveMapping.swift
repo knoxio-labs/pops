@@ -5,10 +5,9 @@ import Foundation
 /// saves (POPS-2454).
 ///
 /// `ReceiptDraft`'s fields are `internal` — nothing outside this module can
-/// read one apart, which is why this mapping lives here rather than in
-/// ``ReceiptResultViewModel`` alongside the call it feeds: the parsing has
-/// to happen on this side of the module boundary regardless of which type
-/// does it.
+/// read one apart, which is why this mapping lives here rather than beside the
+/// call it feeds: the parsing has to happen on this side of the module
+/// boundary regardless of which type does it.
 ///
 /// Every amount is a `String` a reader has been typing into, so this can
 /// fail — a stray letter, a second decimal point — in a way the form's own

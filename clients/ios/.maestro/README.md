@@ -2,8 +2,8 @@
 
 The only tests in this client that exercise a screen the way somebody holding
 the phone does — everything else stops at the view model. They cover pairing,
-recoveries, receipts, purchase browsing and Inventory, each starting from an
-unpaired launch:
+recoveries, purchase capture and browsing, and Inventory, each starting from
+an unpaired launch:
 
 | Flow                                            | What it proves                                                                                                                                                                                                                                                                                                     |
 | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -13,10 +13,12 @@ unpaired launch:
 | `unreachable-transactions-say-so.yaml`          | Transactions that cannot be fetched say so instead of reading as an empty list.                                                                                                                                                                                                                                    |
 | `root-says-so-when-nothing-is-usable.yaml`      | A feature the BFM reports `unavailable` never opens its screen; the root says so and Try again leaves it once the pillar answers.                                                                                                                                                                                  |
 | `root-contract-mismatch-reads-differently.yaml` | A pillar answering something unreadable reads as a different sentence from `unavailable`, not the same one.                                                                                                                                                                                                        |
-| `receipt-capture-says-there-is-no-camera.yaml`  | A second usable feature earns a tab, and the screen behind it explains the camera it cannot open instead of offering one.                                                                                                                                                                                          |
-| `receipt-manual-entry.yaml`                     | A hand-entered purchase reaches the editable form with no camera, saves for real, and comes back as the saved result screen.                                                                                                                                                                                       |
 | `purchases-home-archive-detail.yaml`            | Purchases loads its month figure and archive counts, filters Unmatched, opens a complete detail, then pages All through its oldest month.                                                                                                                                                                          |
+| `purchases-hand-entry.yaml`                     | Purchases opens hand entry from Add, saves a manual purchase, and returns to its highlighted row on Home.                                                                                                                                                                                                          |
+| `purchases-scan-says-there-is-no-camera.yaml`   | Purchases Scan reaches the capture presenter and reports the Simulator's unavailable camera.                                                                                                                                                                                                                       |
 | `inventory-smoke.yaml`                          | Inventory downloads from the real inventory pillar, then creates a place and an item, moves it, discards it and undoes the discard, each write landing on the phone first and draining to the pillar; then creates a place while every relayed sync request fails and sees it drain once the pillar answers again. |
+| `search-inventory-scope.yaml`                   | The universal search screen scoped to Inventory matches the shipped Inventory search: ranking, opening a result, the scoped recent, the filter sheet showing only Inventory's fields, bulk Pick up and Undo, Move, a waiting-to-sync mark under a sync outage, and the scan glyph.                                 |
+| `search-purchases.yaml`                         | Search finds a seeded purchase by merchant, shows the Purchases section and chip count in All, scopes to it, fails and recovers when the search route alone refuses, and opens the purchase's detail.                                                                                                              |
 
 ## Running them
 
@@ -227,7 +229,7 @@ call the seams are in `scripts/` beside the flows, one per switch.
   `pillars/bfm/src/api/purchases/draft-client.ts`'s `createManualPurchase`
   calls by name. `scripts/ios-e2e/purchases-stub.mjs` echoes back a
   `PurchaseDetailResponseSchema`-shaped record built from the request body,
-  which is what lets `receipt-manual-entry.yaml` assert on values it typed
+  which is what lets `purchases-hand-entry.yaml` assert on values it typed
   rather than a producer's invention.
 
 A silent recovery leaves no mark on a screenshot, so the expiry flow finishes
@@ -242,23 +244,22 @@ is no preview, no shutter and no scan output — nothing for Maestro or any othe
 Simulator-hosted driver to interact with. That is not a Maestro limitation and
 no selector works around it.
 
-So `receipt-capture-says-there-is-no-camera.yaml` drives everything on the near
-side of the camera: the tab that only exists once a second feature is usable,
-the screen behind it, which of the three refusals it is showing, and the rule
-that only a reversible refusal is offered a way to reverse it. A capture, an
-upload, and the reconciled/unreconciled/unreadable outcomes a scan produces
-still need the capture step stubbed inside the app before a flow can reach
-them, and that remains tracked rather than done here — those three outcomes
-are covered where they can be, by `FeaturePurchases`'s own suites
+So `purchases-scan-says-there-is-no-camera.yaml` drives everything on the near
+side of the camera: Purchases' own capture presenter, reached from Home once a
+month's figures have loaded, and the refusal it shows instead of a scanner. A
+capture, an upload, and the reconciled/unreconciled/unreadable outcomes a scan
+produces still need the capture step stubbed inside the app before a flow can
+reach them, and that remains tracked rather than done here — those three
+outcomes are covered where they can be, by `FeaturePurchases`'s own suites
 rendering each one and reading it back.
 
 Manual entry (POPS-2454) is not on the far side of that gap: it produces no
 scan, so there is nothing about it a camera-free Simulator cannot drive.
-`receipt-manual-entry.yaml` reaches it from the same tab, fills in the same
-`ReceiptDraftView` a corrected reading uses, and saves it through a real
-`POST /purchases/manual` against `scripts/ios-e2e/purchases-stub.mjs` — the
-one write this harness answers for real rather than refusing, since it is the
-one write the Simulator can produce a request for at all.
+`purchases-hand-entry.yaml` reaches it from the same Add presenter, fills in
+the same `ReceiptDraftView` a corrected reading uses, and saves it through a
+real `POST /purchases/manual` against `scripts/ios-e2e/purchases-stub.mjs` —
+the one write this harness answers for real rather than refusing, since it is
+the one write the Simulator can produce a request for at all.
 
 ## What these flows do not prove
 

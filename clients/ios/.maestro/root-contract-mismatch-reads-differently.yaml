@@ -25,15 +25,15 @@ name: A pillar answering something unreadable reads differently from unavailable
 
 # `RootCopy.nothingAvailable(surface.unavailable)` in full: transactions and
 # accounts are `contract-mismatch`, both behind finance
-# (`pillars/bfm/src/api/mobile/features.ts`), and purchases, receipt-capture
-# and inventory are `unavailable`, because the harness withholds `purchases`
-# and `inventory` unless a flow arms them and this one does not —
-# `scripts/ios-e2e/purchases-stub.mjs`, `scripts/ios-e2e/inventory-pillar.mjs`.
-# All five reasons land in the same sentence, in `App/RootFeature.swift`'s
+# (`pillars/bfm/src/api/mobile/features.ts`), and purchases and inventory are
+# `unavailable`, because the harness withholds them unless a flow arms them
+# and this one does not — `scripts/ios-e2e/purchases-stub.mjs`,
+# `scripts/ios-e2e/inventory-pillar.mjs`.
+# All four reasons land in the same sentence, in `App/RootFeature.swift`'s
 # `renderable` order. The `contract-mismatch` clauses are the ones that must
 # stay distinct from the `unavailable` ones below — "answered something this
 # build cannot read" is a reason to update the app, not to wait.
-- assertVisible: 'Transactions needs a newer version of this app. Accounts needs a newer version of this app. Purchases is not available right now. Receipts is not available right now. Inventory is not available right now.'
+- assertVisible: 'Transactions needs a newer version of this app. Accounts needs a newer version of this app. Purchases is not available right now. Inventory is not available right now.'
 
 # AFTER the assertion above — `root-says-so-when-nothing-is-usable.yaml`
 # explains why the order matters: the surface is optimistic before the first

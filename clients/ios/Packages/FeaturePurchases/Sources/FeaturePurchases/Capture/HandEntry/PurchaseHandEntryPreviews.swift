@@ -34,7 +34,13 @@
 
         var body: some View {
             NavigationStack {
-                PurchaseHandEntryView(model: model, merchants: [], onFinished: { _ in })
+                PurchaseHandEntryView(
+                    model: model,
+                    searchMerchants: { _ in [] },
+                    merchantPreview: { _ in nil },
+                    addressesForMerchant: { _ in [] },
+                    addressPreview: { _, _ in nil },
+                    onFinished: { _ in })
             }
             .task {
                 switch action {

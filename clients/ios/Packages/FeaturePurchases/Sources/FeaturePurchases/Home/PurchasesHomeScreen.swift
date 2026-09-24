@@ -8,8 +8,8 @@ internal struct PurchasesHomeScreen: View {
     @Environment(\.purchaseCapture) private var purchaseCapture
     @Environment(\.startRePairing) private var startRePairing
 
-    internal init(dependencies: AppDependencies) {
-        _model = State(wrappedValue: PurchasesHomeModel(dependencies: dependencies))
+    internal init(model: PurchasesHomeModel) {
+        _model = State(wrappedValue: model)
     }
 
     internal var body: some View {

@@ -2,12 +2,11 @@ import Foundation
 
 /// A reading of a receipt, as something the reader may change.
 ///
-/// ## Why this is not a variant of ``ReceiptResultContent``
+/// ## Why a field the extractor produced nothing for is not dropped
 ///
-/// That type is a *reading*, projected for display: a field the extractor
-/// produced nothing for is dropped, because a review screen padded with empty
-/// labels reads as a record that failed to load. A draft is the opposite
-/// object. Every field exists whether or not anything was read into it —
+/// A read-only projection would drop it, because a review screen padded with
+/// empty labels reads as a record that failed to load. A draft is the
+/// opposite: every field exists whether or not anything was read into it —
 /// dropping the ones that came back empty would remove exactly the fields the
 /// reader most needs to fill in, and a Salvos receipt whose items have no
 /// names would offer nowhere to name them.

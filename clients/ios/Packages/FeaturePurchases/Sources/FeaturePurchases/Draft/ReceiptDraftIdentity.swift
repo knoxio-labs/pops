@@ -36,7 +36,8 @@ extension ReceiptDraftForm {
     private var merchantName: String {
         if let created = draft.merchantResolution.createdValue { return created }
         let id = draft.merchantResolution.entityID
-        return merchants.first { $0.id == id }?.name ?? draft.printedMerchant.value
+        if resolvedMerchant?.id == id, let name = resolvedMerchant?.name { return name }
+        return draft.printedMerchant.value
     }
 
     /// A select, not a field.
@@ -47,16 +48,28 @@ extension ReceiptDraftForm {
     /// nothing can be reconciled or totalled against. Every route through
     /// this control ends at an entity — matched, chosen, or created.
     private var merchantField: some View {
-        ReceiptDraftRecordSelect(
+        return ReceiptDraftRecordSelect(
             label: ReceiptDraftCopy.merchantLabel,
             resolution: merchantBinding,
             printed: draft.printedMerchant.value,
-            records: merchants.map { ReceiptDraftRecord(id: $0.id, name: $0.name) },
+            resolvedName: resolvedMerchant?.name,
+            search: { query in
+                await searchMerchants(query).map {
+                    ReceiptDraftRecord(id: $0.id, name: $0.name)
+                }
+            },
             symbol: "building.2",
             placeholder: ReceiptDraftCopy.merchantPlaceholderSelect,
             createTitle: ReceiptDraftCopy.createMerchantSection,
             note: merchantNote
         )
+        .task(id: draft.merchantResolution.entityID) {
+            guard let id = draft.merchantResolution.entityID else {
+                resolvedMerchant = nil
+                return
+            }
+            resolvedMerchant = await merchantPreview(id)
+        }
         .accessibilityIdentifier(ReceiptDraftAccessibility.merchant)
     }
 
@@ -104,18 +117,68 @@ extension ReceiptDraftForm {
     /// until there is an entity whose branches these are, and a list of every
     /// address in contacts is not a help.
     private var addressField: some View {
-        let known = merchants.first { $0.id == draft.merchantResolution.entityID }?.addresses ?? []
+        let liveDraft = $draft
         return ReceiptDraftRecordSelect(
             label: ReceiptDraftCopy.addressLabel,
             resolution: $draft.addressResolution,
             printed: draft.printedAddress.value,
-            records: known.map { ReceiptDraftRecord(id: $0.id, name: $0.value) },
+            resolvedName: resolvedAddress?.value,
+            search: { query in
+                await Self.addressRecords(
+                    draft: liveDraft,
+                    addressesForMerchant: addressesForMerchant,
+                    query: query)
+            },
             symbol: "mappin.and.ellipse",
             placeholder: ReceiptDraftCopy.addressPlaceholderSelect,
             createTitle: ReceiptDraftCopy.createAddressSection,
             note: hint(.address)
         )
+        .task(
+            id: [
+                draft.merchantResolution.entityID ?? "",
+                draft.addressResolution.entityID ?? "",
+            ]
+        ) {
+            guard let merchantID = draft.merchantResolution.entityID,
+                let addressID = draft.addressResolution.entityID
+            else {
+                resolvedAddress = nil
+                return
+            }
+            resolvedAddress = await addressPreview(merchantID, addressID)
+        }
         .accessibilityIdentifier(ReceiptDraftAccessibility.address)
+    }
+
+    internal static func addressRecords(
+        draft: Binding<ReceiptDraft>,
+        addressesForMerchant: ReceiptAddressesForMerchant,
+        query: String = ""
+    ) async -> [ReceiptDraftRecord] {
+        guard let merchantID = draft.wrappedValue.merchantResolution.entityID else { return [] }
+        let records = await addressesForMerchant(merchantID).map {
+            ReceiptDraftRecord(id: $0.id, name: $0.value)
+        }
+        return Self.narrowed(records, byQuery: query)
+    }
+
+    /// A merchant's addresses narrowed to the typed query, case- and
+    /// diacritic-insensitive. An empty query narrows to nothing typed yet, so
+    /// it answers with every address rather than none — the sheet's own rule
+    /// already keeps an empty query from reaching this in practice, showing
+    /// its prompt instead of calling `search` at all.
+    internal static func narrowed(
+        _ records: [ReceiptDraftRecord],
+        byQuery query: String
+    ) -> [ReceiptDraftRecord] {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return records }
+        let foldingOptions: String.CompareOptions = [.diacriticInsensitive, .caseInsensitive]
+        let needle = trimmed.folding(options: foldingOptions, locale: nil)
+        return records.filter {
+            $0.name.folding(options: foldingOptions, locale: nil).contains(needle)
+        }
     }
 
     /// Removes the address field rather than disabling it. A field that is

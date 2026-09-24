@@ -2,6 +2,7 @@ import AppCore
 import Auth
 import BFMClient
 import FeatureInventory
+import FeaturePurchases
 import Foundation
 import InventoryReplica
 import os
@@ -193,6 +194,19 @@ internal final class AppComposition {
         )
         bound = BoundDevice(device: device, dependencies: dependencies, storageFull: storageFull)
         return dependencies
+    }
+
+    /// Universal search's per-pillar providers, read from the same
+    /// dependencies a paired screen reads. Purchases is handed
+    /// ``networkReachability`` — the one path monitor shared by every
+    /// network-aware feature — so it waits out an offline phone the same way
+    /// every other BFM read does, rather than each carrying its own.
+    internal func searchProviders(for dependencies: AppDependencies) -> (
+        inventory: InventorySearchProvider, purchases: PurchasesSearchProvider
+    ) {
+        let purchases = PurchasesSearchProvider(
+            repository: dependencies.purchases, reachability: networkReachability)
+        return (InventorySearchProvider(store: dependencies.inventory), purchases)
     }
 
     /// The paired device's Inventory: a replica of its own on disk, where

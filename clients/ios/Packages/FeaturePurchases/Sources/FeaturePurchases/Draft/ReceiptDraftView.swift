@@ -16,17 +16,14 @@ import SwiftUI
 ///
 /// ## Where the save goes
 ///
-/// Out through a closure. This screen knows a draft was accepted and nothing
-/// about what happens next, which is what lets the same screen serve a
-/// correction, a hand-entered purchase and an edit of a saved one — three
-/// tickets, one form, per this package's README.
-///
-/// ReceiptResultView is the caller today: its `.draft` and `.manualEntry`
-/// states both build this view with `save` wired to
-/// `ReceiptResultViewModel.save(_:)` (POPS-2454). The seam still earns its
-/// keep beyond that one caller — an eventual edit-a-saved-purchase screen
-/// (POPS-2458) can reuse the same view with a different save closure without
-/// this type knowing the difference.
+/// This screen knows a draft was accepted and nothing about what happens
+/// next, which is what lets the same form serve a corrected reading, a
+/// hand-entered purchase and an edit of a saved one — three tickets, one
+/// form, per this package's README. `PurchaseReviewView` and
+/// `PurchaseHandEntryView` commit through their own host's navigation bar
+/// rather than this view's `save` closure; `PurchaseEditSheet` (POPS-2458)
+/// wires `save` directly, reusing the same view with a save closure of its
+/// own.
 public struct ReceiptDraftView: View {
     @State private var ownDraft: ReceiptDraft
     private let hostDraft: Binding<ReceiptDraft>?
@@ -36,9 +33,10 @@ public struct ReceiptDraftView: View {
     private let status: Status?
     private let parts: [ReceiptPart]
     private let complaints: ComplaintStyle
-    private let merchants: [ReceiptMerchantChoice]
-    private let secondaryAction: SecondaryAction?
-    private let addAnother: AddAnother?
+    private let searchMerchants: ReceiptMerchantSearch
+    private let merchantPreview: ReceiptMerchantPreview
+    private let addressesForMerchant: ReceiptAddressesForMerchant
+    private let addressPreview: ReceiptAddressPreview
     private let lock: ReceiptDraftLock?
     private let commit: ReceiptDraftCommit
     private let onChange: ((ReceiptDraft) -> Void)?
@@ -55,10 +53,11 @@ public struct ReceiptDraftView: View {
         subtitle: String?,
         status: Status?,
         complaints: ComplaintStyle,
-        merchants: [ReceiptMerchantChoice],
+        searchMerchants: @escaping ReceiptMerchantSearch,
+        merchantPreview: @escaping ReceiptMerchantPreview,
+        addressesForMerchant: @escaping ReceiptAddressesForMerchant,
+        addressPreview: @escaping ReceiptAddressPreview,
         parts: [ReceiptPart],
-        secondaryAction: SecondaryAction?,
-        addAnother: AddAnother?,
         lock: ReceiptDraftLock?,
         commit: ReceiptDraftCommit,
         onChange: ((ReceiptDraft) -> Void)?,
@@ -75,10 +74,11 @@ public struct ReceiptDraftView: View {
         self.subtitle = subtitle
         self.status = status
         self.complaints = complaints
-        self.merchants = merchants
+        self.searchMerchants = searchMerchants
+        self.merchantPreview = merchantPreview
+        self.addressesForMerchant = addressesForMerchant
+        self.addressPreview = addressPreview
         self.parts = parts
-        self.secondaryAction = secondaryAction
-        self.addAnother = addAnother
         self.lock = lock
         self.commit = commit
         self.onChange = onChange
@@ -87,72 +87,6 @@ public struct ReceiptDraftView: View {
         self.saveEligibility = saveEligibility
         self.isSaving = isSaving
         self.save = save
-    }
-
-    /// How much room the gate's complaint is given.
-    ///
-    /// It is a full status header today, which is right when the reading is
-    /// the whole screen — the result screen opens on it and the tone is the
-    /// first thing read. Inside the review step the same block costs the top
-    /// of a screen whose entire job is the form below it, and none of it can
-    /// be acted on.
-    ///
-    /// Every style keeps the per-field hints, which are where a complaint
-    /// that names a field actually belongs. What the styles differ on is what
-    /// happens to the complaints that name no field, and how loudly.
-    public enum ComplaintStyle: Hashable, Sendable, CaseIterable {
-        /// The full header, above the fields. What the result screen uses.
-        case banner
-        /// The same words at caption weight in one row.
-        case compact
-        /// A single line saying how many, opening on a tap.
-        case collapsed
-        /// Nothing at the top at all. The fields carry their own hints and
-        /// anything naming no field is not shown here.
-        case hintsOnly
-        /// The full header, after the fields, so the screen opens on
-        /// something that can be acted on.
-        case belowForm
-    }
-
-    /// What happened to the receipt this form was read off, as the glyph and
-    /// the colour the screen opens with.
-    public struct Status: Hashable, Sendable {
-        internal let tone: PopsStatusHeader.Tone
-        internal let heading: String
-        internal let message: String
-        internal let caption: String?
-
-        public init(
-            tone: PopsStatusHeader.Tone, heading: String, message: String, caption: String? = nil
-        ) {
-            self.tone = tone
-            self.heading = heading
-            self.message = message
-            self.caption = caption
-        }
-    }
-
-    /// Saves, and keeps the form open for another purchase.
-    ///
-    /// Not a ``SecondaryAction``: that one takes no draft and is not held by
-    /// the save rule, and this one is a save.
-    public struct AddAnother {
-        internal let action: (ReceiptDraft) -> Void
-
-        public init(action: @escaping (ReceiptDraft) -> Void) {
-            self.action = action
-        }
-    }
-
-    public struct SecondaryAction {
-        internal let title: String
-        internal let action: () -> Void
-
-        public init(title: String, action: @escaping () -> Void) {
-            self.title = title
-            self.action = action
-        }
     }
 
     private var draft: ReceiptDraft { hostDraft?.wrappedValue ?? ownDraft }
@@ -171,9 +105,9 @@ public struct ReceiptDraftView: View {
         .accessibilityIdentifier(ReceiptDraftAccessibility.form)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.popsBackground)
-        .safeAreaInset(edge: .bottom) { if save != nil && commit == .actionBar { actions } }
+        .safeAreaInset(edge: .bottom) { if showsSaveInActionBar { actions } }
         .toolbar {
-            if save != nil && commit == .navigationBar {
+            if showsSaveInNavigationBar {
                 ToolbarItem(placement: .confirmationAction) { navigationSave }
             }
         }
@@ -184,54 +118,47 @@ public struct ReceiptDraftView: View {
         .scrollDismissesKeyboard(.interactively)
     }
 
+    /// Whether Save draws in the bottom action bar — `commit == .actionBar`,
+    /// and only when there is a `save` to draw it for. `internal` rather than
+    /// `private` so where Save ends up is a value a test can assert rather
+    /// than something only a rendered screen could show.
+    internal var showsSaveInActionBar: Bool { save != nil && commit == .actionBar }
+
+    /// Whether Save draws in the navigation bar's confirmation slot — the
+    /// mirror of ``showsSaveInActionBar`` for `commit == .navigationBar`.
+    internal var showsSaveInNavigationBar: Bool { save != nil && commit == .navigationBar }
+
     /// `internal` rather than `private` so the layout can be exercised
-    /// without going through `body`'s scroll — the same affordance
-    /// ``ReceiptResultView/content`` exposes, for the same reason.
+    /// without going through `body`'s scroll.
     @ViewBuilder internal var content: some View {
         VStack(alignment: .leading, spacing: PopsSpacing.lg) {
             if !parts.isEmpty { ReceiptPagesView(parts: parts) }
-            if complaints != .belowForm { complaint }
+            complaint
             if title != nil || subtitle != nil { heading }
             if let lock { ReceiptDraftLockNotice(lock: lock) }
             ReceiptDraftForm(
-                draft: editing, merchants: merchants, lock: lock,
-                lineRemovalNotice: lineRemovalNotice, presentation: formPresentation)
-            if complaints == .belowForm { complaint }
+                draft: editing,
+                searchMerchants: searchMerchants,
+                merchantPreview: merchantPreview,
+                addressesForMerchant: addressesForMerchant,
+                addressPreview: addressPreview,
+                lock: lock,
+                lineRemovalNotice: lineRemovalNotice,
+                presentation: formPresentation)
         }
     }
 
     @ViewBuilder private var complaint: some View {
         if let status {
             switch complaints {
-            case .banner, .belowForm:
+            case .banner:
                 PopsStatusHeader(
                     tone: status.tone, title: status.heading, message: status.message,
                     caption: status.caption)
-            case .compact:
-                compactComplaint(status)
-            case .collapsed:
-                CollapsedComplaint(status: status)
             case .hintsOnly:
                 EmptyView()
             }
         }
-    }
-
-    private func compactComplaint(_ status: Status) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: PopsSpacing.sm) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .font(.popsCaption)
-                .foregroundStyle(status.tone.color)
-            Text(status.message)
-                .font(.popsCaption)
-                .foregroundStyle(Color.popsMutedForeground)
-                .fixedSize(horizontal: false, vertical: true)
-            Spacer(minLength: PopsSpacing.zero)
-        }
-        .padding(PopsSpacing.md)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            status.tone.color.opacity(0.12), in: .rect(cornerRadius: PopsRadius.control))
     }
 
     /// The screen's own name and what it is asking for.
@@ -263,10 +190,6 @@ public struct ReceiptDraftView: View {
             .receiptDraftProminentBarButton()
     }
 
-    /// Save is the prominent one; whatever else can be done here sits beside
-    /// it at the standard weight. Exactly the demotion this package's README
-    /// describes for the moment the form replaces the read-only reading —
-    /// "Photograph another" stops being what the screen is for.
     private var actions: some View {
         PopsActionBar {
             PopsButton(
@@ -274,14 +197,6 @@ public struct ReceiptDraftView: View {
             ) { save?(draft) }
             .disabled(!canSave(draft))
             .accessibilityIdentifier(ReceiptDraftAccessibility.saveButton)
-            if let addAnother {
-                PopsButton(ReceiptDraftCopy.saveAndAddAnother) { addAnother.action(draft) }
-                    .disabled(!canSave(draft))
-                    .accessibilityIdentifier(ReceiptDraftAccessibility.saveAndAddAnotherButton)
-            }
-            if let secondaryAction {
-                PopsButton(secondaryAction.title, action: secondaryAction.action)
-            }
         }
     }
 
@@ -301,8 +216,10 @@ extension ReceiptDraftView {
     ///     report.
     ///   - parts: the pages this was read off, drawn above the fields. Empty
     ///     when there is no receipt.
-    ///   - secondaryAction: the other thing that can be done here, at the
-    ///     standard weight beside the prominent Save.
+    ///   - searchMerchants: Finds merchant choices for entered text.
+    ///   - merchantPreview: Resolves the merchant already held by the draft.
+    ///   - addressesForMerchant: Lists address choices for the current merchant.
+    ///   - addressPreview: Resolves the address already held by the draft within its merchant.
     ///   - save: called with the draft as it stands.
     /// - Parameters:
     ///   - title: the screen's own name, and `nil` when it has none. A form
@@ -312,10 +229,8 @@ extension ReceiptDraftView {
     ///   - save: `nil` omits the action bar entirely, for the same reason: a
     ///     form inside a batch is not the thing that saves, and two Save
     ///     buttons on one screen is one of them lying about what it does.
-    ///   - addAnother: a second save beside Save that keeps the form open for
-    ///     the next purchase, under the same rule Save is.
-    ///   - isSaving: a save is in flight. Both saves hold, so a second tap
-    ///     cannot create a second purchase.
+    ///   - isSaving: a save is in flight, so a second tap cannot create a
+    ///     second purchase.
     ///   - lock: fields of a saved purchase shown read-only, and why. `nil`
     ///     leaves every field editable, as a reading always is.
     ///   - commit: where Save is drawn. See ``ReceiptDraftCommit``.
@@ -329,10 +244,11 @@ extension ReceiptDraftView {
         subtitle: String? = nil,
         status: Status? = nil,
         complaints: ComplaintStyle = .banner,
-        merchants: [ReceiptMerchantChoice] = [],
+        searchMerchants: @escaping ReceiptMerchantSearch = { _ in [] },
+        merchantPreview: @escaping ReceiptMerchantPreview = { _ in nil },
+        addressesForMerchant: @escaping ReceiptAddressesForMerchant = { _ in [] },
+        addressPreview: @escaping ReceiptAddressPreview = { _, _ in nil },
         parts: [ReceiptPart] = [],
-        secondaryAction: SecondaryAction? = nil,
-        addAnother: AddAnother? = nil,
         lock: ReceiptDraftLock? = nil,
         commit: ReceiptDraftCommit = .actionBar,
         onChange: ((ReceiptDraft) -> Void)? = nil,
@@ -342,8 +258,9 @@ extension ReceiptDraftView {
     ) {
         self.init(
             owned: draft, host: nil, title: title, subtitle: subtitle, status: status,
-            complaints: complaints, merchants: merchants, parts: parts,
-            secondaryAction: secondaryAction, addAnother: addAnother, lock: lock,
+            complaints: complaints, searchMerchants: searchMerchants,
+            merchantPreview: merchantPreview, addressesForMerchant: addressesForMerchant,
+            addressPreview: addressPreview, parts: parts, lock: lock,
             commit: commit, onChange: onChange, lineRemovalNotice: lineRemovalNotice,
             formPresentation: .receiptReading, saveEligibility: { $0.isSaveable },
             isSaving: isSaving, save: save)
@@ -359,17 +276,19 @@ extension ReceiptDraftView {
         subtitle: String? = nil,
         status: Status? = nil,
         complaints: ComplaintStyle = .banner,
-        merchants: [ReceiptMerchantChoice] = [],
+        searchMerchants: @escaping ReceiptMerchantSearch = { _ in [] },
+        merchantPreview: @escaping ReceiptMerchantPreview = { _ in nil },
+        addressesForMerchant: @escaping ReceiptAddressesForMerchant = { _ in [] },
+        addressPreview: @escaping ReceiptAddressPreview = { _, _ in nil },
         parts: [ReceiptPart] = [],
-        secondaryAction: SecondaryAction? = nil,
-        addAnother: AddAnother? = nil,
         isSaving: Bool = false,
         save: ((ReceiptDraft) -> Void)? = nil
     ) {
         self.init(
             owned: draft.wrappedValue, host: draft, title: title, subtitle: subtitle,
-            status: status, complaints: complaints, merchants: merchants, parts: parts,
-            secondaryAction: secondaryAction, addAnother: addAnother, lock: nil,
+            status: status, complaints: complaints, searchMerchants: searchMerchants,
+            merchantPreview: merchantPreview, addressesForMerchant: addressesForMerchant,
+            addressPreview: addressPreview, parts: parts, lock: nil,
             commit: .actionBar, onChange: nil, lineRemovalNotice: nil,
             formPresentation: .receiptReading, saveEligibility: { $0.isSaveable },
             isSaving: isSaving, save: save)

@@ -25,10 +25,41 @@ internal struct ContentView: View {
     internal let surface: FeatureSurface
     internal let shell: AppShellModel
     internal let composition: AppComposition
+    internal var purchasesCaptureObserver: (@MainActor (Bool) -> Void)?
 
     /// The tab the person chose, if they chose one. See ``features`` for why
     /// this is held here rather than left to `TabView`.
     @State private var chosenFeature: MobileFeature?
+
+    /// The one search model behind ``searchTab``, asking every pillar
+    /// `surface.available` allows. Held rather than built where it is used —
+    /// same reasoning as ``AppComposition/router(for:)`` — so a query and its
+    /// answer survive the tab being switched away from and back.
+    @State private var searchModel: AppSearchModel<InventorySearchProvider, PurchasesSearchProvider>
+
+    /// Builds the search model from the same dependencies ``screen(for:)``
+    /// reads, over the pillars available at construction time; ``features``
+    /// keeps it current as `surface.available` changes.
+    internal init(
+        surface: FeatureSurface,
+        shell: AppShellModel,
+        composition: AppComposition,
+        purchasesCaptureObserver: (@MainActor (Bool) -> Void)? = nil
+    ) {
+        self.surface = surface
+        self.shell = shell
+        self.composition = composition
+        self.purchasesCaptureObserver = purchasesCaptureObserver
+        let dependencies: AppDependencies
+        if case .paired(let device) = shell.session.state {
+            dependencies = composition.dependencies(for: device)
+        } else {
+            dependencies = composition.pairingDependencies
+        }
+        _searchModel = State(
+            wrappedValue: composition.searchModel(
+                for: dependencies, available: Set(surface.available)))
+    }
 
     internal var body: some View {
         @Bindable var presentation = composition.entityPresentation
@@ -44,40 +75,45 @@ internal struct ContentView: View {
                 RePairingAction { composition.session.send(.revoked(.credentialsRejected)) }
             )
             .environment(\.inventoryStorageFullOnEntry, composition.inventoryStorageFull)
+            .onChange(of: surface.available) {
+                let available = surface.available
+                let pillars = SearchPillar.allCases.filter { available.contains($0.feature) }
+                searchModel.update(available: pillars)
+            }
     }
 
-    /// Identifies Inventory's search tab in the switcher below. Not a
-    /// `MobileFeature` the BFM ever sends — the search tab is a sibling this
-    /// file adds whenever Inventory itself is available, not a feature of
-    /// its own — but the same hashable type as `.tag(feature)` uses, so the
-    /// two coexist in one `TabView` without a second tag type to reconcile.
-    nonisolated internal static let inventorySearchTab = MobileFeature(rawValue: "inventory.search")
+    /// Identifies the app-wide search tab in the switcher below. Not a
+    /// `MobileFeature` the BFM ever sends — this is a sibling the shell adds
+    /// whenever any searchable pillar is available, not a feature of its own
+    /// — but the same hashable type as `.tag(feature)` uses, so the two
+    /// coexist in one `TabView` without a second tag type to reconcile.
+    nonisolated internal static let searchTab = MobileFeature(rawValue: "search")
 
-    /// Whether Inventory is among the BFM's available features, and so
-    /// whether its search tab — mirroring the approved shell's tab bar,
-    /// which always shows Inventory's search alongside Inventory itself —
-    /// belongs in the switcher.
-    private var hasInventorySearch: Bool {
-        surface.available.contains(FeatureInventory.feature)
+    /// Whether any pillar universal search covers is among the BFM's
+    /// available features, and so whether the search tab — the approved
+    /// shell's one app-wide search, always present alongside whatever it can
+    /// search — belongs in the switcher.
+    private var hasSearch: Bool {
+        SearchPillar.allCases.contains { surface.available.contains($0.feature) }
     }
 
-    /// Primary features, More, and Inventory's separate search tab.
+    /// Primary features, More, and the app-wide search tab.
     ///
     /// Zero gets the explanation below. Exactly one fills the screen outright
     /// — the shipped single-feature look, unchanged, because a tab bar with
     /// one tab is chrome nobody asked for — unless that one feature is
-    /// Inventory, whose search sibling makes it two. Two or more (with or
+    /// searchable, whose search sibling makes it two. Two or more (with or
     /// without that sibling) get a `TabView`, grouping secondary features under More.
     ///
     /// The `TabView` is given its selection rather than left to track one on
     /// its own. Left alone, it dropped back to the first tab whenever a tab's
-    /// root view changed type: on the Receipts tab, "Add a purchase" swaps the
-    /// prompt for the draft form, and the app landed on Transactions instead
-    /// of the form. Nothing above this view was rebuilt when it happened; the
-    /// implicit selection was simply lost. `receipt-manual-entry.yaml` is the
-    /// flow that catches it.
+    /// root view changed type: on the Purchases tab, "Add a purchase" swaps
+    /// the prompt for the hand-entry form, and the app landed on Transactions
+    /// instead of the form. Nothing above this view was rebuilt when it
+    /// happened; the implicit selection was simply lost.
+    /// `purchases-hand-entry.yaml` is the flow that catches it.
     @ViewBuilder private var features: some View {
-        switch (surface.available.count, hasInventorySearch) {
+        switch (surface.available.count, hasSearch) {
         case (0, _):
             unavailableExplanation
         case (1, false):
@@ -101,10 +137,11 @@ internal struct ContentView: View {
                         }
                     }
                 }
-                if hasInventorySearch {
-                    Tab(value: Self.inventorySearchTab, role: .search) {
-                        InventorySearchFlowView(
-                            dependencies: dependencies, entityRouter: composition.entityRouter)
+                if hasSearch {
+                    Tab(value: Self.searchTab, role: .search) {
+                        AppSearchTab(
+                            model: searchModel, dependencies: dependencies,
+                            entityRouter: composition.entityRouter)
                     }
                 }
             }
@@ -117,8 +154,8 @@ internal struct ContentView: View {
     ///
     /// A tab bar tints the selected item and nothing else, so tinting the
     /// whole `TabView` from the selection is what makes a colour belong to its
-    /// feature rather than to whichever tab happens to be chosen. Inventory's
-    /// search sibling is a tab of its own and keeps the usual tint.
+    /// feature rather than to whichever tab happens to be chosen. The search
+    /// tab is a tab of its own and keeps the usual tint.
     ///
     /// `nonisolated` because it is pure, for the reason ``shownFeature`` is.
     nonisolated internal static func tabTint(for shown: MobileFeature) -> Color? {
@@ -169,9 +206,16 @@ internal struct ContentView: View {
                 dependencies: dependencies,
                 router: composition.router(for: FeatureAccounts.feature))
         case FeaturePurchases.feature:
-            PurchasesFlowView(dependencies: dependencies)
-        case ReceiptCaptureTab.feature:
-            ReceiptCaptureView(model: ReceiptCaptureViewModel(dependencies: dependencies))
+            if let purchasesCaptureObserver {
+                PurchasesFlowView(
+                    dependencies: dependencies,
+                    captureAvailable: surface.captureAvailable,
+                    captureObserver: purchasesCaptureObserver)
+            } else {
+                PurchasesFlowView(
+                    dependencies: dependencies,
+                    captureAvailable: surface.captureAvailable)
+            }
         case FeatureInventory.feature:
             InventoryFlowView(dependencies: dependencies, entityRouter: composition.entityRouter)
         default:

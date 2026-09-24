@@ -29,7 +29,12 @@
  * entry (POPS-2454) is the one write this Simulator can drive end to end.
  * `POST /receipts*` stays unserved for the
  * same reason it always was — a fixture nobody's flow can exercise is a
- * fixture nobody notices going wrong.
+ * fixture nobody notices going wrong. `GET /receipts/{sha256}/thumbnail` is
+ * different: the Corner Store fixture carries one receipt document, and this
+ * stub answers that document's thumbnail with a small seeded PNG, because the
+ * purchase detail screen's receipt plate reads it on every flow that opens
+ * that purchase — not a write the Simulator cannot drive, but a read the
+ * detail screen needs to render at all.
  *
  * The document served is purchases' own committed snapshot, verbatim — same
  * bargain `upstream-stub.mjs` strikes with finance's. A contract the pillar
@@ -55,7 +60,7 @@
  * flow arming this before it pairs sees the consequence on the first request
  * the app makes.
  */
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { fileURLToPath } from 'node:url';
@@ -96,6 +101,21 @@ export const DETAIL_OPERATION_ID = 'purchase.get';
 
 /** The operation used by the mobile purchases home figures. */
 export const MONTH_SUMMARY_OPERATION_ID = 'analytics.monthSummary';
+
+/**
+ * The operation the universal search screen's Purchases section reads
+ * through — `pillars/bfm/src/api/purchases/search-client.ts`'s `search`
+ * calls `handle.search.search` by this name.
+ */
+export const SEARCH_OPERATION_ID = 'search.search';
+
+/**
+ * The operation the purchase detail screen reads a receipt plate through —
+ * `pillars/bfm/src/api/purchases/client.ts`'s `getReceiptThumbnail` calls it
+ * by this name, and `BFMPurchasesRepository+Receipts.swift` is the only
+ * reader on the iOS side.
+ */
+export const RECEIPT_THUMBNAIL_OPERATION_ID = 'receipt.thumbnail';
 
 /**
  * purchases' committed OpenAPI snapshot.
@@ -181,6 +201,22 @@ export function monthSummaryRoute(document) {
 }
 
 /**
+ * @param {Record<string, unknown>} document purchases' OpenAPI snapshot
+ * @returns {{ method: string, path: string }}
+ */
+export function receiptThumbnailRoute(document) {
+  return routeFor(document, RECEIPT_THUMBNAIL_OPERATION_ID);
+}
+
+/**
+ * @param {Record<string, unknown>} document purchases' OpenAPI snapshot
+ * @returns {{ method: string, path: string }}
+ */
+export function searchRoute(document) {
+  return routeFor(document, SEARCH_OPERATION_ID);
+}
+
+/**
  * The shape both snapshot readers accept for one pillar on the registry —
  * shared with `upstream-stub.mjs`'s finance entry so the two can sit in the
  * same `pillars` array.
@@ -230,6 +266,7 @@ export function purchasesRegistryEntry({ baseUrl, now }) {
           `purchases.${LIST_OPERATION_ID}`,
           `purchases.${DETAIL_OPERATION_ID}`,
           `purchases.${MONTH_SUMMARY_OPERATION_ID}`,
+          `purchases.${RECEIPT_THUMBNAIL_OPERATION_ID}`,
         ],
         mutations: [`purchases.${UPLOAD_OPERATION_ID}`, `purchases.${MANUAL_OPERATION_ID}`],
         subscriptions: [],
@@ -275,6 +312,36 @@ const PURCHASE_STATUSES = new Set([
 ]);
 
 /**
+ * A single transparent 1x1 PNG, standing in for a real receipt thumbnail.
+ * Small on purpose — this is bytes on the wire for every flow that opens the
+ * Corner Store purchase, not a fixture read once.
+ */
+const SEEDED_RECEIPT_PNG_BASE64 =
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
+
+/** The media type `mobile-purchases-schemas.ts` and the pillar's own enum both accept. */
+const SEEDED_RECEIPT_MEDIA_TYPE = 'image/png';
+
+/**
+ * The sha256 the Corner Store fixture's receipt document is filed under.
+ *
+ * Derived from the served bytes rather than picked, the same way `purchases`
+ * itself names a receipt file after the hash of what it holds — see
+ * `BFMPurchasesRepository+Receipts.swift`'s comment on why the bytes are
+ * passed through unchanged.
+ */
+export const SEEDED_RECEIPT_SHA256 = createHash('sha256')
+  .update(Buffer.from(SEEDED_RECEIPT_PNG_BASE64, 'base64'))
+  .digest('hex');
+
+/**
+ * The `pops://purchases/receipt/<sha256>` URI `ReceiptURI.swift` parses the
+ * sha256 out of, matching the shape `receiptUris` carries on the mobile wire
+ * (`pillars/bfm/src/api/purchases/list-wire.ts`'s `receiptUris`).
+ */
+const SEEDED_RECEIPT_DOCUMENT_URI = `pops://purchases/receipt/${SEEDED_RECEIPT_SHA256}`;
+
+/**
  * The deterministic purchase history each stub starts with.
  *
  * @returns {Array<Record<string, unknown>>}
@@ -288,6 +355,13 @@ export function seededPurchases() {
       status: 'awaiting_settlement',
       totalCents: 1_250,
       item: 'Breakfast',
+      documents: [
+        {
+          documentUri: SEEDED_RECEIPT_DOCUMENT_URI,
+          kind: 'receipt',
+          createdAt: '2026-09-18T08:30:00.000Z',
+        },
+      ],
     }),
     seededPurchase({
       id: 'purchase-august-linked',
@@ -316,6 +390,7 @@ export function seededPurchases() {
  *   status: string,
  *   totalCents: number,
  *   item: string,
+ *   documents?: Array<{ documentUri: string, kind: string, createdAt: string }>,
  * }} fixture
  * @returns {Record<string, unknown>}
  */
@@ -350,7 +425,7 @@ function seededPurchase(fixture) {
         units: [],
       },
     ],
-    documents: [],
+    documents: fixture.documents ?? [],
   };
 }
 
@@ -677,14 +752,117 @@ function sumLineTotals(items) {
 }
 
 /**
- * Reads one path parameter from an OpenAPI template containing `{id}`.
+ * Answers `GET /receipts/{sha256}/thumbnail` in the shape `receipt.thumbnail`
+ * publishes (`pillars/purchases/openapi/purchases.openapi.json`): the sha256,
+ * media type, byte length and base64 body `BFMPurchasesRepository+Receipts.swift`
+ * decodes. A sha256 no seeded purchase's `documents` carries answers 404, the
+ * same "unknown document" the real pillar reports rather than a fabricated
+ * image — see `PurchaseDetailViewModel.loadThumbnails`, which treats that as
+ * "no plate" rather than an error.
+ *
+ * @param {string} sha256
+ * @param {import('node:http').ServerResponse} response
+ * @param {Array<Record<string, unknown>>} store
+ */
+function handleReceiptThumbnail(sha256, response, store) {
+  const known = store.some((entry) => {
+    const documents = entry['documents'];
+    return (
+      Array.isArray(documents) &&
+      documents.some((document) => document?.documentUri === `pops://purchases/receipt/${sha256}`)
+    );
+  });
+
+  if (!known) {
+    json(response, 404, { code: 'NOT_FOUND', message: `Receipt ${sha256} not found` });
+    return;
+  }
+
+  const bytes = Buffer.from(SEEDED_RECEIPT_PNG_BASE64, 'base64');
+  json(response, 200, {
+    sha256,
+    mediaType: SEEDED_RECEIPT_MEDIA_TYPE,
+    byteLength: bytes.byteLength,
+    dataBase64: SEEDED_RECEIPT_PNG_BASE64,
+  });
+}
+
+/**
+ * Answers `POST /search` the way `search.search` does for the order adapter
+ * alone — this stub's seeded history carries no line items, so there is
+ * nothing for the item adapter to rank. Mirrors the envelope
+ * `pillars/purchases/src/contract/rest-search.ts`'s `SearchHitSchema`
+ * publishes and the fields `search-order-adapter.ts`'s `orderCandidate`
+ * puts under `data`, because `pillars/bfm/src/api/purchases/search-wire.ts`
+ * parses both against that exact shape and a stub that drifted from it would
+ * report a pillar the bfm cannot actually read.
+ *
+ * @param {import('node:http').IncomingMessage} request
+ * @param {import('node:http').ServerResponse} response
+ * @param {Array<Record<string, unknown>>} store
+ * @returns {Promise<void>}
+ */
+async function handleSearch(request, response, store) {
+  const body = await readJsonBody(request);
+  // The gateway's dynamic proxy serialises its whole call argument —
+  // `{ body: { query: {...} } }` — rather than stripping the `body` key the
+  // way a generated ts-rest client would; `search()` in
+  // `pillars/bfm/src/api/purchases/search-client.ts` calls
+  // `handle.search.search({ body: { query: {...} } })` and that outer `body`
+  // reaches this handler verbatim. Read from either shape so this keeps
+  // working if that proxy is ever changed to strip it.
+  const envelope = /** @type {{ query?: unknown }} */ (body['body']) ?? body;
+  const query = /** @type {{ text?: unknown }} */ (envelope['query']) ?? {};
+  const text = typeof query.text === 'string' ? query.text.trim() : '';
+  if (text.length === 0) {
+    json(response, 200, { hits: [] });
+    return;
+  }
+
+  const needle = text.toLowerCase();
+  const hits = store
+    .map((entry) => {
+      const purchase = /** @type {Record<string, unknown>} */ (entry['purchase']);
+      const merchant = purchase?.['merchantEntityName'];
+      if (typeof merchant !== 'string') return null;
+      const haystack = merchant.toLowerCase();
+      const at = haystack.indexOf(needle);
+      if (at === -1) return null;
+      const matchType = at === 0 ? 'prefix' : 'contains';
+      return {
+        uri: `pops:purchases/purchase/${String(purchase['id'])}`,
+        score: matchType === 'prefix' ? 1 : 0.5,
+        matchField: 'merchantEntityName',
+        matchType,
+        data: {
+          source: purchase['source'],
+          sourceOrderId: purchase['sourceOrderId'] ?? null,
+          merchantEntityId: purchase['merchantEntityId'] ?? null,
+          merchantEntityName: purchase['merchantEntityName'],
+          orderedAt: purchase['orderedAt'],
+          orderedAtOffsetMinutes: purchase['orderedAtOffsetMinutes'] ?? null,
+          currency: purchase['currency'],
+          totalCents: purchase['totalCents'],
+          status: purchase['status'],
+        },
+      };
+    })
+    .filter((hit) => hit !== null)
+    .toSorted((left, right) => right.score - left.score);
+
+  json(response, 200, { hits });
+}
+
+/**
+ * Reads one path parameter from an OpenAPI template containing the given
+ * `{marker}`.
  *
  * @param {string} template
  * @param {string} pathname
+ * @param {string} [marker]
  * @returns {string | null}
  */
-function pathParameter(template, pathname) {
-  const marker = '{id}';
+function pathParameter(template, pathname, marker = '{id}') {
   const markerIndex = template.indexOf(marker);
   if (markerIndex === -1) return null;
   const prefix = template.slice(0, markerIndex);
@@ -709,6 +887,8 @@ function pathParameter(template, pathname) {
  *   close: () => Promise<void>,
  *   setReachable: (active: boolean) => void,
  *   isReachable: () => boolean,
+ *   setSearchOutage: (active: boolean) => void,
+ *   isSearchOutage: () => boolean,
  * }>}
  */
 export async function startPurchasesStub({
@@ -722,9 +902,17 @@ export async function startPurchasesStub({
   const list = listRoute(contract);
   const detail = detailRoute(contract);
   const monthSummary = monthSummaryRoute(contract);
+  const receiptThumbnail = receiptThumbnailRoute(contract);
+  const search = searchRoute(contract);
   const store = seededPurchases();
 
   let reachable = false;
+  // Independent of `reachable`, the same way `manual`'s write route is: a
+  // flow arms this to fail the search request specifically while `/openapi`
+  // keeps answering and the Purchases tab stays, mirroring
+  // `finance-stops-answering.js`'s "reachable but its data route refuses"
+  // shape rather than taking the whole pillar down.
+  let searchOutage = false;
 
   // Serialised once rather than per probe, for the reason `upstream-stub.mjs`
   // gives about finance's much larger document: a stringify inside the handler
@@ -749,6 +937,18 @@ export async function startPurchasesStub({
         'content-length': String(contractBody.byteLength),
       });
       response.end(contractBody);
+      return;
+    }
+
+    if (request.method === search.method && url.pathname === search.path) {
+      if (searchOutage) {
+        // Same refusal `/openapi` gives while unreachable: a reset fails the
+        // bfm's fetch outright rather than answering something a 5xx handler
+        // would have to invent a body for.
+        request.socket.destroy();
+        return;
+      }
+      void handleSearch(request, response, store);
       return;
     }
 
@@ -782,11 +982,20 @@ export async function startPurchasesStub({
       return;
     }
 
+    const thumbnailSha256 =
+      request.method === receiptThumbnail.method
+        ? pathParameter(receiptThumbnail.path, url.pathname, '{sha256}')
+        : null;
+    if (thumbnailSha256 !== null) {
+      handleReceiptThumbnail(thumbnailSha256, response, store);
+      return;
+    }
+
     json(response, 404, {
       message:
         `ios-e2e purchases stub serves nothing at ${request.method} ${url.pathname}. ` +
-        'It answers purchase list, detail, month-summary and manual-create routes; receipt upload remains ' +
-        "unserved on purpose — see this file's header.",
+        'It answers purchase list, detail, month-summary, receipt-thumbnail and manual-create ' +
+        "routes; receipt upload remains unserved on purpose — see this file's header.",
     });
   });
 
@@ -813,5 +1022,9 @@ export async function startPurchasesStub({
       reachable = active;
     },
     isReachable: () => reachable,
+    setSearchOutage: (active) => {
+      searchOutage = active;
+    },
+    isSearchOutage: () => searchOutage,
   };
 }

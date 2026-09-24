@@ -3,12 +3,11 @@ import Foundation
 
 /// How a reading becomes a form somebody can change.
 ///
-/// The counterpart of ``ReceiptResultPresentation``, and deliberately not the
-/// same function. That one drops what the receipt never stated, because a
-/// display padded with empty labels reads as a record that failed to load.
-/// This one keeps every field, because an empty field is where the reader
-/// puts what the paper could not say — and the two most common reasons to
-/// open this screen are a receipt whose items are named unhelpfully and one
+/// Deliberately not a function that drops what the receipt never stated —
+/// that shape reads as a record that failed to load once every empty label is
+/// padded in. This one keeps every field, because an empty field is where the
+/// reader puts what the paper could not say — and the two most common reasons
+/// to open this screen are a receipt whose items are named unhelpfully and one
 /// whose items are not named at all.
 public struct ReceiptDraftPresentation: Sendable {
     public init() {}

@@ -65,8 +65,8 @@ internal struct ReceiptDraftHandEntryTests {
         #expect(next.date.isEdited)
     }
 
-    @Test("neither save can be pressed while one is in flight, or before the form is saveable")
-    func bothSavesHold() {
+    @Test("save cannot be pressed while one is in flight, or before the form is saveable")
+    func saveHolds() {
         let saveable = ReceiptDraft.fake(.tillNamedItems()).attributed()
 
         #expect(saveable.isSaveable, "the fixture has to be saveable to prove the hold")
@@ -84,5 +84,42 @@ internal struct ReceiptDraftHandEntryTests {
         form.editing.wrappedValue.addLine()
 
         #expect(stored.lines.count == 2)
+    }
+
+    /// POPS-4296: `PurchaseEditSheet` is the one caller that commits from the
+    /// navigation bar rather than the bottom action bar — the edit sheet's
+    /// own host titles and cancels it, so a second Save pinned under the form
+    /// would be the sheet's own confirmation action said twice.
+    @Test("an owned form with save set draws its Save in the toolbar, not the action bar")
+    func ownedFormWithNavigationBarCommitDrawsSaveInTheToolbar() {
+        let form = ReceiptDraftView(
+            savedPurchase: presentation.blankDraft(currency: "AUD"),
+            lock: nil,
+            onChange: { _ in },
+            lineRemovalNotice: { _ in nil },
+            saveEligibility: { _ in true },
+            isSaving: false,
+            save: { _ in })
+
+        #expect(form.showsSaveInNavigationBar)
+        #expect(!form.showsSaveInActionBar)
+    }
+
+    /// The mirror of the assertion above, from the form every other caller
+    /// builds: no `commit` named, so Save stays in the bottom action bar.
+    @Test("a form with no commit named draws its Save in the action bar, not the toolbar")
+    func defaultCommitDrawsSaveInTheActionBar() {
+        let form = ReceiptDraftView(draft: presentation.blankDraft(currency: "AUD"), save: { _ in })
+
+        #expect(form.showsSaveInActionBar)
+        #expect(!form.showsSaveInNavigationBar)
+    }
+
+    @Test("a form with no save closure draws Save nowhere at all")
+    func noSaveClosureDrawsNeither() {
+        let form = ReceiptDraftView(draft: presentation.blankDraft(currency: "AUD"))
+
+        #expect(!form.showsSaveInActionBar)
+        #expect(!form.showsSaveInNavigationBar)
     }
 }

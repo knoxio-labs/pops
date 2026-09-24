@@ -3,10 +3,10 @@
     import AppCore
     import SwiftUI
 
-    // The receipt and the pages these draw come from
-    // `ReceiptCapturePreviews`, so the form and the read-only reading it
-    // replaces are shown against the same receipt. Two fixtures would let
-    // the two screens be compared only by eye.
+    // The receipt and the pages these draw come from `PreviewReceipt`, shared
+    // with every other `#Preview` in this module that needs a receipt. One
+    // fixture is what lets two previews be compared by eye rather than by
+    // guessing whether they started from the same paper.
 
     private enum PreviewDraft {
         static let presentation = ReceiptDraftPresentation()
@@ -70,8 +70,6 @@
                     for: PreviewReceipt.failures.map(\.kind)),
                 caption: ReceiptResultCopy.photoCount(2)),
             parts: PreviewReceipt.pages(2),
-            secondaryAction: ReceiptDraftView.SecondaryAction(
-                title: ReceiptCaptureCopy.captureAnother, action: {}),
             save: { _ in }
         )
     }
@@ -88,8 +86,6 @@
                 heading: ReceiptResultCopy.createdHeading,
                 message: ReceiptResultCopy.createdMessage),
             parts: PreviewReceipt.pages(1),
-            secondaryAction: ReceiptDraftView.SecondaryAction(
-                title: ReceiptCaptureCopy.captureAnother, action: {}),
             save: { _ in }
         )
     }
@@ -114,8 +110,6 @@
             title: ReceiptDraftCopy.title,
             subtitle: ReceiptDraftCopy.subtitle,
             parts: PreviewReceipt.pages(1),
-            secondaryAction: ReceiptDraftView.SecondaryAction(
-                title: ReceiptCaptureCopy.captureAnother, action: {}),
             save: { _ in }
         )
         .dynamicTypeSize(.accessibility5)

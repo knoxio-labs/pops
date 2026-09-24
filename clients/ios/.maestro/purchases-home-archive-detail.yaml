@@ -53,6 +53,8 @@ name: Purchases home opens both archive scopes and a full detail
 - assertVisible:
     id: 'purchase-detail'
     text: 'Breakfast, A\$12\.50'
+- assertVisible:
+    id: 'purchase-detail-receipt'
 
 # Back returns to the archive with its scope intact. Switching the segmented
 # control to All must reveal the linked fixture that Unmatched excluded.

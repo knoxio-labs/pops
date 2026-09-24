@@ -23,13 +23,6 @@ public enum ReceiptDraftCopy {
     internal static let save = "Save purchase"
     internal static let dismissSaveError = "OK"
 
-    /// Shown above the form when the receipt's own arithmetic did not
-    /// reconcile — the status ``ReceiptDraftView`` draws for that arm.
-    internal static let unreconciledHeading = "The figures don't add up"
-    internal static let unreconciledMessage =
-        "The items below don't sum to the printed total. Check them against the receipt "
-        + "before saving."
-    internal static let saveAndAddAnother = "Save and add another"
     /// A bar button is a verb on its own; the object is the sheet's title.
     internal static let saveInBar = "Save"
     internal static let saving = "Saving"

@@ -139,6 +139,17 @@ internal struct CompositionRootTests {
         #expect(RootFeature.renderable.contains(FeatureAccounts.feature))
     }
 
+    /// POPS-4294 removed the Receipts tab. `.receiptCapture` stays out of
+    /// `RootFeature.renderable` deliberately — `RootCopyPresentationTests`
+    /// requires every renderable feature to have its own tab name and icon,
+    /// and `.receiptCapture` is not a screen. `AppShellModel` still forwards
+    /// the BFM's answer about it to Purchases, independently of this list —
+    /// see `FeatureSurface.captureAvailable`.
+    @Test("receipt capture is not renderable — it is a capability, not a screen")
+    func receiptCaptureIsNotRenderable() {
+        #expect(!RootFeature.renderable.contains(.receiptCapture))
+    }
+
     /// Two `NavigationStack`s bound to one `[Route]` are one stack rendered
     /// twice. This was unobservable while transactions was the only feature
     /// that drew a stack, and became a real defect the moment accounts did.

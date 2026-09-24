@@ -14,7 +14,10 @@ internal enum PurchaseHandEntryPolicy {
 
 internal struct PurchaseHandEntryView: View {
     private let model: PurchaseHandEntryViewModel
-    private let merchants: [ReceiptMerchantChoice]
+    private let searchMerchants: ReceiptMerchantSearch
+    private let merchantPreview: ReceiptMerchantPreview
+    private let addressesForMerchant: ReceiptAddressesForMerchant
+    private let addressPreview: ReceiptAddressPreview
     private let onFinished: ([Purchase.ID]) -> Void
 
     @State private var draft: ReceiptDraft
@@ -24,11 +27,17 @@ internal struct PurchaseHandEntryView: View {
 
     internal init(
         model: PurchaseHandEntryViewModel,
-        merchants: [ReceiptMerchantChoice],
+        searchMerchants: @escaping ReceiptMerchantSearch,
+        merchantPreview: @escaping ReceiptMerchantPreview,
+        addressesForMerchant: @escaping ReceiptAddressesForMerchant,
+        addressPreview: @escaping ReceiptAddressPreview,
         onFinished: @escaping ([Purchase.ID]) -> Void
     ) {
         self.model = model
-        self.merchants = merchants
+        self.searchMerchants = searchMerchants
+        self.merchantPreview = merchantPreview
+        self.addressesForMerchant = addressesForMerchant
+        self.addressPreview = addressPreview
         self.onFinished = onFinished
         _draft = State(initialValue: model.draft)
         _opened = State(initialValue: model.draft)
@@ -38,7 +47,10 @@ internal struct PurchaseHandEntryView: View {
         ReceiptDraftView(
             draft: $draft,
             complaints: .hintsOnly,
-            merchants: merchants
+            searchMerchants: searchMerchants,
+            merchantPreview: merchantPreview,
+            addressesForMerchant: addressesForMerchant,
+            addressPreview: addressPreview
         )
         .id(model.formGeneration)
         .disabled(model.isSaving)
@@ -57,6 +69,7 @@ internal struct PurchaseHandEntryView: View {
         }
         .popsMotion(value: model.formGeneration)
         .popsMotion(value: model.failure)
+        .accessibilityIdentifier(PurchaseHandEntryAccessibility.root)
         .onChange(of: model.formGeneration) {
             draft = model.draft
             opened = model.draft
@@ -106,6 +119,7 @@ internal struct PurchaseHandEntryView: View {
         }
         .receiptDraftProminentBarButton()
         .disabled(!canSave)
+        .accessibilityIdentifier(PurchaseHandEntryAccessibility.save)
     }
 
     private var canSave: Bool {
@@ -125,4 +139,9 @@ internal struct PurchaseHandEntryView: View {
         didFinish = true
         onFinished(model.savedPurchaseIDs)
     }
+}
+
+internal enum PurchaseHandEntryAccessibility {
+    internal static let root = "purchases-hand-entry"
+    internal static let save = "purchases-hand-entry-save"
 }
