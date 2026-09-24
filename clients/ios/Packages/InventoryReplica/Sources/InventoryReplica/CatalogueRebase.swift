@@ -12,9 +12,10 @@ import GRDB
 /// change arrives at the newer revision.
 ///
 /// A definition the server named as replaced (``AppCore/InventoryCatalogueChange``
-/// with a `replacementId`) is first moved onto its replacement when that
-/// accepts the value (``CatalogueReplacement``); only what is still in the
-/// way after that refuses the move.
+/// with a `replacementId`), or that the newer revision records a replacement
+/// for, is first moved onto its replacement when that accepts the value
+/// (``CatalogueReplacement``); only what is still in the way after that
+/// refuses the move.
 internal enum CatalogueRebase {
     enum Verdict: Equatable {
         /// `revision` is what the moved change is sent with
@@ -53,12 +54,17 @@ internal enum CatalogueRebase {
         let authored = try Protocol2CatalogueRows.read(revision: authoredRevision, in: db)
         let itemTypeId = try CatalogueCompatibility.typeId(ofItem: command.entityId, in: db)
         let replacement = CatalogueReplacement(authored: authored, target: target)
-        let moved = replacement.move(command, along: known, itemTypeId: itemTypeId)
+        let replacements =
+            known
+            + replacement.recorded(for: command).filter { recorded in
+                !known.contains { $0.id == recorded.id && $0.isReplacement }
+            }
+        let moved = replacement.move(command, along: replacements, itemTypeId: itemTypeId)
         command = moved.command
         let check = CatalogueCompatibility(authored: authored, target: target)
         let found = check.incompatibility(of: command, itemTypeId: itemTypeId)
         if let found {
-            let named = known.first { $0.id == found.id && $0.change == .replaced }
+            let named = replacements.first { $0.id == found.id && $0.change == .replaced }
             return .incompatible([named ?? found] + moved.refused.filter { $0.id != found.id })
         }
         if let refused = moved.refused.first {

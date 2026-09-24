@@ -159,4 +159,78 @@ internal struct CatalogueReplacementTests {
 
         #expect(verdict == .incompatible([typeReplaced]))
     }
+    @Test("a replacement the newer revision records takes the value though the server named none")
+    func recordedReplacementMoves() throws {
+        let fields = [
+            Fixture.field(
+                Fixture.lumens, key: "lumens", kind: .measurement, sortOrder: 0,
+                archivedAt: Self.archived, replacedBy: Self.brightness),
+            Fixture.baseFields[1],
+            Fixture.field(Self.brightness, key: "brightness", kind: .measurement, sortOrder: 2),
+        ]
+
+        let verdict = try Fixture.verdict(try Self.lumensEdit(), next: fields)
+
+        guard case .rebased(.command(.editProtocol2Item(_, 2, let patches)), 2) = verdict else {
+            Issue.record("expected the edit to move onto the recorded replacement, got \(verdict)")
+            return
+        }
+        #expect(patches.map(\.fieldId) == [Self.brightness])
+    }
+
+    @Test("recorded lineage is followed through a replacement archived since, to the live end")
+    func recordedLineageFollowsChain() throws {
+        let glow = "66666666-6666-4666-8666-666666666666"
+        let fields = [
+            Fixture.field(
+                Fixture.lumens, key: "lumens", kind: .measurement, sortOrder: 0,
+                archivedAt: Self.archived, replacedBy: Self.brightness),
+            Fixture.baseFields[1],
+            Fixture.field(
+                Self.brightness, key: "brightness", kind: .measurement, sortOrder: 2,
+                archivedAt: Self.archived, replacedBy: glow),
+            Fixture.field(glow, key: "glow", kind: .measurement, sortOrder: 3),
+        ]
+
+        let verdict = try Fixture.verdict(try Self.lumensEdit(), next: fields)
+
+        guard case .rebased(.command(.editProtocol2Item(_, 2, let patches)), 2) = verdict else {
+            Issue.record("expected the edit to reach the live end of the lineage, got \(verdict)")
+            return
+        }
+        #expect(patches.map(\.fieldId) == [glow])
+    }
+
+    @Test("a recorded replacement of another kind refuses, and the repair names it")
+    func recordedReplacementRefuses() throws {
+        let fields = [
+            Fixture.field(
+                Fixture.lumens, key: "lumens", kind: .measurement, sortOrder: 0,
+                archivedAt: Self.archived, replacedBy: Self.brightness),
+            Fixture.baseFields[1],
+            Fixture.field(Self.brightness, key: "brightness", kind: .decimal, sortOrder: 2),
+        ]
+
+        let verdict = try Fixture.verdict(try Self.lumensEdit(), next: fields)
+
+        #expect(verdict == .incompatible([Self.lumensReplaced]))
+    }
+
+    @Test("clearing a replaced field is never moved onto its replacement")
+    func clearIsNotMoved() throws {
+        let fields = [
+            Fixture.field(
+                Fixture.lumens, key: "lumens", kind: .measurement, sortOrder: 0,
+                archivedAt: Self.archived, replacedBy: Self.brightness),
+            Fixture.baseFields[1],
+            Fixture.field(Self.brightness, key: "brightness", kind: .measurement, sortOrder: 2),
+        ]
+        let clear = InventoryCommand.editProtocol2Item(
+            id: Fixture.lampId, catalogueRevision: 1,
+            values: [InventoryProtocol2FieldPatch(fieldId: Fixture.lumens, values: nil)])
+
+        let verdict = try Fixture.verdict(clear, next: fields)
+
+        #expect(verdict == .incompatible([Fixture.change(.field, Fixture.lumens, .archived)]))
+    }
 }

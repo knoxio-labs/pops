@@ -17,12 +17,14 @@ internal enum RebaseFixture {
     static func field(
         _ id: String, key: String, label: String? = nil, kind: InventoryPrimitiveKind,
         sortOrder: Int, required: Bool = false, archivedAt: String? = nil,
-        options: [InventoryCatalogueOption] = [], fixedUnit: String? = nil
+        options: [InventoryCatalogueOption] = [], fixedUnit: String? = nil,
+        replacedBy: String? = nil
     ) -> InventoryCatalogueField {
         InventoryCatalogueField(
             id: id, typeId: typeId, key: key, label: label ?? key, sortOrder: sortOrder,
             kind: kind, cardinality: .one, required: required, storage: .stored,
-            fixedUnit: fixedUnit, archivedAt: archivedAt, enumOptions: options)
+            fixedUnit: fixedUnit, archivedAt: archivedAt, replacedBy: replacedBy,
+            enumOptions: options)
     }
 
     static func option(archivedAt: String? = nil) -> InventoryCatalogueOption {

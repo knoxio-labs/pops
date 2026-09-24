@@ -45,17 +45,23 @@ function compareOptions(
   return changes;
 }
 
-function immutableShapeChanged(
+/**
+ * Whether `candidate` holds `base`'s values exactly as they are: the same
+ * kind, cardinality, storage, fixed unit and reference constraint. It is the
+ * immutability rule for one field across revisions, and the rule a value
+ * moved onto a replacement field must pass (no conversion ever happens).
+ */
+export function sameFieldShape(
   base: PersistedItemTypeField,
   candidate: PersistedItemTypeField
 ): boolean {
   return (
-    base.kind !== candidate.kind ||
-    base.cardinality !== candidate.cardinality ||
-    base.storage !== candidate.storage ||
-    base.fixedUnit !== candidate.fixedUnit ||
-    !sameStrings(base.referenceKinds, candidate.referenceKinds) ||
-    !sameStrings(base.referenceTypeIds, candidate.referenceTypeIds)
+    base.kind === candidate.kind &&
+    base.cardinality === candidate.cardinality &&
+    base.storage === candidate.storage &&
+    base.fixedUnit === candidate.fixedUnit &&
+    sameStrings(base.referenceKinds, candidate.referenceKinds) &&
+    sameStrings(base.referenceTypeIds, candidate.referenceTypeIds)
   );
 }
 
@@ -95,7 +101,7 @@ export function comparePersistedFields(
   if (base.key.toLowerCase() !== candidate.key.toLowerCase()) {
     changes.push(change('forbidden', base.id, 'published_field_key_changed'));
   }
-  if (immutableShapeChanged(base, candidate)) {
+  if (!sameFieldShape(base, candidate)) {
     changes.push(change('forbidden', base.id, 'published_field_shape_changed'));
   }
   if (!base.required && candidate.required) {

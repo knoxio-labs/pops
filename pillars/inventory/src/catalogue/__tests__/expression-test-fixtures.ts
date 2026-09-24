@@ -32,6 +32,7 @@ export function expressionField(
     presentation: {},
     referenceKinds: new Set(),
     referenceTypeIds: new Set(),
+    replacedBy: null,
     required: false,
     sortOrder: 0,
     storage: 'stored',
@@ -55,6 +56,7 @@ export function expressionType(
     label: id,
     legacyLabels: [],
     presentation: {},
+    replacedBy: null,
     revision: 1,
     sortOrder: 0,
   };

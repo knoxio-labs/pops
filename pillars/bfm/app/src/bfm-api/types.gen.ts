@@ -2816,6 +2816,7 @@ export type MobileInventoryCatalogueRevisionResponses = {
         };
         referenceKinds: Array<'item' | 'location'>;
         referenceTypeIds: Array<string>;
+        replacedBy?: string | null;
         required: boolean;
         sortOrder: number;
         storage: 'stored' | 'computed';
@@ -2828,6 +2829,7 @@ export type MobileInventoryCatalogueRevisionResponses = {
       presentation: {
         [key: string]: unknown;
       };
+      replacedBy?: string | null;
       revision: number;
       sortOrder: number;
     }>;

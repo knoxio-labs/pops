@@ -344,6 +344,54 @@ describe('inventory catalogue MCP tools — real HTTP boundary', () => {
     });
   });
 
+  it('records the type that replaces an archived one, and refuses an archived replacement', async () => {
+    const draft = await freshDraft(catalogueGet, createDraft);
+    const target = { revision: draft.revision, baseRevision: draft.baseRevision };
+    const created = ok(
+      await patchDraft.handler({
+        ...target,
+        expectedDraftVersion: draft.draftVersion,
+        operations: [
+          { kind: 'put_type', key: 'seam_old_meter', label: 'Old meter' },
+          { kind: 'put_type', key: 'seam_meter', label: 'Meter' },
+        ],
+      })
+    );
+    const types = (created['draft'] as { types: { id: string; key: string }[] }).types;
+    const idOf = (key: string): string => types.find((type) => type.key === key)?.id ?? '';
+    const version = draftRevision(created).draftVersion;
+    try {
+      const refused = await patchDraft.handler({
+        ...target,
+        expectedDraftVersion: version,
+        operations: [
+          { kind: 'archive_type', id: idOf('seam_meter') },
+          { kind: 'archive_type', id: idOf('seam_old_meter'), replacedBy: idOf('seam_meter') },
+        ],
+      });
+      const replaced = ok(
+        await patchDraft.handler({
+          ...target,
+          expectedDraftVersion: version,
+          operations: [
+            { kind: 'archive_type', id: idOf('seam_old_meter'), replacedBy: idOf('seam_meter') },
+          ],
+        })
+      );
+
+      expect(refused.isError).toBe(true);
+      expect(text(refused)).toMatch(/replacement_archived/);
+      expect(
+        (replaced['draft'] as { types: { key: string }[] }).types.find(
+          (type) => type.key === 'seam_old_meter'
+        )
+      ).toMatchObject({ replacedBy: idOf('seam_meter'), archivedAt: expect.any(String) });
+    } finally {
+      const current = draftRevision(ok(await readDraft.handler({})));
+      await abandonDraft.handler({ ...target, expectedDraftVersion: current.draftVersion });
+    }
+  });
+
   describe('malformed operation payloads, per kind, through the real REST boundary', () => {
     function issuePaths(body: string): string[] {
       const jsonStart = body.indexOf('{');

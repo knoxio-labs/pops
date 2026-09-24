@@ -76,13 +76,11 @@ export function resolveCommandCatalogue(
   return { authored, active, rebased: true };
 }
 
-/** Resolves the same stable type identity in both the authored and active snapshots. */
-export function resolveCommandType(
+/** The type `typeId` as the active snapshot defines it. */
+export function resolveActiveCommandType(
   resolution: CommandCatalogueResolution,
   typeId: string
-): { readonly authored: PersistedItemType; readonly active: PersistedItemType } {
-  const authored = resolution.authored.types.find((entry) => entry.id === typeId);
-  if (!authored) throw new CommandRejected('type_unknown', `unknown type ${typeId}`);
+): PersistedItemType {
   const active = resolution.active.types.find((entry) => entry.id === typeId);
   if (!active) {
     throw new CommandRejected(
@@ -91,18 +89,36 @@ export function resolveCommandType(
       [typeNotInRevision(resolution, typeId)]
     );
   }
-  return { authored, active };
+  return active;
 }
 
-/** Validates authored values first, then proves that the same values remain valid after rebase. */
+/** Resolves the same stable type identity in both the authored and active snapshots. */
+export function resolveCommandType(
+  resolution: CommandCatalogueResolution,
+  typeId: string
+): { readonly authored: PersistedItemType; readonly active: PersistedItemType } {
+  const authored = resolution.authored.types.find((entry) => entry.id === typeId);
+  if (!authored) throw new CommandRejected('type_unknown', `unknown type ${typeId}`);
+  return { authored, active: resolveActiveCommandType(resolution, typeId) };
+}
+
+/** A command's type and values as validated against one snapshot. */
+export interface CommandFieldValues {
+  readonly typeId: string;
+  readonly values: readonly ItemFieldValueInput[];
+  readonly existingItemId?: string;
+}
+
+/**
+ * Validates authored values first, then proves that the values remain valid
+ * after rebase: `input` as it was authored, or `rebased`, the same command
+ * moved onto replacements (`moveOntoReplacements`), when it moved.
+ */
 export function assertCommandFieldValues(
   db: CommandDb,
   resolution: CommandCatalogueResolution,
-  input: {
-    readonly typeId: string;
-    readonly values: readonly ItemFieldValueInput[];
-    readonly existingItemId?: string;
-  }
+  input: CommandFieldValues,
+  rebased: CommandFieldValues = input
 ): void {
   const type = resolveCommandType(resolution, input.typeId);
   try {
@@ -114,14 +130,15 @@ export function assertCommandFieldValues(
     throw error;
   }
   if (!resolution.rebased) return;
+  const active = resolveActiveCommandType(resolution, rebased.typeId);
   try {
-    validateItemFieldValuesForType(db, type.active, input.values, input.existingItemId);
+    validateItemFieldValuesForType(db, active, rebased.values, rebased.existingItemId);
   } catch (error) {
     if (error instanceof ItemFieldSetError || error instanceof ValueValidationError) {
       throw new CommandRejected(
         'catalogue_repair_required',
         `${error.message}; refresh catalogue definitions and repair the mutation`,
-        [repairRequiredChange({ db, ...resolution }, input, error)]
+        [repairRequiredChange({ db, ...resolution }, rebased, error)]
       );
     }
     throw error;

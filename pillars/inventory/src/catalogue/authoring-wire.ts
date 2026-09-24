@@ -110,6 +110,7 @@ function fieldWire(field: PersistedItemTypeField): CatalogueFieldWire {
     allowOverride: field.allowOverride,
     presentation: { ...field.presentation },
     archivedAt: field.archivedAt,
+    replacedBy: field.replacedBy,
     enumOptions: field.enumOptions.map((option) => optionWire(option)),
   };
 }
@@ -126,6 +127,7 @@ function typeWire(type: PersistedItemType): CatalogueTypeWire {
     legacyLabels: [...type.legacyLabels],
     presentation: { ...type.presentation },
     archivedAt: type.archivedAt,
+    replacedBy: type.replacedBy,
     fields: type.fields.map(fieldWire),
   };
 }

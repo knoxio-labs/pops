@@ -17,8 +17,8 @@ internal enum Protocol2Wire {
     internal static func field(
         id: String, key: String, label: String, kind: String = "measurement",
         storage: String = "stored", required: Bool = false, archivedAt: String? = nil,
-        sortOrder: Int = 0, cardinality: String = "one", fixedUnit: String? = nil,
-        referenceKinds: [String] = [], enumOptionIds: [String] = []
+        replacedBy: String? = nil, sortOrder: Int = 0, cardinality: String = "one",
+        fixedUnit: String? = nil, referenceKinds: [String] = [], enumOptionIds: [String] = []
     ) -> String {
         let kinds = referenceKinds.map { "\"\($0)\"" }.joined(separator: ",")
         let options = enumOptionIds.enumerated().map { index, optionId in
@@ -34,7 +34,8 @@ internal enum Protocol2Wire {
             "fixedUnit":\(fixedUnit.map { "\"\($0)\"" } ?? "null"),\
             "referenceKinds":[\(kinds)],"referenceTypeIds":[],\
             "expressionVersion":null,"expression":null,"allowOverride":false,"presentation":{},\
-            "archivedAt":\(archivedAt.map { "\"\($0)\"" } ?? "null"),"enumOptions":[\(options)]}
+            "archivedAt":\(archivedAt.map { "\"\($0)\"" } ?? "null"),\
+            "replacedBy":\(replacedBy.map { "\"\($0)\"" } ?? "null"),"enumOptions":[\(options)]}
             """
     }
 
@@ -57,6 +58,16 @@ internal enum Protocol2Wire {
     /// `Lumens` archived and replaced by a new `Brightness` field.
     internal static let replacedFields = [
         field(id: lumens, key: "lumens", label: "Lumens", archivedAt: "2026-09-02T00:00:00.000Z"),
+        field(id: brightness, key: "brightness", label: "Brightness", sortOrder: 2),
+        efficacyField,
+    ]
+
+    /// `Lumens` archived with the catalogue recording the new `Brightness`
+    /// field, of the same kind, as its replacement.
+    internal static let lineageFields = [
+        field(
+            id: lumens, key: "lumens", label: "Lumens", archivedAt: "2026-09-02T00:00:00.000Z",
+            replacedBy: brightness),
         field(id: brightness, key: "brightness", label: "Brightness", sortOrder: 2),
         efficacyField,
     ]

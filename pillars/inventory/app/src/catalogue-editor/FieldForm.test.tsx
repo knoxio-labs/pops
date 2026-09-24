@@ -38,6 +38,7 @@ function field(overrides: Partial<CatalogueField> = {}): CatalogueField {
     presentation: {},
     referenceKinds: [],
     referenceTypeIds: [],
+    replacedBy: null,
     required: false,
     sortOrder: 0,
     storage: 'stored',
@@ -57,6 +58,7 @@ function type(fields: CatalogueField[]): CatalogueType {
     label: 'Equipment',
     legacyLabels: [],
     presentation: {},
+    replacedBy: null,
     revision: 1,
     sortOrder: 0,
   };

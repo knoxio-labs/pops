@@ -21,7 +21,7 @@ function publishCandidate(harness: ReturnType<typeof openHarness>): void {
     .prepare(
       `INSERT INTO item_types
        SELECT 2, id, key, label, description, sort_order, capabilities_json,
-              legacy_labels_json, presentation_json, archived_at
+              legacy_labels_json, presentation_json, archived_at, replaced_by
        FROM item_types WHERE revision = 1`
     )
     .run();
@@ -30,7 +30,8 @@ function publishCandidate(harness: ReturnType<typeof openHarness>): void {
       `INSERT INTO item_type_fields
        SELECT 2, id, type_id, key, label, help, sort_order, kind, cardinality, required,
               storage, fixed_unit, reference_kinds_json, reference_type_ids_json,
-              expression_version, expression_json, allow_override, presentation_json, archived_at
+              expression_version, expression_json, allow_override, presentation_json, archived_at,
+              replaced_by
        FROM item_type_fields WHERE revision = 1`
     )
     .run();

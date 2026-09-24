@@ -101,8 +101,14 @@ describe('inventory catalogue draft management', () => {
               },
               {
                 properties: {
-                  kind: { enum: ['archive_type', 'archive_field', 'archive_enum_option'] },
+                  kind: { enum: ['archive_type', 'archive_field'] },
+                  replacedBy: { format: 'uuid' },
                 },
+                required: ['kind', 'id'],
+              },
+              {
+                properties: { kind: { const: 'archive_enum_option' } },
+                required: ['kind', 'id'],
               },
               {
                 properties: { kind: { const: 'reorder' } },

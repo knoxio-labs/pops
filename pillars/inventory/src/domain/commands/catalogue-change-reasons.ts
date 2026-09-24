@@ -1,4 +1,9 @@
-import { classifyCatalogueCompatibility, loadPublishedCatalogue } from '../../catalogue/index.js';
+import {
+  classifyCatalogueCompatibility,
+  loadPublishedCatalogue,
+  replacingField,
+  replacingType,
+} from '../../catalogue/index.js';
 
 import type {
   PersistedCatalogue,
@@ -37,14 +42,37 @@ function locate(catalogues: readonly PersistedCatalogue[], id: string): Located 
   return { definition: 'revision', typeId: null, fieldId: null };
 }
 
-/** A change about `id`, located in whichever of `catalogues` still declares it. */
+function replacementId(
+  active: PersistedCatalogue | undefined,
+  located: Located,
+  id: string
+): string | null {
+  if (active === undefined) return null;
+  if (located.definition === 'type') return replacingType(active, id)?.id ?? null;
+  if (located.definition === 'field') return replacingField(active, id)?.id ?? null;
+  return null;
+}
+
+/**
+ * A change about `id`, located in whichever of `catalogues` (the active one
+ * first) still declares it. An archived type or field whose lineage in the
+ * active catalogue ends at a live replacement is `replaced`, naming it.
+ */
 export function catalogueChange(
   catalogues: readonly PersistedCatalogue[],
   id: string,
   change: CatalogueChangeKind,
   revision: number
 ): CatalogueChange {
-  return { ...locate(catalogues, id), id, change, replacementId: null, revision };
+  const located = locate(catalogues, id);
+  const replacement = change === 'archived' ? replacementId(catalogues[0], located, id) : null;
+  return {
+    ...located,
+    id,
+    change: replacement === null ? change : 'replaced',
+    replacementId: replacement,
+    revision,
+  };
 }
 
 /** The whole revision is one this server cannot judge the change by. */

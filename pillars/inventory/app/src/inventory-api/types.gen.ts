@@ -3862,6 +3862,7 @@ export type TypesReadCatalogueResponses = {
         };
         referenceKinds: Array<'item' | 'location'>;
         referenceTypeIds: Array<string>;
+        replacedBy: string | null;
         required: boolean;
         sortOrder: number;
         storage: 'stored' | 'computed';
@@ -3874,6 +3875,7 @@ export type TypesReadCatalogueResponses = {
       presentation: {
         [key: string]: unknown;
       };
+      replacedBy: string | null;
       revision: number;
       sortOrder: number;
     }>;
@@ -4082,6 +4084,7 @@ export type TypesManageCreateDraftResponses = {
         };
         referenceKinds: Array<'item' | 'location'>;
         referenceTypeIds: Array<string>;
+        replacedBy: string | null;
         required: boolean;
         sortOrder: number;
         storage: 'stored' | 'computed';
@@ -4094,6 +4097,7 @@ export type TypesManageCreateDraftResponses = {
       presentation: {
         [key: string]: unknown;
       };
+      replacedBy: string | null;
       revision: number;
       sortOrder: number;
     }>;
@@ -4222,6 +4226,7 @@ export type TypesManageReadDraftResponses = {
         };
         referenceKinds: Array<'item' | 'location'>;
         referenceTypeIds: Array<string>;
+        replacedBy: string | null;
         required: boolean;
         sortOrder: number;
         storage: 'stored' | 'computed';
@@ -4234,6 +4239,7 @@ export type TypesManageReadDraftResponses = {
       presentation: {
         [key: string]: unknown;
       };
+      replacedBy: string | null;
       revision: number;
       sortOrder: number;
     }>;
@@ -4313,7 +4319,12 @@ export type TypesManagePatchDraftData = {
         }
       | {
           id: string;
-          kind: 'archive_type' | 'archive_field' | 'archive_enum_option';
+          kind: 'archive_type' | 'archive_field';
+          replacedBy?: string;
+        }
+      | {
+          id: string;
+          kind: 'archive_enum_option';
         }
       | {
           definition: 'type' | 'field' | 'enum_option';
@@ -4523,6 +4534,7 @@ export type TypesManagePatchDraftResponses = {
           };
           referenceKinds: Array<'item' | 'location'>;
           referenceTypeIds: Array<string>;
+          replacedBy: string | null;
           required: boolean;
           sortOrder: number;
           storage: 'stored' | 'computed';
@@ -4535,6 +4547,7 @@ export type TypesManagePatchDraftResponses = {
         presentation: {
           [key: string]: unknown;
         };
+        replacedBy: string | null;
         revision: number;
         sortOrder: number;
       }>;
@@ -4687,6 +4700,7 @@ export type TypesManageAbandonDraftResponses = {
         };
         referenceKinds: Array<'item' | 'location'>;
         referenceTypeIds: Array<string>;
+        replacedBy: string | null;
         required: boolean;
         sortOrder: number;
         storage: 'stored' | 'computed';
@@ -4699,6 +4713,7 @@ export type TypesManageAbandonDraftResponses = {
       presentation: {
         [key: string]: unknown;
       };
+      replacedBy: string | null;
       revision: number;
       sortOrder: number;
     }>;
@@ -5035,7 +5050,12 @@ export type TypesManagePreviewDraftData = {
         }
       | {
           id: string;
-          kind: 'archive_type' | 'archive_field' | 'archive_enum_option';
+          kind: 'archive_type' | 'archive_field';
+          replacedBy?: string;
+        }
+      | {
+          id: string;
+          kind: 'archive_enum_option';
         }
       | {
           definition: 'type' | 'field' | 'enum_option';
@@ -5420,6 +5440,7 @@ export type TypesManagePublishDraftResponses = {
         };
         referenceKinds: Array<'item' | 'location'>;
         referenceTypeIds: Array<string>;
+        replacedBy: string | null;
         required: boolean;
         sortOrder: number;
         storage: 'stored' | 'computed';
@@ -5432,6 +5453,7 @@ export type TypesManagePublishDraftResponses = {
       presentation: {
         [key: string]: unknown;
       };
+      replacedBy: string | null;
       revision: number;
       sortOrder: number;
     }>;
@@ -5760,6 +5782,7 @@ export type TypesReadTypeResponses = {
         };
         referenceKinds: Array<'item' | 'location'>;
         referenceTypeIds: Array<string>;
+        replacedBy: string | null;
         required: boolean;
         sortOrder: number;
         storage: 'stored' | 'computed';
@@ -5772,6 +5795,7 @@ export type TypesReadTypeResponses = {
       presentation: {
         [key: string]: unknown;
       };
+      replacedBy: string | null;
       revision: number;
       sortOrder: number;
     };

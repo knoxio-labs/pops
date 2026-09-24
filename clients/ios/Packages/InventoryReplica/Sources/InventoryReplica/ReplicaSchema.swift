@@ -132,6 +132,7 @@ internal enum ReplicaSchema {
         registerCatalogueUpdateHold(in: &migrator)
         registerNullableCatalogueRevision(in: &migrator)
         registerCatalogueHoldReason(in: &migrator)
+        registerCatalogueLineage(in: &migrator)
         return migrator
     }
 

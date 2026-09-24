@@ -11,8 +11,10 @@ import {
   currentAuthoritativeFieldValues,
   storedFieldValues,
 } from './active-catalogue-values.js';
+import { moveOntoReplacements } from './catalogue-replacement-move.js';
 import {
   assertCommandFieldValues,
+  resolveActiveCommandType,
   resolveCommandCatalogue,
   resolveCommandType,
 } from './command-catalogue.js';
@@ -88,9 +90,21 @@ function resolveActiveTypeChange(
     throw new CommandRejected('invalid', 'stable typeId and values are required');
   }
   const resolution = resolveCommandCatalogue(db, revision);
-  const type = resolveCommandType(resolution, args.typeId).active;
-  const values = storedFieldValues(args.values);
-  assertCommandFieldValues(db, resolution, { typeId: type.id, values, existingItemId: itemId });
+  const authored = storedFieldValues(args.values);
+  resolveCommandType(resolution, args.typeId);
+  const moved = moveOntoReplacements(resolution, {
+    typeId: args.typeId,
+    itemTypeId: null,
+    values: authored,
+  });
+  const type = resolveActiveCommandType(resolution, moved.typeId ?? args.typeId);
+  const values = moved.values;
+  assertCommandFieldValues(
+    db,
+    resolution,
+    { typeId: args.typeId, values: authored, existingItemId: itemId },
+    { typeId: type.id, values, existingItemId: itemId }
+  );
   return {
     type,
     fields: {

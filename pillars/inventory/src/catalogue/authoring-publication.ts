@@ -160,7 +160,7 @@ export function publishCatalogueDraftWith(
   const descriptor = db.transaction((tx) => {
     claimCurrentDraft(tx, revision, input.baseRevision, input.expectedDraftVersion);
     const { base, candidate, compatibility } = applyProtocolGate(tx, revision, input);
-    validateCatalogue(candidate);
+    validateCatalogue(candidate, base);
     const migration = requireMigration(compatibility, input, input.baseRevision, revision);
     return writePublication({
       db: tx,

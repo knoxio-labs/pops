@@ -36,6 +36,9 @@ public struct InventoryCatalogueField: Codable, Identifiable, Hashable, Sendable
     public let allowOverride: Bool
     public let presentation: InventoryJSON
     public let archivedAt: String?
+    /// The field that took over this archived field's values, when the
+    /// catalogue records one.
+    public let replacedBy: String?
     public let enumOptions: [InventoryCatalogueOption]
 
     public init(
@@ -45,7 +48,7 @@ public struct InventoryCatalogueField: Codable, Identifiable, Hashable, Sendable
         references: InventoryReferenceConstraint = .init(), expressionVersion: Int? = nil,
         expression: InventoryJSON? = nil, allowOverride: Bool = false,
         presentation: InventoryJSON = .object([:]), archivedAt: String? = nil,
-        enumOptions: [InventoryCatalogueOption] = []
+        replacedBy: String? = nil, enumOptions: [InventoryCatalogueOption] = []
     ) {
         self.id = id
         self.typeId = typeId
@@ -64,6 +67,7 @@ public struct InventoryCatalogueField: Codable, Identifiable, Hashable, Sendable
         self.allowOverride = allowOverride
         self.presentation = presentation
         self.archivedAt = archivedAt
+        self.replacedBy = replacedBy
         self.enumOptions = enumOptions
     }
 }
@@ -80,12 +84,15 @@ public struct InventoryCatalogueType: Codable, Identifiable, Hashable, Sendable 
     public let legacyLabels: [String]
     public let presentation: InventoryJSON
     public let archivedAt: String?
+    /// The type that took over this archived type's items, when the
+    /// catalogue records one.
+    public let replacedBy: String?
 
     public init(
         id: String, key: String, label: String, description: String? = nil, sortOrder: Int,
         fields: [InventoryCatalogueField] = [], capabilities: [String] = [],
         legacyLabels: [String] = [], presentation: InventoryJSON = .object([:]),
-        archivedAt: String? = nil
+        archivedAt: String? = nil, replacedBy: String? = nil
     ) {
         self.id = id
         self.key = key
@@ -97,6 +104,7 @@ public struct InventoryCatalogueType: Codable, Identifiable, Hashable, Sendable 
         self.legacyLabels = legacyLabels
         self.presentation = presentation
         self.archivedAt = archivedAt
+        self.replacedBy = replacedBy
     }
 }
 
