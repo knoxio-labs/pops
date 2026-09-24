@@ -38,9 +38,9 @@ internal struct ContentViewTabTintTests {
         }
     }
 
-    @Test("Inventory's search sibling is not the Inventory tab item")
-    func theSearchSiblingKeepsTheDefault() {
-        #expect(ContentView.tabTint(for: ContentView.inventorySearchTab) == nil)
+    @Test("the search tab is not the Inventory tab item")
+    func theSearchTabKeepsTheDefault() {
+        #expect(ContentView.tabTint(for: ContentView.searchTab) == nil)
     }
 
     @Test("the amber is never the tint while another tab is the one shown")
