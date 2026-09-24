@@ -1,4 +1,4 @@
-import { knownUnitFactor } from './measurement-units.js';
+import { knownUnitFactor } from '../contract/measurement-units.js';
 import { Protocol1ValueError } from './protocol-1-types.js';
 
 function expandExponentialDecimal(value: string): string {

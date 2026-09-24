@@ -44,7 +44,7 @@ function EmptyExpression() {
     <button
       type="button"
       onClick={() => select('expression')}
-      className="flex w-full flex-col items-center gap-2 rounded-md border border-dashed px-4 py-6 text-center"
+      className="flex min-h-11 min-w-11 w-full flex-col items-center gap-2 rounded-md border border-dashed px-4 py-6 text-center"
     >
       <Braces className="h-5 w-5 text-muted-foreground" />
       <span className="text-sm font-medium">No expression yet</span>
@@ -70,7 +70,7 @@ function RowButton({ row }: { row: OutlineRow }) {
         onClick={() => select(row.path)}
         style={{ paddingLeft: `${0.5 + row.depth * 1.25}rem` }}
         className={cn(
-          'flex min-h-9 w-full items-center gap-2 rounded-md pr-2 text-left text-sm',
+          'flex min-h-11 min-w-11 w-full items-center gap-2 rounded-md pr-2 text-left text-sm',
           selected ? 'bg-primary/10 text-primary' : 'hover:bg-muted',
           issue !== undefined && 'text-destructive'
         )}

@@ -4927,6 +4927,7 @@ export type TypesManagePreviewComputedFieldResponses = {
           missing: Array<{
             fieldId: string;
             itemId: string;
+            reason: string;
           }>;
           reason: string;
           state: 'unavailable';

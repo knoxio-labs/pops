@@ -174,6 +174,24 @@ describe('slot types', () => {
     );
     expect(fieldFitsSlot({ kind: 'integer', cardinality: 'many' }, undefined)).toBe(false);
   });
+
+  it('fits a measurement in any unit of the slot dimension, and an unknown unit only itself', () => {
+    const sum = { op: 'add', left: EMPTY, right: EMPTY } as const;
+    const types = slotTypes(context, sum, { kind: 'measurement', unit: 'cm' });
+    const addend = types.get('expression.left');
+    const measured = (unit: string) => ({ kind: 'measurement', unit, cardinality: 'one' }) as const;
+    expect(fieldFitsSlot(measured('mm'), addend)).toBe(true);
+    expect(fieldFitsSlot(measured('m'), addend)).toBe(true);
+    expect(fieldFitsSlot(measured('cm'), addend)).toBe(true);
+    expect(fieldFitsSlot(measured('kg'), addend)).toBe(false);
+    expect(fieldFitsSlot(measured('cm²'), addend)).toBe(false);
+    expect(fieldFitsSlot(measured('L'), { kind: 'measurement', unit: 'cm³' })).toBe(true);
+    expect(fieldFitsSlot(measured('pcs'), { kind: 'measurement', unit: 'pcs' })).toBe(true);
+    expect(fieldFitsSlot(measured('pcs'), { kind: 'measurement', unit: 'box' })).toBe(false);
+    expect(fieldFitsSlot({ kind: 'measurement', cardinality: 'one' }, addend)).toBe(false);
+    expect(fieldFitsSlot(measured('mm'), { kind: 'decimal' })).toBe(false);
+    expect(fieldFitsSlot({ kind: 'boolean', cardinality: 'one' }, { kind: 'boolean' })).toBe(true);
+  });
 });
 
 describe('palette rules', () => {

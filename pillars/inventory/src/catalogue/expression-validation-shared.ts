@@ -1,5 +1,5 @@
+import { describeDimension, sameDimension, unitDimension } from '../contract/measurement-units.js';
 import { ExpressionValidationError } from './expression-types.js';
-import { describeDimension, sameDimension, unitDimension } from './measurement-units.js';
 
 import type {
   PersistedCatalogue,

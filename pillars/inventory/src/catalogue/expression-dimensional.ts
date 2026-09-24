@@ -1,4 +1,12 @@
 import {
+  combineUnits,
+  formatUnitTerm,
+  termDimension,
+  termPowerOfTen,
+  unitConversionShift,
+  type UnitTerm,
+} from '../contract/measurement-units.js';
+import {
   addOrSubtract,
   divide,
   lessThan,
@@ -6,14 +14,6 @@ import {
   shiftDecimal,
   type ArithmeticResult,
 } from './expression-arithmetic.js';
-import {
-  combineUnits,
-  formatUnitTerm,
-  termDimension,
-  termPowerOfTen,
-  unitConversionShift,
-  type UnitTerm,
-} from './measurement-units.js';
 
 import type { MeasurementWireValue, PrimitiveWireValue } from './value-types.js';
 

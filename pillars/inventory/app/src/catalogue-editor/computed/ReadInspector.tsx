@@ -51,7 +51,7 @@ function ReferenceChoices({ fields }: { fields: readonly ExpressionField[] }) {
               type="button"
               disabled={blocked !== null}
               onClick={() => builder.change(followReference(context, root, slot, field))}
-              className="flex min-h-9 w-full items-center justify-between gap-2 rounded px-2 text-left text-sm hover:bg-muted disabled:opacity-60"
+              className="flex min-h-11 min-w-11 w-full items-center justify-between gap-2 rounded px-2 text-left text-sm hover:bg-muted disabled:opacity-60"
             >
               <span>{field.label}</span>
               <span className="text-xs text-muted-foreground">
@@ -88,7 +88,7 @@ function ReferencePath({ resolved }: { resolved: ResolvedRead }) {
               type="button"
               aria-label={`Stop following ${hop.field.label}`}
               onClick={() => builder.change(unfollowFrom(context, root, slot, index))}
-              className="ml-1 rounded p-0.5 hover:bg-muted"
+              className="relative ml-1 inline-flex h-5 w-5 items-center justify-center rounded hover:bg-muted before:absolute before:-inset-3 before:content-['']"
             >
               <X className="h-3 w-3" />
             </button>

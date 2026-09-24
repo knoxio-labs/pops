@@ -6904,6 +6904,7 @@ export interface operations {
                     /** Format: uuid */
                     fieldId: string;
                     itemId: string;
+                    reason: string;
                   }[];
                   reason: string;
                   /** @enum {string} */

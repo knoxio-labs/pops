@@ -162,6 +162,68 @@ internal struct Protocol2SearchTests {
         #expect(try Self.found(replica, "6.00").isEmpty)
     }
 
+    /// Marks the rack's index row so a rewrite of it is visible: re-indexing
+    /// replaces the marker with the rack's real note.
+    static func markRackIndexRow(_ replica: InventoryReplica) throws {
+        try replica.write { db in
+            try db.execute(
+                sql: """
+                    UPDATE item_fts SET note = 'untouchedmarker'
+                    WHERE rowid = (SELECT rowid FROM item WHERE id = ?)
+                    """,
+                arguments: [Setup.rack])
+        }
+    }
+
+    static func newerBox(_ volume: String) throws -> InventoryItem {
+        let box = try rows()[0]
+        return Setup.item(
+            Setup.box, revision: 2, values: box.fieldValues,
+            computed: [
+                Setup.ok(
+                    Setup.volume, try Setup.decimal(volume), itemRevision: 2,
+                    dependencies: [
+                        InventoryValueDependency(
+                            itemId: Setup.box, fieldId: Setup.width, revision: 2)
+                    ],
+                    traversed: [Setup.box])
+            ])
+    }
+
+    @Test("a page under the revision already in use re-indexes only its own rows (POPS-4436)")
+    func pageUnderStoredRevisionLeavesOtherRows() throws {
+        let replica = try Self.replica()
+        try Self.markRackIndexRow(replica)
+
+        try replica.apply(Setup.changes([try Self.newerBox("8.75")]), catalogue: Self.catalogue)
+
+        #expect(try Self.found(replica, "untouchedmarker") == [Setup.rack])
+        #expect(try Self.found(replica, "8.75") == [Setup.box])
+        #expect(try Self.found(replica, "crimson") == [Setup.box])
+    }
+
+    @Test("a page announcing a new revision re-indexes every item against it")
+    func pageUnderNewRevisionReindexesAll() throws {
+        let replica = try Self.replica()
+        try Self.markRackIndexRow(replica)
+        let next = Setup.revision + 1
+        let renamed = InventoryCatalogueSnapshot(
+            revision: InventoryCatalogueRevision(revision: next, minimumProtocol: 2),
+            types: Self.catalogue.types.map { type in
+                InventoryCatalogueType(
+                    id: type.id, key: type.key, label: "Crate", sortOrder: type.sortOrder,
+                    fields: type.fields)
+            })
+        let page = InventoryChangesPage(
+            epoch: Fixture.epoch, items: [try Self.newerBox("8.75")], locations: [], events: [],
+            nextSince: 20, hasMore: false, catalogueVersion: "cat-1", catalogueRevision: next)
+
+        try replica.apply(page, catalogue: renamed)
+
+        #expect(try Self.found(replica, "untouchedmarker").isEmpty)
+        #expect(try Self.found(replica, "crate") == [Setup.rack, Setup.box].sorted())
+    }
+
     @Test("what a local edit indexed is still found after a relaunch")
     func survivesRelaunch() throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(

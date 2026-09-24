@@ -1,3 +1,5 @@
+import { sameDimension, unitDimension } from '@pops/inventory';
+
 import { resolveRead } from './catalogue-lookup';
 import { isNumericKind } from './model';
 import { ROOT_PATH, nodeChildren } from './tree';
@@ -80,7 +82,18 @@ export function slotTypes(
   return types;
 }
 
-/** Whether a field fits a slot: one value, of the slot's kind and unit, or any number. */
+function sameUnitDimension(actual: string | undefined, expected: string | undefined): boolean {
+  if (actual === expected) return true;
+  if (actual === undefined || expected === undefined) return false;
+  return sameDimension(unitDimension(actual), unitDimension(expected));
+}
+
+/**
+ * Whether a field fits a slot: one value, of the slot's kind, or any number.
+ * A measurement fits a measurement slot in any unit of the same dimension
+ * (mm where cm is expected), since expression version 2 converts between
+ * them exactly; a unit with no known dimension fits only itself.
+ */
 export function fieldFitsSlot(
   field: { readonly kind: ValueType['kind']; readonly unit?: string; readonly cardinality: string },
   expected: SlotType | undefined
@@ -88,5 +101,6 @@ export function fieldFitsSlot(
   if (field.cardinality !== 'one') return false;
   if (expected === undefined) return true;
   if (expected.kind === 'number') return isNumericKind(field.kind);
-  return field.kind === expected.kind && field.unit === expected.unit;
+  if (field.kind !== expected.kind) return false;
+  return sameUnitDimension(field.unit, expected.unit);
 }

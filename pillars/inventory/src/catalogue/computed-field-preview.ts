@@ -90,9 +90,17 @@ function previewMissing(
   evaluation: Extract<ExpressionEvaluation, { readonly state: 'unavailable' }>
 ): ComputedFieldPreviewMissing[] {
   if (evaluation.missingInputs.length > 0)
-    return evaluation.missingInputs.map(({ fieldId, itemId }) => ({ fieldId, itemId }));
+    return evaluation.missingInputs.map(({ fieldId, itemId, reason }) => ({
+      fieldId,
+      itemId,
+      reason,
+    }));
   return [
-    { fieldId: evaluation.fieldId, itemId: evaluation.traversedItemIds.at(-1) ?? rootItemId },
+    {
+      fieldId: evaluation.fieldId,
+      itemId: evaluation.traversedItemIds.at(-1) ?? rootItemId,
+      reason: evaluation.reason,
+    },
   ];
 }
 

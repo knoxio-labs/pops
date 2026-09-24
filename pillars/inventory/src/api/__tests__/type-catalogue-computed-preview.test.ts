@@ -313,7 +313,13 @@ describe('computed-field preview', () => {
     expect(response.body.result).toMatchObject({
       state: 'unavailable',
       reason: 'missing_dependency',
-      missing: [{ fieldId: fixture.ids.weightFieldId, itemId: fixture.partId }],
+      missing: [
+        {
+          fieldId: fixture.ids.weightFieldId,
+          itemId: fixture.partId,
+          reason: 'missing_dependency',
+        },
+      ],
       traversedItemIds: [fixture.kitId, fixture.partId],
     });
     expect(response.body.items.map((item: { name: string }) => item.name)).toEqual([
@@ -340,10 +346,42 @@ describe('computed-field preview', () => {
       state: 'unavailable',
       reason: 'missing_dependency',
       missing: [
-        { fieldId: fixture.ids.weightFieldId, itemId: fixture.partId },
-        { fieldId: fixture.ids.countFieldId, itemId: fixture.kitId },
+        {
+          fieldId: fixture.ids.weightFieldId,
+          itemId: fixture.partId,
+          reason: 'missing_dependency',
+        },
+        { fieldId: fixture.ids.countFieldId, itemId: fixture.kitId, reason: 'missing_dependency' },
       ],
     });
+  });
+
+  it('gives each input a coalesce lacked its own reason', async () => {
+    const fixture = await setup({ weight: 3, count: null });
+    await apply(
+      wireMutation(
+        'item.delete',
+        fixture.partId,
+        {},
+        { baseRevision: 1, catalogueRevision: fixture.ids.revision }
+      )
+    );
+
+    const response = await preview(fixture, {
+      operations: totalExpression(fixture, {
+        op: 'coalesce',
+        values: [
+          { op: 'read', path: [fixture.ids.partFieldId], fieldId: fixture.ids.weightFieldId },
+          { op: 'read', path: [], fieldId: fixture.ids.countFieldId },
+        ],
+      }),
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.result.missing).toEqual([
+      expect.objectContaining({ fieldId: fixture.ids.weightFieldId, reason: 'reference_deleted' }),
+      { fieldId: fixture.ids.countFieldId, itemId: fixture.kitId, reason: 'missing_dependency' },
+    ]);
   });
 
   it('reports a reference to a deleted item', async () => {
