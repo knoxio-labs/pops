@@ -22,6 +22,7 @@ internal enum ContentViewFixture {
     internal static func view(
         available: [MobileFeature],
         bootstrap: BootstrapPhase = .answered(.fresh),
+        captureAvailable: Bool = false,
         purchasesCaptureObserver: (@MainActor (Bool) -> Void)? = nil
     ) -> ContentView {
         let bound = AppComposition(
@@ -33,7 +34,8 @@ internal enum ContentViewFixture {
         )
         return ContentView(
             surface: FeatureSurface(
-                available: available, unavailable: [], bootstrap: bootstrap),
+                available: available, unavailable: [], bootstrap: bootstrap,
+                captureAvailable: captureAvailable),
             shell: bound.shell,
             composition: bound,
             purchasesCaptureObserver: purchasesCaptureObserver
@@ -102,6 +104,22 @@ internal struct ContentViewFeatureSwitchingTests {
     func zeroFeaturesRendersRealContent() throws {
         let light = try #require(Self.render(contentView(available: []), in: .light))
         let dark = try #require(Self.render(contentView(available: []), in: .dark))
+
+        #expect(light != dark, "the explanation renders identically in both colour schemes")
+    }
+
+    /// `.receiptCapture` is not in `RootFeature.renderable` — POPS-4294
+    /// retired its tab — so a `FeatureSurface` naming it alone (as one would
+    /// arrive if something upstream still put it in `available`) reaches
+    /// `screen(for:)`'s `default:` case exactly like any feature id this
+    /// build has no screen for. Named alone, that is the same
+    /// "nothing this build can show" state as an empty `available`, not a
+    /// lone screen of its own.
+    @Test("receipt-capture alone renders the nothing-available explanation, not a screen")
+    func receiptCaptureAloneRendersNothingAvailable() throws {
+        let light = try #require(
+            Self.render(contentView(available: [.receiptCapture]), in: .light))
+        let dark = try #require(Self.render(contentView(available: [.receiptCapture]), in: .dark))
 
         #expect(light != dark, "the explanation renders identically in both colour schemes")
     }
@@ -199,22 +217,37 @@ internal struct ContentViewTabSwitcherTests {
         )
     }
 
-    /// POPS-4191: Inventory's search flow lives in the tab bar's search slot,
-    /// not inside the Inventory tab — so Inventory being the *only* available
-    /// feature must not fall into the single-feature, no-tab-bar path above:
-    /// there are two things to switch between even then.
-    @Test("Inventory alone still gets a tab bar, for its search sibling")
-    func inventoryAloneGetsATabBarForItsSearchSibling() throws {
+    /// POPS-4312: the app-wide search tab lives in the tab bar's search slot,
+    /// not inside a searchable pillar's own tab — so a searchable feature
+    /// being the *only* one available must not fall into the single-feature,
+    /// no-tab-bar path above: there are two things to switch between even
+    /// then. Purchases stands in for every searchable pillar here.
+    @Test("Purchases alone still gets a tab bar, for the search tab")
+    func purchasesAloneGetsATabBarForSearch() throws {
         let switcher = try #require(
-            try mountedTabBar(available: [FeatureInventory.feature]),
-            "Inventory is available alone but no tab bar was built for its search sibling"
+            try mountedTabBar(available: [FeaturePurchases.feature]),
+            "Purchases is available alone but no tab bar was built for the search tab"
         )
 
         #expect(
             switcher.tabBar.items?.count == 2,
             Comment(
-                rawValue: "expected Inventory's own tab plus its search sibling, found "
+                rawValue: "expected Purchases' own tab plus the search tab, found "
                     + "\(switcher.tabBar.items?.count ?? 0)"
+            )
+        )
+    }
+
+    /// Transactions searches nothing, so it is the negative case POPS-4312's
+    /// `hasSearch` must get right: alone, it stays on the single-feature,
+    /// no-tab-bar path, same as any other non-searchable feature.
+    @Test("Transactions alone gets no tab bar and no search tab")
+    func transactionsAloneGetsNoTabBar() throws {
+        #expect(
+            try mountedTabBar(available: [MobileFeature(rawValue: "transactions")]) == nil,
+            Comment(
+                rawValue: "a tab bar was built for Transactions alone — it searches nothing, so "
+                    + "it must not gain a search tab"
             )
         )
     }
@@ -334,7 +367,7 @@ internal struct ContentViewFeatureSwitchingWiringTests {
 
     @Test("Purchases threads capture availability through its own flow")
     func purchasesThreadsCaptureAvailability() {
-        #expect(Self.contentViewSource.contains("captureAvailable: surface.available.contains"))
+        #expect(Self.contentViewSource.contains("captureAvailable: surface.captureAvailable"))
     }
 
     @Test("the retired Receipts tab has no case of its own left to route through")
