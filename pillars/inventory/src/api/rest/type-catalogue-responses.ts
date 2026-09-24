@@ -11,6 +11,7 @@ export interface CatalogueCompatibilityBody {
   classification: CatalogueCompatibilityClassification;
   affectedIds: string[];
   affectedItems: number;
+  discardedOverrides: { fieldId: string; items: number }[];
   changes: CatalogueCompatibilityChange[];
 }
 
@@ -42,6 +43,7 @@ export function compatibilityBody(
     classification: result.classification,
     affectedIds: [...result.affectedIds],
     affectedItems: result.affectedItems,
+    discardedOverrides: result.discardedOverrides.map((entry) => ({ ...entry })),
     changes: result.changes.map((change) => ({ ...change })),
   };
 }

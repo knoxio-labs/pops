@@ -161,11 +161,21 @@ internal struct Protocol2PersistenceTests {
         defer { try? FileManager.default.removeItem(at: directory) }
         do {
             let replica = try onDisk(directory)
+            let amount = InventoryItemFieldEntry(
+                fieldId: Self.decimalFieldId, state: .value([.decimal(try InventoryDecimal("1"))]),
+                source: .stored, catalogueRevision: 7)
             try replica.apply(
-                Self.snapshot(items: [Self.item("cable", revision: 1)], revision: 7),
+                Self.snapshot(
+                    items: [Self.item("cable", revision: 1, values: [amount])], revision: 7),
                 catalogue: Self.catalogue(revision: 7, label: "Cable"))
             _ = try replica.perform(
-                .editItem(id: "cable", name: "Lead", note: .unchanged, fields: [:]),
+                .editProtocol2Item(
+                    id: "cable", catalogueRevision: 7,
+                    values: [
+                        InventoryProtocol2FieldPatch(
+                            fieldId: Self.decimalFieldId,
+                            values: [.decimal(try InventoryDecimal("2"))])
+                    ]),
                 mutationId: "mutation-1", clientTime: Fixture.created)
             #expect(try replica.outboundMutations().first?.catalogueRevision == 7)
         }

@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -64,15 +65,18 @@ function type(fields: CatalogueField[]): CatalogueType {
 function renderField(target: CatalogueField, siblings: CatalogueField[] = [], published = false) {
   const itemType = type([target, ...siblings]);
   const onOperation = vi.fn();
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
-    <FieldForm
-      field={target}
-      isPending={false}
-      onOperation={onOperation}
-      published={published}
-      type={itemType}
-      types={[itemType]}
-    />
+    <QueryClientProvider client={client}>
+      <FieldForm
+        field={target}
+        isPending={false}
+        onOperation={onOperation}
+        published={published}
+        type={itemType}
+        types={[itemType]}
+      />
+    </QueryClientProvider>
   );
   return onOperation;
 }
@@ -178,7 +182,7 @@ describe('FieldForm configuration branches', () => {
     expect(screen.getByLabelText('Equipment')).toBeInTheDocument();
   });
 
-  it('renders closed computed expressions with eligible operands', () => {
+  it('loads a stored computed expression into the builder outline', () => {
     const left = field({ id: '44444444-4444-4444-8444-444444444444', label: 'Width' });
     const right = field({ id: '55555555-5555-4555-8555-555555555555', label: 'Height' });
     renderField(
@@ -194,16 +198,16 @@ describe('FieldForm configuration branches', () => {
       [left, right]
     );
 
-    expect(screen.getByText('Operation')).toBeInTheDocument();
-    expect(screen.getByText('Left field')).toBeInTheDocument();
-    expect(screen.getByText('Right field')).toBeInTheDocument();
+    expect(screen.getByTestId('expression-readback')).toHaveTextContent('Width × Height');
+    expect(screen.getByRole('list', { name: 'Expression outline' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save field' })).toBeEnabled();
   });
 
   it('keeps ordinary stored primitives free of special controls', () => {
     renderField(field({ kind: 'long_text', cardinality: 'many' }));
 
     expect(screen.queryByText('Reference targets')).not.toBeInTheDocument();
-    expect(screen.queryByText('Operation')).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Computation' })).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Options' })).not.toBeInTheDocument();
   });
 
@@ -253,9 +257,10 @@ describe('FieldForm configuration branches', () => {
     expect(screen.getByText('Published shape is locked')).toBeInTheDocument();
   });
 
-  it('blocks a computed field with no eligible operands', () => {
+  it('blocks saving a computed field while its expression is empty', () => {
     renderField(field({ storage: 'computed' }));
 
+    expect(screen.getByText('No expression yet')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Save field' })).toBeDisabled();
   });
 });

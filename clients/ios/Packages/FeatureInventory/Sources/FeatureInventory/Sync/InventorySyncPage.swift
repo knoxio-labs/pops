@@ -47,17 +47,21 @@ internal enum InventorySyncHeaderStatus: Equatable {
     case online(lastRefreshAt: Date?)
     case offline(lastRefreshAt: Date?)
     case syncing(count: Int)
+    /// Sending is stuck on something no network retry fixes
+    /// (`InventorySendingStall`): louder than offline, since what is waiting
+    /// is not moving whatever the network does.
+    case stuck(waiting: Int)
 
     internal static func derive(page: InventorySyncPage) -> Self {
         let sendingCount = page.sending.count
+        if case .blocked = page.status { return .offline(lastRefreshAt: nil) }
+        if page.ledger.sendingStall != nil { return .stuck(waiting: page.ledger.waiting.count) }
         switch page.status {
         case .offline(let since), .stale(let since):
             return .offline(lastRefreshAt: since)
-        case .blocked:
-            return .offline(lastRefreshAt: nil)
         case .refreshing where sendingCount > 0:
             return .syncing(count: sendingCount)
-        case .empty, .downloading, .current, .refreshing:
+        case .empty, .downloading, .current, .refreshing, .blocked:
             break
         }
         if sendingCount > 0 { return .syncing(count: sendingCount) }

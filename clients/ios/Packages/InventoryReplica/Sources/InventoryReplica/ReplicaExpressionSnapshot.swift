@@ -101,7 +101,7 @@ internal final class ReplicaExpressionContext {
             guard let known = InventoryValueUnavailableReason(rawValue: reason) else { return nil }
             let unavailable = InventoryExpressionUnavailable(
                 reason: known, failedFieldId: failedFieldId,
-                traversedItemIds: value.traversedItemIds)
+                traversedItemIds: value.traversedItemIds, missingInputs: value.missingInputs)
             return .unavailable(unavailable, revision: revision, dependencies: value.dependencies)
         }
     }

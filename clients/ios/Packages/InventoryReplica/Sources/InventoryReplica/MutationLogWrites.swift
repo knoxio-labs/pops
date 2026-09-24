@@ -178,13 +178,18 @@ internal enum MutationLogWrites {
         return latest.sorted()
     }
 
+    /// What the change is logged and sent with
+    /// (`InventoryCommand.sentCatalogueRevision(active:)`): nothing for an
+    /// Undo, which carries no command of its own until it is sent.
     private static func catalogueRevision(
         for command: LoggedCommand, in db: Database
-    ) throws -> Int {
-        guard case .command(let inventoryCommand) = command,
-            let revision = inventoryCommand.protocol2CatalogueRevision
-        else { return try SyncMeta.read(db).catalogueRevision ?? 1 }
-        guard try SyncMeta.read(db).catalogueRevision == revision else {
+    ) throws -> Int? {
+        guard case .command(let inventoryCommand) = command else { return nil }
+        let active = try SyncMeta.read(db).catalogueRevision
+        guard let revision = inventoryCommand.protocol2CatalogueRevision else {
+            return inventoryCommand.sentCatalogueRevision(active: active)
+        }
+        guard active == revision else {
             throw InventoryCommandError.rejected(
                 reason: .invalid,
                 message: "catalogue revision \(revision) is not active in this replica")

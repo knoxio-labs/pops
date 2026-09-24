@@ -86,14 +86,6 @@ function seedComputedOverrides(db: InventoryDb): void {
       baseRevision: 1,
       expectedDraftVersion: draft.revision.draftVersion,
       note: null,
-      migration: {
-        name: 'add-computed-vector',
-        fromRevision: 1,
-        toRevision: draft.revision.revision,
-        affectedTypeIds: ['59538480-6e82-5ccc-b7be-f1cfd15b9af6'],
-        affectedFieldIds: ['40000000-0000-4000-8000-000000000001'],
-        steps: [],
-      },
     },
     VECTOR_AUTHOR
   );

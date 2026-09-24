@@ -1,10 +1,10 @@
 import { AlertCircle, ArrowRight, Parentheses, Replace, Trash2 } from 'lucide-react';
 
+import { valueTypeLabel } from '@pops/app-inventory/design';
 import { Alert, AlertDescription, AlertTitle, Badge, Button, cn } from '@pops/ui';
 
-import { valueTypeLabel } from './model';
+import type { SlotType } from '@pops/app-inventory/design';
 
-import type { ValueType } from './model';
 import type { ExpressionIssue, InspectorPanel } from './scenario';
 
 /** Identity of the selected node, the slot it fills, its type and its node actions. */
@@ -19,7 +19,7 @@ export function NodeHeader({
   symbol: string;
   title: string;
   slot: string;
-  expected: ValueType | undefined;
+  expected: SlotType | undefined;
   isRoot: boolean;
   onPanel: (panel: InspectorPanel) => void;
 }) {
@@ -93,7 +93,7 @@ export function SlotRow({
 }: {
   slot: string;
   title: string;
-  expected: ValueType | undefined;
+  expected: SlotType | undefined;
   empty: boolean;
   children?: React.ReactNode;
 }) {

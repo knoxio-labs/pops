@@ -80,7 +80,7 @@ export function inferReadType(
   const first = fields[0] ?? expressionFail(path, 'expression_type_unknown', 'has no target type');
   const result = expressionValueType(first);
   for (const field of fields.slice(1))
-    requireExpressionType(expressionValueType(field), result, path);
+    requireExpressionType(expressionValueType(field), result, path, context.dimensional);
   if (fields.some((field) => field.cardinality !== 'one'))
     expressionFail(path, 'expression_many_read', 'may only read one-cardinality fields');
   return result;

@@ -59,10 +59,37 @@ function immutableShapeChanged(
   );
 }
 
-/** Collects compatibility changes for fields that exist in both snapshots. */
+function compareComputedDefinition(
+  base: PersistedItemTypeField,
+  candidate: PersistedItemTypeField,
+  fieldsHoldingOverrides: ReadonlySet<string>
+): CatalogueCompatibilityChange[] {
+  const changes: CatalogueCompatibilityChange[] = [];
+  if (base.expressionJson !== candidate.expressionJson) {
+    changes.push(change('compatible', base.id, 'computed_expression_changed'));
+  }
+  if (!base.allowOverride && candidate.allowOverride) {
+    changes.push(change('compatible', base.id, 'computed_overrides_enabled'));
+  } else if (base.allowOverride && !candidate.allowOverride) {
+    changes.push(
+      fieldsHoldingOverrides.has(base.id)
+        ? change('migration_required', base.id, 'computed_overrides_in_use')
+        : change('compatible', base.id, 'computed_overrides_disabled')
+    );
+  }
+  return changes;
+}
+
+/**
+ * Collects compatibility changes for fields that exist in both snapshots.
+ * Computed results are derived, so expression and override-policy edits are
+ * compatible; only disabling overrides that live items hold (named in
+ * `fieldsHoldingOverrides`) needs a migration that discards them.
+ */
 export function comparePersistedFields(
   base: PersistedItemTypeField,
-  candidate: PersistedItemTypeField
+  candidate: PersistedItemTypeField,
+  fieldsHoldingOverrides: ReadonlySet<string>
 ): CatalogueCompatibilityChange[] {
   const changes: CatalogueCompatibilityChange[] = [];
   if (base.key.toLowerCase() !== candidate.key.toLowerCase()) {
@@ -74,12 +101,7 @@ export function comparePersistedFields(
   if (!base.required && candidate.required) {
     changes.push(change('migration_required', base.id, 'field_became_required'));
   }
-  if (
-    base.expressionJson !== candidate.expressionJson ||
-    base.allowOverride !== candidate.allowOverride
-  ) {
-    changes.push(change('migration_required', base.id, 'computed_definition_changed'));
-  }
+  changes.push(...compareComputedDefinition(base, candidate, fieldsHoldingOverrides));
   if (base.archivedAt === null && candidate.archivedAt !== null) {
     changes.push(change('compatible', base.id, 'field_archived'));
   }
@@ -105,12 +127,16 @@ export function compareAddedFields(
   const changes: CatalogueCompatibilityChange[] = [];
   const baseIds = new Set(base.fields.map((field) => field.id));
   for (const field of candidate.fields.filter((entry) => !baseIds.has(entry.id))) {
-    if (field.required || field.storage === 'computed') {
+    if (field.storage === 'stored' && field.required) {
       changes.push(change('migration_required', field.id, 'non_optional_field_added'));
     } else {
       changes.push(
         primitiveKindAdded(field, baseKinds) ??
-          change('compatible', field.id, 'optional_field_added')
+          change(
+            'compatible',
+            field.id,
+            field.storage === 'computed' ? 'computed_field_added' : 'optional_field_added'
+          )
       );
     }
   }

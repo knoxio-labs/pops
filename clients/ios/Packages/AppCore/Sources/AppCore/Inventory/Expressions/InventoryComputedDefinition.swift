@@ -20,16 +20,19 @@ public struct InventoryComputedDefinition: Hashable, Sendable {
     public let fixedUnit: String?
     public let allowOverride: Bool
     public let expression: InventoryExpression
+    /// The stored expression version, which decides how measurements combine.
+    public let expressionVersion: Int
 
     public init(
         fieldId: String, kind: InventoryPrimitiveKind, fixedUnit: String?, allowOverride: Bool,
-        expression: InventoryExpression
+        expression: InventoryExpression, expressionVersion: Int
     ) {
         self.fieldId = fieldId
         self.kind = kind
         self.fixedUnit = fixedUnit
         self.allowOverride = allowOverride
         self.expression = expression
+        self.expressionVersion = expressionVersion
     }
 
     /// Parses a catalogue field's expression. Throws when the field is not
@@ -44,7 +47,8 @@ public struct InventoryComputedDefinition: Hashable, Sendable {
         self.init(
             fieldId: field.id, kind: field.kind, fixedUnit: field.fixedUnit,
             allowOverride: field.allowOverride,
-            expression: try InventoryExpression.parse(version: version, json: json))
+            expression: try InventoryExpression.parse(version: version, json: json),
+            expressionVersion: version)
     }
 
     /// `evaluateComputedValue` plus the sync projection: an override wins
@@ -69,7 +73,8 @@ public struct InventoryComputedDefinition: Hashable, Sendable {
         }
         let root = snapshot.rootItemId
         switch InventoryExpressionEvaluator.evaluate(
-            expression, kind: kind, fixedUnit: fixedUnit, in: snapshot)
+            expression, expressionVersion: expressionVersion, kind: kind, fixedUnit: fixedUnit,
+            in: snapshot)
         {
         case .value(let result, let dependencies):
             var traversed: [String] = []
@@ -85,7 +90,7 @@ public struct InventoryComputedDefinition: Hashable, Sendable {
                     reason: unavailable.reason.rawValue, failedFieldId: unavailable.failedFieldId),
                 catalogueRevision: catalogueRevision, itemRevision: itemRevision,
                 dependencies: dependencies,
-                traversed: unavailable.traversedItemIds)
+                traversed: unavailable.traversedItemIds, missingInputs: unavailable.missingInputs)
         case .error(_, let dependencies):
             return value(
                 .unavailable(
@@ -99,11 +104,12 @@ public struct InventoryComputedDefinition: Hashable, Sendable {
 
     private func value(
         _ evaluation: InventoryComputedEvaluation, catalogueRevision: Int, itemRevision: Int,
-        dependencies: [InventoryValueDependency], traversed: [String]
+        dependencies: [InventoryValueDependency], traversed: [String],
+        missingInputs: [InventoryExpressionMissingInput] = []
     ) -> InventoryComputedValue {
         InventoryComputedValue(
             fieldId: fieldId, catalogueRevision: catalogueRevision, evaluation: evaluation,
             dependencies: dependencies, traversedItemIds: traversed,
-            evaluatedItemRevision: itemRevision)
+            evaluatedItemRevision: itemRevision, missingInputs: missingInputs)
     }
 }

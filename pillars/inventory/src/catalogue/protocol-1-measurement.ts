@@ -1,23 +1,5 @@
+import { knownUnitFactor } from '../contract/measurement-units.js';
 import { Protocol1ValueError } from './protocol-1-types.js';
-
-interface UnitFactor {
-  readonly dimension: string;
-  readonly numerator: bigint;
-  readonly denominator: bigint;
-}
-
-const UNIT_FACTORS: Readonly<Record<string, UnitFactor>> = {
-  mm: { dimension: 'length', numerator: 1n, denominator: 1000n },
-  cm: { dimension: 'length', numerator: 1n, denominator: 100n },
-  m: { dimension: 'length', numerator: 1n, denominator: 1n },
-  kg: { dimension: 'mass', numerator: 1n, denominator: 1n },
-  L: { dimension: 'volume', numerator: 1n, denominator: 1n },
-  W: { dimension: 'power', numerator: 1n, denominator: 1n },
-  V: { dimension: 'voltage', numerator: 1n, denominator: 1n },
-  Gbps: { dimension: 'data-rate', numerator: 1n, denominator: 1n },
-  lm: { dimension: 'brightness', numerator: 1n, denominator: 1n },
-  K: { dimension: 'colour-temperature', numerator: 1n, denominator: 1n },
-};
 
 function expandExponentialDecimal(value: string): string {
   const match = /^(-?)(\d+)(?:\.(\d+))?[eE]([+-]?\d+)$/u.exec(value);
@@ -70,14 +52,13 @@ export function convertProtocol1MeasurementAmount(
   sourceSymbol: string,
   targetSymbol: string
 ): string {
-  const source = UNIT_FACTORS[sourceSymbol];
-  const target = UNIT_FACTORS[targetSymbol];
-  if (!source || !target || source.dimension !== target.dimension) {
+  const factor = knownUnitFactor(sourceSymbol, targetSymbol);
+  if (factor === null) {
     throw new Protocol1ValueError(fieldKey, `unit ${sourceSymbol} is incompatible`);
   }
   const decimal = decimalParts(protocol1NumberToDecimal(fieldKey, value));
-  let numerator = decimal.digits * source.numerator * target.denominator;
-  let denominator = source.denominator * target.numerator;
+  let numerator = decimal.digits * factor.numerator;
+  let denominator = factor.denominator;
   let scale = decimal.scale;
   while (denominator % 10n === 0n) {
     denominator /= 10n;

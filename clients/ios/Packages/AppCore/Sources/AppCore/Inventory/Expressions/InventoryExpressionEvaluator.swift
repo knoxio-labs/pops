@@ -7,16 +7,27 @@ public struct InventoryExpressionEvaluator {
     typealias Raw = InventoryExpressionEvaluation<InventoryExpressionValue>
 
     let snapshot: any InventoryExpressionSnapshot
+    /// Expression version 2 and later convert and derive measurement units.
+    let dimensional: Bool
 
-    /// Evaluates `expression`, whose declared result is `kind` (and `fixedUnit`
-    /// for a measurement). A result that is not canonical for that kind is
-    /// the `invalid_value` error, as on the server.
+    /// Evaluates `expression`, stored as `expressionVersion`, whose declared
+    /// result is `kind` (and `fixedUnit` for a measurement). A version-2
+    /// measurement is first converted into `fixedUnit`; a result that is not
+    /// canonical for the kind is the `invalid_value` error, as on the server.
     public static func evaluate(
-        _ expression: InventoryExpression, kind: InventoryPrimitiveKind, fixedUnit: String?,
-        in snapshot: any InventoryExpressionSnapshot
+        _ expression: InventoryExpression, expressionVersion: Int, kind: InventoryPrimitiveKind,
+        fixedUnit: String?, in snapshot: any InventoryExpressionSnapshot
     ) -> InventoryExpressionEvaluation<InventoryPrimitiveValue> {
-        switch Self(snapshot: snapshot).node(expression) {
-        case .value(let value, let dependencies):
+        let dimensional = expressionVersion >= 2
+        switch Self(snapshot: snapshot, dimensional: dimensional).node(expression) {
+        case .value(let raw, let dependencies):
+            var value = raw
+            if dimensional {
+                switch InventoryExpressionArithmetic.converted(raw, toFixedUnit: fixedUnit) {
+                case .success(let converted): value = converted
+                case .failure(let code): return .error(code, dependencies: dependencies)
+                }
+            }
             guard let canonical = value.canonical(kind: kind, fixedUnit: fixedUnit) else {
                 return .error(.invalidValue, dependencies: dependencies)
             }
@@ -68,7 +79,36 @@ public struct InventoryExpressionEvaluator {
             return right.merging(leftDependencies)
         }
         let dependencies = InventoryValueDependency.unique(leftDependencies + rightDependencies)
+        if dimensional, let raw = Self.dimensional(op, leftValue, rightValue, dependencies) {
+            return raw
+        }
         return Self.combine(op, leftValue, rightValue, dependencies)
+    }
+
+    /// The version-2 result of an arithmetic or comparison op; nil for the
+    /// ops version 2 leaves as version 1 defines them.
+    private static func dimensional(
+        _ op: InventoryExpressionOp, _ left: InventoryExpressionValue,
+        _ right: InventoryExpressionValue,
+        _ dependencies: [InventoryValueDependency]
+    ) -> Raw? {
+        typealias Arithmetic = InventoryExpressionArithmetic
+        switch op {
+        case .add, .subtract:
+            return lift(
+                Arithmetic.dimensionalAdd(left, right, subtracting: op == .subtract), dependencies)
+        case .multiply, .divide:
+            return lift(
+                Arithmetic.dimensionalMultiply(left, right, dividing: op == .divide), dependencies)
+        case .lessThan: return lift(Arithmetic.dimensionalLessThan(left, right), dependencies)
+        case .equal:
+            guard case .measurement(let lhs, let unit) = left,
+                case .measurement(let rhs, let other) = right
+            else { return nil }
+            return lift(
+                Arithmetic.dimensionalMeasurementEqual(lhs, unit, rhs, other), dependencies)
+        default: return nil
+        }
     }
 
     private static func combine(

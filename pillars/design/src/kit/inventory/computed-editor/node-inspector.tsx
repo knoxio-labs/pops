@@ -1,18 +1,30 @@
+import {
+  ROOT_PATH,
+  comparedChoiceField,
+  nodeAt,
+  operationInfo,
+  outlineRows,
+  parentPath,
+} from '@pops/app-inventory/design';
+
 import { nodeTitle } from './expression-outline';
-import { comparedChoiceField } from './formula';
 import { CoalesceInputs, InputList, OperationSwitch } from './inspector-branches';
 import { LiteralInspector } from './inspector-literal';
 import { IssueAlert, NodeHeader } from './inspector-parts';
 import { ReadInspector } from './inspector-read';
 import { OperationPalette } from './operation-palette';
-import { operationInfo } from './operations';
-import { ROOT_PATH, nodeAt, outlineRows, parentPath } from './tree';
 
-import type { DesignField, ExpressionContext, ExpressionNode, ValueType } from './model';
+import type {
+  ExpressionContext,
+  ExpressionField,
+  ExpressionNode,
+  OutlineRow,
+  SlotType,
+} from '@pops/app-inventory/design';
+
 import type { ExpressionIssue, InspectorPanel } from './scenario';
-import type { OutlineRow } from './tree';
 
-type Types = ReadonlyMap<string, ValueType | undefined>;
+type Types = ReadonlyMap<string, SlotType | undefined>;
 
 interface InspectorProps {
   context: ExpressionContext;
@@ -36,7 +48,7 @@ function choiceFieldFor(
   context: ExpressionContext,
   rows: readonly OutlineRow[],
   path: string
-): DesignField | undefined {
+): ExpressionField | undefined {
   return comparedChoiceField(context, rows.find((row) => row.path === parentPath(path))?.node);
 }
 

@@ -34,7 +34,7 @@ internal enum MutationLogReplay {
                 try MutationLogRows.update(entry, in: db)
             }
         }
-        let catalogue = try SyncMeta.read(db).searchCatalogue(in: db)
+        let catalogue = try SearchCatalogue.read(in: db)
         for ref in stale { try resetView(ref, catalogue: catalogue, in: db) }
         var written: Set<EntityRef> = []
         for var entry in entries {
@@ -91,7 +91,7 @@ internal enum MutationLogReplay {
     }
 
     static func resetView(
-        _ ref: EntityRef, catalogue: InventoryCatalogue?, in db: Database
+        _ ref: EntityRef, catalogue: SearchCatalogue, in db: Database
     ) throws {
         let (layer, columns) = layer(of: ref)
         guard try exists(ref, in: "\(layer)_base", db) else {

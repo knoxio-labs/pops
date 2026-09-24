@@ -76,10 +76,12 @@ export function expressionCatalogue(types: readonly PersistedItemType[]): Persis
 /** Creates a validated wrapper when a test exercises evaluation independently of validation. */
 export function validatedExpression(
   ast: ExpressionV1,
-  resultType: ExpressionValueType = { kind: 'decimal', fixedUnit: null }
+  resultType: ExpressionValueType = { kind: 'decimal', fixedUnit: null },
+  version = 1
 ): ValidatedExpression {
   return {
     ast,
+    version,
     dependencies: [],
     field: { typeId: 'type', fieldId: 'computed' },
     resultType,

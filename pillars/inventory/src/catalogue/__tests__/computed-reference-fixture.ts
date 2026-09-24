@@ -1,4 +1,5 @@
 import { createCatalogueDraft, patchCatalogueDraft, publishCatalogueDraft } from '../authoring.js';
+import { activatePersistedCatalogueProtocol } from './protocol-rollout-fixture.js';
 
 import type { ExpressionV1Shape } from '../../contract/rest-catalogue-expression-schema.js';
 import type { CommandDb } from '../../domain/commands/entities.js';
@@ -131,8 +132,9 @@ function bundleFields(
   ];
 }
 
-/** Publishes {@link ReferenceComputedCatalogue} as the next catalogue revision. */
+/** Activates protocol 2, then publishes {@link ReferenceComputedCatalogue} as the next catalogue revision. */
 export function publishReferenceComputedTypes(db: CommandDb): ReferenceComputedCatalogue {
+  activatePersistedCatalogueProtocol(db);
   const created = createCatalogueDraft(db, 1, AUTHOR);
   const revision = created.revision.revision;
   const withTypes = patchCatalogueDraft(db, target(created), [

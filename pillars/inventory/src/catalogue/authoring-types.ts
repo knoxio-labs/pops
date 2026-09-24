@@ -3,7 +3,7 @@ import type { z } from 'zod';
 import type { CatalogueMigrationStepSchema } from '../contract/rest-catalogue-migration-schemas.js';
 import type { CatalogueDraftOperationSchema } from '../contract/rest-catalogue-schemas.js';
 import type { PersistedItemTypeField } from './catalogue-types.js';
-import type { CatalogueCompatibilityResult } from './compatibility-types.js';
+import type { CatalogueCompatibilityAssessment } from './compatibility-preview.js';
 
 export type DraftOperation = z.infer<typeof CatalogueDraftOperationSchema>;
 export type MigrationStepInput = z.infer<typeof CatalogueMigrationStepSchema>;
@@ -42,7 +42,7 @@ export interface CatalogueIssue {
 export interface CataloguePreviewDiagnostics {
   readonly baseRevision: number;
   readonly draftRevision: number;
-  readonly compatibility: CatalogueCompatibilityResult & { readonly affectedItems: number };
+  readonly compatibility: CatalogueCompatibilityAssessment;
 }
 
 /** An HTTP-shaped catalogue authoring failure. */

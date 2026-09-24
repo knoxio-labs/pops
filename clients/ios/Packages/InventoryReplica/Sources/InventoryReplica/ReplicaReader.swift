@@ -115,7 +115,8 @@ internal final class ReplicaReader: InventoryQuerySource {
             InventoryReplicaSyncLedger(
                 waiting: try MutationLogLedger.waiting(in: db),
                 repairs: try RepairRows.openRepairs(in: db).compactMap(\.repair),
-                resolved: try RepairRows.resolvedEntries(in: db))
+                resolved: try RepairRows.resolvedEntries(in: db),
+                sendingStall: activity.sendingStall)
         }
     }
 
