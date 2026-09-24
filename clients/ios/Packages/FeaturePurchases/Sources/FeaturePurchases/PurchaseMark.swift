@@ -3,12 +3,22 @@ import DesignSystem
 import SwiftUI
 
 internal struct PurchaseMark: View {
-    internal let purchase: Purchase
+    internal let merchant: MerchantIdentity
     internal var size: CGFloat = 38
+
+    internal init(purchase: Purchase, size: CGFloat = 38) {
+        self.merchant = purchase.merchant
+        self.size = size
+    }
+
+    internal init(merchant: MerchantIdentity, size: CGFloat = 38) {
+        self.merchant = merchant
+        self.size = size
+    }
 
     internal var body: some View {
         Group {
-            if PurchasesPresentation.isUnattributed(purchase) {
+            if merchant == .unattributed {
                 Image(systemName: "questionmark")
                     .font(.popsSubheadline.weight(.semibold))
                     .foregroundStyle(Color.popsMutedForeground)
@@ -28,15 +38,19 @@ internal struct PurchaseMark: View {
                     .foregroundStyle(Color.popsBackground)
                     .frame(width: size, height: size)
                     .background(
-                        Self.tint(for: PurchasesPresentation.merchant(purchase)),
+                        Self.tint(for: displayName),
                         in: .rect(cornerRadius: PopsRadius.control))
             }
         }
         .accessibilityHidden(true)
     }
 
+    private var displayName: String {
+        merchant.displayName ?? "Merchant not recognised"
+    }
+
     private var initials: String {
-        PurchasesPresentation.merchant(purchase)
+        displayName
             .split(separator: " ")
             .filter { $0.first?.isLetter == true }
             .prefix(2)
