@@ -205,6 +205,7 @@ describe('guard-job discovery', () => {
     expect(all).toContain('scripts/ci/check-node-pin.mjs');
     expect(all).toContain('scripts/ci/smoke-image.mjs');
     expect(all).toContain('scripts/check-pillar-ui-reachability.mjs');
+    expect(all).toContain('scripts/check-pillar-locales.mjs');
   });
 });
 
