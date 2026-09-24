@@ -20,4 +20,40 @@ internal enum InventoryAccessibility {
     internal static func protocol2Field(id: String) -> String {
         "inventory-field-\(id)"
     }
+
+    /// A many-valued field's Nth entry, addressed by its position in the
+    /// list rather than the entry's own (ephemeral, UI-only) id: a driver
+    /// script knows the field id from the catalogue it seeded, but never the
+    /// entry id the form invents when "Add" is tapped. Sharing
+    /// ``protocol2Field(id:)``'s own string would collide every entry of a
+    /// many-valued field onto the one identifier that scalar field already
+    /// owns, so this is a distinct namespace, suffixed rather than nested.
+    internal static func protocol2FieldEntry(id: String, index: Int) -> String {
+        "inventory-field-\(id)-\(index)"
+    }
+
+    /// The button that appends one more entry to a many-valued field.
+    internal static func protocol2FieldAdd(id: String) -> String {
+        "inventory-field-\(id)-add"
+    }
+
+    /// Moves the entry at `index` one place earlier. A plain button, not a
+    /// menu item: `Menu`-hosted actions are the flaky control class
+    /// automation already avoids for the Type picker (POPS-4556), and a
+    /// many-valued field's reorder controls are exactly that same class if
+    /// left inside one.
+    internal static func protocol2FieldMoveEarlier(id: String, index: Int) -> String {
+        "inventory-field-\(id)-\(index)-move-earlier"
+    }
+
+    /// Moves the entry at `index` one place later, the same reasoning as
+    /// ``protocol2FieldMoveEarlier(id:index:)``.
+    internal static func protocol2FieldMoveLater(id: String, index: Int) -> String {
+        "inventory-field-\(id)-\(index)-move-later"
+    }
+
+    /// Removes the entry at `index`.
+    internal static func protocol2FieldRemove(id: String, index: Int) -> String {
+        "inventory-field-\(id)-\(index)-remove"
+    }
 }
