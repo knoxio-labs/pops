@@ -56,9 +56,10 @@ internal struct InventoryProtocol2ValueEditor: View {
     private var longTextEditor: some View {
         LabeledContent(label) {
             TextField(
-                field.help ?? InventoryFormBlank.placeholder, text: textBinding, axis: .vertical)
-                .lineLimit(1...8)
-                .multilineTextAlignment(.trailing)
+                field.help ?? InventoryFormBlank.placeholder, text: textBinding, axis: .vertical
+            )
+            .lineLimit(1...8)
+            .multilineTextAlignment(.trailing)
         }
     }
 
