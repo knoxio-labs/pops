@@ -293,6 +293,7 @@ extension InventoryItemFormModel {
                 protocol2Draft = .init(
                     type: type, catalogueRevision: catalogue.revision.revision, item: item)
             }
+            clampContainerQuantity()
             phase = .ready
         case .repair:
             phase = seedRepair(context)

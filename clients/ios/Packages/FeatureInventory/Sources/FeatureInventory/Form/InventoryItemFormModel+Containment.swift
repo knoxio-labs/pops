@@ -18,4 +18,11 @@ extension InventoryItemFormModel {
             draft.quantity = 1
         }
     }
+
+    /// An item stored as a grouped container before D3 was enforced opens
+    /// with its quantity pulled to 1, so saving corrects it rather than
+    /// showing a locked "1" while quietly keeping the stale count.
+    internal func clampContainerQuantity() {
+        if selectedTypeIsContainer { draft.quantity = 1 }
+    }
 }

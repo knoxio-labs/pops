@@ -14,9 +14,9 @@ extension LocalReducer {
         }
         let type = try resolveType(new.typeKey)
         try assertFieldsFit(new.fields, type: type)
-        try assertContainerQuantity(isContainer: type?.isContainer == true, quantity: new.quantity)
         let externalIds = try storedExternalIds(new.externalIds)
         try assertPlacementAllowed(itemId: new.id, to: new.placement)
+        try assertContainerQuantity(isContainer: type?.isContainer == true, quantity: new.quantity)
         noteReference(new.placement)
         let row = WorkingItem(
             id: new.id, revision: 1, seq: 0, catalogueRevision: nil, name: name, typeId: nil,

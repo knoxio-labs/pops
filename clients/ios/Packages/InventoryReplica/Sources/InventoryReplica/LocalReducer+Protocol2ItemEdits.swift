@@ -12,8 +12,8 @@ extension LocalReducer {
         let values = try protocol2Entries(
             new.values, type: type, revision: new.catalogueRevision)
         let isContainer = type.capabilities.contains("containment")
-        try assertContainerQuantity(isContainer: isContainer, quantity: new.quantity)
         try assertPlacementAllowed(itemId: new.id, to: new.placement)
+        try assertContainerQuantity(isContainer: isContainer, quantity: new.quantity)
         noteReference(new.placement)
         let row = WorkingItem(
             id: new.id, revision: 1, seq: 0, catalogueRevision: new.catalogueRevision,

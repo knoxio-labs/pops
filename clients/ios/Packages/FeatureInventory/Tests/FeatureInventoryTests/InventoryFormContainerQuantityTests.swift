@@ -57,4 +57,23 @@ internal struct InventoryFormContainerQuantityTests {
 
         #expect(form.draft.quantity == 5)
     }
+
+    /// A container stored grouped before D3 was enforced: the locked control
+    /// shows 1, so saving has to send 1 rather than keep the stale count.
+    @Test("editing a container stored with quantity 2 saves it back to 1")
+    func editingGroupedContainerCorrectsQuantity() async {
+        let stored = InventoryItem(
+            id: "bin-1", revision: 1, seq: 1, name: "Bin", typeKey: "storage_box",
+            quantity: InventoryQuantity(count: 2), placement: .hand,
+            createdAt: FormFixture.epoch, updatedAt: FormFixture.epoch)
+        let store = RecordingFormStore(
+            FormFixtureSource(items: [stored], catalogue: FormFixture.catalogue))
+        let form = model(store, request: .edit("bin-1"))
+        let loading = await form.startAndAwaitReady()
+        defer { loading.cancel() }
+
+        #expect(form.draft.quantity == 1)
+        #expect(await form.submit())
+        #expect(store.performed == [.setItemQuantity(id: "bin-1", quantity: 1)])
+    }
 }

@@ -46,6 +46,28 @@ internal struct ContainerQuantityConflictTests {
         #expect(try replica.read(.item(id: newId)) == nil)
     }
 
+    /// `item-create.ts` checks placement before quantity, so a create that
+    /// breaks both is refused for its placement; the offline apply has to
+    /// give the same reason the server will on sync.
+    @Test("a grouped container aimed at a non-container is refused for its placement first")
+    func createChecksPlacementBeforeQuantity() throws {
+        let replica = try Self.replicaWithBoxCatalogue()
+        let newId = "30000000-0000-4000-8000-000000000003"
+
+        do {
+            _ = try replica.perform(
+                .createItem(
+                    InventoryNewItem(
+                        id: newId, name: "Bin", typeKey: "storage_box", quantity: 2,
+                        placement: .container("screws"))),
+                mutationId: "m1", clientTime: Self.time)
+            Issue.record("the create should have been refused")
+        } catch InventoryCommandError.rejected(let reason, _) {
+            #expect(reason == .notContainer)
+        }
+        #expect(try replica.read(.item(id: newId)) == nil)
+    }
+
     @Test("creating a non-container with quantity greater than 1 is allowed")
     func createAllowsGroupedNonContainer() throws {
         let replica = try Self.replicaWithBoxCatalogue()
