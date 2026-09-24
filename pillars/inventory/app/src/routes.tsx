@@ -46,6 +46,9 @@ const ConnectionsPage = lazy(() =>
     default: m.ConnectionsPage,
   }))
 );
+const LabelsPage = lazy(() =>
+  import('./pages/labels-page/LabelsPage').then((m) => ({ default: m.LabelsPage }))
+);
 const TypeCataloguePage = lazy(() =>
   import('./pages/TypeCataloguePage').then((m) => ({ default: m.TypeCataloguePage }))
 );
@@ -93,6 +96,7 @@ export const PAGE_COMPONENTS = {
   'inventory-warranties': WarrantiesPage,
   'inventory-location-tree': LocationTreePage,
   'inventory-type-catalogue': TypeCataloguePage,
+  'inventory-labels': LabelsPage,
   'inventory-reports-group': ReportsGroup,
   'inventory-report-dashboard': ReportDashboardPage,
   'inventory-insurance-report': InsuranceReportPage,
@@ -109,6 +113,7 @@ export const routes: RouteObject[] = [
   { path: 'warranties', element: <WarrantiesPage /> },
   { path: 'locations', element: <LocationTreePage /> },
   { path: 'types', element: <TypeCataloguePage /> },
+  { path: 'labels', element: <LabelsPage /> },
   {
     path: 'reports',
     element: <ReportsGroup />,
