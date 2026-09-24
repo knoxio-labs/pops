@@ -2,9 +2,9 @@ export { LINK_TYPE_LABELS, PURCHASE_STATUS_LABELS } from '@/kit/purchases/labels
 
 /**
  * The order-detail vocabulary, copied verbatim from `purchase.*` in
- * `libs/locales/en-AU/purchases.json`. Keyed by the enum so a variant added
- * to the fixture types fails to compile here rather than printing a raw
- * enum token on screen.
+ * `pillars/purchases/app/src/locales/en-AU.json`. Keyed by the enum so a
+ * variant added to the fixture types fails to compile here rather than
+ * printing a raw enum token on screen.
  */
 import type {
   ChargeOrigin,

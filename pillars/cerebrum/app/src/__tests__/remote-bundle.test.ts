@@ -7,6 +7,7 @@ import { promisify } from 'node:util';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import { CEREBRUM_CAPTURE_SLOT, CEREBRUM_NUDGE_INDICATOR_SLOT } from '@pops/cerebrum/manifest';
+import { RemotePillarI18nSchema } from '@pops/pillar-sdk';
 
 import { allPageSlots } from './page-slots';
 
@@ -53,6 +54,16 @@ describe('cerebrum remote bundle', () => {
 
   it('satisfies the module shape the shell narrows to', () => {
     expect(() => assertRemoteUiModule(imported)).not.toThrow();
+  });
+
+  it('exports the translations the shell registers, inlined into the bundle', () => {
+    const exported =
+      typeof imported === 'object' && imported !== null && 'i18n' in imported
+        ? imported.i18n
+        : undefined;
+    const i18n = RemotePillarI18nSchema.parse(exported);
+    expect(i18n.namespace).toBe('cerebrum');
+    expect(Object.keys(i18n.resources['pt-BR']).length).toBeGreaterThan(0);
   });
 
   // Walked rather than mapped, so a page tree that grows a layout later keeps

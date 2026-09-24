@@ -9,8 +9,7 @@ import { createInstance, type i18n } from 'i18next';
 import { useMemo, useState } from 'react';
 import { I18nextProvider, initReactI18next } from 'react-i18next';
 
-import enAUFood from '@pops/locales/en-AU/food.json';
-
+import enAUFood from '../../../locales/en-AU.json';
 import { AliasesTable } from './AliasesTable';
 
 import type { Meta, StoryObj } from '@storybook/react-vite';

@@ -3,8 +3,7 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import enAUPurchases from '@pops/locales/en-AU/purchases.json';
-
+import enAUPurchases from '../../locales/en-AU.json';
 import { ProductDictionaryPage } from '../ProductDictionaryPage';
 
 import type { ReactElement } from 'react';

@@ -54,7 +54,6 @@
     "@lezer/common": "^1.5.2",
     "@lezer/generator": "^1.8.0",
     "@pops/lists": "workspace:*",
-    "@pops/locales": "workspace:*",
     "@storybook/react-vite": "^10.6.0",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",

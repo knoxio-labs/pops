@@ -17,8 +17,7 @@ import { I18nextProvider, initReactI18next } from 'react-i18next';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it } from 'vitest';
 
-import enAUFood from '@pops/locales/en-AU/food.json';
-
+import enAUFood from '../../../locales/en-AU.json';
 import { AutoCreatedBanner } from '../AutoCreatedBanner.js';
 import { MissingCurrentVersionBanner } from '../MissingCurrentVersionBanner.js';
 import { RecipeArchiveDialog } from '../RecipeArchiveDialog.js';

@@ -22,11 +22,13 @@
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import { lazy } from 'react';
+import { I18nextProvider, useTranslation } from 'react-i18next';
 import { MemoryRouter, Outlet, Route, Routes } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import shellI18n from '../i18n';
 import {
   defaultRemoteModuleImporter,
   synthesizeExternalBundleEntry,
@@ -250,6 +252,123 @@ describe('external pillar UI — runtime mount (Option A)', () => {
     await waitFor(() =>
       expect(screen.getByTestId('external-pillar-load-error')).toBeInTheDocument()
     );
+  });
+});
+
+/**
+ * The shell registers only its shared namespaces (POPS-4582). A pillar's
+ * translations arrive as its bundle's `i18n` export and are registered with
+ * the shell's instance before its first component mounts. Each case uses its
+ * own pillar id: registration is once per pillar for the life of the page.
+ */
+describe('external pillar UI — its translations', () => {
+  function translatedBundle(namespace: string) {
+    function Greeting() {
+      const { t } = useTranslation(namespace);
+      return <div data-testid="greeting">{t('hello')}</div>;
+    }
+    return {
+      bundles: { home: Greeting },
+      i18n: {
+        namespace,
+        resources: { 'en-AU': { hello: 'Hello' }, 'pt-BR': { hello: 'Olá' } },
+      },
+    };
+  }
+
+  function mountWithShellI18n(entry: BundleEntry): void {
+    render(
+      <I18nextProvider i18n={shellI18n}>
+        <MemoryRouter initialEntries={['/acme']}>
+          <Routes>
+            <Route path="acme" element={<Outlet />}>
+              {routesOf(entry).map((route, i) => (
+                <Route
+                  key={route.path ?? String(i)}
+                  index={route.index}
+                  path={route.path}
+                  element={route.element}
+                />
+              ))}
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      </I18nextProvider>
+    );
+  }
+
+  afterEach(async () => {
+    vi.restoreAllMocks();
+    cleanup();
+    await shellI18n.changeLanguage('en-AU');
+  });
+
+  it('holds no pillar namespace until that pillar loads, then renders its strings', async () => {
+    expect(shellI18n.hasResourceBundle('en-AU', 'food')).toBe(false);
+    expect(shellI18n.hasResourceBundle('pt-BR', 'food')).toBe(false);
+
+    const importer = vi.fn<RemoteModuleImporter>(() => Promise.resolve(translatedBundle('food')));
+    const entry = synthesizeExternalBundleEntry(descriptor({ pillarId: 'food' }), importer);
+    if (entry === null) throw new Error('expected a synthesized entry');
+    expect(shellI18n.hasResourceBundle('en-AU', 'food')).toBe(false);
+
+    mountWithShellI18n(entry);
+
+    await waitFor(() => expect(screen.getByTestId('greeting')).toHaveTextContent('Hello'));
+    expect(shellI18n.hasResourceBundle('en-AU', 'food')).toBe(true);
+    expect(shellI18n.hasResourceBundle('pt-BR', 'food')).toBe(true);
+  });
+
+  it('re-renders the pillar in the new locale when the shell switches', async () => {
+    const importer = vi.fn<RemoteModuleImporter>(() =>
+      Promise.resolve(translatedBundle('switcher'))
+    );
+    const entry = synthesizeExternalBundleEntry(descriptor({ pillarId: 'switcher' }), importer);
+    if (entry === null) throw new Error('expected a synthesized entry');
+
+    mountWithShellI18n(entry);
+    await waitFor(() => expect(screen.getByTestId('greeting')).toHaveTextContent('Hello'));
+
+    await act(() => shellI18n.changeLanguage('pt-BR'));
+
+    expect(screen.getByTestId('greeting')).toHaveTextContent('Olá');
+  });
+
+  it('mounts with raw keys and warns when the bundle exports no i18n', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const bundle = translatedBundle('untranslated');
+    const importer = vi.fn<RemoteModuleImporter>(() =>
+      Promise.resolve({ bundles: bundle.bundles })
+    );
+    const entry = synthesizeExternalBundleEntry(descriptor({ pillarId: 'untranslated' }), importer);
+    if (entry === null) throw new Error('expected a synthesized entry');
+
+    mountWithShellI18n(entry);
+
+    await waitFor(() => expect(screen.getByTestId('greeting')).toHaveTextContent('hello'));
+    expect(screen.queryByTestId('external-pillar-load-error')).not.toBeInTheDocument();
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("'untranslated'"));
+    expect(shellI18n.hasResourceBundle('en-AU', 'untranslated')).toBe(false);
+  });
+
+  it('degrades to the placeholder when the i18n export is malformed', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const bundle = translatedBundle('malformed');
+    const importer = vi.fn<RemoteModuleImporter>(() =>
+      Promise.resolve({
+        bundles: bundle.bundles,
+        i18n: { namespace: 'malformed', resources: { 'en-AU': { hello: 'Hello' } } },
+      })
+    );
+    const entry = synthesizeExternalBundleEntry(descriptor({ pillarId: 'malformed' }), importer);
+    if (entry === null) throw new Error('expected a synthesized entry');
+
+    mountWithShellI18n(entry);
+
+    await waitFor(() =>
+      expect(screen.getByTestId('external-pillar-load-error')).toBeInTheDocument()
+    );
+    expect(shellI18n.hasResourceBundle('en-AU', 'malformed')).toBe(false);
   });
 });
 

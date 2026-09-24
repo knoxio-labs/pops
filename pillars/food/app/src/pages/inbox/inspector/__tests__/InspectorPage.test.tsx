@@ -14,7 +14,7 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { Toaster } from 'sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import enAUFood from '@pops/locales/en-AU/food.json';
+import enAUFood from '../../../../locales/en-AU.json';
 
 import type { InspectorResult } from '../inspector-wire-types.js';
 

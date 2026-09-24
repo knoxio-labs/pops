@@ -3,7 +3,7 @@ import { cleanup, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import enAUPurchases from '@pops/locales/en-AU/purchases.json';
+import enAUPurchases from '../../locales/en-AU.json';
 
 const purchaseGetMock = vi.hoisted(() => vi.fn());
 

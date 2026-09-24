@@ -7,7 +7,7 @@ import { I18nextProvider, initReactI18next } from 'react-i18next';
 import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import enAULists from '@pops/locales/en-AU/lists.json';
+import enAULists from '../../locales/en-AU.json';
 
 import type { ListListAggregateResponses } from '../../lists-api/types.gen';
 import type { ListIndexItemView } from '../lists-index/useListsIndexQuery';
