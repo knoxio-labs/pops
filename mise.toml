@@ -324,6 +324,25 @@ run = [
   "mise run fixture:expression-vectors:vendor",
 ]
 
+# The value-vectors fixture (POPS-4403) has three copies: BFM relays
+# inventory's values without depending on the pillar, and iOS vendors under
+# ADR-043.
+[tasks."fixture:value-vectors:vendor"]
+description = "Re-vendor the inventory value-vectors fixture into the iOS client and BFM"
+dir = "{{config_root}}"
+run = [
+  "cp pillars/inventory/contracts/value-vectors-v1.json clients/ios/Contracts/value-vectors-v1.json",
+  "cp pillars/inventory/contracts/value-vectors-v1.json pillars/bfm/contracts/value-vectors-v1.json",
+]
+
+[tasks."fixture:value-vectors"]
+description = "Regenerate the inventory value-vectors fixture from the catalogue/command engine, and re-vendor it"
+dir = "{{config_root}}"
+run = [
+  "pnpm --filter @pops/inventory run generate:value-vectors",
+  "mise run fixture:value-vectors:vendor",
+]
+
 # The iOS app icon's layers are generated, not drawn. The task lives here rather
 # than under `clients/ios` because it writes into both Icon Composer bundles and
 # its palette is asserted against `libs/sdk`'s nav enum — three units, so it

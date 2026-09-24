@@ -75,9 +75,8 @@ extension LocalReducer {
     private func rebasedStoredFieldValues(
         of item: WorkingItem, typeId: String, target: Int
     ) throws -> [InventoryItemFieldEntry] {
-        guard let current = item.catalogueRevision else {
-            throw refusal(.invalid, "item \(item.id) does not use catalogue revision \(target)")
-        }
+        // A typed item holding no values names no revision: there is nothing to rebase.
+        guard let current = item.catalogueRevision else { return item.fieldValues }
         guard current != target else { return item.fieldValues }
         guard current < target,
             let targetCatalogue = try Protocol2CatalogueRows.read(revision: target, in: db)

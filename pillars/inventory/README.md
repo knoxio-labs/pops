@@ -194,6 +194,12 @@ projection, and the Swift evaluator must reproduce each result. Regenerate with
 `mise run fixture:expression-vectors`; the drift test and the
 `expression-vectors-fixture` CI job fail on a stale copy.
 
+`contracts/value-vectors-v1.json` does the same for stored values: every
+primitive kind and cardinality, absent and cleared fields, reference targets
+in each state and every computed state, written through the command engine and
+projected by `toSyncItem`, plus malformed values the engine refuses. BFM and the
+phone vendor it; regenerate with `mise run fixture:value-vectors`.
+
 Migration `0012_items_single_identity` built this from `home_inventory` and
 `containers` and dropped both. It aborts, writing nothing, when an id or a
 case-insensitive code is held twice across the two old tables; the operator

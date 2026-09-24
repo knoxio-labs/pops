@@ -24,7 +24,7 @@ internal func protocol2Value(
     case let value as Bool:
         return .boolean(value)
     case let value as Int:
-        return .integer(try InventoryInteger(Int64(value)))
+        return .integer(try canonical { try InventoryInteger(Int64(value)) })
     case let value as [String: (any Sendable)?]:
         return try protocol2ObjectValue(value)
     default:
@@ -39,7 +39,7 @@ private func protocol2ObjectValue(
         return .enumeration(optionId: optionId)
     }
     if value.count == 2, let amount = string(value["amount"]), let unit = string(value["unit"]) {
-        return .measurement(amount: try InventoryDecimal(amount), unit: unit)
+        return .measurement(amount: try canonical { try InventoryDecimal(amount) }, unit: unit)
     }
     if value.count == 2, let kind = string(value["targetKind"]), let id = string(value["targetId"]),
         let targetKind = InventoryReferenceTargetKind(rawValue: kind)
@@ -54,6 +54,13 @@ private func protocol2ObjectValue(
         return .reference(.init(targetKind: targetKind, targetId: id, targetState: targetState))
     }
     throw RepositoryError.contractMismatch
+}
+
+/// A wire value outside its canonical range is a contract mismatch like any
+/// other malformed value, not a separate failure the page apply must know.
+private func canonical<Value>(_ make: () throws -> Value) throws -> Value {
+    guard let value = try? make() else { throw RepositoryError.contractMismatch }
+    return value
 }
 
 private func string(_ value: (any Sendable)??) -> String? {
