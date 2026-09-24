@@ -35,7 +35,12 @@ internal struct CatalogueCompatibility {
         }
     }
 
-    private func incompatibility(
+    /// The same schema-only judgement ``incompatibility(of:itemTypeId:)`` applies
+    /// to a command's own fields, exposed for a stored item's fields directly
+    /// (``LocalReducer/editProtocol2Item(id:catalogueRevision:values:)``, moving
+    /// an item's untouched values onto a newer revision it has not itself
+    /// caught up to yet).
+    func incompatibility(
         typeId: String, fieldIds: [String], values: [InventoryPrimitiveValue],
         requiresAll: Bool
     ) -> InventoryCatalogueChange? {

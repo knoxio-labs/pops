@@ -31,12 +31,14 @@ extension LocalReducer {
         id: String, catalogueRevision: Int, values: [InventoryProtocol2FieldPatch]
     ) throws -> Written {
         let before = try liveItem(id)
-        guard before.catalogueRevision == catalogueRevision, let typeId = before.typeId else {
+        guard let typeId = before.typeId else {
             throw refusal(
                 .invalid, "item \(id) does not use catalogue revision \(catalogueRevision)")
         }
         let type = try protocol2Type(id: typeId, revision: catalogueRevision)
-        var entries = Dictionary(uniqueKeysWithValues: before.fieldValues.map { ($0.fieldId, $0) })
+        let baseline = try rebasedStoredFieldValues(
+            of: before, typeId: typeId, target: catalogueRevision)
+        var entries = Dictionary(uniqueKeysWithValues: baseline.map { ($0.fieldId, $0) })
         for patch in values {
             if let replacement = patch.values {
                 entries[patch.fieldId] = .init(
@@ -49,8 +51,62 @@ extension LocalReducer {
         let replacement = entries.values.sorted { $0.fieldId < $1.fieldId }
         try validateProtocol2Entries(replacement, type: type, revision: catalogueRevision)
         var after = before
+        after.catalogueRevision = catalogueRevision
         after.fieldValues = replacement
         return try update(before, to: after, kind: "edited") ?? unchanged(before)
+    }
+
+    /// `item`'s own stored field values, moved onto `target` when the item
+    /// has not itself caught up to that catalogue revision yet: a command
+    /// authored or rebased against a newer revision than the one this
+    /// item's row carries (POPS-4405's drain rebase, or the catalogue-repair
+    /// "Edit item" path, reaching a replica that has not synced the item's
+    /// migration back yet).
+    ///
+    /// Judged the same way ``CatalogueRebase`` judges a queued command:
+    /// schema only, against the field ids this item currently stores (an
+    /// override is untouched either way). A field this item still carries
+    /// that the newer revision no longer has as it was refuses the edit,
+    /// same as a stale revision always has; the server has the final word
+    /// once the change reaches it.
+    ///
+    /// - Throws: ``AppCore/InventoryCommandError`` when `target` is older
+    ///   than the item's own revision, or the item's fields do not fit it.
+    private func rebasedStoredFieldValues(
+        of item: WorkingItem, typeId: String, target: Int
+    ) throws -> [InventoryItemFieldEntry] {
+        guard let current = item.catalogueRevision else {
+            throw refusal(.invalid, "item \(item.id) does not use catalogue revision \(target)")
+        }
+        guard current != target else { return item.fieldValues }
+        guard current < target,
+            let targetCatalogue = try Protocol2CatalogueRows.read(revision: target, in: db)
+        else {
+            throw refusal(
+                .invalid, "item \(item.id) does not use catalogue revision \(target)")
+        }
+        let authoredCatalogue = try Protocol2CatalogueRows.read(revision: current, in: db)
+        let check = CatalogueCompatibility(authored: authoredCatalogue, target: targetCatalogue)
+        let stored = item.fieldValues.filter { $0.source != .override }
+        let values = stored.flatMap { entry -> [InventoryPrimitiveValue] in
+            guard case .value(let values) = entry.state else { return [] }
+            return values
+        }
+        if let incompatible = check.incompatibility(
+            typeId: typeId, fieldIds: stored.map(\.fieldId), values: values, requiresAll: false)
+        {
+            throw refusal(
+                .invalid,
+                "item \(item.id) does not use catalogue revision \(target): \(incompatible.summary)"
+            )
+        }
+        return item.fieldValues.map { entry in
+            entry.source == .override
+                ? entry
+                : InventoryItemFieldEntry(
+                    fieldId: entry.fieldId, state: entry.state, source: entry.source,
+                    catalogueRevision: target, dependencies: entry.dependencies)
+        }
     }
 
     func changeProtocol2ItemType(
