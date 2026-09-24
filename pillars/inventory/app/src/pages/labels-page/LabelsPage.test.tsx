@@ -224,6 +224,17 @@ describe('items without a code', () => {
     expect(screen.getByText('Needs a code')).toBeInTheDocument();
   });
 
+  it('will not print again after an uncoded item joins the job', async () => {
+    const print = vi.spyOn(window, 'print').mockImplementation(() => {});
+    renderPage(`?ids=${BOX}`);
+    fireEvent.click(await screen.findByRole('button', { name: 'Print 2 labels' }));
+    fireEvent.click(screen.getByRole('button', { name: 'No' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add 3 inside' }));
+    await screen.findByText('1 item needs a code before printing.');
+    fireEvent.click(screen.getByRole('button', { name: 'Print again' }));
+    expect(print).toHaveBeenCalledOnce();
+  });
+
   it('saves a suggested code through item.setCode, then prints', async () => {
     api.codesSuggest.mockResolvedValue(ok({ suggestions: ['KIT-040'] }));
     renderPage(`?ids=${CUPS}`);

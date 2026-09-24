@@ -98,13 +98,13 @@ function useExpandContents(
   setIds: (ids: string[], dropContents: boolean) => void
 ) {
   useEffect(() => {
-    if (!params.contents || data.isLoading) return;
+    if (!params.contents || data.isLoading || data.contentsLoading) return;
     const expanded = params.ids.flatMap((id) => [
       id,
       ...(data.contents.get(id) ?? []).map((held) => held.id),
     ]);
     setIds(expanded, true);
-  }, [params.contents, params.ids, data.isLoading, data.contents, setIds]);
+  }, [params.contents, params.ids, data.isLoading, data.contentsLoading, data.contents, setIds]);
 }
 
 function LabelsContent({

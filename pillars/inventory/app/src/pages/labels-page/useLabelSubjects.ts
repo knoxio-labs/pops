@@ -3,7 +3,7 @@
  * (`GET /web/items?ids=`), with what each listed box holds and a suggested
  * code for every item that has none (`POST /codes/suggest`).
  */
-import { useQueries, useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQueries, useQuery } from '@tanstack/react-query';
 
 import { unwrap } from '../../inventory-api-helpers.js';
 import { codesSuggest, webList } from '../../inventory-api/index.js';
@@ -59,7 +59,10 @@ async function suggestCode(item: WebItem): Promise<string | null> {
 
 /** The job's items in the order asked for, with the ids that matched no live item. */
 export interface LabelSubjects {
+  /** True until the listed items first arrive; later changes keep the last answer showing. */
   isLoading: boolean;
+  /** True while any listed box's contents are still being read. */
+  contentsLoading: boolean;
   error: Error | null;
   subjects: LabelSubject[];
   /** Ids asked for that are not live items: deleted, discarded, or never existed. */
@@ -100,6 +103,7 @@ export function useLabelSubjects(ids: readonly string[]): LabelSubjects {
     queryKey: [...WEB_ITEMS_QUERY_KEY, 'labels', ids] as const,
     queryFn: () => listItems({ ids: ids.join(',') }),
     enabled: ids.length > 0,
+    placeholderData: keepPreviousData,
   });
   const items = listed.data ?? [];
   const byId = new Map(items.map((item) => [item.id, item]));
@@ -111,10 +115,11 @@ export function useLabelSubjects(ids: readonly string[]): LabelSubjects {
   const suggestions = useSuggestions(ordered);
   const subject = (item: WebItem) => toLabelSubject(item, suggestions.get(item.id) ?? null);
   return {
-    isLoading: listed.isLoading || boxContents.isLoading,
+    isLoading: listed.isLoading,
+    contentsLoading: boxContents.isLoading,
     error: listed.error,
     subjects: ordered.map(subject),
-    missing: listed.data ? ids.filter((id) => !byId.has(id)) : [],
+    missing: listed.data && !listed.isPlaceholderData ? ids.filter((id) => !byId.has(id)) : [],
     contents: new Map([...boxContents.contents].map(([boxId, held]) => [boxId, held.map(subject)])),
   };
 }
