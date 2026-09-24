@@ -314,4 +314,60 @@ describe('computed field override commands', () => {
     ).toMatchObject({ status: 'rejected', reason: 'catalogue_update_required' });
     expect(harness.item(itemId).revision).toBe(1);
   });
+
+  it('always allows clearing an override the field no longer permits, but never setting one', () => {
+    const harness = openHarness();
+    const catalogue = publishComputedType(harness.db);
+    const itemId = createItem(harness, catalogue);
+    harness.raw
+      .prepare(
+        `INSERT INTO item_field_values
+           (item_id, field_id, source, ordinal, value_json, catalogue_revision, created_at, updated_at)
+         VALUES (?, ?, 'override', 0, '9', ?, ?, ?)`
+      )
+      .run(
+        itemId,
+        catalogue.lockedFieldId,
+        catalogue.revision,
+        '2026-09-18T12:00:00.000Z',
+        '2026-09-18T12:00:00.000Z'
+      );
+    expect(readItemFieldValues(harness.db, itemId)).toContainEqual({
+      fieldId: catalogue.lockedFieldId,
+      source: 'override',
+      catalogueRevision: catalogue.revision,
+      values: [9],
+    });
+
+    expect(
+      harness.run(
+        mutation(
+          'item.setOverride',
+          itemId,
+          { fieldId: catalogue.lockedFieldId, values: [11] },
+          { baseRevision: 1, catalogueRevision: catalogue.revision }
+        )
+      )
+    ).toMatchObject({ status: 'rejected' });
+    expect(
+      readItemFieldValues(harness.db, itemId).find(
+        (entry) => entry.fieldId === catalogue.lockedFieldId
+      )
+    ).toMatchObject({ values: [9] });
+
+    const clear = harness.run(
+      mutation(
+        'item.clearOverride',
+        itemId,
+        { fieldId: catalogue.lockedFieldId },
+        { baseRevision: 1, catalogueRevision: catalogue.revision }
+      )
+    );
+    expect(clear).toMatchObject({ status: 'applied', revision: 2 });
+    expect(
+      readItemFieldValues(harness.db, itemId).find(
+        (entry) => entry.fieldId === catalogue.lockedFieldId
+      )
+    ).toBeUndefined();
+  });
 });
