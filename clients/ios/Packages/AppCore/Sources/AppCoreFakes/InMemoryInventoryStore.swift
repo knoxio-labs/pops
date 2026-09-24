@@ -170,6 +170,11 @@ public final class InMemoryInventoryStore: InventoryStore, @unchecked Sendable {
         notify(snapshot)
     }
 
+    public func hasNeverDownloaded() async -> Bool {
+        guard case .empty = state.withLock({ $0.replicaStatus }) else { return false }
+        return true
+    }
+
     public func photo(_ sha256: String, variant: InventoryPhotoVariant) async throws -> Data {
         try state.withLock { current in
             guard let data = current.media[sha256] else { throw RepositoryError.contractMismatch }

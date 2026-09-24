@@ -53,12 +53,14 @@ internal struct InventoryDashedActionButton: View {
     }
 }
 
-/// First launch, before anything has been downloaded: one neutral line and
-/// the download.
+/// First launch, before anything has been downloaded. Pairing and opening
+/// this tab both ask for a sync on their own (POPS-4354), so this now reads
+/// as a retry after one of those has not finished — offline at the time,
+/// most often — rather than an instruction to start the first one by hand.
 internal struct InventoryFirstLaunchPrompt: View {
     internal var body: some View {
         VStack(spacing: PopsSpacing.lg) {
-            InventoryCentredLine(text: "Nothing on this phone yet")
+            InventoryCentredLine(text: "Not synced yet")
             InventoryDashedActionButton(
                 title: "Download", symbol: InventorySymbol.update.system, action: {})
         }

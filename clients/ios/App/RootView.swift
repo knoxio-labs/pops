@@ -31,6 +31,14 @@ internal struct RootView: View {
             .background(Color.popsBackground)
             .task { await composition.shell.restoreSession() }
             .task(id: pairedDevice) { await composition.shell.loadBootstrap() }
+            // Fires on the pairing that just happened and, since `.task(id:)`
+            // runs for the initial value too, on a launch that restores a
+            // device already paired — the two moments a fresh replica would
+            // otherwise sit empty until something else asked for it.
+            .task(id: pairedDevice) {
+                guard let pairedDevice else { return }
+                await composition.syncInventoryOnPairing(pairedDevice)
+            }
             // Off the main actor: `pruneStaleInventoryReplicas` does blocking
             // disk I/O, and nothing on screen needs to wait on it — it is
             // cleanup for a device this build is no longer paired to, not

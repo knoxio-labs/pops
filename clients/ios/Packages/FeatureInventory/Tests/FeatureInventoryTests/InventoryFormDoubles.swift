@@ -154,6 +154,7 @@ internal final class RecordingFormStore: InventoryStore, Sendable {
     }
     func download() async throws {}
     func refresh() async {}
+    func hasNeverDownloaded() async -> Bool { false }
 
     func photo(_ sha256: String, variant: InventoryPhotoVariant) async throws -> Data {
         throw RepositoryError.unavailable
