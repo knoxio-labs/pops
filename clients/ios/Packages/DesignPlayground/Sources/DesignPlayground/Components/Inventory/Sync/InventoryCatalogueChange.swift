@@ -67,6 +67,15 @@ internal enum InventoryCatalogueRetry: Hashable {
     }
 }
 
+/// Which commit a catalogue repair leads with.
+internal enum InventoryCatalogueRepairAction: Hashable {
+    /// Reopen the item form against the current fields, queued values filled
+    /// in and the rest struck through.
+    case editItem
+    /// Send the change again unedited.
+    case retry
+}
+
 /// A queued change that a newer catalogue left behind: what it was, the
 /// values it carried, and what Retry would do now.
 internal struct InventoryCatalogueChange: Hashable {
@@ -74,6 +83,21 @@ internal struct InventoryCatalogueChange: Hashable {
     internal let title: String
     internal let values: [InventoryQueuedValue]
     internal let retry: InventoryCatalogueRetry
+    /// Whether the phone's fields changed since the repair opened: the only
+    /// time sending the change again unedited can turn out differently.
+    internal var definitionsChanged = false
+
+    internal var isBlocked: Bool { values.contains { $0.fit.blocks } }
+
+    /// Edit item while something still stops the change, and while nothing
+    /// changed that could make Retry turn out differently (owner decision
+    /// 2026-09-24).
+    internal var leadingAction: InventoryCatalogueRepairAction {
+        isBlocked || !definitionsChanged ? .editItem : .retry
+    }
+
+    /// Retry only once the fields changed since the repair opened.
+    internal var offersRetry: Bool { definitionsChanged }
 }
 
 extension InventoryQueuedOperation {
@@ -92,12 +116,15 @@ internal enum InventoryQueueHold: Equatable {
     case appUpdate
     /// An earlier change to the same record needs a repair first.
     case behindRepair
+    /// The phone cannot read the change back, so nothing moves it.
+    case stalled
 
     internal var caption: String {
         switch self {
         case .newFields: "Waiting for new fields"
         case .appUpdate: "Needs an app update"
         case .behindRepair: "Waits on a repair"
+        case .stalled: "Can't be sent"
         }
     }
 
@@ -106,6 +133,7 @@ internal enum InventoryQueueHold: Equatable {
         case .newFields: .refreshFields
         case .appUpdate: .appUpdate
         case .behindRepair: .held
+        case .stalled: .attention
         }
     }
 }

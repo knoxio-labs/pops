@@ -41,6 +41,10 @@ internal enum InventoryCatalogueRepairSurface {
             DesignState("item-notice", "Item notice") {
                 InventoryItemDetailView(detail: itemWithRepair)
             },
+            syncState(
+                "stalled", "Change can't be read", .stuck,
+                InventorySyncLedger(
+                    waiting: [Fixtures.unreadable, InventorySyncFixtures.kettleDiscarded])),
         ]
     }
 
@@ -53,10 +57,16 @@ internal enum InventoryCatalogueRepairSurface {
             repairState("now-required", "Field now required", Fixtures.nowRequired),
             repairState("fields-not-here", "Fields not on this phone", Fixtures.fieldsNotHere),
             repairState("fields-arrived", "Fields arrived", Fixtures.fieldsArrived),
+            repairState(
+                "blocked-after-change", "Fields changed, still archived",
+                Fixtures.shieldingAfterChange),
+            DesignState("edit-item", "Edit item") {
+                repair(Fixtures.shieldingArchived, editing: true)
+            },
             DesignState("retry-refused", "Retry refused") {
                 repair(
-                    Fixtures.shieldingArchived,
-                    failure: Fixtures.shieldingArchived.catalogue?.retry.refusal)
+                    Fixtures.shieldingAfterChange,
+                    failure: Fixtures.shieldingAfterChange.catalogue?.retry.refusal)
             },
             DesignState("retry-too-soon", "Retry before fields arrive") {
                 repair(
@@ -95,7 +105,8 @@ internal enum InventoryCatalogueRepairSurface {
             InventoryDetailField(key: "Connector", value: "USB-C"),
         ],
         conflict: InventoryDetailConflict(
-            problem: "Queued edit: Shielding was archived", resolution: "Retry")
+            problem: "Queued edit: Shielding was archived",
+            resolution: InventoryRepairKind.catalogueChanged.fix.title)
     )
 
     private static func syncState(
@@ -115,10 +126,11 @@ internal enum InventoryCatalogueRepairSurface {
 
     private static func repair(
         _ repair: InventoryRepair, resolved: Bool = false, keepingMine: Bool = true,
-        failure: String? = nil
+        failure: String? = nil, editing: Bool = false
     ) -> some View {
         InventoryRepairView(
-            repair: repair, resolved: resolved, keepingMine: keepingMine, failure: failure
+            repair: repair, resolved: resolved, keepingMine: keepingMine, failure: failure,
+            editing: editing
         )
         .inventoryDestinations(true)
     }

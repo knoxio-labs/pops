@@ -96,16 +96,25 @@ internal struct InventoryRepairListRow: View {
             .font(.popsCaption)
             .labelStyle(InventorySyncCaptionLabelStyle())
         } trailing: {
-            Button(action: onFix) {
-                repair.kind.fix.symbol.image
-                    .font(.popsHeadline)
-                    .foregroundStyle(Color.popsInventory)
-                    .frame(width: PopsSize.touchTarget, height: PopsSize.touchTarget)
-                    .contentShape(.rect)
+            if repair.kind.opensRepair {
+                icon.accessibilityHidden(true)
+            } else {
+                Button(action: onFix) { icon }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(repair.kind.fix.title)
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel(repair.kind.fix.title)
         }
+        .accessibilityHint(repair.kind.opensRepair ? repair.kind.fix.title : "")
+    }
+
+    /// A repair that opens its own screen draws the icon without a button,
+    /// so a tap anywhere on the row opens it.
+    private var icon: some View {
+        repair.kind.fix.symbol.image
+            .font(.popsHeadline)
+            .foregroundStyle(Color.popsInventory)
+            .frame(width: PopsSize.touchTarget, height: PopsSize.touchTarget)
+            .contentShape(.rect)
     }
 }
 
@@ -137,9 +146,17 @@ private struct InventoryQueueHoldMark: View {
     var body: some View {
         hold.symbol.image
             .font(.popsCaption.weight(.semibold))
-            .foregroundStyle(hold == .appUpdate ? Color.popsWarning : Color.popsMutedForeground)
+            .foregroundStyle(tint)
             .symbolEffect(.rotate, isActive: hold == .newFields)
             .accessibilityLabel(hold.caption)
+    }
+
+    private var tint: Color {
+        switch hold {
+        case .appUpdate: .popsWarning
+        case .stalled: .popsDestructive
+        case .newFields, .behindRepair: .popsMutedForeground
+        }
     }
 }
 

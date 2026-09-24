@@ -14,16 +14,19 @@ internal struct InventoryRepairView: View {
     @State private var failure: String?
     /// Whether the commit kept this phone's change, which is then queued.
     @State private var keptMine: Bool
+    /// Edit item's form, up over the repair.
+    @State private var editing: Bool
 
     /// `resolved` stages the page just after a commit, with the capsule held
     /// up: Keep's by default, Let go's when `keepingMine` is false. `failure`
     /// stages it with the write-failure alert up.
     internal init(
         repair: InventoryRepair, resolved: Bool = false, keepingMine: Bool = true,
-        failure: String? = nil
+        failure: String? = nil, editing: Bool = false
     ) {
         self.repair = repair
         lingers = resolved
+        _editing = State(initialValue: editing)
         _chosen = State(initialValue: repair.options.first?.id)
         _code = State(initialValue: repair.suggestedCode ?? "")
         _failure = State(initialValue: failure)
@@ -73,7 +76,26 @@ internal struct InventoryRepairView: View {
         .playgroundTitleDisplay(large: false)
         .tint(.popsInventory)
         .safeAreaInset(edge: .bottom) {
-            if outcome == nil { commits }
+            if outcome == nil {
+                if let change = repair.catalogue {
+                    InventoryCatalogueCommits(
+                        change: change, letGo: repair.kind.letGo,
+                        commit: { commit(keepingMine: $0) }, editItem: { editing = true })
+                } else {
+                    commits
+                }
+            }
+        }
+        .sheet(isPresented: $editing) {
+            if let change = repair.catalogue,
+                let draft = InventoryCatalogueFixtures.editDraft(for: repair)
+            {
+                NavigationStack {
+                    InventoryItemFormView(
+                        draft: draft, mode: .edit,
+                        notCarried: change.values.filter(\.fit.blocks))
+                }
+            }
         }
         .inventoryUndoCapsule($offer, lingers: lingers) { _ in outcome = nil }
         .alert(

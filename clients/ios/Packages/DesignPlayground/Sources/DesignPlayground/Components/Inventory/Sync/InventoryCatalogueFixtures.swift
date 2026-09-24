@@ -12,6 +12,14 @@ internal enum InventoryCatalogueFixtures {
             ],
             retry: .refused("Shielding is still archived, so nothing was sent.")))
 
+    /// The same edit after the phone's fields changed again, with Shielding
+    /// still archived: Edit item still leads, and Retry sits beside it.
+    internal static let shieldingAfterChange: InventoryRepair = {
+        var repair = shieldingArchived
+        repair.catalogue?.definitionsChanged = true
+        return repair
+    }()
+
     internal static let screenReplaced = InventoryRepair(
         id: "television-screen", recordID: "television", kind: .catalogueChanged,
         problem: "Screen size was replaced by Diagonal",
@@ -83,12 +91,12 @@ internal enum InventoryCatalogueFixtures {
                 InventoryQueuedValue(field: "Head", value: "Countersunk"),
                 InventoryQueuedValue(field: "Drive", value: "Pozidriv"),
             ],
-            retry: .sends))
+            retry: .sends, definitionsChanged: true))
 
     /// Every catalogue repair the surface stages.
     internal static let everyRepair: [InventoryRepair] = [
-        shieldingArchived, screenReplaced, typeReplaced, optionRetired, nowRequired,
-        fieldsNotHere, fieldsArrived,
+        shieldingArchived, shieldingAfterChange, screenReplaced, typeReplaced, optionRetired,
+        nowRequired, fieldsNotHere, fieldsArrived,
     ]
 
     /// Several changes the same catalogue publish left behind at once.
@@ -104,6 +112,18 @@ internal enum InventoryCatalogueFixtures {
     internal static let cableRename = InventoryQueuedOperation(
         id: "rename-cable", recordID: "cable", symbol: .rename, title: "USB-A to USB-C cable",
         detail: "Renamed", enqueued: 1, dependsOn: "edit-cable", hold: .behindRepair)
+
+    /// The item form Edit item opens for a repair: its change against the
+    /// current fields, the values that still fit filled in. The cable's edit
+    /// reopens on the cable as the creation screens draw it.
+    internal static func editDraft(for repair: InventoryRepair) -> InventoryDraft? {
+        repair.recordID == shieldingArchived.recordID ? InventoryDraftFixtures.typed : nil
+    }
+
+    /// A change the phone cannot read back: nothing moves it.
+    internal static let unreadable = InventoryQueuedOperation(
+        id: "unreadable", recordID: "screws", symbol: .attention, title: "Wood screws",
+        detail: "Can't be read", enqueued: 2, hold: .stalled)
 
     internal static let heldForFields: [InventoryQueuedOperation] = [
         cableEdit, InventorySyncFixtures.screwsCounted, InventorySyncFixtures.kettleDiscarded,

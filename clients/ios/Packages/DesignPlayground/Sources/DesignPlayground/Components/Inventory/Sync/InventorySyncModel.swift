@@ -113,9 +113,16 @@ internal enum InventoryRepairKind: Equatable {
         case .conflict: ("Keep mine", InventorySymbol(system: "iphone", lucide: "Smartphone"))
         case .codeCollision: ("New code", .suggest)
         case .deletedElsewhere: ("Restore", .restore)
-        case .photoFailed, .catalogueChanged: ("Retry", .retry)
+        case .photoFailed: ("Retry", .retry)
+        case .catalogueChanged: ("Review", .edit)
         }
     }
+
+    /// Whether the one-tap entry points (the row's icon, the item's notice)
+    /// open the repair rather than committing its fix: a catalogue repair's
+    /// right move depends on what is still in the way, which only the repair
+    /// shows (POPS-4494, owner decision 2026-09-24).
+    internal var opensRepair: Bool { self == .catalogueChanged }
 
     /// The repair page's two commits: the one that keeps this phone's work,
     /// and the one that lets it go.

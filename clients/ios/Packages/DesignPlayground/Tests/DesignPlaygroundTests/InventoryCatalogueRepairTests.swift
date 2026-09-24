@@ -47,6 +47,46 @@ internal struct InventoryCatalogueRepairTests {
         }
     }
 
+    @Test("Edit item leads while anything blocks; Retry shows only once the fields changed")
+    func leadingActionFollowsTheOwnersRule() throws {
+        for repair in Fixtures.everyRepair {
+            let change = try #require(repair.catalogue)
+            #expect(change.offersRetry == change.definitionsChanged, "\(repair.id)")
+            if change.isBlocked || !change.definitionsChanged {
+                #expect(change.leadingAction == .editItem, "\(repair.id)")
+            } else {
+                #expect(change.leadingAction == .retry, "\(repair.id)")
+            }
+        }
+        #expect(Fixtures.shieldingArchived.catalogue?.offersRetry == false)
+        #expect(Fixtures.shieldingAfterChange.catalogue?.leadingAction == .editItem)
+        #expect(Fixtures.shieldingAfterChange.catalogue?.offersRetry == true)
+        #expect(Fixtures.fieldsArrived.catalogue?.leadingAction == .retry)
+    }
+
+    @Test("a catalogue repair's one-tap entry points open it rather than retrying")
+    func oneTapOpensTheRepair() {
+        #expect(InventoryRepairKind.catalogueChanged.opensRepair)
+        #expect(InventoryRepairKind.catalogueChanged.fix.title == "Review")
+        for kind in [InventoryRepairKind.conflict, .codeCollision, .deletedElsewhere, .photoFailed]
+        {
+            #expect(!kind.opensRepair, "\(kind)")
+        }
+    }
+
+    @Test("Edit item opens a form, and only a blocked value is left out of it")
+    func editItemHasAForm() throws {
+        let change = try #require(Fixtures.shieldingArchived.catalogue)
+        #expect(Fixtures.editDraft(for: Fixtures.shieldingArchived) != nil)
+        #expect(change.values.filter(\.fit.blocks).map(\.field) == ["Shielding"])
+    }
+
+    @Test("an unreadable change is stalled, and says so")
+    func unreadableIsStalled() {
+        #expect(Fixtures.unreadable.hold == .stalled)
+        #expect(Fixtures.unreadable.caption == "Can't be read · Can't be sent")
+    }
+
     @Test("only a Retry that sends has no alert")
     func refusalIsNilOnlyWhenSending() {
         #expect(InventoryCatalogueRetry.sends.refusal == nil)
@@ -106,7 +146,7 @@ internal struct InventoryCatalogueRepairTests {
         let named: Set<String> = [
             "updating-fields", "app-too-old", "needs-attention", "several", "item-notice",
             "field-archived", "field-replaced", "type-replaced", "retry-refused", "retried",
-            "let-go", "settled",
+            "let-go", "settled", "edit-item", "blocked-after-change", "stalled",
         ]
         #expect(named.isSubset(of: ids), "missing \(named.subtracting(ids))")
         #expect(ids.count == surface.states.count)
