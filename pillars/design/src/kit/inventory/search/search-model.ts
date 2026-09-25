@@ -159,3 +159,29 @@ export function stepActive(
   if (index === -1) return order[0] ?? null;
   return order[Math.min(order.length - 1, Math.max(0, index + delta))] ?? null;
 }
+
+/** One row of the TopBar dropdown: an item or a place, in page order. */
+export type TypeaheadRow = { kind: 'item'; hit: ItemHit; exact: boolean } | PlaceHit;
+
+/**
+ * The TopBar dropdown's rows: the page's order cut to `limit`, so the
+ * dropdown is always a prefix of what Enter opens on the results page.
+ */
+export function typeaheadRows(results: InventoryResults, limit = 8): TypeaheadRow[] {
+  const { byName, elsewhere } = splitHits(results.items);
+  const exact: TypeaheadRow[] = results.exact
+    ? [
+        {
+          kind: 'item',
+          hit: { kind: 'item', item: results.exact, tier: 'prefix', field: 'code' },
+          exact: true,
+        },
+      ]
+    : [];
+  return [
+    ...exact,
+    ...byName.map((hit): TypeaheadRow => ({ kind: 'item', hit, exact: false })),
+    ...results.places,
+    ...elsewhere.map((hit): TypeaheadRow => ({ kind: 'item', hit, exact: false })),
+  ].slice(0, limit);
+}

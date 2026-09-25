@@ -33,7 +33,8 @@ export interface SearchBarProps {
   onFilters?: (patch: Partial<SearchFilters>) => void;
 }
 
-function ScopeChip({
+/** One scope, with its result count once something is typed. */
+export function ScopeChip({
   id,
   label,
   count,

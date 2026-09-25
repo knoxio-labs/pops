@@ -1,7 +1,14 @@
 import { coreWorld } from '@/fixtures/inventory/core';
 import { describe, expect, it } from 'vitest';
 
-import { exactCode, resultCount, resultOrder, searchInventory, stepActive } from './search-model';
+import {
+  exactCode,
+  resultCount,
+  resultOrder,
+  searchInventory,
+  stepActive,
+  typeaheadRows,
+} from './search-model';
 
 const itemIds = (query: string, filters?: Parameters<typeof searchInventory>[2]) =>
   searchInventory(coreWorld, query, filters).items.map((hit) => hit.item.id);
@@ -102,5 +109,26 @@ describe('resultOrder', () => {
     expect(order.indexOf('itm-drill')).toBeGreaterThan(garage);
     const cable = resultOrder(searchInventory(coreWorld, 'cable'));
     expect(cable.indexOf('itm-hdmi')).toBeLessThan(cable.indexOf('itm-charger'));
+  });
+});
+
+describe('typeaheadRows', () => {
+  const idOf = (row: ReturnType<typeof typeaheadRows>[number]) =>
+    row.kind === 'item' ? row.hit.item.id : row.place.id;
+
+  it('is a prefix of the page order, capped', () => {
+    const results = searchInventory(coreWorld, 'garage');
+    const rows = typeaheadRows(results, 4);
+    expect(rows).toHaveLength(4);
+    expect(rows.map(idOf)).toEqual(resultOrder(results).slice(0, 4));
+  });
+
+  it('marks the exact code row', () => {
+    const [first] = typeaheadRows(searchInventory(coreWorld, 'K12'));
+    expect(first).toMatchObject({ kind: 'item', exact: true, hit: { item: { id: 'box-k12' } } });
+  });
+
+  it('is empty for an empty query', () => {
+    expect(typeaheadRows(searchInventory(coreWorld, ''))).toEqual([]);
   });
 });
