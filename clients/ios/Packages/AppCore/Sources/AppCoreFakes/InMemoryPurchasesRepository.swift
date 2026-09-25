@@ -147,7 +147,9 @@ public actor InMemoryPurchasesRepository: PurchasesRepository {
             lines: lines,
             receiptURIs: current.receiptURIs,
             edit: current.edit,
-            updatedAt: current.updatedAt
+            updatedAt: current.updatedAt,
+            accounting: current.accounting,
+            charges: current.charges
         )
         details[id] = updated
         if let index = rows.firstIndex(where: { $0.id == id }) {

@@ -1,3 +1,11 @@
+/**
+ * The catalogue and protocol-2 item tools (`inventory.catalogue.*`,
+ * `inventory.items.validate`, item create/edit) identify a type by its stable
+ * `typeId` (the type's immutable id), not by its human-readable `key`. This is
+ * the sole identifier for those tools; there is no `typeKey` alternative for
+ * them. `inventory.items.list`'s `typeKey` filter is a separate, legacy
+ * lookup by the published type's key and is unaffected by this.
+ */
 import { catalogueClient } from './inventory-catalogue-client.js';
 import { optionalPositiveInteger } from './inventory-catalogue-input.js';
 import { INVENTORY_TYPES_READ_SCOPE } from './inventory-catalogue-scopes.js';

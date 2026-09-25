@@ -3226,6 +3226,35 @@ export type MobilePurchasesCreateManualPurchaseResponses = {
    * 200
    */
   200: {
+    accounting?: {
+      awaitingImportCents: number;
+      matchedCents: number;
+      netSpendCents: number;
+      refundedCents: number;
+      residualCents: number;
+      totalCents: number;
+    };
+    charges?: Array<{
+      amountCents: number;
+      chargedOn: string | null;
+      currency: string;
+      id: string;
+      matches: Array<{
+        amountCents: number;
+        id: string;
+        matchedBy: 'automatic' | 'confirmed';
+        transaction: {
+          accountName: string | null;
+          amount: number;
+          currency: string;
+          date: string;
+          description: string;
+        } | null;
+        transactionId: string | null;
+      }>;
+      origin: string;
+      role: string;
+    }>;
     currency: string;
     discountCents: number;
     edit: {
@@ -3412,6 +3441,35 @@ export type MobilePurchasesSaveReceiptDraftResponses = {
    * 200
    */
   200: {
+    accounting?: {
+      awaitingImportCents: number;
+      matchedCents: number;
+      netSpendCents: number;
+      refundedCents: number;
+      residualCents: number;
+      totalCents: number;
+    };
+    charges?: Array<{
+      amountCents: number;
+      chargedOn: string | null;
+      currency: string;
+      id: string;
+      matches: Array<{
+        amountCents: number;
+        id: string;
+        matchedBy: 'automatic' | 'confirmed';
+        transaction: {
+          accountName: string | null;
+          amount: number;
+          currency: string;
+          date: string;
+          description: string;
+        } | null;
+        transactionId: string | null;
+      }>;
+      origin: string;
+      role: string;
+    }>;
     currency: string;
     discountCents: number;
     edit: {
@@ -4370,6 +4428,35 @@ export type MobilePurchasesGetPurchaseResponses = {
    * 200
    */
   200: {
+    accounting?: {
+      awaitingImportCents: number;
+      matchedCents: number;
+      netSpendCents: number;
+      refundedCents: number;
+      residualCents: number;
+      totalCents: number;
+    };
+    charges?: Array<{
+      amountCents: number;
+      chargedOn: string | null;
+      currency: string;
+      id: string;
+      matches: Array<{
+        amountCents: number;
+        id: string;
+        matchedBy: 'automatic' | 'confirmed';
+        transaction: {
+          accountName: string | null;
+          amount: number;
+          currency: string;
+          date: string;
+          description: string;
+        } | null;
+        transactionId: string | null;
+      }>;
+      origin: string;
+      role: string;
+    }>;
     currency: string;
     discountCents: number;
     edit: {
@@ -4573,6 +4660,35 @@ export type MobilePurchasesUpdatePurchaseResponses = {
    * 200
    */
   200: {
+    accounting?: {
+      awaitingImportCents: number;
+      matchedCents: number;
+      netSpendCents: number;
+      refundedCents: number;
+      residualCents: number;
+      totalCents: number;
+    };
+    charges?: Array<{
+      amountCents: number;
+      chargedOn: string | null;
+      currency: string;
+      id: string;
+      matches: Array<{
+        amountCents: number;
+        id: string;
+        matchedBy: 'automatic' | 'confirmed';
+        transaction: {
+          accountName: string | null;
+          amount: number;
+          currency: string;
+          date: string;
+          description: string;
+        } | null;
+        transactionId: string | null;
+      }>;
+      origin: string;
+      role: string;
+    }>;
     currency: string;
     discountCents: number;
     edit: {

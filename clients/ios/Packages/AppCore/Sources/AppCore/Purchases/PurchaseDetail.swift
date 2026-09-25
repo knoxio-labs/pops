@@ -28,8 +28,9 @@ public struct PurchaseDetailLine: Identifiable, Hashable, Sendable {
 /// The complete purchase representation supplied by the BFM detail contract.
 ///
 /// `receiptURIs` preserves every receipt document in server order and is empty when the purchase
-/// has none. The BFM contract supplies the five named charge totals below; it has no other charge,
-/// finance-link, or accounting-split fields for this model to carry.
+/// has none. `accounting` and `charges` are the bank match: how much of the purchase the
+/// statements have proven, and which transactions did it. `accounting` is `nil` only when the
+/// server predates the field.
 public struct PurchaseDetail: Identifiable, Hashable, Sendable {
     public var id: Purchase.ID { purchase.id }
 
@@ -45,6 +46,9 @@ public struct PurchaseDetail: Identifiable, Hashable, Sendable {
     public let edit: PurchaseEdit?
     /// The server's verbatim compare-and-swap token for an update, when supplied.
     public let updatedAt: String?
+    public let accounting: PurchaseAccounting?
+    /// Every charge the purchase expects on a statement, in server order.
+    public let charges: [PurchaseCharge]
 
     /// Creates a complete purchase detail while preserving receipt document order.
     public init(
@@ -58,7 +62,9 @@ public struct PurchaseDetail: Identifiable, Hashable, Sendable {
         lines: [PurchaseDetailLine],
         receiptURIs: [String],
         edit: PurchaseEdit? = nil,
-        updatedAt: String? = nil
+        updatedAt: String? = nil,
+        accounting: PurchaseAccounting? = nil,
+        charges: [PurchaseCharge] = []
     ) {
         self.purchase = purchase
         self.subtotal = subtotal
@@ -71,6 +77,8 @@ public struct PurchaseDetail: Identifiable, Hashable, Sendable {
         self.receiptURIs = receiptURIs
         self.edit = edit
         self.updatedAt = updatedAt
+        self.accounting = accounting
+        self.charges = charges
     }
 }
 

@@ -168,6 +168,15 @@ export function purchasesPurchaseDetail(
         updatedAt: '2026-08-01T14:32:00.000Z',
       },
       items: [],
+      charges: [],
+      accounting: {
+        totalCents: overrides.totalCents ?? 2750,
+        matchedCents: 0,
+        awaitingImportCents: overrides.totalCents ?? 2750,
+        residualCents: 0,
+        refundedCents: 0,
+        netSpendCents: overrides.totalCents ?? 2750,
+      },
       documents: [],
     },
   };

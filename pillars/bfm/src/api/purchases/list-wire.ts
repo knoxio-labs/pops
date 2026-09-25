@@ -13,16 +13,24 @@
  * persists and publishes it.
  *
  * Only what the mobile shapes draw is described. `purchases`' record carries
- * shipments, charges, an accounting split and per-line provenance that a phone
- * does not render, and a schema demanding all of it would turn a producer
- * trimming an unused field into a `502` on a handset.
+ * shipments, allocations and per-line provenance that a phone does not
+ * render, and a schema demanding all of it would turn a producer trimming an
+ * unused field into a `502` on a handset.
  */
 import { z } from 'zod';
 
 import { parseSoftUri } from '@pops/pillar-sdk';
 
+import {
+  PurchasesAccountingSchema,
+  PurchasesChargeDetailSchema,
+  toMobileAccounting,
+  toMobileCharges,
+} from './bank-match-wire.js';
+import { calendarDayOf } from './calendar-day.js';
 import { toMerchantIdentity } from './merchant-identity.js';
 
+import type { MobileMatchedTransaction } from '../../contract/mobile-purchase-bank-match-schemas.js';
 import type {
   MobilePurchase,
   MobilePurchaseDetail,
@@ -131,9 +139,8 @@ const PurchasesItemSchema = z.object({
  * The detail read.
  *
  * `purchases` answers a `PurchaseDetail` — the order plus its shipments,
- * lines, charges, documents and accounting. Only the order header, the lines
- * and the documents are described, because those are what the mobile detail
- * draws.
+ * lines, charges, documents and accounting. Shipments and allocations are
+ * not described, because the mobile detail does not draw them.
  *
  * `itemCount` and `receiptUri` are NOT on this response: they are aggregates
  * the list endpoint computes, and here the same facts are read off the arrays
@@ -194,6 +201,8 @@ export const PurchasesDetailResponseSchema = z.object({
     updatedAt: z.string().optional(),
   }),
   items: z.array(PurchasesItemSchema),
+  charges: z.array(PurchasesChargeDetailSchema),
+  accounting: PurchasesAccountingSchema,
   documents: z.array(
     z.object({
       documentUri: z.string(),
@@ -205,63 +214,6 @@ export const PurchasesDetailResponseSchema = z.object({
 });
 
 export type PurchasesDetailResponse = z.infer<typeof PurchasesDetailResponseSchema>;
-
-/**
- * The calendar day an order is dated, WHERE IT WAS PLACED.
- *
- * No ambient zone takes part. A 9am Sydney shop stays the 21st on a handset
- * that has since flown to Los Angeles — where resolving the instant in the
- * device's zone would render it as the 20th and nothing on screen would say
- * why. The transactions leg beside this one shipped that mistake, which is
- * why the day is computed on this side of the wire rather than left to a
- * client.
- *
- * `offsetMinutes` is a separate argument because the instant usually cannot
- * carry it. `purchases` spells `orderedAt` in UTC so that a text comparison
- * over the column is a chronological one — correct for ordering, and it
- * leaves the string saying nothing about where the shop was. Reading the
- * day out of `2026-08-20T23:00:00.000Z` alone answers the 20th for a
- * receipt that printed the 21st, which is the whole defect this argument
- * exists to close.
- *
- * When it is null the timestamp's own suffix answers instead. That is not a
- * second source of truth: a producer that states the offset writes both
- * from the same fact, and one that states none is either spelling the
- * instant in UTC — where the suffix yields zero and the UTC day is the only
- * day anybody can name — or spelling an offset, which is then the best
- * evidence there is.
- *
- * Arithmetic on the epoch rather than string surgery, so an offset that
- * pushes the local time past midnight in either direction lands on the
- * right day.
- */
-export function calendarDayOf(timestamp: string, offsetMinutes: number | null): string {
-  const instant = Date.parse(timestamp);
-  if (Number.isNaN(instant)) {
-    throw new Error(`[bfm-api] not an ISO-8601 timestamp: ${timestamp}`);
-  }
-  const applied = offsetMinutes ?? readOffsetMinutes(timestamp);
-  return new Date(instant + applied * 60_000).toISOString().slice(0, 10);
-}
-
-/**
- * Minutes east of UTC, from the timestamp's own suffix.
- *
- * `Z` is zero. Anything else the schema admits ends in `±HH:MM`. A string
- * that is neither never reaches here — `OrderedAtSchema` rejects it before
- * the mapping runs — and the throw is what keeps that true rather than
- * defaulting a malformed value to UTC and dating it silently wrong.
- */
-function readOffsetMinutes(timestamp: string): number {
-  if (timestamp.endsWith('Z') || timestamp.endsWith('z')) return 0;
-  const match = /(?<sign>[+-])(?<hours>\d{2}):(?<minutes>\d{2})$/u.exec(timestamp);
-  const groups = match?.groups;
-  if (groups === undefined) {
-    throw new Error(`[bfm-api] timestamp carries no UTC offset: ${timestamp}`);
-  }
-  const magnitude = Number(groups['hours']) * 60 + Number(groups['minutes']);
-  return groups['sign'] === '-' ? -magnitude : magnitude;
-}
 
 /** purchases list row → mobile list row. Field-for-field; no arithmetic on money. */
 export function toMobilePurchase(
@@ -284,9 +236,11 @@ export function toMobilePurchase(
 /** purchases detail → the mobile detail record. */
 export function toMobilePurchaseDetail(
   detail: PurchasesDetailResponse,
-  mergedNames: ReadonlyMap<string, string> = new Map()
+  mergedNames: ReadonlyMap<string, string> = new Map(),
+  transactions: ReadonlyMap<string, MobileMatchedTransaction> = new Map()
 ): MobilePurchaseDetail {
   const purchase = detail.purchase;
+  const offsetMinutes = purchase.orderedAtOffsetMinutes ?? null;
   return {
     id: purchase.id,
     merchant: toMerchantIdentity(
@@ -297,7 +251,7 @@ export function toMobilePurchaseDetail(
     merchantName: purchase.merchantEntityName,
     totalCents: purchase.totalCents,
     currency: purchase.currency,
-    orderedOn: calendarDayOf(purchase.orderedAt, purchase.orderedAtOffsetMinutes ?? null),
+    orderedOn: calendarDayOf(purchase.orderedAt, offsetMinutes),
     orderedAt: purchase.orderedAt,
     itemCount: detail.items.length,
     status: purchase.status,
@@ -318,6 +272,8 @@ export function toMobilePurchaseDetail(
       detail.edit === null || detail.edit === undefined
         ? null
         : { editedAt: detail.edit.editedAt, changes: detail.edit.changes },
+    accounting: toMobileAccounting(detail.accounting),
+    charges: toMobileCharges(detail.charges, offsetMinutes, transactions),
   };
 }
 

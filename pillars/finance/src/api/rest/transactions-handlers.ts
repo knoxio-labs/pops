@@ -89,6 +89,7 @@ export function makeTransactionsHandlers(db: FinanceDb, contacts: ContactsClient
             tag: query.tag,
             entityId: query.entityId,
             type: query.type,
+            ids: query.ids,
             beforeDate: query.beforeDate,
             beforeId: query.beforeId,
           },

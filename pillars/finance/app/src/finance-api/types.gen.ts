@@ -9766,6 +9766,10 @@ export type TransactionsListData = {
       | 'rebate'
       | 'tax'
       | 'fee';
+    /**
+     * Only the transactions with these ids. Repeat the parameter for several. Ids that match nothing are absent from the answer rather than an error.
+     */
+    ids?: Array<string>;
     limit?: number;
     offset?: number;
     /**
