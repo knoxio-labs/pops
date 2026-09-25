@@ -13,12 +13,12 @@ import type { BulkDraft } from '../bulk-entry/paste-parser';
 import type { BulkIssue } from '../bulk-entry/row-validation';
 
 const COLS = [
-  ['name', 'Name', 'min-w-0 flex-1'],
-  ['type', 'Type', 'w-32'],
+  ['name', 'Name', 'min-w-32 flex-1'],
+  ['type', 'Type', 'w-28 lg:w-32'],
   ['quantity', 'Qty', 'w-12 text-right'],
   ['code', 'Code', 'w-20 font-mono text-xs'],
-  ['where', 'Where', 'w-40'],
-  ['note', 'Note', 'w-40'],
+  ['where', 'Where', 'w-32 lg:w-40'],
+  ['note', 'Note', 'hidden w-40 lg:block'],
 ] as const;
 
 /** Props for {@link PreviewStep}. */

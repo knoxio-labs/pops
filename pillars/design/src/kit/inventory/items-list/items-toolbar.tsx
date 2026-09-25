@@ -53,8 +53,8 @@ function isSort(value: string): value is ItemsSort {
 export function ItemsToolbar(props: ItemsToolbarProps) {
   const { filters, view, onFilters } = props;
   return (
-    <div className="flex items-center gap-2">
-      <div className="w-64 shrink-0">
+    <div className="flex flex-wrap items-center gap-2">
+      <div className="w-56 shrink-0 lg:w-64">
         <TextInput
           size="sm"
           value={filters.q}

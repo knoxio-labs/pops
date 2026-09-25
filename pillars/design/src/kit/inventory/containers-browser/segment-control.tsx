@@ -1,6 +1,7 @@
 /**
  * The Containers segments as one radio group, each with its count, so the
- * number of open boxes is visible before anyone clicks Open.
+ * number of open boxes is visible before anyone clicks Open. Moving day is
+ * every active container in packing order, so it carries no count of its own.
  */
 import { ButtonPrimitive, cn } from '@pops/ui';
 
@@ -49,7 +50,9 @@ export function SegmentControl({
           onClick={() => onChange?.(segment)}
         >
           {LABELS[segment]}
-          <span className="tabular-nums text-muted-foreground">{counts[segment]}</span>
+          {segment === 'moving' ? null : (
+            <span className="tabular-nums text-muted-foreground">{counts[segment]}</span>
+          )}
         </ButtonPrimitive>
       ))}
     </div>

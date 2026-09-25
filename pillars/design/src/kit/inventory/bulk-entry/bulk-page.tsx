@@ -54,9 +54,9 @@ function Defaults({
   types,
 }: Pick<BulkPageProps, 'world' | 'destination' | 'types'>) {
   return (
-    <div className="flex items-center gap-3 text-sm">
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
       <span className="text-muted-foreground">Rows without a Where go to</span>
-      <PlacementPath world={world} placement={destination} maxSegments={3} />
+      <PlacementPath world={world} placement={destination} maxSegments={3} className="shrink-0" />
       <Button size="sm" variant="outline">
         Change
       </Button>

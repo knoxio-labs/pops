@@ -77,21 +77,23 @@ function RowVerbs({ item }: { item: ItemRowModel }) {
 
 function NameCell({ item, onOpen }: { item: ItemRowModel; onOpen?: (id: string) => void }) {
   return (
-    <span className="flex min-w-0 flex-1 items-center gap-2">
+    <span className="flex min-w-40 flex-1 items-center gap-2 overflow-hidden">
       <ItemMark item={item} />
       <ButtonPrimitive
         variant="ghost"
         size="xs"
-        className="h-auto min-w-0 shrink justify-start px-0 text-sm font-medium hover:bg-transparent"
+        className="h-auto min-w-24 shrink justify-start px-0 text-sm font-medium hover:bg-transparent"
         aria-label={`Open ${item.name}`}
         onClick={() => onOpen?.(item.id)}
       >
         <span className="truncate">{item.name}</span>
       </ButtonPrimitive>
-      <QuantityBadge quantity={item.quantity} />
-      <ContainerStateBadge container={item.container} />
-      <LifecycleBadge lifecycle={item.lifecycle} />
-      <SyncBadge sync={item.sync} />
+      <span className="hidden min-w-0 shrink items-center gap-1 overflow-hidden lg:flex">
+        <QuantityBadge quantity={item.quantity} />
+        <ContainerStateBadge container={item.container} />
+        <LifecycleBadge lifecycle={item.lifecycle} />
+        <SyncBadge sync={item.sync} />
+      </span>
     </span>
   );
 }

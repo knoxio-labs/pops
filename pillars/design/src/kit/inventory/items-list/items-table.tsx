@@ -82,7 +82,7 @@ function Header(props: ItemsTableProps) {
         sort="name"
         active={sort === 'name'}
         onSort={onSort}
-        className="flex-1 pl-9"
+        className="min-w-40 flex-1 pl-9"
       />
       {props.secondColumn ? (
         <span className={cn(COLUMN.type, 'uppercase tracking-label')}>

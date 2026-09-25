@@ -54,6 +54,7 @@ function banner(props: ContainersPageProps, segment: ContainerSegment): ReactNod
 /** The Containers page. */
 export function ContainersPage(props: ContainersPageProps) {
   const { items, world, segment = 'all' } = props;
+  const population = items.filter((item) => item.container !== null).length;
   const rows = useMemo(() => rowsFor(items, segment), [items, segment]);
   const browser = useItemsBrowser(
     rows,
@@ -65,17 +66,19 @@ export function ContainersPage(props: ContainersPageProps) {
     <ListPage
       title="Containers"
       icon={INVENTORY_ICONS.container}
-      actions={<NewItemButton label="New container" />}
+      actions={<NewItemButton label="New container" offline={props.offline} />}
       banner={banner(props, segment)}
       toolbar={
-        <ContainersToolbar
-          browser={browser}
-          segment={segment}
-          items={items}
-          shown={rows.length}
-          types={props.types}
-          places={props.places}
-        />
+        (props.status ?? 'ready') === 'ready' && population > 0 ? (
+          <ContainersToolbar
+            browser={browser}
+            segment={segment}
+            items={items}
+            shown={rows.length}
+            types={props.types}
+            places={props.places}
+          />
+        ) : null
       }
       dock={
         <SelectionDock
@@ -91,7 +94,7 @@ export function ContainersPage(props: ContainersPageProps) {
         browser={browser}
         world={world}
         status={props.status ?? 'ready'}
-        population={items.filter((item) => item.container !== null).length}
+        population={population}
         noun="containers"
         secondColumn={{ header: 'Holds', Cell: HoldsCell }}
       />

@@ -90,11 +90,15 @@ export function ItemsPage(props: ItemsPageProps) {
             selectedCount={browser.selection.count}
             defaultOpen={props.exportOpen}
           />
-          <NewItemButton />
+          <NewItemButton offline={props.offline} />
         </>
       }
       banner={props.offline ? <OfflineBanner /> : props.banner}
-      toolbar={<ItemsHead browser={browser} props={props} />}
+      toolbar={
+        status === 'ready' && items.length > 0 ? (
+          <ItemsHead browser={browser} props={props} />
+        ) : null
+      }
       dock={
         <SelectionDock
           world={world}

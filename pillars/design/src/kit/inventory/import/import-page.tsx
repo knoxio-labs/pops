@@ -117,7 +117,7 @@ export function ImportPage(props: ImportPageProps) {
       description="Bring a spreadsheet of things in as items."
       actions={phase === 'upload' ? null : <FileLine file={props.file} />}
       toolbar={
-        <div className="flex min-h-9 items-center gap-4">
+        <div className="flex min-h-9 flex-wrap items-center gap-x-4 gap-y-2">
           <ImportSteps current={stepOf(phase)} done={phase === 'done'} />
           {phase === 'preview' ? (
             <span className="ml-auto flex items-center gap-2">

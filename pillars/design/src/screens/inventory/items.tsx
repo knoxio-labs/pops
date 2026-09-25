@@ -122,10 +122,10 @@ export const states: ScreenStates = {
   'empty-filtered': () => <Items seed={{ filters: { q: 'snorkel' } }} />,
   loading: () => <Items status="loading" />,
   error: () => <Items status="error" />,
-  offline: () => <Items offline seed={{ filters: RECENT, selected: ['itm-lamp', 'itm-drill'] }} />,
+  offline: () => <Items offline seed={{ filters: RECENT, selected: ['itm-tv', 'box-k13'] }} />,
   stale: () => (
     <Items
-      seed={{ filters: RECENT, selected: ['itm-lamp', 'itm-drill'] }}
+      seed={{ filters: RECENT, selected: ['itm-tv', 'box-k13'] }}
       banner={
         <StateBanner
           kind="stale"

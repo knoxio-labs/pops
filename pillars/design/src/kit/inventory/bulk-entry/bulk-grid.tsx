@@ -26,12 +26,12 @@ const HEADERS: Readonly<Record<BulkColumn, string>> = {
 };
 
 const WIDTHS: Readonly<Record<BulkColumn, string>> = {
-  name: 'min-w-0 flex-1',
-  type: 'w-36 shrink-0',
+  name: 'min-w-40 flex-1',
+  type: 'w-28 shrink-0 lg:w-36',
   quantity: 'w-16 shrink-0',
   code: 'w-24 shrink-0',
-  where: 'w-44 shrink-0',
-  note: 'w-40 shrink-0',
+  where: 'w-36 shrink-0 lg:w-44',
+  note: 'hidden w-40 shrink-0 lg:block',
 };
 
 function placeholders(destination: string): Readonly<Partial<Record<BulkColumn, string>>> {

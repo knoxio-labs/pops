@@ -12,16 +12,32 @@ import {
   DropdownMenuItem,
   DropdownMenuRoot,
   DropdownMenuTrigger,
+  cn,
 } from '@pops/ui';
 
 import { HintTooltip, ShortcutHint } from '../foundation';
 
 /** New item, and a menu for Bulk entry and Import. */
-export function NewItemButton({ label = 'New item' }: { label?: string }) {
+export function NewItemButton({
+  label = 'New item',
+  offline = false,
+}: {
+  label?: string;
+  /** No connection: adding is off, and the tooltip says why. */
+  offline?: boolean;
+}) {
   return (
     <span className="flex items-center">
-      <HintTooltip label={label} shortcutId="new-item">
-        <Button className="rounded-r-none" prefix={<Plus className="size-4" aria-hidden />}>
+      <HintTooltip
+        label={label}
+        shortcutId="new-item"
+        disabledReason={offline ? 'No connection' : undefined}
+      >
+        <Button
+          aria-disabled={offline || undefined}
+          className={cn('rounded-r-none', offline && 'opacity-50')}
+          prefix={<Plus className="size-4" aria-hidden />}
+        >
           {label}
         </Button>
       </HintTooltip>
@@ -30,6 +46,7 @@ export function NewItemButton({ label = 'New item' }: { label?: string }) {
           <ButtonPrimitive
             size="icon"
             aria-label="More ways to add"
+            disabled={offline}
             className="rounded-l-none border-l border-primary-foreground/20"
           >
             <ChevronDown className="size-4" aria-hidden />
