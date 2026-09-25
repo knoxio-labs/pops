@@ -57,9 +57,13 @@ function BarVerb({ action }: { action: SelectionBarAction }) {
         className={cn('shrink-0 gap-1 px-1.5 whitespace-nowrap', disabled && 'opacity-50')}
         onClick={disabled ? undefined : action.onSelect}
         prefix={<Icon className="size-4 text-muted-foreground" aria-hidden />}
-        suffix={action.shortcutId ? <ShortcutHint id={action.shortcutId} /> : undefined}
+        suffix={
+          action.shortcutId ? (
+            <ShortcutHint id={action.shortcutId} className="max-lg:hidden" />
+          ) : undefined
+        }
       >
-        {action.label}
+        <span className="max-lg:sr-only">{action.label}</span>
       </Button>
     </HintTooltip>
   );
