@@ -49,10 +49,18 @@ internal struct ValueVectorRoundTripTests {
         "every vector reads back as its catalogue field's kind, in order, with its target's state")
     func everyVectorReadsBack() async throws {
         let (harness, file) = try await Self.downloaded()
-        #expect(file.vectors.count == 35)
+        #expect(file.vectors.count == 37)
 
         for vector in file.vectors {
             let name = try File.require(vector["name"] as? String, "name")
+            // The pending-target vector deliberately has the phone lacking a
+            // row for a target the producer still calls resolved: its own
+            // test above (`referenceTargetNotYetSyncedResolvesToNothingLocally`)
+            // covers it; this loop's oracle assumes the wire target state is
+            // one the replica can independently derive, which is exactly
+            // what that vector breaks.
+            guard name != "reference one whose target is live but has not synced to the phone yet"
+            else { continue }
             let fieldId = try File.require(vector["fieldId"] as? String, "fieldId")
             let kind = try Expect.kind(vector)
             let item = try Self.item(harness, vector)
@@ -69,6 +77,45 @@ internal struct ValueVectorRoundTripTests {
                 #expect(!item.fieldValues.contains { $0.fieldId == fieldId }, "\(name)")
             }
         }
+    }
+
+    /// A reference `[String: Any]` vector's first (only) `referenceTargets` entry.
+    private static func firstReferenceTarget(_ vector: [String: Any]) throws -> [String: Any] {
+        let targets = try File.require(vector["referenceTargets"] as? [Any], "referenceTargets")
+        return try File.object(targets.first)
+    }
+
+    private static func vector(_ file: File, named name: String) throws -> [String: Any] {
+        try File.require(file.vectors.first { ($0["name"] as? String) == name }, name)
+    }
+
+    @Test("a target not yet synced down resolves to nothing, never a fabricated row")
+    func referenceTargetNotYetSyncedResolvesToNothingLocally() async throws {
+        let (harness, file) = try await Self.downloaded()
+        let vector = try Self.vector(
+            file, named: "reference one whose target is live but has not synced to the phone yet")
+        let target = try Self.firstReferenceTarget(vector)
+        #expect(target["kind"] as? String == "pending")
+        let targetId = try File.require(target["targetId"] as? String, "targetId")
+        #expect(try harness.replica.read(.item(id: targetId)) == nil)
+    }
+
+    @Test(
+        "a reference target renamed after selection resolves to its current label, not a stale one"
+    )
+    func referenceTargetRenamedResolvesToCurrentLabel() async throws {
+        let (harness, file) = try await Self.downloaded()
+        let vector = try Self.vector(
+            file, named: "reference one whose target was renamed after being selected")
+        let target = try Self.firstReferenceTarget(vector)
+        let targetItem = try File.object(target["item"])
+        let targetId = try File.require(targetItem["id"] as? String, "targetId")
+        #expect(
+            try File.require(targetItem["name"] as? String, "name")
+                == "Reference target after rename")
+        let resolved = try File.require(
+            try harness.replica.read(.item(id: targetId)), "resolved target")
+        #expect(resolved.name == "Reference target after rename")
     }
 
     @Test("a value read back is sent back exactly as the engine accepted it")

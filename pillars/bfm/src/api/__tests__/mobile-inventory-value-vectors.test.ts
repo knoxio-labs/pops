@@ -31,6 +31,11 @@ const FixtureSchema = z.object({
           z.union([
             z.object({ kind: z.literal('item'), item: RowSchema }),
             z.object({ kind: z.literal('location'), location: RowSchema }),
+            z.object({
+              kind: z.literal('pending'),
+              targetKind: z.enum(['item', 'location']),
+              targetId: z.string(),
+            }),
             z.null(),
           ])
         )

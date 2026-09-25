@@ -18,10 +18,19 @@ export interface ValueVectorCommand {
 /**
  * A reference value names only `{targetKind, targetId}`; its target's state is
  * whatever row the consumer holds. `null` is a target no row exists for.
+ * `pending` is a target that is live on the producer but the vector
+ * withholds its resolved row, standing in for a target the phone has not
+ * synced down yet (POPS-4403/4360): the consumer must resolve it from its
+ * own replica, not from data embedded in this reference.
  */
 export type ValueVectorReferenceTarget =
   | { readonly kind: 'item'; readonly item: SyncItem }
   | { readonly kind: 'location'; readonly location: SyncLocation }
+  | {
+      readonly kind: 'pending';
+      readonly targetKind: 'item' | 'location';
+      readonly targetId: string;
+    }
   | null;
 
 /** One kind/cardinality/state case, projected through `toSyncItem` after every write. */

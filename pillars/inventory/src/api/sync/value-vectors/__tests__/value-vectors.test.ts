@@ -13,6 +13,7 @@ import { SyncRequestError } from '../../errors.js';
 import { requireProtocol } from '../../protocol.js';
 import { buildValueVectors } from '../build.js';
 import { KIND_FIELDS } from '../catalogue-fields.js';
+import { referenceValuesOf } from '../reference-values.js';
 
 import type { NegativeValueVector, ValueVector, ValueVectorFile } from '../build.js';
 
@@ -45,9 +46,16 @@ function negative<Category extends NegativeValueVector['category']>(
 function targetStates(vector: ValueVector): string[] {
   return (vector.referenceTargets ?? []).map((target) => {
     if (target === null) return 'missing';
+    if (target.kind === 'pending') return `${target.targetKind}:pending`;
     const row = target.kind === 'item' ? target.item : target.location;
     return `${target.kind}:${row.deletedAt === null ? 'live' : 'deleted'}`;
   });
+}
+
+function findVector(name: string): ValueVector {
+  const vector = file.vectors.find((candidate) => candidate.name === name);
+  if (!vector) throw new Error(`no vector named ${name}`);
+  return vector;
 }
 
 describe('value vectors', () => {
@@ -124,8 +132,33 @@ describe('value vectors', () => {
   it('covers every reference target state, item and location', () => {
     const states = new Set(file.vectors.flatMap(targetStates));
     expect(states).toEqual(
-      new Set(['item:live', 'item:deleted', 'location:live', 'location:deleted', 'missing'])
+      new Set([
+        'item:live',
+        'item:deleted',
+        'item:pending',
+        'location:live',
+        'location:deleted',
+        'missing',
+      ])
     );
+  });
+
+  it('withholds resolution for a target that is live but has not synced to the phone yet', () => {
+    const vector = findVector(
+      'reference one whose target is live but has not synced to the phone yet'
+    );
+    const [value] = referenceValuesOf(vector.fieldValue);
+    if (!value) throw new Error('expected a reference value');
+    expect(vector.referenceTargets).toEqual([
+      { kind: 'pending', targetKind: 'item', targetId: value.targetId },
+    ]);
+  });
+
+  it('resolves a reference target to its current label after it was renamed', () => {
+    const vector = findVector('reference one whose target was renamed after being selected');
+    const [target] = vector.referenceTargets ?? [];
+    if (!target || target.kind !== 'item') throw new Error('expected a resolved item target');
+    expect(target.item.name).toBe('Reference target after rename');
   });
 
   it('shows an enum value naming an option the current revision archived', () => {
