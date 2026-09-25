@@ -56,7 +56,9 @@ extension BFMPurchasesRepository {
                 },
                 receiptURIs: wire.receiptUris,
                 edit: try Self.edit(from: wire.edit),
-                updatedAt: wire.updatedAt))
+                updatedAt: wire.updatedAt,
+                accounting: Self.accounting(from: wire.accounting, currency: wire.currency),
+                charges: try charges(from: wire.charges)))
     }
 
     func detail(from wire: UpdatePurchaseWire) throws -> PurchaseDetail {
@@ -84,7 +86,9 @@ extension BFMPurchasesRepository {
                 },
                 receiptURIs: wire.receiptUris,
                 edit: try Self.edit(from: wire.edit),
-                updatedAt: wire.updatedAt))
+                updatedAt: wire.updatedAt,
+                accounting: Self.accounting(from: wire.accounting, currency: wire.currency),
+                charges: try charges(from: wire.charges)))
     }
 
     private func detail(from wire: DetailValues) throws -> PurchaseDetail {
@@ -123,7 +127,9 @@ extension BFMPurchasesRepository {
             },
             receiptURIs: wire.receiptURIs,
             edit: wire.edit,
-            updatedAt: wire.updatedAt
+            updatedAt: wire.updatedAt,
+            accounting: wire.accounting,
+            charges: wire.charges
         )
     }
 
@@ -200,6 +206,8 @@ private struct DetailValues {
     let receiptURIs: [String]
     let edit: PurchaseEdit?
     let updatedAt: String?
+    let accounting: PurchaseAccounting?
+    let charges: [PurchaseCharge]
 }
 
 private struct DetailLineValues {

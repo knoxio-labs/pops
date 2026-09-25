@@ -29,7 +29,9 @@ extension PurchaseDetail {
         lines: [PurchaseDetailLine] = [.fake()],
         receiptURIs: [String] = [],
         edit: PurchaseEdit? = nil,
-        updatedAt: String? = nil
+        updatedAt: String? = nil,
+        accounting: PurchaseAccounting? = nil,
+        charges: [PurchaseCharge] = []
     ) -> PurchaseDetail {
         PurchaseDetail(
             purchase: purchase,
@@ -42,7 +44,9 @@ extension PurchaseDetail {
             lines: lines,
             receiptURIs: receiptURIs,
             edit: edit,
-            updatedAt: updatedAt
+            updatedAt: updatedAt,
+            accounting: accounting,
+            charges: charges
         )
     }
 }

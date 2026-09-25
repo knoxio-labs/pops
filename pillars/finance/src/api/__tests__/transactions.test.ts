@@ -221,6 +221,26 @@ describe('transactions — filters & pagination', () => {
     expect(income.data.map((t) => t.description)).toEqual(['Salary']);
   });
 
+  it('narrows to the requested ids, repeated or single', async () => {
+    const all = await client().transactions.list();
+    const byDescription = new Map(all.data.map((t) => [t.description, t.id]));
+    const coffee = byDescription.get('Coffee') ?? '';
+    const rent = byDescription.get('Rent') ?? '';
+
+    const both = await client().transactions.list({ ids: [coffee, rent, 'no-such-id'] });
+    expect(both.data.map((t) => t.description).toSorted()).toEqual(['Coffee', 'Rent']);
+    expect(both.pagination.total).toBe(2);
+
+    const one = await client().transactions.list({ ids: [rent] });
+    expect(one.data.map((t) => t.description)).toEqual(['Rent']);
+  });
+
+  it('refuses an empty id', async () => {
+    await expect(client().transactions.list({ ids: [''] })).rejects.toMatchObject({
+      status: 400,
+    });
+  });
+
   it('paginates with limit/offset', async () => {
     const page = await client().transactions.list({ limit: 2, offset: 0 });
     expect(page.data).toHaveLength(2);

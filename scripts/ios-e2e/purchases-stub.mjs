@@ -425,6 +425,8 @@ function seededPurchase(fixture) {
         units: [],
       },
     ],
+    charges: [],
+    accounting: accounting(fixture.totalCents, fixture.status),
     documents: fixture.documents ?? [],
   };
 }
@@ -736,6 +738,8 @@ async function handleCreateManualPurchase(request, response, store) {
       },
       units: [],
     })),
+    charges: [],
+    accounting: accounting(Number(body['totalCents'] ?? 0), 'linked'),
     documents: [],
   };
 

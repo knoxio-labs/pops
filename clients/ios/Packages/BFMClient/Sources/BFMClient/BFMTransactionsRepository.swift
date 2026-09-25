@@ -232,7 +232,7 @@ extension BFMTransactionsRepository {
     /// `19.989999999999998976` and scaling that yields `1998` cents. Its
     /// `description` is `"19.99"`, which is exactly what the server serialised
     /// and what `Decimal(string:)` reads back without loss.
-    private static func majorUnits(of amount: Double) -> Decimal? {
+    static func majorUnits(of amount: Double) -> Decimal? {
         guard amount.isFinite else { return nil }
         return Decimal(string: String(amount))
     }
