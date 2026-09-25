@@ -25,7 +25,7 @@ export function SidebarNavLink({ app, item, pathname, onNavigate }: SidebarNavLi
       onClick={onNavigate}
       className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors font-medium min-h-[44px] ${
         isActive
-          ? 'bg-primary text-primary-foreground'
+          ? 'bg-app-accent text-app-accent-foreground'
           : 'text-foreground hover:bg-muted hover:text-foreground'
       }`}
     >
