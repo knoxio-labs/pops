@@ -7,7 +7,13 @@ import * as React from 'react';
  * swipe that merely started on a trigger — a row's ⋮ button, a table's
  * Columns button — opened a menu and froze the page. Touch and pen now open on
  * `click`, which the browser does not fire for a scroll; a mouse still opens on
- * press, as Radix intends. Radix Select already draws the line in this place.
+ * press, as Radix intends. Radix Select splits mouse from touch the same way.
+ *
+ * Cancelling the touch `pointerdown` is only how Radix's own handler is told
+ * to stand down (it skips a default-prevented event). It does not cost the
+ * tap its `click`: the Pointer Events spec suppresses only the compatibility
+ * mouse events (`mousedown`, `mouseup`, `mousemove`), and `click` is not one.
+ * `pillars/shell/e2e/shell-mobile.spec.ts` taps and swipes a real trigger.
  */
 interface TapToggle {
   open: boolean;

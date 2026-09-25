@@ -97,6 +97,45 @@ test.describe('Shell — mobile chrome', () => {
     await expect(page.locator('body')).not.toHaveCSS('overflow', 'hidden');
   });
 
+  // The Language switcher is a kit DropdownMenu. Its trigger cancels the touch
+  // pointerdown so Radix does not open on press, and opens on the click that
+  // follows. These two tests run on real touch input, which is what the unit
+  // tests' synthetic pointerdown + click cannot show: that cancelling a touch
+  // pointerdown leaves the tap's click intact, and that a swipe fires none.
+  test('a tap on a DropdownMenu trigger opens it', async ({ page }) => {
+    await openLandingPage(page);
+    await page.getByRole('button', { name: 'Language' }).tap();
+    await expect(page.getByRole('menu')).toBeVisible();
+  });
+
+  test('a swipe that starts on a DropdownMenu trigger scrolls the page', async ({ page }) => {
+    await openLandingPage(page);
+    await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible();
+    await page.evaluate(() => window.scrollTo(0, 600));
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(600);
+
+    const box = await page.getByRole('button', { name: 'Language' }).boundingBox();
+    if (box === null) throw new Error('Language trigger has no box');
+    const x = Math.round(box.x + box.width / 2);
+    const y = Math.round(box.y + box.height / 2);
+
+    // Raw touch input, finger dragged down from the trigger: the page should
+    // scroll back up. `Input.synthesizeScrollGesture` does not scroll the
+    // headless shell at all, so it cannot tell a working page from this bug.
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
+    for (let step = 1; step <= 10; step++) {
+      await cdp.send('Input.dispatchTouchEvent', {
+        type: 'touchMove',
+        touchPoints: [{ x, y: y + 30 * step }],
+      });
+    }
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeLessThan(600);
+    await expect(page.getByRole('menu')).toHaveCount(0);
+  });
+
   test('the page never scrolls sideways', async ({ page }) => {
     await page.goto('/settings');
     await expect(page.getByRole('button', { name: 'Toggle sidebar' })).toBeVisible();
