@@ -52,6 +52,15 @@ const BASE_DETAIL: PurchasesDetailResponse = {
     updatedAt: '2026-08-13T02:15:00.000Z',
   },
   items: [],
+  charges: [],
+  accounting: {
+    totalCents: 100,
+    matchedCents: 0,
+    awaitingImportCents: 100,
+    residualCents: 0,
+    refundedCents: 0,
+    netSpendCents: 100,
+  },
   documents: [],
 };
 

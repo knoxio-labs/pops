@@ -238,7 +238,10 @@ export const EXPECTATIONS = [
     // `beforeDate`/`beforeId` are the keyset anchor the mobile cursor decodes
     // to. Losing either one on the producer side turns a stable scroll into an
     // unfiltered first page served over and over, with a 200 every time.
-    query: ['limit', 'beforeDate', 'beforeId'],
+    // `ids` is the purchase detail's bank-match read
+    // (`finance/matched-transactions.ts`); losing it answers with the newest
+    // transactions instead of the matched ones, and every descriptor is wrong.
+    query: ['limit', 'beforeDate', 'beforeId', 'ids'],
     usedBy: 'pillars/bfm/src/api/finance/client.ts',
   },
   {
@@ -2953,15 +2956,15 @@ function selfTest() {
   // made is about resolution, not about file layout.
   const bfmFinanceSites = sites.filter((s) => s.consumer === 'bfm' && s.producer === 'finance');
   assert(
-    bfmFinanceSites.length === 5,
+    bfmFinanceSites.length === 7,
     "discovery must follow bfm's PillarGateway.call wrapper into finance, not just a literal " +
-      'pillar() token — these five calls resolve their producer through gateway.call, not pillar()'
+      'pillar() token — these seven calls resolve their producer through gateway.call, not pillar()'
   );
   assert(
-    new Set(bfmFinanceSites.map((s) => s.file)).size === 2,
-    'and it must follow the wrapper into EVERY file that uses it: bfm reaches finance from both ' +
-      'halves of its finance leg, and a scan that found only the transactions half would still ' +
-      'satisfy the count above'
+    new Set(bfmFinanceSites.map((s) => s.file)).size === 3,
+    'and it must follow the wrapper into EVERY file that uses it: bfm reaches finance from three ' +
+      'files of its finance leg, and a scan that found only one of them could still satisfy the ' +
+      'count above'
   );
   assert(
     sites.filter((s) => s.file === 'pillars/finance/scripts/migrate-core-entities.ts').length === 2,

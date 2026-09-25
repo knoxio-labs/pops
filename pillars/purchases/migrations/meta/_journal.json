@@ -127,6 +127,20 @@
       "when": 1788000000000,
       "tag": "0017_purchase_status_from_links",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1788100000000,
+      "tag": "0018_amazon_source_matching",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "6",
+      "when": 1788200000000,
+      "tag": "0019_nothing_to_settle_status",
+      "breakpoints": true
     }
   ]
 }

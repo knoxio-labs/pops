@@ -32,6 +32,14 @@ export type SettlementMode = (typeof SETTLEMENT_MODES)[number];
  *
  * `awaiting_settlement` is a normal, permanent, valid state — a receipt
  * captured before its card statement is imported is correct, not broken.
+ *
+ * `nothing_to_settle` is derived, not chosen: an order whose total is zero
+ * (free, or fully cancelled before any charge) and that carries no
+ * `capture`/`adjustment`/`refund` charge has no bank transaction to wait
+ * for, so it must never sit in the same "awaiting a match" queue as an
+ * order that genuinely is waiting (POPS-4648). Like `linked`/`partial`, it
+ * is computed by `db/services/purchase-status.ts`'s `deriveStatus` rather
+ * than set by a person — see that file for the full rule.
  */
 export const PURCHASE_STATUSES = [
   'awaiting_settlement',
@@ -39,6 +47,7 @@ export const PURCHASE_STATUSES = [
   'partial',
   'settled_cash',
   'ignored',
+  'nothing_to_settle',
 ] as const;
 export type PurchaseStatus = (typeof PURCHASE_STATUSES)[number];
 

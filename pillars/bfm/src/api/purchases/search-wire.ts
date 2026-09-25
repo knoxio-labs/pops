@@ -14,7 +14,7 @@
  */
 import { z } from 'zod';
 
-import { calendarDayOf } from './list-wire.js';
+import { calendarDayOf } from './calendar-day.js';
 
 import type { MobilePurchaseSearchHit } from '../../contract/mobile-purchases-schemas.js';
 

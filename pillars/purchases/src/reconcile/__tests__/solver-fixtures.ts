@@ -28,6 +28,7 @@ export function charge(overrides: Partial<SolvableCharge> = {}): SolvableCharge 
     orderedAt: '2026-03-04T00:00:00Z',
     descriptorPattern: null,
     settlementWindowDays: null,
+    paymentHint: null,
     ...overrides,
   };
 }
@@ -36,6 +37,7 @@ export function txn(overrides: Partial<SolvableTransaction> = {}): SolvableTrans
   return {
     uri: 'pops://finance/transaction/t1',
     description: 'AMAZON MKTPLACE AU',
+    accountId: 'acct-amex',
     amountCents: 4128,
     settlementCurrency: 'AUD',
     foreignAmountMinor: null,
@@ -69,6 +71,7 @@ export function run(input: Partial<SolverInput> = {}): SolverOutput {
     confirmed: [],
     rejected: [],
     rules: [],
+    cardAccounts: new Map(),
     defaultWindowDays: 21,
     ...input,
   });

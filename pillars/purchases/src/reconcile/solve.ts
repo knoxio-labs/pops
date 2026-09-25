@@ -62,6 +62,7 @@ export function solve(input: SolverInput): SolverOutput {
     defaultWindowDays: input.defaultWindowDays,
     rejected: rejectionsByCharge(input.rejected),
     rules: input.rules,
+    cardAccounts: input.cardAccounts,
   };
 
   const charges = orderedCharges(input.charges).filter(

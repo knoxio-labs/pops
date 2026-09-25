@@ -176,7 +176,7 @@ export function SortablePhotoGrid({
 
   return (
     <div
-      className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2"
+      className="grid grid-cols-4 sm:max-md:grid-cols-5 md:grid-cols-6 gap-2"
       role="list"
       aria-label="Reorder photos"
     >

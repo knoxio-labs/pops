@@ -39,7 +39,7 @@ export function ProviderStatusSection() {
   return (
     <div className="space-y-3">
       <h2 className="text-xl font-semibold">Providers</h2>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-3 sm:max-lg:grid-cols-2 lg:grid-cols-3">
         {providers.map((p) => (
           <ProviderCard
             key={p.id}

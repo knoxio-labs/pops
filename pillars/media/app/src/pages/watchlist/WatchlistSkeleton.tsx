@@ -29,7 +29,7 @@ export function WatchlistSkeleton() {
           </div>
         ))}
       </div>
-      <div className="hidden md:grid grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+      <div className="hidden md:grid grid-cols-3 lg:max-xl:grid-cols-4 xl:grid-cols-5 gap-4">
         {DESKTOP_SKELETON_KEYS.map((key) => (
           <div key={key} className="space-y-2">
             <Skeleton className="w-full aspect-[2/3] rounded-md" />

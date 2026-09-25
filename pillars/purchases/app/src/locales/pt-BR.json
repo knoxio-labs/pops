@@ -176,6 +176,7 @@
   "purchase.status.partial": "Parcialmente vinculada",
   "purchase.status.settled_cash": "Liquidada em dinheiro",
   "purchase.status.ignored": "Ignorada",
+  "purchase.status.nothing_to_settle": "Nada a liquidar",
   "purchase.ingest.email": "E-mail",
   "purchase.ingest.export": "Exportação do estabelecimento",
   "purchase.ingest.upload": "Envio de arquivo",

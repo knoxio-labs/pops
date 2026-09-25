@@ -151,7 +151,7 @@ function HeroBody({ show, progress, showId, onBatchLog, isPending }: TvShowHeroP
 export function TvShowHero(props: TvShowHeroProps) {
   const { show } = props;
   return (
-    <div className="-mx-4 md:-mx-6 lg:-mx-8 -mt-4 md:-mt-6 lg:-mt-8 relative h-64 md:h-96 overflow-hidden bg-muted">
+    <div className="-mx-4 md:max-lg:-mx-6 lg:-mx-8 -mt-4 md:max-lg:-mt-6 lg:-mt-8 relative h-64 md:h-96 overflow-hidden bg-muted">
       {show.backdropUrl && (
         <img
           src={show.backdropUrl}

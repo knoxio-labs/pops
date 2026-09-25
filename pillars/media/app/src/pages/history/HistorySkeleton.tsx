@@ -14,7 +14,7 @@ export function HistorySkeleton() {
           </div>
         ))}
       </div>
-      <div className="hidden md:grid grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+      <div className="hidden md:grid grid-cols-3 lg:max-xl:grid-cols-4 xl:grid-cols-5 gap-4">
         {Array.from({ length: 10 }).map((_, i) => (
           <div key={i} className="space-y-2">
             <Skeleton className="w-full aspect-[2/3] rounded-md" />

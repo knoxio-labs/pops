@@ -14,12 +14,14 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 import { cataloguePreviewComputedField } from './inventory-catalogue-computed-preview.js';
+import { catalogueDraftOperationInputSchema } from './inventory-catalogue-preview.js';
 import {
   catalogueOperationSchema,
   EXPRESSION_BINARY_OPS,
   EXPRESSION_UNARY_OPS,
   expressionSchemaDefs,
 } from './inventory-catalogue-schema.js';
+import { catalogueTools } from './inventory-catalogue.js';
 import { validationFieldValueSchema } from './inventory-item-input.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -241,6 +243,100 @@ describe('inventory MCP schema fidelity', () => {
     );
     const mcpValues = property(property(findByOp(mcpVariants, 'coalesce'), 'properties'), 'values');
     expect(mcpValues).toMatchObject({ minItems: property(producerValues, 'minItems') });
+  });
+
+  it('matches the producer length and count limits for put_type, put_field and put_enum_option', () => {
+    const patchSchema = requestSchema(spec, '/type-catalogue/drafts/{revision}', 'patch');
+    const producerVariants = array(
+      property(
+        property(property(property(patchSchema, 'properties'), 'operations'), 'items'),
+        'oneOf'
+      ),
+      'operation oneOf'
+    );
+    const variant = (variants: readonly unknown[], kind: string) => {
+      const found = variants.find((entry) => discriminants({ oneOf: [entry] }).includes(kind));
+      if (found === undefined) throw new Error(`${kind} operation is missing`);
+      return object(property(found, 'properties'), kind);
+    };
+    const limits = (schema: unknown) => {
+      const record = object(schema, 'field schema');
+      return {
+        minLength: record['minLength'],
+        maxLength: record['maxLength'],
+        maxItems: record['maxItems'],
+      };
+    };
+
+    const producerPutType = variant(producerVariants, 'put_type');
+    const mcpPutType = variant(catalogueOperationSchema.oneOf, 'put_type');
+    for (const key of ['key', 'label', 'description', 'capabilities', 'legacyLabels']) {
+      expect(limits(mcpPutType[key]), key).toEqual(limits(producerPutType[key]));
+    }
+    expect(limits(property(producerPutType['capabilities'], 'items'))).toEqual(
+      limits(property(mcpPutType['capabilities'], 'items'))
+    );
+    expect(limits(property(producerPutType['legacyLabels'], 'items'))).toEqual(
+      limits(property(mcpPutType['legacyLabels'], 'items'))
+    );
+
+    const producerPutField = variant(producerVariants, 'put_field');
+    const mcpPutField = variant(catalogueOperationSchema.oneOf, 'put_field');
+    for (const key of ['key', 'label', 'help', 'fixedUnit', 'referenceKinds', 'referenceTypeIds']) {
+      expect(limits(mcpPutField[key]), key).toEqual(limits(producerPutField[key]));
+    }
+
+    const producerPutEnumOption = variant(producerVariants, 'put_enum_option');
+    const mcpPutEnumOption = variant(catalogueOperationSchema.oneOf, 'put_enum_option');
+    for (const key of ['key', 'label']) {
+      expect(limits(mcpPutEnumOption[key]), key).toEqual(limits(producerPutEnumOption[key]));
+    }
+
+    const producerReorder = variant(producerVariants, 'reorder');
+    const mcpReorder = variant(catalogueOperationSchema.oneOf, 'reorder');
+    expect({
+      minItems: property(mcpReorder['ids'], 'minItems'),
+      maxItems: property(mcpReorder['ids'], 'maxItems'),
+    }).toEqual({
+      minItems: property(producerReorder['ids'], 'minItems'),
+      maxItems: property(producerReorder['ids'], 'maxItems'),
+    });
+
+    const producerOperations = property(property(patchSchema, 'properties'), 'operations');
+    const mcpOperations = property(
+      property(catalogueDraftOperationInputSchema, 'properties'),
+      'operations'
+    );
+    expect({
+      minItems: property(mcpOperations, 'minItems'),
+      maxItems: property(mcpOperations, 'maxItems'),
+    }).toEqual({
+      minItems: property(producerOperations, 'minItems'),
+      maxItems: property(producerOperations, 'maxItems'),
+    });
+  });
+
+  it('matches the producer length limits on publishDraft note and migrationName', () => {
+    const schema = requestSchema(spec, '/type-catalogue/drafts/{revision}/publish', 'post');
+    const producerNote = object(property(property(schema, 'properties'), 'note'), 'note');
+    const producerMigrationName = object(
+      property(property(schema, 'properties'), 'migrationName'),
+      'migrationName'
+    );
+    const cataloguePublishDraft = catalogueTools.find(
+      (tool) => tool.name === 'inventory.catalogue.publishDraft'
+    );
+    if (cataloguePublishDraft === undefined) throw new Error('publishDraft tool is missing');
+    const mcpProps = object(
+      property(cataloguePublishDraft.inputSchema, 'properties'),
+      'MCP publishDraft properties'
+    );
+    const mcpNote = object(mcpProps['note'], 'MCP note');
+    const mcpMigrationName = object(mcpProps['migrationName'], 'MCP migrationName');
+
+    expect(mcpNote['maxLength']).toEqual(producerNote['maxLength']);
+    expect(mcpMigrationName['minLength']).toEqual(producerMigrationName['minLength']);
+    expect(mcpMigrationName['maxLength']).toEqual(producerMigrationName['maxLength']);
   });
 
   it('maps every producer computed-preview request key onto an MCP input', () => {
