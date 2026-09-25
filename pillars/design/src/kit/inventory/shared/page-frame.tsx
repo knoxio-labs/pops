@@ -11,9 +11,7 @@ import type { ReactNode } from 'react';
 
 import type { BreadcrumbSegment } from '@pops/ui';
 
-/** Fills the content area under the POPS chrome exactly. */
-export const PAGE_HEIGHT =
-  'h-[calc(100dvh-5.5rem)] md:h-[calc(100dvh-7rem)] lg:h-[calc(100dvh-8rem)]';
+const PAGE_HEIGHT = 'h-[calc(100dvh-5.5rem)] md:h-[calc(100dvh-7rem)] lg:h-[calc(100dvh-8rem)]';
 
 /** The amber tile a page title carries; `lg` for a record's own header. */
 export function AccentTile({ icon: Icon, size = 'md' }: { icon: LucideIcon; size?: 'md' | 'lg' }) {

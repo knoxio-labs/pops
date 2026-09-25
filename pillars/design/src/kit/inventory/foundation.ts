@@ -89,7 +89,7 @@ export type { HintTooltipProps } from './shared/hint-tooltip';
 export { ShortcutSheet, ShortcutSheetBody } from './shared/shortcut-sheet';
 export { Sheet, SheetPanel } from './shared/sheet';
 export type { SheetContentProps, SheetProps } from './shared/sheet';
-export { AccentTile, InventoryPage, PAGE_HEIGHT } from './shared/page-frame';
+export { AccentTile, InventoryPage } from './shared/page-frame';
 export type { InventoryPageProps } from './shared/page-frame';
 export { NewItemButton } from './shared/new-item-button';
 export { Segmented } from './shared/segmented';

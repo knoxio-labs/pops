@@ -1,9 +1,7 @@
 /**
- * The Activity feed's model: which kinds a filter chip covers, which events
- * a filter keeps, and the month groups the feed is read in.
+ * The Activity feed's model: which kinds a filter chip covers and which
+ * events a filter keeps.
  */
-import { monthKey, monthLabel } from './when';
-
 import type { EventActor, EventKind, EventModel } from '../shared/model';
 
 /** The filter chips, each covering a family of event kinds. */
@@ -73,30 +71,6 @@ export function filterEvents(events: readonly EventModel[], filter: ActivityFilt
       (filter.actor === 'anyone' || event.actor === filter.actor) &&
       matchesQuery(event, filter.query)
   );
-}
-
-/** One month of the feed. */
-export interface MonthGroup {
-  key: string;
-  label: string;
-  events: EventModel[];
-}
-
-/** Groups events by month, newest month first, newest event first within a month. */
-export function groupByMonth(events: readonly EventModel[]): MonthGroup[] {
-  const groups = new Map<string, MonthGroup>();
-  for (const event of events) {
-    const key = monthKey(event.at);
-    const group = groups.get(key) ?? { key, label: monthLabel(event.at), events: [] };
-    group.events.push(event);
-    groups.set(key, group);
-  }
-  return [...groups.values()]
-    .toSorted((a, b) => b.key.localeCompare(a.key))
-    .map((group) => ({
-      ...group,
-      events: group.events.toSorted((a, b) => b.at.localeCompare(a.at)),
-    }));
 }
 
 /** How many events each chip would show, for the chip counts. */

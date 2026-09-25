@@ -7,20 +7,7 @@
 const MINUTE = 60_000;
 const DAY = 24 * 60 * MINUTE;
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
-const MONTHS = [
-  'January',
-  'February',
-  'March',
-  'April',
-  'May',
-  'June',
-  'July',
-  'August',
-  'September',
-  'October',
-  'November',
-  'December',
-] as const;
+const DATE = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' });
 
 function clock(date: Date): string {
   const hours = String(date.getUTCHours()).padStart(2, '0');
@@ -32,11 +19,7 @@ function dayNumber(date: Date): number {
   return Math.floor(date.getTime() / DAY);
 }
 
-function monthName(date: Date): string {
-  return MONTHS[date.getUTCMonth()] ?? '';
-}
-
-/** "Just now", "12 min ago", "10:42", "Yesterday 18:10", "Tue 19:45" or "20 Sep". */
+/** "Just now", "12 min ago", "10:42", "Yesterday 18:10", "Tue 19:45" or "20 Sept", as item pages date. */
 export function formatWhen(iso: string, now: string): string {
   const at = new Date(iso);
   const reference = new Date(now);
@@ -47,16 +30,5 @@ export function formatWhen(iso: string, now: string): string {
   if (days === 0) return clock(at);
   if (days === 1) return `Yesterday ${clock(at)}`;
   if (days > 1 && days < 7) return `${WEEKDAYS[at.getUTCDay()] ?? ''} ${clock(at)}`;
-  return `${at.getUTCDate()} ${monthName(at).slice(0, 3)}`;
-}
-
-/** The month heading an event sits under: "September 2026". */
-export function monthLabel(iso: string): string {
-  const at = new Date(iso);
-  return `${monthName(at)} ${at.getUTCFullYear()}`;
-}
-
-/** A sortable month key: "2026-09". */
-export function monthKey(iso: string): string {
-  return iso.slice(0, 7);
+  return DATE.format(at);
 }

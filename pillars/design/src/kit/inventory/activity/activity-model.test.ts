@@ -1,14 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  KIND_GROUP,
-  NO_FILTER,
-  filterEvents,
-  groupByMonth,
-  groupCounts,
-  isFiltered,
-} from './activity-model';
-import { formatWhen, monthLabel } from './when';
+import { KIND_GROUP, NO_FILTER, filterEvents, groupCounts, isFiltered } from './activity-model';
+import { formatWhen } from './when';
 
 import type { EventKind, EventModel } from '../shared/model';
 
@@ -67,19 +60,6 @@ describe('filterEvents', () => {
   });
 });
 
-describe('groupByMonth', () => {
-  it('puts the newest month first and sorts inside each month', () => {
-    const groups = groupByMonth(feed);
-    expect(groups.map((group) => group.label)).toEqual(['September 2026', 'August 2026']);
-    expect(groups[0]?.events.map((entry) => entry.id)).toEqual(['e', 'a', 'b']);
-    expect(groups[1]?.events.map((entry) => entry.id)).toEqual(['c', 'd']);
-  });
-
-  it('returns no groups for no events', () => {
-    expect(groupByMonth([])).toEqual([]);
-  });
-});
-
 describe('groupCounts', () => {
   it('counts each family and the total', () => {
     const counts = groupCounts(feed);
@@ -110,14 +90,10 @@ describe('formatWhen', () => {
   it('names yesterday, then the weekday, then the date', () => {
     expect(formatWhen('2026-09-24T18:10:00Z', now)).toBe('Yesterday 18:10');
     expect(formatWhen('2026-09-20T19:45:00Z', now)).toBe('Sun 19:45');
-    expect(formatWhen('2026-09-18T08:00:00Z', now)).toBe('18 Sep');
+    expect(formatWhen('2026-09-18T08:00:00Z', now)).toBe('18 Sept');
   });
 
   it('never says minutes for a time after now', () => {
     expect(formatWhen('2026-09-25T10:50:00Z', now)).toBe('10:50');
-  });
-
-  it('labels months in full', () => {
-    expect(monthLabel('2026-08-02T10:00:00Z')).toBe('August 2026');
   });
 });
