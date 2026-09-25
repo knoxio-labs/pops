@@ -134,10 +134,12 @@ public final class InventoryReplica: Sendable {
 
     /// Stores one snapshot page. The last page (no `nextCursor`) completes
     /// the download: the change feed then resumes after the page's
-    /// high-water `seq`. A page from a new epoch first discards every row the
-    /// old epoch left, keeping only the catalogue.
-    public func apply(_ page: InventorySnapshotPage) throws {
-        try write { try ReplicaApply.snapshot(page, now: now(), in: $0) }
+    /// high-water `seq`. A page from a new epoch, or the first page of a
+    /// resync (`resyncing`), first discards every server row and the feed
+    /// position in the same transaction, keeping the catalogue, the type
+    /// arrivals and this phone's own mutation log.
+    public func apply(_ page: InventorySnapshotPage, resyncing: Bool = false) throws {
+        try write { try ReplicaApply.snapshot(page, now: now(), resyncing: resyncing, in: $0) }
     }
 
     /// Stores one change-feed page: rows (tombstones included) by revision,
@@ -219,12 +221,6 @@ public final class InventoryReplica: Sendable {
             return current != before
         }
         if changed { observers.notify() }
-    }
-
-    /// Discards every server row and the feed position ahead of a fresh
-    /// snapshot, keeping the catalogue (`ReplicaApply.resetForResync`).
-    internal func resetForResync() throws {
-        try write { try ReplicaApply.resetForResync(in: $0) }
     }
 
     /// Where an item is, walked outward through its containers to the

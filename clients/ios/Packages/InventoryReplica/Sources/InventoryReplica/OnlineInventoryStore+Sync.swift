@@ -50,20 +50,24 @@ extension OnlineInventoryStore {
     private func resync() async throws {
         replica.updateActivity { $0.isDownloading = true }
         defer { replica.updateActivity { $0.isDownloading = false } }
-        try replica.resetForResync()
-        try await snapshot(from: nil)
+        try await snapshot(from: nil, resyncing: true)
         try await followFeed()
     }
 
     /// Pages the snapshot into the replica from `cursor`. Each page is stored
     /// with the cursor after it, which is where an interrupted download
-    /// resumes.
-    private func snapshot(from cursor: String?) async throws {
+    /// resumes. A resync discards the replica's server rows only in the
+    /// transaction that stores its first page, so a fetch that fails before
+    /// then leaves the last usable replica, and the next refresh meets the
+    /// same `409` and tries again.
+    private func snapshot(from cursor: String?, resyncing: Bool = false) async throws {
         var cursor = cursor
+        var resyncing = resyncing
         repeat {
             let page = try await transport.fetchSnapshot(cursor: cursor, limit: pageSize)
             if let next = page.nextCursor, next == cursor { throw RepositoryError.contractMismatch }
-            try await apply(page)
+            try await apply(page, resyncing: resyncing)
+            resyncing = false
             cursor = page.nextCursor
         } while cursor != nil
         try await refreshCatalogueIfAnnounced()
@@ -93,13 +97,16 @@ extension OnlineInventoryStore {
         }
     }
 
-    private func apply(_ page: InventorySnapshotPage) async throws {
+    private func apply(_ page: InventorySnapshotPage, resyncing: Bool) async throws {
         try Self.requireSupported(page.minimumProtocol)
-        guard let revision = page.catalogueRevision else { return try replica.apply(page) }
+        guard let revision = page.catalogueRevision else {
+            return try replica.apply(page, resyncing: resyncing)
+        }
         let catalogue = try await exactCatalogue(revision)
         try replica.apply(
             page, catalogue: catalogue,
-            referencedCatalogues: try await unheldCatalogues(namedBy: page.items, pinned: revision))
+            referencedCatalogues: try await unheldCatalogues(namedBy: page.items, pinned: revision),
+            resyncing: resyncing)
     }
 
     private func apply(_ page: InventoryChangesPage) async throws {
