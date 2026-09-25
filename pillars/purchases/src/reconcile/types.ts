@@ -64,12 +64,22 @@ export interface SolvableCharge {
   readonly descriptorPattern: string | null;
   /** Per-source window override; falls back to the caller's default. */
   readonly settlementWindowDays: number | null;
+  /**
+   * The parent order's `purchases.paymentHint` — the merchant's name for the
+   * card it charged, such as `Visa - 7373`. Null when the source states none.
+   *
+   * Finance accounts carry no card number, so the hint says nothing on its
+   * own. It narrows blocking only through {@link SolverInput.cardAccounts}.
+   */
+  readonly paymentHint: string | null;
 }
 
 /** A transaction the solver may link to, already in integer cents. */
 export interface SolvableTransaction {
   readonly uri: string;
   readonly description: string;
+  /** The finance account the transaction was posted to. */
+  readonly accountId: string;
   /** Signed, integer cents, in {@link settlementCurrency}. */
   readonly amountCents: number;
   /** ISO-4217 the account settled in — what {@link amountCents} is stated in. */
@@ -159,6 +169,15 @@ export interface SolverInput {
    * Without them a reject is a button that the next sweep silently undoes.
    */
   readonly rejected: readonly RejectedPairing[];
+  /**
+   * Payment hint → the one finance account that hint settles on, learned
+   * from existing links by `learnCardAccounts`.
+   *
+   * A charge whose hint is a key here only admits transactions on that
+   * account. A hint absent from the map blocks nothing, which is what keeps
+   * an order paid by a card nobody has linked yet matchable at all.
+   */
+  readonly cardAccounts: ReadonlyMap<string, string>;
   /** Default settlement window when a source states none. */
   readonly defaultWindowDays: number;
 }

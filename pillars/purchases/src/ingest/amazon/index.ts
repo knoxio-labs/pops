@@ -30,3 +30,4 @@ export {
   parseAmazonRefundDetails,
   type AmazonRefundParseResult,
 } from './refunds.js';
+export { AMAZON_DESCRIPTOR_PATTERN, AMAZON_SETTLEMENT_WINDOW_DAYS } from './source-settings.js';

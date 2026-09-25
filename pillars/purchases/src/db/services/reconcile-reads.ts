@@ -17,6 +17,7 @@ import {
 import { orderedAtWindow } from './ordered-at.js';
 import { queryChunked } from './sqlite-chunk.js';
 
+import type { LinkedHint } from '../../reconcile/card-accounts.js';
 import type { ConfirmedLink, RejectedPairing, SolvableCharge } from '../../reconcile/types.js';
 import type { PurchasesDb } from './internal.js';
 
@@ -58,6 +59,7 @@ export function listSolvableCharges(db: PurchasesDb, scope: ReconcileScope = {})
       orderedAt: purchases.orderedAt,
       descriptorPattern: purchaseSources.descriptorPattern,
       settlementWindowDays: purchaseSources.settlementWindowDays,
+      paymentHint: purchases.paymentHint,
     })
     .from(purchaseCharges)
     .innerJoin(purchases, eq(purchaseCharges.purchaseId, purchases.id))
@@ -83,6 +85,7 @@ export function listSolvableCharges(db: PurchasesDb, scope: ReconcileScope = {})
     orderedAt: row.orderedAt,
     descriptorPattern: row.descriptorPattern,
     settlementWindowDays: row.settlementWindowDays,
+    paymentHint: row.paymentHint,
   }));
 }
 
@@ -171,6 +174,34 @@ export function listConfirmedLinks(db: PurchasesDb): ConfirmedLink[] {
     .from(purchaseChargeLinks)
     .where(isNotNull(purchaseChargeLinks.confirmedAt))
     .all();
+}
+
+/**
+ * Every existing link whose order names the card it was paid with, for
+ * learning which account each card settles on.
+ *
+ * Unconfirmed links count as well as confirmed ones: nearly every link is
+ * an auto-link, and one on the wrong account makes its hint map to nothing
+ * rather than to the wrong account. Read before the sweep tears its own
+ * links down, and fleet-wide for the reason {@link listConfirmedLinks} is:
+ * a card's history outside the swept window is still evidence about it.
+ */
+export function listLinkedPaymentHints(db: PurchasesDb): LinkedHint[] {
+  const rows = db
+    .select({
+      paymentHint: purchases.paymentHint,
+      transactionUri: purchaseChargeLinks.transactionUri,
+    })
+    .from(purchaseChargeLinks)
+    .innerJoin(purchaseCharges, eq(purchaseChargeLinks.chargeId, purchaseCharges.id))
+    .innerJoin(purchases, eq(purchaseCharges.purchaseId, purchases.id))
+    .where(isNotNull(purchases.paymentHint))
+    .all();
+  return rows.flatMap((row) =>
+    row.paymentHint === null
+      ? []
+      : [{ paymentHint: row.paymentHint, transactionUri: row.transactionUri }]
+  );
 }
 
 /**
