@@ -26,6 +26,10 @@ export interface MappingStepProps {
   guessed: ReadonlySet<string>;
 }
 
+function sample(cell: string | undefined): string {
+  return cell === undefined || cell.trim() === '' ? '(empty)' : cell;
+}
+
 function source(column: ColumnMapping, guessed: boolean): string {
   if (column.target === 'skip') return 'Left out';
   return guessed ? 'Matched by its name' : 'Chosen by you';
@@ -109,7 +113,7 @@ export function MappingStep({ mapping, rows, guessed }: MappingStepProps) {
             <MappingRow
               key={column.header}
               column={column}
-              samples={rows.slice(0, 4).map((cells) => cells[index] || '(empty)')}
+              samples={rows.slice(0, 4).map((cells) => sample(cells[index]))}
               guessed={guessed.has(`${column.header}:${column.target}`)}
             />
           ))}
