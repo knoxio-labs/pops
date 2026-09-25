@@ -80,6 +80,7 @@ export const states: ScreenStates = {
     source: 'Kitchen 12 and its contents',
   }),
   'chosen-handful': page(handful),
+  'from-selection': page({ ...handful, source: '4 selected in Items' }),
   'partial-sheet': page({ ...handful, seed: { ...handful.seed, startAt: 14 } }),
   'one-copy-per-box': page({
     ...boxes,

@@ -1,108 +1,143 @@
-import { inventoryItem, inventoryItems, inventoryItemsEmpty } from '@/fixtures/inventory-items';
-import { inventoryItemsNoValues } from '@/fixtures/inventory-items-list';
-import { ItemsPageBody } from '@/kit/inventory/items-list/items-page-body';
+import { coreItem } from '@/fixtures/inventory/core';
+import { coreLocations } from '@/fixtures/inventory/core';
 import {
-  DEFAULT_ITEMS_PAGE_CALLBACKS,
-  DEFAULT_ITEMS_PAGE_FILTERS_SEED,
-  DEFAULT_ITEMS_PAGE_OPTIONS,
-  DEFAULT_ITEMS_PAGE_UI_SEED,
-} from '@/kit/inventory/items-list/items-page-types';
-import { useItemsPageState } from '@/kit/inventory/items-list/use-items-page-state';
-import { Package, Plus } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
-
-import { Button, PageHeader } from '@pops/ui';
+  arrivedType,
+  boxedSelection,
+  browseInventory,
+  browseWorld,
+  duplicatePair,
+  itemsSelection,
+  placeOptions,
+  typeOptions,
+} from '@/fixtures/inventory/items-browse';
+import { buildWorld, StateBanner } from '@/kit/inventory/foundation';
+import { BulkMoveSheet, BulkSetFieldSheet } from '@/kit/inventory/items-list/bulk-sheets';
+import { DuplicatesBanner, TypeArrivedBanner } from '@/kit/inventory/items-list/items-banners';
+import { ItemsPage } from '@/kit/inventory/items-list/items-page';
+import { PageOverlay } from '@/kit/inventory/items-list/page-overlay';
 
 import type { ScreenMeta, ScreenStates } from '@/contract';
-import type { InventoryFixtureItem } from '@/fixtures/inventory-items';
-import type {
-  ItemsPageCallbacks,
-  ItemsPageFiltersSeed,
-  ItemsPageOptions,
-  ItemsPageUiSeed,
-} from '@/kit/inventory/items-list/items-page-types';
+import type { ItemsPageProps } from '@/kit/inventory/items-list/items-page';
+import type { ReactNode } from 'react';
 
 export const meta: ScreenMeta = { title: 'Items', order: 1, frame: 'web' };
 
-function AddItemButton({ onClick }: { onClick: () => void }) {
+const RECENT = { sort: 'updated' as const };
+
+function Items(props: Partial<ItemsPageProps>): ReactNode {
   return (
-    <Button onClick={onClick} prefix={<Plus className="h-4 w-4" />}>
-      Add Item
-    </Button>
+    <ItemsPage
+      items={browseInventory}
+      world={browseWorld}
+      types={typeOptions}
+      places={placeOptions}
+      {...props}
+    />
   );
 }
 
-export interface ItemsPageProps {
-  items?: InventoryFixtureItem[];
-  options?: ItemsPageOptions;
-  isLoading?: boolean;
-  filtersSeed?: ItemsPageFiltersSeed;
-  uiSeed?: ItemsPageUiSeed;
-  deletePending?: boolean;
-  callbacks?: ItemsPageCallbacks;
-}
+const duplicatesWorld = buildWorld([...duplicatePair, ...browseInventory], coreLocations);
 
 /**
- * `/inventory`: the items list, its filters, the table/grid toggle and the
- * delete confirmation. `useItemsPageState` holds everything the app drives
- * through `useSearchParams`, which does not survive the port: the canvas is
- * an iframe, so a real `useSearchParams`/`navigate` would leave the surface,
- * and there is no server to query. The one behaviour genuinely absent is the
- * URL round-trip: filters here do not survive a reload or become a shareable
- * link, which on the real page they do.
+ * `/inventory/items`: every tracked thing. Filters, sort and view live in
+ * the URL (no saved searches, owner decision 6). The selection bar carries
+ * Print labels, which opens the labels page with the selection (owner
+ * decision 1); Retire and Discard sit under More.
  */
-export function ItemsPage({
-  items = inventoryItems,
-  options = DEFAULT_ITEMS_PAGE_OPTIONS,
-  isLoading = false,
-  filtersSeed = DEFAULT_ITEMS_PAGE_FILTERS_SEED,
-  uiSeed = DEFAULT_ITEMS_PAGE_UI_SEED,
-  deletePending = false,
-  callbacks = DEFAULT_ITEMS_PAGE_CALLBACKS,
-}: ItemsPageProps) {
-  const { t } = useTranslation('inventory');
-  const state = useItemsPageState(items, filtersSeed, uiSeed);
-
-  return (
-    <div className="space-y-6">
-      <PageHeader
-        title={t('title')}
-        icon={<Package className="h-6 w-6 text-muted-foreground" />}
-        actions={<AddItemButton onClick={callbacks.onAddItem} />}
-      />
-      <ItemsPageBody
-        state={state}
-        options={options}
-        isLoading={isLoading}
-        deletePending={deletePending}
-        callbacks={callbacks}
-      />
-    </div>
-  );
-}
-
 export const states: ScreenStates = {
-  loading: () => <ItemsPage isLoading />,
-  empty: () => <ItemsPage items={inventoryItemsEmpty} />,
-  'no-matches': () => (
-    <ItemsPage filtersSeed={{ ...DEFAULT_ITEMS_PAGE_FILTERS_SEED, search: 'zzz-no-match' }} />
+  cards: () => <Items seed={{ view: 'cards', filters: RECENT }} />,
+  compact: () => <Items seed={{ view: 'compact' }} />,
+  filtered: () => (
+    <Items seed={{ filters: { typeId: 'type-cable', within: 'loc-garage', q: '' } }} />
   ),
-  grid: () => <ItemsPage uiSeed={{ ...DEFAULT_ITEMS_PAGE_UI_SEED, viewMode: 'grid' }} />,
-  deleting: () => (
-    <ItemsPage uiSeed={{ ...DEFAULT_ITEMS_PAGE_UI_SEED, deletingItemId: inventoryItem.id }} />
-  ),
-  'deleting-pending': () => (
-    <ItemsPage
-      uiSeed={{ ...DEFAULT_ITEMS_PAGE_UI_SEED, deletingItemId: inventoryItem.id }}
-      deletePending
+  'filter-open': () => <Items seed={{ filters: { typeId: 'type-cable' } }} filterOpen />,
+  selected: () => (
+    <Items
+      seed={{ filters: RECENT, selected: itemsSelection, focusedId: 'itm-tv' }}
+      pendingIds={new Set(['itm-tape'])}
     />
   ),
-  filtered: () => (
-    <ItemsPage filtersSeed={{ ...DEFAULT_ITEMS_PAGE_FILTERS_SEED, typeFilter: 'Electronics' }} />
+  'selected-in-boxes': () => (
+    <Items seed={{ filters: { ...RECENT, within: 'loc-kitchen' }, selected: boxedSelection }} />
   ),
-  'no-values': () => <ItemsPage items={inventoryItemsNoValues} />,
+  'bulk-move-preview': () => (
+    <Items
+      seed={{ filters: RECENT, selected: itemsSelection }}
+      overlay={
+        <PageOverlay align="right">
+          <BulkMoveSheet
+            world={browseWorld}
+            ids={itemsSelection}
+            target={{ kind: 'location', locationId: 'loc-shelving' }}
+          />
+        </PageOverlay>
+      }
+    />
+  ),
+  'bulk-set-field': () => (
+    <Items
+      seed={{
+        filters: { typeId: 'type-electronics' },
+        selected: ['itm-tv', 'itm-router', 'itm-lamp', 'itm-soundbar'],
+      }}
+      overlay={
+        <PageOverlay align="right">
+          <BulkSetFieldSheet
+            count={4}
+            value="LG"
+            fields={[
+              { key: 'manufacturer', label: 'Manufacturer', have: 4 },
+              { key: 'powered', label: 'Needs power', have: 4 },
+              { key: 'brand', label: 'Brand', have: 0 },
+            ]}
+          />
+        </PageOverlay>
+      }
+    />
+  ),
+  'type-arrived-banner': () => (
+    <Items
+      seed={{ filters: { untyped: true } }}
+      banner={
+        <TypeArrivedBanner
+          typeLabel={arrivedType.label}
+          matches={arrivedType.matchCount}
+          publishedBy={arrivedType.publishedBy}
+        />
+      }
+    />
+  ),
+  'collision-banner': () => (
+    <Items
+      items={[...duplicatePair, ...browseInventory]}
+      world={duplicatesWorld}
+      seed={{ filters: { q: 'extension' } }}
+      banner={<DuplicatesBanner name={duplicatePair[0].name} place="Garage › Shelving" />}
+    />
+  ),
+  'export-menu': () => (
+    <Items seed={{ filters: RECENT, selected: [coreItem('itm-tv').id] }} exportOpen />
+  ),
+  empty: () => <Items items={[]} />,
+  'empty-filtered': () => <Items seed={{ filters: { q: 'snorkel' } }} />,
+  loading: () => <Items status="loading" />,
+  error: () => <Items status="error" />,
+  offline: () => <Items offline seed={{ filters: RECENT, selected: ['itm-tv', 'box-k13'] }} />,
+  stale: () => (
+    <Items
+      seed={{ filters: RECENT, selected: ['itm-tv', 'box-k13'] }}
+      banner={
+        <StateBanner
+          kind="stale"
+          title="14 items changed elsewhere since this list loaded"
+          detail="The list stays as it is while you select. Reload to see the changes."
+          actionLabel="Reload"
+        />
+      }
+    />
+  ),
 };
 
-export default function ItemsScreen() {
-  return <ItemsPage />;
+export default function ItemsScreen(): ReactNode {
+  return <Items />;
 }

@@ -1,205 +1,73 @@
-import { useEffect } from 'react';
-import { toast } from 'sonner';
-
-import { Alert, AlertDescription, AlertTitle, PageHeader, Skeleton, Toaster } from '@pops/ui';
-
-import { ConnectionsSection } from './connections-section';
-import { CoreFieldsSection } from './core-fields-section';
-import { DocumentUploadSection } from './document-upload-section';
-import { FormFooter } from './form-footer';
-import { NotesSection } from './notes-section';
-import { PhotoUploadSection } from './photo-upload-section';
-import { useItemFormState } from './use-item-form-state';
-
-import type { ItemFormOpening } from './use-item-form-state';
-
-function FormSkeleton() {
-  return (
-    <div className="p-6 space-y-6 max-w-2xl">
-      <Skeleton className="h-8 w-48" />
-      <Skeleton className="h-10 w-full" />
-      <Skeleton className="h-10 w-full" />
-      <Skeleton className="h-10 w-full" />
-    </div>
-  );
-}
-
-function NotFoundView() {
-  return (
-    <div className="p-6">
-      <Alert variant="destructive">
-        <AlertTitle>Item not found</AlertTitle>
-        <AlertDescription>This item doesn&apos;t exist.</AlertDescription>
-      </Alert>
-      <a
-        href="#/inventory"
-        className="mt-4 inline-block text-sm text-app-accent hover:text-app-accent/80 underline font-medium"
-      >
-        Back to inventory
-      </a>
-    </div>
-  );
-}
-
-function buildBreadcrumbs(
-  isEditMode: boolean,
-  id: string | undefined,
-  editItemName: string | undefined
-) {
-  if (isEditMode && editItemName) {
-    return [
-      { label: 'Inventory', href: '#/inventory' },
-      { label: editItemName, href: `#/inventory/items/${id}` },
-      { label: 'Edit' },
-    ];
-  }
-  return [{ label: 'Inventory', href: '#/inventory' }, { label: 'New Item' }];
-}
-
 /**
- * A failed save reaches the user as a toast and nothing else: the source's
- * `createMutation`/`updateMutation` call `toast.error(...)` in `onError` and
- * leave no markup behind. Reproduced rather than turned into a banner, because
- * a banner is a different design, and how loudly a save failure announces
- * itself is one of the things this screen is here to have judged.
+ * The item form page, one component for `/inventory/items/new` and
+ * `/inventory/items/:id/edit`: the header with its verbs, a banner when
+ * something outside the form matters, what every item has on the left and
+ * the type's fields on the right. Only the field list scrolls.
  */
-function SaveErrorToast({ message }: { message: string | null }) {
-  useEffect(() => {
-    if (message !== null) toast.error(message);
-  }, [message]);
-  return <Toaster />;
+import { CancelDialog } from './cancel-dialog';
+import { FieldsCard } from './fields-card';
+import { FormBanner } from './form-banners';
+import { FormHeader } from './form-header';
+import { IdentityCard } from './identity-card';
+import { useItemForm } from './use-item-form';
+
+import type { ItemFormContext, ItemFormOpening } from './form-opening';
+
+/** Props for {@link ItemFormPage}. */
+export interface ItemFormPageProps {
+  opening: ItemFormOpening;
+  context: ItemFormContext;
 }
 
-/** `CoreFieldsSection` plus the photo and document upload sections: the record's own fields and its attachments. */
-function FormFieldsAndMedia({ model }: { model: ReturnType<typeof useItemFormState> }) {
-  return (
-    <>
-      <CoreFieldsSection
-        values={model.values}
-        errors={model.errors}
-        assetIdError={model.assetIdError}
-        assetIdChecking={model.assetIdChecking}
-        generating={model.generating}
-        locationTree={model.locationTree}
-        onAutoGenerate={model.handleAutoGenerate}
-        onValidateAssetId={model.validateAssetIdUniqueness}
-        onCreateLocation={model.onCreateLocation}
-        onChange={model.onChange}
-      />
-      <PhotoUploadSection
-        isEditMode={model.isEditMode}
-        existingPhotos={model.existingPhotos}
-        uploadFiles={model.uploadFiles}
-        imageProcessing={model.imageProcessing}
-        isReordering={model.isReordering}
-        deleteConfirmId={model.deleteConfirmId}
-        isDeleting={model.isDeleting}
-        onFilesSelected={model.handleFilesSelected}
-        onRemoveUpload={model.handleRemoveUpload}
-        onDeletePhoto={model.handleDeletePhoto}
-        onConfirmDelete={model.confirmDeletePhoto}
-        onCancelDelete={() => model.setDeleteConfirmId(null)}
-        onReorder={model.onReorder}
-      />
-      <DocumentUploadSection
-        isEditMode={model.isEditMode}
-        existingDocuments={model.existingDocuments}
-        uploadFiles={model.documentUploadFiles}
-        deleteConfirmId={model.documentDeleteConfirmId}
-        isDeleting={model.isDeletingDocument}
-        isUploading={model.documentUploadFiles.some((f) => f.status === 'uploading')}
-        onFilesSelected={model.handleDocumentFilesSelected}
-        onRemoveUpload={model.handleDocumentRemoveUpload}
-        onDeleteDocument={model.handleDeleteDocument}
-        onConfirmDelete={model.confirmDeleteDocument}
-        onCancelDelete={() => model.setDocumentDeleteConfirmId(null)}
-      />
-    </>
-  );
+function blockedReason(offline: boolean, blockers: readonly string[]): string | null {
+  if (offline) return 'No connection.';
+  return blockers[0] ?? null;
 }
 
-/** Notes, the create-mode connections picker, and the footer/save-error that close the form. */
-function FormNotesAndFooter({ model }: { model: ReturnType<typeof useItemFormState> }) {
+/** The page. */
+export function ItemFormPage({ opening, context }: ItemFormPageProps) {
+  const api = useItemForm(opening, context);
+  const { draft, view } = api;
+  const staged = api.photos.filter((photo) => photo.status.kind === 'staged').length;
   return (
-    <>
-      <NotesSection
-        notes={model.values.notes}
-        notesPreview={model.notesPreview}
-        onChangeNotes={(v) => model.onChange('notes', v)}
-        onTogglePreview={model.onToggleNotesPreview}
-      />
-      {!model.isEditMode && (
-        <ConnectionsSection
-          pendingConnections={model.pendingConnections}
-          connectionSearch={model.connectionSearch}
-          searchResults={model.searchResults}
-          searchLoading={model.searchLoading}
-          onSearchChange={model.setConnectionSearch}
-          onAdd={model.onAdd}
-          onRemove={model.onRemove}
-        />
-      )}
-      <FormFooter
-        isEditMode={model.isEditMode}
-        isMutating={model.saving}
-        onCancel={model.onCancel}
-      />
-      <SaveErrorToast message={model.saveError} />
-    </>
-  );
-}
-
-/**
- * The whole form: every section wired to one `useItemFormState` draft. The
- * source's `onSubmit` is `form.handleSubmit(onSubmit)`; without
- * react-hook-form the form's own `onSubmit` event calls the model's
- * `onSubmit` directly and prevents the default navigation a real `<form>`
- * submit would otherwise trigger.
- */
-function FormBody({ model }: { model: ReturnType<typeof useItemFormState> }) {
-  return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        model.onSubmit();
-      }}
-      className="space-y-8"
+    <div
+      className="flex flex-col gap-4 lg:h-[calc(100vh-8rem)] lg:min-h-0"
+      onKeyDown={api.onKeyDown}
     >
-      <FormFieldsAndMedia model={model} />
-      <FormNotesAndFooter model={model} />
-    </form>
-  );
-}
-
-function ItemFormPageBody({ opening }: { opening: ItemFormOpening }) {
-  const model = useItemFormState(opening);
-  const editItemName = opening.item?.itemName;
-  return (
-    <div className="p-6 max-w-2xl">
-      <PageHeader
-        title={model.isEditMode ? 'Edit Item' : 'New Item'}
-        backHref={
-          model.isEditMode && opening.id ? `#/inventory/items/${opening.id}` : '#/inventory'
-        }
-        breadcrumbs={buildBreadcrumbs(model.isEditMode, opening.id, editItemName)}
-        className="mb-8"
+      <FormHeader
+        mode={draft.mode}
+        editingName={opening.editing?.name}
+        container={view.type?.containment === true}
+        saving={opening.phase === 'saving'}
+        blocked={blockedReason(api.offline, view.blockers)}
+        onCancel={api.requestCancel}
+        onSave={api.save}
       />
-      <FormBody model={model} />
+      <FormBanner opening={opening} name={opening.editing?.name ?? draft.name} />
+      <div className="grid gap-4 lg:min-h-0 lg:flex-1 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
+        <IdentityCard
+          api={api}
+          context={context}
+          openedTypeId={opening.draft.mode === 'edit' ? opening.draft.typeId : null}
+          editingId={opening.editing?.id}
+          overlay={opening.overlay}
+        />
+        <FieldsCard
+          draft={draft}
+          view={view}
+          context={context}
+          computed={opening.computed ?? {}}
+          dispatch={api.dispatch}
+          overlay={opening.overlay}
+        />
+      </div>
+      <CancelDialog
+        open={api.cancelAsked}
+        mode={draft.mode}
+        stagedPhotos={staged}
+        onOpenChange={api.setCancelAsked}
+        onDiscard={() => api.setCancelAsked(false)}
+      />
     </div>
   );
-}
-
-/**
- * Renders `/inventory/items/new` (no `opening.id`) or
- * `/inventory/items/:id/edit` (`opening.id` set), matching
- * `ItemFormPage`'s own `isEditMode = !!id` branch. Edit mode additionally
- * branches on `opening.loading`/`opening.notFound` the way the source's
- * `itemsGet` query does before the form ever mounts.
- */
-export function ItemFormPage({ opening = {} }: { opening?: ItemFormOpening }) {
-  const isEditMode = opening.id !== undefined;
-  if (isEditMode && opening.loading) return <FormSkeleton />;
-  if (isEditMode && opening.notFound) return <NotFoundView />;
-
-  return <ItemFormPageBody opening={opening} />;
 }

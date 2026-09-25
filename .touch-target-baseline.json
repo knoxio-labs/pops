@@ -1,10 +1,4 @@
 {
-  "pillars/cerebrum/app/src/components/ScopePicker.tsx": {
-    "button": 1
-  },
-  "pillars/cerebrum/app/src/components/TagPicker.tsx": {
-    "button": 1
-  },
   "pillars/cerebrum/app/src/pages/glia-dashboard/AuditActionRow.tsx": {
     "button": 1
   },
@@ -57,7 +51,7 @@
     "button": 1
   },
   "pillars/food/app/src/pages/data/aliases/AliasTargetPicker.tsx": {
-    "button": 2
+    "button": 1
   },
   "pillars/food/app/src/pages/data/aliases/AliasesTable.tsx": {
     "button": 1
@@ -81,9 +75,6 @@
     "button": 1
   },
   "pillars/food/app/src/pages/data/substitutions-graph/SubGraphHeader.tsx": {
-    "button": 1
-  },
-  "pillars/food/app/src/pages/data/substitutions-tab/endpoint-picker/IngredientSearch.tsx": {
     "button": 1
   },
   "pillars/food/app/src/pages/data/substitutions-tab/endpoint-picker/SelectedPill.tsx": {
@@ -166,9 +157,6 @@
   "pillars/inventory/app/src/components/inventory-card/VerticalCard.tsx": {
     "button": 1
   },
-  "pillars/inventory/app/src/components/location-picker/TreeNode.tsx": {
-    "button": 1
-  },
   "pillars/inventory/app/src/pages/location-tree-page/sections/MoveDialog.tsx": {
     "button": 2
   },
@@ -207,7 +195,7 @@
     "button": 2
   },
   "pillars/lists/app/src/pages/detail/ListDetailMenu.tsx": {
-    "button": 2
+    "button": 1
   },
   "pillars/lists/app/src/pages/detail/ListEditModal.tsx": {
     "button": 3
@@ -216,7 +204,7 @@
     "button": 3
   },
   "pillars/lists/app/src/pages/detail/ListItemMenu.tsx": {
-    "button": 2
+    "button": 1
   },
   "pillars/lists/app/src/pages/detail/ListItemRow.tsx": {
     "button": 2

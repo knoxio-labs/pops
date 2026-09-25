@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 
-import { Skeleton } from '@pops/ui';
+import { Skeleton, cn } from '@pops/ui';
 
 import { useGraphInteraction } from './use-graph-interaction';
 import { useGraphSimulation } from './use-graph-simulation';
@@ -19,16 +19,20 @@ export interface ConnectionGraphProps {
    * drive navigation themselves instead of this reaching for react-router.
    */
   onNavigate?: (id: string) => void;
+  /** Sizes the canvas; defaults to a fixed 400px height. */
+  className?: string;
 }
 
 function GraphCanvas({
   itemId,
   data,
   onNavigate,
+  className,
 }: {
   itemId: string;
   data: GraphData;
   onNavigate: (id: string) => void;
+  className?: string;
 }): React.ReactElement {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -57,7 +61,10 @@ function GraphCanvas({
   return (
     <div
       ref={containerRef}
-      className="relative h-100 w-full border rounded-lg bg-muted/20 overflow-hidden"
+      className={cn(
+        'relative w-full border rounded-lg bg-muted/20 overflow-hidden',
+        className ?? 'h-100'
+      )}
     >
       <canvas ref={canvasRef} className="w-full h-full cursor-grab active:cursor-grabbing" />
       <div className="absolute bottom-2 right-2 text-xs text-muted-foreground">
@@ -72,6 +79,7 @@ export function ConnectionGraph({
   status,
   data,
   onNavigate = () => {},
+  className,
 }: ConnectionGraphProps): React.ReactElement {
   if (status === 'loading') return <Skeleton className="h-100 w-full rounded-lg" />;
   if (status === 'unavailable') {
@@ -86,5 +94,5 @@ export function ConnectionGraph({
     );
   }
 
-  return <GraphCanvas itemId={itemId} data={data} onNavigate={onNavigate} />;
+  return <GraphCanvas itemId={itemId} data={data} onNavigate={onNavigate} className={className} />;
 }

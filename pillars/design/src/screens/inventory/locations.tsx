@@ -1,141 +1,110 @@
-import { locationTreeEmpty, locationTreeSingleRoot } from '@/fixtures/inventory-locations';
+import { coreWorld } from '@/fixtures/inventory/core';
 import {
-  DEFAULT_LOCATIONS_CALLBACKS,
-  DEFAULT_LOCATIONS_DATA,
-  DEFAULT_LOCATIONS_PENDING,
-  DEFAULT_LOCATIONS_SEED,
-} from '@/kit/inventory/locations-tree/locations-page-types';
+  GARAGE,
+  GRABBED_FROM_GARAGE,
+  OPEN_TO_GARAGE,
+  OVER_SHELVING,
+  SHELVING,
+  selected,
+} from '@/fixtures/inventory/location-contents';
+import { recentPlacements } from '@/fixtures/inventory/recents';
+import { OFFLINE_TITLE, planMove } from '@/kit/inventory/foundation';
+import { applyMove } from '@/kit/inventory/locations-tree/apply-move';
+import { LocationsPage } from '@/kit/inventory/locations-tree/locations-page';
 import {
-  LocationsPageBody,
-  LocationsPageDialogs,
-} from '@/kit/inventory/locations-tree/locations-page-view';
-import { PageHeaderActions } from '@/kit/inventory/locations-tree/page-header-actions';
-import { useLocationsPageState } from '@/kit/inventory/locations-tree/use-locations-page-state';
-import { MapPin } from 'lucide-react';
-
-import { PageHeader } from '@pops/ui';
+  LocationsEmpty,
+  LocationsError,
+  LocationsLoading,
+} from '@/kit/inventory/locations-tree/locations-states';
 
 import type { ScreenMeta, ScreenStates } from '@/contract';
-import type {
-  LocationsPageCallbacks,
-  LocationsPageData,
-  LocationsPagePending,
-  LocationsPageSeed,
-} from '@/kit/inventory/locations-tree/locations-page-types';
+import type { LocationsPageProps } from '@/kit/inventory/locations-tree/locations-page';
+import type { LocationsSeed } from '@/kit/inventory/locations-tree/use-locations';
 
 export const meta: ScreenMeta = { title: 'Locations', order: 5, frame: 'web' };
 
-function EmptyState() {
-  return (
-    <div className="text-center py-16">
-      <MapPin className="h-12 w-12 mx-auto text-muted-foreground/40 mb-4" />
-      <p className="text-muted-foreground">
-        No locations yet. Add your first location to start organising.
-      </p>
-    </div>
-  );
-}
+const base: LocationsSeed = { world: coreWorld, selectedId: GARAGE, expanded: OPEN_TO_GARAGE };
 
-function ErrorState() {
-  return (
-    <div className="space-y-6">
-      <PageHeader title="Locations" icon={<MapPin className="h-6 w-6 text-muted-foreground" />} />
-      <p className="text-destructive">Failed to load locations.</p>
-    </div>
-  );
-}
-
-export interface LocationsPageProps {
-  data?: LocationsPageData;
-  hasError?: boolean;
-  seed?: LocationsPageSeed;
-  pending?: LocationsPagePending;
-  callbacks?: LocationsPageCallbacks;
+function page(seed: Partial<LocationsSeed>, extra: Partial<LocationsPageProps> = {}) {
+  return function LocationsState() {
+    return <LocationsPage seed={{ ...base, ...seed }} recents={recentPlacements} {...extra} />;
+  };
 }
 
 /**
- * `/inventory/locations`: the location tree, its drag-and-drop reorder, and
- * the contents panel for whichever location is selected.
- *
- * The app drives this from `useLocationTreePageModel` over react-query
- * mutations that settle by invalidating and refetching the tree; there is no
- * server here, so `useLocationsPageState` holds the tree in local state and
- * applies the same patches a round trip would leave behind directly (see
- * `tree-mutations.ts`).
+ * `/inventory/locations`: the fixed tree of places beside the selected
+ * place's contents. Places are renamed, added, moved and deleted from the
+ * tree; things are dragged from the panel onto a place.
  */
-export function LocationsPage({
-  data = DEFAULT_LOCATIONS_DATA,
-  hasError = false,
-  seed = DEFAULT_LOCATIONS_SEED,
-  pending = DEFAULT_LOCATIONS_PENDING,
-  callbacks = DEFAULT_LOCATIONS_CALLBACKS,
-}: LocationsPageProps) {
-  const state = useLocationsPageState({ data, seed });
-
-  if (hasError) return <ErrorState />;
-
-  return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Locations"
-        icon={<MapPin className="h-6 w-6 text-muted-foreground" />}
-        actions={
-          <PageHeaderActions
-            onAddRoot={state.handlers.onAddRootClick}
-            onInsuranceReport={() => callbacks.onInsuranceReport()}
-          />
-        }
-      />
-      {state.showEmpty ? (
-        <EmptyState />
-      ) : (
-        <LocationsPageBody state={state} data={data} seed={seed} callbacks={callbacks} />
-      )}
-      <LocationsPageDialogs state={state} pending={pending} />
-    </div>
-  );
-}
-
 export const states: ScreenStates = {
-  loading: () => <LocationsPage data={{ ...DEFAULT_LOCATIONS_DATA, isLoading: true }} />,
-  error: () => <LocationsPage hasError />,
-  empty: () => <LocationsPage data={{ ...DEFAULT_LOCATIONS_DATA, tree: locationTreeEmpty }} />,
-  'single-root': () => (
-    <LocationsPage data={{ ...DEFAULT_LOCATIONS_DATA, tree: locationTreeSingleRoot }} />
+  selected: page(
+    { selectedId: SHELVING },
+    { initialSelection: selected(['box-cables', 'itm-pots'], 'itm-pots') }
   ),
-  'selected-populated': () => (
-    <LocationsPage seed={{ ...DEFAULT_LOCATIONS_SEED, selectedId: 'loc-kitchen' }} />
+  renaming: page({ renamingId: 'loc-workbench' }),
+  'creating-inline': page({ creatingUnder: GARAGE }),
+  'move-place': page({ selectedId: 'loc-workbench' }, { movingPlace: true }),
+  'dragging-node': page({
+    expanded: [...OPEN_TO_GARAGE, 'loc-study'],
+    placeDrag: { placeId: 'loc-workbench', targetId: 'loc-study', position: 'inside' },
+  }),
+  'dragging-node-refused': page({
+    placeDrag: { placeId: GARAGE, targetId: 'loc-toolbox', position: 'inside' },
+  }),
+  'dragging-node-reorder': page({
+    placeDrag: { placeId: SHELVING, targetId: 'loc-workbench', position: 'before' },
+  }),
+  'dragging-items-onto-node': page(
+    {
+      expanded: ['loc-house', GARAGE],
+      itemDrag: { ids: GRABBED_FROM_GARAGE, over: OVER_SHELVING },
+    },
+    { initialSelection: selected(GRABBED_FROM_GARAGE) }
   ),
-  'selected-empty': () => (
-    <LocationsPage seed={{ ...DEFAULT_LOCATIONS_SEED, selectedId: 'loc-storage' }} />
+  'delete-reparent': page({ deleting: { placeId: GARAGE, mode: 'reparent' } }),
+  'delete-with-contents': page({ deleting: { placeId: GARAGE, mode: 'to-hand' } }),
+  'delete-top-level': page({
+    selectedId: 'loc-storage',
+    expanded: ['loc-storage'],
+    deleting: { placeId: 'loc-storage', mode: 'to-hand' },
+  }),
+  moved: page(
+    {
+      world: applyMove(
+        coreWorld,
+        planMove({ world: coreWorld, selectedIds: GRABBED_FROM_GARAGE, target: OVER_SHELVING })
+      ),
+    },
+    { toast: { concept: 'move', message: 'Moved 4 things to Shelving' } }
   ),
-  renaming: () => <LocationsPage seed={{ ...DEFAULT_LOCATIONS_SEED, renamingId: 'loc-bedroom' }} />,
-  'add-root-open': () => <LocationsPage seed={{ ...DEFAULT_LOCATIONS_SEED, addingRoot: true }} />,
-  'move-open': () => (
-    <LocationsPage seed={{ ...DEFAULT_LOCATIONS_SEED, movingId: 'loc-tv-unit' }} />
+  'empty-filtered': page({ selectedId: null, filter: 'attic' }),
+  empty: () => <LocationsEmpty />,
+  loading: () => <LocationsLoading />,
+  error: () => <LocationsError />,
+  offline: page(
+    {},
+    {
+      banner: {
+        kind: 'offline',
+        title: OFFLINE_TITLE,
+        detail: 'Renaming, moving and deleting come back when the connection does.',
+      },
+    }
   ),
-  'delete-blocked': () => (
-    <LocationsPage seed={{ ...DEFAULT_LOCATIONS_SEED, deleteConfirmId: 'loc-house' }} />
+  stale: page(
+    {},
+    {
+      banner: {
+        kind: 'stale',
+        title: 'Places changed on iPhone 1 minute ago.',
+        detail: 'What you see is from before that change.',
+        actionLabel: 'Reload',
+      },
+    }
   ),
-  dragging: () => (
-    <LocationsPage
-      seed={{
-        ...DEFAULT_LOCATIONS_SEED,
-        dragState: { activeId: 'loc-living', overId: 'loc-kitchen' },
-      }}
-    />
-  ),
-  'deeply-nested': () => (
-    <LocationsPage
-      seed={{
-        ...DEFAULT_LOCATIONS_SEED,
-        selectedId: 'loc-tv-drawer',
-        expandedIds: new Set(['loc-living', 'loc-tv-unit']),
-      }}
-    />
-  ),
+  tablet: page({ selectedId: GARAGE }, { single: true }),
 };
 
 export default function LocationsScreen() {
-  return <LocationsPage />;
+  return <LocationsPage seed={base} recents={recentPlacements} />;
 }
