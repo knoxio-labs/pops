@@ -151,11 +151,11 @@ internal struct ReplicaTypeArrivalTests {
             InventoryCatalogue(version: "cat-2", units: [], types: [Self.box, Self.bag, tray]))
         try replica.settleTypeArrival(typeKey: "bag")
 
-        try replica.resetForResync()
         try replica.apply(
             Fixture.snapshot(items: [
                 Self.untyped("canvas", legacy: "Bag"), Self.untyped("desk", legacy: "Tray"),
-            ]))
+            ]),
+            resyncing: true)
 
         #expect(try replica.read(.typeArrival)?.type.key == "tray")
     }

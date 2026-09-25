@@ -163,9 +163,11 @@ extension InventoryReplica {
     /// Stores the catalogue a snapshot page pins, every older revision its
     /// items' values still name (`referencedCatalogues`), and the page, in one
     /// transaction. Only the pinned revision becomes the replica's current one.
+    /// `resyncing` discards the server's rows first, as ``apply(_:resyncing:)``
+    /// does, in that same transaction.
     public func apply(
         _ page: InventorySnapshotPage, catalogue: InventoryCatalogueSnapshot,
-        referencedCatalogues: [InventoryCatalogueSnapshot] = []
+        referencedCatalogues: [InventoryCatalogueSnapshot] = [], resyncing: Bool = false
     ) throws {
         guard page.catalogueRevision == catalogue.revision.revision else {
             throw InventoryReplicaError.corruptValue("snapshot catalogue revision does not match")
@@ -175,7 +177,7 @@ extension InventoryReplica {
                 try Protocol2CatalogueRows.store(referenced, in: db)
             }
             try Protocol2CatalogueRows.storeAndReindex(catalogue, in: db) {
-                try ReplicaApply.snapshot(page, now: now(), in: db)
+                try ReplicaApply.snapshot(page, now: now(), resyncing: resyncing, in: db)
             }
         }
     }

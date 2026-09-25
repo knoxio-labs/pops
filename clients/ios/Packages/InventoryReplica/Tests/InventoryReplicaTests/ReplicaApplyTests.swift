@@ -157,6 +157,33 @@ internal struct ReplicaApplyTests {
         #expect(try replica.syncPosition().epoch == "epoch-2")
     }
 
+    @Test("a resync's first page replaces every server row in the same epoch, rewound ones too")
+    func resyncingSnapshotDiscardsOldRows() throws {
+        let replica = try Fixture.downloaded(
+            items: [Fixture.item("gone"), Fixture.item("rewound", name: "Old", revision: 9)])
+
+        try replica.apply(
+            Fixture.snapshot(items: [Fixture.item("rewound", name: "New", revision: 2)]),
+            resyncing: true)
+
+        #expect(try replica.read(.item(id: "gone")) == nil)
+        #expect(try replica.read(.item(id: "rewound"))?.name == "New")
+        #expect(try replica.ids(.search("old")).isEmpty)
+        #expect(try replica.syncPosition().since == 10)
+    }
+
+    @Test("a snapshot page that is not a resync's keeps rows it does not carry")
+    func ordinarySnapshotKeepsOtherRows() throws {
+        let replica = try Fixture.downloaded(
+            items: [Fixture.item("kept"), Fixture.item("rewound", name: "Old", revision: 9)])
+
+        try replica.apply(
+            Fixture.snapshot(items: [Fixture.item("rewound", name: "New", revision: 2)]))
+
+        #expect(try replica.read(.item(id: "kept")) != nil)
+        #expect(try replica.read(.item(id: "rewound"))?.name == "Old")
+    }
+
     @Test("feed events become history, newest first, and a repeated event is kept once")
     func eventsBecomeHistory() throws {
         let replica = try Fixture.downloaded(items: [Fixture.item("a")])

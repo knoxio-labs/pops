@@ -144,11 +144,9 @@ internal struct MutationLogRebaseTests {
         let replica = try MutationLogPerformTests.replica()
         try Self.renamed(replica)
 
-        try replica.resetForResync()
-        #expect(try replica.read(.item(id: "lamp")) == nil)
         try replica.apply(
-            Fixture.snapshot(
-                items: [Fixture.item("lamp", name: "Lamp", revision: 4)], epoch: "epoch-2"))
+            Fixture.snapshot(items: [Fixture.item("lamp", name: "Lamp", revision: 4)]),
+            resyncing: true)
 
         #expect(try replica.read(.item(id: "lamp"))?.name == "Desk lamp")
         #expect(try replica.outboundMutations().map(\.mutationId) == ["m1"])

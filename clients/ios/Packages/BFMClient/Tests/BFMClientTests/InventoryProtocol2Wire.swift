@@ -13,19 +13,24 @@ internal enum Protocol2Wire {
     internal static let lampId = "6c0a2f6e-9d1b-4f3a-8e57-1b2c3d4e5f60"
 
     /// One catalogue field. `kind` is a string so a test can send one this
-    /// build has never heard of.
+    /// build has never heard of. An option with no entry in
+    /// `enumOptionLabels` is labelled `Option <index>`.
     internal static func field(
         id: String, key: String, label: String, kind: String = "measurement",
         storage: String = "stored", required: Bool = false, archivedAt: String? = nil,
         replacedBy: String? = nil, sortOrder: Int = 0, cardinality: String = "one",
-        fixedUnit: String? = nil, referenceKinds: [String] = [], enumOptionIds: [String] = []
+        fixedUnit: String? = nil, referenceKinds: [String] = [], enumOptionIds: [String] = [],
+        enumOptionLabels: [String] = []
     ) -> String {
         let kinds = referenceKinds.map { "\"\($0)\"" }.joined(separator: ",")
-        let options = enumOptionIds.enumerated().map { index, optionId in
-            """
-            {"id":"\(optionId)","key":"option-\(index)","label":"Option \(index)",\
-            "sortOrder":\(index),"archivedAt":null}
-            """
+        let options = enumOptionIds.enumerated().map { index, optionId -> String in
+            let optionLabel =
+                enumOptionLabels.indices.contains(index)
+                ? enumOptionLabels[index] : "Option \(index)"
+            return """
+                {"id":"\(optionId)","key":"option-\(index)","label":"\(optionLabel)",\
+                "sortOrder":\(index),"archivedAt":null}
+                """
         }.joined(separator: ",")
         return """
             {"id":"\(id)","typeId":"\(bulbType)","key":"\(key)","label":"\(label)","help":null,\
