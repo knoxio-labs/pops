@@ -1,3 +1,8 @@
+/**
+ * Every catalogue and item tool in this MCP surface identifies a type by its
+ * stable `typeId` (the type's immutable id, not its human-readable `key`).
+ * There is no separate `typeKey` argument anywhere in the surface.
+ */
 import { catalogueClient } from './inventory-catalogue-client.js';
 import { optionalPositiveInteger } from './inventory-catalogue-input.js';
 import { INVENTORY_TYPES_READ_SCOPE } from './inventory-catalogue-scopes.js';
