@@ -3,6 +3,8 @@
  * universal search: a label that starts with the query beats one that
  * contains it, which beats a match only in other fields (codes, paths).
  */
+import { Search } from 'lucide-react';
+
 import type { PaletteArgumentKind, PaletteCommand, PaletteGroupId } from '../shared/contracts';
 
 /** The palette's search scopes, which Tab cycles. */
@@ -112,4 +114,35 @@ export function buildSections(
           section('jump-to', rankEntries(query, ofGroup(source, 'jump-to'))),
         ];
   return sections.filter((s) => s.entries.length > 0);
+}
+
+/** The id of the entry that hands the query to the Search page. */
+export const SEE_ALL_RESULTS_ID = 'see-all-results';
+
+/** The Search page for a query, in the palette's scope: `/inventory/search?q=…`. */
+export function searchResultsHref(query: string, scope: PaletteScope): string {
+  const params = new URLSearchParams({ q: query.trim() });
+  if (scope === 'purchases') params.set('scope', 'purchases');
+  return `/inventory/search?${params.toString()}`;
+}
+
+/**
+ * The last entry while searching: every match, filterable and previewable,
+ * on the Search page. Absent with no query and inside an argument step,
+ * where the query picks a target rather than searching.
+ */
+export function seeAllResultsEntry(
+  query: string,
+  scope: PaletteScope,
+  step: PaletteStep | null
+): PaletteCommand | null {
+  const trimmed = query.trim();
+  if (trimmed === '' || step !== null) return null;
+  return {
+    id: SEE_ALL_RESULTS_ID,
+    label: 'See all results in Search',
+    group: 'commands',
+    icon: Search,
+    detail: `“${trimmed}” in ${scope === 'inventory' ? 'Inventory' : 'Purchases'}`,
+  };
 }

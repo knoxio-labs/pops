@@ -95,7 +95,14 @@ export { dragSet, useDragPlacement } from './shared/use-drag-placement';
 export type { DragPlacementApi, DropTargetState } from './shared/use-drag-placement';
 export { CommandPalette, CommandPalettePanel } from './command-palette/command-palette';
 export type { CommandPalettePanelProps } from './command-palette/command-palette';
-export { buildSections, rankEntries, rankMatch } from './command-palette/palette-groups';
+export {
+  SEE_ALL_RESULTS_ID,
+  buildSections,
+  rankEntries,
+  rankMatch,
+  searchResultsHref,
+  seeAllResultsEntry,
+} from './command-palette/palette-groups';
 export type {
   PaletteScope,
   PaletteSection,

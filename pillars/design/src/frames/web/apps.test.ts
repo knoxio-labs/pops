@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { INVENTORY_SCREEN_PAGES } from '@/fixtures/inventory/nav';
 import { describe, expect, it } from 'vitest';
 
 import { iconMap } from '@pops/navigation';
@@ -146,5 +147,36 @@ describe('activeItemPath', () => {
   it('marks nothing when no page matches, and never falls back to the index', () => {
     expect(activeItemPath(app, 'settings')).toBeUndefined();
     expect(activeItemPath(app, undefined)).toBeUndefined();
+  });
+
+  it('lands a mapped screen on its page ahead of the slug, and ignores a map to no page', () => {
+    expect(activeItemPath(app, 'history', { history: '/import' })).toBe('/import');
+    expect(activeItemPath(app, 'import-rules', { 'import-rules': '/import' })).toBe('/import');
+    expect(activeItemPath(app, 'history', { history: '/gone' })).toBeUndefined();
+  });
+});
+
+describe('inventory screens inside another page', () => {
+  const inventory = appForArea('inventory');
+  if (inventory === undefined) throw new Error('inventory nav missing');
+
+  it('marks Sync for Activity, a segment of the Sync page', () => {
+    expect(activeItemPath(inventory, 'activity')).toBe('/sync');
+    expect(activeItemPath(inventory, 'sync')).toBe('/sync');
+  });
+
+  it('marks Items for an item’s own screens', () => {
+    for (const slug of ['item-detail', 'item-form', 'item-history', 'lifecycle', 'bulk-new']) {
+      expect(activeItemPath(inventory, slug)).toBe('/items');
+    }
+  });
+
+  it('marks Locations for one place', () => {
+    expect(activeItemPath(inventory, 'location-page')).toBe('/locations');
+  });
+
+  it('maps every listed screen to a page the nav actually has', () => {
+    const paths = new Set(inventory.items.map((item) => item.path));
+    for (const path of Object.values(INVENTORY_SCREEN_PAGES)) expect(paths).toContain(path);
   });
 });
