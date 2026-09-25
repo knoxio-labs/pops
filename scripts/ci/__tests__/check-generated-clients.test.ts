@@ -659,7 +659,7 @@ describe('the real CLI, spawned as a subprocess', { timeout: REAL_SUBPROCESS_TIM
       });
 
       expect(output).toContain('FAIL —');
-      expect(output).toContain('Preparing worktree');
+      expect(output).toContain('Building the merge of HEAD onto');
       expect(status).toBe(1);
       expect(worktreesUnder(scratch)).toEqual([]);
     } finally {
