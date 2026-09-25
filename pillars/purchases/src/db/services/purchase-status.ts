@@ -16,6 +16,24 @@
  * are set by a person or another process, not derived from links, so they
  * are never overwritten here.
  *
+ * **`nothing_to_settle` (Joao, 2026-09-25, POPS-4648).** A zero-total order
+ * — free, or cancelled before any charge — has no bank transaction to wait
+ * for. Without this it sits at `awaiting_settlement` forever and clogs the
+ * unmatched queue with orders no import will ever resolve. The order
+ * qualifies when its total is zero AND none of its charges is
+ * `capture`/`adjustment`/`refund` — the same `isResidualBearing` set
+ * `computeAccounting` already treats as money that moved. A refund alone on
+ * a zero-total order still needs to be matched to the transaction that
+ * returned it, so it is excluded the same as a capture would be: the order
+ * falls through to the normal coverage rule instead, which — with no
+ * capture ever having existed — reads as `awaiting_settlement` until that
+ * refund is linked. Checked before coverage so a genuinely zero, genuinely
+ * untouched order never has to wait on `computeAccounting` to agree; and it
+ * is re-derived on every call rather than added to
+ * `STATUSES_NOT_DERIVED`, so an order that later gets a non-zero total (an
+ * edit) or a capture charge (a correction) falls straight back into the
+ * ordinary rule above.
+ *
  * **Coverage** is `computeAccounting`'s `matchedCents` — the sum of
  * `capture`/`adjustment` charges that carry at least one link. `refund` and
  * `authorization` charges are excluded from coverage the same way they are
@@ -28,6 +46,7 @@
  */
 import { inArray } from 'drizzle-orm';
 
+import { isResidualBearing } from '../../contract/constants.js';
 import { purchaseCharges, purchaseChargeLinks, purchases } from '../schema.js';
 import { computeAccounting } from './accounting.js';
 import { groupBy } from './group-by.js';
@@ -58,6 +77,10 @@ export function deriveStatus(
   linksByChargeId: ReadonlyMap<string, readonly PurchaseChargeLinkRow[]>
 ): PurchaseStatus {
   if (STATUSES_NOT_DERIVED.has(currentStatus)) return currentStatus;
+
+  if (totalCents === 0 && !charges.some((charge) => isResidualBearing(charge.role))) {
+    return 'nothing_to_settle';
+  }
 
   const { matchedCents } = computeAccounting(totalCents, charges, linksByChargeId);
   if (matchedCents <= 0) return 'awaiting_settlement';

@@ -1,5 +1,5 @@
-import { HintTooltip } from '@/kit/inventory/foundation';
-import { InventoryPage, PageStateBanner, PageTabs } from '@/kit/inventory/secondary-page';
+import { HintTooltip, InventoryPage, Segmented } from '@/kit/inventory/foundation';
+import { PageStateBanner } from '@/kit/inventory/secondary-page';
 /**
  * `/inventory/reports`: one page, four tabs (Overview, Values, Warranties,
  * Insurance), the tab in the URL. Export CSV and Print act on the tab shown.
@@ -15,11 +15,11 @@ import type { ReactNode } from 'react';
 /** The report tabs. */
 export type ReportTab = 'overview' | 'values' | 'warranties' | 'insurance';
 
-const TABS: readonly { value: ReportTab; label: string }[] = [
-  { value: 'overview', label: 'Overview' },
-  { value: 'values', label: 'Values' },
-  { value: 'warranties', label: 'Warranties' },
-  { value: 'insurance', label: 'Insurance' },
+const TABS: readonly { id: ReportTab; label: string }[] = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'values', label: 'Values' },
+  { id: 'warranties', label: 'Warranties' },
+  { id: 'insurance', label: 'Insurance' },
 ];
 
 /** Props for {@link ReportsPage}. */
@@ -67,7 +67,9 @@ export function ReportsPage(props: ReportsPageProps) {
           </HintTooltip>
         </div>
       }
-      tabs={<PageTabs label="Reports" tabs={TABS} value={props.tab} onChange={props.onTabChange} />}
+      tabs={
+        <Segmented label="Reports" segments={TABS} value={props.tab} onChange={props.onTabChange} />
+      }
       banner={<PageStateBanner banner={props.banner} what="Inventory" />}
     >
       {props.children}

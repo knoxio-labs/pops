@@ -28544,6 +28544,20 @@
             }
           },
           {
+            "description": "Only the transactions with these ids. Repeat the parameter for several. Ids that match nothing are absent from the answer rather than an error.",
+            "in": "query",
+            "name": "ids",
+            "schema": {
+              "items": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "maxItems": 500,
+              "minItems": 1,
+              "type": "array"
+            }
+          },
+          {
             "in": "query",
             "name": "limit",
             "schema": {

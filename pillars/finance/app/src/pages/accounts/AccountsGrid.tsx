@@ -11,7 +11,7 @@ import type { AccountListFilters } from './useAccountListFilters';
 
 function LoadingSkeleton() {
   return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+    <div className="grid gap-4 sm:max-xl:grid-cols-2 xl:grid-cols-3">
       {[0, 1, 2].map((i) => (
         <Skeleton key={i} className="h-32 w-full" />
       ))}
@@ -45,7 +45,7 @@ export function AccountsGrid({
       <AccountListControls filters={filters} />
       {filters.visible.length === 0 && <NoMatchingAccounts onClear={filters.clear} />}
       {filters.visible.length > 0 && (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-4 sm:max-xl:grid-cols-2 xl:grid-cols-3">
           {filters.visible.map((account) => (
             <AccountCard
               key={account.id}

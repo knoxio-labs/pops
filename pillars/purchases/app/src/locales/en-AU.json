@@ -176,6 +176,7 @@
   "purchase.status.partial": "Partly linked",
   "purchase.status.settled_cash": "Settled in cash",
   "purchase.status.ignored": "Ignored",
+  "purchase.status.nothing_to_settle": "Nothing to settle",
   "purchase.ingest.email": "Email",
   "purchase.ingest.export": "Merchant export",
   "purchase.ingest.upload": "Upload",

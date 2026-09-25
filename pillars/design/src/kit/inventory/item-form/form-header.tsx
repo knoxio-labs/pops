@@ -8,6 +8,7 @@ import { Button, PageHeader } from '@pops/ui';
 import { HintTooltip } from '../shared/hint-tooltip';
 import { INVENTORY_ICONS } from '../shared/icons';
 import { ShortcutHint } from '../shared/kbd';
+import { AccentTile } from '../shared/page-frame';
 
 /** Props for {@link FormHeader}. */
 export interface FormHeaderProps {
@@ -25,7 +26,7 @@ function Actions({ mode, saving, blocked, onCancel, onSave }: FormHeaderProps) {
   return (
     <div className="flex items-center gap-2">
       <HintTooltip label="Cancel" shortcutId="form-cancel">
-        <Button variant="ghost" size="sm" onClick={onCancel} disabled={saving}>
+        <Button variant="ghost" onClick={onCancel} disabled={saving}>
           Cancel
         </Button>
       </HintTooltip>
@@ -35,31 +36,18 @@ function Actions({ mode, saving, blocked, onCancel, onSave }: FormHeaderProps) {
           shortcutId="form-save-new"
           disabledReason={blocked ?? undefined}
         >
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={saving}
-            aria-disabled={blocked !== null || undefined}
-          >
+          <Button variant="outline" disabled={saving} aria-disabled={blocked !== null || undefined}>
             Save and new
           </Button>
         </HintTooltip>
       ) : null}
       <HintTooltip label="Save" shortcutId="form-save" disabledReason={blocked ?? undefined}>
         <Button
-          size="sm"
           loading={saving}
           loadingText="Saving"
           aria-disabled={blocked !== null || undefined}
           onClick={onSave}
-          suffix={
-            saving ? undefined : (
-              <ShortcutHint
-                id="form-save"
-                className="[&_kbd]:border-primary-foreground/30 [&_kbd]:bg-primary-foreground/15 [&_kbd]:text-primary-foreground"
-              />
-            )
-          }
+          suffix={saving ? undefined : <ShortcutHint id="form-save" onPrimary />}
           className={blocked === null ? undefined : 'opacity-60'}
         >
           {mode === 'create' ? 'Create item' : 'Save changes'}
@@ -81,11 +69,7 @@ export function FormHeader(props: FormHeaderProps) {
     <PageHeader
       title={title}
       description={description}
-      icon={
-        <span className="flex size-9 items-center justify-center rounded-lg bg-app-accent/15">
-          <Icon className="size-5 text-app-accent" aria-hidden />
-        </span>
-      }
+      icon={<AccentTile icon={Icon} />}
       actions={<Actions {...props} />}
     />
   );

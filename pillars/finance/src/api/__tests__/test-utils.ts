@@ -239,6 +239,7 @@ export interface TransactionQuery {
   tag?: string;
   entityId?: string;
   type?: string;
+  ids?: string[];
   limit?: number;
   offset?: number;
   beforeDate?: string;

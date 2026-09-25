@@ -4,8 +4,8 @@
  */
 import { Button, EmptyState } from '@pops/ui';
 
+import { groupByMonth } from '../../shared/event-groups';
 import { EventRow } from './event-row';
-import { groupByMonth } from './history-model';
 
 import type { LucideIcon } from 'lucide-react';
 

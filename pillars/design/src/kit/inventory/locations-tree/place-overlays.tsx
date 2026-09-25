@@ -3,7 +3,7 @@
  * placement picker for a Move of things, the delete confirmation, and the
  * Store here sheet for the current place.
  */
-import { StoreHereStub } from '../location-page/store-here-stub';
+import { StoreHereSheet } from '../store-here/store-here-sheet';
 import { DeletePlaceDialog } from './delete-place-dialog';
 import { InHandStrip } from './in-hand-strip';
 import { MoveItemsAnchor } from './move-controls';
@@ -43,7 +43,7 @@ export function PlaceOverlays({
         onCancel={api.edits.cancelDelete}
       />
       {place ? (
-        <StoreHereStub
+        <StoreHereSheet
           open={storing}
           onOpenChange={onStoringChange}
           target={{ kind: 'location', id: place.id, name: place.name }}

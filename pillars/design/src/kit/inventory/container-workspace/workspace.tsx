@@ -12,8 +12,8 @@ import { Button } from '@pops/ui';
 import { MovePlanPanel, Sheet, planMove } from '../foundation';
 import { FactsSection } from '../item-detail/facts-section';
 import { SectionStack } from '../item-detail/section-stack';
+import { StoreHereSheet } from '../store-here/store-here-sheet';
 import { ContentsPane } from './contents-pane';
-import { StoreHereSheetStub } from './store-here-stub';
 import { initialUnpack, unpackReducer } from './unpack-model';
 
 import type { PlacementTarget, SelectionState, StoreHereTarget } from '../foundation';
@@ -163,7 +163,7 @@ export function ContainerWorkspace(props: ContainerWorkspaceProps) {
         <Details {...props} />
       </Sheet>
       <MoveSheet model={model} ids={moveIds} onClose={() => setMoveIds([])} />
-      <StoreHereSheetStub
+      <StoreHereSheet
         open={props.storeHereOpen}
         onOpenChange={props.onStoreHereChange}
         world={model.world}

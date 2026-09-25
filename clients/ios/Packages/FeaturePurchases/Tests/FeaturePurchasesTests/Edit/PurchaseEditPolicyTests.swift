@@ -17,7 +17,7 @@ internal struct PurchaseEditPolicyTests {
     @Test(
         "unmatched and terminal local settlements keep identity fields editable",
         arguments: [
-            PurchaseSettlement.awaitingSettlement, .settledCash, .ignored,
+            PurchaseSettlement.awaitingSettlement, .settledCash, .ignored, .nothingToSettle,
         ])
     func unmatchedFieldsAreEditable(status: PurchaseSettlement) {
         #expect(PurchaseEditPolicy.lockedFields(for: status).isEmpty)

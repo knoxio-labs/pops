@@ -35,7 +35,10 @@ export interface StoreHereOpening {
   offline?: boolean;
 }
 
-type BodyProps = Omit<StoreHereSheetProps, 'open' | 'onOpenChange'> & { opening: StoreHereOpening };
+type BodyProps = Omit<StoreHereSheetProps, 'open' | 'onOpenChange'> & {
+  opening: StoreHereOpening;
+  onDone?: () => void;
+};
 
 function toggled(set: ReadonlySet<string>, id: string): Set<string> {
   const next = new Set(set);
@@ -169,7 +172,7 @@ function StoreFooter({
 }) {
   if (state.tab === 'new') {
     return (
-      <Button variant="outline" size="sm">
+      <Button variant="outline" size="sm" onClick={props.onDone}>
         Done
       </Button>
     );
@@ -178,7 +181,7 @@ function StoreFooter({
   return (
     <>
       <p className="mr-auto min-w-0 text-xs text-muted-foreground">{carriedLine(plan)}</p>
-      <Button variant="ghost" size="sm">
+      <Button variant="ghost" size="sm" onClick={props.onDone}>
         Done
       </Button>
       <Button
@@ -207,7 +210,7 @@ function useStoreHere(props: BodyProps): SheetContentProps {
 
 /** The Store here sheet, over the page. */
 export function StoreHereSheet({ open, onOpenChange, ...rest }: StoreHereSheetProps) {
-  const content = useStoreHere({ ...rest, opening: {} });
+  const content = useStoreHere({ ...rest, opening: {}, onDone: () => onOpenChange(false) });
   return <Sheet open={open} onOpenChange={onOpenChange} {...content} />;
 }
 

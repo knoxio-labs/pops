@@ -5,6 +5,7 @@ import {
   movingNotStartedWorld,
   movingWorld,
 } from '@/fixtures/inventory/moving-day';
+import { OFFLINE_TITLE } from '@/kit/inventory/foundation';
 import { MovingDayPage } from '@/kit/inventory/moving-day/moving-day-page';
 import {
   MovingDayDone,
@@ -60,7 +61,7 @@ export const states: ScreenStates = {
     {
       banner: {
         kind: 'offline',
-        title: 'No connection. Showing the boxes as they were.',
+        title: OFFLINE_TITLE,
         detail: 'Closing, packing and marking full come back when the connection does.',
       },
     }

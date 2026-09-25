@@ -5,6 +5,7 @@ import AppCore
 @MainActor
 internal enum PurchaseDetailSurfaces {
     private typealias Fixture = PurchaseDetailFixtures
+    private typealias BankMatch = PurchaseDetailBankMatchFixtures
 
     /// Any row of the history as a detail, so a row opened from the archive
     /// lands somewhere. No lines: the fixtures itemise only the purchases
@@ -39,7 +40,11 @@ internal enum PurchaseDetailSurfaces {
 
     private static let content: [DesignState] = [
         state("default", "Awaiting a bank match", loaded(Fixture.bunnings)),
-        state("matched", "Matched to the bank", loaded(Fixture.aldi)),
+        state("matched", "Matched to the bank", loaded(BankMatch.matched)),
+        state("part-matched", "Part matched, the rest unexplained", loaded(BankMatch.partial)),
+        state("shared-transaction", "One transaction paying for more", loaded(BankMatch.shared)),
+        state(
+            "match-undescribed", "Matched, finance unreachable", loaded(BankMatch.undescribed)),
         state("till-names", "Lines as the till printed them", loaded(Fixture.salvos)),
         state("every-figure", "Tax, delivery, discount and surcharge", loaded(Fixture.uniqlo)),
         state("no-lines", "A receipt with no itemised lines", loaded(Fixture.sushiNoLines)),

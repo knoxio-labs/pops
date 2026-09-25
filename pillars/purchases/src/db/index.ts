@@ -189,6 +189,7 @@ export {
 
 export {
   listConfirmedLinks,
+  listLinkedPaymentHints,
   listOrdersNeedingDerivedCharge,
   listRejectedPairings,
   listSolvableCharges,

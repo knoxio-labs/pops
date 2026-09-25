@@ -46,6 +46,7 @@ function run(charges: readonly SolvableCharge[], transactions: readonly Solvable
     confirmed: [],
     rejected: [],
     rules: [],
+    cardAccounts: new Map(),
     defaultWindowDays: 21,
   };
   return solve(input);
@@ -64,6 +65,7 @@ describe('the finance sign boundary end to end', () => {
       orderedAt: '2026-03-04T00:00:00Z',
       descriptorPattern: null,
       settlementWindowDays: null,
+      paymentHint: null,
     };
 
     // Finance publishes the Amazon card charge as -106.99 (money leaving
@@ -95,6 +97,7 @@ describe('the finance sign boundary end to end', () => {
       orderedAt: '2026-03-04T00:00:00Z',
       descriptorPattern: null,
       settlementWindowDays: null,
+      paymentHint: null,
     };
     const refund: SolvableCharge = {
       id: 'chg-refund',
@@ -107,6 +110,7 @@ describe('the finance sign boundary end to end', () => {
       orderedAt: '2026-03-04T00:00:00Z',
       descriptorPattern: null,
       settlementWindowDays: null,
+      paymentHint: null,
     };
 
     // Finance publishes the refund as +24.95 (a credit). Unflipped, that

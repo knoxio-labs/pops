@@ -107,7 +107,10 @@ export function PlacementPath({
   const shown = visibleSegments(trail, maxSegments, isProperty);
   const full = trail.map((segment) => segment.name).join(' › ');
   return (
-    <span className={cn('inline-flex min-w-0 items-center gap-1 text-xs', className)} title={full}>
+    <span
+      className={cn('relative inline-flex min-w-0 items-center gap-1 text-xs', className)}
+      title={full}
+    >
       <span className="sr-only">{full}</span>
       <span aria-hidden className="inline-flex min-w-0 items-center gap-1">
         {shown.map((segment, index) => (

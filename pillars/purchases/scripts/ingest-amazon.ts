@@ -31,6 +31,8 @@ import { join } from 'node:path';
 import { isCliEntrypoint } from '@pops/pillar-sdk/node';
 
 import {
+  AMAZON_DESCRIPTOR_PATTERN,
+  AMAZON_SETTLEMENT_WINDOW_DAYS,
   AMAZON_SOURCE_ID,
   REFUND_DETAILS_BUNDLE_PATH,
   attachInvoiceDocuments,
@@ -146,9 +148,8 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
   await upsertSource(client, {
     id: AMAZON_SOURCE_ID,
     label: 'Amazon',
-    // No bank descriptor is the bare word AMAZON — it is `AMAZON MKTPLACE
-    // AU`, `Amazon AU`, `AMAZON.COM.AU`.
-    descriptorPattern: 'AMAZON%',
+    descriptorPattern: AMAZON_DESCRIPTOR_PATTERN,
+    settlementWindowDays: AMAZON_SETTLEMENT_WINDOW_DAYS,
     // One order routinely settles as several shipment charges days apart,
     // so Amazon gets review rather than auto-linking.
     autoLinkPolicy: 'review',

@@ -4,27 +4,13 @@
  */
 import { Button, cn } from '@pops/ui';
 
-import { ACTOR_SHORT, EVENT_CONCEPT } from '../activity/event-concept';
+import { ACTOR_SHORT } from '../activity/event-concept';
 import { formatWhen } from '../activity/when';
+import { EventMark } from '../shared/event-mark';
 import { INVENTORY_ICONS } from '../shared/icons';
 import { OverviewPanel, PanelEmpty, PanelRow } from './panel';
 
 import type { EventModel } from '../shared/model';
-
-/** One event's symbol, in a tile the size of an item mark. */
-export function EventMark({ event, className }: { event: EventModel; className?: string }) {
-  const Icon = INVENTORY_ICONS[EVENT_CONCEPT[event.kind]];
-  return (
-    <span
-      className={cn(
-        'inline-flex size-7 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground',
-        className
-      )}
-    >
-      <Icon className="size-4" aria-hidden />
-    </span>
-  );
-}
 
 /** Props for {@link RecentWorkPanel}. */
 export interface RecentWorkPanelProps {

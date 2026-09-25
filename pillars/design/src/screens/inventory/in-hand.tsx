@@ -10,7 +10,7 @@ import { recentPlacements } from '@/fixtures/inventory/recents';
 import { orderInHand } from '@/kit/inventory/in-hand/in-hand-model';
 import { InHandPage } from '@/kit/inventory/in-hand/in-hand-page';
 import { PlacementPickerPanel } from '@/kit/inventory/placement-picker/placement-picker';
-import { StateBanner } from '@/kit/inventory/shared/state-banner';
+import { OFFLINE_REASON, OFFLINE_TITLE, StateBanner } from '@/kit/inventory/shared/state-banner';
 import { UndoToast } from '@/kit/inventory/shared/undo-toast';
 
 import type { ScreenMeta, ScreenStates } from '@/contract';
@@ -81,11 +81,11 @@ export const states: ScreenStates = {
   empty: page({ items: [] }),
   loading: page({ body: 'loading' }),
   offline: page({
-    disabledReason: 'No connection. Changes are off until it is back',
+    disabledReason: OFFLINE_REASON,
     banner: (
       <StateBanner
         kind="offline"
-        title="No connection. Showing what loaded at 10:42."
+        title={OFFLINE_TITLE}
         detail="Put back and Move are off until the connection is back."
         actionLabel="Retry"
       />

@@ -2,7 +2,7 @@
  * Feedback: the undo toast in its three states, stacked where sonner puts
  * them, and the state banner for each way data can be less than fine.
  */
-import { StateBanner } from '../shared/state-banner';
+import { OFFLINE_TITLE, StateBanner } from '../shared/state-banner';
 import { UndoToast } from '../shared/undo-toast';
 import { Specimen } from './gallery-frame';
 
@@ -40,7 +40,7 @@ export function BannersGallery() {
         />
         <StateBanner
           kind="offline"
-          title="No connection. Showing what loaded."
+          title={OFFLINE_TITLE}
           detail="Changes are off until the connection is back."
         />
         <StateBanner

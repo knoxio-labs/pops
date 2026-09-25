@@ -5,7 +5,7 @@
  */
 import { useCallback, useMemo, useReducer } from 'react';
 
-import { buildSections } from './palette-groups';
+import { buildSections, seeAllResultsEntry } from './palette-groups';
 
 import type { PaletteCommand } from '../shared/contracts';
 import type { PaletteScope, PaletteSection, PaletteSource, PaletteStep } from './palette-groups';
@@ -103,6 +103,8 @@ export interface PaletteApi {
   state: PaletteState;
   sections: PaletteSection[];
   step: PaletteStep | null;
+  /** The hand-off to the Search page, while a query is searching. */
+  seeAll: PaletteCommand | null;
   setQuery: (query: string) => void;
   cycleScope: () => void;
   /** Applies a palette-owned key; `handled` means preventDefault, `close` means dismiss. */
@@ -141,6 +143,7 @@ export function usePaletteState(
     state,
     sections,
     step,
+    seeAll: seeAllResultsEntry(state.query, state.scope, step),
     setQuery: (query) => dispatch({ type: 'query', query }),
     cycleScope: () => dispatch({ type: 'cycle-scope' }),
     onKey,

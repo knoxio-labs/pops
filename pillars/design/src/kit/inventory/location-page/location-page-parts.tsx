@@ -5,10 +5,9 @@
  */
 import { FolderPlus, PackagePlus, Search } from 'lucide-react';
 
-import { Button, Input, Tabs, TabsList, TabsTrigger } from '@pops/ui';
+import { Button, Input } from '@pops/ui';
 
-import { locationPath } from '../foundation';
-import { TabCount } from '../locations-tree/fit-page';
+import { Segmented, locationPath } from '../foundation';
 import { MovePlaceButton } from '../locations-tree/move-controls';
 import { PlaceMenu } from '../locations-tree/place-menu';
 import { tallyPlace } from '../locations-tree/tree-model';
@@ -84,8 +83,6 @@ export function PlaceActions({ api, place, ...props }: PlaceActionsProps) {
   );
 }
 
-const TABS: readonly PlaceTab[] = ['items', 'in-boxes', 'places'];
-
 /** The tab row with counts, and the search over this place. */
 export function PlaceToolbar({
   world,
@@ -105,25 +102,16 @@ export function PlaceToolbar({
   const tally = tallyPlace(world, place.id);
   return (
     <div className="flex items-center gap-3 pb-3">
-      <Tabs
+      <Segmented
+        label={`What is in ${place.name}`}
         value={tab}
-        onValueChange={(value) => onTab(TABS.find((entry) => entry === value) ?? 'items')}
-      >
-        <TabsList>
-          <TabsTrigger value="items" className="px-3">
-            Here
-            <TabCount n={tally.itemsHere + tally.boxesHere} />
-          </TabsTrigger>
-          <TabsTrigger value="in-boxes" className="px-3">
-            In boxes here
-            <TabCount n={tally.inBoxes} />
-          </TabsTrigger>
-          <TabsTrigger value="places" className="px-3">
-            Places inside
-            <TabCount n={tally.places} />
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
+        onChange={onTab}
+        segments={[
+          { id: 'items', label: 'Here', count: tally.itemsHere + tally.boxesHere },
+          { id: 'in-boxes', label: 'In boxes here', count: tally.inBoxes },
+          { id: 'places', label: 'Places inside', count: tally.places },
+        ]}
+      />
       <div className="relative ml-auto w-72">
         <Search
           className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"

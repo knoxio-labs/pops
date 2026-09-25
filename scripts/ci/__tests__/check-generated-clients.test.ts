@@ -1,5 +1,13 @@
 import { execFileSync, spawnSync } from 'node:child_process';
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  chmodSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { delimiter, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -499,23 +507,28 @@ describe('the real CLI, spawned as a subprocess', { timeout: REAL_SUBPROCESS_TIM
   const FIXTURE_PKG_NAME = '@pops/fixture';
   const FIXTURE_SCRIPT_NAME = 'generate:fixture-client';
 
-  function runCli(args: string[]): { status: number | null; output: string } {
+  function runCli(
+    args: string[],
+    env: NodeJS.ProcessEnv = gitEnv()
+  ): { status: number | null; output: string } {
     const result = spawnSync('node', [script, ...args], {
       cwd: repoRoot,
       encoding: 'utf8',
-      env: gitEnv(),
+      env,
     });
     return { status: result.status, output: `${result.stdout}${result.stderr}` };
   }
 
-  function countWorktrees(): number {
+  function worktreesUnder(dir: string): string[] {
     return execFileSync('git', ['worktree', 'list', '--porcelain'], {
       cwd: repoRoot,
       encoding: 'utf8',
       env: gitEnv(),
     })
       .split('\n')
-      .filter((line) => line.startsWith('worktree ')).length;
+      .filter((line) => line.startsWith('worktree '))
+      .map((line) => line.slice('worktree '.length))
+      .filter((path) => path.startsWith(dir));
   }
 
   /**
@@ -636,12 +649,21 @@ describe('the real CLI, spawned as a subprocess', { timeout: REAL_SUBPROCESS_TIM
   });
 
   it('with --base, removes the disposable merge worktree even after a failing run', () => {
-    const before = countWorktrees();
+    // Scoped to a private TMPDIR: counting every worktree in the shared repo
+    // fails whenever another checkout adds or removes one mid-run.
+    const scratch = realpathSync(mkdtempSync(join(tmpdir(), 'codegen-drift-test-')));
+    try {
+      const { status, output } = runCli(['--base', 'HEAD', '--pkg', 'does-not-exist-anywhere'], {
+        ...gitEnv(),
+        TMPDIR: scratch,
+      });
 
-    const { status, output } = runCli(['--base', 'HEAD', '--pkg', 'does-not-exist-anywhere']);
-
-    expect(output).toContain('FAIL —');
-    expect(status).toBe(1);
-    expect(countWorktrees()).toBe(before);
+      expect(output).toContain('FAIL —');
+      expect(output).toContain('Building the merge of HEAD onto');
+      expect(status).toBe(1);
+      expect(worktreesUnder(scratch)).toEqual([]);
+    } finally {
+      rmSync(scratch, { recursive: true, force: true });
+    }
   });
 });

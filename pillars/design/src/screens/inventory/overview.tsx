@@ -3,7 +3,7 @@ import { coreWorld } from '@/fixtures/inventory/core';
 import { DESIGN_NOW } from '@/fixtures/inventory/sync-cases';
 import { OverviewPage } from '@/kit/inventory/overview/overview-page';
 import { buildWorld } from '@/kit/inventory/shared/placement-model';
-import { StateBanner } from '@/kit/inventory/shared/state-banner';
+import { OFFLINE_REASON, OFFLINE_TITLE, StateBanner } from '@/kit/inventory/shared/state-banner';
 
 import type { ScreenMeta, ScreenStates } from '@/contract';
 import type { OverviewPageProps } from '@/kit/inventory/overview/overview-page';
@@ -11,8 +11,6 @@ import type { OverviewPageProps } from '@/kit/inventory/overview/overview-page';
 export const meta: ScreenMeta = { title: 'Overview', order: 0, frame: 'web' };
 
 const base: OverviewPageProps = { world: coreWorld, events: activityEvents, now: DESIGN_NOW };
-
-const OFFLINE = 'No connection. Changes are off until it is back';
 
 function page(props: Partial<OverviewPageProps>) {
   return function OverviewState() {
@@ -30,11 +28,11 @@ export const states: ScreenStates = {
   'moving-day': page({ moving: { destination: 'Banksia Road flat' } }),
   loading: page({ body: 'loading' }),
   offline: page({
-    disabledReason: OFFLINE,
+    disabledReason: OFFLINE_REASON,
     banner: (
       <StateBanner
         kind="offline"
-        title="No connection. Showing what loaded at 10:42."
+        title={OFFLINE_TITLE}
         detail="Close, Put back, Move and Undo are off until the connection is back."
         actionLabel="Retry"
       />

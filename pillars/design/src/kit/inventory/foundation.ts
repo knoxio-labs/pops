@@ -40,7 +40,7 @@ export { itemTableColumns } from './shared/item-table-columns';
 export type { ItemColumnId, ItemTableColumnOptions } from './shared/item-table-columns';
 export { UNDO_WINDOW_MS, UndoToast, showUndoToast } from './shared/undo-toast';
 export type { UndoToastProps, UndoToastState } from './shared/undo-toast';
-export { StateBanner } from './shared/state-banner';
+export { OFFLINE_REASON, OFFLINE_TITLE, StateBanner } from './shared/state-banner';
 export type { StateBannerKind, StateBannerProps } from './shared/state-banner';
 export { SelectionBar } from './shared/selection-bar';
 export type { SelectionBarProps } from './shared/selection-bar';
@@ -89,13 +89,25 @@ export type { HintTooltipProps } from './shared/hint-tooltip';
 export { ShortcutSheet, ShortcutSheetBody } from './shared/shortcut-sheet';
 export { Sheet, SheetPanel } from './shared/sheet';
 export type { SheetContentProps, SheetProps } from './shared/sheet';
+export { AccentTile, InventoryPage } from './shared/page-frame';
+export type { InventoryPageProps } from './shared/page-frame';
+export { NewItemButton } from './shared/new-item-button';
+export { Segmented } from './shared/segmented';
+export type { Segment, SegmentedProps } from './shared/segmented';
 export { DROP_TARGET_CLASS, DragDock, DragGhost, DropHint } from './shared/drag-dock';
 export type { DragDockProps } from './shared/drag-dock';
 export { dragSet, useDragPlacement } from './shared/use-drag-placement';
 export type { DragPlacementApi, DropTargetState } from './shared/use-drag-placement';
 export { CommandPalette, CommandPalettePanel } from './command-palette/command-palette';
 export type { CommandPalettePanelProps } from './command-palette/command-palette';
-export { buildSections, rankEntries, rankMatch } from './command-palette/palette-groups';
+export {
+  SEE_ALL_RESULTS_ID,
+  buildSections,
+  rankEntries,
+  rankMatch,
+  searchResultsHref,
+  seeAllResultsEntry,
+} from './command-palette/palette-groups';
 export type {
   PaletteScope,
   PaletteSection,

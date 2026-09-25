@@ -139,7 +139,7 @@ internal struct PurchaseDetailMappingTests {
         }
     }
 
-    private static let detailJSON = [
+    static let detailJSON = [
         """
         {"currency":"AUD","discountCents":50,
         """,

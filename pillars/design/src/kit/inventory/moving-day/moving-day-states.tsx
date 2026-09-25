@@ -3,7 +3,7 @@
  * not started (no boxes yet, and the one action that starts), and done
  * (everything closed, with what is left to do on the day).
  */
-import { CircleCheck, PackagePlus, Printer, Truck } from 'lucide-react';
+import { CircleCheck, PackagePlus, Plus, Printer, Truck } from 'lucide-react';
 
 import { Button, EmptyState, Skeleton } from '@pops/ui';
 
@@ -55,7 +55,7 @@ export function MovingDayNotStarted({ loose }: { loose: number }) {
           icon={PackagePlus}
           title="No boxes yet"
           description={`${loose} things are in the house. Add a box, name it for the room it is packed in (Kitchen 01), then store things in it as you pack. Each box gets a label code so you can find it again.`}
-          action={<Button prefix={<PackagePlus className="size-4" aria-hidden />}>New box</Button>}
+          action={<Button prefix={<Plus className="size-4" aria-hidden />}>New box</Button>}
         />
       </div>
     </FitPage>

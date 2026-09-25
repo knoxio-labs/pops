@@ -7,6 +7,7 @@ import { Button, PageHeader } from '@pops/ui';
 
 import { INVENTORY_ICONS } from '../shared/icons';
 import { ItemList, ItemRow } from '../shared/item-row';
+import { AccentTile } from '../shared/page-frame';
 import { StoreHereSheetPanel } from './store-here-sheet';
 
 import type { StoreHereTarget } from '../shared/contracts';
@@ -40,11 +41,7 @@ export function StoreHereStage({ target, world, tab, opening }: StoreHereStagePr
         <PageHeader
           title={target.name}
           description={`${contents.length} items directly in it`}
-          icon={
-            <span className="flex size-9 items-center justify-center rounded-lg bg-app-accent/15">
-              <Icon className="size-5 text-app-accent" aria-hidden />
-            </span>
-          }
+          icon={<AccentTile icon={Icon} />}
           actions={<Button size="sm">Store here</Button>}
         />
         <ItemList label={`In ${target.name}`}>

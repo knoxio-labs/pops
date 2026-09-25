@@ -25,7 +25,14 @@
             "name": "statuses",
             "schema": {
               "items": {
-                "enum": ["awaiting_settlement", "linked", "partial", "settled_cash", "ignored"],
+                "enum": [
+                  "awaiting_settlement",
+                  "linked",
+                  "partial",
+                  "settled_cash",
+                  "ignored",
+                  "nothing_to_settle"
+                ],
                 "type": "string"
               },
               "type": "array"
@@ -630,7 +637,14 @@
             "name": "statuses",
             "schema": {
               "items": {
-                "enum": ["awaiting_settlement", "linked", "partial", "settled_cash", "ignored"],
+                "enum": [
+                  "awaiting_settlement",
+                  "linked",
+                  "partial",
+                  "settled_cash",
+                  "ignored",
+                  "nothing_to_settle"
+                ],
                 "type": "string"
               },
               "type": "array"
@@ -2025,7 +2039,14 @@
             "name": "statuses",
             "schema": {
               "items": {
-                "enum": ["awaiting_settlement", "linked", "partial", "settled_cash", "ignored"],
+                "enum": [
+                  "awaiting_settlement",
+                  "linked",
+                  "partial",
+                  "settled_cash",
+                  "ignored",
+                  "nothing_to_settle"
+                ],
                 "type": "string"
               },
               "type": "array"
@@ -2223,7 +2244,8 @@
                               "linked",
                               "partial",
                               "settled_cash",
-                              "ignored"
+                              "ignored",
+                              "nothing_to_settle"
                             ],
                             "type": "string"
                           },
@@ -3466,7 +3488,8 @@
                             "linked",
                             "partial",
                             "settled_cash",
-                            "ignored"
+                            "ignored",
+                            "nothing_to_settle"
                           ],
                           "type": "string"
                         },
@@ -4793,7 +4816,8 @@
                             "linked",
                             "partial",
                             "settled_cash",
-                            "ignored"
+                            "ignored",
+                            "nothing_to_settle"
                           ],
                           "type": "string"
                         },
@@ -5752,7 +5776,8 @@
                             "linked",
                             "partial",
                             "settled_cash",
-                            "ignored"
+                            "ignored",
+                            "nothing_to_settle"
                           ],
                           "type": "string"
                         },
@@ -6709,7 +6734,8 @@
                             "linked",
                             "partial",
                             "settled_cash",
-                            "ignored"
+                            "ignored",
+                            "nothing_to_settle"
                           ],
                           "type": "string"
                         },
@@ -8748,7 +8774,8 @@
                                     "linked",
                                     "partial",
                                     "settled_cash",
-                                    "ignored"
+                                    "ignored",
+                                    "nothing_to_settle"
                                   ],
                                   "type": "string"
                                 },
@@ -10312,7 +10339,8 @@
                             "linked",
                             "partial",
                             "settled_cash",
-                            "ignored"
+                            "ignored",
+                            "nothing_to_settle"
                           ],
                           "type": "string"
                         },
@@ -11759,7 +11787,8 @@
                                   "linked",
                                   "partial",
                                   "settled_cash",
-                                  "ignored"
+                                  "ignored",
+                                  "nothing_to_settle"
                                 ],
                                 "type": "string"
                               },

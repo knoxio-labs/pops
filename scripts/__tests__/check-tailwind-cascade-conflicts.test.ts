@@ -21,7 +21,7 @@ import {
 const REAL_SUBPROCESS_TIMEOUT_MS = 60_000;
 
 const SHELL = { variant: true, plain: false };
-const PILLAR = { variant: false, plain: true };
+const PILLAR = { variant: true, plain: true };
 
 function pairs(src: string, scope = SHELL): string[] {
   return findConflicts('fixture.tsx', src, scope).map((c) =>
@@ -107,12 +107,18 @@ describe('conditionsExclusive', () => {
     [['[a&]'], ['[button&]']],
     [['not-dark', 'hover'], ['dark']],
     [['md', 'max-lg'], ['lg']],
+    [['sm', 'max-lg'], ['xl']],
+    [['xl'], ['sm', 'max-md']],
+    [['lg', 'max-xl'], ['2xl']],
   ])('%j and %j never hold together', (a, b) => {
     expect(conditionsExclusive(a, b)).toBe(true);
   });
 
   it.each([
     [['md'], ['lg']],
+    [['sm', 'max-xl'], ['lg']],
+    [['max-lg'], ['md']],
+    [['max-lg'], ['max-xl']],
     [['hover'], ['dark']],
     [['data-[size=sm]'], ['data-[state=open]']],
     [['group-data-[size=sm]/a'], ['group-data-[size=lg]/b']],
@@ -171,7 +177,7 @@ describe('extractElements', () => {
   });
 });
 
-describe('findConflicts, case 1: two variants of one property (shell and libs)', () => {
+describe('findConflicts, case 1: two variants of one property (shell, libs, pillar apps)', () => {
   it('reports the md:flex lg:hidden shape, in a string and across cn() arguments', () => {
     expect(pairs('<nav className="hidden md:flex lg:hidden" />')).toEqual(['md:flex|lg:hidden']);
     expect(pairs("<a className={cn('md:flex', open && 'lg:hidden')} />")).toEqual([
@@ -186,6 +192,22 @@ describe('findConflicts, case 1: two variants of one property (shell and libs)',
   it('reports equal-specificity state variants with nothing to decide between them', () => {
     expect(pairs('<tr className="hover:bg-muted/50 data-[state=selected]:bg-muted" />')).toEqual([
       'hover:bg-muted/50|data-[state=selected]:bg-muted',
+    ]);
+  });
+
+  it('reports every overlapping step of an open grid ladder in a pillar app', () => {
+    expect(
+      pairs('<div className="grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5" />', PILLAR)
+    ).toEqual([
+      'sm:grid-cols-3|md:grid-cols-4',
+      'sm:grid-cols-3|lg:grid-cols-5',
+      'md:grid-cols-4|lg:grid-cols-5',
+    ]);
+  });
+
+  it('reports a range that ends above the breakpoint it competes with', () => {
+    expect(pairs('<div className="sm:max-xl:grid-cols-2 lg:grid-cols-3" />', PILLAR)).toEqual([
+      'sm:max-xl:grid-cols-2|lg:grid-cols-3',
     ]);
   });
 
@@ -204,6 +226,17 @@ describe('findConflicts, case 1: two variants of one property (shell and libs)',
   it.each([
     ['exclusive ranges', '<a className="hidden md:max-lg:block" />'],
     ['a breakpoint range against the next', '<a className="md:max-lg:p-6 lg:p-8" />'],
+    [
+      'a grid ladder of closed ranges',
+      '<a className="grid-cols-2 sm:max-md:grid-cols-3 md:max-lg:grid-cols-4 lg:max-xl:grid-cols-5 xl:grid-cols-6" />',
+      PILLAR,
+    ],
+    [
+      'hover against a state it excludes',
+      '<a className="hover:not-aria-checked:bg-muted aria-checked:bg-primary" />',
+      PILLAR,
+    ],
+    ['hover outside print', '<tr className="not-print:hover:bg-a print:hover:bg-b" />', PILLAR],
     ['not-dark against dark', '<a className="not-dark:hover:bg-a dark:bg-b" />'],
     [
       'not-data against data',
@@ -217,7 +250,6 @@ describe('findConflicts, case 1: two variants of one property (shell and libs)',
     ['ternary branches', "<a className={open ? 'md:flex' : 'lg:hidden'} />"],
     ['options of one cva variant', "cva('', { variants: { s: { a: 'md:h-8', b: 'lg:h-10' } } })"],
     ['cva defaultVariants', "cva('md:h-8', { defaultVariants: { size: 'lg:h-10' } })"],
-    ['a pillar file', '<a className="md:flex lg:hidden" />', PILLAR],
   ])('does not report %s', (_label, src, scope = SHELL) => {
     expect(pairs(src, scope)).toEqual([]);
   });
@@ -292,16 +324,18 @@ describe('auditTree and its floors (ADR-045 degenerate cases)', () => {
     root = tree({
       'pillars/shell/src/Nav.tsx': '<nav className="md:block lg:hidden" />',
       'pillars/media/app/src/Card.tsx': '<div className="p-2 p-4" />',
+      'pillars/media/app/src/Grid.tsx': '<div className="md:-mx-6 lg:-mx-8" />',
       'libs/ui/src/Ok.tsx': '<div className="p-2" />',
     });
     const { counts, conflicts } = auditTree(root);
     expect(conflicts.map((c) => `${c.kind}:${c.file}:${c.line}`)).toEqual([
       'plain:pillars/media/app/src/Card.tsx:1',
+      'variant:pillars/media/app/src/Grid.tsx:1',
       'variant:pillars/shell/src/Nav.tsx:1',
     ]);
     expect(counts).toEqual({
-      variant: { files: 2, elements: 2 },
-      plain: { files: 1, elements: 1 },
+      shell: { files: 2, elements: 2 },
+      app: { files: 2, elements: 2 },
     });
   });
 

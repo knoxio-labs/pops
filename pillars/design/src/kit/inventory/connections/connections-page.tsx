@@ -1,10 +1,14 @@
-import { HintTooltip, SelectionBar, UndoToast } from '@/kit/inventory/foundation';
 import {
+  HintTooltip,
   InventoryPage,
-  LoadFailedBody,
   OFFLINE_REASON,
+  Segmented,
+  SelectionBar,
+  UndoToast,
+} from '@/kit/inventory/foundation';
+import {
+  LoadFailedBody,
   PageStateBanner,
-  PageTabs,
   ScrollPanel,
   SkeletonRows,
 } from '@/kit/inventory/secondary-page';
@@ -42,13 +46,13 @@ export function ConnectionsTabs({
   onChange?: (value: 'connections' | 'fixtures') => void;
 }) {
   return (
-    <PageTabs
+    <Segmented
       label="Connections and fixtures"
       value={value}
       onChange={onChange}
-      tabs={[
-        { value: 'connections', label: 'Connections', count: counts.connections },
-        { value: 'fixtures', label: 'Fixtures', count: counts.fixtures },
+      segments={[
+        { id: 'connections', label: 'Connections', count: counts.connections },
+        { id: 'fixtures', label: 'Fixtures', count: counts.fixtures },
       ]}
     />
   );

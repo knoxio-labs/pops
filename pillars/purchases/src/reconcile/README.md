@@ -14,14 +14,14 @@ Links are **re-derived from scratch on every sweep, never patched**, so identica
 
 Deterministic first, AI never. Matching is arithmetic, and a model asked to partition a set of amounts produces a plausible partition that is wrong.
 
-| stage | what                                                                                        | link type |
-| ----- | ------------------------------------------------------------------------------------------- | --------- |
-| 0     | block: unclaimed, not rejected, in window, descriptor match, same sign, comparable currency | —         |
-| 1     | exactly one transaction for the charge amount                                               | `exact`   |
-| 2     | subset-sum over the remaining candidates                                                    | `split`   |
-| 4     | a learned merchant descriptor, at exactly the charge amount                                 | `rule`    |
-| 3     | one candidate smaller than the charge — a part-payment                                      | `partial` |
-| 5     | anything ambiguous or unmatched                                                             | review    |
+| stage | what                                                                                                      | link type |
+| ----- | --------------------------------------------------------------------------------------------------------- | --------- |
+| 0     | block: unclaimed, not rejected, in window, descriptor match, same sign, comparable currency, card account | —         |
+| 1     | exactly one transaction for the charge amount                                                             | `exact`   |
+| 2     | subset-sum over the remaining candidates                                                                  | `split`   |
+| 4     | a learned merchant descriptor, at exactly the charge amount                                               | `rule`    |
+| 3     | one candidate smaller than the charge — a part-payment                                                    | `partial` |
+| 5     | anything ambiguous or unmatched                                                                           | review    |
 
 Stage 4 runs between combined and partial, which is why the table is out of numerical order.
 
@@ -139,7 +139,13 @@ Patterns are compiled with regex metacharacters escaped first, because `PAYPAL *
 
 The window is symmetric: a card is normally charged after the order, but a pre-authorisation lands before it and a till receipt can be dated a day ahead of the statement entry that settles it.
 
-It stays narrow (14–21 days, per source). Import lag is absorbed by perpetual retry, not by widening it.
+It stays narrow, set per source (Amazon 10 days, Amazon Digital 3, the 21-day default otherwise). Import lag is absorbed by perpetual retry, not by widening it.
+
+## The card filter
+
+Amazon bills every card under the same descriptor, so a window holds each card's same-amount charges at once and stage 1 reads them as ambiguous. The order's `paymentHint` (`Visa - 7373`) names the card, but finance accounts carry no card number, so the two are joined through the links that already exist: a hint maps to an account when every linked charge of an order with that hint landed on that one account (`card-accounts.ts`). A mapped hint admits only that account's transactions at stage 0. A hint whose links disagree, or that has none, maps to nothing and blocks nothing — which is also what a wrong auto-link on another account does to it, so the failure is the old behaviour rather than a blocked settlement.
+
+Unconfirmed links count as evidence because nearly every link is one. They are read before teardown, and the sweep resolves their accounts from the transactions it fetched, so a link outside the fetched window is no evidence either way. That makes a sweep depend on the previous sweep's output, which the invariant above otherwise rules out; it is safe because the dependence is a fixed point — under a mapping every link of that hint lands on the mapped account, so the next sweep learns the same mapping. The mapping is not a table: it would be a second record of what the links already say, and the one nobody updates.
 
 ## Confirmed links are constraints, not suggestions
 

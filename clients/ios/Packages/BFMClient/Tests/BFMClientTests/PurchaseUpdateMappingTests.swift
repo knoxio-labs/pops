@@ -139,7 +139,7 @@ internal struct PurchaseUpdateMappingTests {
         #"{"code":"\#(code)","message":"x","pillar":"purchases","retryable":false}"#
     }
 
-    private static let detailJSON = """
+    static let detailJSON = """
         {"currency":"AUD","discountCents":0,
         "edit":{"editedAt":"2026-09-21T01:05:00.000Z","changes":[
         {"field":"merchant","itemId":null,"original":"Old Cafe","current":"New Cafe"},

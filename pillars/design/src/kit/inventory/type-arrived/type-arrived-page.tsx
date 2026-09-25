@@ -8,9 +8,10 @@ import { useReducer } from 'react';
 
 import { Button, Card, Skeleton } from '@pops/ui';
 
-import { InventoryPage, ToastDock } from '../overview/inventory-page';
+import { ToastDock } from '../overview/inventory-page';
 import { INVENTORY_ICONS } from '../shared/icons';
 import { ShortcutHint } from '../shared/kbd';
+import { InventoryPage } from '../shared/page-frame';
 import { UndoToast } from '../shared/undo-toast';
 import { TypeArrivedList } from './type-arrived-list';
 import { appliedMessage, applyLabel, matchesFor, tickReducer } from './type-arrived-model';
@@ -65,19 +66,10 @@ function Outcome({ title, detail, action }: { title: string; detail: string; act
 function Actions({ count, onNotNow }: { count: number; onNotNow?: () => void }) {
   return (
     <div className="flex items-center gap-2">
-      <Button size="sm" variant="outline" onClick={onNotNow}>
+      <Button variant="outline" onClick={onNotNow}>
         Not now
       </Button>
-      <Button
-        size="sm"
-        disabled={count === 0}
-        suffix={
-          <ShortcutHint
-            id="form-save"
-            className="[&_kbd]:border-primary-foreground/30 [&_kbd]:bg-primary-foreground/15 [&_kbd]:text-primary-foreground"
-          />
-        }
-      >
+      <Button disabled={count === 0} suffix={<ShortcutHint id="form-save" onPrimary />}>
         {applyLabel(count)}
       </Button>
     </div>
@@ -152,7 +144,7 @@ export function TypeArrivedPage({
       description={description}
       breadcrumbs={[{ label: 'Types', href: '/inventory/types' }, { label: type.name }]}
       actions={reviewing ? <Actions count={ticked.size} /> : undefined}
-      className="gap-3"
+      bodyClassName="gap-3"
       overlay={
         stage === 'applied' ? (
           <ToastDock>

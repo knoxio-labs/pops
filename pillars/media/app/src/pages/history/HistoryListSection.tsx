@@ -66,7 +66,7 @@ export function HistoryListSection({
           <HistoryItem key={entry.id} entry={entry} onDelete={onDelete} isDeleting={isDeleting} />
         ))}
       </div>
-      <div className="hidden md:grid grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+      <div className="hidden md:grid grid-cols-3 lg:max-xl:grid-cols-4 xl:grid-cols-5 gap-4">
         {entries.map((entry) => (
           <HistoryCard key={entry.id} entry={entry} onDelete={onDelete} isDeleting={isDeleting} />
         ))}

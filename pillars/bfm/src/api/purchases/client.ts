@@ -18,8 +18,10 @@
  * phone draws them differently.
  */
 import { createMobileContactsClient, type MobileContactsClient } from '../contacts/client.js';
+import { fetchMatchedTransactions } from '../finance/matched-transactions.js';
 import { type GatewayOutcome, type PillarGateway, isGatewayOk } from '../pillars/gateway.js';
 import { parseOrMismatch } from '../pillars/parse-response.js';
+import { matchedTransactionIds } from './bank-match-wire.js';
 import { createManualPurchase, extractReceipt, saveReceiptDraft } from './draft-client.js';
 import { type PurchasesPageCursor } from './list-cursor.js';
 import { distinctEntityIds, resolveMergedNames, servedRows, toPage } from './list-page.js';
@@ -279,7 +281,10 @@ async function getPurchase(
   if (!isGatewayOk(detail)) return detail;
 
   const entityId = detail.value.purchase.merchantEntityId ?? null;
-  const mergedNames = await resolveMergedNames(contacts, entityId === null ? [] : [entityId]);
+  const [mergedNames, transactions] = await Promise.all([
+    resolveMergedNames(contacts, entityId === null ? [] : [entityId]),
+    fetchMatchedTransactions(gateway, matchedTransactionIds(detail.value.charges)),
+  ]);
 
-  return { kind: 'ok', value: toMobilePurchaseDetail(detail.value, mergedNames) };
+  return { kind: 'ok', value: toMobilePurchaseDetail(detail.value, mergedNames, transactions) };
 }

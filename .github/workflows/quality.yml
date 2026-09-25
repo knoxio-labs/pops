@@ -458,7 +458,7 @@ jobs:
     # Each pillar's utilities sheet is linked after the shell's in one document
     # (POPS-4581), so two utilities competing on one element no longer resolve
     # in Tailwind's single-sheet order. This guard keeps out the two shapes the
-    # pillar-base sublayer does not fix (POPS-4619): a shell/lib element with two
+    # pillar-base sublayer does not fix (POPS-4619): any element with two
     # variants of one property at equal specificity (`md:flex lg:hidden`), and a
     # pillar element with two plain utilities of one property outside cn(). It
     # reads the source tree directly and pulls in no third-party deps, so it

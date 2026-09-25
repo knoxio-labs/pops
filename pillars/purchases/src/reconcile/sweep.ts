@@ -9,6 +9,7 @@
 import {
   listActiveMatchRules,
   listConfirmedLinks,
+  listLinkedPaymentHints,
   listOrdersNeedingDerivedCharge,
   listRejectedPairings,
   listSolvableCharges,
@@ -18,6 +19,7 @@ import {
   tearDownUnconfirmedLinks,
   type ReconcileScope,
 } from '../db/index.js';
+import { learnCardAccounts } from './card-accounts.js';
 import { solve } from './solve.js';
 import { settlementWindowFor, unionOfWindows, type SettlementWindow } from './window.js';
 
@@ -120,6 +122,10 @@ export async function runSweep(deps: SweepDeps, scope: ReconcileScope = {}): Pro
         charges.map((charge) => charge.id)
       ),
       rules: listActiveMatchRules(tx),
+      cardAccounts: learnCardAccounts(
+        listLinkedPaymentHints(tx),
+        new Map(fetched.transactions.map((transaction) => [transaction.uri, transaction.accountId]))
+      ),
       defaultWindowDays,
     });
 

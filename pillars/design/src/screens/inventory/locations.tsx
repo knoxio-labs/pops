@@ -8,7 +8,7 @@ import {
   selected,
 } from '@/fixtures/inventory/location-contents';
 import { recentPlacements } from '@/fixtures/inventory/recents';
-import { planMove } from '@/kit/inventory/foundation';
+import { OFFLINE_TITLE, planMove } from '@/kit/inventory/foundation';
 import { applyMove } from '@/kit/inventory/locations-tree/apply-move';
 import { LocationsPage } from '@/kit/inventory/locations-tree/locations-page';
 import {
@@ -86,7 +86,7 @@ export const states: ScreenStates = {
     {
       banner: {
         kind: 'offline',
-        title: 'No connection. Showing the places that loaded.',
+        title: OFFLINE_TITLE,
         detail: 'Renaming, moving and deleting come back when the connection does.',
       },
     }

@@ -11,7 +11,7 @@
  * the design surface instead, so its screens are reviewed in the chrome they
  * will ship in. Inventory's designed nav lives with its design fixtures.
  */
-import { INVENTORY_DESIGN_NAV } from '@/fixtures/inventory/nav';
+import { INVENTORY_DESIGN_NAV, INVENTORY_SCREEN_PAGES } from '@/fixtures/inventory/nav';
 
 import { AI_NAV } from '@pops/ai/manifest';
 import { BFM_NAV } from '@pops/bfm/manifest';
@@ -67,14 +67,29 @@ export function appForArea(area: string | undefined): AppNavConfig | undefined {
 }
 
 /**
+ * Screens whose slug does not name the page they belong to, per app: a
+ * segment of another page, a record under a list. Checked before the slug.
+ */
+const SCREEN_PAGES: Readonly<Record<string, Readonly<Record<string, string>>>> = {
+  [INVENTORY_DESIGN_NAV.id]: INVENTORY_SCREEN_PAGES,
+};
+
+/**
  * Which page of the app a screen is a design for, matched on the screen's
  * slug: `finance/import` lands on the `/import` nav item, `finance/import-review`
  * on it too (a screen is often one stage of a page, not a page of its own).
+ * A screen listed in the app's screen-page map lands on the page named there.
  * No match means no page is marked: better than marking the first and
  * quietly asserting something untrue about where the screen belongs.
  */
-export function activeItemPath(app: AppNavConfig, slug: string | undefined): string | undefined {
+export function activeItemPath(
+  app: AppNavConfig,
+  slug: string | undefined,
+  screenPages: Readonly<Record<string, string>> = SCREEN_PAGES[app.id] ?? {}
+): string | undefined {
   if (slug === undefined) return undefined;
+  const mapped = screenPages[slug];
+  if (mapped !== undefined && app.items.some((item) => item.path === mapped)) return mapped;
   const target = `/${slug}`;
   const exact = app.items.find((item) => item.path === target);
   if (exact) return exact.path;

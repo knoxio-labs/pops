@@ -31,14 +31,13 @@ export function BulkActionBar({ phase, counts }: { phase: BulkPhase; counts: Bul
         {summary}
       </p>
       <span className="ml-auto" />
-      <Button variant="ghost" size="sm" disabled={busy}>
+      <Button variant="ghost" disabled={busy}>
         Clear grid
       </Button>
       <Button
-        size="sm"
         loading={phase === 'submitting'}
         disabled={busy || counts.ready === 0}
-        suffix={<ShortcutHint id="form-save" />}
+        suffix={<ShortcutHint id="form-save" onPrimary />}
       >
         {buttonLabel(counts)}
       </Button>

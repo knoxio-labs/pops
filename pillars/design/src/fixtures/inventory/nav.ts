@@ -34,3 +34,21 @@ export const INVENTORY_DESIGN_NAV = {
     { path: '/settings', label: 'Settings', labelKey: 'inventory.settings', icon: 'settings' },
   ],
 } as const;
+
+/**
+ * Inventory screens that are a view inside a nav page rather than a page of
+ * their own, keyed by screen slug: the page the nav marks while they show.
+ * Activity is a segment of Sync; an item's detail, form, history and
+ * lifecycle dialogs sit under Items; one place sits under Locations.
+ */
+export const INVENTORY_SCREEN_PAGES: Readonly<Record<string, string>> = {
+  activity: '/sync',
+  'item-detail': '/items',
+  'item-form': '/items',
+  'item-history': '/items',
+  lifecycle: '/items',
+  'bulk-new': '/items',
+  'location-page': '/locations',
+  'moving-day': '/containers',
+  'type-arrived': '/types',
+};

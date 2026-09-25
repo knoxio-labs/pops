@@ -22,6 +22,7 @@ import { normalizeMerchantLabel } from './merchant-identity.js';
 import { canonicalInstant, spelledOffsetMinutes } from './ordered-at.js';
 import { insertPurchaseDocument } from './purchase-documents.js';
 import { findPurchaseByChecksum, findPurchaseBySourceOrderId } from './purchase-lookups.js';
+import { recomputePurchaseStatuses } from './purchase-status.js';
 import { insertCapture } from './purchase-write-capture.js';
 import { insertCharge } from './purchase-write-charges.js';
 import { componentCents, shipmentIdFor, type IngestContext } from './purchase-write-context.js';
@@ -95,6 +96,14 @@ export function createPurchase(db: PurchasesDb, input: CreatePurchaseInput): str
       insertDocument(ctx, document);
     }
     insertCapture(ctx, input.capture);
+
+    // The row above was written with the terminal-cash-or-awaiting default
+    // before any charge existed to derive from. A zero-total order (free,
+    // or cancelled before any charge) needs `nothing_to_settle` from the
+    // moment it exists — see `purchase-status.ts` — and this is the one
+    // place that has both the final charge set and a still-open
+    // transaction to write it in.
+    recomputePurchaseStatuses(tx, [ctx.purchase.id]);
 
     return ctx.purchase.id;
   });

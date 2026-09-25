@@ -1,5 +1,5 @@
-import { UndoToast, useSelection } from '@/kit/inventory/foundation';
-import { InventoryPage, OFFLINE_REASON, PageStateBanner } from '@/kit/inventory/secondary-page';
+import { InventoryPage, OFFLINE_REASON, UndoToast, useSelection } from '@/kit/inventory/foundation';
+import { PageStateBanner } from '@/kit/inventory/secondary-page';
 /**
  * `/inventory/fixtures/:id`: one fixture. Its facts sit in a narrow column
  * (kind, room, note, when it was recorded); the items wired to it fill the

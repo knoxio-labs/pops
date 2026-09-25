@@ -131,6 +131,22 @@ export const TransactionQuery = z.object({
   tag: z.string().optional(),
   entityId: z.string().optional(),
   type: TransactionTypeSchema.optional(),
+  /**
+   * Only these transactions. A repeated parameter; a single value is lifted
+   * into an array so `?ids=a` and `?ids=a&ids=b` both work. Lets a consumer
+   * holding transaction references (a purchase's matched links) read them in
+   * one call instead of one `GET /transactions/:id` each.
+   */
+  ids: z
+    .preprocess(
+      (v) => (v === undefined || Array.isArray(v) ? v : [v]),
+      z.array(NonEmptyString).min(1).max(500)
+    )
+    .optional()
+    .describe(
+      'Only the transactions with these ids. Repeat the parameter for several. ' +
+        'Ids that match nothing are absent from the answer rather than an error.'
+    ),
   limit: LimitQuery,
   offset: OffsetQuery,
   /**

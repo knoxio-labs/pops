@@ -99,6 +99,24 @@ internal struct PurchaseDetailRenderingTests {
         #expect(!RenderedPixels.drawTheSame(awaiting, linked))
     }
 
+    @Test("a partial bank match renders its matched transactions", .requiresCompiledColorCatalog)
+    func bankMatchStatesDiffer() throws {
+        let awaiting = try #require(
+            Self.render(
+                PurchaseBankMatchSection(
+                    status: .awaitingSettlement,
+                    accounting: .fake(total: 500, matched: 0, awaitingImport: 500),
+                    charges: [.fake()])))
+        let partial = try #require(
+            Self.render(
+                PurchaseBankMatchSection(
+                    status: .partial,
+                    accounting: .fake(total: 500, matched: 200, awaitingImport: 0, residual: 300),
+                    charges: [.fake(matches: [.fake(amount: Self.money(200))])])))
+
+        #expect(!RenderedPixels.drawTheSame(awaiting, partial))
+    }
+
     @Test("retryable and terminal failures render differently", .requiresCompiledColorCatalog)
     func failureStatesDiffer() throws {
         let retryable = try #require(

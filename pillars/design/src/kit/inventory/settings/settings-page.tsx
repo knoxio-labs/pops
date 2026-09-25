@@ -1,5 +1,10 @@
-import { HintTooltip, ShortcutHint } from '@/kit/inventory/foundation';
-import { InventoryPage, OFFLINE_REASON, PageStateBanner } from '@/kit/inventory/secondary-page';
+import {
+  HintTooltip,
+  InventoryPage,
+  OFFLINE_REASON,
+  ShortcutHint,
+} from '@/kit/inventory/foundation';
+import { PageStateBanner } from '@/kit/inventory/secondary-page';
 /**
  * `/inventory/settings`: Paperless, codes, label defaults and list density
  * on one screen, two columns, no scrolling. Changes collect until Save; the
@@ -61,12 +66,7 @@ function Footer({
           aria-disabled={blocked !== null || undefined}
           className={blocked === null ? undefined : 'opacity-50'}
           onClick={blocked === null ? onSave : undefined}
-          suffix={
-            <ShortcutHint
-              id="form-save"
-              className="[&_kbd]:border-primary-foreground/30 [&_kbd]:bg-primary-foreground/15 [&_kbd]:text-primary-foreground"
-            />
-          }
+          suffix={<ShortcutHint id="form-save" onPrimary />}
         >
           Save
         </Button>

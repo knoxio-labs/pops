@@ -48,7 +48,20 @@ export function KeyCombo({
   );
 }
 
-/** The hint for a registered shortcut, by id. */
-export function ShortcutHint({ id, className }: { id: string; className?: string }) {
-  return <KeyCombo sequence={shortcut(id).sequence} className={className} />;
+const ON_PRIMARY =
+  '[&_kbd]:border-primary-foreground/30 [&_kbd]:bg-primary-foreground/15 [&_kbd]:text-primary-foreground';
+
+/** The hint for a registered shortcut, by id; `onPrimary` inside a primary button. */
+export function ShortcutHint({
+  id,
+  className,
+  onPrimary = false,
+}: {
+  id: string;
+  className?: string;
+  onPrimary?: boolean;
+}) {
+  return (
+    <KeyCombo sequence={shortcut(id).sequence} className={cn(onPrimary && ON_PRIMARY, className)} />
+  );
 }

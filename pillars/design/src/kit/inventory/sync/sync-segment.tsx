@@ -8,9 +8,9 @@ import { Smartphone } from 'lucide-react';
 import { Card, EmptyState, cn } from '@pops/ui';
 
 import { formatWhen } from '../activity/when';
+import { Segmented } from '../shared/segmented';
 import { CaseRow, ResolvedRow, WaitingRow } from './ledger-rows';
 import { RepairSheet } from './repair-sheet';
-import { Segmented } from './segmented';
 import { casePosition, deviceName, orderCases, segmentCounts } from './sync-model';
 
 import type { ReactNode } from 'react';

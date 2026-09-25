@@ -21,8 +21,15 @@ export interface VerbButtonProps {
   iconOnly?: boolean;
   /** Icon-only at 32px, with the hit area still expanded to 44px. */
   compact?: boolean;
+  /** `default` for a page header's verbs, which match every page header's buttons. */
+  size?: 'sm' | 'default';
   onClick?: () => void;
   className?: string;
+}
+
+function iconSize(compact: boolean, size: 'sm' | 'default'): 'icon-xs' | 'icon-sm' | 'icon' {
+  if (compact) return 'icon-xs';
+  return size === 'default' ? 'icon' : 'icon-sm';
 }
 
 /** A verb button with its hint tooltip. */
@@ -35,6 +42,7 @@ export function VerbButton({
   variant = 'outline',
   iconOnly = false,
   compact = false,
+  size = 'sm',
   onClick,
   className,
 }: VerbButtonProps) {
@@ -48,7 +56,7 @@ export function VerbButton({
   const button = iconOnly ? (
     <ButtonPrimitive
       variant={variant}
-      size={compact ? 'icon-xs' : 'icon-sm'}
+      size={iconSize(compact, size)}
       aria-label={label}
       className={cn(refused && 'opacity-50', className)}
       {...shared}
@@ -57,7 +65,7 @@ export function VerbButton({
     </ButtonPrimitive>
   ) : (
     <Button
-      size="sm"
+      size={size}
       variant={variant}
       className={cn('whitespace-nowrap', refused && 'opacity-50', className)}
       prefix={glyph}

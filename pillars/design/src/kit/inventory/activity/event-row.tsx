@@ -7,7 +7,7 @@ import { ArrowRight } from 'lucide-react';
 
 import { Button, ButtonPrimitive, cn } from '@pops/ui';
 
-import { EventMark } from '../overview/recent-work-panel';
+import { EventMark } from '../shared/event-mark';
 import { ACTOR_SHORT } from './event-concept';
 import { formatWhen } from './when';
 

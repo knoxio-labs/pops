@@ -7,10 +7,9 @@ import { ArrowRight } from 'lucide-react';
 
 import { ButtonPrimitive, cn } from '@pops/ui';
 
-import { INVENTORY_ICONS } from '../../foundation';
+import { EventMark } from '../../shared/event-mark';
 import { shortDate } from '../section-parts';
 import { VerbButton } from '../verb-button';
-import { eventConcept } from './history-model';
 
 import type { EventModel } from '../../foundation';
 
@@ -43,7 +42,6 @@ export function EventRow({
   onOpen,
   onUndo,
 }: EventRowProps) {
-  const Icon = INVENTORY_ICONS[eventConcept(event.kind)];
   return (
     <li className={cn('flex min-h-11 items-center gap-2 pr-1', selected && 'bg-app-accent/10')}>
       <ButtonPrimitive
@@ -52,9 +50,7 @@ export function EventRow({
         onClick={() => onOpen?.(event.id)}
         className="h-auto min-h-11 min-w-0 flex-1 justify-start gap-3 rounded-md px-2 py-1 font-normal"
       >
-        <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted">
-          <Icon className="size-3.5 text-muted-foreground" aria-hidden />
-        </span>
+        <EventMark event={event} />
         <span className="flex min-w-0 flex-1 flex-col items-start gap-0.5 text-left">
           <span className="w-full truncate text-sm text-foreground">{event.summary}</span>
           <Change before={event.before} after={event.after} />

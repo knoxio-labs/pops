@@ -4,13 +4,13 @@
  * states open it with a seed (filters, view, selection) and optionally a
  * banner and an overlay (a bulk sheet) drawn over it.
  */
-import { INVENTORY_ICONS, StateBanner } from '../foundation';
+import { INVENTORY_ICONS, OFFLINE_TITLE, StateBanner } from '../foundation';
+import { NewItemButton } from '../shared/new-item-button';
+import { InventoryPage } from '../shared/page-frame';
 import { ExportMenu } from './export-menu';
 import { ItemsBody } from './items-body';
 import { ItemsSummary } from './items-summary';
 import { ItemsToolbar } from './items-toolbar';
-import { ListPage } from './list-page';
-import { NewItemButton } from './new-item-button';
 import { itemSelectionActions } from './selection-actions';
 import { SelectionDock } from './selection-dock';
 import { useItemsBrowser } from './use-items-browser';
@@ -44,7 +44,7 @@ export function OfflineBanner() {
   return (
     <StateBanner
       kind="offline"
-      title="No connection. Showing what loaded at 10:42."
+      title={OFFLINE_TITLE}
       detail="Changes are off until the connection is back."
     />
   );
@@ -80,7 +80,7 @@ export function ItemsPage(props: ItemsPageProps) {
   const { items, world, status = 'ready' } = props;
   const browser = useItemsBrowser(items, world, props.seed);
   return (
-    <ListPage
+    <InventoryPage
       title="Items"
       icon={INVENTORY_ICONS.item}
       actions={
@@ -118,6 +118,6 @@ export function ItemsPage(props: ItemsPageProps) {
         pendingIds={props.pendingIds}
         rejections={props.rejections}
       />
-    </ListPage>
+    </InventoryPage>
   );
 }

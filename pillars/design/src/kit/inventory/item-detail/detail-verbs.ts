@@ -6,7 +6,7 @@
  */
 import { Link2, Pencil } from 'lucide-react';
 
-import { INVENTORY_ICONS, targetName } from '../foundation';
+import { INVENTORY_ICONS, OFFLINE_REASON, targetName } from '../foundation';
 import { actCopy, lifecycleActs, restoreLabel } from '../lifecycle/lifecycle-model';
 
 import type { LucideIcon } from 'lucide-react';
@@ -52,9 +52,6 @@ export interface DetailVerbs {
 export interface VerbOptions {
   offline?: boolean;
 }
-
-/** Why a mutation is off while the connection is down. */
-export const OFFLINE_REASON = 'No connection. Changes are off until it returns.';
 
 function placementVerbs(item: ItemRowModel, world: PlacementWorld): DetailVerb[] {
   const move: DetailVerb = { id: 'move', label: 'Move', icon: I.move, shortcutId: 'detail-move' };

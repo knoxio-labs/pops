@@ -17,9 +17,12 @@
  */
 import { fakePillarHandle } from '@pops/pillar-sdk/testing';
 
+import { awaitingAccounting } from './purchases-bank-match-fake.js';
+
 import type { CallResult } from '@pops/pillar-sdk/server';
 
 import type { PillarHandleFactory } from '../pillars/gateway.js';
+import type { PurchasesFakeAccounting, PurchasesFakeCharge } from './purchases-bank-match-fake.js';
 
 /** A purchases list row, as that pillar's REST layer serves one. */
 export interface PurchasesFakeRow {
@@ -187,6 +190,16 @@ export function createPurchasesReadFake(
   };
 }
 
+function settlement(
+  overrides: { charges?: readonly PurchasesFakeCharge[]; accounting?: PurchasesFakeAccounting },
+  totalCents: number
+): { charges: readonly PurchasesFakeCharge[]; accounting: PurchasesFakeAccounting } {
+  return {
+    charges: overrides.charges ?? [],
+    accounting: overrides.accounting ?? awaitingAccounting(totalCents),
+  };
+}
+
 /** The producer's `purchase.get` body, with every field bfm reads present. */
 export function purchasesDetail(
   overrides: {
@@ -202,8 +215,11 @@ export function purchasesDetail(
       item: { id: string; name: string; quantity: number; lineTotalCents: number };
     }[];
     documents?: readonly { documentUri: string; kind: string; createdAt: string }[];
+    charges?: readonly PurchasesFakeCharge[];
+    accounting?: PurchasesFakeAccounting;
   } = {}
 ): CallResult<unknown> {
+  const totalCents = overrides.totalCents ?? 8420;
   return {
     kind: 'ok',
     value: {
@@ -216,7 +232,7 @@ export function purchasesDetail(
           overrides.merchantEntityName === undefined ? 'Woolworths' : overrides.merchantEntityName,
         merchantEntityId:
           overrides.merchantEntityId === undefined ? null : overrides.merchantEntityId,
-        totalCents: overrides.totalCents ?? 8420,
+        totalCents,
         subtotalCents: 7600,
         taxCents: 760,
         shippingCents: 0,
@@ -239,9 +255,8 @@ export function purchasesDetail(
       // Present and unread by bfm — the producer sends them and the wire
       // schema must not demand their absence.
       shipments: [],
-      charges: [],
       tags: [],
-      accounting: {},
+      ...settlement(overrides, totalCents),
       documents: overrides.documents ?? [
         {
           documentUri: 'pops://purchases/receipt/abc',

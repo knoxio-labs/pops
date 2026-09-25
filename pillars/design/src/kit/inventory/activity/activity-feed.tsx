@@ -7,9 +7,10 @@ import { useState } from 'react';
 
 import { Button, Card, EmptyState, Skeleton } from '@pops/ui';
 
+import { groupByMonth } from '../shared/event-groups';
 import { INVENTORY_ICONS } from '../shared/icons';
 import { ActivityFilters } from './activity-filters';
-import { NO_FILTER, filterEvents, groupByMonth, isFiltered } from './activity-model';
+import { NO_FILTER, filterEvents, isFiltered } from './activity-model';
 import { EventDetailSheet } from './event-detail-sheet';
 import { EventRow } from './event-row';
 

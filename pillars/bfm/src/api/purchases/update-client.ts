@@ -10,8 +10,10 @@
  * recomputed on the way in — only the answer is mapped, through
  * {@link toMobilePurchaseDetail}, exactly as every other read on this leg is.
  */
+import { fetchMatchedTransactions } from '../finance/matched-transactions.js';
 import { isGatewayOk, type GatewayOutcome, type PillarGateway } from '../pillars/gateway.js';
 import { parseOrMismatch } from '../pillars/parse-response.js';
+import { matchedTransactionIds } from './bank-match-wire.js';
 import { PurchasesDetailResponseSchema, toMobilePurchaseDetail } from './list-wire.js';
 
 import type {
@@ -46,5 +48,9 @@ export async function updatePurchase(
   );
   if (!isGatewayOk(answered)) return answered;
 
-  return { kind: 'ok', value: toMobilePurchaseDetail(answered.value) };
+  const transactions = await fetchMatchedTransactions(
+    gateway,
+    matchedTransactionIds(answered.value.charges)
+  );
+  return { kind: 'ok', value: toMobilePurchaseDetail(answered.value, new Map(), transactions) };
 }

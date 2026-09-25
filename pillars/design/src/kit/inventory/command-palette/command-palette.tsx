@@ -19,12 +19,13 @@ import {
 
 import { ShortcutHint } from '../shared/kbd';
 import { PaletteArgumentSteps, palettePlaceholder } from './palette-argument-step';
+import { searchResultsHref } from './palette-groups';
 import { Empty, Footer, ScopeChips } from './palette-parts';
 import { usePaletteState } from './use-palette-state';
 
 import type { PaletteCommand } from '../shared/contracts';
 import type { PaletteSource } from './palette-groups';
-import type { PaletteState } from './use-palette-state';
+import type { PaletteApi, PaletteState } from './use-palette-state';
 
 /** Props for {@link CommandPalettePanel}. */
 export interface CommandPalettePanelProps {
@@ -38,6 +39,8 @@ export interface CommandPalettePanelProps {
   /** Cmd-Enter: open the active record in the preview pane or a new tab. */
   onOpenBeside?: (entry: PaletteCommand) => void;
   onClose?: () => void;
+  /** Opens a page: "See all results in Search" hands over the query this way. */
+  onNavigate?: (href: string) => void;
 }
 
 function Entry({ entry, onSelect }: { entry: PaletteCommand; onSelect: () => void }) {
@@ -57,15 +60,58 @@ function Entry({ entry, onSelect }: { entry: PaletteCommand; onSelect: () => voi
   );
 }
 
+function Results({
+  api,
+  onRun,
+  onOpenSearch,
+}: {
+  api: PaletteApi;
+  onRun: CommandPalettePanelProps['onRun'];
+  onOpenSearch: () => void;
+}) {
+  const { query, scope } = api.state;
+  return (
+    <CommandList className="max-h-96 p-1">
+      {api.sections.map((section) => (
+        <CommandGroup key={section.id} heading={section.title}>
+          {section.entries.map((entry) => (
+            <Entry
+              key={`${section.id}-${entry.id}`}
+              entry={entry}
+              onSelect={() => {
+                const choice = api.choose(entry);
+                if (choice.kind === 'run') onRun?.(choice.command, choice.argument);
+              }}
+            />
+          ))}
+        </CommandGroup>
+      ))}
+      {api.sections.length === 0 ? (
+        <Empty query={query} scope={scope} step={api.step?.label ?? null} />
+      ) : null}
+      {api.seeAll ? (
+        <CommandGroup heading="Search">
+          <Entry entry={api.seeAll} onSelect={onOpenSearch} />
+        </CommandGroup>
+      ) : null}
+    </CommandList>
+  );
+}
+
 /** The palette's content, drawn in place: the dialog's body and the gallery's subject. */
 export function CommandPalettePanel(props: CommandPalettePanelProps) {
-  const { source, initial, initialActiveId, subject, onRun, onOpenBeside, onClose } = props;
+  const { source, initial, initialActiveId, subject, onRun, onOpenBeside, onClose, onNavigate } =
+    props;
   const api = usePaletteState(source, initial);
   const [active, setActive] = useState(initialActiveId ?? '');
   const { query, scope, steps } = api.state;
   const activeEntry = api.sections
     .flatMap((section) => section.entries)
     .find((entry) => entry.id === active);
+  const openSearch = () => {
+    onNavigate?.(searchResultsHref(query, scope));
+    onClose?.();
+  };
   return (
     <Command
       shouldFilter={false}
@@ -95,25 +141,7 @@ export function CommandPalettePanel(props: CommandPalettePanelProps) {
         />
         <ScopeChips scope={scope} locked={steps.length > 0} />
       </div>
-      <CommandList className="max-h-96 p-1">
-        {api.sections.map((section) => (
-          <CommandGroup key={section.id} heading={section.title}>
-            {section.entries.map((entry) => (
-              <Entry
-                key={`${section.id}-${entry.id}`}
-                entry={entry}
-                onSelect={() => {
-                  const choice = api.choose(entry);
-                  if (choice.kind === 'run') onRun?.(choice.command, choice.argument);
-                }}
-              />
-            ))}
-          </CommandGroup>
-        ))}
-        {api.sections.length === 0 ? (
-          <Empty query={query} scope={scope} step={api.step?.label ?? null} />
-        ) : null}
-      </CommandList>
+      <Results api={api} onRun={onRun} onOpenSearch={openSearch} />
       <Footer />
     </Command>
   );

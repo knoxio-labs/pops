@@ -6,7 +6,7 @@ import { ArrowLeft } from 'lucide-react';
 
 import { Button } from '@pops/ui';
 
-import { INVENTORY_ICONS } from '../../foundation';
+import { AccentTile, INVENTORY_ICONS } from '../../foundation';
 
 /** The header. */
 export function HistoryHeader({ itemName, total }: { itemName: string; total: number }) {
@@ -24,9 +24,7 @@ export function HistoryHeader({ itemName, total }: { itemName: string; total: nu
         </Button>
       </div>
       <div className="flex items-center gap-3">
-        <span className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-app-accent/15">
-          <Icon className="size-5 text-app-accent" aria-hidden />
-        </span>
+        <AccentTile icon={Icon} size="lg" />
         <div className="min-w-0">
           <h1 className="truncate text-2xl font-bold tracking-tight md:text-3xl">
             History of {itemName}

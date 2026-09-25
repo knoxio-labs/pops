@@ -9,7 +9,7 @@ import { FileSpreadsheet, FileUp } from 'lucide-react';
 import { Button, Progress, Switch, Label } from '@pops/ui';
 
 import { validateRows } from '../bulk-entry/row-validation';
-import { ListPage } from '../items-list/list-page';
+import { InventoryPage } from '../shared/page-frame';
 import { ImportDone } from './import-done';
 import { applyMapping, guessMapping, mappingProblems } from './import-model';
 import { ImportSteps } from './import-steps';
@@ -111,7 +111,7 @@ export function ImportPage(props: ImportPageProps) {
       .map((column) => `${column.header}:${column.target}`)
   );
   return (
-    <ListPage
+    <InventoryPage
       title="Import CSV"
       icon={FileUp}
       description="Bring a spreadsheet of things in as items."
@@ -146,6 +146,6 @@ export function ImportPage(props: ImportPageProps) {
       {phase === 'done' ? (
         <ImportDone imported={ready} skipped={skipped} file={props.file.name} />
       ) : null}
-    </ListPage>
+    </InventoryPage>
   );
 }

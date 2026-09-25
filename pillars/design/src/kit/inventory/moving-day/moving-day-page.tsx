@@ -6,13 +6,13 @@
  * the box. Opening a box shows it in a side sheet with what is still
  * loose in its room, one click from going in.
  */
-import { PackagePlus, Search, Truck } from 'lucide-react';
+import { Plus, Search, Truck } from 'lucide-react';
 import { useMemo } from 'react';
 
-import { Button, Input, Tabs, TabsList, TabsTrigger } from '@pops/ui';
+import { Button, Input } from '@pops/ui';
 
-import { PlacementPicker, StateBanner } from '../foundation';
-import { FitPage, TabCount } from '../locations-tree/fit-page';
+import { PlacementPicker, Segmented, StateBanner } from '../foundation';
+import { FitPage } from '../locations-tree/fit-page';
 import { BoxPanel } from './box-panel';
 import { DestinationBoard } from './destination-board';
 import { FindResults } from './find-results';
@@ -58,25 +58,20 @@ function Board({ api }: { api: MovingDayApi }) {
 function Toolbar({ api }: { api: MovingDayApi }) {
   return (
     <div className="flex items-center gap-3">
-      <Tabs
+      <Segmented
+        label="View boxes"
         value={api.view}
-        onValueChange={(value) =>
-          api.setView(value === 'destinations' || value === 'loose' ? value : 'boxes')
-        }
-      >
-        <TabsList>
-          <TabsTrigger value="boxes" className="px-3">
-            By stage
-          </TabsTrigger>
-          <TabsTrigger value="destinations" className="px-3">
-            By destination
-          </TabsTrigger>
-          <TabsTrigger value="loose" className="px-3">
-            Not packed
-            <TabCount n={api.summary.looseCount + api.summary.inHand.length} />
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
+        onChange={api.setView}
+        segments={[
+          { id: 'boxes', label: 'By stage' },
+          { id: 'destinations', label: 'By destination' },
+          {
+            id: 'loose',
+            label: 'Not packed',
+            count: api.summary.looseCount + api.summary.inHand.length,
+          },
+        ]}
+      />
       <div className="relative ml-auto w-80">
         <Search
           className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
@@ -131,7 +126,7 @@ export function MovingDayPage({ seed, banner, toast }: MovingDayPageProps) {
       description={`Packing up ${home}`}
       banner={banner ? <StateBanner {...banner} /> : undefined}
       toast={toast}
-      actions={<Button prefix={<PackagePlus className="size-4" aria-hidden />}>New box</Button>}
+      actions={<Button prefix={<Plus className="size-4" aria-hidden />}>New box</Button>}
     >
       <div className="flex min-h-0 flex-1 flex-col gap-4">
         <MoveSummaryStrip summary={api.summary} />

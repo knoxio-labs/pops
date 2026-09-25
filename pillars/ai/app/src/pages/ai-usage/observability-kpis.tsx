@@ -52,7 +52,7 @@ export function ObservabilityKpis({ stats }: { stats: ObservabilityTotals | unde
   const k = deriveKpis(stats);
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-4 md:max-lg:grid-cols-2 lg:grid-cols-4">
       <StatCard
         title="Total Cost"
         value={k.totalCost}

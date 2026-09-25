@@ -7,7 +7,7 @@
  */
 import { cn } from '@pops/ui';
 
-import { INVENTORY_ICONS, StateBanner } from '../foundation';
+import { INVENTORY_ICONS, OFFLINE_TITLE, StateBanner } from '../foundation';
 import { dateTime } from './section-parts';
 
 import type { ItemRowModel } from '../foundation';
@@ -87,7 +87,7 @@ function ConditionBanner({ condition }: { condition: DetailCondition }) {
       return (
         <StateBanner
           kind="offline"
-          title="No connection. Showing what loaded."
+          title={OFFLINE_TITLE}
           detail="Changes are off until the connection returns."
         />
       );
