@@ -41,6 +41,8 @@ export interface BlockingContext {
    * count as this merchant's — and only stage 4 reads them.
    */
   readonly rules: readonly SolvableRule[];
+  /** Payment hint → the account it settles on; see `SolverInput.cardAccounts`. */
+  readonly cardAccounts: ReadonlyMap<string, string>;
 }
 
 /** Leaves the descriptor to stage 4's rules, which decide it per candidate. */
@@ -102,6 +104,11 @@ export function orderedTransactions(
  * reaches an outcome of its own — with nothing else in range it reports
  * `no-candidate`, which is the honest reading of a window whose only
  * candidate the operator has ruled out.
+ *
+ * A charge whose payment hint maps to a finance account admits only that
+ * account's transactions. Amazon bills every card under the same
+ * descriptor, so without it a window holds the same-amount charges of
+ * every card at once and stage 1 reads them as ambiguous (POPS-4647).
  */
 export function eligibilityFor(
   charge: SolvableCharge,
@@ -114,7 +121,7 @@ export function eligibilityFor(
  * {@link eligibilityFor} with the descriptor test supplied.
  *
  * Every other test blocking makes — window, sign, non-zero, comparable
- * currency, rejected — is a fact about the charge and the transaction, and
+ * currency, rejected, card account — is a fact about the charge and the transaction, and
  * holds whatever admitted the descriptor. Stage 4 swaps that one test and nothing else, which is
  * both what makes it a widening of blocking rather than a second ladder,
  * and what stops a learned rule from ever reaching past a rejection or
@@ -135,9 +142,12 @@ function eligibilityWith(
 
   const wantPositive = charge.amountCents > 0;
   const rejected = blocking.rejected.get(charge.id);
+  const cardAccount =
+    charge.paymentHint === null ? undefined : blocking.cardAccounts.get(charge.paymentHint);
 
   return (transaction) => {
     if (rejected?.has(transaction.uri) === true) return false;
+    if (cardAccount !== undefined && transaction.accountId !== cardAccount) return false;
     if (!isWithinWindow(transaction.date, window)) return false;
     if (transaction.amountCents === 0) return false;
     if (transaction.amountCents > 0 !== wantPositive) return false;

@@ -328,3 +328,50 @@ describe('confirmed links are never torn down', () => {
     expect(listConfirmedLinks(db)).toHaveLength(1);
   });
 });
+
+describe('the card filter', () => {
+  function aCardOrder(totalCents: number, checksum: string, paymentHint: string) {
+    return createPurchase(db, {
+      source: 'amazon',
+      sourceOrderId: checksum,
+      ingestMethod: 'export',
+      orderedAt: '2026-03-04T00:00:00Z',
+      currency: 'AUD',
+      totalCents,
+      paymentHint,
+      checksum,
+    });
+  }
+
+  const finance = financeReturning(
+    { id: 'first-on-anz', accountId: 'anz', amountCents: 4128, date: '2026-03-06' },
+    { id: 'second-on-anz', accountId: 'anz', amountCents: 2500, date: '2026-03-07' },
+    { id: 'second-on-amex', accountId: 'amex', amountCents: 2500, date: '2026-03-08' }
+  );
+
+  it('learns the account from the links the previous sweep left, and links on it', async () => {
+    aCardOrder(4128, 'first', 'Visa - 7373');
+    aCardOrder(2500, 'second', 'Visa - 7373');
+
+    const first = await runSweep(deps(finance));
+    expect(first.kind === 'swept' && first.review.map((r) => r.reason)).toEqual(['ambiguous']);
+    expect(linkRows().map((row) => row.uri)).toEqual(['pops://finance/transaction/first-on-anz']);
+
+    const second = await runSweep(deps(finance));
+    expect(second.kind === 'swept' && second.review).toEqual([]);
+    expect(linkRows().map((row) => row.uri)).toEqual([
+      'pops://finance/transaction/first-on-anz',
+      'pops://finance/transaction/second-on-anz',
+    ]);
+  });
+
+  it('learns nothing from another card’s links', async () => {
+    aCardOrder(4128, 'first', 'AmericanExpress - 1001');
+    aCardOrder(2500, 'second', 'Visa - 7373');
+
+    await runSweep(deps(finance));
+    const second = await runSweep(deps(finance));
+
+    expect(second.kind === 'swept' && second.review.map((r) => r.reason)).toEqual(['ambiguous']);
+  });
+});
