@@ -12,10 +12,12 @@ import {
   printLongNames,
   television,
 } from '@/fixtures/inventory-print';
+import { printDetails } from '@/fixtures/inventory-print-details';
 import { office04WithContents } from '@/fixtures/inventory-print-office';
 import { PrintLabelsLoading, PrintLabelsPage } from '@/kit/inventory/print/print-labels-page';
 
 import type { ScreenMeta, ScreenStates } from '@/contract';
+import type { LabelContent, LabelPart } from '@/kit/inventory/print/label-content';
 import type { PrintCatalogueEntry } from '@/kit/inventory/print/print-add-dialog';
 import type { TakenCode } from '@/kit/inventory/print/print-code-field';
 import type { PrintLabelsPageProps } from '@/kit/inventory/print/print-labels-page';
@@ -38,7 +40,7 @@ function lookup(code: string): TakenCode | null {
 }
 
 const boxes: PrintLabelsPageProps = {
-  seed: { subjects: printBoxes, sheetId: 'L7160', customSheet: null },
+  seed: { subjects: printBoxes, sheetId: 'L7160', customSheet: null, details: printDetails },
   source: '6 boxes packed this week',
   catalogue,
   lookup,
@@ -46,13 +48,13 @@ const boxes: PrintLabelsPageProps = {
 
 const uncoded: PrintLabelsPageProps = {
   ...boxes,
-  seed: { subjects: kitchen12Uncoded, sheetId: 'L7163', customSheet: null },
+  seed: { ...boxes.seed, subjects: kitchen12Uncoded, sheetId: 'L7163' },
   source: 'Kitchen 12 and its contents',
 };
 
 const handful: PrintLabelsPageProps = {
   ...boxes,
-  seed: { subjects: printHandful, sheetId: 'L7160', customSheet: null },
+  seed: { ...boxes.seed, subjects: printHandful },
   source: '4 chosen from Items',
 };
 
@@ -63,20 +65,83 @@ function page(props: PrintLabelsPageProps) {
 function custom(customSheet: PrintLabelsPageProps['seed']['customSheet']): PrintLabelsPageProps {
   return {
     ...boxes,
-    seed: { subjects: kitchen12WithContents, sheetId: 'custom', customSheet },
+    seed: { ...boxes.seed, subjects: kitchen12WithContents, sheetId: 'custom', customSheet },
     source: 'Kitchen 12 and its contents',
   };
 }
 
+function shows(parts: LabelPart[], fields: string[] = []): LabelContent {
+  return { kind: 'parts', parts, fields };
+}
+
+function showing(
+  content: LabelContent,
+  seed: Partial<PrintLabelsPageProps['seed']> = {},
+  source = boxes.source
+) {
+  return page({ ...boxes, source, seed: { ...boxes.seed, ...seed, content } });
+}
+
+const ROOM_AND_PACKED = ['moving-box.room', 'moving-box.packed', 'moving-box.fragile'];
+const BRAND_AND_MODEL = ['appliance.brand', 'appliance.model', 'power-tool.brand', 'network.brand'];
+
+/**
+ * What a label shows, one state per kind and a few mixes. The first set is
+ * the presets; the `shows-*-and-*` states are custom mixes from the ticks.
+ */
+const labelShowsStates: ScreenStates = {
+  'label-shows-picker': page({ ...boxes, labelShowsOpen: true }),
+  'label-shows-picker-custom': page({
+    ...handful,
+    labelShowsOpen: true,
+    seed: {
+      ...handful.seed,
+      content: shows(['qr', 'code'], ['appliance.brand', 'appliance.model']),
+    },
+  }),
+  'shows-qr-only': showing(shows(['qr'])),
+  'shows-code-only': showing(shows(['code'])),
+  'shows-name-only': showing(shows(['name'])),
+  'shows-contents-only': showing(shows(['contents']), { sheetId: 'L7163' }),
+  'shows-contents-with-items': showing(
+    shows(['contents']),
+    { subjects: kitchen12WithContents, sheetId: 'L7163' },
+    'Kitchen 12 and its contents'
+  ),
+  'shows-fields-only': showing(
+    shows([], BRAND_AND_MODEL),
+    { subjects: printHandful, sheetId: 'L7163' },
+    handful.source
+  ),
+  'shows-qr-name-and-fields': showing(shows(['qr', 'name'], ROOM_AND_PACKED), {
+    sheetId: 'L7163',
+  }),
+  'shows-name-and-contents': showing(shows(['name', 'contents']), { sheetId: 'L7165' }),
+  'shows-qr-code-and-contents': showing(shows(['qr', 'code', 'contents']), { sheetId: 'L7165' }),
+  'shows-code-and-fields': showing(
+    shows(['code'], BRAND_AND_MODEL),
+    { subjects: printHandful },
+    handful.source
+  ),
+  'shows-code-on-small-labels': showing(shows(['code']), {
+    sheetId: 'custom',
+    customSheet: customSheetTooSmall,
+  }),
+  'shows-too-narrow-for-fields': showing(shows(['qr', 'name', 'code'], ROOM_AND_PACKED), {
+    sheetId: 'custom',
+    customSheet: customSheetNarrow,
+  }),
+};
+
 export const states: ScreenStates = {
   'one-item': page({
     ...boxes,
-    seed: { subjects: [television], sheetId: 'L7160', customSheet: null },
+    seed: { ...boxes.seed, subjects: [television] },
     source: 'Television',
   }),
   'container-and-contents': page({
     ...boxes,
-    seed: { subjects: kitchen12WithContents, sheetId: 'L7163', customSheet: null },
+    seed: { ...boxes.seed, subjects: kitchen12WithContents, sheetId: 'L7163' },
     source: 'Kitchen 12 and its contents',
   }),
   'chosen-handful': page(handful),
@@ -99,12 +164,12 @@ export const states: ScreenStates = {
   }),
   'long-names': page({
     ...boxes,
-    seed: { subjects: printLongNames, sheetId: 'L7160', customSheet: null },
+    seed: { ...boxes.seed, subjects: printLongNames },
     source: '4 chosen from Items',
   }),
   'many-labels': page({
     ...boxes,
-    seed: { subjects: office04WithContents, sheetId: 'L7163', customSheet: null, startAt: 7 },
+    seed: { ...boxes.seed, subjects: office04WithContents, sheetId: 'L7163', startAt: 7 },
     source: 'Office 04 and its contents',
   }),
   monochrome: page({ ...boxes, monochrome: true }),
@@ -118,6 +183,7 @@ export const states: ScreenStates = {
   }),
   adding: page({ ...handful, addOpen: true }),
   loading: () => <PrintLabelsLoading />,
+  ...labelShowsStates,
 };
 
 export default function PrintLabelsScreen() {

@@ -3,6 +3,8 @@
  * the left, the job's choices above the preview on the right, and Print in
  * the header. The page is entered with a selection (an item's, a box's, or a
  * list's "Print labels" action) and printing is the browser's own dialog.
+ * From 1024 px the page fits the frame: the item list and the sheets scroll,
+ * the page does not.
  */
 import { Plus, Printer } from 'lucide-react';
 import { useState } from 'react';
@@ -32,8 +34,14 @@ export interface PrintLabelsPageProps {
   addSearch?: string;
   /** Opens with the custom sheet form showing, for review. */
   customOpen?: boolean;
+  /** Opens with the "Label shows" popover showing, for review. */
+  labelShowsOpen?: boolean;
   monochrome?: boolean;
 }
+
+const PAGE = 'flex flex-col gap-4 lg:h-[calc(100dvh-8rem)] lg:min-h-120';
+const BODY =
+  'grid grid-cols-[minmax(0,1fr)] gap-6 lg:min-h-0 lg:flex-1 lg:grid-cols-[20rem_minmax(0,1fr)]';
 
 function printLabel(count: number): string {
   if (count === 0) return 'Print labels';
@@ -77,11 +85,11 @@ export function PrintLabelsPage(props: PrintLabelsPageProps) {
     />
   );
   return (
-    <div className="space-y-4">
+    <div className={PAGE}>
       <LabelPrintStyles />
       <Header count={job.labels.length} onPrint={job.block ? undefined : job.print} />
-      <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[20rem_minmax(0,1fr)]">
-        <aside className="flex min-w-0 flex-col lg:sticky lg:top-24 lg:max-h-[calc(100vh-8rem)] lg:self-start">
+      <div className={BODY}>
+        <aside className="flex min-h-0 min-w-0 flex-col">
           <PrintSelection
             job={job}
             source={props.source}
@@ -91,8 +99,12 @@ export function PrintLabelsPage(props: PrintLabelsPageProps) {
             editSeed={props.editSeed}
           />
         </aside>
-        <section className="flex min-w-0 flex-col gap-4" aria-label="Labels">
-          <PrintOptions job={job} customOpen={props.customOpen} />
+        <section className="flex min-h-0 min-w-0 flex-col gap-4" aria-label="Labels">
+          <PrintOptions
+            job={job}
+            customOpen={props.customOpen}
+            labelShowsOpen={props.labelShowsOpen}
+          />
           <PrintPreview job={job} monochrome={props.monochrome} />
         </section>
       </div>
@@ -103,18 +115,18 @@ export function PrintLabelsPage(props: PrintLabelsPageProps) {
 /** The page while the selection loads: skeletons, never a spinner. */
 export function PrintLabelsLoading() {
   return (
-    <div className="space-y-4">
+    <div className={PAGE}>
       <Header count={0} />
-      <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[20rem_minmax(0,1fr)]">
+      <div className={BODY}>
         <div className="space-y-3" aria-busy="true" aria-label="Loading items">
           <Skeleton className="h-9 w-40" />
           {[0, 1, 2, 3].map((row) => (
             <Skeleton key={row} className="h-12 w-full" />
           ))}
         </div>
-        <div className="space-y-4">
+        <div className="flex min-h-0 flex-col gap-4">
           <Skeleton className="h-16 w-full max-w-3xl" />
-          <Skeleton className="mx-auto aspect-[210/297] w-full max-w-md" />
+          <Skeleton className="mx-auto aspect-[210/297] min-h-0 w-full max-w-md flex-1" />
         </div>
       </div>
     </div>

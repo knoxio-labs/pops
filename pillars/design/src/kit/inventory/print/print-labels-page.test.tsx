@@ -63,8 +63,12 @@ describe('PrintLabelsPage', () => {
     expect(screen.getByRole('button', { name: 'Print 10 labels' })).toBeTruthy();
   });
 
-  it('forces one template on everything when asked', () => {
-    renderPage({ subjects: kitchen12WithContents, sheetId: 'L7163', template: 'item' });
+  it('forces one choice on everything when asked', () => {
+    renderPage({
+      subjects: kitchen12WithContents,
+      sheetId: 'L7163',
+      content: { kind: 'parts', parts: ['qr', 'code'], fields: [] },
+    });
     const labels = document.querySelectorAll('[data-slot-kind="label"]');
     expect(within(labels[0] as HTMLElement).queryByText('Kitchen 12')).toBeNull();
   });
@@ -223,7 +227,7 @@ describe('sheets', () => {
     );
   });
 
-  it('hides the box template on labels too narrow for it, and says why', () => {
+  it('steps a box label down to QR and code on labels too narrow for its name, and says why', () => {
     renderPage({
       subjects: kitchen12WithContents,
       sheetId: 'custom',
@@ -238,8 +242,8 @@ describe('sheets', () => {
         pitchYMm: 30,
       },
     });
-    expect(screen.queryByRole('tab', { name: 'Box' })).toBeNull();
-    expect(screen.getByText(/too narrow for the box label/)).toBeTruthy();
+    expect(screen.getByText(/leaves too little room beside it, so 2 labels print/)).toBeTruthy();
+    expect(printedCodes()).toEqual(['B412', 'B412', 'BREW-2026-0007-A', 'KIT-031', 'KIT-032']);
     expect(screen.queryByText('Kitchen 12', { selector: '[data-slot-kind] *' })).toBeNull();
   });
 
@@ -258,8 +262,56 @@ describe('sheets', () => {
         pitchYMm: 21.2,
       },
     });
-    expect(screen.queryByRole('tablist', { name: 'Template' })).toBeNull();
     expect(screen.getByRole('alert').textContent).toContain('20.5 mm');
     expect(screen.getByRole('button', { name: 'Print labels' })).toHaveProperty('disabled', true);
+  });
+
+  it('prints a label without the QR on labels too small for one', () => {
+    renderPage({
+      subjects: printBoxes,
+      content: { kind: 'parts', parts: ['code'], fields: [] },
+      sheetId: 'custom',
+      customSheet: {
+        columns: 5,
+        rows: 13,
+        labelWidthMm: 38.1,
+        labelHeightMm: 21.2,
+        marginTopMm: 10.7,
+        marginLeftMm: 4.75,
+        pitchXMm: 40.64,
+        pitchYMm: 21.2,
+      },
+    });
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Print 12 labels' })).toHaveProperty(
+      'disabled',
+      false
+    );
+  });
+
+  it('prints the code on an item when only contents were chosen, and says so', () => {
+    renderPage({
+      subjects: kitchen12WithContents,
+      sheetId: 'L7163',
+      content: { kind: 'parts', parts: ['contents'], fields: [] },
+      details: {
+        [kitchen12WithContents[0]?.id ?? '']: {
+          typeName: 'Moving box',
+          fields: [],
+          contents: ['Coffee cups ×6'],
+        },
+      },
+    });
+    expect(printedCodes()).toEqual(['BREW-2026-0007-A', 'KIT-031', 'KIT-032']);
+    expect(screen.getAllByText('Coffee cups ×6')).toHaveLength(2);
+    expect(screen.getByText(/3 labels have nothing chosen to show/)).toBeTruthy();
+  });
+
+  it('names the choice on the Label shows button, and switches from a preset', () => {
+    renderPage({ subjects: printBoxes, sheetId: 'L7160' });
+    fireEvent.click(screen.getByRole('button', { name: 'Label shows: Auto' }));
+    fireEvent.click(screen.getByRole('button', { name: /^QR only/ }));
+    expect(screen.getByRole('button', { name: 'Label shows: QR only' })).toBeTruthy();
+    expect(printedCodes()).toEqual([]);
   });
 });

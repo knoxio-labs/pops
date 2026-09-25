@@ -1,45 +1,22 @@
 import { labelsPerSheet, MIN_QR_MM } from '@pops/inventory/labels';
 /**
- * The job's choices, side by side above the preview: template, sheet and
- * copies, and apart from them the label the first sheet starts on. Nothing
- * here is a designer: a template fixes its layout, the presets are the
- * standard A4 sheets whose die-cuts the page knows, and a sheet they miss is
- * measured once as the custom sheet.
+ * The job's choices, side by side above the preview: sheet, what the label
+ * shows and copies, and apart from them the label the first sheet starts
+ * on. Nothing here is a designer: each choice of parts has one layout, the
+ * presets are the standard A4 sheets whose die-cuts the page knows, and a
+ * sheet they miss is measured once as the custom sheet.
  */
 import { NumberInput, Tabs, TabsList, TabsTrigger } from '@pops/ui';
 
+import { LabelShowsPicker } from './label-shows-picker';
 import { OptionField } from './print-option-field';
 import { SheetChoice } from './print-sheet-choice';
 
-import type { LabelTemplateChoice, PrintSubject } from '@pops/inventory/labels';
+import type { PrintSubject } from '@pops/inventory/labels';
 
 import type { PrintJob } from './use-print-job';
 
 const COPY_CHOICES = ['1', '2', '3', '4'] as const;
-
-function isTemplateChoice(value: string): value is LabelTemplateChoice {
-  return value === 'auto' || value === 'container' || value === 'item';
-}
-
-function TemplateChoice({ job }: { job: PrintJob }) {
-  if (!job.fits.item) return null;
-  return (
-    <OptionField label="Template">
-      <Tabs
-        value={job.template}
-        onValueChange={(value) => {
-          if (isTemplateChoice(value)) job.setTemplate(value);
-        }}
-      >
-        <TabsList aria-label="Template">
-          <TabsTrigger value="auto">Auto</TabsTrigger>
-          {job.fits.container ? <TabsTrigger value="container">Box</TabsTrigger> : null}
-          <TabsTrigger value="item">Item</TabsTrigger>
-        </TabsList>
-      </Tabs>
-    </OptionField>
-  );
-}
 
 function CopiesChoice({ job, kind }: { job: PrintJob; kind: PrintSubject['kind'] }) {
   const label = kind === 'container' ? 'Copies per box' : 'Copies per item';
@@ -61,27 +38,45 @@ function CopiesChoice({ job, kind }: { job: PrintJob; kind: PrintSubject['kind']
   );
 }
 
+function plural(count: number, one: string, many: string): string {
+  return count === 1 ? `1 ${one}` : `${count} ${many}`;
+}
+
 /**
- * Why a template is missing from this sheet, or why the sheet prints
- * nothing: a QR smaller than its minimum is a label no phone reads.
+ * What the sheet or the items changed from the choice, in one line each:
+ * a QR the labels are too small for stops the job; a QR that leaves no room
+ * for the rest steps down to QR and code; a label with nothing it can show
+ * prints its code.
  */
 export function SheetFitNotice({ job }: { job: PrintJob }) {
-  if (!job.fits.item) {
+  if (job.block === 'too-small') {
     return (
       <p className="rounded-md border border-destructive/40 px-3 py-2 text-sm" role="alert">
         These labels are too small for a QR code a phone can read, which needs a {MIN_QR_MM} mm
-        square beside its code. Choose a larger sheet.
+        square. Choose a larger sheet, or a label without the QR.
       </p>
     );
   }
-  if (!job.fits.container) {
-    return (
-      <p className="rounded-md bg-muted/60 px-3 py-2 text-sm" role="status">
-        These labels are too narrow for the box label, so boxes get the item label: QR and code.
-      </p>
+  const { trimmed, fallback } = job.adjustments;
+  const lines: string[] = [];
+  if (trimmed > 0) {
+    lines.push(
+      `On these labels the QR leaves too little room beside it, so ${plural(trimmed, 'label prints', 'labels print')} only the QR and code.`
     );
   }
-  return null;
+  if (fallback > 0) {
+    lines.push(
+      `${plural(fallback, 'label has', 'labels have')} nothing chosen to show, so ${fallback === 1 ? 'it prints its' : 'they print their'} code.`
+    );
+  }
+  if (lines.length === 0) return null;
+  return (
+    <div className="space-y-0.5 rounded-md bg-muted/60 px-3 py-2 text-sm" role="status">
+      {lines.map((line) => (
+        <p key={line}>{line}</p>
+      ))}
+    </div>
+  );
 }
 
 /**
@@ -102,21 +97,34 @@ export function StartAtControl({ job }: { job: PrintJob }) {
         step={1}
         showSteppers
         onChange={(event) => job.setStartAt(Number(event.target.value))}
-        containerClassName="w-36"
+        containerClassName="w-40"
       />
     </div>
   );
 }
 
-/** Template, sheet and copies, in one wrapping row, and what the sheet cannot fit. */
-export function PrintOptions({ job, customOpen }: { job: PrintJob; customOpen?: boolean }) {
+/** Sheet, label content and copies, in one wrapping row, and what the sheet cannot fit. */
+export function PrintOptions({
+  job,
+  customOpen,
+  labelShowsOpen,
+}: {
+  job: PrintJob;
+  customOpen?: boolean;
+  labelShowsOpen?: boolean;
+}) {
   const hasBoxes = job.subjects.some((subject) => subject.kind === 'container');
   const hasItems = job.subjects.some((subject) => subject.kind === 'item');
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
         <SheetChoice job={job} customOpen={customOpen} />
-        <TemplateChoice job={job} />
+        <LabelShowsPicker
+          content={job.content}
+          fields={job.fields}
+          onChange={job.setContent}
+          defaultOpen={labelShowsOpen}
+        />
         {hasBoxes ? <CopiesChoice job={job} kind="container" /> : null}
         {hasItems ? <CopiesChoice job={job} kind="item" /> : null}
       </div>

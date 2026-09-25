@@ -8,7 +8,7 @@ import { A4_HEIGHT_MM, A4_WIDTH_MM, slotOrigin } from '@pops/inventory/labels';
  */
 import { cn } from '@pops/ui';
 
-import { PrintLabel } from './label-templates';
+import { ContentLabel } from './label-templates';
 import { PRINT_ROOT_CLASS, PRINT_SHEET_CLASS } from './print-styles';
 
 import type { SheetLayout, SheetPage, SheetSlot } from '@pops/inventory/labels';
@@ -43,7 +43,7 @@ function SlotContent({ slot, props }: SlotProps) {
   if (slot.kind === 'blank') return null;
   const entry = props.labels[slot.label];
   if (!entry) return null;
-  return <PrintLabel template={entry.template} subject={entry.subject} layout={props.layout} />;
+  return <ContentLabel label={entry.label} subject={entry.subject} layout={props.layout} />;
 }
 
 function Slot({ slot, props, firstPage }: SlotProps) {

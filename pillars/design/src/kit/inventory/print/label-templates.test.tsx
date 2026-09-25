@@ -12,9 +12,11 @@ import {
 } from '@pops/inventory/labels';
 import { decodeQrSvg } from '@pops/ui/testing/decode-qr';
 
-import { ContainerLabel, ItemLabel, PrintLabel } from './label-templates';
+import { ContainerLabel, ContentLabel, ItemLabel } from './label-templates';
 
 import type { PrintSubject, SheetLayout } from '@pops/inventory/labels';
+
+import type { LabelPart, ResolvedLabel } from './label-content';
 
 afterEach(cleanup);
 
@@ -94,14 +96,54 @@ describe('label text', () => {
   });
 
   it('shrinks a long code instead of truncating it', () => {
-    render(<PrintLabel template="item" subject={espressoMachine} layout={sheetLayout('L7160')} />);
+    render(<ItemLabel subject={espressoMachine} layout={sheetLayout('L7160')} />);
     const code = screen.getByText('BREW-2026-0007-A');
     expect(Number(code.dataset['codePt'])).toBeLessThan(sheetLayout('L7160').scale.codePt);
     expect(code.textContent).toBe('BREW-2026-0007-A');
   });
+});
 
-  it('switches template by id', () => {
-    render(<PrintLabel template="container" subject={kitchen12} layout={sheetLayout('L7163')} />);
-    expect(screen.getByText('Kitchen 12')).toBeTruthy();
+function showing(parts: LabelPart[], extra: Partial<ResolvedLabel> = {}): ResolvedLabel {
+  return { parts, fields: [], contents: [], fallback: false, ...extra };
+}
+
+function arrangement(): string | undefined {
+  return document.querySelector<HTMLElement>('[data-arrangement]')?.dataset['arrangement'];
+}
+
+describe('label content', () => {
+  it('fills the label with the QR when it is all the label shows', () => {
+    const layout = sheetLayout('L7165');
+    render(<ContentLabel subject={kitchen12} layout={layout} label={showing(['qr'])} />);
+    expect(arrangement()).toBe('qr-fill');
+    expect(decodeQrSvg(renderedQr())).toBe(itemUri(kitchen12.id));
+    expect(screen.queryByText('B412')).toBeNull();
+  });
+
+  it('sets a code shown alone larger than the code beside a QR', () => {
+    const layout = sheetLayout('L7160');
+    render(<ContentLabel subject={kitchen12} layout={layout} label={showing(['code'])} />);
+    expect(arrangement()).toBe('text');
+    expect(screen.queryByRole('img')).toBeNull();
+    const code = screen.getByText('B412');
+    expect(Number(code.dataset['codePt'])).toBeGreaterThan(layout.scale.codePt);
+  });
+
+  it('prints field labels with their values', () => {
+    const label = showing(['name'], {
+      fields: [{ id: 'moving-box.room', label: 'Room', value: 'Kitchen' }],
+    });
+    render(<ContentLabel subject={kitchen12} layout={sheetLayout('L7163')} label={label} />);
+    expect(screen.getByRole('list', { name: 'Fields' }).textContent).toBe('Room: Kitchen');
+  });
+
+  it('ends a contents list that runs out of room in "+N more"', () => {
+    const contents = Array.from({ length: 30 }, (_, index) => `Thing ${index + 1}`);
+    const label = showing(['qr', 'name', 'code', 'contents'], { contents });
+    render(<ContentLabel subject={kitchen12} layout={sheetLayout('L7160')} label={label} />);
+    const list = screen.getByRole('list', { name: 'Contents' });
+    const lines = [...list.querySelectorAll('li')].map((node) => node.textContent);
+    expect(lines.length).toBeLessThan(30);
+    expect(lines.at(-1)).toBe(`+${30 - (lines.length - 1)} more`);
   });
 });
