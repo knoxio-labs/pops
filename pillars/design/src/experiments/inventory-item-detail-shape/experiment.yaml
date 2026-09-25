@@ -1,0 +1,9 @@
+name: Inventory item detail shape
+question: On desktop, does a rich item read better as folded sections in one
+  column, or as a fixed facts rail beside Overview, Connections and History
+  tabs?
+status: active
+screen: inventory/item-detail
+variants:
+  stacked: One column, sections folded to one line each
+  rail-tabs: Facts rail beside tabs
