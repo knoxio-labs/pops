@@ -1,4 +1,12 @@
-import { forceCenter, forceCollide, forceLink, forceManyBody, forceSimulation } from 'd3-force';
+import {
+  forceCenter,
+  forceCollide,
+  forceLink,
+  forceManyBody,
+  forceSimulation,
+  forceX,
+  forceY,
+} from 'd3-force';
 import { useEffect, useRef, type RefObject } from 'react';
 
 import { drawGraph, NODE_RADIUS } from './draw';
@@ -13,7 +21,7 @@ interface RawGraphData {
 function buildGraph(raw: RawGraphData): { nodes: GraphNode[]; links: GraphLink[] } {
   const nodeMap = new Map<string, GraphNode>();
   const nodes: GraphNode[] = raw.nodes.map((n) => {
-    const gn: GraphNode = { ...n, x: 0, y: 0 };
+    const gn: GraphNode = { ...n };
     nodeMap.set(n.id, gn);
     return gn;
   });
@@ -95,10 +103,12 @@ export function useGraphSimulation({
         'link',
         forceLink<GraphNode, GraphLink>(links)
           .id((d) => d.id)
-          .distance(120)
+          .distance(110)
       )
-      .force('charge', forceManyBody().strength(-400))
+      .force('charge', forceManyBody().strength(-450))
       .force('center', forceCenter(0, 0))
+      .force('x', forceX(0).strength(0.05))
+      .force('y', forceY(0).strength(0.1))
       .force('collide', forceCollide(NODE_RADIUS + 8))
       .on('tick', () => drawRef.current());
 
