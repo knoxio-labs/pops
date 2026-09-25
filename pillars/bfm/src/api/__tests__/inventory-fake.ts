@@ -188,11 +188,15 @@ export function createInventoryFake(options: InventoryFakeOptions = {}): Invento
   };
 }
 
+/**
+ * The revision the SDK call carried. The server SDK takes route arguments
+ * flat (`{ revision }`), exactly as `sync.snapshot({ cursor, limit })` does;
+ * a `{ query: { revision } }` wrapper is not read by the SDK and reaches
+ * inventory as no revision at all, which answers the current catalogue.
+ */
 function readRevision(input: unknown): number {
-  if (input === null || typeof input !== 'object' || !('query' in input)) return Number.NaN;
-  const { query } = input;
-  if (query === null || typeof query !== 'object' || !('revision' in query)) return Number.NaN;
-  return typeof query.revision === 'number' ? query.revision : Number.NaN;
+  if (input === null || typeof input !== 'object' || !('revision' in input)) return Number.NaN;
+  return typeof input.revision === 'number' ? input.revision : Number.NaN;
 }
 
 function readSyncCall(input: unknown): InventorySyncCall {
