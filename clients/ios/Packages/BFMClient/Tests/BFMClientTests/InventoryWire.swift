@@ -175,11 +175,16 @@ internal enum InventoryWire {
     }
 
     internal static func rejectedOutcome(
-        mutationId: String, reason: String = "cycle", message: String = "no"
+        mutationId: String, reason: String = "cycle", message: String = "no",
+        incomingReference: (itemId: String, fieldId: String)? = nil
     ) -> String {
-        """
-        {"mutationId":"\(mutationId)","status":"rejected","reason":"\(reason)","message":"\(message)"}
-        """
+        let incoming =
+            incomingReference.map {
+                ",\"incomingReference\":{\"itemId\":\"\($0.itemId)\",\"fieldId\":\"\($0.fieldId)\"}"
+            } ?? ""
+        return """
+            {"mutationId":"\(mutationId)","status":"rejected","reason":"\(reason)","message":"\(message)"\(incoming)}
+            """
     }
 
     internal static func deferredOutcome(mutationId: String, waitingOn: String) -> String {

@@ -11,8 +11,12 @@ internal enum StoredOutcome: Codable, Equatable {
     case conflictCodeCollision(heldById: String, heldByName: String, suggestedCode: String)
     case conflictDeleted(source: StoredSyncSource, at: Double)
     /// `catalogueChanges` is absent from a row written before they were
-    /// kept, and for every refusal that names none.
-    case rejected(reason: String, message: String, catalogueChanges: [StoredCatalogueChange]?)
+    /// kept, and for every refusal that names none. `incomingReference` is
+    /// absent from a row written before it was kept, and for every refusal
+    /// that names none (POPS-4617).
+    case rejected(
+        reason: String, message: String, catalogueChanges: [StoredCatalogueChange]?,
+        incomingReference: StoredIncomingReference?)
     case deferred(waitingOn: String)
 
     init(_ outcome: InventoryMutationOutcome) {
@@ -28,10 +32,11 @@ internal enum StoredOutcome: Codable, Equatable {
                 heldById: id, heldByName: name, suggestedCode: suggestedCode)
         case .conflictDeleted(let source, let at):
             self = .conflictDeleted(source: StoredSyncSource(source), at: storedDate(at))
-        case .rejected(let reason, let message, let changes):
+        case .rejected(let reason, let message, let changes, let incomingReference):
             self = .rejected(
                 reason: reason.storageValue, message: message,
-                catalogueChanges: changes.isEmpty ? nil : changes.map(StoredCatalogueChange.init))
+                catalogueChanges: changes.isEmpty ? nil : changes.map(StoredCatalogueChange.init),
+                incomingReference: incomingReference.map(StoredIncomingReference.init))
         case .deferred(let waitingOn):
             self = .deferred(waitingOn: waitingOn)
         }
@@ -62,8 +67,30 @@ extension StoredOutcome {
     /// What a catalogue refusal named as standing in the way; empty for any
     /// other outcome.
     var catalogueChanges: [InventoryCatalogueChange] {
-        guard case .rejected(_, _, let changes?) = self else { return [] }
+        guard case .rejected(_, _, let changes?, _) = self else { return [] }
         return changes.map(\.value)
+    }
+
+    /// The other item and field a `reference_type_mismatch` names; nil for
+    /// any other outcome, or one that names none.
+    var incomingReference: InventoryIncomingReference? {
+        guard case .rejected(_, _, _, let incomingReference?) = self else { return nil }
+        return incomingReference.value
+    }
+}
+
+/// ``AppCore/InventoryIncomingReference``'s storage twin.
+internal struct StoredIncomingReference: Codable, Equatable {
+    let itemId: String
+    let fieldId: String
+
+    init(_ value: InventoryIncomingReference) {
+        itemId = value.itemId
+        fieldId = value.fieldId
+    }
+
+    var value: InventoryIncomingReference {
+        InventoryIncomingReference(itemId: itemId, fieldId: fieldId)
     }
 }
 

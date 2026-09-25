@@ -23,26 +23,39 @@ export const REJECTION_REASONS = [
 /** One of {@link REJECTION_REASONS}. */
 export type RejectionReason = (typeof REJECTION_REASONS)[number];
 
+/** The other item and field a `reference_type_mismatch` names, when the refusal is about a reference INTO the changed item rather than one its own command values carry (POPS-4617). */
+export interface IncomingReferenceRef {
+  readonly itemId: string;
+  readonly fieldId: string;
+}
+
 /**
  * Thrown by an op (or the engine) to refuse a mutation. The engine rolls back
  * everything the op wrote, stores a `rejected` outcome, and never retries it.
  * `catalogueChanges` says which definitions a `catalogue_update_required` or
  * `catalogue_repair_required` refusal is about; the outcome carries it only
- * when it is non-empty.
+ * when it is non-empty. `incomingReference` says the same for a
+ * `reference_type_mismatch` caused by another item's reference into the one
+ * being changed (a type change breaking an inbound constraint), distinct from
+ * one of the command's own values failing — a client must not offer to edit
+ * its own values for the former.
  */
 export class CommandRejected extends Error {
   override readonly name = 'CommandRejected' as const;
   readonly reason: RejectionReason;
   readonly catalogueChanges: readonly CatalogueChange[];
+  readonly incomingReference?: IncomingReferenceRef;
 
   constructor(
     reason: RejectionReason,
     message: string,
-    catalogueChanges: readonly CatalogueChange[] = []
+    catalogueChanges: readonly CatalogueChange[] = [],
+    incomingReference?: IncomingReferenceRef
   ) {
     super(message);
     this.reason = reason;
     this.catalogueChanges = catalogueChanges;
+    this.incomingReference = incomingReference;
   }
 }
 

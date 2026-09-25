@@ -2072,6 +2072,10 @@ export type MobileInventoryMutationsResponses = {
             revision: number;
             typeId: string | null;
           }>;
+          incomingReference?: {
+            fieldId: string;
+            itemId: string;
+          };
           message: string;
           mutationId: string;
           reason: string;

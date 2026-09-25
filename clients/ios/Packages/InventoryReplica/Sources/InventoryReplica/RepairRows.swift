@@ -30,21 +30,26 @@ internal enum StoredRepairKind: String {
     /// photo, which Retry and Remove settle. A change that no longer fits
     /// the active catalogue (`catalogue_repair_required`) is
     /// `catalogueChanged`, which can be sent again against the current
-    /// definitions or edited. So is an item change whose reference value the
-    /// server refused (`target_missing`, `reference_type_mismatch`), which
-    /// Edit item can point elsewhere. Every other refusal is let go.
+    /// definitions or edited. So is an item change whose OWN reference value
+    /// the server refused (`target_missing`, `reference_type_mismatch`),
+    /// which Edit item can point elsewhere. A `reference_type_mismatch` that
+    /// names an INCOMING reference from another item (POPS-4617) is not:
+    /// editing this command's own values cannot fix another item's
+    /// reference, so it is let go like any other refusal, even when this
+    /// command also happens to carry a reference value of its own. Every
+    /// other refusal is let go.
     init?(_ outcome: StoredOutcome, command: LoggedCommand) {
         switch outcome {
         case .conflictField: self = .field
         case .conflictCodeCollision: self = .codeCollision
         case .conflictDeleted: self = .deleted
-        case .rejected(let reason, _, _):
+        case .rejected(let reason, _, _, let incomingReference):
             if command.attachedPhoto != nil,
                 StagedUploadFailure.photoRejectionReasons.contains(reason)
             {
                 self = .photoFailed
             } else if reason == InventoryRejectedReason.catalogueRepairRequired.storageValue
-                || Self.refusesReference(reason, of: command)
+                || Self.refusesReference(reason, of: command, incomingReference: incomingReference)
             {
                 self = .catalogueChanged
             } else {
@@ -54,10 +59,13 @@ internal enum StoredRepairKind: String {
         }
     }
 
-    private static func refusesReference(_ reason: String, of command: LoggedCommand) -> Bool {
+    private static func refusesReference(
+        _ reason: String, of command: LoggedCommand, incomingReference: StoredIncomingReference?
+    ) -> Bool {
         guard InventoryStaleReference(InventoryRejectedReason(wire: reason)) != nil,
             case .command(let command) = command
         else { return false }
+        if let incomingReference, incomingReference.itemId != command.entityId { return false }
         return command.carriesReferenceValue
     }
 }
@@ -111,7 +119,7 @@ internal struct StoredRepair {
                         value: "Deleted", source: source.syncSource,
                         at: Date(timeIntervalSinceReferenceDate: at)),
                 ], openedAt: opened)
-        case .rejected(let reason, _, _):
+        case .rejected(let reason, _, _, _):
             return InventoryRepair(
                 id: mutationId, entityKind: entityKind, entityId: entity.id,
                 kind: Self.rejectedKind(kind, reason: reason),
@@ -128,7 +136,7 @@ extension StoredRepair {
         var queued: InventoryCommand?
         if case .command(let command)? = command { queued = command }
         var staleReference: InventoryStaleReference?
-        if case .rejected(let reason, _, _) = payload.outcome {
+        if case .rejected(let reason, _, _, _) = payload.outcome {
             staleReference = InventoryStaleReference(InventoryRejectedReason(wire: reason))
         }
         return InventoryCatalogueRepair(

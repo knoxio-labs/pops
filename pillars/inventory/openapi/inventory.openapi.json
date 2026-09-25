@@ -9507,6 +9507,19 @@
                                 },
                                 "type": "array"
                               },
+                              "incomingReference": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "fieldId": {
+                                    "type": "string"
+                                  },
+                                  "itemId": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["itemId", "fieldId"],
+                                "type": "object"
+                              },
                               "message": {
                                 "type": "string"
                               },
