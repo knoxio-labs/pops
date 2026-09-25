@@ -7,7 +7,8 @@
 import { Button, cn } from '@pops/ui';
 
 import { CodeBadge, INVENTORY_ICONS, ShortcutHint, locationPath } from '../foundation';
-import { ItemResultRow, PlaceResultRow, PurchaseResultRow, ResultHeading } from './result-rows';
+import { PurchaseResultRow } from './purchase-result-row';
+import { ItemResultRow, PlaceResultRow, ResultHeading } from './result-rows';
 import { splitHits } from './search-model';
 
 import type { ReactNode } from 'react';

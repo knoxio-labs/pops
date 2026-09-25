@@ -1,12 +1,12 @@
 /**
  * The rows the search list draws: an item or container (selectable, with
  * the matched part of its name marked, or the field that matched when the
- * name did not), a place, and a purchase. The active row is the one the
+ * name did not), and a place. The active row is the one the
  * preview pane shows and Enter opens.
  */
-import { MapPin, ShoppingBag } from 'lucide-react';
+import { MapPin } from 'lucide-react';
 
-import { ButtonPrimitive, Checkbox, cn, formatCents, highlightMatch } from '@pops/ui';
+import { Checkbox, cn, highlightMatch } from '@pops/ui';
 
 import {
   CodeBadge,
@@ -20,7 +20,6 @@ import {
 import type { ReactNode } from 'react';
 
 import type { PlacementWorld } from '../foundation';
-import type { PurchaseResult } from './purchase-model';
 import type { ItemHit, MatchField, PlaceHit } from './search-model';
 
 const FIELD_WORDS: Readonly<Record<MatchField, string>> = {
@@ -30,7 +29,8 @@ const FIELD_WORDS: Readonly<Record<MatchField, string>> = {
   place: 'Place',
 };
 
-function RowFrame({
+/** The row shell every result shares: the active edge, selection tint and slots. */
+export function RowFrame({
   active,
   selected = false,
   label,
@@ -156,43 +156,6 @@ export function PlaceResultRow({
   );
 }
 
-const day = new Intl.DateTimeFormat('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
-
-/** One purchase hit. */
-export function PurchaseResultRow({
-  purchase,
-  query,
-  active,
-}: {
-  purchase: PurchaseResult;
-  query: string;
-  active: boolean;
-}) {
-  const q = query.trim().toLowerCase();
-  const line = purchase.lines.find((entry) => entry.name.toLowerCase().includes(q));
-  return (
-    <RowFrame
-      active={active}
-      label={`${purchase.merchant} ${purchase.orderNumber}`}
-      leading={
-        <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
-          <ShoppingBag className="size-4" aria-hidden />
-        </span>
-      }
-      trailing={
-        <span className="text-sm tabular-nums">{formatCents(purchase.totalCents, 'AUD')}</span>
-      }
-    >
-      <p className="truncate text-sm font-medium">
-        {line ? highlightMatch(line.name, query.trim()) : purchase.merchant}
-      </p>
-      <p className="truncate text-xs text-muted-foreground">
-        {`${purchase.merchant} · ${day.format(new Date(purchase.date))} · ${purchase.orderNumber}`}
-      </p>
-    </RowFrame>
-  );
-}
-
 /** A section heading in the results list. */
 export function ResultHeading({ title, count }: { title: string; count: number }) {
   return (
@@ -200,14 +163,5 @@ export function ResultHeading({ title, count }: { title: string; count: number }
       {title}
       <span className="tabular-nums">{count}</span>
     </h3>
-  );
-}
-
-/** "Show all N" under a capped section. */
-export function ShowAll({ count, noun }: { count: number; noun: string }) {
-  return (
-    <ButtonPrimitive variant="ghost" size="xs" className="mx-3 my-1 text-xs text-muted-foreground">
-      Show all {count} {noun}
-    </ButtonPrimitive>
   );
 }
