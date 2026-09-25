@@ -1,43 +1,56 @@
-import { Network } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
+import { coreWorld } from '@/fixtures/inventory/core';
+import { houseConnections, houseFixtures } from '@/fixtures/inventory/fixtures-house';
+import { connectionIndex } from '@/kit/inventory/connections/connection-model';
+import { ConnectionsPage } from '@/kit/inventory/connections/connections-page';
 
-import { PageHeader } from '@pops/ui';
-
-import type { ScreenMeta } from '@/contract';
+import type { ScreenMeta, ScreenStates } from '@/contract';
+import type { ConnectionsPageProps } from '@/kit/inventory/connections/connections-page';
 
 export const meta: ScreenMeta = { title: 'Connections', order: 6, frame: 'web' };
 
+const index = connectionIndex(coreWorld, houseFixtures);
+
+function page(overrides: Partial<ConnectionsPageProps> = {}) {
+  return function ConnectionsState() {
+    return <ConnectionsPage connections={houseConnections} index={index} {...overrides} />;
+  };
+}
+
 /**
- * `/inventory/connections`: the page as it ships, which is a placeholder.
- *
- * The rail and the page nav both offer it, so a reviewer reaches it; what they
- * find is the panel below and nothing else. The item-to-item connection
- * controls that carry this pillar's real graph (see the item detail screen)
- * are not mounted here, which is the state this screen is recording.
+ * `/inventory/connections`: every connection in the house as a list, with
+ * the graph a toggle away and the trace pane beside the list. Fixtures is
+ * the second tab (`/inventory/connections/fixtures`).
  */
-export function ConnectionsPage() {
-  const { t } = useTranslation('inventory');
+export const states: ScreenStates = {
+  graph: page({ seed: { view: 'graph' } }),
+  trace: page({ seed: { traceItemId: 'itm-tv', focusedId: 'cx-i1' } }),
+  'connect-dialog': page({
+    seed: { connectOpen: true },
+    connectSeed: {
+      fromKey: 'item:itm-lamp',
+      toKind: 'fixture',
+      toKey: 'fixture:fx-bedside-outlet',
+    },
+  }),
+  'connect-refused': page({
+    seed: { connectOpen: true },
+    connectSeed: {
+      fromKey: 'item:itm-tv',
+      fromQuery: 'tele',
+      toKind: 'item',
+      toKey: 'item:itm-soundbar',
+      toQuery: 'so',
+    },
+  }),
+  'filtered-kind': page({ seed: { kind: 'fixture' } }),
+  selected: page({ seed: { selected: ['cx-f3', 'cx-f7', 'cx-f8'], focusedId: 'cx-f8' } }),
+  disconnected: page({ seed: { disconnected: ['cx-i1'] } }),
+  empty: page({ connections: [] }),
+  'empty-filtered': page({ seed: { query: 'dishwasher' } }),
+  loading: page({ status: 'loading' }),
+  error: page({ status: 'error' }),
+  stale: page({ banner: 'stale' }),
+  offline: page({ banner: 'offline' }),
+};
 
-  return (
-    <div className="space-y-6">
-      <PageHeader
-        title={t('connections')}
-        icon={
-          <div className="p-2 rounded-xl bg-app-accent/10">
-            <Network className="h-6 w-6 text-app-accent" />
-          </div>
-        }
-      />
-      <div className="rounded-xl border border-border bg-card p-8 text-center">
-        <h1 role="heading" className="text-xl font-semibold text-foreground mb-2">
-          {t('connections')}
-        </h1>
-        <p className="text-sm text-muted-foreground">{t('connections.comingSoon')}</p>
-      </div>
-    </div>
-  );
-}
-
-export default function ConnectionsScreen() {
-  return <ConnectionsPage />;
-}
+export default page();
