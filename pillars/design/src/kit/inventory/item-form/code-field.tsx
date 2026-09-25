@@ -3,7 +3,7 @@
  * field; an offered code shows in the field itself and Enter takes it. A
  * taken code names who has it and offers the next free one (ADR-002 D7).
  */
-import { Check, LoaderCircle, WandSparkles } from 'lucide-react';
+import { Check, LoaderCircle, QrCode } from 'lucide-react';
 
 import { Button, ButtonPrimitive, Input, cn } from '@pops/ui';
 
@@ -46,7 +46,7 @@ function SuggestControl({ entry, onSuggest }: Pick<CodeFieldProps, 'entry' | 'on
         onClick={cannot ? undefined : onSuggest}
         className={cn('text-muted-foreground', cannot && 'opacity-50')}
       >
-        <WandSparkles className="size-4" aria-hidden />
+        <QrCode className="size-4" aria-hidden />
       </ButtonPrimitive>
     </HintTooltip>
   );
