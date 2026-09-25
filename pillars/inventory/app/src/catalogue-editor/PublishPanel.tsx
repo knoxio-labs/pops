@@ -1,4 +1,4 @@
-import { Check, RefreshCw, Sparkles, TriangleAlert } from 'lucide-react';
+import { Check, RefreshCw, TriangleAlert, Upload } from 'lucide-react';
 import { useState } from 'react';
 
 import { Alert, AlertDescription, AlertTitle, Badge, Button } from '@pops/ui';
@@ -87,7 +87,7 @@ export function PublishPanel({
             Abandon draft
           </Button>
           <Button onClick={() => setOpen(true)} disabled={isPending || blocked}>
-            <Sparkles className="h-4 w-4" />
+            <Upload className="h-4 w-4" />
             Review and publish
           </Button>
         </div>
