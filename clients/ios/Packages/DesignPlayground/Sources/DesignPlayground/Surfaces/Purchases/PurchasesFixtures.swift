@@ -128,5 +128,12 @@ internal enum PurchasesFixtures {
         purchase(
             "pur-market", .printed("EVELEIGH FARMERS MARKET STALL 12"),
             daysAgo: 58, aud(4_150), items: 6),
+        // A cancelled digital order: zero total, nothing ever charged, so the
+        // pillar derives `nothing_to_settle` rather than leaving it stuck
+        // waiting on a bank match that will never come (POPS-4648).
+        purchase(
+            "pur-cancelled-digital",
+            .entity(id: "ent-amazon", name: "Amazon", printed: "AMZN Digital"),
+            daysAgo: 62, aud(0), items: 1, status: .nothingToSettle, receipt: false),
     ]
 }

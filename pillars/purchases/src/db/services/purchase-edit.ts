@@ -31,6 +31,7 @@ import { writeAddedLines, writeKeptLines, writeRemovedLines } from './purchase-e
 import { planPurchaseUpdate, type UpdatePlan } from './purchase-edit-plan.js';
 import { recordHeaderEdits, recordLineEdits } from './purchase-edit-records.js';
 import { getPurchase, type PurchaseDetail } from './purchase-reads.js';
+import { recomputePurchaseStatuses } from './purchase-status.js';
 
 import type { UpdatePurchaseInput } from './purchase-input.js';
 
@@ -73,6 +74,13 @@ export function commitPurchaseUpdate(
       })
       .where(eq(purchases.id, plan.purchase.id))
       .run();
+
+    // `totalCents` is only ever editable on an unlocked status (see
+    // `planPurchaseUpdate`'s `UNLOCKED_STATUSES`), which is exactly the set
+    // `deriveStatus` is willing to move — so a total edited to or from zero
+    // must re-derive in the same transaction rather than wait for the next
+    // sweep to notice.
+    recomputePurchaseStatuses(tx, [plan.purchase.id]);
   });
 
   const detail = getPurchase(db, plan.purchase.id);

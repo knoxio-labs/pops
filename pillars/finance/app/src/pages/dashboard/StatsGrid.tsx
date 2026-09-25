@@ -53,12 +53,12 @@ export function formatTileAmount(value: number): string {
 export function StatsGrid({ stats, isLoading }: { stats: Stats | null; isLoading: boolean }) {
   const { t } = useTranslation('finance');
   if (isLoading) {
-    return <SkeletonGrid count={4} itemHeight="h-32" cols="sm:grid-cols-2 lg:grid-cols-4" />;
+    return <SkeletonGrid count={4} itemHeight="h-32" cols="sm:max-lg:grid-cols-2 lg:grid-cols-4" />;
   }
   if (!stats) return null;
   const netBalance = stats.totalIncome - stats.totalExpenses;
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-4 sm:max-lg:grid-cols-2 lg:grid-cols-4">
       <StatCard
         title={t('dashboard.totalTransactions')}
         value={stats.totalTransactions.toLocaleString()}

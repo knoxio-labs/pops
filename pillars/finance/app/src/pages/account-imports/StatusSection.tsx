@@ -38,7 +38,7 @@ export function StatusSection({
       <CardHeader className="space-y-0">
         <CardTitle className="text-sm font-medium">Status</CardTitle>
       </CardHeader>
-      <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <CardContent className="grid gap-4 sm:max-lg:grid-cols-2 lg:grid-cols-4">
         <Stat
           label="Last fed"
           value={status.lastImportAt ? whenLabel(status.lastImportAt) : 'Never'}

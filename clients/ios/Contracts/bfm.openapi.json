@@ -11234,7 +11234,14 @@
             "in": "query",
             "name": "status",
             "schema": {
-              "enum": ["awaiting_settlement", "linked", "partial", "settled_cash", "ignored"],
+              "enum": [
+                "awaiting_settlement",
+                "linked",
+                "partial",
+                "settled_cash",
+                "ignored",
+                "nothing_to_settle"
+              ],
               "type": "string"
             }
           },

@@ -17,6 +17,7 @@ import {
   purchaseChargeLinks,
   purchaseCharges,
   setPurchaseStatus,
+  updatePurchase,
 } from '../../index.js';
 import { selectChargeDetails } from '../purchase-read-charges.js';
 import {
@@ -176,6 +177,76 @@ describe('deriveStatus', () => {
     linkCharge(id, 'c1', 'pops://finance/transaction/t1');
     expect(deriveStoredStatus(id, 'ignored', 2000)).toBe('ignored');
   });
+
+  it('is nothing_to_settle for a zero-total order with no charges at all', () => {
+    const id = createPurchase(opened.db, amazonOrder({ checksum: 'a:zero-bare', totalCents: 0 }));
+    expect(deriveStoredStatus(id, 'awaiting_settlement', 0)).toBe('nothing_to_settle');
+  });
+
+  it('a zero-total order with a refund charge stays awaiting_settlement — the refund still needs matching', () => {
+    const id = createPurchase(
+      opened.db,
+      amazonOrder({
+        checksum: 'a:zero-refund',
+        totalCents: 0,
+        charges: [{ sourceChargeRef: 'c1', amountCents: -500, role: 'refund' }],
+      })
+    );
+    expect(deriveStoredStatus(id, 'awaiting_settlement', 0)).toBe('awaiting_settlement');
+  });
+
+  it('a non-zero total is never nothing_to_settle regardless of charges', () => {
+    const id = createPurchase(
+      opened.db,
+      amazonOrder({ checksum: 'a:nonzero-bare', totalCents: 5000 })
+    );
+    expect(deriveStoredStatus(id, 'awaiting_settlement', 5000)).toBe('awaiting_settlement');
+  });
+
+  it('preserves settled_cash on a zero-total order', () => {
+    const id = createPurchase(
+      opened.db,
+      amazonOrder({ checksum: 'a:zero-cash', totalCents: 0, settlementMode: 'cash' })
+    );
+    expect(deriveStoredStatus(id, 'settled_cash', 0)).toBe('settled_cash');
+  });
+
+  it('preserves ignored on a zero-total order', () => {
+    const id = createPurchase(
+      opened.db,
+      amazonOrder({ checksum: 'a:zero-ignored', totalCents: 0 })
+    );
+    expect(deriveStoredStatus(id, 'ignored', 0)).toBe('ignored');
+  });
+});
+
+describe('nothing_to_settle — leaving and re-entering', () => {
+  it('a zero-total order that later gets a non-zero total derives normally again', () => {
+    const id = createPurchase(
+      opened.db,
+      amazonOrder({ checksum: 'a:zero-then-total', totalCents: 0 })
+    );
+    expect(deriveStoredStatus(id, 'nothing_to_settle', 0)).toBe('nothing_to_settle');
+    expect(deriveStoredStatus(id, 'nothing_to_settle', 1999)).toBe('awaiting_settlement');
+  });
+
+  it('a zero-total order that later gets a capture charge derives normally again', () => {
+    // A non-zero charge amount, deliberately: a linked charge of exactly 0
+    // cents reads as `awaiting_settlement` under the ordinary coverage rule
+    // (`matchedCents <= 0`) regardless of this feature, so a 0-cent charge
+    // here would test that pre-existing edge case rather than this one —
+    // whether leaving `nothing_to_settle` hands back to the ordinary rule.
+    const id = createPurchase(
+      opened.db,
+      amazonOrder({
+        checksum: 'a:zero-then-capture',
+        totalCents: 0,
+        charges: [{ sourceChargeRef: 'c1', amountCents: 500, role: 'capture' }],
+      })
+    );
+    linkCharge(id, 'c1', 'pops://finance/transaction/t1');
+    expect(deriveStoredStatus(id, 'nothing_to_settle', 0)).toBe('linked');
+  });
 });
 
 describe('recomputePurchaseStatuses', () => {
@@ -286,5 +357,78 @@ describe('recomputeStatusForCharges', () => {
     const changed = recomputeStatusForCharges(opened.db, [charge.id]);
     expect(changed).toBe(1);
     expect(getPurchase(opened.db, id)?.purchase.status).toBe('linked');
+  });
+});
+
+describe('createPurchase — status derives from the moment the order exists', () => {
+  it('a zero-total order is nothing_to_settle from creation, with no sweep involved', () => {
+    const id = createPurchase(opened.db, amazonOrder({ checksum: 'a:create-zero', totalCents: 0 }));
+    expect(getPurchase(opened.db, id)?.purchase.status).toBe('nothing_to_settle');
+  });
+
+  it('a zero-total order created with a refund charge stays awaiting_settlement', () => {
+    const id = createPurchase(
+      opened.db,
+      amazonOrder({
+        checksum: 'a:create-zero-refund',
+        totalCents: 0,
+        charges: [{ sourceChargeRef: 'c1', amountCents: -500, role: 'refund' }],
+      })
+    );
+    expect(getPurchase(opened.db, id)?.purchase.status).toBe('awaiting_settlement');
+  });
+
+  it('a non-zero-total order is unaffected — still awaiting_settlement', () => {
+    const id = createPurchase(
+      opened.db,
+      amazonOrder({ checksum: 'a:create-nonzero', totalCents: 4000 })
+    );
+    expect(getPurchase(opened.db, id)?.purchase.status).toBe('awaiting_settlement');
+  });
+
+  it('a cash order is still settled_cash even at zero total', () => {
+    const id = createPurchase(
+      opened.db,
+      amazonOrder({ checksum: 'a:create-zero-cash', totalCents: 0, settlementMode: 'cash' })
+    );
+    expect(getPurchase(opened.db, id)?.purchase.status).toBe('settled_cash');
+  });
+});
+
+describe('updatePurchase — a total edit re-derives status in the same transaction', () => {
+  it('editing an awaiting_settlement order down to a zero total moves it to nothing_to_settle', () => {
+    const id = createPurchase(
+      opened.db,
+      amazonOrder({
+        checksum: 'a:edit-to-zero',
+        totalCents: 4000,
+        items: [{ name: 'Widget', unitPriceCents: 4000, lineTotalCents: 4000, quantity: 1 }],
+      })
+    );
+    const before = getPurchase(opened.db, id);
+    expect(before?.purchase.status).toBe('awaiting_settlement');
+
+    updatePurchase(opened.db, id, {
+      totalCents: 0,
+      lines: [],
+      expectedUpdatedAt: before?.purchase.updatedAt ?? '',
+    });
+    expect(getPurchase(opened.db, id)?.purchase.status).toBe('nothing_to_settle');
+  });
+
+  it('editing a nothing_to_settle order up to a real total moves it back to awaiting_settlement', () => {
+    const id = createPurchase(
+      opened.db,
+      amazonOrder({ checksum: 'a:edit-from-zero', totalCents: 0 })
+    );
+    const before = getPurchase(opened.db, id);
+    expect(before?.purchase.status).toBe('nothing_to_settle');
+
+    updatePurchase(opened.db, id, {
+      totalCents: 2500,
+      lines: [{ name: 'Widget', quantity: 1, lineTotalCents: 2500 }],
+      expectedUpdatedAt: before?.purchase.updatedAt ?? '',
+    });
+    expect(getPurchase(opened.db, id)?.purchase.status).toBe('awaiting_settlement');
   });
 });

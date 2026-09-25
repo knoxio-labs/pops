@@ -38801,6 +38801,7 @@ internal enum Operations {
                     case partial = "partial"
                     case settledCash = "settled_cash"
                     case ignored = "ignored"
+                    case nothingToSettle = "nothing_to_settle"
                 }
                 /// - Remark: Generated from `#/paths/mobile/purchases/search/GET/query/status`.
                 internal var status: Operations.MobilePurchases_searchPurchases.Input.Query.StatusPayload?

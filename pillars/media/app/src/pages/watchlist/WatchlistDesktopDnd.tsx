@@ -53,7 +53,7 @@ export function WatchlistDesktopDnd({
         items={sortedEntries.map((e) => e.id)}
         strategy={verticalListSortingStrategy}
       >
-        <div className="hidden md:grid grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        <div className="hidden md:grid grid-cols-3 lg:max-xl:grid-cols-4 xl:grid-cols-5 gap-4">
           {sortedEntries.map((entry, index) => {
             const meta = getMetaForEntry(entry);
             const cardProps = {

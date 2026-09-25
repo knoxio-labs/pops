@@ -114,6 +114,7 @@ internal enum PurchaseDetailCopy {
         case .partial: "Part matched to the bank"
         case .settledCash: "Paid in cash"
         case .ignored: "Left out of matching"
+        case .nothingToSettle: "Nothing to pay"
         case .unrecognised(let raw): raw.prefix(1).uppercased() + raw.dropFirst()
         }
     }
@@ -125,6 +126,7 @@ internal enum PurchaseDetailCopy {
         case .partial: "circle.lefthalf.filled"
         case .settledCash: "banknote"
         case .ignored: "minus"
+        case .nothingToSettle: "circle.dashed"
         case .unrecognised: "questionmark"
         }
     }

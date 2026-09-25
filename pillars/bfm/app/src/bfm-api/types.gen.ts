@@ -3971,7 +3971,13 @@ export type MobilePurchasesSearchPurchasesData = {
   path?: never;
   query: {
     q: string;
-    status?: 'awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored';
+    status?:
+      | 'awaiting_settlement'
+      | 'linked'
+      | 'partial'
+      | 'settled_cash'
+      | 'ignored'
+      | 'nothing_to_settle';
     tags?: Array<string>;
   };
   url: '/mobile/purchases/search';

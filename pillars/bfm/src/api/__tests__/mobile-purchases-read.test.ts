@@ -680,6 +680,22 @@ describe('the unsettled filter and total', () => {
     expect(res.body.data.map((row: { id: string }) => row.id)).toEqual(['pur-1', 'pur-3']);
   });
 
+  it('excludes nothing_to_settle from the unsettled filter — there is nothing to match', async () => {
+    const { app, token } = openWithRows([
+      purchasesRow({ id: 'pur-1', status: 'awaiting_settlement' }),
+      purchasesRow({
+        id: 'pur-2',
+        status: 'nothing_to_settle',
+        orderedAt: '2026-08-12T02:15:00.000Z',
+      }),
+    ]);
+
+    const res = await list(app, token, '?status=unsettled');
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.map((row: { id: string }) => row.id)).toEqual(['pur-1']);
+  });
+
   it('reports a total that reflects the whole filtered scope, not the page', async () => {
     const { app, token } = openWithRows([
       purchasesRow({ id: 'pur-1', status: 'awaiting_settlement' }),
