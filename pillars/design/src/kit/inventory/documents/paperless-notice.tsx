@@ -13,7 +13,7 @@ export type PaperlessOutage = 'unreachable' | 'not-configured';
 const COPY: Readonly<Record<PaperlessOutage, string>> = {
   unreachable: 'Paperless is unreachable. Documents cannot be opened or linked until it is back.',
   'not-configured':
-    'Paperless is not connected. Connect it in Inventory settings to link documents.',
+    'Paperless is not connected. Connect it in Settings, under Inventory, to link documents.',
 };
 
 /** The reason actions are off, for their tooltips. */

@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 
 import { iconMap } from '@pops/navigation';
 
-import { activeItemPath, appForArea, railOrder, WEB_APPS } from './apps';
+import { activeItemPath, appForArea, isSettingsScreen, railOrder, WEB_APPS } from './apps';
 
 import type { AppNavConfig } from '@pops/navigation';
 
@@ -34,7 +34,7 @@ describe('railOrder', () => {
 });
 
 describe('WEB_APPS', () => {
-  it('draws inventory with its designed ten-item nav, Labels and Activity folded', () => {
+  it('draws inventory with its designed nine-item nav: Labels and Activity folded, Settings in the Settings app', () => {
     const inventory = appForArea('inventory');
     expect(inventory?.items.map((item) => item.label)).toEqual([
       'Overview',
@@ -46,7 +46,6 @@ describe('WEB_APPS', () => {
       'Types',
       'Reports',
       'Sync',
-      'Settings',
     ]);
   });
 
@@ -190,5 +189,18 @@ describe('inventory screens inside another page', () => {
   it('maps every listed screen to a page the nav actually has', () => {
     const paths = new Set(inventory.items.map((item) => item.path));
     for (const path of Object.values(INVENTORY_SCREEN_PAGES)) expect(paths).toContain(path);
+  });
+});
+
+describe('isSettingsScreen', () => {
+  it('takes shell screens at or under settings', () => {
+    expect(isSettingsScreen('shell', 'settings')).toBe(true);
+    expect(isSettingsScreen('shell', 'settings/inventory')).toBe(true);
+  });
+
+  it('refuses other areas and look-alike slugs', () => {
+    expect(isSettingsScreen('inventory', 'settings/inventory')).toBe(false);
+    expect(isSettingsScreen('shell', 'settings-old')).toBe(false);
+    expect(isSettingsScreen('shell', undefined)).toBe(false);
   });
 });

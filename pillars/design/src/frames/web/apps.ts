@@ -66,6 +66,18 @@ export function appForArea(area: string | undefined): AppNavConfig | undefined {
   return area === undefined ? undefined : WEB_APPS.find((app) => app.id === area);
 }
 
+/** The playground area for screens of the shell's own apps. */
+export const SHELL_AREA = 'shell';
+
+/**
+ * Whether a screen is a design for the shell's Settings app: area `shell`,
+ * slug `settings` or under it. The frame marks the rail's Settings button
+ * for these and draws no page nav, as the shell does at `/settings`.
+ */
+export function isSettingsScreen(area: string | undefined, slug: string | undefined): boolean {
+  return area === SHELL_AREA && slug !== undefined && /^settings(\/|$)/u.test(slug);
+}
+
 /**
  * Screens whose slug does not name the page they belong to, per app: a
  * segment of another page, a record under a list. Checked before the slug.
