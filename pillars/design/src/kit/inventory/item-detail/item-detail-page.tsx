@@ -1,7 +1,8 @@
 /**
  * An item page: header, notices, then the body for its shape. A container
- * gets the contents-first workspace; anything else gets the E1 layout under
- * review. The page fills the frame and never scrolls; its lists do.
+ * gets the contents-first workspace; anything else gets the split view E1 chose:
+ * facts rail beside tabs. The page fills the frame and never scrolls; its
+ * lists do.
  */
 import { cn } from '@pops/ui';
 
@@ -26,6 +27,7 @@ import type { DetailCondition, DetailLayout, ItemDetailModel } from './detail-mo
 export interface ItemDetailPageProps {
   model: ItemDetailModel;
   condition?: DetailCondition;
+  /** Defaults to `rail-tabs`, the layout E1 chose; `stacked` stages the losing variant. */
   layout?: DetailLayout;
   position?: ListPosition;
   /** Opens a dialog on arrival, for the lifecycle review states. */
@@ -66,7 +68,7 @@ function Body({ props, page }: { props: ItemDetailPageProps; page: Page }) {
     sections: page.sections,
     onQuantity: page.onQuantity,
   };
-  return props.layout === 'rail-tabs' ? <RailTabsBody {...body} /> : <StackedBody {...body} />;
+  return props.layout === 'stacked' ? <StackedBody {...body} /> : <RailTabsBody {...body} />;
 }
 
 /** The item page. */
@@ -77,7 +79,7 @@ export function ItemDetailPage(props: ItemDetailPageProps) {
     dialog: props.initialDialog ?? null,
     workspace: props.workspace,
   });
-  const stacked = props.layout !== 'rail-tabs' && model.item.container === null;
+  const stacked = props.layout === 'stacked' && model.item.container === null;
   return (
     <div
       className={cn(
