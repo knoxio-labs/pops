@@ -34,6 +34,7 @@ import { createRefreshRateLimit, type RefreshRateLimitOptions } from './auth/ref
 import { createRequireCapability } from './auth/require-capability.js';
 import { createRequireDevice } from './auth/require-device.js';
 import { createIdentityMiddleware } from './middleware/identity.js';
+import { createMobileNoStore } from './mobile-no-store.js';
 import {
   CHALLENGE_PATH,
   MOBILE_INVENTORY_MEDIA_UPLOAD_PATH,
@@ -112,6 +113,9 @@ export function createBfmApiApp(deps: BfmApiDeps, options: CreateBfmApiAppOption
   // limiter stands in front of it (POPS-1468). A refused request costs a map
   // lookup instead of a signature check.
   app.use(MOBILE_PATH_PREFIX, createMobileRateLimit(deps.mobileRateLimit).handler);
+
+  // Phone answers are live state, never cache entries: see `mobile-no-store.ts`.
+  app.use(MOBILE_PATH_PREFIX, createMobileNoStore());
 
   // The pairing exchange's own budget, on the same footing and ahead of the
   // body parser for the same reason. A separate limiter rather than a wider
