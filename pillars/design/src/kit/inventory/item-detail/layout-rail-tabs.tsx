@@ -4,11 +4,15 @@
  * History, keyed 1 2 3. Below the split width the rail folds into a first
  * Facts tab, so tablet keeps one pane.
  */
+import { useState } from 'react';
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@pops/ui';
 
 import { ShortcutHint } from '../foundation';
 import { FactsSection } from './facts-section';
 import { PhotosSection } from './photos-section';
+import { RailSplitter } from './rail-splitter';
+import { RAIL_DEFAULT } from './rail-width';
 import { PaneLabel } from './section-parts';
 
 import type { DetailSectionId } from './detail-model';
@@ -83,14 +87,17 @@ export function RailTabsBody(props: DetailBodyProps) {
   const connections = find('connections');
   const history = find('history');
   const content = 'min-h-0 flex-1 overflow-y-auto px-4 py-3 @container';
+  const [railWidth, setRailWidth] = useState(RAIL_DEFAULT);
+  const railStyle: Record<string, string> = { '--rail-width': `${railWidth}px` };
   return (
-    <div className="flex min-h-0 flex-1 gap-5">
+    <div className="flex min-h-0 flex-1" style={railStyle}>
       <aside
         aria-label="Facts"
-        className="hidden w-72 shrink-0 flex-col rounded-xl border bg-card p-4 @2xl:flex @4xl:w-80"
+        className="hidden w-(--rail-width) shrink-0 flex-col rounded-xl border bg-card p-4 @2xl:flex"
       >
         <Rail {...props} />
       </aside>
+      <RailSplitter width={railWidth} onWidth={setRailWidth} />
       <Tabs
         defaultValue={tabOf(props.condition.openSection)}
         className="flex min-h-0 min-w-0 flex-1 flex-col gap-0 rounded-xl border bg-card"

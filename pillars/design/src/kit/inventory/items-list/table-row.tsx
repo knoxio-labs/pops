@@ -20,7 +20,7 @@ import {
   SyncBadge,
   TypeLabel,
 } from '../foundation';
-import { COLUMN } from './table-columns';
+import { useColumnClass } from './column-resize';
 
 import type { ComponentType } from 'react';
 
@@ -77,7 +77,10 @@ function RowVerbs({ item }: { item: ItemRowModel }) {
 
 function NameCell({ item, onOpen }: { item: ItemRowModel; onOpen?: (id: string) => void }) {
   return (
-    <span className="flex min-w-40 flex-1 items-center gap-2 overflow-hidden">
+    <span
+      data-col="name"
+      className={cn(useColumnClass('name'), 'flex items-center gap-2 overflow-hidden')}
+    >
       <ItemMark item={item} />
       <ButtonPrimitive
         variant="ghost"
@@ -98,6 +101,15 @@ function NameCell({ item, onOpen }: { item: ItemRowModel; onOpen?: (id: string) 
   );
 }
 
+function useRowColumns() {
+  return {
+    type: useColumnClass('type'),
+    where: useColumnClass('where'),
+    code: useColumnClass('code'),
+    updated: useColumnClass('updated'),
+  };
+}
+
 function rowTone(props: TableRowProps): string {
   if (props.rejection) return 'bg-warning/10';
   return props.selected ? 'bg-app-accent/10' : 'hover:bg-muted/60';
@@ -106,6 +118,7 @@ function rowTone(props: TableRowProps): string {
 /** One table row. */
 export function TableRow(props: TableRowProps) {
   const { item, world } = props;
+  const col = useRowColumns();
   return (
     <div
       role="row"
@@ -133,23 +146,20 @@ export function TableRow(props: TableRowProps) {
           }}
         />
         <NameCell item={item} onOpen={props.onOpen} />
-        <span className={COLUMN.type}>
+        <span data-col="type" className={col.type}>
           {props.SecondCell ? (
             <props.SecondCell item={item} world={world} />
           ) : (
             <TypeLabel typeName={item.typeName} />
           )}
         </span>
-        <PlacementPath
-          world={world}
-          placement={item.placement}
-          maxSegments={2}
-          className={COLUMN.where}
-        />
-        <span className={COLUMN.code}>
+        <span data-col="where" className={cn(col.where, 'flex items-center overflow-hidden')}>
+          <PlacementPath world={world} placement={item.placement} maxSegments={2} />
+        </span>
+        <span data-col="code" className={col.code}>
           <CodeBadge code={item.code} />
         </span>
-        <span className={COLUMN.trail}>
+        <span data-col="updated" className={col.updated}>
           <span className="hidden h-full items-center text-xs tabular-nums text-muted-foreground group-focus-within:invisible group-hover:invisible group-data-focused:invisible lg:flex">
             {shortDate(item.updatedAt)}
           </span>

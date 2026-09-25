@@ -5,15 +5,25 @@
  * says how many more the cursor-paged list will load on scroll.
  */
 import { ArrowDown } from 'lucide-react';
+import { useRef } from 'react';
 
 import { ButtonPrimitive, Checkbox, cn } from '@pops/ui';
 
+import {
+  ColumnResizeHandle,
+  ColumnWidthsProvider,
+  useColumnClass,
+  useColumnWidths,
+} from './column-resize';
 import { ListBody } from './list-page';
-import { COLUMN } from './table-columns';
 import { TableRow } from './table-row';
+
+import type { ReactNode } from 'react';
 
 import type { ItemRowModel, PlacementWorld, SelectionApi } from '../foundation';
 import type { ItemsSort } from './browse-model';
+import type { ColumnWidthsApi } from './column-resize';
+import type { ColumnId } from './column-widths';
 import type { SecondColumn, TableDensity } from './table-row';
 
 /** Props for {@link ItemsTable}. */
@@ -62,8 +72,29 @@ function SortHeader({
   );
 }
 
-function Header(props: ItemsTableProps) {
-  const { selection, sort = 'name', onSort } = props;
+function HeaderCell({
+  id,
+  label,
+  api,
+  className,
+  children,
+}: {
+  id: ColumnId;
+  label: string;
+  api: ColumnWidthsApi;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <span data-col={id} className={cn(useColumnClass(id), 'relative flex items-center', className)}>
+      {children}
+      <ColumnResizeHandle id={id} label={label} api={api} />
+    </span>
+  );
+}
+
+function Header(props: ItemsTableProps & { api: ColumnWidthsApi }) {
+  const { selection, sort = 'name', onSort, api } = props;
   return (
     <div
       role="row"
@@ -77,35 +108,30 @@ function Header(props: ItemsTableProps) {
           selection.onHeaderToggle();
         }}
       />
-      <SortHeader
-        label="Name"
-        sort="name"
-        active={sort === 'name'}
-        onSort={onSort}
-        className="min-w-40 flex-1 pl-9"
-      />
+      <HeaderCell id="name" label="Name" api={api} className="pl-9">
+        <SortHeader label="Name" sort="name" active={sort === 'name'} onSort={onSort} />
+      </HeaderCell>
       {props.secondColumn ? (
-        <span className={cn(COLUMN.type, 'uppercase tracking-label')}>
+        <HeaderCell
+          id="type"
+          label={props.secondColumn.header}
+          api={api}
+          className="uppercase tracking-label"
+        >
           {props.secondColumn.header}
-        </span>
+        </HeaderCell>
       ) : (
-        <SortHeader
-          label="Type"
-          sort="type"
-          active={sort === 'type'}
-          onSort={onSort}
-          className={COLUMN.type}
-        />
+        <HeaderCell id="type" label="Type" api={api}>
+          <SortHeader label="Type" sort="type" active={sort === 'type'} onSort={onSort} />
+        </HeaderCell>
       )}
-      <SortHeader
-        label="Where"
-        sort="where"
-        active={sort === 'where'}
-        onSort={onSort}
-        className={COLUMN.where}
-      />
-      <span className={cn(COLUMN.code, 'uppercase tracking-label')}>Code</span>
-      <span className={cn(COLUMN.trail, 'flex items-center')}>
+      <HeaderCell id="where" label="Where" api={api}>
+        <SortHeader label="Where" sort="where" active={sort === 'where'} onSort={onSort} />
+      </HeaderCell>
+      <HeaderCell id="code" label="Code" api={api} className="uppercase tracking-label">
+        Code
+      </HeaderCell>
+      <HeaderCell id="updated" label="Updated" api={api}>
         <SortHeader
           label="Updated"
           sort="updated"
@@ -113,7 +139,7 @@ function Header(props: ItemsTableProps) {
           onSort={onSort}
           className="hidden lg:block"
         />
-      </span>
+      </HeaderCell>
     </div>
   );
 }
@@ -127,41 +153,47 @@ function Footer({ shown, total }: { shown: number; total: number }) {
   );
 }
 
-/** The item table. */
+/** The item table. Column edges in the header drag to resize; double-click fits. */
 export function ItemsTable(props: ItemsTableProps) {
   const { rows, world, selection } = props;
+  const tableRef = useRef<HTMLDivElement>(null);
+  const api = useColumnWidths(tableRef);
   return (
     <ListBody>
-      <div
-        role="grid"
-        aria-label={props.label}
-        aria-multiselectable
-        tabIndex={0}
-        className="outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
-        onKeyDown={(event) => {
-          if (selection.onKey(event)) event.preventDefault();
-        }}
-      >
-        <Header {...props} />
-        <div className="divide-y divide-border/60">
-          {rows.map((item) => (
-            <TableRow
-              key={item.id}
-              item={item}
-              world={world}
-              density={props.density ?? 'default'}
-              selected={selection.isSelected(item.id)}
-              focused={selection.state.focusedId === item.id}
-              pending={props.pendingIds?.has(item.id)}
-              rejection={props.rejections?.[item.id] ?? null}
-              SecondCell={props.secondColumn?.Cell}
-              onToggle={selection.onRowToggle}
-              onOpen={props.onOpen}
-            />
-          ))}
+      <ColumnWidthsProvider widths={api.widths}>
+        <div
+          ref={tableRef}
+          role="grid"
+          aria-label={props.label}
+          aria-multiselectable
+          tabIndex={0}
+          style={api.style}
+          className="outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+          onKeyDown={(event) => {
+            if (selection.onKey(event)) event.preventDefault();
+          }}
+        >
+          <Header {...props} api={api} />
+          <div className="divide-y divide-border/60">
+            {rows.map((item) => (
+              <TableRow
+                key={item.id}
+                item={item}
+                world={world}
+                density={props.density ?? 'default'}
+                selected={selection.isSelected(item.id)}
+                focused={selection.state.focusedId === item.id}
+                pending={props.pendingIds?.has(item.id)}
+                rejection={props.rejections?.[item.id] ?? null}
+                SecondCell={props.secondColumn?.Cell}
+                onToggle={selection.onRowToggle}
+                onOpen={props.onOpen}
+              />
+            ))}
+          </div>
+          <Footer shown={rows.length} total={props.total} />
         </div>
-        <Footer shown={rows.length} total={props.total} />
-      </div>
+      </ColumnWidthsProvider>
     </ListBody>
   );
 }
