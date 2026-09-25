@@ -32,7 +32,9 @@ internal struct PurchaseDetailPage: View {
         VStack(alignment: .leading, spacing: PopsSpacing.lg) {
             PurchaseDetailHeader(detail: detail) { viewing = $0 }
             notices
-            PurchaseDetailMatchRow(status: detail.purchase.status)
+            PurchaseBankMatchSection(
+                status: detail.purchase.status, accounting: detail.accounting,
+                charges: detail.charges)
             PurchaseDetailReceipt(detail: detail)
         }
         .padding(.horizontal, PopsSpacing.lg)

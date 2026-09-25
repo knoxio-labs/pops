@@ -15,10 +15,11 @@ internal struct PurchaseDetailLine: Identifiable, Hashable {
 ///
 /// Shaped after `GET /mobile/purchases/:id` and not after the pillar's own
 /// detail, which returns a great deal more. The mobile route answers with the
-/// order, its five component figures, its source, and flat lines of name,
-/// quantity and line total: no charges, no finance links, no shipments, no
-/// per-line tags or units. So this screen shows what a device can actually ask
-/// for, and the absences are the contract's rather than the design's.
+/// order, its five component figures, its source, flat lines of name, quantity
+/// and line total, and the bank match: the accounting split and each charge
+/// with its matched transactions. No shipments, no per-line tags or units. So
+/// this screen shows what a device can actually ask for, and the absences are
+/// the contract's rather than the design's.
 internal struct PurchaseDetail: Identifiable, Hashable {
     internal let purchase: Purchase
     internal let subtotal: MoneyAmount
@@ -31,6 +32,11 @@ internal struct PurchaseDetail: Identifiable, Hashable {
     internal let pages: [StagedPage]
     /// Set once a person has changed the purchase since it was read.
     internal var edit: PurchaseEdit?
+    /// How much of the purchase the statements have proven. `nil` stages a
+    /// server that predates the bank match.
+    internal var accounting: PurchaseAccounting?
+    /// Each charge, with the bank transactions matched to it.
+    internal var charges: [PurchaseCharge] = []
 
     internal var id: String { purchase.id }
 }

@@ -54,7 +54,9 @@ internal struct PurchaseDetailPage: View {
                 Task { await model.openReceipt(at: index) }
             }
             notices
-            PurchaseDetailMatchRow(status: detail.purchase.status)
+            PurchaseBankMatchSection(
+                status: detail.purchase.status, accounting: detail.accounting,
+                charges: detail.charges)
             PurchaseDetailReceipt(detail: detail)
         }
         .padding(.horizontal, PopsSpacing.lg)
