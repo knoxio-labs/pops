@@ -1,7 +1,7 @@
 import { coreWorld } from '@/fixtures/inventory/core';
 import { GARAGE, HALL_CUPBOARD, selected } from '@/fixtures/inventory/location-contents';
 import { recentPlacements } from '@/fixtures/inventory/recents';
-import { buildWorld } from '@/kit/inventory/foundation';
+import { OFFLINE_TITLE, buildWorld } from '@/kit/inventory/foundation';
 import { LocationPage } from '@/kit/inventory/location-page/location-page';
 import { PlaceGone } from '@/kit/inventory/location-page/place-gone';
 import { movePlace } from '@/kit/inventory/locations-tree/tree-model';
@@ -71,7 +71,7 @@ export const states: ScreenStates = {
   offline: page({
     banner: {
       kind: 'offline',
-      title: 'No connection. Showing what loaded.',
+      title: OFFLINE_TITLE,
       detail: 'Storing, moving and deleting come back when the connection does.',
     },
   }),

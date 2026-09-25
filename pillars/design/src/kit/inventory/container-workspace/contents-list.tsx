@@ -3,6 +3,8 @@
  * up, driven by the list keys; or, when there are none, what that means and
  * the one action that changes it.
  */
+import { SearchX } from 'lucide-react';
+
 import { Button, EmptyState } from '@pops/ui';
 
 import { INVENTORY_ICONS, ItemList, ItemRow, RowVerb } from '../foundation';
@@ -42,17 +44,17 @@ function Empty({
   return (
     <div className="flex flex-1 items-center justify-center p-6">
       <EmptyState
-        icon={I.container}
+        icon={filtered ? SearchX : I.container}
         size="sm"
         title={filtered ? `Nothing inside matches “${query.trim()}”` : `Nothing in ${name} yet`}
         description={
           filtered
-            ? 'The filter only looks at what is directly inside.'
+            ? 'The search only looks at what is directly inside.'
             : 'Store things here and they show up in this list.'
         }
         action={
           <Button size="sm" variant="outline" onClick={filtered ? onClearQuery : onStoreHere}>
-            {filtered ? 'Clear filter' : 'Store here'}
+            {filtered ? 'Clear search' : 'Store here'}
           </Button>
         }
       />

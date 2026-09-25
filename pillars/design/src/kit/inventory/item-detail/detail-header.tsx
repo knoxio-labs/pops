@@ -10,6 +10,7 @@ import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button, cn } from '@pops/ui';
 
 import {
+  AccentTile,
   CodeBadge,
   ContainerStateBadge,
   INVENTORY_ICONS,
@@ -115,9 +116,7 @@ export function DetailHeader({ item, world, position, actions, meta }: DetailHea
       {position ? <BackRow position={position} /> : null}
       <div className="flex flex-col gap-3 @3xl:flex-row @3xl:items-center">
         <div className="flex min-w-0 flex-1 items-center gap-3">
-          <span className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-app-accent/15">
-            <Icon className="size-5 text-app-accent" aria-hidden />
-          </span>
+          <AccentTile icon={Icon} size="lg" />
           <div className="flex min-w-0 flex-1 flex-col gap-1">
             <div className="flex min-w-0 items-center gap-2">
               <h1

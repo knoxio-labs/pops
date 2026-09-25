@@ -7,10 +7,10 @@
 import { Search } from 'lucide-react';
 
 import { KeyCombo, SheetPanel } from '../foundation';
-import { ListPage } from '../items-list/list-page';
 import { PageOverlay } from '../items-list/page-overlay';
 import { itemSelectionActions } from '../items-list/selection-actions';
 import { SelectionDock } from '../items-list/selection-dock';
+import { InventoryPage } from '../shared/page-frame';
 import { ActivePreview } from './active-preview';
 import { RecentsList } from './recents-list';
 import { PurchaseList, ResultsList } from './results-list';
@@ -117,7 +117,7 @@ export function SearchPage(props: SearchPageProps) {
   const { world } = props;
   const page = useSearchPage(world, props.purchases, props.seed);
   return (
-    <ListPage
+    <InventoryPage
       title="Search"
       icon={Search}
       actions={<KeyHints />}
@@ -145,7 +145,7 @@ export function SearchPage(props: SearchPageProps) {
       overlay={<NarrowPreview page={page} props={props} />}
     >
       <SearchSplit page={page} props={props} />
-    </ListPage>
+    </InventoryPage>
   );
 }
 

@@ -58,7 +58,7 @@ export function CodeBadge({ code, showNone = false }: { code: string | null; sho
     return showNone ? <span className="text-xs text-muted-foreground">No code</span> : null;
   }
   return (
-    <span className="inline-flex items-center gap-1 font-mono text-xs text-muted-foreground">
+    <span className="relative inline-flex items-center gap-1 font-mono text-xs text-muted-foreground">
       <Icon className="size-3.5" aria-hidden />
       <span className="sr-only">Code</span>
       {code}

@@ -10,10 +10,10 @@ import { useMemo } from 'react';
 import { INVENTORY_ICONS } from '../foundation';
 import { ItemsBody } from '../items-list/items-body';
 import { OfflineBanner } from '../items-list/items-page';
-import { ListPage } from '../items-list/list-page';
-import { NewItemButton } from '../items-list/new-item-button';
 import { SelectionDock } from '../items-list/selection-dock';
 import { useItemsBrowser } from '../items-list/use-items-browser';
+import { NewItemButton } from '../shared/new-item-button';
+import { InventoryPage } from '../shared/page-frame';
 import { containerActions } from './container-actions';
 import { inSegment, movingOrder, packingProgress } from './containers-model';
 import { ContainersToolbar } from './containers-toolbar';
@@ -63,7 +63,7 @@ export function ContainersPage(props: ContainersPageProps) {
     '/inventory/containers'
   );
   return (
-    <ListPage
+    <InventoryPage
       title="Containers"
       icon={INVENTORY_ICONS.container}
       actions={<NewItemButton label="New container" offline={props.offline} />}
@@ -98,6 +98,6 @@ export function ContainersPage(props: ContainersPageProps) {
         noun="containers"
         secondColumn={{ header: 'Holds', Cell: HoldsCell }}
       />
-    </ListPage>
+    </InventoryPage>
   );
 }

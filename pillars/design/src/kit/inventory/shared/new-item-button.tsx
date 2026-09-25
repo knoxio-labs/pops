@@ -15,16 +15,20 @@ import {
   cn,
 } from '@pops/ui';
 
-import { HintTooltip, ShortcutHint } from '../foundation';
+import { HintTooltip } from './hint-tooltip';
+import { ShortcutHint } from './kbd';
 
 /** New item, and a menu for Bulk entry and Import. */
 export function NewItemButton({
   label = 'New item',
   offline = false,
+  onNavigate,
 }: {
   label?: string;
   /** No connection: adding is off, and the tooltip says why. */
   offline?: boolean;
+  /** Opens the page each choice leads to. */
+  onNavigate?: (path: string) => void;
 }) {
   return (
     <span className="flex items-center">
@@ -37,6 +41,7 @@ export function NewItemButton({
           aria-disabled={offline || undefined}
           className={cn('rounded-r-none', offline && 'opacity-50')}
           prefix={<Plus className="size-4" aria-hidden />}
+          onClick={offline ? undefined : () => onNavigate?.('/inventory/items/new')}
         >
           {label}
         </Button>
@@ -53,12 +58,12 @@ export function NewItemButton({
           </ButtonPrimitive>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
-          <DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => onNavigate?.('/inventory/items/bulk-new')}>
             <ListPlus className="size-4" aria-hidden />
             Bulk entry
             <ShortcutHint id="bulk-entry" className="ml-auto" />
           </DropdownMenuItem>
-          <DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => onNavigate?.('/inventory/import')}>
             <FileUp className="size-4" aria-hidden />
             Import CSV
           </DropdownMenuItem>

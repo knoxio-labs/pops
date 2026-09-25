@@ -1,7 +1,9 @@
 /**
- * A segmented control on the tabs primitive: one row of choices, each with
- * an optional count, the active one raised. Used for Activity | Sync and
- * for the Sync lists.
+ * The one segmented control: a row of choices on the tabs primitive, each
+ * with an optional count, the active one raised (or underlined). Page
+ * segments (Activity | Sync, Connections | Fixtures, a report's tabs, a
+ * place's lists) and in-page switches all use it, so a count reads the
+ * same everywhere.
  */
 import { Tabs, TabsList, TabsTrigger, cn } from '@pops/ui';
 
@@ -27,6 +29,21 @@ function isSegment<T extends string>(segments: readonly Segment<T>[], raw: strin
   return segments.some((segment) => segment.id === raw);
 }
 
+function Count({ count, alert }: { count: number; alert: boolean }) {
+  return (
+    <span
+      className={cn(
+        'tabular-nums',
+        alert && count > 0
+          ? 'min-w-5 rounded-full bg-warning/20 px-1.5 text-2xs font-semibold text-foreground'
+          : 'text-xs text-muted-foreground'
+      )}
+    >
+      {count}
+    </span>
+  );
+}
+
 /** The control. */
 export function Segmented<T extends string>({
   label,
@@ -42,23 +59,14 @@ export function Segmented<T extends string>({
       onValueChange={(raw) => {
         if (isSegment(segments, raw)) onChange?.(raw);
       }}
-      className={className}
+      className={cn('self-start', className)}
     >
       <TabsList aria-label={label} variant={variant}>
         {segments.map((segment) => (
-          <TabsTrigger key={segment.id} value={segment.id} className="gap-1.5 px-3">
+          <TabsTrigger key={segment.id} value={segment.id} className="flex-none gap-1.5 px-3">
             {segment.label}
             {segment.count === undefined ? null : (
-              <span
-                className={cn(
-                  'min-w-5 rounded-full px-1.5 text-2xs font-semibold tabular-nums',
-                  segment.alert === true && segment.count > 0
-                    ? 'bg-warning/20 text-foreground'
-                    : 'bg-muted-foreground/15 text-muted-foreground'
-                )}
-              >
-                {segment.count}
-              </span>
+              <Count count={segment.count} alert={segment.alert === true} />
             )}
           </TabsTrigger>
         ))}

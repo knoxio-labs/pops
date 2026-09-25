@@ -3,13 +3,14 @@
  * and what just happened, with the verbs that finish each. The panels fill
  * the viewport and scroll inside; the page itself never scrolls.
  */
-import { FileUp, LayoutDashboard, Plus, Rows3 } from 'lucide-react';
+import { LayoutDashboard } from 'lucide-react';
 
-import { Button, Skeleton } from '@pops/ui';
+import { Skeleton } from '@pops/ui';
 
-import { ShortcutHint } from '../shared/kbd';
+import { NewItemButton } from '../shared/new-item-button';
+import { InventoryPage } from '../shared/page-frame';
 import { FirstRunCard } from './first-run';
-import { InventoryPage, LoadError } from './inventory-page';
+import { LoadError } from './inventory-page';
 import { MovingDayStrip } from './moving-day-strip';
 import { movingProgress, openContainerRows, overviewCounts } from './overview-model';
 import { InHandPanel, OpenContainersPanel } from './overview-panels';
@@ -33,43 +34,6 @@ export interface OverviewPageProps {
   /** Present while a move is under way. */
   moving?: { destination: string };
   onNavigate?: (path: string) => void;
-}
-
-function HeaderActions({ onNavigate }: { onNavigate?: (path: string) => void }) {
-  return (
-    <div className="flex items-center gap-2">
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => onNavigate?.('/inventory/import')}
-        prefix={<FileUp className="size-4" aria-hidden />}
-      >
-        Import
-      </Button>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => onNavigate?.('/inventory/items/bulk-new')}
-        prefix={<Rows3 className="size-4" aria-hidden />}
-        suffix={<ShortcutHint id="bulk-entry" />}
-      >
-        Bulk entry
-      </Button>
-      <Button
-        size="sm"
-        onClick={() => onNavigate?.('/inventory/items/new')}
-        prefix={<Plus className="size-4" aria-hidden />}
-        suffix={
-          <ShortcutHint
-            id="new-item"
-            className="[&_kbd]:border-primary-foreground/30 [&_kbd]:bg-primary-foreground/15 [&_kbd]:text-primary-foreground"
-          />
-        }
-      >
-        New item
-      </Button>
-    </div>
-  );
 }
 
 function Panels({ world, events, now, disabledReason, moving, onNavigate }: OverviewPageProps) {
@@ -130,9 +94,11 @@ export function OverviewPage(props: OverviewPageProps) {
     <InventoryPage
       title="Overview"
       icon={LayoutDashboard}
-      actions={<HeaderActions onNavigate={props.onNavigate} />}
+      actions={
+        <NewItemButton offline={props.disabledReason !== undefined} onNavigate={props.onNavigate} />
+      }
       banner={props.banner}
-      className="gap-3"
+      bodyClassName="gap-3"
     >
       {body === 'panels' ? <Panels {...props} /> : null}
       {body === 'first-run' ? <FirstRunCard onNavigate={props.onNavigate} /> : null}

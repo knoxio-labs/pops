@@ -7,6 +7,8 @@ import { Shapes } from 'lucide-react';
 
 import { PageHeader, cn } from '@pops/ui';
 
+import { AccentTile } from '../shared/page-frame';
+
 import type { ReactNode } from 'react';
 
 /** The gallery page: header plus the state's specimens. */
@@ -21,15 +23,7 @@ export function GalleryPage({
 }) {
   return (
     <div className="space-y-4">
-      <PageHeader
-        title={title}
-        description={description}
-        icon={
-          <span className="flex size-9 items-center justify-center rounded-lg bg-app-accent/15">
-            <Shapes className="size-5 text-app-accent" aria-hidden />
-          </span>
-        }
-      />
+      <PageHeader title={title} description={description} icon={<AccentTile icon={Shapes} />} />
       {children}
     </div>
   );

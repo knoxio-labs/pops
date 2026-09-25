@@ -43,6 +43,7 @@ function Verb({
       detail={verb.detail}
       disabledReason={verb.disabledReason}
       variant={primary ? 'default' : 'outline'}
+      size="default"
       onClick={() => props.onVerb?.(verb)}
     />
   );

@@ -7,9 +7,10 @@
 import { useState } from 'react';
 
 import { ActivityFeed } from '../activity/activity-feed';
-import { InventoryPage, ToastDock } from '../overview/inventory-page';
+import { ToastDock } from '../overview/inventory-page';
 import { INVENTORY_ICONS } from '../shared/icons';
-import { Segmented } from './segmented';
+import { InventoryPage } from '../shared/page-frame';
+import { Segmented } from '../shared/segmented';
 import { SyncSegment } from './sync-segment';
 
 import type { ReactNode } from 'react';
@@ -44,7 +45,7 @@ export function SyncPage(props: SyncPageProps) {
         title="Sync"
         icon={INVENTORY_ICONS.sync}
         banner={props.banner}
-        className="gap-3"
+        bodyClassName="gap-3"
         actions={
           <Segmented
             label="Show"

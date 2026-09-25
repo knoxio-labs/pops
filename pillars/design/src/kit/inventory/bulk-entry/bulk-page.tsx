@@ -9,7 +9,8 @@ import { ListPlus } from 'lucide-react';
 import { Button, Select } from '@pops/ui';
 
 import { PlacementPath } from '../foundation';
-import { ListBody, ListPage } from '../items-list/list-page';
+import { ListBody } from '../items-list/list-page';
+import { InventoryPage } from '../shared/page-frame';
 import { BulkActionBar } from './bulk-action-bar';
 import { BulkGridHeader, BulkGridRow } from './bulk-grid';
 import { BulkBanner } from './bulk-status';
@@ -92,7 +93,7 @@ export function BulkPage(props: BulkPageProps) {
   const nextBlank = grid.findIndex((row) => isBlank(row));
   const destination = destinationName(props);
   return (
-    <ListPage
+    <InventoryPage
       title="Bulk entry"
       icon={ListPlus}
       description="Add many items at once. Ready rows are created; rows that need fixing stay here."
@@ -130,7 +131,7 @@ export function BulkPage(props: BulkPageProps) {
           })}
         </div>
       </ListBody>
-    </ListPage>
+    </InventoryPage>
   );
 }
 

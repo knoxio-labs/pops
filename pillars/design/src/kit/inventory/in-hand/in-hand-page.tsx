@@ -7,11 +7,12 @@ import { useMemo } from 'react';
 
 import { Button, Card, EmptyState, Skeleton } from '@pops/ui';
 
-import { InventoryPage, LoadError, ToastDock } from '../overview/inventory-page';
+import { LoadError, ToastDock } from '../overview/inventory-page';
 import { HintTooltip } from '../shared/hint-tooltip';
 import { INVENTORY_ICONS } from '../shared/icons';
 import { ItemList } from '../shared/item-row';
 import { ShortcutHint } from '../shared/kbd';
+import { InventoryPage } from '../shared/page-frame';
 import { SelectionBar } from '../shared/selection-bar';
 import { useSelection } from '../shared/use-selection';
 import { orderInHand, planPutBackAll } from './in-hand-model';
@@ -51,7 +52,6 @@ function PutBackAllButton({
   return (
     <HintTooltip label={plan.label} disabledReason={reason}>
       <Button
-        size="sm"
         aria-disabled={reason !== undefined || undefined}
         className={reason === undefined ? undefined : 'opacity-50'}
         prefix={<I.putBack className="size-4" aria-hidden />}
@@ -152,7 +152,7 @@ export function InHandPage(props: InHandPageProps) {
       title="In hand"
       icon={I.inHand}
       banner={props.banner}
-      className="gap-3"
+      bodyClassName="gap-3"
       actions={
         hasItems && body === 'list' ? (
           <div className="flex items-center gap-2">

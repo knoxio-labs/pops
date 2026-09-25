@@ -1,9 +1,7 @@
 import { ConnectionsTabs } from '@/kit/inventory/connections/connections-page';
-import { HintTooltip } from '@/kit/inventory/foundation';
+import { HintTooltip, InventoryPage, OFFLINE_REASON } from '@/kit/inventory/foundation';
 import {
-  InventoryPage,
   LoadFailedBody,
-  OFFLINE_REASON,
   PageStateBanner,
   ScrollPanel,
   SkeletonRows,

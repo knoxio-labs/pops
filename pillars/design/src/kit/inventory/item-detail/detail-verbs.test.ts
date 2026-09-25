@@ -1,7 +1,8 @@
 import { coreItem, coreWorld } from '@/fixtures/inventory/core';
 import { describe, expect, it } from 'vitest';
 
-import { OFFLINE_REASON, detailVerbs } from './detail-verbs';
+import { OFFLINE_REASON } from '../foundation';
+import { detailVerbs } from './detail-verbs';
 
 import type { ItemRowModel } from '../foundation';
 

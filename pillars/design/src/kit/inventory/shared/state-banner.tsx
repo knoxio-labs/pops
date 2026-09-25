@@ -12,6 +12,12 @@ import { INVENTORY_ICONS } from './icons';
 import type { LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 
+/** The offline banner's line (spec 3.8); its detail names what is off. */
+export const OFFLINE_TITLE = 'No connection. Showing what loaded.';
+
+/** Why a change is off while offline: the tooltip on every refused verb. */
+export const OFFLINE_REASON = 'No connection. Changes are off until it is back.';
+
 /** What the banner reports. */
 export type StateBannerKind = 'stale' | 'offline' | 'conflict' | 'needs-attention' | 'error';
 

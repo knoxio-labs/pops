@@ -1,4 +1,4 @@
-import { StateBanner } from '@/kit/inventory/foundation';
+import { OFFLINE_TITLE, StateBanner } from '@/kit/inventory/foundation';
 /**
  * The generic page states (spec 3.8) as the secondary pages draw them: the
  * stale and offline banners, the failed-load body, and the reason a verb is
@@ -12,9 +12,6 @@ import { EmptyBody } from './list-parts';
 
 /** Data is not simply fine: changed elsewhere, or no connection. */
 export type PageBanner = 'stale' | 'offline';
-
-/** Why a change is off while offline; doubles as the tooltip. */
-export const OFFLINE_REASON = 'No connection. Changes are off until it is back.';
 
 /** The stale or offline banner for a page listing `what`. */
 export function PageStateBanner({
@@ -41,7 +38,7 @@ export function PageStateBanner({
     return (
       <StateBanner
         kind="offline"
-        title="No connection. Showing what loaded."
+        title={OFFLINE_TITLE}
         detail="Changes are off until the connection is back."
       />
     );

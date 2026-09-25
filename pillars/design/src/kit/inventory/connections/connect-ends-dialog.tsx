@@ -144,12 +144,7 @@ function Footer({ draft, props }: { draft: ConnectDraft; props: ConnectEndsDialo
         </Button>
         <Button
           disabled={!verdict.ok}
-          suffix={
-            <ShortcutHint
-              id="form-save"
-              className="[&_kbd]:border-primary-foreground/30 [&_kbd]:bg-primary-foreground/15 [&_kbd]:text-primary-foreground"
-            />
-          }
+          suffix={<ShortcutHint id="form-save" onPrimary />}
           onClick={connect}
         >
           Connect

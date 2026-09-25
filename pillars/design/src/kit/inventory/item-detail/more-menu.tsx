@@ -58,7 +58,7 @@ export function MoreMenu({ groups, defaultOpen = false, onSelect }: MoreMenuProp
   return (
     <DropdownMenuRoot defaultOpen={defaultOpen} modal={false}>
       <DropdownMenuTrigger asChild>
-        <ButtonPrimitive variant="outline" size="icon-sm" aria-label="More actions">
+        <ButtonPrimitive variant="outline" size="icon" aria-label="More actions">
           <MoreHorizontal className="size-4" aria-hidden />
         </ButtonPrimitive>
       </DropdownMenuTrigger>

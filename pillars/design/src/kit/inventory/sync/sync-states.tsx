@@ -15,7 +15,7 @@ import {
 } from '@/fixtures/inventory/sync-ledger';
 
 import { NO_FILTER } from '../activity/activity-model';
-import { StateBanner } from '../shared/state-banner';
+import { OFFLINE_REASON, OFFLINE_TITLE, StateBanner } from '../shared/state-banner';
 import { UndoToast } from '../shared/undo-toast';
 import { ReloadRequired, SessionExpired } from './interruptions';
 import { LetGoSheet, SettledSheet } from './outcome-sheets';
@@ -59,12 +59,10 @@ export function repairState(repair: RepairCase): ComponentType {
   return syncState({ sync: { ledger, openCaseId: repair.id } });
 }
 
-const OFFLINE = 'No connection. Changes are off until it is back';
-
 const offlineBanner = (
   <StateBanner
     kind="offline"
-    title="No connection. Showing what loaded at 10:42."
+    title={OFFLINE_TITLE}
     detail="Web actions and Undo are off until the connection is back."
     actionLabel="Retry"
   />
@@ -94,7 +92,11 @@ export const activityStates: Readonly<Record<string, ComponentType>> = {
     ),
   }),
   loading: syncState({ segment: 'activity', activity: { loading: true } }),
-  offline: syncState({ segment: 'activity', disabledReason: OFFLINE, banner: offlineBanner }),
+  offline: syncState({
+    segment: 'activity',
+    disabledReason: OFFLINE_REASON,
+    banner: offlineBanner,
+  }),
 };
 
 /** The Sync segment's list, all-clear, outcome and interruption states. */
@@ -128,7 +130,7 @@ export const ledgerStates: Readonly<Record<string, ComponentType>> = {
   }),
   'session-expired': syncState({ blocker: <SessionExpired /> }),
   offline: syncState({
-    disabledReason: OFFLINE,
+    disabledReason: OFFLINE_REASON,
     banner: offlineBanner,
     sync: { openCaseId: busyLedger.attention[0]?.id },
   }),
