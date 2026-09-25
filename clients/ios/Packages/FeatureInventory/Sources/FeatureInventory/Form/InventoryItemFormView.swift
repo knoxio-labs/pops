@@ -197,12 +197,15 @@ extension InventoryItemFormView {
             "Type",
             selection: Binding(get: { selected.typeId }, set: { model.selectProtocol2Type($0) })
         ) {
-            let types = catalogue.types.filter { $0.archivedAt == nil || $0.id == selected.typeId }
-            ForEach(types) { type in
-                Text(type.label).tag(type.id)
+            let options = InventoryFormTypeOptions.protocol2(catalogue, selectedId: selected.typeId)
+            ForEach(options) { option in
+                Text(option.label)
+                    .tag(option.id)
+                    .accessibilityIdentifier(option.accessibilityIdentifier)
             }
         }
         .pickerStyle(.menu)
+        .accessibilityIdentifier(InventoryAccessibility.itemTypePicker)
     }
 
     @ViewBuilder

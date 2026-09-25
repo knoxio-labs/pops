@@ -15,11 +15,46 @@ internal struct InventoryFormTypeRow: View {
             if offersNone {
                 Text("No type yet").tag(String?.none)
             }
-            ForEach(types) { type in
-                Text(type.name).tag(Optional(type.key))
+            ForEach(InventoryFormTypeOptions.legacy(types)) { option in
+                Text(option.label)
+                    .tag(Optional(option.id))
+                    .accessibilityIdentifier(option.accessibilityIdentifier)
             }
         }
         .pickerStyle(.menu)
+        .accessibilityIdentifier(InventoryAccessibility.itemTypePicker)
+    }
+}
+
+/// One entry of the item form's Type menu.
+internal struct InventoryFormTypeOption: Identifiable, Equatable {
+    internal let id: String
+    internal let label: String
+
+    /// The option's handle for a driver: its words are owner-authored and
+    /// may repeat, its id never does.
+    internal var accessibilityIdentifier: String {
+        InventoryAccessibility.itemTypeOption(id: id)
+    }
+}
+
+/// What the Type menu lists, apart from the menu itself, so the options and
+/// the handles automation taps them by are pinned by a test.
+internal enum InventoryFormTypeOptions {
+    /// Every active type in catalogue order, plus `selectedId` even once
+    /// archived: an item already of a retired type still reads its type,
+    /// but no other item can newly take it.
+    internal static func protocol2(
+        _ catalogue: InventoryCatalogueSnapshot, selectedId: String
+    ) -> [InventoryFormTypeOption] {
+        catalogue.types
+            .filter { $0.archivedAt == nil || $0.id == selectedId }
+            .map { InventoryFormTypeOption(id: $0.id, label: $0.label) }
+    }
+
+    /// A protocol-1 catalogue's types, keyed by type key.
+    internal static func legacy(_ types: [InventoryType]) -> [InventoryFormTypeOption] {
+        types.map { InventoryFormTypeOption(id: $0.key, label: $0.name) }
     }
 }
 

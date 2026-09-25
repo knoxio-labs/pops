@@ -189,15 +189,6 @@ internal enum InventoryProtocol2ReferenceTargets {
     }
 }
 
-internal enum InventoryProtocol2EnumOptions {
-    internal static func selectable(
-        for field: InventoryCatalogueField, retaining selectedId: String?
-    ) -> [InventoryCatalogueOption] {
-        field.enumOptions.filter { $0.archivedAt == nil || $0.id == selectedId }
-            .sorted { ($0.sortOrder, $0.id) < ($1.sortOrder, $1.id) }
-    }
-}
-
 internal enum InventoryProtocol2Display {
     internal static func text(
         for values: [InventoryPrimitiveValue], field: InventoryCatalogueField,
@@ -245,7 +236,7 @@ internal enum InventoryProtocol2Display {
         guard let option = field.enumOptions.first(where: { $0.id == optionId }) else {
             return "Unknown option"
         }
-        return option.archivedAt == nil ? option.label : "\(option.label) (Retired)"
+        return InventoryProtocol2EnumOptions.label(of: option)
     }
 
     private static func reference(
