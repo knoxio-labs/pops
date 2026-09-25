@@ -12,11 +12,9 @@ import { ListBody } from './list-page';
 import { COLUMN } from './table-columns';
 import { TableRow } from './table-row';
 
-import type { ReactNode } from 'react';
-
 import type { ItemRowModel, PlacementWorld, SelectionApi } from '../foundation';
 import type { ItemsSort } from './browse-model';
-import type { TableDensity } from './table-row';
+import type { SecondColumn, TableDensity } from './table-row';
 
 /** Props for {@link ItemsTable}. */
 export interface ItemsTableProps {
@@ -29,9 +27,8 @@ export interface ItemsTableProps {
   onSort?: (sort: ItemsSort) => void;
   pendingIds?: ReadonlySet<string>;
   rejections?: Readonly<Record<string, string>>;
-  /** Label of the second column; "Type" unless a browser replaces it. */
-  secondHeader?: string;
-  secondCell?: (item: ItemRowModel) => ReactNode;
+  /** Replaces the Type column: Containers shows what each box holds. */
+  secondColumn?: SecondColumn;
   onOpen?: (id: string) => void;
   label: string;
 }
@@ -87,8 +84,10 @@ function Header(props: ItemsTableProps) {
         onSort={onSort}
         className="flex-1 pl-9"
       />
-      {props.secondHeader ? (
-        <span className={cn(COLUMN.type, 'uppercase tracking-label')}>{props.secondHeader}</span>
+      {props.secondColumn ? (
+        <span className={cn(COLUMN.type, 'uppercase tracking-label')}>
+          {props.secondColumn.header}
+        </span>
       ) : (
         <SortHeader
           label="Type"
@@ -155,7 +154,7 @@ export function ItemsTable(props: ItemsTableProps) {
               focused={selection.state.focusedId === item.id}
               pending={props.pendingIds?.has(item.id)}
               rejection={props.rejections?.[item.id] ?? null}
-              secondCell={props.secondCell?.(item)}
+              SecondCell={props.secondColumn?.Cell}
               onToggle={selection.onRowToggle}
               onOpen={props.onOpen}
             />

@@ -4,22 +4,23 @@
  * states open it with a seed (filters, view, selection) and optionally a
  * banner and an overlay (a bulk sheet) drawn over it.
  */
-import { INVENTORY_ICONS, SelectionBar, StateBanner } from '../foundation';
+import { INVENTORY_ICONS, StateBanner } from '../foundation';
 import { ExportMenu } from './export-menu';
 import { ItemsBody } from './items-body';
 import { ItemsSummary } from './items-summary';
 import { ItemsToolbar } from './items-toolbar';
 import { ListPage } from './list-page';
 import { NewItemButton } from './new-item-button';
-import { carriedCount, itemSelectionActions } from './selection-actions';
+import { itemSelectionActions } from './selection-actions';
+import { SelectionDock } from './selection-dock';
 import { useItemsBrowser } from './use-items-browser';
 
 import type { ReactNode } from 'react';
 
-import type { ItemRowModel, PlacementWorld, SelectionBarAction } from '../foundation';
+import type { ItemRowModel, PlacementWorld } from '../foundation';
 import type { FilterOption } from './filter-popover';
 import type { ListStatus } from './items-body';
-import type { BrowserSeed } from './use-items-browser';
+import type { BrowserSeed, ItemsBrowser } from './use-items-browser';
 
 /** Props for {@link ItemsPage}. */
 export interface ItemsPageProps {
@@ -38,10 +39,6 @@ export interface ItemsPageProps {
   rejections?: Readonly<Record<string, string>>;
 }
 
-function offlineActions(actions: SelectionBarAction[]): SelectionBarAction[] {
-  return actions.map((action) => ({ ...action, disabledReason: 'No connection' }));
-}
-
 /** The offline banner every list page shows the same way. */
 export function OfflineBanner() {
   return (
@@ -53,12 +50,35 @@ export function OfflineBanner() {
   );
 }
 
+function ItemsHead({ browser, props }: { browser: ItemsBrowser; props: ItemsPageProps }) {
+  return (
+    <>
+      <ItemsToolbar
+        filters={browser.filters}
+        view={browser.view}
+        types={props.types}
+        places={props.places}
+        onFilters={browser.setFilters}
+        onClear={browser.clearFilters}
+        onView={browser.setView}
+        filterOpen={props.filterOpen}
+      />
+      <ItemsSummary
+        shown={browser.total}
+        total={browser.baseline}
+        noun="items"
+        hiddenInactive={browser.hidden}
+        chips={browser.chips}
+        address={browser.address}
+      />
+    </>
+  );
+}
+
 /** The Items page. */
 export function ItemsPage(props: ItemsPageProps) {
   const { items, world, status = 'ready' } = props;
   const browser = useItemsBrowser(items, world, props.seed);
-  const ids = browser.selection.selectedIds;
-  const actions = itemSelectionActions(world, ids);
   return (
     <ListPage
       title="Items"
@@ -74,37 +94,14 @@ export function ItemsPage(props: ItemsPageProps) {
         </>
       }
       banner={props.offline ? <OfflineBanner /> : props.banner}
-      toolbar={
-        <>
-          <ItemsToolbar
-            filters={browser.filters}
-            view={browser.view}
-            types={props.types}
-            places={props.places}
-            onFilters={browser.setFilters}
-            onClear={browser.clearFilters}
-            onView={browser.setView}
-            filterOpen={props.filterOpen}
-          />
-          <ItemsSummary
-            shown={browser.total}
-            total={browser.baseline}
-            noun="items"
-            hiddenInactive={browser.hidden}
-            chips={browser.chips}
-            address={browser.address}
-          />
-        </>
-      }
+      toolbar={<ItemsHead browser={browser} props={props} />}
       dock={
-        <SelectionBar
-          count={browser.selection.count}
+        <SelectionDock
+          world={world}
+          selection={browser.selection}
           loadedCount={browser.rows.length}
-          coverage={browser.selection.coverage}
-          actions={props.offline ? offlineActions(actions) : actions}
-          carriedCount={carriedCount(world, ids)}
-          onSelectAll={browser.selection.onHeaderToggle}
-          onClear={browser.selection.clearSelection}
+          actions={itemSelectionActions(world, browser.selection.selectedIds)}
+          offline={props.offline}
         />
       }
       overlay={props.overlay}

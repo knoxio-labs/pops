@@ -16,17 +16,13 @@ function accessVerb(world: PlacementWorld, ids: readonly string[]): SelectionBar
     : { id: 'close', label: 'Close', icon: INVENTORY_ICONS.closed };
 }
 
-/** Bar verbs for selected containers; every verb is off while offline. */
+/** Bar verbs for selected containers. */
 export function containerActions(
   world: PlacementWorld,
-  ids: readonly string[],
-  offline: boolean
+  ids: readonly string[]
 ): SelectionBarAction[] {
   const base = itemSelectionActions(world, ids).map((action) =>
     action.id === 'set-field' ? { ...action, overflow: true } : action
   );
-  const actions = [...base.slice(0, 2), accessVerb(world, ids), ...base.slice(2)];
-  return offline
-    ? actions.map((action) => ({ ...action, disabledReason: 'No connection' }))
-    : actions;
+  return [...base.slice(0, 2), accessVerb(world, ids), ...base.slice(2)];
 }

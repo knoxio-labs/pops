@@ -22,7 +22,7 @@ import {
 } from '../foundation';
 import { COLUMN } from './table-columns';
 
-import type { ReactNode } from 'react';
+import type { ComponentType } from 'react';
 
 import type { ItemRowModel, PlacementWorld } from '../foundation';
 
@@ -41,7 +41,13 @@ export interface TableRowProps {
   onToggle?: (id: string, shiftKey: boolean) => void;
   onOpen?: (id: string) => void;
   /** Replaces the Type cell: the Containers browser shows what a box holds there. */
-  secondCell?: ReactNode;
+  SecondCell?: SecondColumn['Cell'];
+}
+
+/** A browser's own second column, in place of Type. */
+export interface SecondColumn {
+  header: string;
+  Cell: ComponentType<{ item: ItemRowModel; world: PlacementWorld }>;
 }
 
 const thisYear = new Intl.DateTimeFormat('en-AU', { day: 'numeric', month: 'short' });
@@ -126,7 +132,11 @@ export function TableRow(props: TableRowProps) {
         />
         <NameCell item={item} onOpen={props.onOpen} />
         <span className={COLUMN.type}>
-          {props.secondCell ?? <TypeLabel typeName={item.typeName} />}
+          {props.SecondCell ? (
+            <props.SecondCell item={item} world={world} />
+          ) : (
+            <TypeLabel typeName={item.typeName} />
+          )}
         </span>
         <PlacementPath
           world={world}

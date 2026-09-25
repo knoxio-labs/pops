@@ -69,6 +69,23 @@ function TypeFields({ filters, types, onChange, scope }: FilterPopoverProps) {
   );
 }
 
+function InactiveField({ filters, onChange, scope }: FilterPopoverProps) {
+  return (
+    <div
+      className={cn('flex items-center justify-between gap-3', scope === 'containers' && 'hidden')}
+    >
+      <Label htmlFor="items-filter-inactive" className="font-normal">
+        Include retired, discarded, lost and destroyed
+      </Label>
+      <Switch
+        id="items-filter-inactive"
+        checked={filters.inactive}
+        onCheckedChange={(checked) => onChange({ inactive: checked })}
+      />
+    </div>
+  );
+}
+
 /** The filter button and its popover. */
 export function FilterPopover(props: FilterPopoverProps) {
   const { filters, places, onChange, onClear } = props;
@@ -107,21 +124,7 @@ export function FilterPopover(props: FilterPopoverProps) {
           />
           <p className="text-xs text-muted-foreground">Includes what is inside boxes there.</p>
         </div>
-        <div
-          className={cn(
-            'flex items-center justify-between gap-3',
-            props.scope === 'containers' && 'hidden'
-          )}
-        >
-          <Label htmlFor="items-filter-inactive" className="font-normal">
-            Include retired, discarded, lost and destroyed
-          </Label>
-          <Switch
-            id="items-filter-inactive"
-            checked={filters.inactive}
-            onCheckedChange={(checked) => onChange({ inactive: checked })}
-          />
-        </div>
+        <InactiveField {...props} />
         {count > 0 ? (
           <Button variant="ghost" size="sm" className="w-full" onClick={onClear}>
             Clear filters

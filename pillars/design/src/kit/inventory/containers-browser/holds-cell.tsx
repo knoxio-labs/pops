@@ -4,11 +4,11 @@
  */
 import { holds } from './containers-model';
 
-import type { PlacementWorld } from '../foundation';
+import type { ItemRowModel, PlacementWorld } from '../foundation';
 
 /** The Holds cell. */
-export function HoldsCell({ world, id }: { world: PlacementWorld; id: string }) {
-  const { direct, deep } = holds(world, id);
+export function HoldsCell({ item, world }: { item: ItemRowModel; world: PlacementWorld }) {
+  const { direct, deep } = holds(world, item.id);
   if (direct === 0) return <span className="text-xs text-muted-foreground">Empty</span>;
   return (
     <span className="text-xs leading-4 tabular-nums">

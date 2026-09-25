@@ -116,16 +116,46 @@ export function searchInventory(
   return { exact, items, places: placeHits(world, q, filters) };
 }
 
-/** Every result id in the order the keyboard walks them. */
+/** Item hits split as the page draws them: name matches, then matches elsewhere. */
+export function splitHits(items: readonly ItemHit[]): { byName: ItemHit[]; elsewhere: ItemHit[] } {
+  return {
+    byName: items.filter((hit) => hit.tier !== 'other'),
+    elsewhere: items.filter((hit) => hit.tier === 'other'),
+  };
+}
+
+/**
+ * Every result id in the order the page draws and the keyboard walks them:
+ * the exact code, items matched by name, places matched by name, then items
+ * matched only in another field or by where they sit.
+ */
 export function resultOrder(results: InventoryResults): string[] {
+  const { byName, elsewhere } = splitHits(results.items);
   return [
     ...(results.exact ? [results.exact.id] : []),
-    ...results.items.map((hit) => hit.item.id),
+    ...byName.map((hit) => hit.item.id),
     ...results.places.map((hit) => hit.place.id),
+    ...elsewhere.map((hit) => hit.item.id),
   ];
 }
 
 /** How many results a query found, for the scope chip's count. */
 export function resultCount(results: InventoryResults): number {
   return (results.exact ? 1 : 0) + results.items.length + results.places.length;
+}
+
+/**
+ * The next active row for a key step: clamps at both ends rather than
+ * wrapping, and starts from the top when nothing is active or the active
+ * row has left the results.
+ */
+export function stepActive(
+  order: readonly string[],
+  activeId: string | null,
+  delta: number
+): string | null {
+  if (order.length === 0) return null;
+  const index = activeId === null ? -1 : order.indexOf(activeId);
+  if (index === -1) return order[0] ?? null;
+  return order[Math.min(order.length - 1, Math.max(0, index + delta))] ?? null;
 }

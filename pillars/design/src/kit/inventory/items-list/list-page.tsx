@@ -74,7 +74,7 @@ export function ListPage({
 export function ListBody({ children, className }: { children: ReactNode; className?: string }) {
   return (
     <div
-      className={cn('min-h-0 flex-1 overflow-y-auto rounded-lg border bg-card', className)}
+      className={cn('relative min-h-0 flex-1 overflow-y-auto rounded-lg border bg-card', className)}
       data-list-body
     >
       {children}

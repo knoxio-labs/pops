@@ -6,9 +6,8 @@ import { ItemsCards } from './items-cards';
 import { ItemsTable } from './items-table';
 import { EmptyFiltered, EmptyInventory, ListError, ListSkeleton } from './list-states';
 
-import type { ReactNode } from 'react';
-
-import type { ItemRowModel, PlacementWorld } from '../foundation';
+import type { PlacementWorld } from '../foundation';
+import type { SecondColumn } from './table-row';
 import type { ItemsBrowser } from './use-items-browser';
 
 /** Whether the list has data to draw. */
@@ -23,8 +22,8 @@ export interface ItemsBodyProps {
   noun?: string;
   pendingIds?: ReadonlySet<string>;
   rejections?: Readonly<Record<string, string>>;
-  secondHeader?: string;
-  secondCell?: (item: ItemRowModel) => ReactNode;
+  /** Replaces the Type column: Containers shows what each box holds. */
+  secondColumn?: SecondColumn;
 }
 
 /** The list body. */
@@ -57,8 +56,7 @@ export function ItemsBody({ browser, world, status, population, ...rest }: Items
       onSort={(sort) => browser.setFilters({ sort })}
       pendingIds={rest.pendingIds}
       rejections={rest.rejections}
-      secondHeader={rest.secondHeader}
-      secondCell={rest.secondCell}
+      secondColumn={rest.secondColumn}
     />
   );
 }
