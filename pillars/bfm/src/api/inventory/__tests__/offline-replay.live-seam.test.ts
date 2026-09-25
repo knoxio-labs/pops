@@ -412,6 +412,23 @@ describe('phone -> BFM -> Inventory offline catalogue replay', () => {
     expect(history.events).toHaveLength(1);
   });
 
+  it('answers the catalogue revision the phone asked for, not the current one', async () => {
+    if (bfmProcess === undefined) throw new Error('BFM did not start');
+    expect(fixture.authoredRevision).not.toBe(fixture.activeRevision);
+
+    for (const revision of [fixture.authoredRevision, fixture.activeRevision]) {
+      const response = await fetch(
+        `${bfmProcess.baseUrl}/mobile/inventory/type-catalogue?revision=${String(revision)}`,
+        { headers: { authorization: `Bearer ${deviceToken}` } }
+      );
+      const body = await parseJson(
+        response,
+        z.object({ revision: z.object({ revision: z.number() }) })
+      );
+      expect(body.revision.revision, `asked for ${String(revision)}`).toBe(revision);
+    }
+  });
+
   it('returns a stable repair outcome when the authored field was archived and replaced', async () => {
     if (bfmProcess === undefined) throw new Error('BFM did not start');
     if (inventoryProxy === undefined) throw new Error('Inventory proxy did not start');
