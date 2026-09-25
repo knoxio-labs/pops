@@ -56,7 +56,7 @@ function HeroTitle({ title, logoUrl }: { title: string; logoUrl: string | null }
 
 export function MovieHero({ movie, year, daysSinceWatch, staleness }: MovieHeroProps) {
   return (
-    <div className="-mx-4 md:-mx-6 lg:-mx-8 -mt-4 md:-mt-6 lg:-mt-8 relative h-64 md:h-96 overflow-hidden bg-muted">
+    <div className="-mx-4 md:max-lg:-mx-6 lg:-mx-8 -mt-4 md:max-lg:-mt-6 lg:-mt-8 relative h-64 md:h-96 overflow-hidden bg-muted">
       {movie.backdropUrl && (
         <img
           src={movie.backdropUrl}

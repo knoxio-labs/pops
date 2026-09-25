@@ -6,7 +6,7 @@ const SKELETON_COUNT = 3;
 
 export function SearchSectionSkeleton() {
   return (
-    <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid gap-3 grid-cols-1 sm:max-lg:grid-cols-2 lg:grid-cols-3">
       {Array.from({ length: SKELETON_COUNT }).map((_, i) => (
         <div key={i} className="flex gap-4 rounded-lg border bg-card p-3">
           <Skeleton className="w-20 shrink-0 rounded-md aspect-[2/3]" />

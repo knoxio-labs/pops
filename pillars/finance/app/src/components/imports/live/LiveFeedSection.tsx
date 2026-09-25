@@ -26,7 +26,7 @@ function Arrived({ item, currency }: { item: PendingImportItem; currency: string
   const need = draft.unresolvedCount;
   return (
     <>
-      <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <CardContent className="grid gap-4 sm:max-lg:grid-cols-2 lg:grid-cols-4">
         <Stat label="Arrived" value={`${draft.rowCount} transactions`} />
         <Stat
           label="Covering"

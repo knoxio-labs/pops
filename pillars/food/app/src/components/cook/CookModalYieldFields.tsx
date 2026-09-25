@@ -46,7 +46,7 @@ export function CookModalYieldFields({ form, setForm, onLocationChange }: Props)
               type="button"
               role="radio"
               aria-checked={form.location === loc}
-              className="cursor-pointer rounded border px-3 py-1 text-sm hover:bg-muted aria-checked:border-primary aria-checked:bg-primary aria-checked:text-primary-foreground"
+              className="cursor-pointer rounded border px-3 py-1 text-sm hover:not-aria-checked:bg-muted aria-checked:border-primary aria-checked:bg-primary aria-checked:text-primary-foreground"
               onClick={() => onLocationChange(loc)}
             >
               {t(`cook.modal.location.${loc}`)}

@@ -22,7 +22,7 @@ export function FoodLandingPage() {
 
       <section
         aria-label={t('comingSoon.heading')}
-        className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+        className="grid gap-4 sm:max-lg:grid-cols-2 lg:grid-cols-3"
       >
         <Card aria-disabled className="opacity-70">
           <CardHeader>

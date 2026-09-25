@@ -7,7 +7,7 @@ export function AiUsagePageSkeleton() {
         title="AI Observability"
         description="Monitor AI usage, costs, latency, and provider health"
       />
-      <SkeletonGrid count={4} itemHeight="h-32" cols="md:grid-cols-2 lg:grid-cols-4" />
+      <SkeletonGrid count={4} itemHeight="h-32" cols="md:max-lg:grid-cols-2 lg:grid-cols-4" />
       <Skeleton className="h-64" />
     </div>
   );
