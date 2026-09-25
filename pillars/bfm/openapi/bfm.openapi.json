@@ -8719,6 +8719,142 @@
                 "schema": {
                   "additionalProperties": false,
                   "properties": {
+                    "accounting": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "awaitingImportCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "matchedCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "netSpendCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "refundedCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "residualCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "totalCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "totalCents",
+                        "matchedCents",
+                        "awaitingImportCents",
+                        "residualCents",
+                        "refundedCents",
+                        "netSpendCents"
+                      ],
+                      "type": "object"
+                    },
+                    "charges": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "amountCents": {
+                            "maximum": 9007199254740991,
+                            "minimum": -9007199254740991,
+                            "type": "integer"
+                          },
+                          "chargedOn": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "id": {
+                            "type": "string"
+                          },
+                          "matches": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "amountCents": {
+                                  "maximum": 9007199254740991,
+                                  "minimum": -9007199254740991,
+                                  "type": "integer"
+                                },
+                                "id": {
+                                  "type": "string"
+                                },
+                                "matchedBy": {
+                                  "enum": ["automatic", "confirmed"],
+                                  "type": "string"
+                                },
+                                "transaction": {
+                                  "additionalProperties": false,
+                                  "nullable": true,
+                                  "properties": {
+                                    "accountName": {
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
+                                    "amount": {
+                                      "type": "number"
+                                    },
+                                    "date": {
+                                      "type": "string"
+                                    },
+                                    "description": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": ["description", "date", "amount", "accountName"],
+                                  "type": "object"
+                                },
+                                "transactionId": {
+                                  "nullable": true,
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "transactionId",
+                                "amountCents",
+                                "matchedBy",
+                                "transaction"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "origin": {
+                            "type": "string"
+                          },
+                          "role": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "amountCents",
+                          "currency",
+                          "role",
+                          "origin",
+                          "chargedOn",
+                          "matches"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
                     "currency": {
                       "type": "string"
                     },
@@ -9343,6 +9479,142 @@
                 "schema": {
                   "additionalProperties": false,
                   "properties": {
+                    "accounting": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "awaitingImportCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "matchedCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "netSpendCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "refundedCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "residualCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "totalCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "totalCents",
+                        "matchedCents",
+                        "awaitingImportCents",
+                        "residualCents",
+                        "refundedCents",
+                        "netSpendCents"
+                      ],
+                      "type": "object"
+                    },
+                    "charges": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "amountCents": {
+                            "maximum": 9007199254740991,
+                            "minimum": -9007199254740991,
+                            "type": "integer"
+                          },
+                          "chargedOn": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "id": {
+                            "type": "string"
+                          },
+                          "matches": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "amountCents": {
+                                  "maximum": 9007199254740991,
+                                  "minimum": -9007199254740991,
+                                  "type": "integer"
+                                },
+                                "id": {
+                                  "type": "string"
+                                },
+                                "matchedBy": {
+                                  "enum": ["automatic", "confirmed"],
+                                  "type": "string"
+                                },
+                                "transaction": {
+                                  "additionalProperties": false,
+                                  "nullable": true,
+                                  "properties": {
+                                    "accountName": {
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
+                                    "amount": {
+                                      "type": "number"
+                                    },
+                                    "date": {
+                                      "type": "string"
+                                    },
+                                    "description": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": ["description", "date", "amount", "accountName"],
+                                  "type": "object"
+                                },
+                                "transactionId": {
+                                  "nullable": true,
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "transactionId",
+                                "amountCents",
+                                "matchedBy",
+                                "transaction"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "origin": {
+                            "type": "string"
+                          },
+                          "role": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "amountCents",
+                          "currency",
+                          "role",
+                          "origin",
+                          "chargedOn",
+                          "matches"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
                     "currency": {
                       "type": "string"
                     },
@@ -11853,6 +12125,142 @@
                 "schema": {
                   "additionalProperties": false,
                   "properties": {
+                    "accounting": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "awaitingImportCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "matchedCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "netSpendCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "refundedCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "residualCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "totalCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "totalCents",
+                        "matchedCents",
+                        "awaitingImportCents",
+                        "residualCents",
+                        "refundedCents",
+                        "netSpendCents"
+                      ],
+                      "type": "object"
+                    },
+                    "charges": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "amountCents": {
+                            "maximum": 9007199254740991,
+                            "minimum": -9007199254740991,
+                            "type": "integer"
+                          },
+                          "chargedOn": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "id": {
+                            "type": "string"
+                          },
+                          "matches": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "amountCents": {
+                                  "maximum": 9007199254740991,
+                                  "minimum": -9007199254740991,
+                                  "type": "integer"
+                                },
+                                "id": {
+                                  "type": "string"
+                                },
+                                "matchedBy": {
+                                  "enum": ["automatic", "confirmed"],
+                                  "type": "string"
+                                },
+                                "transaction": {
+                                  "additionalProperties": false,
+                                  "nullable": true,
+                                  "properties": {
+                                    "accountName": {
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
+                                    "amount": {
+                                      "type": "number"
+                                    },
+                                    "date": {
+                                      "type": "string"
+                                    },
+                                    "description": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": ["description", "date", "amount", "accountName"],
+                                  "type": "object"
+                                },
+                                "transactionId": {
+                                  "nullable": true,
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "transactionId",
+                                "amountCents",
+                                "matchedBy",
+                                "transaction"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "origin": {
+                            "type": "string"
+                          },
+                          "role": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "amountCents",
+                          "currency",
+                          "role",
+                          "origin",
+                          "chargedOn",
+                          "matches"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
                     "currency": {
                       "type": "string"
                     },
@@ -12398,6 +12806,142 @@
                 "schema": {
                   "additionalProperties": false,
                   "properties": {
+                    "accounting": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "awaitingImportCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "matchedCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "netSpendCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "refundedCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "residualCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        },
+                        "totalCents": {
+                          "maximum": 9007199254740991,
+                          "minimum": -9007199254740991,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "totalCents",
+                        "matchedCents",
+                        "awaitingImportCents",
+                        "residualCents",
+                        "refundedCents",
+                        "netSpendCents"
+                      ],
+                      "type": "object"
+                    },
+                    "charges": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "amountCents": {
+                            "maximum": 9007199254740991,
+                            "minimum": -9007199254740991,
+                            "type": "integer"
+                          },
+                          "chargedOn": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "id": {
+                            "type": "string"
+                          },
+                          "matches": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "amountCents": {
+                                  "maximum": 9007199254740991,
+                                  "minimum": -9007199254740991,
+                                  "type": "integer"
+                                },
+                                "id": {
+                                  "type": "string"
+                                },
+                                "matchedBy": {
+                                  "enum": ["automatic", "confirmed"],
+                                  "type": "string"
+                                },
+                                "transaction": {
+                                  "additionalProperties": false,
+                                  "nullable": true,
+                                  "properties": {
+                                    "accountName": {
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
+                                    "amount": {
+                                      "type": "number"
+                                    },
+                                    "date": {
+                                      "type": "string"
+                                    },
+                                    "description": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": ["description", "date", "amount", "accountName"],
+                                  "type": "object"
+                                },
+                                "transactionId": {
+                                  "nullable": true,
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "transactionId",
+                                "amountCents",
+                                "matchedBy",
+                                "transaction"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "origin": {
+                            "type": "string"
+                          },
+                          "role": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "amountCents",
+                          "currency",
+                          "role",
+                          "origin",
+                          "chargedOn",
+                          "matches"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
                     "currency": {
                       "type": "string"
                     },

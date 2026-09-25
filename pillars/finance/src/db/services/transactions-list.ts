@@ -7,7 +7,7 @@
  * is only meaningful against the exact order `listTransactions` imposes, and a
  * change to one that is not made to the other silently pages past rows.
  */
-import { and, count, desc, eq, gte, like, lt, lte, or, type SQL, sql } from 'drizzle-orm';
+import { and, count, desc, eq, gte, inArray, like, lt, lte, or, type SQL, sql } from 'drizzle-orm';
 
 import { transactions } from '../schema.js';
 
@@ -23,6 +23,8 @@ export interface TransactionFilters {
   tag?: string | undefined;
   entityId?: string | undefined;
   type?: TransactionType | undefined;
+  /** Only these transaction ids. An empty list matches nothing. */
+  ids?: readonly string[] | undefined;
   /**
    * Keyset anchor: return only rows that sort strictly AFTER `(beforeDate,
    * beforeId)` under this service's total order. Both halves are required
@@ -63,6 +65,9 @@ function buildListConditions(filters: TransactionFilters): SQL[] {
   }
   if (filters.type) {
     conditions.push(eq(transactions.type, filters.type));
+  }
+  if (filters.ids !== undefined) {
+    conditions.push(inArray(transactions.id, [...filters.ids]));
   }
   const keyset = buildKeysetCondition(filters.beforeDate, filters.beforeId);
   if (keyset !== undefined) {

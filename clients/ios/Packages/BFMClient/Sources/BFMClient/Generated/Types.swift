@@ -30774,6 +30774,325 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/accounting`.
+                        internal struct AccountingPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/accounting/awaitingImportCents`.
+                            internal var awaitingImportCents: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/accounting/matchedCents`.
+                            internal var matchedCents: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/accounting/netSpendCents`.
+                            internal var netSpendCents: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/accounting/refundedCents`.
+                            internal var refundedCents: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/accounting/residualCents`.
+                            internal var residualCents: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/accounting/totalCents`.
+                            internal var totalCents: Swift.Int
+                            /// Creates a new `AccountingPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - awaitingImportCents:
+                            ///   - matchedCents:
+                            ///   - netSpendCents:
+                            ///   - refundedCents:
+                            ///   - residualCents:
+                            ///   - totalCents:
+                            internal init(
+                                awaitingImportCents: Swift.Int,
+                                matchedCents: Swift.Int,
+                                netSpendCents: Swift.Int,
+                                refundedCents: Swift.Int,
+                                residualCents: Swift.Int,
+                                totalCents: Swift.Int
+                            ) {
+                                self.awaitingImportCents = awaitingImportCents
+                                self.matchedCents = matchedCents
+                                self.netSpendCents = netSpendCents
+                                self.refundedCents = refundedCents
+                                self.residualCents = residualCents
+                                self.totalCents = totalCents
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case awaitingImportCents
+                                case matchedCents
+                                case netSpendCents
+                                case refundedCents
+                                case residualCents
+                                case totalCents
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.awaitingImportCents = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .awaitingImportCents
+                                )
+                                self.matchedCents = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .matchedCents
+                                )
+                                self.netSpendCents = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .netSpendCents
+                                )
+                                self.refundedCents = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .refundedCents
+                                )
+                                self.residualCents = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .residualCents
+                                )
+                                self.totalCents = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .totalCents
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "awaitingImportCents",
+                                    "matchedCents",
+                                    "netSpendCents",
+                                    "refundedCents",
+                                    "residualCents",
+                                    "totalCents"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/accounting`.
+                        internal var accounting: Operations.MobilePurchases_createManualPurchase.Output.Ok.Body.JsonPayload.AccountingPayload?
+                        /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/ChargesPayload`.
+                        internal struct ChargesPayloadPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/ChargesPayload/amountCents`.
+                            internal var amountCents: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/ChargesPayload/chargedOn`.
+                            internal var chargedOn: Swift.String?
+                            /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/ChargesPayload/currency`.
+                            internal var currency: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/ChargesPayload/id`.
+                            internal var id: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/ChargesPayload/MatchesPayload`.
+                            internal struct MatchesPayloadPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/ChargesPayload/MatchesPayload/amountCents`.
+                                internal var amountCents: Swift.Int
+                                /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/ChargesPayload/MatchesPayload/id`.
+                                internal var id: Swift.String
+                                /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/ChargesPayload/MatchesPayload/matchedBy`.
+                                internal enum MatchedByPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case automatic = "automatic"
+                                    case confirmed = "confirmed"
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/ChargesPayload/MatchesPayload/matchedBy`.
+                                internal var matchedBy: Operations.MobilePurchases_createManualPurchase.Output.Ok.Body.JsonPayload.ChargesPayloadPayload.MatchesPayloadPayload.MatchedByPayload
+                                /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/ChargesPayload/MatchesPayload/transaction`.
+                                internal struct TransactionPayload: Codable, Hashable, Sendable {
+                                    /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/ChargesPayload/MatchesPayload/transaction/accountName`.
+                                    internal var accountName: Swift.String?
+                                    /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/ChargesPayload/MatchesPayload/transaction/amount`.
+                                    internal var amount: Swift.Double
+                                    /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/ChargesPayload/MatchesPayload/transaction/date`.
+                                    internal var date: Swift.String
+                                    /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/ChargesPayload/MatchesPayload/transaction/description`.
+                                    internal var description: Swift.String
+                                    /// Creates a new `TransactionPayload`.
+                                    ///
+                                    /// - Parameters:
+                                    ///   - accountName:
+                                    ///   - amount:
+                                    ///   - date:
+                                    ///   - description:
+                                    internal init(
+                                        accountName: Swift.String? = nil,
+                                        amount: Swift.Double,
+                                        date: Swift.String,
+                                        description: Swift.String
+                                    ) {
+                                        self.accountName = accountName
+                                        self.amount = amount
+                                        self.date = date
+                                        self.description = description
+                                    }
+                                    internal enum CodingKeys: String, CodingKey {
+                                        case accountName
+                                        case amount
+                                        case date
+                                        case description
+                                    }
+                                    internal init(from decoder: any Swift.Decoder) throws {
+                                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                                        self.accountName = try container.decodeIfPresent(
+                                            Swift.String.self,
+                                            forKey: .accountName
+                                        )
+                                        self.amount = try container.decode(
+                                            Swift.Double.self,
+                                            forKey: .amount
+                                        )
+                                        self.date = try container.decode(
+                                            Swift.String.self,
+                                            forKey: .date
+                                        )
+                                        self.description = try container.decode(
+                                            Swift.String.self,
+                                            forKey: .description
+                                        )
+                                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                            "accountName",
+                                            "amount",
+                                            "date",
+                                            "description"
+                                        ])
+                                    }
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/ChargesPayload/MatchesPayload/transaction`.
+                                internal var transaction: Operations.MobilePurchases_createManualPurchase.Output.Ok.Body.JsonPayload.ChargesPayloadPayload.MatchesPayloadPayload.TransactionPayload?
+                                /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/ChargesPayload/MatchesPayload/transactionId`.
+                                internal var transactionId: Swift.String?
+                                /// Creates a new `MatchesPayloadPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - amountCents:
+                                ///   - id:
+                                ///   - matchedBy:
+                                ///   - transaction:
+                                ///   - transactionId:
+                                internal init(
+                                    amountCents: Swift.Int,
+                                    id: Swift.String,
+                                    matchedBy: Operations.MobilePurchases_createManualPurchase.Output.Ok.Body.JsonPayload.ChargesPayloadPayload.MatchesPayloadPayload.MatchedByPayload,
+                                    transaction: Operations.MobilePurchases_createManualPurchase.Output.Ok.Body.JsonPayload.ChargesPayloadPayload.MatchesPayloadPayload.TransactionPayload? = nil,
+                                    transactionId: Swift.String? = nil
+                                ) {
+                                    self.amountCents = amountCents
+                                    self.id = id
+                                    self.matchedBy = matchedBy
+                                    self.transaction = transaction
+                                    self.transactionId = transactionId
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case amountCents
+                                    case id
+                                    case matchedBy
+                                    case transaction
+                                    case transactionId
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.amountCents = try container.decode(
+                                        Swift.Int.self,
+                                        forKey: .amountCents
+                                    )
+                                    self.id = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .id
+                                    )
+                                    self.matchedBy = try container.decode(
+                                        Operations.MobilePurchases_createManualPurchase.Output.Ok.Body.JsonPayload.ChargesPayloadPayload.MatchesPayloadPayload.MatchedByPayload.self,
+                                        forKey: .matchedBy
+                                    )
+                                    self.transaction = try container.decodeIfPresent(
+                                        Operations.MobilePurchases_createManualPurchase.Output.Ok.Body.JsonPayload.ChargesPayloadPayload.MatchesPayloadPayload.TransactionPayload.self,
+                                        forKey: .transaction
+                                    )
+                                    self.transactionId = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .transactionId
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "amountCents",
+                                        "id",
+                                        "matchedBy",
+                                        "transaction",
+                                        "transactionId"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/ChargesPayload/matches`.
+                            internal typealias MatchesPayload = [Operations.MobilePurchases_createManualPurchase.Output.Ok.Body.JsonPayload.ChargesPayloadPayload.MatchesPayloadPayload]
+                            /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/ChargesPayload/matches`.
+                            internal var matches: Operations.MobilePurchases_createManualPurchase.Output.Ok.Body.JsonPayload.ChargesPayloadPayload.MatchesPayload
+                            /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/ChargesPayload/origin`.
+                            internal var origin: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/ChargesPayload/role`.
+                            internal var role: Swift.String
+                            /// Creates a new `ChargesPayloadPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - amountCents:
+                            ///   - chargedOn:
+                            ///   - currency:
+                            ///   - id:
+                            ///   - matches:
+                            ///   - origin:
+                            ///   - role:
+                            internal init(
+                                amountCents: Swift.Int,
+                                chargedOn: Swift.String? = nil,
+                                currency: Swift.String,
+                                id: Swift.String,
+                                matches: Operations.MobilePurchases_createManualPurchase.Output.Ok.Body.JsonPayload.ChargesPayloadPayload.MatchesPayload,
+                                origin: Swift.String,
+                                role: Swift.String
+                            ) {
+                                self.amountCents = amountCents
+                                self.chargedOn = chargedOn
+                                self.currency = currency
+                                self.id = id
+                                self.matches = matches
+                                self.origin = origin
+                                self.role = role
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case amountCents
+                                case chargedOn
+                                case currency
+                                case id
+                                case matches
+                                case origin
+                                case role
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.amountCents = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .amountCents
+                                )
+                                self.chargedOn = try container.decodeIfPresent(
+                                    Swift.String.self,
+                                    forKey: .chargedOn
+                                )
+                                self.currency = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .currency
+                                )
+                                self.id = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .id
+                                )
+                                self.matches = try container.decode(
+                                    Operations.MobilePurchases_createManualPurchase.Output.Ok.Body.JsonPayload.ChargesPayloadPayload.MatchesPayload.self,
+                                    forKey: .matches
+                                )
+                                self.origin = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .origin
+                                )
+                                self.role = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .role
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "amountCents",
+                                    "chargedOn",
+                                    "currency",
+                                    "id",
+                                    "matches",
+                                    "origin",
+                                    "role"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/charges`.
+                        internal typealias ChargesPayload = [Operations.MobilePurchases_createManualPurchase.Output.Ok.Body.JsonPayload.ChargesPayloadPayload]
+                        /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/charges`.
+                        internal var charges: Operations.MobilePurchases_createManualPurchase.Output.Ok.Body.JsonPayload.ChargesPayload?
                         /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/currency`.
                         internal var currency: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/discountCents`.
@@ -31159,6 +31478,8 @@ internal enum Operations {
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
+                        ///   - accounting:
+                        ///   - charges:
                         ///   - currency:
                         ///   - discountCents:
                         ///   - edit:
@@ -31180,6 +31501,8 @@ internal enum Operations {
                         ///   - totalCents:
                         ///   - updatedAt:
                         internal init(
+                            accounting: Operations.MobilePurchases_createManualPurchase.Output.Ok.Body.JsonPayload.AccountingPayload? = nil,
+                            charges: Operations.MobilePurchases_createManualPurchase.Output.Ok.Body.JsonPayload.ChargesPayload? = nil,
                             currency: Swift.String,
                             discountCents: Swift.Int,
                             edit: Operations.MobilePurchases_createManualPurchase.Output.Ok.Body.JsonPayload.EditPayload? = nil,
@@ -31201,6 +31524,8 @@ internal enum Operations {
                             totalCents: Swift.Int,
                             updatedAt: Swift.String? = nil
                         ) {
+                            self.accounting = accounting
+                            self.charges = charges
                             self.currency = currency
                             self.discountCents = discountCents
                             self.edit = edit
@@ -31223,6 +31548,8 @@ internal enum Operations {
                             self.updatedAt = updatedAt
                         }
                         internal enum CodingKeys: String, CodingKey {
+                            case accounting
+                            case charges
                             case currency
                             case discountCents
                             case edit
@@ -31246,6 +31573,14 @@ internal enum Operations {
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
                             let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.accounting = try container.decodeIfPresent(
+                                Operations.MobilePurchases_createManualPurchase.Output.Ok.Body.JsonPayload.AccountingPayload.self,
+                                forKey: .accounting
+                            )
+                            self.charges = try container.decodeIfPresent(
+                                Operations.MobilePurchases_createManualPurchase.Output.Ok.Body.JsonPayload.ChargesPayload.self,
+                                forKey: .charges
+                            )
                             self.currency = try container.decode(
                                 Swift.String.self,
                                 forKey: .currency
@@ -31327,6 +31662,8 @@ internal enum Operations {
                                 forKey: .updatedAt
                             )
                             try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "accounting",
+                                "charges",
                                 "currency",
                                 "discountCents",
                                 "edit",
@@ -32673,6 +33010,325 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/accounting`.
+                        internal struct AccountingPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/accounting/awaitingImportCents`.
+                            internal var awaitingImportCents: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/accounting/matchedCents`.
+                            internal var matchedCents: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/accounting/netSpendCents`.
+                            internal var netSpendCents: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/accounting/refundedCents`.
+                            internal var refundedCents: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/accounting/residualCents`.
+                            internal var residualCents: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/accounting/totalCents`.
+                            internal var totalCents: Swift.Int
+                            /// Creates a new `AccountingPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - awaitingImportCents:
+                            ///   - matchedCents:
+                            ///   - netSpendCents:
+                            ///   - refundedCents:
+                            ///   - residualCents:
+                            ///   - totalCents:
+                            internal init(
+                                awaitingImportCents: Swift.Int,
+                                matchedCents: Swift.Int,
+                                netSpendCents: Swift.Int,
+                                refundedCents: Swift.Int,
+                                residualCents: Swift.Int,
+                                totalCents: Swift.Int
+                            ) {
+                                self.awaitingImportCents = awaitingImportCents
+                                self.matchedCents = matchedCents
+                                self.netSpendCents = netSpendCents
+                                self.refundedCents = refundedCents
+                                self.residualCents = residualCents
+                                self.totalCents = totalCents
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case awaitingImportCents
+                                case matchedCents
+                                case netSpendCents
+                                case refundedCents
+                                case residualCents
+                                case totalCents
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.awaitingImportCents = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .awaitingImportCents
+                                )
+                                self.matchedCents = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .matchedCents
+                                )
+                                self.netSpendCents = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .netSpendCents
+                                )
+                                self.refundedCents = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .refundedCents
+                                )
+                                self.residualCents = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .residualCents
+                                )
+                                self.totalCents = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .totalCents
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "awaitingImportCents",
+                                    "matchedCents",
+                                    "netSpendCents",
+                                    "refundedCents",
+                                    "residualCents",
+                                    "totalCents"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/accounting`.
+                        internal var accounting: Operations.MobilePurchases_saveReceiptDraft.Output.Ok.Body.JsonPayload.AccountingPayload?
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/ChargesPayload`.
+                        internal struct ChargesPayloadPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/ChargesPayload/amountCents`.
+                            internal var amountCents: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/ChargesPayload/chargedOn`.
+                            internal var chargedOn: Swift.String?
+                            /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/ChargesPayload/currency`.
+                            internal var currency: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/ChargesPayload/id`.
+                            internal var id: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/ChargesPayload/MatchesPayload`.
+                            internal struct MatchesPayloadPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/ChargesPayload/MatchesPayload/amountCents`.
+                                internal var amountCents: Swift.Int
+                                /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/ChargesPayload/MatchesPayload/id`.
+                                internal var id: Swift.String
+                                /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/ChargesPayload/MatchesPayload/matchedBy`.
+                                internal enum MatchedByPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case automatic = "automatic"
+                                    case confirmed = "confirmed"
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/ChargesPayload/MatchesPayload/matchedBy`.
+                                internal var matchedBy: Operations.MobilePurchases_saveReceiptDraft.Output.Ok.Body.JsonPayload.ChargesPayloadPayload.MatchesPayloadPayload.MatchedByPayload
+                                /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/ChargesPayload/MatchesPayload/transaction`.
+                                internal struct TransactionPayload: Codable, Hashable, Sendable {
+                                    /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/ChargesPayload/MatchesPayload/transaction/accountName`.
+                                    internal var accountName: Swift.String?
+                                    /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/ChargesPayload/MatchesPayload/transaction/amount`.
+                                    internal var amount: Swift.Double
+                                    /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/ChargesPayload/MatchesPayload/transaction/date`.
+                                    internal var date: Swift.String
+                                    /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/ChargesPayload/MatchesPayload/transaction/description`.
+                                    internal var description: Swift.String
+                                    /// Creates a new `TransactionPayload`.
+                                    ///
+                                    /// - Parameters:
+                                    ///   - accountName:
+                                    ///   - amount:
+                                    ///   - date:
+                                    ///   - description:
+                                    internal init(
+                                        accountName: Swift.String? = nil,
+                                        amount: Swift.Double,
+                                        date: Swift.String,
+                                        description: Swift.String
+                                    ) {
+                                        self.accountName = accountName
+                                        self.amount = amount
+                                        self.date = date
+                                        self.description = description
+                                    }
+                                    internal enum CodingKeys: String, CodingKey {
+                                        case accountName
+                                        case amount
+                                        case date
+                                        case description
+                                    }
+                                    internal init(from decoder: any Swift.Decoder) throws {
+                                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                                        self.accountName = try container.decodeIfPresent(
+                                            Swift.String.self,
+                                            forKey: .accountName
+                                        )
+                                        self.amount = try container.decode(
+                                            Swift.Double.self,
+                                            forKey: .amount
+                                        )
+                                        self.date = try container.decode(
+                                            Swift.String.self,
+                                            forKey: .date
+                                        )
+                                        self.description = try container.decode(
+                                            Swift.String.self,
+                                            forKey: .description
+                                        )
+                                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                            "accountName",
+                                            "amount",
+                                            "date",
+                                            "description"
+                                        ])
+                                    }
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/ChargesPayload/MatchesPayload/transaction`.
+                                internal var transaction: Operations.MobilePurchases_saveReceiptDraft.Output.Ok.Body.JsonPayload.ChargesPayloadPayload.MatchesPayloadPayload.TransactionPayload?
+                                /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/ChargesPayload/MatchesPayload/transactionId`.
+                                internal var transactionId: Swift.String?
+                                /// Creates a new `MatchesPayloadPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - amountCents:
+                                ///   - id:
+                                ///   - matchedBy:
+                                ///   - transaction:
+                                ///   - transactionId:
+                                internal init(
+                                    amountCents: Swift.Int,
+                                    id: Swift.String,
+                                    matchedBy: Operations.MobilePurchases_saveReceiptDraft.Output.Ok.Body.JsonPayload.ChargesPayloadPayload.MatchesPayloadPayload.MatchedByPayload,
+                                    transaction: Operations.MobilePurchases_saveReceiptDraft.Output.Ok.Body.JsonPayload.ChargesPayloadPayload.MatchesPayloadPayload.TransactionPayload? = nil,
+                                    transactionId: Swift.String? = nil
+                                ) {
+                                    self.amountCents = amountCents
+                                    self.id = id
+                                    self.matchedBy = matchedBy
+                                    self.transaction = transaction
+                                    self.transactionId = transactionId
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case amountCents
+                                    case id
+                                    case matchedBy
+                                    case transaction
+                                    case transactionId
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.amountCents = try container.decode(
+                                        Swift.Int.self,
+                                        forKey: .amountCents
+                                    )
+                                    self.id = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .id
+                                    )
+                                    self.matchedBy = try container.decode(
+                                        Operations.MobilePurchases_saveReceiptDraft.Output.Ok.Body.JsonPayload.ChargesPayloadPayload.MatchesPayloadPayload.MatchedByPayload.self,
+                                        forKey: .matchedBy
+                                    )
+                                    self.transaction = try container.decodeIfPresent(
+                                        Operations.MobilePurchases_saveReceiptDraft.Output.Ok.Body.JsonPayload.ChargesPayloadPayload.MatchesPayloadPayload.TransactionPayload.self,
+                                        forKey: .transaction
+                                    )
+                                    self.transactionId = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .transactionId
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "amountCents",
+                                        "id",
+                                        "matchedBy",
+                                        "transaction",
+                                        "transactionId"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/ChargesPayload/matches`.
+                            internal typealias MatchesPayload = [Operations.MobilePurchases_saveReceiptDraft.Output.Ok.Body.JsonPayload.ChargesPayloadPayload.MatchesPayloadPayload]
+                            /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/ChargesPayload/matches`.
+                            internal var matches: Operations.MobilePurchases_saveReceiptDraft.Output.Ok.Body.JsonPayload.ChargesPayloadPayload.MatchesPayload
+                            /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/ChargesPayload/origin`.
+                            internal var origin: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/ChargesPayload/role`.
+                            internal var role: Swift.String
+                            /// Creates a new `ChargesPayloadPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - amountCents:
+                            ///   - chargedOn:
+                            ///   - currency:
+                            ///   - id:
+                            ///   - matches:
+                            ///   - origin:
+                            ///   - role:
+                            internal init(
+                                amountCents: Swift.Int,
+                                chargedOn: Swift.String? = nil,
+                                currency: Swift.String,
+                                id: Swift.String,
+                                matches: Operations.MobilePurchases_saveReceiptDraft.Output.Ok.Body.JsonPayload.ChargesPayloadPayload.MatchesPayload,
+                                origin: Swift.String,
+                                role: Swift.String
+                            ) {
+                                self.amountCents = amountCents
+                                self.chargedOn = chargedOn
+                                self.currency = currency
+                                self.id = id
+                                self.matches = matches
+                                self.origin = origin
+                                self.role = role
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case amountCents
+                                case chargedOn
+                                case currency
+                                case id
+                                case matches
+                                case origin
+                                case role
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.amountCents = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .amountCents
+                                )
+                                self.chargedOn = try container.decodeIfPresent(
+                                    Swift.String.self,
+                                    forKey: .chargedOn
+                                )
+                                self.currency = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .currency
+                                )
+                                self.id = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .id
+                                )
+                                self.matches = try container.decode(
+                                    Operations.MobilePurchases_saveReceiptDraft.Output.Ok.Body.JsonPayload.ChargesPayloadPayload.MatchesPayload.self,
+                                    forKey: .matches
+                                )
+                                self.origin = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .origin
+                                )
+                                self.role = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .role
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "amountCents",
+                                    "chargedOn",
+                                    "currency",
+                                    "id",
+                                    "matches",
+                                    "origin",
+                                    "role"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/charges`.
+                        internal typealias ChargesPayload = [Operations.MobilePurchases_saveReceiptDraft.Output.Ok.Body.JsonPayload.ChargesPayloadPayload]
+                        /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/charges`.
+                        internal var charges: Operations.MobilePurchases_saveReceiptDraft.Output.Ok.Body.JsonPayload.ChargesPayload?
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/currency`.
                         internal var currency: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/discountCents`.
@@ -33058,6 +33714,8 @@ internal enum Operations {
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
+                        ///   - accounting:
+                        ///   - charges:
                         ///   - currency:
                         ///   - discountCents:
                         ///   - edit:
@@ -33079,6 +33737,8 @@ internal enum Operations {
                         ///   - totalCents:
                         ///   - updatedAt:
                         internal init(
+                            accounting: Operations.MobilePurchases_saveReceiptDraft.Output.Ok.Body.JsonPayload.AccountingPayload? = nil,
+                            charges: Operations.MobilePurchases_saveReceiptDraft.Output.Ok.Body.JsonPayload.ChargesPayload? = nil,
                             currency: Swift.String,
                             discountCents: Swift.Int,
                             edit: Operations.MobilePurchases_saveReceiptDraft.Output.Ok.Body.JsonPayload.EditPayload? = nil,
@@ -33100,6 +33760,8 @@ internal enum Operations {
                             totalCents: Swift.Int,
                             updatedAt: Swift.String? = nil
                         ) {
+                            self.accounting = accounting
+                            self.charges = charges
                             self.currency = currency
                             self.discountCents = discountCents
                             self.edit = edit
@@ -33122,6 +33784,8 @@ internal enum Operations {
                             self.updatedAt = updatedAt
                         }
                         internal enum CodingKeys: String, CodingKey {
+                            case accounting
+                            case charges
                             case currency
                             case discountCents
                             case edit
@@ -33145,6 +33809,14 @@ internal enum Operations {
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
                             let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.accounting = try container.decodeIfPresent(
+                                Operations.MobilePurchases_saveReceiptDraft.Output.Ok.Body.JsonPayload.AccountingPayload.self,
+                                forKey: .accounting
+                            )
+                            self.charges = try container.decodeIfPresent(
+                                Operations.MobilePurchases_saveReceiptDraft.Output.Ok.Body.JsonPayload.ChargesPayload.self,
+                                forKey: .charges
+                            )
                             self.currency = try container.decode(
                                 Swift.String.self,
                                 forKey: .currency
@@ -33226,6 +33898,8 @@ internal enum Operations {
                                 forKey: .updatedAt
                             )
                             try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "accounting",
+                                "charges",
                                 "currency",
                                 "discountCents",
                                 "edit",
@@ -41312,6 +41986,325 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/accounting`.
+                        internal struct AccountingPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/accounting/awaitingImportCents`.
+                            internal var awaitingImportCents: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/accounting/matchedCents`.
+                            internal var matchedCents: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/accounting/netSpendCents`.
+                            internal var netSpendCents: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/accounting/refundedCents`.
+                            internal var refundedCents: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/accounting/residualCents`.
+                            internal var residualCents: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/accounting/totalCents`.
+                            internal var totalCents: Swift.Int
+                            /// Creates a new `AccountingPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - awaitingImportCents:
+                            ///   - matchedCents:
+                            ///   - netSpendCents:
+                            ///   - refundedCents:
+                            ///   - residualCents:
+                            ///   - totalCents:
+                            internal init(
+                                awaitingImportCents: Swift.Int,
+                                matchedCents: Swift.Int,
+                                netSpendCents: Swift.Int,
+                                refundedCents: Swift.Int,
+                                residualCents: Swift.Int,
+                                totalCents: Swift.Int
+                            ) {
+                                self.awaitingImportCents = awaitingImportCents
+                                self.matchedCents = matchedCents
+                                self.netSpendCents = netSpendCents
+                                self.refundedCents = refundedCents
+                                self.residualCents = residualCents
+                                self.totalCents = totalCents
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case awaitingImportCents
+                                case matchedCents
+                                case netSpendCents
+                                case refundedCents
+                                case residualCents
+                                case totalCents
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.awaitingImportCents = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .awaitingImportCents
+                                )
+                                self.matchedCents = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .matchedCents
+                                )
+                                self.netSpendCents = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .netSpendCents
+                                )
+                                self.refundedCents = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .refundedCents
+                                )
+                                self.residualCents = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .residualCents
+                                )
+                                self.totalCents = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .totalCents
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "awaitingImportCents",
+                                    "matchedCents",
+                                    "netSpendCents",
+                                    "refundedCents",
+                                    "residualCents",
+                                    "totalCents"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/accounting`.
+                        internal var accounting: Operations.MobilePurchases_getPurchase.Output.Ok.Body.JsonPayload.AccountingPayload?
+                        /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/ChargesPayload`.
+                        internal struct ChargesPayloadPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/ChargesPayload/amountCents`.
+                            internal var amountCents: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/ChargesPayload/chargedOn`.
+                            internal var chargedOn: Swift.String?
+                            /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/ChargesPayload/currency`.
+                            internal var currency: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/ChargesPayload/id`.
+                            internal var id: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/ChargesPayload/MatchesPayload`.
+                            internal struct MatchesPayloadPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/ChargesPayload/MatchesPayload/amountCents`.
+                                internal var amountCents: Swift.Int
+                                /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/ChargesPayload/MatchesPayload/id`.
+                                internal var id: Swift.String
+                                /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/ChargesPayload/MatchesPayload/matchedBy`.
+                                internal enum MatchedByPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case automatic = "automatic"
+                                    case confirmed = "confirmed"
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/ChargesPayload/MatchesPayload/matchedBy`.
+                                internal var matchedBy: Operations.MobilePurchases_getPurchase.Output.Ok.Body.JsonPayload.ChargesPayloadPayload.MatchesPayloadPayload.MatchedByPayload
+                                /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/ChargesPayload/MatchesPayload/transaction`.
+                                internal struct TransactionPayload: Codable, Hashable, Sendable {
+                                    /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/ChargesPayload/MatchesPayload/transaction/accountName`.
+                                    internal var accountName: Swift.String?
+                                    /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/ChargesPayload/MatchesPayload/transaction/amount`.
+                                    internal var amount: Swift.Double
+                                    /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/ChargesPayload/MatchesPayload/transaction/date`.
+                                    internal var date: Swift.String
+                                    /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/ChargesPayload/MatchesPayload/transaction/description`.
+                                    internal var description: Swift.String
+                                    /// Creates a new `TransactionPayload`.
+                                    ///
+                                    /// - Parameters:
+                                    ///   - accountName:
+                                    ///   - amount:
+                                    ///   - date:
+                                    ///   - description:
+                                    internal init(
+                                        accountName: Swift.String? = nil,
+                                        amount: Swift.Double,
+                                        date: Swift.String,
+                                        description: Swift.String
+                                    ) {
+                                        self.accountName = accountName
+                                        self.amount = amount
+                                        self.date = date
+                                        self.description = description
+                                    }
+                                    internal enum CodingKeys: String, CodingKey {
+                                        case accountName
+                                        case amount
+                                        case date
+                                        case description
+                                    }
+                                    internal init(from decoder: any Swift.Decoder) throws {
+                                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                                        self.accountName = try container.decodeIfPresent(
+                                            Swift.String.self,
+                                            forKey: .accountName
+                                        )
+                                        self.amount = try container.decode(
+                                            Swift.Double.self,
+                                            forKey: .amount
+                                        )
+                                        self.date = try container.decode(
+                                            Swift.String.self,
+                                            forKey: .date
+                                        )
+                                        self.description = try container.decode(
+                                            Swift.String.self,
+                                            forKey: .description
+                                        )
+                                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                            "accountName",
+                                            "amount",
+                                            "date",
+                                            "description"
+                                        ])
+                                    }
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/ChargesPayload/MatchesPayload/transaction`.
+                                internal var transaction: Operations.MobilePurchases_getPurchase.Output.Ok.Body.JsonPayload.ChargesPayloadPayload.MatchesPayloadPayload.TransactionPayload?
+                                /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/ChargesPayload/MatchesPayload/transactionId`.
+                                internal var transactionId: Swift.String?
+                                /// Creates a new `MatchesPayloadPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - amountCents:
+                                ///   - id:
+                                ///   - matchedBy:
+                                ///   - transaction:
+                                ///   - transactionId:
+                                internal init(
+                                    amountCents: Swift.Int,
+                                    id: Swift.String,
+                                    matchedBy: Operations.MobilePurchases_getPurchase.Output.Ok.Body.JsonPayload.ChargesPayloadPayload.MatchesPayloadPayload.MatchedByPayload,
+                                    transaction: Operations.MobilePurchases_getPurchase.Output.Ok.Body.JsonPayload.ChargesPayloadPayload.MatchesPayloadPayload.TransactionPayload? = nil,
+                                    transactionId: Swift.String? = nil
+                                ) {
+                                    self.amountCents = amountCents
+                                    self.id = id
+                                    self.matchedBy = matchedBy
+                                    self.transaction = transaction
+                                    self.transactionId = transactionId
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case amountCents
+                                    case id
+                                    case matchedBy
+                                    case transaction
+                                    case transactionId
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.amountCents = try container.decode(
+                                        Swift.Int.self,
+                                        forKey: .amountCents
+                                    )
+                                    self.id = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .id
+                                    )
+                                    self.matchedBy = try container.decode(
+                                        Operations.MobilePurchases_getPurchase.Output.Ok.Body.JsonPayload.ChargesPayloadPayload.MatchesPayloadPayload.MatchedByPayload.self,
+                                        forKey: .matchedBy
+                                    )
+                                    self.transaction = try container.decodeIfPresent(
+                                        Operations.MobilePurchases_getPurchase.Output.Ok.Body.JsonPayload.ChargesPayloadPayload.MatchesPayloadPayload.TransactionPayload.self,
+                                        forKey: .transaction
+                                    )
+                                    self.transactionId = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .transactionId
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "amountCents",
+                                        "id",
+                                        "matchedBy",
+                                        "transaction",
+                                        "transactionId"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/ChargesPayload/matches`.
+                            internal typealias MatchesPayload = [Operations.MobilePurchases_getPurchase.Output.Ok.Body.JsonPayload.ChargesPayloadPayload.MatchesPayloadPayload]
+                            /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/ChargesPayload/matches`.
+                            internal var matches: Operations.MobilePurchases_getPurchase.Output.Ok.Body.JsonPayload.ChargesPayloadPayload.MatchesPayload
+                            /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/ChargesPayload/origin`.
+                            internal var origin: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/ChargesPayload/role`.
+                            internal var role: Swift.String
+                            /// Creates a new `ChargesPayloadPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - amountCents:
+                            ///   - chargedOn:
+                            ///   - currency:
+                            ///   - id:
+                            ///   - matches:
+                            ///   - origin:
+                            ///   - role:
+                            internal init(
+                                amountCents: Swift.Int,
+                                chargedOn: Swift.String? = nil,
+                                currency: Swift.String,
+                                id: Swift.String,
+                                matches: Operations.MobilePurchases_getPurchase.Output.Ok.Body.JsonPayload.ChargesPayloadPayload.MatchesPayload,
+                                origin: Swift.String,
+                                role: Swift.String
+                            ) {
+                                self.amountCents = amountCents
+                                self.chargedOn = chargedOn
+                                self.currency = currency
+                                self.id = id
+                                self.matches = matches
+                                self.origin = origin
+                                self.role = role
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case amountCents
+                                case chargedOn
+                                case currency
+                                case id
+                                case matches
+                                case origin
+                                case role
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.amountCents = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .amountCents
+                                )
+                                self.chargedOn = try container.decodeIfPresent(
+                                    Swift.String.self,
+                                    forKey: .chargedOn
+                                )
+                                self.currency = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .currency
+                                )
+                                self.id = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .id
+                                )
+                                self.matches = try container.decode(
+                                    Operations.MobilePurchases_getPurchase.Output.Ok.Body.JsonPayload.ChargesPayloadPayload.MatchesPayload.self,
+                                    forKey: .matches
+                                )
+                                self.origin = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .origin
+                                )
+                                self.role = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .role
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "amountCents",
+                                    "chargedOn",
+                                    "currency",
+                                    "id",
+                                    "matches",
+                                    "origin",
+                                    "role"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/charges`.
+                        internal typealias ChargesPayload = [Operations.MobilePurchases_getPurchase.Output.Ok.Body.JsonPayload.ChargesPayloadPayload]
+                        /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/charges`.
+                        internal var charges: Operations.MobilePurchases_getPurchase.Output.Ok.Body.JsonPayload.ChargesPayload?
                         /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/currency`.
                         internal var currency: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/discountCents`.
@@ -41697,6 +42690,8 @@ internal enum Operations {
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
+                        ///   - accounting:
+                        ///   - charges:
                         ///   - currency:
                         ///   - discountCents:
                         ///   - edit:
@@ -41718,6 +42713,8 @@ internal enum Operations {
                         ///   - totalCents:
                         ///   - updatedAt:
                         internal init(
+                            accounting: Operations.MobilePurchases_getPurchase.Output.Ok.Body.JsonPayload.AccountingPayload? = nil,
+                            charges: Operations.MobilePurchases_getPurchase.Output.Ok.Body.JsonPayload.ChargesPayload? = nil,
                             currency: Swift.String,
                             discountCents: Swift.Int,
                             edit: Operations.MobilePurchases_getPurchase.Output.Ok.Body.JsonPayload.EditPayload? = nil,
@@ -41739,6 +42736,8 @@ internal enum Operations {
                             totalCents: Swift.Int,
                             updatedAt: Swift.String? = nil
                         ) {
+                            self.accounting = accounting
+                            self.charges = charges
                             self.currency = currency
                             self.discountCents = discountCents
                             self.edit = edit
@@ -41761,6 +42760,8 @@ internal enum Operations {
                             self.updatedAt = updatedAt
                         }
                         internal enum CodingKeys: String, CodingKey {
+                            case accounting
+                            case charges
                             case currency
                             case discountCents
                             case edit
@@ -41784,6 +42785,14 @@ internal enum Operations {
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
                             let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.accounting = try container.decodeIfPresent(
+                                Operations.MobilePurchases_getPurchase.Output.Ok.Body.JsonPayload.AccountingPayload.self,
+                                forKey: .accounting
+                            )
+                            self.charges = try container.decodeIfPresent(
+                                Operations.MobilePurchases_getPurchase.Output.Ok.Body.JsonPayload.ChargesPayload.self,
+                                forKey: .charges
+                            )
                             self.currency = try container.decode(
                                 Swift.String.self,
                                 forKey: .currency
@@ -41865,6 +42874,8 @@ internal enum Operations {
                                 forKey: .updatedAt
                             )
                             try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "accounting",
+                                "charges",
                                 "currency",
                                 "discountCents",
                                 "edit",
@@ -43070,6 +44081,325 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/200/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/200/content/json/accounting`.
+                        internal struct AccountingPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/200/content/json/accounting/awaitingImportCents`.
+                            internal var awaitingImportCents: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/200/content/json/accounting/matchedCents`.
+                            internal var matchedCents: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/200/content/json/accounting/netSpendCents`.
+                            internal var netSpendCents: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/200/content/json/accounting/refundedCents`.
+                            internal var refundedCents: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/200/content/json/accounting/residualCents`.
+                            internal var residualCents: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/200/content/json/accounting/totalCents`.
+                            internal var totalCents: Swift.Int
+                            /// Creates a new `AccountingPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - awaitingImportCents:
+                            ///   - matchedCents:
+                            ///   - netSpendCents:
+                            ///   - refundedCents:
+                            ///   - residualCents:
+                            ///   - totalCents:
+                            internal init(
+                                awaitingImportCents: Swift.Int,
+                                matchedCents: Swift.Int,
+                                netSpendCents: Swift.Int,
+                                refundedCents: Swift.Int,
+                                residualCents: Swift.Int,
+                                totalCents: Swift.Int
+                            ) {
+                                self.awaitingImportCents = awaitingImportCents
+                                self.matchedCents = matchedCents
+                                self.netSpendCents = netSpendCents
+                                self.refundedCents = refundedCents
+                                self.residualCents = residualCents
+                                self.totalCents = totalCents
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case awaitingImportCents
+                                case matchedCents
+                                case netSpendCents
+                                case refundedCents
+                                case residualCents
+                                case totalCents
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.awaitingImportCents = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .awaitingImportCents
+                                )
+                                self.matchedCents = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .matchedCents
+                                )
+                                self.netSpendCents = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .netSpendCents
+                                )
+                                self.refundedCents = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .refundedCents
+                                )
+                                self.residualCents = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .residualCents
+                                )
+                                self.totalCents = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .totalCents
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "awaitingImportCents",
+                                    "matchedCents",
+                                    "netSpendCents",
+                                    "refundedCents",
+                                    "residualCents",
+                                    "totalCents"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/200/content/json/accounting`.
+                        internal var accounting: Operations.MobilePurchases_updatePurchase.Output.Ok.Body.JsonPayload.AccountingPayload?
+                        /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/200/content/json/ChargesPayload`.
+                        internal struct ChargesPayloadPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/200/content/json/ChargesPayload/amountCents`.
+                            internal var amountCents: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/200/content/json/ChargesPayload/chargedOn`.
+                            internal var chargedOn: Swift.String?
+                            /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/200/content/json/ChargesPayload/currency`.
+                            internal var currency: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/200/content/json/ChargesPayload/id`.
+                            internal var id: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/200/content/json/ChargesPayload/MatchesPayload`.
+                            internal struct MatchesPayloadPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/200/content/json/ChargesPayload/MatchesPayload/amountCents`.
+                                internal var amountCents: Swift.Int
+                                /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/200/content/json/ChargesPayload/MatchesPayload/id`.
+                                internal var id: Swift.String
+                                /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/200/content/json/ChargesPayload/MatchesPayload/matchedBy`.
+                                internal enum MatchedByPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case automatic = "automatic"
+                                    case confirmed = "confirmed"
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/200/content/json/ChargesPayload/MatchesPayload/matchedBy`.
+                                internal var matchedBy: Operations.MobilePurchases_updatePurchase.Output.Ok.Body.JsonPayload.ChargesPayloadPayload.MatchesPayloadPayload.MatchedByPayload
+                                /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/200/content/json/ChargesPayload/MatchesPayload/transaction`.
+                                internal struct TransactionPayload: Codable, Hashable, Sendable {
+                                    /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/200/content/json/ChargesPayload/MatchesPayload/transaction/accountName`.
+                                    internal var accountName: Swift.String?
+                                    /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/200/content/json/ChargesPayload/MatchesPayload/transaction/amount`.
+                                    internal var amount: Swift.Double
+                                    /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/200/content/json/ChargesPayload/MatchesPayload/transaction/date`.
+                                    internal var date: Swift.String
+                                    /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/200/content/json/ChargesPayload/MatchesPayload/transaction/description`.
+                                    internal var description: Swift.String
+                                    /// Creates a new `TransactionPayload`.
+                                    ///
+                                    /// - Parameters:
+                                    ///   - accountName:
+                                    ///   - amount:
+                                    ///   - date:
+                                    ///   - description:
+                                    internal init(
+                                        accountName: Swift.String? = nil,
+                                        amount: Swift.Double,
+                                        date: Swift.String,
+                                        description: Swift.String
+                                    ) {
+                                        self.accountName = accountName
+                                        self.amount = amount
+                                        self.date = date
+                                        self.description = description
+                                    }
+                                    internal enum CodingKeys: String, CodingKey {
+                                        case accountName
+                                        case amount
+                                        case date
+                                        case description
+                                    }
+                                    internal init(from decoder: any Swift.Decoder) throws {
+                                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                                        self.accountName = try container.decodeIfPresent(
+                                            Swift.String.self,
+                                            forKey: .accountName
+                                        )
+                                        self.amount = try container.decode(
+                                            Swift.Double.self,
+                                            forKey: .amount
+                                        )
+                                        self.date = try container.decode(
+                                            Swift.String.self,
+                                            forKey: .date
+                                        )
+                                        self.description = try container.decode(
+                                            Swift.String.self,
+                                            forKey: .description
+                                        )
+                                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                            "accountName",
+                                            "amount",
+                                            "date",
+                                            "description"
+                                        ])
+                                    }
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/200/content/json/ChargesPayload/MatchesPayload/transaction`.
+                                internal var transaction: Operations.MobilePurchases_updatePurchase.Output.Ok.Body.JsonPayload.ChargesPayloadPayload.MatchesPayloadPayload.TransactionPayload?
+                                /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/200/content/json/ChargesPayload/MatchesPayload/transactionId`.
+                                internal var transactionId: Swift.String?
+                                /// Creates a new `MatchesPayloadPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - amountCents:
+                                ///   - id:
+                                ///   - matchedBy:
+                                ///   - transaction:
+                                ///   - transactionId:
+                                internal init(
+                                    amountCents: Swift.Int,
+                                    id: Swift.String,
+                                    matchedBy: Operations.MobilePurchases_updatePurchase.Output.Ok.Body.JsonPayload.ChargesPayloadPayload.MatchesPayloadPayload.MatchedByPayload,
+                                    transaction: Operations.MobilePurchases_updatePurchase.Output.Ok.Body.JsonPayload.ChargesPayloadPayload.MatchesPayloadPayload.TransactionPayload? = nil,
+                                    transactionId: Swift.String? = nil
+                                ) {
+                                    self.amountCents = amountCents
+                                    self.id = id
+                                    self.matchedBy = matchedBy
+                                    self.transaction = transaction
+                                    self.transactionId = transactionId
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case amountCents
+                                    case id
+                                    case matchedBy
+                                    case transaction
+                                    case transactionId
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.amountCents = try container.decode(
+                                        Swift.Int.self,
+                                        forKey: .amountCents
+                                    )
+                                    self.id = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .id
+                                    )
+                                    self.matchedBy = try container.decode(
+                                        Operations.MobilePurchases_updatePurchase.Output.Ok.Body.JsonPayload.ChargesPayloadPayload.MatchesPayloadPayload.MatchedByPayload.self,
+                                        forKey: .matchedBy
+                                    )
+                                    self.transaction = try container.decodeIfPresent(
+                                        Operations.MobilePurchases_updatePurchase.Output.Ok.Body.JsonPayload.ChargesPayloadPayload.MatchesPayloadPayload.TransactionPayload.self,
+                                        forKey: .transaction
+                                    )
+                                    self.transactionId = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .transactionId
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "amountCents",
+                                        "id",
+                                        "matchedBy",
+                                        "transaction",
+                                        "transactionId"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/200/content/json/ChargesPayload/matches`.
+                            internal typealias MatchesPayload = [Operations.MobilePurchases_updatePurchase.Output.Ok.Body.JsonPayload.ChargesPayloadPayload.MatchesPayloadPayload]
+                            /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/200/content/json/ChargesPayload/matches`.
+                            internal var matches: Operations.MobilePurchases_updatePurchase.Output.Ok.Body.JsonPayload.ChargesPayloadPayload.MatchesPayload
+                            /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/200/content/json/ChargesPayload/origin`.
+                            internal var origin: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/200/content/json/ChargesPayload/role`.
+                            internal var role: Swift.String
+                            /// Creates a new `ChargesPayloadPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - amountCents:
+                            ///   - chargedOn:
+                            ///   - currency:
+                            ///   - id:
+                            ///   - matches:
+                            ///   - origin:
+                            ///   - role:
+                            internal init(
+                                amountCents: Swift.Int,
+                                chargedOn: Swift.String? = nil,
+                                currency: Swift.String,
+                                id: Swift.String,
+                                matches: Operations.MobilePurchases_updatePurchase.Output.Ok.Body.JsonPayload.ChargesPayloadPayload.MatchesPayload,
+                                origin: Swift.String,
+                                role: Swift.String
+                            ) {
+                                self.amountCents = amountCents
+                                self.chargedOn = chargedOn
+                                self.currency = currency
+                                self.id = id
+                                self.matches = matches
+                                self.origin = origin
+                                self.role = role
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case amountCents
+                                case chargedOn
+                                case currency
+                                case id
+                                case matches
+                                case origin
+                                case role
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.amountCents = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .amountCents
+                                )
+                                self.chargedOn = try container.decodeIfPresent(
+                                    Swift.String.self,
+                                    forKey: .chargedOn
+                                )
+                                self.currency = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .currency
+                                )
+                                self.id = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .id
+                                )
+                                self.matches = try container.decode(
+                                    Operations.MobilePurchases_updatePurchase.Output.Ok.Body.JsonPayload.ChargesPayloadPayload.MatchesPayload.self,
+                                    forKey: .matches
+                                )
+                                self.origin = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .origin
+                                )
+                                self.role = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .role
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "amountCents",
+                                    "chargedOn",
+                                    "currency",
+                                    "id",
+                                    "matches",
+                                    "origin",
+                                    "role"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/200/content/json/charges`.
+                        internal typealias ChargesPayload = [Operations.MobilePurchases_updatePurchase.Output.Ok.Body.JsonPayload.ChargesPayloadPayload]
+                        /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/200/content/json/charges`.
+                        internal var charges: Operations.MobilePurchases_updatePurchase.Output.Ok.Body.JsonPayload.ChargesPayload?
                         /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/200/content/json/currency`.
                         internal var currency: Swift.String
                         /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/200/content/json/discountCents`.
@@ -43455,6 +44785,8 @@ internal enum Operations {
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
+                        ///   - accounting:
+                        ///   - charges:
                         ///   - currency:
                         ///   - discountCents:
                         ///   - edit:
@@ -43476,6 +44808,8 @@ internal enum Operations {
                         ///   - totalCents:
                         ///   - updatedAt:
                         internal init(
+                            accounting: Operations.MobilePurchases_updatePurchase.Output.Ok.Body.JsonPayload.AccountingPayload? = nil,
+                            charges: Operations.MobilePurchases_updatePurchase.Output.Ok.Body.JsonPayload.ChargesPayload? = nil,
                             currency: Swift.String,
                             discountCents: Swift.Int,
                             edit: Operations.MobilePurchases_updatePurchase.Output.Ok.Body.JsonPayload.EditPayload? = nil,
@@ -43497,6 +44831,8 @@ internal enum Operations {
                             totalCents: Swift.Int,
                             updatedAt: Swift.String? = nil
                         ) {
+                            self.accounting = accounting
+                            self.charges = charges
                             self.currency = currency
                             self.discountCents = discountCents
                             self.edit = edit
@@ -43519,6 +44855,8 @@ internal enum Operations {
                             self.updatedAt = updatedAt
                         }
                         internal enum CodingKeys: String, CodingKey {
+                            case accounting
+                            case charges
                             case currency
                             case discountCents
                             case edit
@@ -43542,6 +44880,14 @@ internal enum Operations {
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
                             let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.accounting = try container.decodeIfPresent(
+                                Operations.MobilePurchases_updatePurchase.Output.Ok.Body.JsonPayload.AccountingPayload.self,
+                                forKey: .accounting
+                            )
+                            self.charges = try container.decodeIfPresent(
+                                Operations.MobilePurchases_updatePurchase.Output.Ok.Body.JsonPayload.ChargesPayload.self,
+                                forKey: .charges
+                            )
                             self.currency = try container.decode(
                                 Swift.String.self,
                                 forKey: .currency
@@ -43623,6 +44969,8 @@ internal enum Operations {
                                 forKey: .updatedAt
                             )
                             try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "accounting",
+                                "charges",
                                 "currency",
                                 "discountCents",
                                 "edit",

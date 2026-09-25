@@ -238,7 +238,10 @@ export const EXPECTATIONS = [
     // `beforeDate`/`beforeId` are the keyset anchor the mobile cursor decodes
     // to. Losing either one on the producer side turns a stable scroll into an
     // unfiltered first page served over and over, with a 200 every time.
-    query: ['limit', 'beforeDate', 'beforeId'],
+    // `ids` is the purchase detail's bank-match read
+    // (`finance/matched-transactions.ts`); losing it answers with the newest
+    // transactions instead of the matched ones, and every descriptor is wrong.
+    query: ['limit', 'beforeDate', 'beforeId', 'ids'],
     usedBy: 'pillars/bfm/src/api/finance/client.ts',
   },
   {

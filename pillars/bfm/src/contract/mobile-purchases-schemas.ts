@@ -9,6 +9,11 @@
  */
 import { z } from 'zod';
 
+import {
+  MobilePurchaseAccountingSchema,
+  MobilePurchaseChargeSchema,
+} from './mobile-purchase-bank-match-schemas.js';
+
 /**
  * Who a purchase was made from, and how confidently that is known — mirrors
  * `purchases`' own `MerchantIdentitySchema` (`contract/rest-analytics.ts`),
@@ -221,6 +226,18 @@ export const MobilePurchaseDetailSchema = MobilePurchaseSchema.extend({
    * still has a genuine single-receipt reason to read `receiptUri`.
    */
   receiptUris: z.array(z.string()),
+  /**
+   * How much of the order the bank statements have proven (POPS-4646).
+   * Optional only so a newer app still decodes a bfm build predating the
+   * field; this bfm always sends it.
+   */
+  accounting: MobilePurchaseAccountingSchema.optional(),
+  /**
+   * Every charge the order expects on a statement, in the producer's
+   * position order, each with the transactions matched to it. Optional for
+   * the same reason as `accounting`; this bfm always sends it.
+   */
+  charges: z.array(MobilePurchaseChargeSchema).optional(),
 });
 
 export type MobilePurchaseDetail = z.infer<typeof MobilePurchaseDetailSchema>;

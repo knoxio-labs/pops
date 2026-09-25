@@ -473,6 +473,15 @@ describe('merchant identity batching', () => {
           status: 'linked',
         },
         items: [],
+        charges: [],
+        accounting: {
+          totalCents: 500,
+          matchedCents: 0,
+          awaitingImportCents: 500,
+          residualCents: 0,
+          refundedCents: 0,
+          netSpendCents: 500,
+        },
         documents: [],
       },
     };
