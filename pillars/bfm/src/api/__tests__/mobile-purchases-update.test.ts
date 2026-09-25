@@ -193,6 +193,7 @@ describe('PATCH /mobile/purchases/:id', () => {
       description: 'WOOLWORTHS 1234',
       date: '2026-09-19',
       amount: -10,
+      currency: 'AUD',
       accountName: null,
     });
   });

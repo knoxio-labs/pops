@@ -63,7 +63,12 @@ function financeHandle(
         if (failWith !== undefined) return failWith;
         return {
           kind: 'ok',
-          value: { data: [financeAccountRow({ id: 'acc-up-everyday', name: 'Up Everyday' })] },
+          value: {
+            data: [
+              financeAccountRow({ id: 'acc-up-everyday', name: 'Up Everyday', currency: 'AUD' }),
+              financeAccountRow({ id: 'acc-wise', name: 'Wise EUR', currency: 'EUR' }),
+            ],
+          },
         };
       },
     },
@@ -157,6 +162,7 @@ describe('the bank match on a purchase detail', () => {
               description: 'IKEA RHODES',
               date: '2026-09-02',
               amount: -200,
+              currency: 'AUD',
               accountName: 'Up Everyday',
             },
           },
@@ -169,6 +175,7 @@ describe('the bank match on a purchase detail', () => {
               description: 'IKEA RHODES 2',
               date: '2026-09-03',
               amount: -49,
+              currency: 'AUD',
               accountName: 'Up Everyday',
             },
           },
@@ -186,6 +193,21 @@ describe('the bank match on a purchase detail', () => {
     ]);
     expect(calls.transactions).toEqual([{ ids: ['tx-1', 'tx-2'], limit: 2 }]);
     expect(calls.accounts).toHaveLength(1);
+  });
+
+  it('states each transaction in its own account’s currency', async () => {
+    const { get } = open(
+      purchasesDetail({ id: 'pur-1', charges: [charge({ id: 'chg-1' }, [link({ id: 'lnk-1' })])] }),
+      [financeRow({ id: 'tx-1', accountId: 'acc-wise', amount: -170.5 })]
+    );
+
+    const res = await get();
+
+    expect(res.body.charges[0].matches[0].transaction).toMatchObject({
+      amount: -170.5,
+      currency: 'EUR',
+      accountName: 'Wise EUR',
+    });
   });
 
   it('asks finance nothing for an order with no links', async () => {

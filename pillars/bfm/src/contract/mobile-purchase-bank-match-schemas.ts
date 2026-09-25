@@ -56,6 +56,12 @@ export const MobileMatchedTransactionSchema = z.object({
    * transaction pays several charges.
    */
   amount: z.number(),
+  /**
+   * ISO 4217 of `amount` — the transaction's account currency, falling back
+   * to `FALLBACK_MOBILE_CURRENCY` when finance's account list did not answer,
+   * exactly as the transactions leg does (POPS-3571).
+   */
+  currency: z.string(),
   /** The account's display name, or null when finance's account list did not answer. */
   accountName: z.string().nullable(),
 });

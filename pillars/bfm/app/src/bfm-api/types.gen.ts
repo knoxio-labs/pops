@@ -3242,6 +3242,7 @@ export type MobilePurchasesCreateManualPurchaseResponses = {
         transaction: {
           accountName: string | null;
           amount: number;
+          currency: string;
           date: string;
           description: string;
         } | null;
@@ -3456,6 +3457,7 @@ export type MobilePurchasesSaveReceiptDraftResponses = {
         transaction: {
           accountName: string | null;
           amount: number;
+          currency: string;
           date: string;
           description: string;
         } | null;
@@ -4442,6 +4444,7 @@ export type MobilePurchasesGetPurchaseResponses = {
         transaction: {
           accountName: string | null;
           amount: number;
+          currency: string;
           date: string;
           description: string;
         } | null;
@@ -4673,6 +4676,7 @@ export type MobilePurchasesUpdatePurchaseResponses = {
         transaction: {
           accountName: string | null;
           amount: number;
+          currency: string;
           date: string;
           description: string;
         } | null;

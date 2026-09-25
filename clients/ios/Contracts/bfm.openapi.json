@@ -8809,6 +8809,9 @@
                                     "amount": {
                                       "type": "number"
                                     },
+                                    "currency": {
+                                      "type": "string"
+                                    },
                                     "date": {
                                       "type": "string"
                                     },
@@ -8816,7 +8819,13 @@
                                       "type": "string"
                                     }
                                   },
-                                  "required": ["description", "date", "amount", "accountName"],
+                                  "required": [
+                                    "description",
+                                    "date",
+                                    "amount",
+                                    "currency",
+                                    "accountName"
+                                  ],
                                   "type": "object"
                                 },
                                 "transactionId": {
@@ -9569,6 +9578,9 @@
                                     "amount": {
                                       "type": "number"
                                     },
+                                    "currency": {
+                                      "type": "string"
+                                    },
                                     "date": {
                                       "type": "string"
                                     },
@@ -9576,7 +9588,13 @@
                                       "type": "string"
                                     }
                                   },
-                                  "required": ["description", "date", "amount", "accountName"],
+                                  "required": [
+                                    "description",
+                                    "date",
+                                    "amount",
+                                    "currency",
+                                    "accountName"
+                                  ],
                                   "type": "object"
                                 },
                                 "transactionId": {
@@ -12215,6 +12233,9 @@
                                     "amount": {
                                       "type": "number"
                                     },
+                                    "currency": {
+                                      "type": "string"
+                                    },
                                     "date": {
                                       "type": "string"
                                     },
@@ -12222,7 +12243,13 @@
                                       "type": "string"
                                     }
                                   },
-                                  "required": ["description", "date", "amount", "accountName"],
+                                  "required": [
+                                    "description",
+                                    "date",
+                                    "amount",
+                                    "currency",
+                                    "accountName"
+                                  ],
                                   "type": "object"
                                 },
                                 "transactionId": {
@@ -12896,6 +12923,9 @@
                                     "amount": {
                                       "type": "number"
                                     },
+                                    "currency": {
+                                      "type": "string"
+                                    },
                                     "date": {
                                       "type": "string"
                                     },
@@ -12903,7 +12933,13 @@
                                       "type": "string"
                                     }
                                   },
-                                  "required": ["description", "date", "amount", "accountName"],
+                                  "required": [
+                                    "description",
+                                    "date",
+                                    "amount",
+                                    "currency",
+                                    "accountName"
+                                  ],
                                   "type": "object"
                                 },
                                 "transactionId": {

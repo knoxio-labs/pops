@@ -30887,6 +30887,8 @@ internal enum Operations {
                                     internal var accountName: Swift.String?
                                     /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/ChargesPayload/MatchesPayload/transaction/amount`.
                                     internal var amount: Swift.Double
+                                    /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/ChargesPayload/MatchesPayload/transaction/currency`.
+                                    internal var currency: Swift.String
                                     /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/ChargesPayload/MatchesPayload/transaction/date`.
                                     internal var date: Swift.String
                                     /// - Remark: Generated from `#/paths/mobile/purchases/manual/POST/responses/200/content/json/ChargesPayload/MatchesPayload/transaction/description`.
@@ -30896,22 +30898,26 @@ internal enum Operations {
                                     /// - Parameters:
                                     ///   - accountName:
                                     ///   - amount:
+                                    ///   - currency:
                                     ///   - date:
                                     ///   - description:
                                     internal init(
                                         accountName: Swift.String? = nil,
                                         amount: Swift.Double,
+                                        currency: Swift.String,
                                         date: Swift.String,
                                         description: Swift.String
                                     ) {
                                         self.accountName = accountName
                                         self.amount = amount
+                                        self.currency = currency
                                         self.date = date
                                         self.description = description
                                     }
                                     internal enum CodingKeys: String, CodingKey {
                                         case accountName
                                         case amount
+                                        case currency
                                         case date
                                         case description
                                     }
@@ -30925,6 +30931,10 @@ internal enum Operations {
                                             Swift.Double.self,
                                             forKey: .amount
                                         )
+                                        self.currency = try container.decode(
+                                            Swift.String.self,
+                                            forKey: .currency
+                                        )
                                         self.date = try container.decode(
                                             Swift.String.self,
                                             forKey: .date
@@ -30936,6 +30946,7 @@ internal enum Operations {
                                         try decoder.ensureNoAdditionalProperties(knownKeys: [
                                             "accountName",
                                             "amount",
+                                            "currency",
                                             "date",
                                             "description"
                                         ])
@@ -33123,6 +33134,8 @@ internal enum Operations {
                                     internal var accountName: Swift.String?
                                     /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/ChargesPayload/MatchesPayload/transaction/amount`.
                                     internal var amount: Swift.Double
+                                    /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/ChargesPayload/MatchesPayload/transaction/currency`.
+                                    internal var currency: Swift.String
                                     /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/ChargesPayload/MatchesPayload/transaction/date`.
                                     internal var date: Swift.String
                                     /// - Remark: Generated from `#/paths/mobile/purchases/receipts/POST/responses/200/content/json/ChargesPayload/MatchesPayload/transaction/description`.
@@ -33132,22 +33145,26 @@ internal enum Operations {
                                     /// - Parameters:
                                     ///   - accountName:
                                     ///   - amount:
+                                    ///   - currency:
                                     ///   - date:
                                     ///   - description:
                                     internal init(
                                         accountName: Swift.String? = nil,
                                         amount: Swift.Double,
+                                        currency: Swift.String,
                                         date: Swift.String,
                                         description: Swift.String
                                     ) {
                                         self.accountName = accountName
                                         self.amount = amount
+                                        self.currency = currency
                                         self.date = date
                                         self.description = description
                                     }
                                     internal enum CodingKeys: String, CodingKey {
                                         case accountName
                                         case amount
+                                        case currency
                                         case date
                                         case description
                                     }
@@ -33161,6 +33178,10 @@ internal enum Operations {
                                             Swift.Double.self,
                                             forKey: .amount
                                         )
+                                        self.currency = try container.decode(
+                                            Swift.String.self,
+                                            forKey: .currency
+                                        )
                                         self.date = try container.decode(
                                             Swift.String.self,
                                             forKey: .date
@@ -33172,6 +33193,7 @@ internal enum Operations {
                                         try decoder.ensureNoAdditionalProperties(knownKeys: [
                                             "accountName",
                                             "amount",
+                                            "currency",
                                             "date",
                                             "description"
                                         ])
@@ -42099,6 +42121,8 @@ internal enum Operations {
                                     internal var accountName: Swift.String?
                                     /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/ChargesPayload/MatchesPayload/transaction/amount`.
                                     internal var amount: Swift.Double
+                                    /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/ChargesPayload/MatchesPayload/transaction/currency`.
+                                    internal var currency: Swift.String
                                     /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/ChargesPayload/MatchesPayload/transaction/date`.
                                     internal var date: Swift.String
                                     /// - Remark: Generated from `#/paths/mobile/purchases/{id}/GET/responses/200/content/json/ChargesPayload/MatchesPayload/transaction/description`.
@@ -42108,22 +42132,26 @@ internal enum Operations {
                                     /// - Parameters:
                                     ///   - accountName:
                                     ///   - amount:
+                                    ///   - currency:
                                     ///   - date:
                                     ///   - description:
                                     internal init(
                                         accountName: Swift.String? = nil,
                                         amount: Swift.Double,
+                                        currency: Swift.String,
                                         date: Swift.String,
                                         description: Swift.String
                                     ) {
                                         self.accountName = accountName
                                         self.amount = amount
+                                        self.currency = currency
                                         self.date = date
                                         self.description = description
                                     }
                                     internal enum CodingKeys: String, CodingKey {
                                         case accountName
                                         case amount
+                                        case currency
                                         case date
                                         case description
                                     }
@@ -42137,6 +42165,10 @@ internal enum Operations {
                                             Swift.Double.self,
                                             forKey: .amount
                                         )
+                                        self.currency = try container.decode(
+                                            Swift.String.self,
+                                            forKey: .currency
+                                        )
                                         self.date = try container.decode(
                                             Swift.String.self,
                                             forKey: .date
@@ -42148,6 +42180,7 @@ internal enum Operations {
                                         try decoder.ensureNoAdditionalProperties(knownKeys: [
                                             "accountName",
                                             "amount",
+                                            "currency",
                                             "date",
                                             "description"
                                         ])
@@ -44194,6 +44227,8 @@ internal enum Operations {
                                     internal var accountName: Swift.String?
                                     /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/200/content/json/ChargesPayload/MatchesPayload/transaction/amount`.
                                     internal var amount: Swift.Double
+                                    /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/200/content/json/ChargesPayload/MatchesPayload/transaction/currency`.
+                                    internal var currency: Swift.String
                                     /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/200/content/json/ChargesPayload/MatchesPayload/transaction/date`.
                                     internal var date: Swift.String
                                     /// - Remark: Generated from `#/paths/mobile/purchases/{id}/PATCH/responses/200/content/json/ChargesPayload/MatchesPayload/transaction/description`.
@@ -44203,22 +44238,26 @@ internal enum Operations {
                                     /// - Parameters:
                                     ///   - accountName:
                                     ///   - amount:
+                                    ///   - currency:
                                     ///   - date:
                                     ///   - description:
                                     internal init(
                                         accountName: Swift.String? = nil,
                                         amount: Swift.Double,
+                                        currency: Swift.String,
                                         date: Swift.String,
                                         description: Swift.String
                                     ) {
                                         self.accountName = accountName
                                         self.amount = amount
+                                        self.currency = currency
                                         self.date = date
                                         self.description = description
                                     }
                                     internal enum CodingKeys: String, CodingKey {
                                         case accountName
                                         case amount
+                                        case currency
                                         case date
                                         case description
                                     }
@@ -44232,6 +44271,10 @@ internal enum Operations {
                                             Swift.Double.self,
                                             forKey: .amount
                                         )
+                                        self.currency = try container.decode(
+                                            Swift.String.self,
+                                            forKey: .currency
+                                        )
                                         self.date = try container.decode(
                                             Swift.String.self,
                                             forKey: .date
@@ -44243,6 +44286,7 @@ internal enum Operations {
                                         try decoder.ensureNoAdditionalProperties(knownKeys: [
                                             "accountName",
                                             "amount",
+                                            "currency",
                                             "date",
                                             "description"
                                         ])

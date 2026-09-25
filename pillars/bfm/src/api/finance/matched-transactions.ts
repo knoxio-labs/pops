@@ -3,11 +3,12 @@
  * finance for the purchase detail's bank-match section (POPS-4646).
  *
  * One `transactions.list` narrowed by `ids` answers every link of a detail,
- * and one `accounts.list` names their accounts — two calls per detail, run
+ * and one `accounts.list` names their accounts and currencies — two calls per detail, run
  * together, however many links it has. Either failing degrades rather than
  * failing the detail: the links still carry their own amount and method, so
  * an unreachable finance costs the descriptor, not the screen.
  */
+import { FALLBACK_MOBILE_CURRENCY } from '../../contract/rest-schemas.js';
 import { isGatewayOk, type PillarGateway } from '../pillars/gateway.js';
 import { parseOrMismatch } from '../pillars/parse-response.js';
 import { FinanceAccountListResponseSchema, FinanceTransactionListResponseSchema } from './wire.js';
@@ -43,18 +44,20 @@ export async function fetchMatchedTransactions(
   const wanted = [...new Set(ids)].slice(0, FINANCE_LIST_CAP);
   if (wanted.length === 0) return new Map();
 
-  const [transactions, accountNames] = await Promise.all([
+  const [transactions, accounts] = await Promise.all([
     fetchTransactions(gateway, wanted),
-    fetchAccountNames(gateway),
+    fetchAccounts(gateway),
   ]);
 
   const described = new Map<string, MobileMatchedTransaction>();
   for (const row of transactions) {
+    const account = accounts.get(row.accountId);
     described.set(row.id, {
       description: row.description,
       date: row.date,
       amount: row.amount,
-      accountName: accountNames.get(row.accountId) ?? null,
+      currency: account?.currency ?? FALLBACK_MOBILE_CURRENCY,
+      accountName: account?.name ?? null,
     });
   }
   return described;
@@ -77,7 +80,9 @@ async function fetchTransactions(
   return isGatewayOk(page) ? page.value.data : [];
 }
 
-async function fetchAccountNames(gateway: PillarGateway): Promise<ReadonlyMap<string, string>> {
+async function fetchAccounts(
+  gateway: PillarGateway
+): Promise<ReadonlyMap<string, { name: string; currency: string }>> {
   const outcome = await gateway.call<FinanceMatchedTransactionsRouter, unknown>(
     FINANCE_PILLAR_ID,
     (handle) => handle.accounts.list({ limit: FINANCE_LIST_CAP })
@@ -89,5 +94,10 @@ async function fetchAccountNames(gateway: PillarGateway): Promise<ReadonlyMap<st
     'accounts.list'
   );
   if (!isGatewayOk(page)) return new Map();
-  return new Map(page.value.data.map((account) => [account.id, account.name]));
+  return new Map(
+    page.value.data.map((account) => [
+      account.id,
+      { name: account.name, currency: account.currency },
+    ])
+  );
 }

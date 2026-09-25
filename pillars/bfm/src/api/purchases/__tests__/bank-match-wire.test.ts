@@ -50,6 +50,7 @@ const IKEA_TX: MobileMatchedTransaction = {
   description: 'IKEA RHODES',
   date: '2026-09-02',
   amount: -249,
+  currency: 'AUD',
   accountName: 'Up Everyday',
 };
 
