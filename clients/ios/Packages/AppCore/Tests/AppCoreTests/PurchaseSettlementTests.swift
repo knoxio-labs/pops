@@ -2,8 +2,8 @@ import AppCore
 import Testing
 
 /// The mobile surface sends a purchase's settlement status as an open string,
-/// so the mapping has two jobs: name the five the pillar publishes, and keep a
-/// sixth it has never seen rather than refusing the row.
+/// so the mapping has two jobs: name the six the pillar publishes, and keep a
+/// seventh it has never seen rather than refusing the row.
 @Suite("Purchase settlement")
 internal struct PurchaseSettlementTests {
     @Test(
@@ -14,6 +14,7 @@ internal struct PurchaseSettlementTests {
             ("partial", .partial),
             ("settled_cash", .settledCash),
             ("ignored", .ignored),
+            ("nothing_to_settle", .nothingToSettle),
         ]
     )
     func knownStatusesMap(wire: String, expected: PurchaseSettlement) {
@@ -44,6 +45,7 @@ internal struct PurchaseSettlementTests {
             (.linked, false),
             (.settledCash, false),
             (.ignored, false),
+            (.nothingToSettle, false),
             (.unrecognised("something new"), false),
         ]
     )

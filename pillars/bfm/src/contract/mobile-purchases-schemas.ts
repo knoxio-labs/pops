@@ -111,7 +111,7 @@ export const MobilePurchaseSchema = z.object({
   itemCount: z.int().min(0),
   /**
    * Reconciliation state, verbatim from `purchases`: `awaiting_settlement`,
-   * `linked`, `partial`, `settled_cash`, `ignored`.
+   * `linked`, `partial`, `settled_cash`, `ignored`, `nothing_to_settle`.
    *
    * An open string rather than an enum, and NOT collapsed to a boolean.
    * `awaiting_settlement` is a normal permanent state rather than a problem,
@@ -331,6 +331,7 @@ const MOBILE_SEARCH_STATUSES = [
   'partial',
   'settled_cash',
   'ignored',
+  'nothing_to_settle',
 ] as const;
 
 /** `GET /mobile/purchases/search`'s query. */

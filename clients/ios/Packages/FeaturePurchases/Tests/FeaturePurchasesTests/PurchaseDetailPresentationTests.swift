@@ -76,7 +76,7 @@ internal struct PurchaseDetailPresentationTests {
     @Test("every settlement has distinct match copy and symbol")
     func settlementCopyIsDistinct() {
         let statuses: [PurchaseSettlement] = [
-            .awaitingSettlement, .linked, .partial, .settledCash, .ignored,
+            .awaitingSettlement, .linked, .partial, .settledCash, .ignored, .nothingToSettle,
             .unrecognised("refunded"),
         ]
 
