@@ -63,5 +63,9 @@ export function kitchen12Contents(model: ItemDetailModel): string[] {
 /** An open container with nothing in it yet. */
 export const emptyShoebox: ItemDetailModel = (() => {
   const base = detailFor('box-shoe');
-  return { ...base, item: { ...base.item, lifecycle: 'active' } };
+  return {
+    ...base,
+    item: { ...base.item, lifecycle: 'active' },
+    facts: [{ key: 'room', label: 'For room', value: 'Bedroom', origin: 'entered', inline: true }],
+  };
 })();

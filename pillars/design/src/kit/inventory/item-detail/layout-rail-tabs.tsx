@@ -23,6 +23,7 @@ function Rail({ model, condition, readOnly, onQuantity }: DetailBodyProps) {
         itemName={model.item.name}
         broken={condition.brokenPhoto}
         size="wide"
+        disabledReason={readOnly ? 'Nothing can change on this item.' : undefined}
       />
       <div className="min-h-0 flex-1 overflow-y-auto">
         <FactsSection

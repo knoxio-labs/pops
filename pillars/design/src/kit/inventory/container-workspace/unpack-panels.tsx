@@ -90,10 +90,10 @@ export function OutcomePanel({
         <div
           role="group"
           aria-label="Confirm retire"
-          className="flex w-full max-w-md items-center gap-3 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-left"
+          className="flex w-full max-w-xl items-center gap-3 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-left"
         >
           <p className="min-w-0 flex-1 text-sm">
-            Retire {name}? It leaves lists and totals. Its history stays and Undo brings it back.
+            Retire {name}? It leaves lists and totals, and Undo brings it back.
           </p>
           <Button size="sm" variant="ghost" onClick={() => dispatch({ type: 'cancel-retire' })}>
             Cancel

@@ -91,9 +91,13 @@ export function PhotosSection({
   return (
     <div className={cn('flex shrink-0 flex-col gap-2', size === 'tile' ? 'w-48' : 'w-full')}>
       <div className={cn('overflow-hidden rounded-lg border bg-muted', frame)}>
-        {lead ? (
-          <LeadPhoto photo={lead} broken={broken} />
-        ) : (
+        {lead ? <LeadPhoto photo={lead} broken={broken} /> : null}
+        {!lead && disabledReason !== undefined ? (
+          <div className="flex size-full items-center justify-center text-xs text-muted-foreground">
+            No photos
+          </div>
+        ) : null}
+        {lead || disabledReason !== undefined ? null : (
           <AddTile
             label="Add photos from disk"
             onAdd={() => setAdding(true)}

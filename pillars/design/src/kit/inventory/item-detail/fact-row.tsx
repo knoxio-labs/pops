@@ -116,7 +116,7 @@ function Editor({ fact, draft, saving }: { fact: DetailFact; draft: string; savi
 
 function QuantityActions({ onQuantity }: { onQuantity?: FactRowProps['onQuantity'] }) {
   return (
-    <span className="ml-auto flex shrink-0 items-center gap-1">
+    <span className="ml-4 flex shrink-0 items-center gap-1">
       <VerbButton label="Change" variant="ghost" onClick={() => onQuantity?.('change')} />
       <VerbButton label="Split" variant="ghost" onClick={() => onQuantity?.('split')} />
     </span>
@@ -181,6 +181,7 @@ export function FactRow(props: FactRowProps) {
     <div
       className={cn(
         'min-w-0 rounded-md border-l-2 border-transparent',
+        props.fact.key === 'quantity' && '@xs:col-span-2',
         phase === 'pending' && 'border-l-app-accent',
         phase === 'rejected' && 'bg-warning/10',
         (phase === 'editing' || phase === 'saving') && 'bg-muted/60'
