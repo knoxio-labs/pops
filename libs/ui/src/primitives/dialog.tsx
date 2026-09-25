@@ -37,6 +37,12 @@ function DialogOverlay({
   );
 }
 
+/**
+ * Below md the dialog is a full-screen sheet, so it scrolls itself: Radix locks
+ * the page behind it, and a form taller than the phone (or pushed up by the
+ * keyboard) otherwise had its footer buttons cut off with no way to reach them.
+ * `content-start` stops the grid stretching short content to fill the screen.
+ */
 function DialogContent({
   className,
   children,
@@ -51,7 +57,7 @@ function DialogContent({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          'bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed z-50 grid w-full gap-4 border p-6 shadow-lg duration-200 outline-none inset-0 rounded-none md:inset-auto md:top-1/2 md:left-1/2 md:max-w-lg md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-lg md:data-[state=closed]:zoom-out-95 md:data-[state=open]:zoom-in-95',
+          'bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed z-50 grid content-start w-full gap-4 border p-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-lg duration-200 outline-none inset-0 rounded-none overflow-y-auto overscroll-contain md:inset-auto md:top-1/2 md:left-1/2 md:max-w-lg md:max-h-[calc(100dvh-2rem)] md:p-6 md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-lg md:data-[state=closed]:zoom-out-95 md:data-[state=open]:zoom-in-95',
           className
         )}
         {...props}
@@ -60,7 +66,7 @@ function DialogContent({
         {showCloseButton && (
           <DialogPrimitive.Close
             data-slot="dialog-close"
-            className="ring-offset-background focus:ring-ring data-[state=open]:bg-accent data-[state=open]:text-muted-foreground absolute top-2 right-2 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 min-w-11 min-h-11 flex items-center justify-center"
+            className="ring-offset-background focus:ring-ring data-[state=open]:bg-accent data-[state=open]:text-muted-foreground absolute top-[max(0.5rem,env(safe-area-inset-top))] right-2 md:top-2 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 min-w-11 min-h-11 flex items-center justify-center"
           >
             <XIcon />
             <span className="sr-only">Close</span>

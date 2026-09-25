@@ -7,20 +7,20 @@ import { useUIStore } from './uiStore';
 
 describe('uiStore', () => {
   beforeEach(() => {
-    useUIStore.setState({ sidebarOpen: true, railOpen: true });
+    useUIStore.setState({ sidebarOpen: false, railOpen: true });
   });
 
   describe('sidebarOpen', () => {
-    it('should default to true', () => {
-      expect(useUIStore.getState().sidebarOpen).toBe(true);
+    it('should default to false so a phone does not land on an open drawer', () => {
+      expect(useUIStore.getInitialState().sidebarOpen).toBe(false);
     });
 
     it('should toggle sidebar', () => {
       useUIStore.getState().toggleSidebar();
-      expect(useUIStore.getState().sidebarOpen).toBe(false);
+      expect(useUIStore.getState().sidebarOpen).toBe(true);
 
       useUIStore.getState().toggleSidebar();
-      expect(useUIStore.getState().sidebarOpen).toBe(true);
+      expect(useUIStore.getState().sidebarOpen).toBe(false);
     });
 
     it('should set sidebar open directly', () => {
@@ -61,5 +61,25 @@ describe('uiStore', () => {
     useUIStore.getState().setRailOpen(false);
     expect(useUIStore.getState().sidebarOpen).toBe(false);
     expect(useUIStore.getState().railOpen).toBe(false);
+  });
+
+  describe('persistence', () => {
+    beforeEach(() => localStorage.clear());
+
+    it('does not persist sidebarOpen', () => {
+      useUIStore.getState().setSidebarOpen(true);
+      const stored = JSON.parse(localStorage.getItem('pops-ui-storage') ?? '{}');
+      expect(stored.state).toEqual({ railOpen: true });
+    });
+
+    it('ignores a stale sidebarOpen written by an older build', async () => {
+      localStorage.setItem(
+        'pops-ui-storage',
+        JSON.stringify({ state: { sidebarOpen: true, railOpen: false }, version: 0 })
+      );
+      await useUIStore.persist.rehydrate();
+      expect(useUIStore.getState().sidebarOpen).toBe(false);
+      expect(useUIStore.getState().railOpen).toBe(false);
+    });
   });
 });

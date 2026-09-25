@@ -18,7 +18,7 @@ export function EgoFab({ open, onToggle }: EgoFabProps) {
       size="icon"
       shape="circle"
       className={cn(
-        'fixed bottom-6 right-6 z-50 h-14 w-14 shadow-lg',
+        'fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom))] right-6 z-50 h-14 w-14 shadow-lg',
         'bg-info hover:bg-info/90 text-info-foreground',
         'transition-transform duration-200',
         open && 'scale-90'

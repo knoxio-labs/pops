@@ -25,7 +25,7 @@ export function TopBar() {
 
   return (
     <>
-      <header className="bg-card border-b border-border h-14 md:h-16 flex items-center px-3 md:px-4 fixed top-0 w-full z-40">
+      <header className="bg-card border-b border-border h-(--shell-top-bar-height) pt-[env(safe-area-inset-top)] flex items-center pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] md:pl-[max(1rem,env(safe-area-inset-left))] md:pr-[max(1rem,env(safe-area-inset-right))] fixed top-0 w-full z-40">
         <div className="flex flex-1 items-center min-w-0">
           <Button
             variant="ghost"
