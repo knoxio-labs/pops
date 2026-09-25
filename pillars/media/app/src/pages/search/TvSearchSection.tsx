@@ -53,7 +53,7 @@ export function TvSearchSection({
         <SearchSectionError label="TV search failed" message={error.message} onRetry={onRetry} />
       )}
       {!isLoading && !error && results.length > 0 && (
-        <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 grid-cols-1 sm:max-lg:grid-cols-2 lg:grid-cols-3">
           {results.map((show) => (
             <TvCard
               key={show.tvdbId}

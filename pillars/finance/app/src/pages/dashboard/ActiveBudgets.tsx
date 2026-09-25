@@ -67,7 +67,7 @@ export function ActiveBudgets({
     );
   }
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+    <div className="grid gap-4 md:max-lg:grid-cols-2 lg:grid-cols-3">
       {budgets.map((budget) => (
         <BudgetCard key={budget.id} budget={budget} />
       ))}

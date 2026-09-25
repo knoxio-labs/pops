@@ -30,7 +30,7 @@ function ItemRow({ item, onOpen }: { item: ReportItem; onOpen: (id: string) => v
   const warranty = warrantyStatus(item.warrantyExpires);
   return (
     <tr
-      className="border-b last:border-0 hover:bg-muted/30 cursor-pointer print:hover:bg-transparent print:cursor-default print:break-inside-avoid print:border-print-rule"
+      className="border-b last:border-0 not-print:hover:bg-muted/30 cursor-pointer print:hover:bg-transparent print:cursor-default print:break-inside-avoid print:border-print-rule"
       onClick={() => onOpen(item.id)}
     >
       <td className={TD_CLASS}>

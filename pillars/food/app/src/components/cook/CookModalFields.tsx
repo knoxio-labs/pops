@@ -67,7 +67,7 @@ function RatingPicker({
           type="button"
           role="radio"
           aria-checked={value === n}
-          className="cursor-pointer rounded px-2 py-1 text-sm hover:bg-muted aria-checked:bg-primary aria-checked:text-primary-foreground"
+          className="cursor-pointer rounded px-2 py-1 text-sm hover:not-aria-checked:bg-muted aria-checked:bg-primary aria-checked:text-primary-foreground"
           onClick={() => onChange(value === n ? null : n)}
         >
           {n}

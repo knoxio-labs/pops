@@ -12,12 +12,14 @@
  * against a variant. Two shapes remain, and this guard keeps both out of the
  * tree:
  *
- *   1. VARIANT AGAINST VARIANT (scope: `pillars/shell/src`, `libs/*\/src`). A
- *      shell or kit element carrying two different variants of one property
- *      (`md:flex lg:hidden`). A pillar sheet that re-emits the variant Tailwind
- *      orders first (`md:flex`) puts it after the shell's `lg:hidden`, and the
- *      element is shown at `lg`. `cn()` does not help: tailwind-merge never
- *      merges two different variants.
+ *   1. VARIANT AGAINST VARIANT (scope: `pillars/shell/src`, `libs/*\/src`,
+ *      `pillars/*\/app/src`). An element carrying two different variants of
+ *      one property (`md:flex lg:hidden`). A sibling sheet that re-emits the
+ *      variant Tailwind orders first (`md:flex`) puts it after the element's
+ *      own `lg:hidden`, and the element is shown at `lg`. Pillar sheets
+ *      accumulate in one document, so a pillar element is exposed to every
+ *      pillar sheet loaded after its own. `cn()` does not help: tailwind-merge
+ *      never merges two different variants.
  *   2. PLAIN AGAINST PLAIN (scope: `pillars/*\/app/src`). A pillar element
  *      carrying two plain utilities that set one CSS property (`p-2 p-4`, or
  *      `p-2 px-4`). The pillar's plain utilities sit in the
@@ -46,8 +48,10 @@
  *   - Conditions that cannot hold together are exclusive: one data/aria
  *     attribute with two values (`data-[size=sm]:` / `data-[size=lg]:`), two
  *     element types (`[a&]:` / `[button&]:`), `X` and `not-X`, and a
- *     breakpoint and its own range end (`lg:` / `max-lg:`). That last one is
- *     the fix this guard asks for: `md:max-lg:p-6 lg:p-8`.
+ *     breakpoint and a range end at or below it (`lg:` / `max-lg:`, `xl:` /
+ *     `max-lg:`). That last one is the fix this guard asks for:
+ *     `md:max-lg:p-6 lg:p-8`, or for a ladder
+ *     `sm:max-lg:grid-cols-2 lg:max-xl:grid-cols-3 xl:grid-cols-4`.
  *   - Rules of different specificity resolve the same way in either order.
  *     {@link conditionSpecificity} reads it off a table of variants; one
  *     outside the table (an arbitrary `[&:…]:`) makes the pair reported.
@@ -64,8 +68,10 @@
  * is concerned; widening the table only ever adds reports.
  *
  * LIMITS, stated rather than hidden. This is a text scanner, not a TypeScript
- * parser (the job is install-free, ADR-045 Tier A). Classes reaching an
- * element through a variable (`cn(base, 'p-4')`) are not followed. The scan of
+ * parser (the job is install-free, ADR-045 Tier A). Classes that
+ * reach an element through a variable (`cn(base, 'p-4')`) or a prop
+ * (`<SkeletonGrid cols="md:grid-cols-2 lg:grid-cols-4" />`) are invisible to
+ * it. The scan of
  * an expression is quote-, template- and comment-aware, and an expression
  * whose brackets never balance is reported as a finding rather than skipped.
  *
@@ -389,10 +395,27 @@ function keyedCondition(condition) {
   return undefined;
 }
 
+/** The theme's breakpoints, narrowest first (libs/ui/src/theme/globals.css). */
+const BREAKPOINTS = ['sm', 'md', 'lg', 'xl', '2xl'];
+
+/**
+ * Whether `rangeEnd` (`max-lg`) ends at or below where `breakpoint` (`xl`)
+ * starts, so no width satisfies both.
+ *
+ * @param {string} rangeEnd
+ * @param {string} breakpoint
+ */
+function rangeEndsBy(rangeEnd, breakpoint) {
+  const end = BREAKPOINTS.indexOf(rangeEnd.replace(/^max-/, ''));
+  const start = BREAKPOINTS.indexOf(breakpoint);
+  return rangeEnd.startsWith('max-') && end !== -1 && start !== -1 && end <= start;
+}
+
 /**
  * Whether two variant chains can never apply at once: one names a keyed
- * condition the other names with another value, or one negates (`not-dark`)
- * a condition the other requires.
+ * condition the other names with another value, one negates (`not-dark`)
+ * a condition the other requires, or one's breakpoint range ends at or below
+ * where the other's starts (`max-lg` against `lg` or `xl`).
  *
  * @param {string[]} a
  * @param {string[]} b
@@ -401,7 +424,7 @@ export function conditionsExclusive(a, b) {
   for (const x of a) {
     for (const y of b) {
       if (x === `not-${y}` || y === `not-${x}`) return true;
-      if (x === `max-${y}` || y === `max-${x}`) return true;
+      if (rangeEndsBy(x, y) || rangeEndsBy(y, x)) return true;
       const kx = keyedCondition(x);
       const ky = keyedCondition(y);
       if (kx !== undefined && ky !== undefined && kx[0] === ky[0] && kx[1] !== ky[1]) return true;
@@ -1002,7 +1025,7 @@ export function scopeOf(relPath) {
   if (/^pillars\/shell\/src\//.test(relPath) || /^libs\/(?:.+\/)?src\//.test(relPath)) {
     return { variant: true, plain: false };
   }
-  if (/^pillars\/[^/]+\/app\/src\//.test(relPath)) return { variant: false, plain: true };
+  if (/^pillars\/[^/]+\/app\/src\//.test(relPath)) return { variant: true, plain: true };
   return undefined;
 }
 
@@ -1040,17 +1063,17 @@ function discoverFiles(root) {
 }
 
 /**
- * Floors on discovery, per scope. The tree has hundreds of files and
+ * Floors on discovery, per area. The tree has hundreds of files and
  * thousands of elements in each; numbers near zero mean the walk or the
  * extractor broke, not that the tree got clean.
  */
-const MIN_FILES = { variant: 300, plain: 1000 };
-const MIN_ELEMENTS = { variant: 700, plain: 4000 };
+const MIN_FILES = { shell: 300, app: 1000 };
+const MIN_ELEMENTS = { shell: 700, app: 4000 };
 
 /**
  * @typedef {object} AuditCounts
- * @property {{ files: number, elements: number }} variant Shell and lib files.
- * @property {{ files: number, elements: number }} plain   Pillar app files.
+ * @property {{ files: number, elements: number }} shell Shell and lib files.
+ * @property {{ files: number, elements: number }} app   Pillar app files.
  */
 
 /**
@@ -1061,14 +1084,14 @@ const MIN_ELEMENTS = { variant: 700, plain: 4000 };
  * @throws When `pillars/` or `libs/` is missing under `root`.
  */
 export function auditTree(root) {
-  const counts = { variant: { files: 0, elements: 0 }, plain: { files: 0, elements: 0 } };
+  const counts = { shell: { files: 0, elements: 0 }, app: { files: 0, elements: 0 } };
   /** @type {Conflict[]} */
   const conflicts = [];
   for (const file of discoverFiles(root)) {
     const scope = scopeOf(file);
     if (scope === undefined) continue;
     const src = readFileSync(join(root, file), 'utf8');
-    const which = scope.variant ? 'variant' : 'plain';
+    const which = scope.plain ? 'app' : 'shell';
     counts[which].files += 1;
     counts[which].elements += extractElements(src).length;
     conflicts.push(...findConflicts(file, src, scope));
@@ -1077,21 +1100,21 @@ export function auditTree(root) {
 }
 
 /**
- * One message per scope whose discovery fell below its floor; empty when
- * both scopes found enough to be believable.
+ * One message per area whose discovery fell below its floor; empty when
+ * both areas found enough to be believable.
  *
  * @param {AuditCounts} counts
  * @returns {string[]}
  */
 export function floorViolations(counts) {
-  return /** @type {const} */ (['variant', 'plain'])
+  return /** @type {const} */ (['shell', 'app'])
     .filter(
       (which) =>
         counts[which].files < MIN_FILES[which] || counts[which].elements < MIN_ELEMENTS[which]
     )
     .map(
       (which) =>
-        `Discovery for the ${which} scope found ${counts[which].files} file(s) and ` +
+        `Discovery for the ${which} files found ${counts[which].files} file(s) and ` +
         `${counts[which].elements} element(s), below the floors of ${MIN_FILES[which]} and ` +
         `${MIN_ELEMENTS[which]}. The walk or the extractor is broken; this is not a clean tree.`
     );
@@ -1113,13 +1136,13 @@ function run() {
   const variant = conflicts.filter((c) => c.kind === 'variant');
   const plain = conflicts.filter((c) => c.kind === 'plain');
   console.log(
-    `Scanned ${counts.variant.files} shell/lib file(s) (${counts.variant.elements} elements) and ` +
-      `${counts.plain.files} pillar app file(s) (${counts.plain.elements} elements).`
+    `Scanned ${counts.shell.files} shell/lib file(s) (${counts.shell.elements} elements) and ` +
+      `${counts.app.files} pillar app file(s) (${counts.app.elements} elements).`
   );
   if (variant.length > 0) {
     console.error(
-      `\n${variant.length} shell/lib pair(s) of variants of one property at equal specificity. A ` +
-        'pillar sheet that re-emits the one Tailwind orders first overrides the other. Make the ' +
+      `\n${variant.length} pair(s) of variants of one property at equal specificity. A ` +
+        'sibling sheet that re-emits the one Tailwind orders first overrides the other. Make the ' +
         'conditions exclusive (md:max-lg:p-6 lg:p-8, not md:p-6 lg:p-8):'
     );
     for (const c of variant) console.error(formatConflict(c));
@@ -1145,7 +1168,7 @@ function run() {
  */
 function selfTest() {
   const shell = { variant: true, plain: false };
-  const pillar = { variant: false, plain: true };
+  const pillar = { variant: true, plain: true };
   /** @type {[string, string, Scope, string[]][]} */
   const cases = [
     [
@@ -1233,11 +1256,12 @@ function selfTest() {
     ],
     ['a class in a comment is not an element', '// <a className="md:flex lg:hidden" />', shell, []],
     [
-      'variant shapes are out of the pillar scope',
-      '<a className="md:flex lg:hidden" />',
+      'variant pair in a pillar app',
+      '<a className="md:grid-cols-2 lg:grid-cols-4" />',
       pillar,
-      [],
+      ['md:grid-cols-2|lg:grid-cols-4'],
     ],
+    ['plain shapes are out of the shell scope', '<a className="p-2 p-4" />', shell, []],
     [
       'equal specificity with no decider is reported',
       '<tr className="hover:bg-a data-[state=on]:bg-b" />',
@@ -1255,6 +1279,18 @@ function selfTest() {
       '<a className="md:max-lg:p-6 lg:p-8" />',
       shell,
       [],
+    ],
+    [
+      'a grid ladder of closed ranges is exclusive',
+      '<a className="sm:max-lg:grid-cols-2 lg:max-xl:grid-cols-3 xl:grid-cols-4" />',
+      pillar,
+      [],
+    ],
+    [
+      'a range ending above the next breakpoint overlaps it',
+      '<a className="sm:max-xl:grid-cols-2 lg:grid-cols-3" />',
+      pillar,
+      ['sm:max-xl:grid-cols-2|lg:grid-cols-3'],
     ],
     ['not-X and X are exclusive', '<a className="not-dark:hover:bg-a dark:bg-b" />', shell, []],
     [
@@ -1312,7 +1348,8 @@ function selfTest() {
     ok = false;
   }
   const missing = scopeOf('pillars/shell/src/app/nav.tsx');
-  if (missing === undefined || scopeOf('pillars/finance/app/src/page.tsx')?.plain !== true) {
+  const app = scopeOf('pillars/finance/app/src/page.tsx');
+  if (missing === undefined || app?.plain !== true || !app.variant) {
     console.error('self-test FAILED: the scope map no longer recognises the shell or a pillar app');
     ok = false;
   }
@@ -1340,10 +1377,15 @@ function selfTestTree() {
       '<nav className="md:block lg:hidden" />\n'
     );
     writeFileSync(join(root, 'pillars/media/app/src/Card.tsx'), '<div className="p-2 p-4" />\n');
+    writeFileSync(
+      join(root, 'pillars/media/app/src/Grid.tsx'),
+      '<div className="sm:grid-cols-2 lg:grid-cols-3" />\n'
+    );
     const { counts, conflicts } = auditTree(root);
     const found = conflicts.map((c) => `${c.kind}:${c.file}:${c.first}|${c.second}`).toSorted();
     const expected = [
       'plain:pillars/media/app/src/Card.tsx:p-2|p-4',
+      'variant:pillars/media/app/src/Grid.tsx:sm:grid-cols-2|lg:grid-cols-3',
       'variant:pillars/shell/src/Nav.tsx:md:block|lg:hidden',
     ];
     if (JSON.stringify(found) !== JSON.stringify(expected)) {
@@ -1351,7 +1393,7 @@ function selfTestTree() {
       ok = false;
     }
     if (floorViolations(counts).length !== 2) {
-      console.error('self-test FAILED: a two-file tree must fail both discovery floors');
+      console.error('self-test FAILED: a three-file tree must fail both discovery floors');
       ok = false;
     }
     rmSync(join(root, 'libs'), { recursive: true });
