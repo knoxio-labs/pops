@@ -77,8 +77,13 @@ function splitLine(line: string, tabbed: boolean): string[] {
   return tabbed ? line.split('\t').map((value) => value.trim()) : splitCsvLine(line);
 }
 
+/** The grid column a header names, by name or a common alias; null when none. */
+export function columnForHeader(header: string): BulkColumn | null {
+  return ALIASES[header.trim().toLowerCase()] ?? null;
+}
+
 function headerColumns(cells: readonly string[]): (BulkColumn | null)[] | null {
-  const mapped = cells.map((cell) => ALIASES[cell.trim().toLowerCase()] ?? null);
+  const mapped = cells.map(columnForHeader);
   return mapped.some((column) => column === 'name') ? mapped : null;
 }
 
