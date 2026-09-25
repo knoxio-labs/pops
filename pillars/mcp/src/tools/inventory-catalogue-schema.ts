@@ -8,7 +8,6 @@ export {
 } from './inventory-catalogue-expression-schema.js';
 
 const uuid = { type: 'string', format: 'uuid' } as const;
-const nullableString = { type: ['string', 'null'] } as const;
 const archivedAt = { type: ['string', 'null'] } as const;
 const presentation = { type: 'object', additionalProperties: true } as const;
 
@@ -20,10 +19,18 @@ const putType = {
     id: uuid,
     key: { type: 'string', minLength: 1, maxLength: 100 },
     label: { type: 'string', minLength: 1, maxLength: 200 },
-    description: nullableString,
+    description: { type: ['string', 'null'], maxLength: 2_000 },
     sortOrder: { type: 'integer', minimum: 0 },
-    capabilities: { type: 'array', items: { type: 'string', minLength: 1, maxLength: 64 } },
-    legacyLabels: { type: 'array', items: { type: 'string', minLength: 1, maxLength: 200 } },
+    capabilities: {
+      type: 'array',
+      maxItems: 16,
+      items: { type: 'string', minLength: 1, maxLength: 64 },
+    },
+    legacyLabels: {
+      type: 'array',
+      maxItems: 50,
+      items: { type: 'string', minLength: 1, maxLength: 200 },
+    },
     presentation,
     archivedAt,
   },
@@ -39,7 +46,7 @@ const putField = {
     typeId: uuid,
     key: { type: 'string', minLength: 1, maxLength: 100 },
     label: { type: 'string', minLength: 1, maxLength: 200 },
-    help: nullableString,
+    help: { type: ['string', 'null'], maxLength: 2_000 },
     sortOrder: { type: 'integer', minimum: 0 },
     fieldKind: {
       type: 'string',
@@ -60,7 +67,7 @@ const putField = {
     cardinality: { type: 'string', enum: ['one', 'many'] },
     required: { type: 'boolean' },
     storage: { type: 'string', enum: ['stored', 'computed'] },
-    fixedUnit: nullableString,
+    fixedUnit: { type: ['string', 'null'], minLength: 1, maxLength: 32 },
     referenceKinds: {
       type: 'array',
       maxItems: 2,
@@ -113,7 +120,12 @@ const reorderDefinitions = {
   required: ['kind', 'definition', 'ids'],
 } as const;
 
-/** JSON schema matching every discriminant and required field in the REST draft operation union. */
+/**
+ * JSON schema matching every discriminant and required field in the REST draft
+ * operation union. Archiving a type, field or enum option is one of these
+ * operations (`archive_type`, `archive_field`, `archive_enum_option`); the MCP
+ * surface has no separate archive tool.
+ */
 export const catalogueOperationSchema = {
   oneOf: [
     putType,
