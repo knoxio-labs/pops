@@ -2,7 +2,10 @@ import { and, eq, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { resolveProtocol1Type } from '../../catalogue/catalogue.js';
-import { assertIncomingReferencesPermitType } from '../../catalogue/item-values.js';
+import {
+  assertIncomingReferencesPermitType,
+  IncomingReferenceTypeError,
+} from '../../catalogue/item-values.js';
 import { ValueValidationError } from '../../catalogue/value-codec.js';
 import { items } from '../../db/index.js';
 import {
@@ -133,6 +136,12 @@ function assertTypeChangePermitted(
   try {
     assertIncomingReferencesPermitType(db, row.id, type.id);
   } catch (error) {
+    if (error instanceof IncomingReferenceTypeError) {
+      throw new CommandRejected('reference_type_mismatch', error.message, [], {
+        itemId: error.itemId,
+        fieldId: error.fieldId,
+      });
+    }
     if (error instanceof ValueValidationError) {
       throw new CommandRejected('invalid', error.message);
     }

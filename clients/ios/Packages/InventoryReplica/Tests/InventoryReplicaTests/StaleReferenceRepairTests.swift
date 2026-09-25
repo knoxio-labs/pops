@@ -87,6 +87,69 @@ internal struct StaleReferenceRepairTests {
         #expect(sent.first?.command == Self.shelf(Setup.rack))
     }
 
+    @Test(
+        "Retry refuses locally rather than resend a reference this phone still cannot show is live"
+    )
+    func retryRefusesStaleReferenceLocally() throws {
+        let replica = try Self.refused(Self.shelf(Setup.elsewhere), reason: .targetMissing)
+
+        #expect(throws: InventoryCommandError.self) {
+            try replica.resolve("m1", with: .keepMine(), minting: ["m2"])
+        }
+        #expect(try replica.ledger.repairs.count == 1)
+        #expect(try replica.outboundMutations().isEmpty)
+    }
+
+    @Test("Retry sends the change once this phone can show the reference target is live")
+    func retrySendsOnceTargetProvenLive() throws {
+        let replica = try Self.refused(Self.shelf(Setup.elsewhere), reason: .targetMissing)
+        try replica.apply(
+            Setup.changes([
+                Setup.item(
+                    Setup.elsewhere, values: [Setup.stored(Setup.depth, try Setup.decimal("10"))])
+            ]))
+
+        try replica.resolve("m1", with: .keepMine(), minting: ["m2"])
+
+        #expect(try replica.ledger.repairs.isEmpty)
+        let sent = try replica.outboundMutations()
+        #expect(sent.map(\.mutationId) == ["m2"])
+        #expect(sent.first?.command == Self.shelf(Setup.elsewhere))
+    }
+
+    @Test("an incoming reference on another item stays Let go, even with an own reference value")
+    func incomingReferenceOnAnotherItemIsUnrecognised() throws {
+        let retype = InventoryCommand.changeProtocol2ItemType(
+            id: Setup.box, catalogueRevision: Setup.revision, typeId: Setup.typeId,
+            values: [
+                InventoryProtocol2FieldValue(
+                    fieldId: Setup.shelf,
+                    values: [
+                        .reference(InventoryReferenceValue(targetKind: .item, targetId: Setup.rack))
+                    ])
+            ])
+        let replica = try LocalComputedValueTests.replica()
+        _ = try replica.perform(retype, mutationId: "m1", clientTime: Setup.time)
+        try replica.recordOutcomes(
+            InventoryMutationBatchResult(
+                outcomes: [
+                    "m1": .rejected(
+                        reason: .referenceTypeMismatch, message: "x",
+                        incomingReference: InventoryIncomingReference(
+                            itemId: Setup.rack, fieldId: Setup.shelf))
+                ], highWaterSeq: 12))
+
+        let repair = try #require(try replica.ledger.repairs.first)
+        #expect(repair.kind == .unrecognised("reference_type_mismatch"))
+        #expect(repair.catalogue == nil)
+
+        try replica.resolve("m1", with: .keepMine(), minting: ["m2"])
+
+        #expect(try replica.ledger.repairs.isEmpty)
+        #expect(try replica.ledger.resolved.first?.outcome == "Let go")
+        #expect(try replica.outboundMutations().isEmpty)
+    }
+
     @Test("letting go drops the change and keeps the server's reference")
     func letGoKeepsTheServerValue() throws {
         let replica = try Self.refused(Self.shelf(Setup.elsewhere), reason: .referenceTypeMismatch)

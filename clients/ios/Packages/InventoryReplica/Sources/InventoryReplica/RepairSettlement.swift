@@ -141,6 +141,13 @@ internal enum RepairSettlement {
             throw InventoryCommandError.rejected(
                 reason: .catalogueRepairRequired, message: changes.summary)
         case .rebased(let command, let revision):
+            if case .command(let inventoryCommand) = command,
+                let stale = try StaleReferenceRetryCheck.stillStale(
+                    inventoryCommand, onto: revision ?? active, in: db)
+            {
+                throw InventoryCommandError.rejected(
+                    reason: stale.rejectedReason, message: stale.retryRefusalMessage)
+            }
             return Reissue(
                 command: command, baseRevision: entry.baseRevision, baseRevisionFloor: nil,
                 restoreFirst: false, resolution: .rebased, code: nil,

@@ -18566,6 +18566,46 @@ internal enum Operations {
                                 internal typealias CatalogueChangesPayload = [Operations.MobileInventory_mutations.Output.Ok.Body.JsonPayload.OutcomesPayloadPayload.Value3Payload.CatalogueChangesPayloadPayload]
                                 /// - Remark: Generated from `#/paths/mobile/inventory/mutations/POST/responses/200/content/json/OutcomesPayload/value3/catalogueChanges`.
                                 internal var catalogueChanges: Operations.MobileInventory_mutations.Output.Ok.Body.JsonPayload.OutcomesPayloadPayload.Value3Payload.CatalogueChangesPayload?
+                                /// - Remark: Generated from `#/paths/mobile/inventory/mutations/POST/responses/200/content/json/OutcomesPayload/value3/incomingReference`.
+                                internal struct IncomingReferencePayload: Codable, Hashable, Sendable {
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/mutations/POST/responses/200/content/json/OutcomesPayload/value3/incomingReference/fieldId`.
+                                    internal var fieldId: Swift.String
+                                    /// - Remark: Generated from `#/paths/mobile/inventory/mutations/POST/responses/200/content/json/OutcomesPayload/value3/incomingReference/itemId`.
+                                    internal var itemId: Swift.String
+                                    /// Creates a new `IncomingReferencePayload`.
+                                    ///
+                                    /// - Parameters:
+                                    ///   - fieldId:
+                                    ///   - itemId:
+                                    internal init(
+                                        fieldId: Swift.String,
+                                        itemId: Swift.String
+                                    ) {
+                                        self.fieldId = fieldId
+                                        self.itemId = itemId
+                                    }
+                                    internal enum CodingKeys: String, CodingKey {
+                                        case fieldId
+                                        case itemId
+                                    }
+                                    internal init(from decoder: any Swift.Decoder) throws {
+                                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                                        self.fieldId = try container.decode(
+                                            Swift.String.self,
+                                            forKey: .fieldId
+                                        )
+                                        self.itemId = try container.decode(
+                                            Swift.String.self,
+                                            forKey: .itemId
+                                        )
+                                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                            "fieldId",
+                                            "itemId"
+                                        ])
+                                    }
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/inventory/mutations/POST/responses/200/content/json/OutcomesPayload/value3/incomingReference`.
+                                internal var incomingReference: Operations.MobileInventory_mutations.Output.Ok.Body.JsonPayload.OutcomesPayloadPayload.Value3Payload.IncomingReferencePayload?
                                 /// - Remark: Generated from `#/paths/mobile/inventory/mutations/POST/responses/200/content/json/OutcomesPayload/value3/message`.
                                 internal var message: Swift.String
                                 /// - Remark: Generated from `#/paths/mobile/inventory/mutations/POST/responses/200/content/json/OutcomesPayload/value3/mutationId`.
@@ -18582,18 +18622,21 @@ internal enum Operations {
                                 ///
                                 /// - Parameters:
                                 ///   - catalogueChanges:
+                                ///   - incomingReference:
                                 ///   - message:
                                 ///   - mutationId:
                                 ///   - reason:
                                 ///   - status:
                                 internal init(
                                     catalogueChanges: Operations.MobileInventory_mutations.Output.Ok.Body.JsonPayload.OutcomesPayloadPayload.Value3Payload.CatalogueChangesPayload? = nil,
+                                    incomingReference: Operations.MobileInventory_mutations.Output.Ok.Body.JsonPayload.OutcomesPayloadPayload.Value3Payload.IncomingReferencePayload? = nil,
                                     message: Swift.String,
                                     mutationId: Swift.String,
                                     reason: Swift.String,
                                     status: Operations.MobileInventory_mutations.Output.Ok.Body.JsonPayload.OutcomesPayloadPayload.Value3Payload.StatusPayload
                                 ) {
                                     self.catalogueChanges = catalogueChanges
+                                    self.incomingReference = incomingReference
                                     self.message = message
                                     self.mutationId = mutationId
                                     self.reason = reason
@@ -18601,6 +18644,7 @@ internal enum Operations {
                                 }
                                 internal enum CodingKeys: String, CodingKey {
                                     case catalogueChanges
+                                    case incomingReference
                                     case message
                                     case mutationId
                                     case reason
@@ -18611,6 +18655,10 @@ internal enum Operations {
                                     self.catalogueChanges = try container.decodeIfPresent(
                                         Operations.MobileInventory_mutations.Output.Ok.Body.JsonPayload.OutcomesPayloadPayload.Value3Payload.CatalogueChangesPayload.self,
                                         forKey: .catalogueChanges
+                                    )
+                                    self.incomingReference = try container.decodeIfPresent(
+                                        Operations.MobileInventory_mutations.Output.Ok.Body.JsonPayload.OutcomesPayloadPayload.Value3Payload.IncomingReferencePayload.self,
+                                        forKey: .incomingReference
                                     )
                                     self.message = try container.decode(
                                         Swift.String.self,
@@ -18630,6 +18678,7 @@ internal enum Operations {
                                     )
                                     try decoder.ensureNoAdditionalProperties(knownKeys: [
                                         "catalogueChanges",
+                                        "incomingReference",
                                         "message",
                                         "mutationId",
                                         "reason",

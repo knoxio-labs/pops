@@ -63,12 +63,19 @@ const conflictHeaderSchema = z.object({ mutationId: z.string(), status: z.litera
 
 const conflictSchema = z.intersection(conflictHeaderSchema, conflictBodySchema);
 
+/** The other item and field a `reference_type_mismatch` names when it is about a reference INTO the changed item (POPS-4617); see {@link IncomingReferenceRef}. */
+export const incomingReferenceWireSchema = z.object({
+  itemId: z.string(),
+  fieldId: z.string(),
+});
+
 const rejectedSchema = z.object({
   mutationId: z.string(),
   status: z.literal('rejected'),
   reason: z.string(),
   message: z.string(),
   catalogueChanges: z.array(catalogueChangeWireSchema).optional(),
+  incomingReference: incomingReferenceWireSchema.optional(),
 });
 
 const deferredSchema = z.object({

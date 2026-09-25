@@ -92,12 +92,26 @@ export const MobileCatalogueChangeSchema = z.object({
 
 export type MobileCatalogueChange = z.infer<typeof MobileCatalogueChangeSchema>;
 
+export const MobileIncomingReferenceSchema = z.object({
+  itemId: z.string(),
+  fieldId: z.string(),
+});
+
+export type MobileIncomingReference = z.infer<typeof MobileIncomingReferenceSchema>;
+
 const mobileRejectedOutcomeSchema = z.object({
   mutationId: z.string(),
   status: z.literal('rejected'),
   reason: z.string(),
   message: z.string(),
   catalogueChanges: z.array(MobileCatalogueChangeSchema).optional(),
+  /**
+   * Set when a `reference_type_mismatch` names a reference INTO the changed
+   * item from another item's field, rather than one this command's own
+   * values carry (POPS-4617): the phone must not offer Edit item on its own
+   * values for a refusal it cannot fix that way.
+   */
+  incomingReference: MobileIncomingReferenceSchema.optional(),
 });
 
 const mobileDeferredOutcomeSchema = z.object({
