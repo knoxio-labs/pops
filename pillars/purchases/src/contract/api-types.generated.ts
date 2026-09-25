@@ -587,7 +587,14 @@ export interface operations {
     parameters: {
       query?: {
         sources?: string[];
-        statuses?: ('awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored')[];
+        statuses?: (
+          | 'awaiting_settlement'
+          | 'linked'
+          | 'partial'
+          | 'settled_cash'
+          | 'ignored'
+          | 'nothing_to_settle'
+        )[];
         currency?: string;
         merchantEntityId?: string;
         merchantEntityName?: string;
@@ -770,7 +777,14 @@ export interface operations {
     parameters: {
       query?: {
         sources?: string[];
-        statuses?: ('awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored')[];
+        statuses?: (
+          | 'awaiting_settlement'
+          | 'linked'
+          | 'partial'
+          | 'settled_cash'
+          | 'ignored'
+          | 'nothing_to_settle'
+        )[];
         currency?: string;
         merchantEntityId?: string;
         merchantEntityName?: string;
@@ -1286,7 +1300,14 @@ export interface operations {
     parameters: {
       query?: {
         sources?: string[];
-        statuses?: ('awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored')[];
+        statuses?: (
+          | 'awaiting_settlement'
+          | 'linked'
+          | 'partial'
+          | 'settled_cash'
+          | 'ignored'
+          | 'nothing_to_settle'
+        )[];
         currency?: string;
         merchantEntityId?: string;
         merchantEntityName?: string;
@@ -1339,7 +1360,13 @@ export interface operations {
               source: string;
               sourceOrderId: string | null;
               /** @enum {string} */
-              status: 'awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored';
+              status:
+                | 'awaiting_settlement'
+                | 'linked'
+                | 'partial'
+                | 'settled_cash'
+                | 'ignored'
+                | 'nothing_to_settle';
               subtotalCents: number;
               surchargeCents: number;
               surchargeIncluded: boolean | null;
@@ -1646,7 +1673,13 @@ export interface operations {
               source: string;
               sourceOrderId: string | null;
               /** @enum {string} */
-              status: 'awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored';
+              status:
+                | 'awaiting_settlement'
+                | 'linked'
+                | 'partial'
+                | 'settled_cash'
+                | 'ignored'
+                | 'nothing_to_settle';
               subtotalCents: number;
               surchargeCents: number;
               surchargeIncluded: boolean | null;
@@ -1976,7 +2009,13 @@ export interface operations {
               source: string;
               sourceOrderId: string | null;
               /** @enum {string} */
-              status: 'awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored';
+              status:
+                | 'awaiting_settlement'
+                | 'linked'
+                | 'partial'
+                | 'settled_cash'
+                | 'ignored'
+                | 'nothing_to_settle';
               subtotalCents: number;
               surchargeCents: number;
               surchargeIncluded: boolean | null;
@@ -2203,7 +2242,13 @@ export interface operations {
               source: string;
               sourceOrderId: string | null;
               /** @enum {string} */
-              status: 'awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored';
+              status:
+                | 'awaiting_settlement'
+                | 'linked'
+                | 'partial'
+                | 'settled_cash'
+                | 'ignored'
+                | 'nothing_to_settle';
               subtotalCents: number;
               surchargeCents: number;
               surchargeIncluded: boolean | null;
@@ -2482,7 +2527,13 @@ export interface operations {
               source: string;
               sourceOrderId: string | null;
               /** @enum {string} */
-              status: 'awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored';
+              status:
+                | 'awaiting_settlement'
+                | 'linked'
+                | 'partial'
+                | 'settled_cash'
+                | 'ignored'
+                | 'nothing_to_settle';
               subtotalCents: number;
               surchargeCents: number;
               surchargeIncluded: boolean | null;
@@ -3186,7 +3237,8 @@ export interface operations {
                       | 'linked'
                       | 'partial'
                       | 'settled_cash'
-                      | 'ignored';
+                      | 'ignored'
+                      | 'nothing_to_settle';
                     subtotalCents: number;
                     surchargeCents: number;
                     surchargeIncluded: boolean | null;
@@ -3581,7 +3633,13 @@ export interface operations {
               source: string;
               sourceOrderId: string | null;
               /** @enum {string} */
-              status: 'awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored';
+              status:
+                | 'awaiting_settlement'
+                | 'linked'
+                | 'partial'
+                | 'settled_cash'
+                | 'ignored'
+                | 'nothing_to_settle';
               subtotalCents: number;
               surchargeCents: number;
               surchargeIncluded: boolean | null;
@@ -4096,7 +4154,13 @@ export interface operations {
                 source: string;
                 sourceOrderId: string | null;
                 /** @enum {string} */
-                status: 'awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored';
+                status:
+                  | 'awaiting_settlement'
+                  | 'linked'
+                  | 'partial'
+                  | 'settled_cash'
+                  | 'ignored'
+                  | 'nothing_to_settle';
                 subtotalCents: number;
                 surchargeCents: number;
                 surchargeIncluded: boolean | null;

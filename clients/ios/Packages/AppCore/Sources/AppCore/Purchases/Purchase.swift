@@ -20,6 +20,12 @@ public enum PurchaseSettlement: Hashable, Sendable {
     case settledCash
     /// Deliberately excluded from reconciliation.
     case ignored
+    /// A zero-total order — free, or cancelled before any charge — that has
+    /// no bank transaction to wait for. Derived by the pillar, not chosen by
+    /// anyone, so it is a settled answer the same way `settledCash` is: an
+    /// order in this state never had, and never will have, anything to
+    /// match.
+    case nothingToSettle
     /// A status this build has never heard of, kept verbatim.
     case unrecognised(String)
 
@@ -30,17 +36,18 @@ public enum PurchaseSettlement: Hashable, Sendable {
         case "partial": self = .partial
         case "settled_cash": self = .settledCash
         case "ignored": self = .ignored
+        case "nothing_to_settle": self = .nothingToSettle
         default: self = .unrecognised(wire)
         }
     }
 
-    /// Whether the purchase is still waiting on somebody. `settledCash` and
-    /// `ignored` are settled answers rather than pending ones, and an
-    /// unrecognised status is not claimed either way.
+    /// Whether the purchase is still waiting on somebody. `settledCash`,
+    /// `ignored` and `nothingToSettle` are settled answers rather than
+    /// pending ones, and an unrecognised status is not claimed either way.
     public var isUnsettled: Bool {
         switch self {
         case .awaitingSettlement, .partial: true
-        case .linked, .settledCash, .ignored, .unrecognised: false
+        case .linked, .settledCash, .ignored, .nothingToSettle, .unrecognised: false
         }
     }
 }

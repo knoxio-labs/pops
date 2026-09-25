@@ -16,11 +16,18 @@ import { computeExpectedTotalCents } from './purchase-write-validation.js';
 import type { PurchaseItemRow, PurchaseRow } from '../schema.js';
 import type { UpdatePurchaseInput, UpdatePurchaseLineInput } from './purchase-input.js';
 
-/** Statuses whose merchant, date and total stay editable. Everything else locks (POPS-4255). */
+/**
+ * Statuses whose merchant, date and total stay editable. Everything else
+ * locks (POPS-4255). `nothing_to_settle` joins this set for the same reason
+ * `awaiting_settlement` is in it: nothing has matched this order to
+ * anything yet, so correcting its total (say, a $0 cancellation that turns
+ * out to have actually shipped) cannot invalidate a match (POPS-4648).
+ */
 const UNLOCKED_STATUSES: ReadonlySet<string> = new Set([
   'awaiting_settlement',
   'settled_cash',
   'ignored',
+  'nothing_to_settle',
 ]);
 
 export interface RemovedLine {

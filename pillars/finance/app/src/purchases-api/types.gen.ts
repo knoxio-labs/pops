@@ -9,7 +9,14 @@ export type AnalyticsMerchantSpendData = {
   path?: never;
   query?: {
     sources?: Array<string>;
-    statuses?: Array<'awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored'>;
+    statuses?: Array<
+      | 'awaiting_settlement'
+      | 'linked'
+      | 'partial'
+      | 'settled_cash'
+      | 'ignored'
+      | 'nothing_to_settle'
+    >;
     currency?: string;
     merchantEntityId?: string;
     merchantEntityName?: string;
@@ -174,7 +181,14 @@ export type AnalyticsProductLeaderboardData = {
   path?: never;
   query?: {
     sources?: Array<string>;
-    statuses?: Array<'awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored'>;
+    statuses?: Array<
+      | 'awaiting_settlement'
+      | 'linked'
+      | 'partial'
+      | 'settled_cash'
+      | 'ignored'
+      | 'nothing_to_settle'
+    >;
     currency?: string;
     merchantEntityId?: string;
     merchantEntityName?: string;
@@ -631,7 +645,14 @@ export type PurchaseListData = {
   path?: never;
   query?: {
     sources?: Array<string>;
-    statuses?: Array<'awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored'>;
+    statuses?: Array<
+      | 'awaiting_settlement'
+      | 'linked'
+      | 'partial'
+      | 'settled_cash'
+      | 'ignored'
+      | 'nothing_to_settle'
+    >;
     currency?: string;
     merchantEntityId?: string;
     merchantEntityName?: string;
@@ -692,7 +713,13 @@ export type PurchaseListResponses = {
       shippingIncluded: boolean | null;
       source: string;
       sourceOrderId: string | null;
-      status: 'awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored';
+      status:
+        | 'awaiting_settlement'
+        | 'linked'
+        | 'partial'
+        | 'settled_cash'
+        | 'ignored'
+        | 'nothing_to_settle';
       subtotalCents: number;
       surchargeCents: number;
       surchargeIncluded: boolean | null;
@@ -980,7 +1007,13 @@ export type PurchaseCreateResponses = {
       shippingIncluded: boolean | null;
       source: string;
       sourceOrderId: string | null;
-      status: 'awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored';
+      status:
+        | 'awaiting_settlement'
+        | 'linked'
+        | 'partial'
+        | 'settled_cash'
+        | 'ignored'
+        | 'nothing_to_settle';
       subtotalCents: number;
       surchargeCents: number;
       surchargeIncluded: boolean | null;
@@ -1280,7 +1313,13 @@ export type PurchaseCreateManualResponses = {
       shippingIncluded: boolean | null;
       source: string;
       sourceOrderId: string | null;
-      status: 'awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored';
+      status:
+        | 'awaiting_settlement'
+        | 'linked'
+        | 'partial'
+        | 'settled_cash'
+        | 'ignored'
+        | 'nothing_to_settle';
       subtotalCents: number;
       surchargeCents: number;
       surchargeIncluded: boolean | null;
@@ -1518,7 +1557,13 @@ export type PurchaseGetResponses = {
       shippingIncluded: boolean | null;
       source: string;
       sourceOrderId: string | null;
-      status: 'awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored';
+      status:
+        | 'awaiting_settlement'
+        | 'linked'
+        | 'partial'
+        | 'settled_cash'
+        | 'ignored'
+        | 'nothing_to_settle';
       subtotalCents: number;
       surchargeCents: number;
       surchargeIncluded: boolean | null;
@@ -1759,7 +1804,13 @@ export type PurchaseUpdateResponses = {
       shippingIncluded: boolean | null;
       source: string;
       sourceOrderId: string | null;
-      status: 'awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored';
+      status:
+        | 'awaiting_settlement'
+        | 'linked'
+        | 'partial'
+        | 'settled_cash'
+        | 'ignored'
+        | 'nothing_to_settle';
       subtotalCents: number;
       surchargeCents: number;
       surchargeIncluded: boolean | null;
@@ -2351,7 +2402,13 @@ export type ReceiptUploadResponses = {
             shippingIncluded: boolean | null;
             source: string;
             sourceOrderId: string | null;
-            status: 'awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored';
+            status:
+              | 'awaiting_settlement'
+              | 'linked'
+              | 'partial'
+              | 'settled_cash'
+              | 'ignored'
+              | 'nothing_to_settle';
             subtotalCents: number;
             surchargeCents: number;
             surchargeIncluded: boolean | null;
@@ -2693,7 +2750,13 @@ export type ReceiptSaveDraftResponses = {
       shippingIncluded: boolean | null;
       source: string;
       sourceOrderId: string | null;
-      status: 'awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored';
+      status:
+        | 'awaiting_settlement'
+        | 'linked'
+        | 'partial'
+        | 'settled_cash'
+        | 'ignored'
+        | 'nothing_to_settle';
       subtotalCents: number;
       surchargeCents: number;
       surchargeIncluded: boolean | null;
@@ -3106,7 +3169,13 @@ export type ReconcileLinksResponses = {
         shippingIncluded: boolean | null;
         source: string;
         sourceOrderId: string | null;
-        status: 'awaiting_settlement' | 'linked' | 'partial' | 'settled_cash' | 'ignored';
+        status:
+          | 'awaiting_settlement'
+          | 'linked'
+          | 'partial'
+          | 'settled_cash'
+          | 'ignored'
+          | 'nothing_to_settle';
         subtotalCents: number;
         surchargeCents: number;
         surchargeIncluded: boolean | null;

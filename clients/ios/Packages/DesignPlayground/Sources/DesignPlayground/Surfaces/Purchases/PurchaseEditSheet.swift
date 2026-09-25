@@ -29,7 +29,7 @@ internal enum PurchaseEditPolicy {
     {
         switch status {
         case .linked, .partial, .unrecognised: [.merchant, .date, .total]
-        case .awaitingSettlement, .settledCash, .ignored: []
+        case .awaitingSettlement, .settledCash, .ignored, .nothingToSettle: []
         }
     }
 

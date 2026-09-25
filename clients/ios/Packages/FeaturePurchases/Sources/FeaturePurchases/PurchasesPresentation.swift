@@ -38,6 +38,7 @@ internal enum PurchasesPresentation {
         case .partial: "Part matched"
         case .settledCash: "Cash"
         case .ignored: "Ignored"
+        case .nothingToSettle: "Nothing to pay"
         case .unrecognised(let raw): raw
         }
     }
@@ -46,7 +47,7 @@ internal enum PurchasesPresentation {
         switch status {
         case .awaitingSettlement, .partial: Color.popsWarning
         case .linked, .settledCash: Color.popsSuccess
-        case .ignored, .unrecognised: Color.popsMutedForeground
+        case .ignored, .nothingToSettle, .unrecognised: Color.popsMutedForeground
         }
     }
 

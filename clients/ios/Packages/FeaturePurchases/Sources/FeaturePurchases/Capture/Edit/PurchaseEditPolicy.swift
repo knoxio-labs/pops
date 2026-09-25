@@ -12,7 +12,7 @@ internal enum PurchaseEditPolicy {
         for status: PurchaseSettlement
     ) -> Set<ReceiptDraftLock.Field> {
         switch status {
-        case .awaitingSettlement, .settledCash, .ignored: []
+        case .awaitingSettlement, .settledCash, .ignored, .nothingToSettle: []
         case .linked, .partial, .unrecognised: [.merchant, .date, .total]
         }
     }
