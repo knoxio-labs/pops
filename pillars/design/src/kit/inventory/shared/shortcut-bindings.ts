@@ -51,6 +51,7 @@ const LIST: readonly ShortcutBinding[] = [
   b('list-open', 'list', 'Enter', 'Open'),
   b('list-peek', 'list', 'Space', 'Peek'),
   b('pick-up', 'list', 'p', 'Pick up'),
+  b('put-back', 'list', 'b', 'Put back where it came from'),
   b('move', 'list', 'm', 'Move'),
   b('take-out', 'list', 't', 'Take out of this container'),
   b('label', 'list', 'l', 'Print labels'),
