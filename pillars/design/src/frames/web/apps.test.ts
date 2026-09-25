@@ -33,6 +33,22 @@ describe('railOrder', () => {
 });
 
 describe('WEB_APPS', () => {
+  it('draws inventory with its designed ten-item nav, Labels and Activity folded', () => {
+    const inventory = appForArea('inventory');
+    expect(inventory?.items.map((item) => item.label)).toEqual([
+      'Overview',
+      'Items',
+      'Containers',
+      'Locations',
+      'In hand',
+      'Connections',
+      'Types',
+      'Reports',
+      'Sync',
+      'Settings',
+    ]);
+  });
+
   it('is the shell rail order (each pillar contract nav.order), finance first', () => {
     expect(WEB_APPS.map((app) => app.id)).toEqual([
       'finance',

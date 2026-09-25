@@ -16,7 +16,7 @@ export interface InventoryCardProps {
   type?: string | null;
   condition?: Condition | null;
   locationSegments?: LocationSegment[];
-  /** Flat location name — used when locationSegments are not available. */
+  /** Flat location name, used when locationSegments are not available. */
   locationName?: string | null;
   photoUrl?: string | null;
   /** Card layout: "horizontal" for list, "vertical" for grid. */

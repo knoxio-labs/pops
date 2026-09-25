@@ -6,13 +6,18 @@
  * the nav is declared once (POPS-3359) — the one cross-pillar import ADR-026
  * permits. A nav item added to a pillar shows up in the frame with no second
  * edit, and the playground never builds against a pillar's app.
+ *
+ * One exception: a pillar under active redesign draws its designed nav from
+ * the design surface instead, so its screens are reviewed in the chrome they
+ * will ship in. Inventory's designed nav lives with its design fixtures.
  */
+import { INVENTORY_DESIGN_NAV } from '@/fixtures/inventory/nav';
+
 import { AI_NAV } from '@pops/ai/manifest';
 import { BFM_NAV } from '@pops/bfm/manifest';
 import { CEREBRUM_NAV } from '@pops/cerebrum/manifest';
 import { FINANCE_NAV } from '@pops/finance/manifest';
 import { FOOD_NAV } from '@pops/food/manifest';
-import { INVENTORY_NAV } from '@pops/inventory/manifest';
 import { LISTS_NAV } from '@pops/lists/manifest';
 import { MEDIA_NAV } from '@pops/media/manifest';
 import { navConfigFromWire } from '@pops/navigation';
@@ -26,7 +31,7 @@ const WIRE_NAVS = [
   CEREBRUM_NAV,
   FINANCE_NAV,
   FOOD_NAV,
-  INVENTORY_NAV,
+  INVENTORY_DESIGN_NAV,
   LISTS_NAV,
   MEDIA_NAV,
   PURCHASES_NAV,

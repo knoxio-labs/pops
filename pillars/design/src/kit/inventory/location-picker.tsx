@@ -40,6 +40,10 @@ function toTreeNodes(nodes: LocationTreeNode[]): TreeNode<LocationTreeNode>[] {
 }
 
 /**
+ * @deprecated Picks locations only. New designs use the foundation's
+ * `PlacementPicker`, which also places into containers and in hand; this
+ * stays until the item form and insurance filters move over.
+ *
  * Location tree picker built on kit `TreePicker`: search, keyboard tree
  * navigation, and expand/collapse all come from the kit component. This
  * component only adapts the flat `LocationTreeNode` shape and supplies the

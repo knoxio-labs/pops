@@ -2,9 +2,9 @@ import { Check, MoreHorizontal, Pencil, Trash2, X } from 'lucide-react';
 import { useMemo } from 'react';
 
 /**
- * InventoryTable — sortable table for inventory items.
+ * InventoryTable: sortable table for inventory items.
  *
- * Columns: Asset ID, Name, Brand, Type, Condition, Location, Value, In Use.
+ * Columns: Code, Name, Brand, Type, Condition, Location, Value, In Use.
  * Click row navigates to detail page.
  *
  * The `locationPathMap` prop maps each `locationId` to its breadcrumb path
@@ -13,19 +13,22 @@ import { useMemo } from 'react';
 import {
   AssetIdBadge,
   Button,
-  type Condition,
-  ConditionBadge,
   DataTable,
   DropdownMenu,
   DropdownMenuItem,
   DropdownMenuSeparator,
-  formatAUD,
-  formatDate,
-  LocationBreadcrumb,
   type LocationSegment,
   SortableHeader,
   TypeBadge,
 } from '@pops/ui';
+
+import {
+  conditionCell,
+  locationCell,
+  NotSet,
+  purchaseDateCell,
+  valueCell,
+} from './inventory-table-cells';
 
 import type { ColumnDef } from '@tanstack/react-table';
 
@@ -41,48 +44,6 @@ export interface InventoryTableItem {
   purchaseDate: string | null;
   inUse: boolean;
   assetId: string | null;
-}
-
-/** Known condition values (lowercase canonical + legacy Title Case). */
-const VALID_CONDITIONS = new Set<string>([
-  'new',
-  'good',
-  'fair',
-  'poor',
-  'broken',
-  // Legacy Title Case values from seed data / Notion import
-  'Excellent',
-  'Good',
-  'Fair',
-  'Poor',
-]);
-
-function locationCell(
-  locationPathMap: ReadonlyMap<string, LocationSegment[]>,
-  row: { original: InventoryTableItem }
-): React.ReactNode {
-  const { locationId, location } = row.original;
-  const segments = locationId ? locationPathMap.get(locationId) : undefined;
-  if (segments && segments.length > 0) {
-    return (
-      <span title={segments.map((s) => s.name).join(' > ')}>
-        <LocationBreadcrumb segments={segments} />
-      </span>
-    );
-  }
-  return <span className="text-muted-foreground">{location ?? '—'}</span>;
-}
-
-function conditionCell(condition: string | null): React.ReactNode {
-  if (!condition || !VALID_CONDITIONS.has(condition)) {
-    return <span className="text-muted-foreground">—</span>;
-  }
-  return <ConditionBadge condition={condition as Condition} />;
-}
-
-function purchaseDateCell(date: string | null): React.ReactNode {
-  if (!date) return <span className="text-muted-foreground">—</span>;
-  return <span className="text-sm tabular-nums">{formatDate(date)}</span>;
 }
 
 function buildActionsColumn(args: {
@@ -123,7 +84,7 @@ function createColumns(
   return [
     {
       accessorKey: 'assetId',
-      header: 'Asset ID',
+      header: 'Code',
       cell: ({ row }) =>
         row.original.assetId ? <AssetIdBadge assetId={row.original.assetId} /> : null,
     },
@@ -135,7 +96,7 @@ function createColumns(
     {
       accessorKey: 'brand',
       header: ({ column }) => <SortableHeader column={column}>Brand</SortableHeader>,
-      cell: ({ row }) => row.original.brand ?? '—',
+      cell: ({ row }) => row.original.brand ?? <NotSet />,
     },
     {
       accessorKey: 'type',
@@ -155,8 +116,7 @@ function createColumns(
     {
       accessorKey: 'replacementValue',
       header: ({ column }) => <SortableHeader column={column}>Value</SortableHeader>,
-      cell: ({ row }) =>
-        row.original.replacementValue != null ? formatAUD(row.original.replacementValue) : '—',
+      cell: ({ row }) => valueCell(row.original.replacementValue),
     },
     {
       accessorKey: 'purchaseDate',
@@ -185,7 +145,7 @@ export interface InventoryTableProps {
    */
   locationPathMap?: ReadonlyMap<string, LocationSegment[]>;
   loading?: boolean;
-  /** Show the built-in search bar (default false — parent page handles search). */
+  /** Show the built-in search bar (default false: the parent page handles search). */
   searchable?: boolean;
   onEdit?: (id: string) => void;
   onDeleteRequest?: (id: string) => void;
