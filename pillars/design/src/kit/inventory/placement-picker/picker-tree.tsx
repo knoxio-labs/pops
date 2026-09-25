@@ -56,9 +56,9 @@ function Crumbs({
 /** The browse column. */
 export function PickerTree({ model, onPick, onDrill }: PickerTreeProps) {
   return (
-    <div className="flex min-h-0 flex-col">
+    <div className="flex min-h-0 flex-1 flex-col">
       <Crumbs crumbs={model.crumbs} onDrill={onDrill} />
-      <ul aria-label="Places here" className="min-h-0 flex-1 overflow-y-auto">
+      <ul aria-label="Places here" className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto p-1">
         {model.level.map((option) => (
           <PickerRow
             key={option.key}

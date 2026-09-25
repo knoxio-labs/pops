@@ -118,7 +118,7 @@ export function PlacementPickerPanel(props: PlacementPickerProps) {
           <div className="min-h-0 overflow-y-auto p-1.5">
             <QuickPicks model={api.model} onPick={props.onPick} />
           </div>
-          <div className="flex min-h-0 flex-col p-1.5">
+          <div className="flex min-h-0 flex-col p-0.5">
             <PickerTree model={api.model} onPick={props.onPick} onDrill={api.drillInto} />
           </div>
         </div>

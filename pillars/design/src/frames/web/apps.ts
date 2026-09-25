@@ -77,7 +77,9 @@ const SCREEN_PAGES: Readonly<Record<string, Readonly<Record<string, string>>>> =
 /**
  * Which page of the app a screen is a design for, matched on the screen's
  * slug: `finance/import` lands on the `/import` nav item, `finance/import-review`
- * on it too (a screen is often one stage of a page, not a page of its own).
+ * on it too (a screen is often one stage of a page, not a page of its own),
+ * and a screen in a folder lands on the page its folder names
+ * (`inventory/items/item-detail` on `/items`).
  * A screen listed in the app's screen-page map lands on the page named there.
  * No match means no page is marked: better than marking the first and
  * quietly asserting something untrue about where the screen belongs.
@@ -93,6 +95,8 @@ export function activeItemPath(
   const target = `/${slug}`;
   const exact = app.items.find((item) => item.path === target);
   if (exact) return exact.path;
+  const folder = app.items.find((item) => item.path !== '' && target.startsWith(`${item.path}/`));
+  if (folder) return folder.path;
   const prefixed = app.items
     .filter((item) => item.path !== '' && target.startsWith(`${item.path}-`))
     .toSorted((a, b) => b.path.length - a.path.length)[0];

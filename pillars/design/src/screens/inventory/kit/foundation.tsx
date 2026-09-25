@@ -18,7 +18,7 @@ import { ShortcutSheetBody } from '@/kit/inventory/shared/shortcut-sheet';
 import type { ScreenMeta, ScreenStates } from '@/contract';
 import type { ReactNode } from 'react';
 
-export const meta: ScreenMeta = { title: 'Foundation', order: 99, frame: 'web' };
+export const meta: ScreenMeta = { title: 'Foundation', order: 999, frame: 'web' };
 
 function page(description: string, body: ReactNode): () => ReactNode {
   return function FoundationState() {

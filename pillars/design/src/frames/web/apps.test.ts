@@ -161,18 +161,30 @@ describe('inventory screens inside another page', () => {
   if (inventory === undefined) throw new Error('inventory nav missing');
 
   it('marks Sync for Activity, a segment of the Sync page', () => {
-    expect(activeItemPath(inventory, 'activity')).toBe('/sync');
-    expect(activeItemPath(inventory, 'sync')).toBe('/sync');
+    expect(activeItemPath(inventory, 'sync/activity')).toBe('/sync');
+    expect(activeItemPath(inventory, 'sync/sync')).toBe('/sync');
   });
 
-  it('marks Items for an item’s own screens', () => {
-    for (const slug of ['item-detail', 'item-form', 'item-history', 'lifecycle', 'bulk-new']) {
+  it('marks the page a screen’s folder names', () => {
+    for (const slug of [
+      'items/item-detail',
+      'items/item-form',
+      'items/lifecycle',
+      'items/bulk-new',
+    ]) {
       expect(activeItemPath(inventory, slug)).toBe('/items');
     }
+    expect(activeItemPath(inventory, 'locations/location-page')).toBe('/locations');
+    expect(activeItemPath(inventory, 'containers/moving-day')).toBe('/containers');
   });
 
-  it('marks Locations for one place', () => {
-    expect(activeItemPath(inventory, 'location-page')).toBe('/locations');
+  it('marks Overview for the overview screen, whose folder is not a nav path', () => {
+    expect(activeItemPath(inventory, 'overview/overview')).toBe('');
+  });
+
+  it('marks nothing for a folder no nav page names', () => {
+    expect(activeItemPath(inventory, 'search/search')).toBeUndefined();
+    expect(activeItemPath(inventory, 'kit/foundation')).toBeUndefined();
   });
 
   it('maps every listed screen to a page the nav actually has', () => {

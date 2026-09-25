@@ -7,7 +7,7 @@ import type { ScreenMeta, ScreenStates } from '@/contract';
 import type { OverviewTabProps } from '@/kit/inventory/reports/overview-tab';
 import type { PageBanner } from '@/kit/inventory/secondary-page';
 
-export const meta: ScreenMeta = { title: 'Reports', order: 1, frame: 'web' };
+export const meta: ScreenMeta = { title: 'Reports', order: 70, frame: 'web' };
 
 function page(overrides: Partial<OverviewTabProps> = {}, banner?: PageBanner) {
   return function ReportsOverviewState() {
